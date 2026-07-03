@@ -10,6 +10,14 @@ app.use("/*", cors({
   origin: ["http://localhost:3000"], // Allow local Next.js app
 }));
 
+import { authRouter } from "./routes/auth";
+import { avatarsRouter } from "./routes/avatars";
+import { schoolsRouter } from "./routes/schools";
+
+app.route("/auth", authRouter);
+app.route("/avatars", avatarsRouter);
+app.route("/schools", schoolsRouter);
+
 // Waitlist Route
 app.post("/waitlist", async (c) => {
   try {
