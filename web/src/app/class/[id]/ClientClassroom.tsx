@@ -27,8 +27,8 @@ function ClassroomConnection({ roomId }: { roomId: string }) {
         }
         
         setToken(data.token);
-      } catch (e: any) {
-        setError(e.message);
+      } catch (e: unknown) {
+        setError((e as Error).message);
         console.error(e);
       }
     })();

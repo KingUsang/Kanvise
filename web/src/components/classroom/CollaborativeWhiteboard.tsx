@@ -8,6 +8,7 @@ import { useDataChannel, useRoomContext, useConnectionState } from "@livekit/com
 import { ConnectionState } from "livekit-client";
 
 export default function CollaborativeWhiteboard() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const isUpdatingFromRemote = useRef(false);
   const lastBroadcastRef = useRef<number>(0);
@@ -23,6 +24,7 @@ export default function CollaborativeWhiteboard() {
         isUpdatingFromRemote.current = true;
         
         // Merge the incoming elements and viewport state (if provided by host)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updatePayload: any = { elements: data.elements };
         if (data.appState) {
           updatePayload.appState = {
@@ -53,7 +55,7 @@ export default function CollaborativeWhiteboard() {
                 if (promise) promise.catch(() => {}); // silent catch
               }
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
       }
@@ -78,10 +80,11 @@ export default function CollaborativeWhiteboard() {
   let isHost = false;
   try {
     isHost = JSON.parse(room.localParticipant.metadata || "{}").isHost;
-  } catch (e) {
+  } catch {
     // ignore
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChange = useCallback((elements: readonly any[], appState: any) => {
     // If this onChange was triggered programmatically by updateScene, 
     // clear the guard flag and DO NOT broadcast to prevent infinite loops!

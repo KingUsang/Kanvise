@@ -19,6 +19,7 @@
     "next": "15.5.19",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-zoom-pan-pinch": "^4.0.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
   },

@@ -3,18 +3,16 @@
 import {
   useConnectionState,
   useRoomContext,
-  DisconnectButton,
   useParticipants,
   useTracks,
   VideoTrack,
-  TrackToggle,
   useLocalParticipant,
 } from "@livekit/components-react";
 import { ConnectionState, Track, RoomEvent, Participant } from "livekit-client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import AudioVideoControls from "./AudioVideoControls";
-import ScreenShare from "./ScreenShare";
 import ChatBox from "./ChatBox";
 import VideoPiP from "./VideoPiP";
 import ParticipantsPanel from "./ParticipantsPanel";
@@ -24,10 +22,12 @@ import {
   MessageSquare,
   Users,
   MonitorPlay,
-  PenLine,
   LogOut,
   Clock,
   X,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
 } from "lucide-react";
 
 export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
@@ -51,8 +51,8 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
         body: JSON.stringify({ roomId: room.name }),
       });
       room.disconnect();
-    } catch (e) {
-      console.error("Failed to end class", e);
+    } catch {
+      console.error("Failed to end class");
       toast.error("Failed to end class");
     } finally {
       setIsEnding(false);
@@ -78,7 +78,7 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
   const isTutorPresent = isHost || participants.some((p) => {
     try {
       return JSON.parse(p.metadata || "{}").isHost === true;
-    } catch (e) {
+    } catch {
       return false;
     }
   });
@@ -89,13 +89,15 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
 
     const handleParticipantConnected = (participant: Participant) => {
       // Only host sees join/leave, and only if room has < 15 people
-      if (isHost && room.participants.size < 15) {
+      const participantCount = (room.remoteParticipants?.size || 0) + 1;
+      if (isHost && participantCount < 15) {
         toast.success(`${participant.name || participant.identity} joined`);
       }
     };
 
     const handleParticipantDisconnected = (participant: Participant) => {
-      if (isHost && room.participants.size < 15) {
+      const participantCount = (room.remoteParticipants?.size || 0) + 1;
+      if (isHost && participantCount < 15) {
         toast(`${participant.name || participant.identity} left`);
       }
     };
@@ -190,11 +192,52 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
             </div>
 
             {screenShareTracks.length > 0 && (
-              <div className="absolute inset-0 flex items-center justify-center overflow-hidden z-20 bg-black">
-                <VideoTrack 
-                  trackRef={screenShareTracks[0]} 
-                  className="w-full h-full object-contain" 
-                />
+              <div className="absolute inset-0 z-20 bg-black overflow-hidden group">
+                <TransformWrapper
+                  initialScale={1}
+                  minScale={1}
+                  maxScale={8}
+                  centerOnInit
+                  wheel={{ step: 0.1 }}
+                >
+                  {({ zoomIn, zoomOut, resetTransform }) => (
+                    <>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full flex items-center justify-center">
+                          <VideoTrack 
+                            trackRef={screenShareTracks[0]} 
+                            className="w-full h-full object-contain" 
+                          />
+                        </TransformComponent>
+                      </div>
+                      
+                      {/* Zoom Controls Overlay */}
+                      <div className="absolute bottom-6 right-6 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30">
+                        <button 
+                          onClick={() => zoomIn()}
+                          className="w-10 h-10 rounded-xl bg-[#180d62]/90 backdrop-blur text-white flex items-center justify-center hover:bg-[#180d62] shadow-lg transition-colors"
+                          title="Zoom In"
+                        >
+                          <ZoomIn size={18} />
+                        </button>
+                        <button 
+                          onClick={() => zoomOut()}
+                          className="w-10 h-10 rounded-xl bg-[#180d62]/90 backdrop-blur text-white flex items-center justify-center hover:bg-[#180d62] shadow-lg transition-colors"
+                          title="Zoom Out"
+                        >
+                          <ZoomOut size={18} />
+                        </button>
+                        <button 
+                          onClick={() => resetTransform()}
+                          className="w-10 h-10 rounded-xl bg-[#180d62]/90 backdrop-blur text-white flex items-center justify-center hover:bg-[#180d62] shadow-lg transition-colors mt-2"
+                          title="Reset Zoom"
+                        >
+                          <Maximize size={18} />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </TransformWrapper>
               </div>
             )}
 
@@ -206,7 +249,7 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
                   </div>
                   <h2 className="text-xl font-bold text-[#180d62] mb-2">Waiting for Tutor</h2>
                   <p className="text-[#787582] text-[13px] leading-relaxed">
-                    The tutor has disconnected or hasn't joined the class yet. Please wait, they should return shortly.
+                    The tutor has disconnected or hasn&apos;t joined the class yet. Please wait, they should return shortly.
                   </p>
                 </div>
               </div>
@@ -379,32 +422,3 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
   );
 }
 
-/* ── SUB-COMPONENTS ─────────────────────────────────────────── */
-
-function ParticipantRow({ name, isHost }: { name: string; isHost: boolean }) {
-  const initials = name.slice(0, 2).toUpperCase();
-  return (
-    <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#f5f3f2] transition-colors group">
-      <div className="w-8 h-8 rounded-full bg-[#2e2877] flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
-        {initials}
-      </div>
-      <span className="text-[13px] font-medium text-[#1b1c1c] flex-1 truncate">{name}</span>
-      {isHost && (
-        <div className="hidden group-hover:flex items-center gap-1">
-          <button
-            title="Mute"
-            className="w-7 h-7 rounded-lg text-[#787582] hover:text-[#ba1a1a] hover:bg-[#ba1a1a]/10 flex items-center justify-center transition-all text-[11px] font-bold"
-          >
-            M
-          </button>
-          <button
-            title="Remove"
-            className="w-7 h-7 rounded-lg text-[#787582] hover:text-[#ba1a1a] hover:bg-[#ba1a1a]/10 flex items-center justify-center transition-all"
-          >
-            <LogOut size={13} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}

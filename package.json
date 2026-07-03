@@ -1,1 +1,17 @@
-{}
+{
+  "name": "kanvise-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "web",
+    "api"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=web\" \"npm run dev --workspace=api\"",
+    "build": "npm run build --workspaces",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

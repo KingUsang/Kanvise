@@ -1,45 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
+/* ── Scroll-reveal animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-up   { animation: fadeUp   0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-fade-in   { animation: fadeIn   0.5s ease both; }
+.animate-slide-right { animation: slideRight 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animation-delay-100 { animation-delay: 0.1s; }
+.animation-delay-200 { animation-delay: 0.2s; }
+.animation-delay-300 { animation-delay: 0.3s; }
+.animation-delay-400 { animation-delay: 0.4s; }
+.animation-delay-500 { animation-delay: 0.5s; }
+
+
+
+/* ── Kanvise Brand Tokens ── */
 :root {
+  /* Existing app tokens */
   --background: #fbf9f8;
   --foreground: #1b1c1c;
-  
   --primary: #180d62;
   --primary-foreground: #ffffff;
-  
   --secondary: #994704;
   --secondary-foreground: #ffffff;
-  
   --surface: #fbf9f8;
   --surface-foreground: #1b1c1c;
-  
   --surface-variant: #e4e2e1;
   --outline: #787582;
-  
   --error: #ba1a1a;
   --error-foreground: #ffffff;
+
+  /* Kanvise Landing Page Brand Tokens */
+  --kv-blue-rose: #2E2877;
+  --kv-ruddy-brown: #C26627;
+  --kv-dark-grey: #3C3027;
+  --kv-rodeo-dust: #C2B59B;
+  --kv-white: #FFFFFF;
+  --kv-bg-soft: #F7F5F2;
+  --kv-rodeo-dust-15: rgba(194, 181, 155, 0.15);
+  --kv-shadow-card: 0 2px 12px rgba(46, 40, 119, 0.08);
+  --kv-shadow-hero: 0 8px 40px rgba(46, 40, 119, 0.24);
 }
 
 @theme inline {
+  /* Existing app colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  
   --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
-  
   --color-surface-variant: var(--surface-variant);
   --color-outline: var(--outline);
-  
   --color-error: var(--error);
   --color-error-foreground: var(--error-foreground);
-  
-  --font-sans: var(--font-jakarta), Arial, sans-serif;
+  --font-sans: var(--font-poppins), Arial, sans-serif;
+
+  /* Kanvise brand colors exposed as Tailwind utilities */
+  --color-kv-blue: #2E2877;
+  --color-kv-brown: #C26627;
+  --color-kv-dark: #3C3027;
+  --color-kv-dust: #C2B59B;
+  --color-kv-soft: #F7F5F2;
 }
 
 body {
@@ -47,3 +83,34 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* ── Landing Page Base ── */
+.landing {
+  font-family: 'Poppins', sans-serif;
+  color: var(--kv-dark-grey);
+}
+
+/* Feature card left-border accent */
+.feature-card {
+  background: #fff;
+  border-radius: 8px;
+  border-left: 4px solid var(--kv-blue-rose);
+  box-shadow: var(--kv-shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(46, 40, 119, 0.14);
+}
+
+/* Smooth scroll behaviour */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus states for accessibility */
+*:focus-visible {
+  outline: 3px solid var(--kv-blue-rose);
+  outline-offset: 2px;
+}
+
