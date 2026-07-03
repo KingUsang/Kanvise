@@ -15,7 +15,7 @@ export default function VideoPiP() {
     try {
       const meta = JSON.parse(p.metadata || "{}");
       return meta.isHost === true;
-    } catch (_e) {
+    } catch {
       return false;
     }
   });

@@ -55,7 +55,7 @@ export default function CollaborativeWhiteboard() {
                 if (promise) promise.catch(() => {}); // silent catch
               }
           }
-        } catch (_e) {
+        } catch {
           // ignore
         }
       }
@@ -80,7 +80,7 @@ export default function CollaborativeWhiteboard() {
   let isHost = false;
   try {
     isHost = JSON.parse(room.localParticipant.metadata || "{}").isHost;
-  } catch (_e) {
+  } catch {
     // ignore
   }
 

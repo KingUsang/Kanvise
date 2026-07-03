@@ -15,7 +15,7 @@ export default function ParticipantsPanel({ isHost }: { isHost: boolean }) {
       // Exclude hosts from the raised hands list just in case
       try {
         if (JSON.parse(p.metadata || "{}").isHost) return false;
-      } catch (_e) {}
+      } catch {}
       return !!p.attributes?.handRaised;
     })
     .sort((a, b) => {
@@ -93,7 +93,7 @@ export default function ParticipantsPanel({ isHost }: { isHost: boolean }) {
                 let isParticipantHost = false;
                 try {
                   isParticipantHost = JSON.parse(p.metadata || "{}").isHost;
-                } catch (_e) {
+                } catch {
                   // ignore
                 }
 

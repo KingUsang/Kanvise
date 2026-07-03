@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("LiveKit Host Action Error:", error);
-    return NextResponse.json({ error: error.message || "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message || "Unknown error" }, { status: 500 });
   }
 }

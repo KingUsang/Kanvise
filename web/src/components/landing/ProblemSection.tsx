@@ -18,7 +18,7 @@ export default function ProblemSection() {
           
           <div className={storyInView ? "animate-slide-right" : "opacity-0"}>
             <h2 className="text-3xl md:text-[32px] leading-[40px] font-semibold text-[#2E2877] mb-6 tracking-[-0.01em]">
-              You've been running a school with tools that were never built for one.
+              You&apos;ve been running a school with tools that were never built for one.
             </h2>
             <div className="w-16 h-1 bg-[#C2B59B] mb-8"></div>
             
@@ -27,21 +27,22 @@ export default function ProblemSection() {
                 I attempted UTME three times before I got into Pharmacy. Three times. The kind of number that makes people start suggesting alternatives. 
               </p>
               <p>
-                When I missed OAU's cut-off, I applied to UI. I found an online tutorial centre and signed up. I attended two classes. Just two. And then I stopped.
+                When I missed OAU&apos;s cut-off, I applied to UI. I found an online tutorial centre and signed up. I attended two classes. Just two. And then I stopped.
               </p>
               <p>
-                I was lucky enough to pass Post-UTME. But I had friends who weren't. Friends who fell through the crack, silently, and no one caught them.
+                I was lucky enough to pass Post-UTME. But I had friends who weren&apos;t. Friends who fell through the crack, silently, and no one caught them.
               </p>
               <p className="font-semibold text-[#2E2877] text-xl border-l-4 border-[#C26627] pl-4 mt-6">
-                That's the thing about virtual learning nobody talks about enough. It's not the content that kills you. It's the silence.
+                That&apos;s the thing about virtual learning nobody talks about enough. It&apos;s not the content that kills you. It&apos;s the silence.
               </p>
               <p className="font-semibold text-[#2E2877]">
-                Kanvise exists because of those friends. Because "nobody noticed" is not a neutral outcome — it's a design failure.
+                Kanvise exists because of those friends. Because &quot;nobody noticed&quot; is not a neutral outcome — it&apos;s a design failure.
               </p>
             </div>
           </div>
 
           <div className={`relative h-[400px] md:h-[500px] rounded-xl overflow-hidden shadow-[0px_4px_24px_rgba(60,48,39,0.12)] ${storyInView ? "animate-fade-up animation-delay-200" : "opacity-0"}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               className="object-cover w-full h-full absolute inset-0" 
               alt="High-end desk setup of a modern educator" 
@@ -90,7 +91,7 @@ export default function ProblemSection() {
               You are not the problem. The infrastructure is.
             </p>
             <p className="text-[#3C3027] text-lg leading-relaxed opacity-90">
-              Nigerian tutors have been working harder than they should — not because they're not serious, but because no one built the right system for them. Until now.
+              Nigerian tutors have been working harder than they should — not because they&apos;re not serious, but because no one built the right system for them. Until now.
             </p>
           </div>
         </div>

@@ -3,11 +3,9 @@
 import {
   useConnectionState,
   useRoomContext,
-  DisconnectButton,
   useParticipants,
   useTracks,
   VideoTrack,
-  TrackToggle,
   useLocalParticipant,
 } from "@livekit/components-react";
 import { ConnectionState, Track, RoomEvent, Participant } from "livekit-client";
@@ -15,7 +13,6 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import AudioVideoControls from "./AudioVideoControls";
-import ScreenShare from "./ScreenShare";
 import ChatBox from "./ChatBox";
 import VideoPiP from "./VideoPiP";
 import ParticipantsPanel from "./ParticipantsPanel";
@@ -25,7 +22,6 @@ import {
   MessageSquare,
   Users,
   MonitorPlay,
-  PenLine,
   LogOut,
   Clock,
   X,
@@ -55,8 +51,8 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
         body: JSON.stringify({ roomId: room.name }),
       });
       room.disconnect();
-    } catch (e) {
-      console.error("Failed to end class", e);
+    } catch {
+      console.error("Failed to end class");
       toast.error("Failed to end class");
     } finally {
       setIsEnding(false);
@@ -82,7 +78,7 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
   const isTutorPresent = isHost || participants.some((p) => {
     try {
       return JSON.parse(p.metadata || "{}").isHost === true;
-    } catch (e) {
+    } catch {
       return false;
     }
   });
@@ -253,7 +249,7 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
                   </div>
                   <h2 className="text-xl font-bold text-[#180d62] mb-2">Waiting for Tutor</h2>
                   <p className="text-[#787582] text-[13px] leading-relaxed">
-                    The tutor has disconnected or hasn't joined the class yet. Please wait, they should return shortly.
+                    The tutor has disconnected or hasn&apos;t joined the class yet. Please wait, they should return shortly.
                   </p>
                 </div>
               </div>
@@ -426,32 +422,3 @@ export default function ClassroomLayout({ isHost }: { isHost: boolean }) {
   );
 }
 
-/* ── SUB-COMPONENTS ─────────────────────────────────────────── */
-
-function ParticipantRow({ name, isHost }: { name: string; isHost: boolean }) {
-  const initials = name.slice(0, 2).toUpperCase();
-  return (
-    <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#f5f3f2] transition-colors group">
-      <div className="w-8 h-8 rounded-full bg-[#2e2877] flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
-        {initials}
-      </div>
-      <span className="text-[13px] font-medium text-[#1b1c1c] flex-1 truncate">{name}</span>
-      {isHost && (
-        <div className="hidden group-hover:flex items-center gap-1">
-          <button
-            title="Mute"
-            className="w-7 h-7 rounded-lg text-[#787582] hover:text-[#ba1a1a] hover:bg-[#ba1a1a]/10 flex items-center justify-center transition-all text-[11px] font-bold"
-          >
-            M
-          </button>
-          <button
-            title="Remove"
-            className="w-7 h-7 rounded-lg text-[#787582] hover:text-[#ba1a1a] hover:bg-[#ba1a1a]/10 flex items-center justify-center transition-all"
-          >
-            <LogOut size={13} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
