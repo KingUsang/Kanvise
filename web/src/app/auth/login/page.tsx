@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, BookOpen } from "lucide-react";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,100 +40,140 @@ export default function LoginPage() {
     if (redirectParams) {
       router.push(redirectParams);
     } else {
-      // Pushing to an auth route will trigger the middleware which will redirect to the correct dashboard
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-kv-soft p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-card p-8 border-l-4 border-kv-blue">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-kv-dark mb-2">Welcome Back</h1>
-          <p className="text-gray-500">Sign in to your Kanvise account</p>
-        </div>
-
-        {reason === "session_expired" && (
-          <div className="mb-6 p-3 bg-red-50 text-error rounded-md text-sm border border-red-100">
-            Your session has expired. Please log in again.
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 text-error rounded-md text-sm border border-red-100">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-kv-dark mb-1.5" htmlFor="email">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-kv-blue/20 focus:border-kv-blue transition-all"
-              placeholder="Enter your email"
-            />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-kv-soft" style={{
+      backgroundImage: 'radial-gradient(var(--kv-rodeo-dust) 0.5px, transparent 0.5px), radial-gradient(var(--kv-rodeo-dust) 0.5px, var(--kv-bg-soft) 0.5px)',
+      backgroundSize: '24px 24px',
+      backgroundPosition: '0 0, 12px 12px',
+    }}>
+      <main className="w-full max-w-[440px] animate-in fade-in duration-700 slide-in-from-bottom-4">
+        <div className="bg-white border border-kv-dust/40 p-8 md:p-10 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] rounded-lg">
+          {/* Logo Section */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 mb-4 flex items-center justify-center bg-kv-blue rounded">
+              <BookOpen className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-kv-blue tracking-tight">Kanvise</h1>
+            <p className="text-sm text-kv-dark/70 font-light mt-1 uppercase tracking-widest text-center">Private OS for Nigerian Tutors</p>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-semibold text-kv-dark" htmlFor="password">
-                Password
+          {reason === "session_expired" && (
+            <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-md text-sm border border-red-100">
+              Your session has expired. Please log in again.
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-md text-sm border border-red-100">
+              {error}
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Email Field */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-kv-blue uppercase tracking-wider" htmlFor="email">
+                Email Address
               </label>
-              <button
-                type="button"
-                onClick={() => router.push("/auth/forgot-password")}
-                className="text-sm text-kv-blue hover:text-kv-brown transition-colors font-medium"
-              >
-                Forgot password?
-              </button>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-kv-dust/60 rounded focus:outline-none focus:border-kv-blue focus:ring-1 focus:ring-kv-blue/30 text-kv-dark transition-all"
+                  placeholder="tutor@kanvise.edu"
+                />
+              </div>
             </div>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-kv-blue/20 focus:border-kv-blue transition-all pr-10"
-                placeholder="Enter your password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-kv-dark"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+
+            {/* Password Field */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-semibold text-kv-blue uppercase tracking-wider" htmlFor="password">
+                  Password
+                </label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs text-kv-brown hover:underline transition-all font-medium"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-12 py-3 bg-white border border-kv-dust/60 rounded focus:outline-none focus:border-kv-blue focus:ring-1 focus:ring-kv-blue/30 text-kv-dark transition-all"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-kv-blue transition-colors focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
+
+            {/* Login CTA */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-kv-brown text-white font-bold py-3.5 rounded hover:bg-kv-brown/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-70 mt-2 focus:outline-none focus:ring-2 focus:ring-kv-brown focus:ring-offset-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Login</span>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Sign Up Toggle */}
+          <div className="mt-8 pt-6 border-t border-kv-dust/30 text-center">
+            <p className="text-sm text-kv-dark/70">
+              Don't have an account?{" "}
+              <Link
+                href="/auth/register"
+                className="text-kv-blue font-bold hover:underline"
+              >
+                Sign Up
+              </Link>
+            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-kv-blue hover:bg-kv-blue/90 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-sm disabled:opacity-70"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Sign In"}
-          </button>
-        </form>
-
-        <div className="mt-8 text-center text-sm text-gray-500">
-          Don't have an account?{" "}
-          <button
-            onClick={() => router.push("/auth/register")}
-            className="text-kv-brown font-semibold hover:underline"
-          >
-            Create one
-          </button>
         </div>
-      </div>
+
+        {/* Footer Metadata */}
+        <footer className="mt-8 text-center">
+          <p className="text-[11px] text-gray-400 uppercase tracking-widest font-medium">
+            © {new Date().getFullYear()} Kanvise. All rights reserved.
+          </p>
+        </footer>
+      </main>
     </div>
   );
 }

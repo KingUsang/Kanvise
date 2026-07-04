@@ -2,6 +2,46 @@ import { Context, Next } from 'hono'
 import { verify } from 'hono/jwt'
 import { supabase } from '../lib/supabase'
 
+import { decode, verifyWithJwks } from 'hono/jwt'
+
+// In-memory cache for JWKS public keys — fetched once on first request, reused forever
+// (until server restarts). Supabase rarely rotates keys.
+let cachedJwks: any[] | null = null
+
+async function getJwks(): Promise<any[]> {
+  if (cachedJwks) return cachedJwks
+
+  // Per Supabase docs: https://supabase.com/docs/guides/auth/jwks
+  // The correct public JWKS endpoint path is /.well-known/jwks.json — no auth header needed
+  const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch JWKS from Supabase: ${res.status} ${await res.text()}`)
+  }
+
+  const { keys } = await res.json() as { keys: any[] }
+  cachedJwks = keys
+  console.log(`[JWT] Fetched and cached ${keys.length} JWKS key(s)`)
+  return cachedJwks!
+}
+
+// Handles both HS256 (legacy Supabase) and ES256 (new Supabase projects)
+const verifyJWT = async (token: string, secret: string) => {
+  const { header } = decode(token)
+
+  if (header.alg === 'HS256') {
+    // Legacy symmetric encryption — use the shared JWT secret
+    return await verify(token, secret, 'HS256')
+  }
+
+  // Asymmetric algorithm (ES256 etc.) — verify against Supabase public keys
+  const keys = await getJwks()
+  return await verifyWithJwks(token, {
+    keys,
+    allowedAlgorithms: [header.alg] as any
+  })
+}
+
 export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
   const authHeader = c.req.header('Authorization')
   
@@ -11,11 +51,12 @@ export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
   
   const token = authHeader.split(' ')[1]
   try {
-    const secret = process.env.SUPABASE_JWT_SECRET || 'super-secret-jwt-token-with-at-least-32-characters-long'
-    const payload = await verify(token, secret)
+    const secret = process.env.SUPABASE_JWT_SECRET
+    const payload = await verifyJWT(token, secret as string)
     c.set('jwt_payload', payload)
     await next()
   } catch (error: any) {
+    console.error('[JWT] Verification failed:', error)
     if (error.name === 'JwtTokenExpired') {
       return c.json({ error: 'Token has expired', code: 'TOKEN_EXPIRED' }, 401)
     }

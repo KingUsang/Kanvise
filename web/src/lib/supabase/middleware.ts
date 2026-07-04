@@ -55,6 +55,12 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (isDashboardRoute) {
+      if (request.nextUrl.pathname === '/dashboard') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard/' + (kanvise_role || 'student')
+        return NextResponse.redirect(url)
+      }
+      
       if (request.nextUrl.pathname.startsWith('/dashboard/admin') && kanvise_role !== 'admin') {
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard/' + (kanvise_role || 'student')
