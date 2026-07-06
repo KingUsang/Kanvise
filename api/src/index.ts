@@ -17,6 +17,7 @@ import { schoolsRouter } from "./routes/schools";
 import { programmesRouter } from "./routes/programmes";
 import { subProgrammesRouter } from "./routes/sub_programmes";
 import { coursesRouter } from "./routes/courses";
+import { publicRouter } from "./routes/public";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -24,6 +25,7 @@ app.route("/schools", schoolsRouter);
 app.route("/programmes", programmesRouter);
 app.route("/sub-programmes", subProgrammesRouter);
 app.route("/courses", coursesRouter);
+app.route("/public", publicRouter);
 
 // Waitlist Route
 app.post("/waitlist", async (c) => {
