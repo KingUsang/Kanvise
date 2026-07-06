@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -9,6 +10,14 @@ const app = new Hono();
 app.use("/*", cors({
   origin: ["http://localhost:3000"], // Allow local Next.js app
 }));
+
+import { authRouter } from "./routes/auth";
+import { avatarsRouter } from "./routes/avatars";
+import { schoolsRouter } from "./routes/schools";
+
+app.route("/auth", authRouter);
+app.route("/avatars", avatarsRouter);
+app.route("/schools", schoolsRouter);
 
 // Waitlist Route
 app.post("/waitlist", async (c) => {

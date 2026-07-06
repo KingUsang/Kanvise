@@ -25,13 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={poppins.variable}>
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@300,1,0,24&display=swap" rel="stylesheet" />
       </head>
-      <body
-        className={`${poppins.variable} font-sans antialiased`}
-      >
+      <body className="font-sans antialiased">
         {children}
         <Toaster position="bottom-right" richColors />
       </body>
