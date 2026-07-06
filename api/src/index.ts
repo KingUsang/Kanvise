@@ -14,10 +14,16 @@ app.use("/*", cors({
 import { authRouter } from "./routes/auth";
 import { avatarsRouter } from "./routes/avatars";
 import { schoolsRouter } from "./routes/schools";
+import { programmesRouter } from "./routes/programmes";
+import { subProgrammesRouter } from "./routes/sub_programmes";
+import { coursesRouter } from "./routes/courses";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
 app.route("/schools", schoolsRouter);
+app.route("/programmes", programmesRouter);
+app.route("/sub-programmes", subProgrammesRouter);
+app.route("/courses", coursesRouter);
 
 // Waitlist Route
 app.post("/waitlist", async (c) => {
