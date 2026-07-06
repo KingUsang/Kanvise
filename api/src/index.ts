@@ -20,6 +20,8 @@ import { coursesRouter } from "./routes/courses";
 import { publicRouter } from "./routes/public";
 import { storageRouter } from "./routes/storage";
 import { promosRouter } from "./routes/promos";
+import { enrolmentsRouter } from "./routes/enrolments";
+import { paymentsRouter } from "./routes/payments";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -29,6 +31,8 @@ app.route("/sub-programmes", subProgrammesRouter);
 app.route("/courses", coursesRouter);
 app.route("/public", publicRouter);
 app.route("/storage", storageRouter);
+app.route("/enrolments", enrolmentsRouter);
+app.route("/payments", paymentsRouter);
 app.route("/", promosRouter);
 
 // Waitlist Route
