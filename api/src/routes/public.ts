@@ -107,6 +107,7 @@ publicRouter.get('/schools/:slug', async (c) => {
       name: school.name,
       slug: school.slug,
       description: school.description,
+      address: school.address || null,
       logo_url: school.logo_key ? `https://storage.kanvise.ng/${school.logo_key}` : null,
       banner_url: school.banner_key ? `https://storage.kanvise.ng/${school.banner_key}` : null,
       video_intro_url: school.video_intro_key ? `https://storage.kanvise.ng/${school.video_intro_key}` : null,

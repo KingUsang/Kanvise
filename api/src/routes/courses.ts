@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole } from '../middleware/auth'
 
-export const coursesRouter = new Hono()
+export const coursesRouter = new Hono<{ Variables: { user: any; jwt_payload?: any } }>()
 
 coursesRouter.use('*', jwtVerificationMiddleware)
 coursesRouter.use('*', profileResolutionMiddleware)

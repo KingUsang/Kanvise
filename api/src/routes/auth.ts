@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware } from '../middleware/auth'
 import { validateInviteToken } from '../lib/invites'
 
-export const authRouter = new Hono()
+export const authRouter = new Hono<{ Variables: { user: any; jwt_payload?: any } }>()
 
 authRouter.use('*', jwtVerificationMiddleware)
 authRouter.use('*', profileResolutionMiddleware)

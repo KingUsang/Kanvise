@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole } from '../middleware/auth'
 
-export const subProgrammesRouter = new Hono()
+export const subProgrammesRouter = new Hono<{ Variables: { user: any; jwt_payload?: any } }>()
 
 subProgrammesRouter.use('*', jwtVerificationMiddleware)
 subProgrammesRouter.use('*', profileResolutionMiddleware)
