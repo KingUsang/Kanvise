@@ -5,7 +5,7 @@ import { Hand, Users, UserMinus, MicOff } from "lucide-react";
 import { useState } from "react";
 import { Participant } from "livekit-client";
 
-export default function ParticipantsPanel({ isHost }: { isHost: boolean }) {
+export default function ParticipantsPanel({ isHost, classId }: { isHost: boolean; classId: string }) {
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const roomContext = useRoomContext();
@@ -26,11 +26,20 @@ export default function ParticipantsPanel({ isHost }: { isHost: boolean }) {
 
   const handleHostAction = async (action: "mute" | "kick" | "lowerHand", identity: string, trackSid?: string) => {
     try {
-      const room = roomContext.name;
-      const res = await fetch("/api/livekit/host", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, room, identity, trackSid }),
+      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL || 'http://localhost:3001';
+      const { createBrowserClient } = await import('@supabase/ssr');
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${honoUrl}/live-classes/${classId}/host-action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ action, identity, trackSid }),
       });
 
       if (!res.ok) {

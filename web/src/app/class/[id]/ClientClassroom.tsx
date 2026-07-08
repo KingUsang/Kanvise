@@ -1,68 +1,42 @@
 "use client";
 
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ClassroomLayout from "@/components/classroom/ClassroomLayout";
 
-function ClassroomConnection({ roomId }: { roomId: string }) {
-  const [token, setToken] = useState("");
-  const [error, setError] = useState("");
-  const searchParams = useSearchParams();
+interface ClientClassroomProps {
+  token: string;
+  serverUrl: string;
+  roomName: string;
+  classId: string;
+  isHost: boolean;
+}
+
+export default function ClientClassroom({
+  token,
+  serverUrl,
+  roomName,
+  classId,
+  isHost,
+}: ClientClassroomProps) {
   const router = useRouter();
-  const username = searchParams.get("username") || "Student-" + Math.floor(Math.random() * 1000);
-  const isHost = searchParams.get("isHost") === "true";
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const resp = await fetch(
-          `/api/livekit/token?room=${roomId}&username=${username}&isHost=${isHost}`
-        );
-        const data = await resp.json();
-        
-        if (!resp.ok) {
-          setError(data.error || "Failed to fetch token");
-          return;
-        }
-        
-        setToken(data.token);
-      } catch (e: any) {
-        setError(e.message);
-        console.error(e);
-      }
-    })();
-  }, [roomId, username, isHost]);
-
-  if (error) {
-    // We will just log the error and allow the UI to render for development
-    console.warn("LiveKit connection error:", error);
-  }
 
   return (
     <LiveKitRoom
-      video={false} // Audio-first MVP
+      video={false}
       audio={true}
-      token={token || "dummy-token"}
-      serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL || "wss://dummy.livekit.cloud"}
-      connect={!!token} // Only try connecting if we actually have a valid token
+      token={token}
+      serverUrl={serverUrl}
+      connect={true}
       data-lk-theme="default"
       className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden"
       onDisconnected={() => router.push("/")}
     >
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
-      
-      {/* The main UI layout for the classroom */}
-      <ClassroomLayout isHost={isHost} />
-    </LiveKitRoom>
-  );
-}
 
-export default function ClientClassroom({ roomId }: { roomId: string }) {
-  return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-background">Loading...</div>}>
-      <ClassroomConnection roomId={roomId} />
-    </Suspense>
+      {/* Main classroom UI */}
+      <ClassroomLayout isHost={isHost} classId={classId} />
+    </LiveKitRoom>
   );
 }

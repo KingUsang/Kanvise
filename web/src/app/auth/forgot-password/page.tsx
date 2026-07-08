@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -33,78 +34,129 @@ export default function ForgotPasswordPage() {
     setLoading(false);
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-kv-soft p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-card p-8 border-l-4 border-kv-blue text-center">
-          <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-kv-dark mb-3">Check your email</h2>
-          <p className="text-gray-500 mb-6">
-            If an account exists for <span className="font-semibold text-kv-dark">{email}</span>, we've sent a password reset link.
-          </p>
-          <button
-            onClick={() => router.push("/auth/login")}
-            className="text-kv-blue hover:text-kv-brown font-medium"
-          >
-            Return to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-kv-soft p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-card p-8 border-l-4 border-kv-blue">
-        <button 
-          onClick={() => router.push("/auth/login")}
-          className="flex items-center text-sm text-gray-500 hover:text-kv-dark mb-6 transition-colors"
-        >
-          <ArrowLeft size={16} className="mr-1" /> Back to login
-        </button>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-surface-container-low font-body-md text-on-surface">
+      {/* Background Decorative Element (Subtle Abstract) */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary-container opacity-5 blur-[120px]"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-secondary opacity-5 blur-[120px]"></div>
+      </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-kv-dark mb-2">Reset Password</h1>
-          <p className="text-gray-500">
-            Enter your email address and we'll send you a link to reset your password.
-          </p>
+      {/* Main Recovery Card */}
+      <main className="relative z-10 w-full max-w-[480px]">
+        {/* Brand Identity Header */}
+        <div className="text-center mb-stack-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-container rounded-xl mb-stack-md shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
+            <span className="material-symbols-outlined text-on-primary text-4xl" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>school</span>
+          </div>
+          <h2 className="font-headline-md text-headline-md text-primary tracking-tight font-semibold">Kanvise LMS</h2>
         </div>
 
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 text-error rounded-md text-sm border border-red-100">
-            {error}
-          </div>
-        )}
+        {/* Focused Recovery Surface */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-10 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
+          {success ? (
+            <div className="text-center py-stack-lg animate-in fade-in zoom-in duration-500">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-stack-lg">
+                <span className="material-symbols-outlined text-green-600 text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+              </div>
+              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-sm font-semibold">Email Sent!</h2>
+              <p className="font-body-md text-body-md text-on-surface-variant mb-stack-lg">
+                We've sent a password reset link to <br />
+                <span className="font-bold text-primary">{email}</span>
+              </p>
+              <Link href="/auth/login" className="w-full flex items-center justify-center bg-primary-container text-on-primary font-headline-sm text-headline-sm py-4 rounded-lg transition-all">
+                Return to Login
+              </Link>
+              <button onClick={() => setSuccess(false)} className="mt-4 text-on-surface-variant font-label-md text-label-md hover:text-primary transition-colors uppercase tracking-wider font-semibold">
+                Did not receive email? Try again.
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Header Section */}
+              <header className="mb-stack-lg">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-stack-sm font-bold tracking-tight">Reset Your Password</h1>
+                <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+              </header>
 
-        <form onSubmit={handleReset} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-kv-dark mb-1.5" htmlFor="email">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-kv-blue/20 focus:border-kv-blue transition-all"
-              placeholder="Enter your email"
-            />
-          </div>
+              {error && (
+                <div className="mb-6 p-4 bg-error-container text-on-error-container rounded-lg text-sm border border-error/20 animate-in fade-in">
+                  {error}
+                </div>
+              )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-kv-blue hover:bg-kv-blue/90 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-sm disabled:opacity-70"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Send Reset Link"}
-          </button>
-        </form>
-      </div>
+              {/* Recovery Form */}
+              <form className="space-y-stack-lg" onSubmit={handleReset}>
+                {/* Email Input Group */}
+                <div className="space-y-stack-sm">
+                  <label className="block font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold" htmlFor="email">
+                    Email Address
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <span className="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">mail</span>
+                    </div>
+                    <input 
+                      className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:ring-0 focus:border-primary focus:outline-none transition-all placeholder:text-outline-variant" 
+                      id="email" 
+                      name="email" 
+                      placeholder="tutor@institution.edu" 
+                      required 
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* CTA Button */}
+                <button 
+                  disabled={loading}
+                  className="w-full bg-secondary hover:bg-secondary-container text-on-secondary font-headline-sm text-headline-sm font-semibold py-4 rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 group shadow-lg shadow-secondary/10 disabled:opacity-70 disabled:cursor-not-allowed" 
+                  type="submit"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="animate-spin w-5 h-5" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Send Reset Link</span>
+                      <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Footer Links */}
+              <footer className="mt-stack-lg pt-stack-lg border-t border-outline-variant flex flex-col items-center gap-4">
+                <Link className="inline-flex items-center gap-2 font-body-md text-body-md text-primary font-semibold hover:text-primary-container transition-colors group" href="/auth/login">
+                  <span className="material-symbols-outlined text-lg group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                  Back to Login
+                </Link>
+                <p className="font-body-sm text-body-sm text-on-surface-variant text-center max-w-[280px]">
+                  If you don't receive an email within 5 minutes, please check your spam folder or 
+                  <a className="text-secondary hover:underline font-medium ml-1" href="#">Contact Support</a>.
+                </p>
+              </footer>
+            </>
+          )}
+        </div>
+
+        {/* System Status Footer (Subtle) */}
+        <div className="mt-stack-lg flex justify-between items-center px-4">
+          <span className="font-label-md text-label-md font-semibold text-on-surface-variant/60 flex items-center gap-1 uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            System Operational
+          </span>
+          <span className="font-label-md text-label-md font-semibold text-on-surface-variant/60 tracking-wider">
+            v2.4.1 Build 2024
+          </span>
+        </div>
+      </main>
     </div>
   );
 }
