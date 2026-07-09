@@ -7,10 +7,12 @@ interface SidebarProps {
   capabilities: {
     isAdmin: boolean;
     isTutor: boolean;
-  }
+  };
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export function Sidebar({ capabilities }: SidebarProps) {
+export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname()
   
   const navItems = [
@@ -38,13 +40,35 @@ export function Sidebar({ capabilities }: SidebarProps) {
   ].filter(item => item.show)
 
   return (
-    <aside className="w-64 bg-[#2e2877] h-screen fixed left-0 top-0 flex flex-col text-white z-50">
-      <div className="h-16 flex items-center px-6 border-b border-white/10">
-        <img src="/kanvise_logo.jpeg" alt="Kanvise" className="w-8 h-8 rounded border border-white/20 mr-3 object-cover" />
-        <h1 className="font-bold text-lg tracking-tight">Kanvise</h1>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-[#1b1c1c]/50 z-40 md:hidden"
+          onClick={onCloseMobile}
+        />
+      )}
       
-      <nav className="flex-1 overflow-y-auto py-4">
+      {/* Sidebar Container */}
+      <aside 
+        className={`w-64 bg-[#2e2877] h-screen fixed left-0 top-0 flex flex-col text-white z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 shrink-0">
+          <div className="flex items-center">
+            <img src="/kanvise_logo.jpeg" alt="Kanvise" className="w-8 h-8 rounded border border-white/20 mr-3 object-cover" />
+            <h1 className="font-bold text-lg tracking-tight">Kanvise</h1>
+          </div>
+          <button 
+            className="md:hidden text-white/70 hover:text-white"
+            onClick={onCloseMobile}
+          >
+            <span className="material-symbols-outlined text-[24px]">close</span>
+          </button>
+        </div>
+        
+        <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href
@@ -80,5 +104,6 @@ export function Sidebar({ capabilities }: SidebarProps) {
         </div>
       </div>
     </aside>
+    </>
   )
 }

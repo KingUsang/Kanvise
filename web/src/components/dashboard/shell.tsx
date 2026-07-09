@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Sidebar } from './sidebar'
 import { TopBar } from './top-bar'
 
@@ -18,14 +18,23 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ children, user, capabilities }: DashboardShellProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
   return (
-    <div className="min-h-screen bg-[#f5f3f2] font-sans">
-      <Sidebar capabilities={capabilities} />
-      <TopBar user={user} />
+    <div className="min-h-screen bg-[#f5f3f2] font-sans relative">
+      <Sidebar 
+        capabilities={capabilities} 
+        isMobileOpen={isMobileMenuOpen} 
+        onCloseMobile={() => setIsMobileMenuOpen(false)} 
+      />
+      <TopBar 
+        user={user} 
+        onMenuClick={() => setIsMobileMenuOpen(true)} 
+      />
       
       {/* Main Content Area */}
-      <main className="ml-64 pt-16 min-h-screen">
-        <div className="p-8 max-w-7xl mx-auto">
+      <main className="md:ml-64 pt-16 min-h-screen flex flex-col">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1">
           {children}
         </div>
       </main>
