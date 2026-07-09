@@ -17,6 +17,7 @@ import { schoolsRouter } from "./routes/schools";
 import { liveClassesRouter } from "./routes/live-classes";
 import { webhooksRouter } from "./routes/webhooks";
 import { slidesRouter } from "./routes/slides";
+import { dashboardRouter } from "./routes/dashboard";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -24,6 +25,7 @@ app.route("/schools", schoolsRouter);
 app.route("/live-classes", liveClassesRouter);
 app.route("/live-classes", slidesRouter);
 app.route("/webhooks", webhooksRouter);
+app.route("/dashboard", dashboardRouter);
 
 // Waitlist Route
 app.post("/waitlist", async (c) => {

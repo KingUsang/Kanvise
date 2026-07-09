@@ -43,39 +43,36 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    const kanvise_role = user.user_metadata?.kanvise_role
-    
+    const kanvise_role = user.user_metadata?.kanvise_role || 'student'
     // Redirect logged in users away from auth routes (unless they are doing a password reset or similar)
     if (isAuthRoute && !request.nextUrl.pathname.includes('reset-password')) {
       const url = request.nextUrl.clone()
-      if (kanvise_role === 'admin') url.pathname = '/dashboard/admin'
-      else if (kanvise_role === 'tutor') url.pathname = '/dashboard/tutor'
-      else url.pathname = '/dashboard/student' // Default
+      if (kanvise_role === 'admin' || kanvise_role === 'tutor') {
+        url.pathname = '/dashboard'
+      } else {
+        url.pathname = '/dashboard/student' // Default
+      }
       return NextResponse.redirect(url)
     }
 
     if (isDashboardRoute) {
       if (request.nextUrl.pathname === '/dashboard') {
+        if (kanvise_role === 'student') {
+          const url = request.nextUrl.clone()
+          url.pathname = '/dashboard/student'
+          return NextResponse.redirect(url)
+        }
+        // Admin and tutor are allowed at /dashboard
+      } else if (request.nextUrl.pathname.startsWith('/dashboard/student')) {
+        if (kanvise_role !== 'student') {
+          const url = request.nextUrl.clone()
+          url.pathname = '/dashboard'
+          return NextResponse.redirect(url)
+        }
+      } else if (kanvise_role === 'student') {
+        // Student trying to access some non-student dashboard route (e.g. /dashboard/school-setup)
         const url = request.nextUrl.clone()
-        url.pathname = '/dashboard/' + (kanvise_role || 'student')
-        return NextResponse.redirect(url)
-      }
-      
-      if (request.nextUrl.pathname.startsWith('/dashboard/admin') && kanvise_role !== 'admin') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard/' + (kanvise_role || 'student')
-        return NextResponse.redirect(url)
-      }
-      
-      if (request.nextUrl.pathname.startsWith('/dashboard/tutor') && kanvise_role !== 'tutor') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard/' + (kanvise_role || 'student')
-        return NextResponse.redirect(url)
-      }
-      
-      if (request.nextUrl.pathname.startsWith('/dashboard/student') && kanvise_role !== 'student') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard/' + (kanvise_role || 'student')
+        url.pathname = '/dashboard/student'
         return NextResponse.redirect(url)
       }
     }

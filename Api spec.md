@@ -1806,8 +1806,36 @@ Returns the current school's subscription status.
 
 Returns billing history for the school. 
 
-## **Appendix A — HTTP Status Code Reference** 
+## **Module 21 — Dashboard** 
 
+## **GET** 
+
+## **Host:** Hono | **Auth:** `A, T` 
+
+Returns aggregated dashboard statistics for the authenticated user. Uses the `capabilities` pattern — returns Admin stats if the user is an Admin, and Tutor stats if the user has tutor assignments. If the user is a solo operator (both Admin and assigned Tutor), returns both sets of stats.
+
+## **Response 200:** 
+
+```
+{
+  "data": {
+    "admin_stats": {
+      "total_students": 120,
+      "active_tutors": 5,
+      "upcoming_classes": 2,
+      "mtd_revenue": 450000.00
+    },
+    "tutor_stats": {
+      "classes_today": 1,
+      "pending_submissions": 4,
+      "my_courses": 2
+    }
+  }
+}
+```
+*Note: `admin_stats` is omitted if the user is only a Tutor. `tutor_stats` is omitted if the user is only an Admin (no course assignments).*
+
+## **Appendix A — HTTP Status Code Reference** 
 |**Code**|**Meaning**|**When Used**|
 |---|---|---|
 |200|OK|Successful GET, PATCH, DELETE|
