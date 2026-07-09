@@ -11,7 +11,7 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { ConnectionState, Track, RoomEvent, Participant } from "livekit-client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import AudioVideoControls from "./AudioVideoControls";
@@ -19,7 +19,8 @@ import ScreenShare from "./ScreenShare";
 import ChatBox from "./ChatBox";
 import VideoPiP from "./VideoPiP";
 import ParticipantsPanel from "./ParticipantsPanel";
-import CollaborativeWhiteboard from "./CollaborativeWhiteboard";
+import CollaborativeWhiteboard, { WhiteboardRef } from "./CollaborativeWhiteboard";
+import PresentationControls from "./PresentationControls";
 import {
   Hand,
   MessageSquare,
@@ -45,6 +46,8 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
+  
+  const whiteboardRef = useRef<WhiteboardRef>(null);
 
   const handleEndClass = async () => {
     setIsEnding(true);
@@ -202,7 +205,7 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
             <VideoPiP />
             
             <div className={`absolute inset-0 ${screenShareTracks.length > 0 ? "hidden pointer-events-none" : "block"}`}>
-              <CollaborativeWhiteboard />
+              <CollaborativeWhiteboard ref={whiteboardRef} />
             </div>
 
             {screenShareTracks.length > 0 && (
@@ -329,6 +332,12 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
 
         {/* Centre: Media Controls */}
         <div className="flex items-center gap-3">
+          {isHost && (
+            <PresentationControls 
+              classId={classId} 
+              onSlideChange={(url) => whiteboardRef.current?.setSlide(url)} 
+            />
+          )}
           <AudioVideoControls />
           
           {isHost && (

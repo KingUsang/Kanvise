@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import dynamic from "next/dynamic";
 
 const Excalidraw = dynamic(() => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw), { ssr: false });
 import { useDataChannel, useRoomContext, useConnectionState } from "@livekit/components-react";
 import { ConnectionState } from "livekit-client";
 
-export default function CollaborativeWhiteboard() {
+export interface WhiteboardRef {
+  setSlide: (imageUrl: string) => Promise<void>;
+}
+
+const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const isUpdatingFromRemote = useRef(false);
   const lastBroadcastRef = useRef<number>(0);
@@ -19,38 +23,37 @@ export default function CollaborativeWhiteboard() {
       const data = JSON.parse(new TextDecoder().decode(msg.payload));
       
       if (data.type === "SYNC_SCENE") {
-        // Set the guard flag to true immediately before updating the scene
         isUpdatingFromRemote.current = true;
-        
-        // Merge the incoming elements and viewport state (if provided by host)
-        const updatePayload: any = { elements: data.elements };
-        if (data.appState) {
-          updatePayload.appState = {
-            scrollX: data.appState.scrollX,
-            scrollY: data.appState.scrollY,
-            zoom: data.appState.zoom
-          };
-        }
-        excalidrawAPI.updateScene(updatePayload);
+        // Viewport sync is removed so students can zoom independently
+        excalidrawAPI.updateScene({ elements: data.elements });
+      }
+      
+      if (data.type === "SLIDE_CHANGE") {
+        isUpdatingFromRemote.current = true;
+        loadSlideToCanvas(data.imageUrl);
       }
       
       if (data.type === "REQUEST_SCENE") {
-        // If someone joins and requests the scene, the first person to receive this 
-        // (usually the host or someone who has been here a while) can reply.
-        // To prevent everyone replying at once, we can just let the Host reply.
         try {
           const meta = JSON.parse(room.localParticipant.metadata || "{}");
           if (meta.isHost) {
               const elements = excalidrawAPI.getSceneElements();
-              const appState = excalidrawAPI.getAppState();
               if (elements.length > 0) {
                 const payload = JSON.stringify({ 
                   type: "SYNC_SCENE", 
                   elements,
-                  appState: { zoom: appState.zoom, scrollX: appState.scrollX, scrollY: appState.scrollY }
                 });
                 const promise = send(new TextEncoder().encode(payload), { reliable: true });
-                if (promise) promise.catch(() => {}); // silent catch
+                if (promise) promise.catch(() => {});
+              }
+              // Also send the current slide if there is one
+              if (currentSlideUrlRef.current) {
+                const slidePayload = JSON.stringify({
+                  type: "SLIDE_CHANGE",
+                  imageUrl: currentSlideUrlRef.current
+                });
+                const p = send(new TextEncoder().encode(slidePayload), { reliable: true });
+                if (p) p.catch(() => {});
               }
           }
         } catch (e) {
@@ -64,6 +67,84 @@ export default function CollaborativeWhiteboard() {
 
   const connectionState = useConnectionState();
   const hasRequestedScene = useRef(false);
+  const currentSlideUrlRef = useRef<string | null>(null);
+
+  const loadSlideToCanvas = async (imageUrl: string) => {
+    if (!excalidrawAPI) return;
+    currentSlideUrlRef.current = imageUrl;
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        const mimeType = blob.type;
+        const fileId = "slide-" + Date.now();
+        
+        excalidrawAPI.addFiles([{
+          id: fileId,
+          dataURL: base64data,
+          mimeType,
+          created: Date.now(),
+          lastRetrieved: Date.now(),
+        }]);
+
+        // Get an image object to check natural width/height
+        const img = new Image();
+        img.onload = () => {
+          // Create the locked image element
+          const imageElement = {
+            type: "image",
+            version: 1,
+            versionNonce: Date.now(),
+            isDeleted: false,
+            id: "slide-element",
+            fillStyle: "hachure",
+            strokeWidth: 1,
+            strokeStyle: "solid",
+            roughness: 1,
+            opacity: 100,
+            angle: 0,
+            x: 0,
+            y: 0,
+            strokeColor: "transparent",
+            backgroundColor: "transparent",
+            width: img.width,
+            height: img.height,
+            seed: Date.now(),
+            groupIds: [],
+            strokeSharpness: "round",
+            boundElements: [],
+            updated: Date.now(),
+            fileId,
+            scale: [1, 1],
+            locked: true, // Keep it locked in the background
+          };
+          
+          excalidrawAPI.updateScene({ elements: [imageElement] });
+        };
+        img.src = base64data;
+      };
+      reader.readAsDataURL(blob);
+    } catch (e) {
+      console.error("Failed to load slide image into whiteboard", e);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    setSlide: async (imageUrl: string) => {
+      // Discard previous drawings and load new slide
+      isUpdatingFromRemote.current = true;
+      await loadSlideToCanvas(imageUrl);
+      // Wait a moment then sync the new scene to peers (as elements)
+      setTimeout(() => {
+        const elements = excalidrawAPI?.getSceneElements() || [];
+        const payload = JSON.stringify({ type: "SYNC_SCENE", elements });
+        const promise = send(new TextEncoder().encode(payload), { reliable: true });
+        if (promise) promise.catch(() => {});
+      }, 500);
+    }
+  }));
 
   // When mounting, ask the room if anyone has the current scene
   useEffect(() => {
@@ -98,8 +179,7 @@ export default function CollaborativeWhiteboard() {
       const payload = JSON.stringify({ 
         type: "SYNC_SCENE", 
         elements,
-        // Only the host can dictate the viewport panning/zooming to the rest of the class
-        appState: isHost ? { zoom: appState.zoom, scrollX: appState.scrollX, scrollY: appState.scrollY } : undefined
+        // Removed appState sync so viewports are independent
       });
       
       const promise = send(new TextEncoder().encode(payload), { reliable: false });
@@ -128,4 +208,6 @@ export default function CollaborativeWhiteboard() {
       />
     </div>
   );
-}
+});
+
+export default CollaborativeWhiteboard;

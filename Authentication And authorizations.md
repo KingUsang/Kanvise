@@ -245,7 +245,8 @@ Supabase Auth issues JWTs signed with the project's JWT secret. The Hono backend
   "user_metadata": {
     "kanvise_role": "admin | tutor | student",
     "school_id": "uuid | null",
-    "kanvise_user_id": "KNV-ADM-00001"
+    "kanvise_user_id": "KNV-ADM-00001",
+    "profile_id": "uuid"
   }
 }
 ```
@@ -259,6 +260,7 @@ database lookup on every request.
 `school_id` — the user's school UUID. Same reason. 
 
 `kanvise_user_id` — the human-readable user ID. 
+`profile_id` — the database UUID from user_profiles, required for foreign-key relations like tutor_id.
 
 ## **When user_metadata is populated:** 
 
@@ -412,10 +414,11 @@ constprofileResolutionMiddleware=async (ctx, next) => {
 const jwtPayload = ctx.get('jwt_payload')
 const supabaseAuthId = jwtPayload.sub
 // Check user_metadata first (fast path — no DB call)
-const { kanvise_role, school_id, kanvise_user_id } = jwtPayload.user_me
-if (kanvise_role && school_id && kanvise_user_id) {
+const { kanvise_role, school_id, kanvise_user_id, profile_id } = jwtPayload.user_me
+if (kanvise_role && school_id && kanvise_user_id && profile_id) {
 // Fast path — metadata is populated
     ctx.set('user', {
+id: profile_id,
 supabase_auth_id: supabaseAuthId,
 role: kanvise_role,
 school_id: school_id,

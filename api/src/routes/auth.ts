@@ -60,6 +60,7 @@ authRouter.post('/profile/init', async (c) => {
       kanvise_role: role,
       school_id: schoolId,
       kanvise_user_id: kanviseUserId,
+      profile_id: profile.id,
       first_name,
       last_name
     }

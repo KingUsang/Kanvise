@@ -7,8 +7,9 @@ import {
   tenantMiddleware,
   requireRole,
 } from '../middleware/auth'
+import type { AppVariables } from '../types'
 
-export const liveClassesRouter = new Hono()
+export const liveClassesRouter = new Hono<{ Variables: AppVariables }>()
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -190,7 +191,8 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
 
 // ── POST /live-classes/:id/start — Tutor starts a class ───────────────────
 
-liveClassesRouter.post('/:id/start', requireRole('tutor'), async (c) => {
+// TODO(auth): Remove 'admin' role bypass after MVP testing is complete
+liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
 
@@ -210,7 +212,12 @@ liveClassesRouter.post('/:id/start', requireRole('tutor'), async (c) => {
   }
 
   if (liveClass.status === 'live') {
-    return c.json({ error: 'Class is already live', code: 'ALREADY_LIVE' }, 409)
+    // If the tutor refreshes the page, the class is already live. Just let them back in!
+    const roomName = liveClass.livekit_room_name || `kanvise-class-${id}`
+    const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Tutor'
+    const token = await generateToken(user.id, displayName, roomName, true)
+    const { wsUrl } = getLiveKitConfig()
+    return c.json({ data: { livekit_room_name: roomName, access_token: token, livekit_url: wsUrl } })
   }
 
   if (liveClass.status !== 'scheduled') {
@@ -241,7 +248,8 @@ liveClassesRouter.post('/:id/start', requireRole('tutor'), async (c) => {
 
 // ── POST /live-classes/:id/join — Participant joins a class ───────────────
 
-liveClassesRouter.post('/:id/join', requireRole('tutor', 'student'), async (c) => {
+// TODO(auth): Remove 'admin' role bypass after MVP testing is complete
+liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
 
@@ -318,7 +326,8 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
 
 // ── POST /live-classes/:id/host-action — Kick / Mute / Lower hand ─────────
 
-liveClassesRouter.post('/:id/host-action', requireRole('tutor'), async (c) => {
+// TODO(auth): Remove 'admin' role bypass after MVP testing is complete
+liveClassesRouter.post('/:id/host-action', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
   const { action, identity, trackSid } = await c.req.json()

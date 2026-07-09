@@ -16,11 +16,13 @@ import { avatarsRouter } from "./routes/avatars";
 import { schoolsRouter } from "./routes/schools";
 import { liveClassesRouter } from "./routes/live-classes";
 import { webhooksRouter } from "./routes/webhooks";
+import { slidesRouter } from "./routes/slides";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
 app.route("/schools", schoolsRouter);
 app.route("/live-classes", liveClassesRouter);
+app.route("/live-classes", slidesRouter);
 app.route("/webhooks", webhooksRouter);
 
 // Waitlist Route

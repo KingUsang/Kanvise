@@ -70,10 +70,11 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   
   // Fast path - metadata is populated
   const userMetadata = jwtPayload.user_metadata || {}
-  const { kanvise_role, school_id, kanvise_user_id } = userMetadata
+  const { kanvise_role, school_id, kanvise_user_id, profile_id } = userMetadata
   
-  if (kanvise_role && kanvise_user_id) {
+  if (kanvise_role && kanvise_user_id && profile_id) {
     c.set('user', {
+      id: profile_id,
       supabase_auth_id: supabaseAuthId,
       role: kanvise_role,
       school_id: school_id || null,

@@ -27,7 +27,6 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
       name: body.name,
       slug: slug,
       description: body.description,
-      address: body.address,
       contact_email: body.contact_email,
       contact_phone: body.contact_phone,
     })
