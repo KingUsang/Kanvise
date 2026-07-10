@@ -22,6 +22,7 @@ import { programmesRouter } from "./routes/programmes";
 import { subProgrammesRouter } from "./routes/sub-programmes";
 import { coursesRouter } from "./routes/courses";
 import { usersRouter } from "./routes/users";
+import { mocksRouter } from "./routes/mocks";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -34,6 +35,7 @@ app.route("/programmes", programmesRouter);
 app.route("/sub-programmes", subProgrammesRouter);
 app.route("/courses", coursesRouter);
 app.route("/users", usersRouter);
+app.route("/mocks", mocksRouter);
 
 // Waitlist Route
 app.post("/waitlist", async (c) => {
