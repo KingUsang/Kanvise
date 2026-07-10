@@ -34,7 +34,7 @@ export function DashboardShell({ children, user, capabilities }: DashboardShellP
       
       {/* Main Content Area */}
       <main className="md:ml-64 pt-16 min-h-screen flex flex-col">
-        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1">
+        <div className="p-4 md:p-8 w-full flex-1">
           {children}
         </div>
       </main>
