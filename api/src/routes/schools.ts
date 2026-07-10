@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole } from '../middleware/auth'
+import { generateInviteToken } from '../lib/invites'
 
 export const schoolsRouter = new Hono()
 
@@ -121,4 +122,134 @@ schoolsRouter.patch('/mine', requireRole('admin'), async (c) => {
   }
 
   return c.json({ data: school })
+})
+
+// POST /schools/invites — Generate a signed tutor invite link
+schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
+  const user = c.get('user')
+  const body = await c.req.json()
+  const { email } = body
+
+  if (!email) {
+    return c.json({ error: 'Email is required', code: 'BAD_REQUEST' }, 400)
+  }
+
+  // Duplicate-invite guard: block if a pending invite already exists for this email+school
+  const { data: existing } = await supabase
+    .from('tutor_invites')
+    .select('id, email, expires_at')
+    .eq('school_id', user.school_id)
+    .eq('email', email.toLowerCase().trim())
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (existing) {
+    return c.json({
+      error: 'A pending invite already exists for this email. Revoke it first to generate a new link.',
+      code: 'DUPLICATE_INVITE'
+    }, 409)
+  }
+
+  // Generate the HMAC-SHA256 signed token
+  const token = generateInviteToken(user.school_id, user.id)
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  // Create the tutor_invites row
+  const { data: invite, error: insertError } = await supabase
+    .from('tutor_invites')
+    .insert({
+      school_id: user.school_id,
+      email: email.toLowerCase().trim(),
+      invited_by: user.id,
+      status: 'pending',
+      expires_at: expiresAt,
+    })
+    .select()
+    .single()
+
+  if (insertError) {
+    return c.json({ error: insertError.message }, 500)
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const inviteUrl = `${appUrl}/join?token=${token}`
+
+  // TODO(ux): The stateless HMAC token makes the URL very long (~150+ chars).
+  // If this becomes a UX issue for sharing via SMS/WhatsApp, we should switch to a
+  // Stateful Short Token architecture:
+  // 1. Generate a random 16-char string (e.g. nanoid)
+  // 2. Add a `token` column to the `tutor_invites` table and save it there
+  // 3. Update the frontend/backend to do a DB lookup `WHERE token = ?` to validate.
+  //
+  // TODO(email): If email is provided, send the inviteUrl via Resend
+  // (Resend integration not yet built). Currently relying on Admin copying the link.
+
+  return c.json({
+    data: {
+      invite_url: inviteUrl,
+      expires_at: invite.expires_at,
+    },
+    message: 'Invite created. Share the link with your tutor.'
+  }, 201)
+})
+
+// GET /schools/invites — List all invites for this school
+schoolsRouter.get('/invites', requireRole('admin'), async (c) => {
+  const user = c.get('user')
+  const status = c.req.query('status') // optional filter: pending | accepted | expired | revoked
+
+  let query = supabase
+    .from('tutor_invites')
+    .select('id, email, status, expires_at, accepted_at, created_at')
+    .eq('school_id', user.school_id)
+    .order('created_at', { ascending: false })
+
+  if (status) {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json({ data })
+})
+
+// POST /schools/invites/:id/revoke — Revoke a pending invite
+schoolsRouter.post('/invites/:id/revoke', requireRole('admin'), async (c) => {
+  const user = c.get('user')
+  const id = c.req.param('id')
+
+  // Fetch the invite — must belong to this school and be pending
+  const { data: invite, error: fetchError } = await supabase
+    .from('tutor_invites')
+    .select('id, status, school_id')
+    .eq('id', id)
+    .eq('school_id', user.school_id)
+    .single()
+
+  if (fetchError || !invite) {
+    return c.json({ error: 'Invite not found', code: 'NOT_FOUND' }, 404)
+  }
+
+  if (invite.status !== 'pending') {
+    return c.json({
+      error: `Cannot revoke an invite with status '${invite.status}'`,
+      code: 'INVALID_STATUS'
+    }, 400)
+  }
+
+  const { error: updateError } = await supabase
+    .from('tutor_invites')
+    .update({ status: 'revoked', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('school_id', user.school_id)
+
+  if (updateError) {
+    return c.json({ error: updateError.message }, 500)
+  }
+
+  return c.json({ message: 'Invite revoked successfully' })
 })

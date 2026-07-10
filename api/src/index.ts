@@ -18,6 +18,10 @@ import { liveClassesRouter } from "./routes/live-classes";
 import { webhooksRouter } from "./routes/webhooks";
 import { slidesRouter } from "./routes/slides";
 import { dashboardRouter } from "./routes/dashboard";
+import { programmesRouter } from "./routes/programmes";
+import { subProgrammesRouter } from "./routes/sub-programmes";
+import { coursesRouter } from "./routes/courses";
+import { usersRouter } from "./routes/users";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -26,6 +30,10 @@ app.route("/live-classes", liveClassesRouter);
 app.route("/live-classes", slidesRouter);
 app.route("/webhooks", webhooksRouter);
 app.route("/dashboard", dashboardRouter);
+app.route("/programmes", programmesRouter);
+app.route("/sub-programmes", subProgrammesRouter);
+app.route("/courses", coursesRouter);
+app.route("/users", usersRouter);
 
 // Waitlist Route
 app.post("/waitlist", async (c) => {
