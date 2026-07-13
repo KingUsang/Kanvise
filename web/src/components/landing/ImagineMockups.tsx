@@ -73,7 +73,7 @@ export const ScheduleMockup = () => (
       </div>
       <div>
         <p className="text-[12px] font-bold text-on-surface">Auto-Reminder Sent</p>
-        <p className="text-[12px] text-on-surface-variant leading-tight">"Reminder: Calculus 101 starts in 1 hour. Join here."</p>
+        <p className="text-[12px] text-on-surface-variant leading-tight">&quot;Reminder: Calculus 101 starts in 1 hour. Join here.&quot;</p>
       </div>
     </div>
   </div>
