@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, Loader2, Mail, Lock, BookOpen } from "lucide-react";
 import Link from "next/link";
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParams = searchParams.get("redirect");
@@ -155,12 +157,9 @@ export default function LoginPage() {
 
           {/* Sign Up Toggle */}
           <div className="mt-8 pt-6 border-t border-kv-dust/30 text-center">
-            <p className="text-sm text-kv-dark/70">
-              Don't have an account?{" "}
-              <Link
-                href="/auth/register"
-                className="text-kv-blue font-bold hover:underline"
-              >
+            <p className="text-center text-sm text-gray-600 mt-8">
+              Don&apos;t have an account?{" "}
+              <Link href="/auth/register" className="font-semibold text-kv-brown hover:text-kv-dark transition-colors">
                 Sign Up
               </Link>
             </p>
@@ -175,5 +174,13 @@ export default function LoginPage() {
         </footer>
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-kv-soft"><Loader2 className="animate-spin" size={32} /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

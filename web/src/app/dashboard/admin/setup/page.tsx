@@ -65,9 +65,9 @@ export default function AdminSchoolSetupPage() {
       router.push("/dashboard/admin");
       router.refresh();
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
   };
@@ -81,7 +81,7 @@ export default function AdminSchoolSetupPage() {
           </div>
           <h1 className="text-3xl font-bold text-kv-dark">Create Your School</h1>
           <p className="text-gray-500 mt-2">
-            Let's set up your tutorial centre's profile on Kanvise.
+            Let&apos;s set up your tutorial centre&apos;s profile on Kanvise.
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export default function AdminSchoolSetupPage() {
                   placeholder="brightminds"
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-1.5">This will be your centre's public web address.</p>
+              <p className="text-xs text-gray-400 mt-1.5">This will be your centre&apos;s public web address.</p>
             </div>
 
             <div>

@@ -129,7 +129,7 @@ export default function AccountSetupPage() {
         <div>
           <h1 className="text-3xl font-bold text-kv-dark">Account Setup</h1>
           <p className="text-gray-500 mt-2">
-            Welcome, {profile?.first_name}! Let's personalize your Kanvise profile.
+            Welcome, {profile?.first_name}! Let&apos;s personalize your Kanvise profile.
           </p>
         </div>
 

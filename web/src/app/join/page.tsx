@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-export default function JoinPage() {
+import { Suspense } from "react";
+
+function JoinContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -89,7 +91,7 @@ export default function JoinPage() {
           </div>
           <h2 className="text-2xl font-bold text-kv-dark mb-3">Check your email</h2>
           <p className="text-gray-500 mb-6">
-            We've sent a verification link to <span className="font-semibold text-kv-dark">{email}</span>. 
+            We&apos;ve sent a verification link to <span className="font-semibold text-kv-dark">{email}</span>. 
             Please click the link to accept your invitation and activate your account.
           </p>
         </div>
@@ -204,5 +206,13 @@ export default function JoinPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin" size={32} /></div>}>
+      <JoinContent />
+    </Suspense>
   );
 }

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     // Always return 200 OK immediately to acknowledge receipt to Paystack
     return NextResponse.json({ received: true }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Paystack Webhook] Fatal error processing event:", error);
     return NextResponse.json({ error: "Internal webhook processing error" }, { status: 500 });
   }

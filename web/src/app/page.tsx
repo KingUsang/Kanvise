@@ -232,11 +232,11 @@ export default function LandingPage() {
         <AnimatedSection className="max-w-[640px] mx-auto">
           <h2 className="text-[32px] font-semibold mb-8 italic">The WhatsApp Exhaustion</h2>
           <div className="space-y-6 text-[18px] text-on-surface-variant leading-relaxed">
-            <p>It starts with one student. A simple message. "Can you help me with Calculus?" Then it becomes five. Then ten. Suddenly, your phone is a non-stop vibration of administrative chaos.</p>
+            <p>It starts with one student. A simple message. &quot;Can you help me with Calculus?&quot; Then it becomes five. Then ten. Suddenly, your phone is a non-stop vibration of administrative chaos.</p>
             <blockquote className="pl-6 border-l-4 border-primary/20 italic font-medium py-2 my-8 text-on-surface">
-                "Have you paid for last week yet?" <br/>
-                "Where is the link for today's session?" <br/>
-                "Check the pinned message in the group chat..."
+                &quot;Have you paid for last week yet?&quot; <br/>
+                &quot;Where is the link for today&apos;s session?&quot; <br/>
+                &quot;Check the pinned message in the group chat...&quot;
             </blockquote>
             <p>We saw our tutors spending 30% of their time chasing payments and scrolling through endless chat history to find a single PDF. We saw students feeling lost in the noise of a 50-person group chat.</p>
             <p>As university students ourselves, we knew there had to be a better way to treat the sanctity of teaching. Something more intentional. Something that felt like a well-organized desk, not a noisy digital lobby.</p>
@@ -259,7 +259,7 @@ export default function LandingPage() {
       <section className="py-20 px-6 md:px-12 max-w-[1120px] mx-auto overflow-hidden">
         <AnimatedSection className="text-center mb-16">
           <h2 className="text-[32px] font-semibold mb-4">Recognize these?</h2>
-          <p className="text-on-surface-variant">The friction points we're deleting for good.</p>
+          <p className="text-on-surface-variant">The friction points we&apos;re deleting for good.</p>
         </AnimatedSection>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
           <AnimatedSection delay={100} className="whatsapp-bubble p-6 rounded-2xl bg-white relative hover:-translate-y-2 transition-transform duration-300">
@@ -267,8 +267,8 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[12px] font-bold">PL</div>
               <span className="font-bold text-[14px]">Pelumi</span>
             </div>
-            <p className="text-[12px] text-on-surface-variant mb-2">Kanvise asked: "What's eating up most of your time running your tutorial?"</p>
-            <p className="text-[14px] mb-4">"Administrative duties. Timetables clashing, sending reminders, handling student registrations. It's a lot before I even get to teaching."</p>
+            <p className="text-[12px] text-on-surface-variant mb-2">Kanvise asked: &quot;What&apos;s eating up most of your time running your tutorial?&quot;</p>
+            <p className="text-[14px] mb-4">&quot;Administrative duties. Timetables clashing, sending reminders, handling student registrations. It&apos;s a lot before I even get to teaching.&quot;</p>
             <div className="pt-4 border-t border-outline-variant">
               <p className="text-primary font-bold text-[13px] flex items-center gap-1">
                 <span className="material-symbols-outlined text-[18px]">verified</span> Automated Scheduling
@@ -280,8 +280,8 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-[12px] font-bold">TM</div>
               <span className="font-bold text-[14px]">Tomiwa</span>
             </div>
-            <p className="text-[12px] text-on-surface-variant mb-2">Kanvise asked: "What's the hardest part of managing your students?"</p>
-            <p className="text-[14px] mb-4">"Payments overlapping, chasing responses from students, keeping class timing and attendance straight."</p>
+            <p className="text-[12px] text-on-surface-variant mb-2">Kanvise asked: &quot;What&apos;s the hardest part of managing your students?&quot;</p>
+            <p className="text-[14px] mb-4">&quot;Payments overlapping, chasing responses from students, keeping class timing and attendance straight.&quot;</p>
             <div className="pt-4 border-t border-outline-variant">
               <p className="text-primary font-bold text-[13px] flex items-center gap-1">
                 <span className="material-symbols-outlined text-[18px]">verified</span> Payment Tracking
@@ -293,8 +293,8 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-[12px] font-bold">ST</div>
               <span className="font-bold text-[14px]">Stephen</span>
             </div>
-            <p className="text-[12px] text-on-surface-variant mb-2">Kanvise asked: "How do you keep students accountable?"</p>
-            <p className="text-[14px] mb-4">"Tutors struggle just to schedule classes in the first place. I call every student biweekly. It works, but it's exhausting to keep up."</p>
+            <p className="text-[12px] text-on-surface-variant mb-2">Kanvise asked: &quot;How do you keep students accountable?&quot;</p>
+            <p className="text-[14px] mb-4">&quot;Tutors struggle just to schedule classes in the first place. I call every student biweekly. It works, but it&apos;s exhausting to keep up.&quot;</p>
             <div className="pt-4 border-t border-outline-variant">
               <p className="text-primary font-bold text-[13px] flex items-center gap-1">
                 <span className="material-symbols-outlined text-[18px]">verified</span> Auto Attendance Logging
@@ -402,8 +402,8 @@ export default function LandingPage() {
       {/* Help Us Build (Sticky Note) */}
       <section className="py-20 px-6 md:px-12 bg-surface-container flex justify-center" id="suggest">
         <AnimatedSection className="max-w-xl w-full sticky-note p-10 md:p-16 rounded-sm">
-          <h3 className="text-[24px] font-semibold mb-4">What's missing?</h3>
-          <p className="mb-8 text-on-surface-variant">We're building for you. Tell us the feature that would save you 5 hours a week.</p>
+          <h3 className="text-[24px] font-semibold mb-4">What&apos;s missing?</h3>
+          <p className="mb-8 text-on-surface-variant">We&apos;re building for you. Tell us the feature that would save you 5 hours a week.</p>
           <textarea 
             className="w-full bg-transparent border-b-2 border-on-surface/20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:border-primary min-h-[120px] text-[18px] outline-none" 
             placeholder="Type your idea here..."
@@ -499,18 +499,18 @@ export default function LandingPage() {
                 className="w-5 h-5 accent-primary cursor-pointer"
               />
               <label htmlFor="wants_beta" className="text-[14px] text-on-surface-variant cursor-pointer select-none">
-                I'm interested in being part of the private beta testing group.
+                I&apos;m interested in being part of the private beta testing group.
               </label>
             </div>
 
             {waitlistSubmitStatus === "success" && (
               <div className="p-4 bg-green-50 text-green-700 rounded-xl font-medium border border-green-200">
-                You're on the list! Keep an eye on your email.
+                You&apos;re on the list! Keep an eye on your email.
               </div>
             )}
             {waitlistSubmitStatus === "conflict" && (
               <div className="p-4 bg-blue-50 text-primary rounded-xl font-medium border border-blue-200">
-                You've already joined the waitlist! We'll be in touch.
+                You&apos;ve already joined the waitlist! We&apos;ll be in touch.
               </div>
             )}
             {waitlistSubmitStatus === "error" && (
