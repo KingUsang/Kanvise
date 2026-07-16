@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import { useState, useEffect } from 'react'
+
 interface SidebarProps {
   capabilities: {
     isAdmin: boolean;
@@ -14,6 +16,30 @@ interface SidebarProps {
 
 export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname()
+  const [ungradedMocksCount, setUngradedMocksCount] = useState(0)
+
+  useEffect(() => {
+    async function fetchBadgeCount() {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+        const res = await fetch(`${baseUrl}/mocks/ungraded-count`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+        if (res.ok) {
+          const json = await res.json()
+          setUngradedMocksCount(json.data?.count || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch badge count', err)
+      }
+    }
+    fetchBadgeCount()
+  }, [])
   
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', show: true, icon: 'space_dashboard' },
@@ -28,7 +54,7 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
     // Shared Admin/Tutor
     { label: 'Schedule', href: '/dashboard/schedule', show: true, icon: 'calendar_month' },
     { label: 'Attendance', href: '/dashboard/attendance', show: true, icon: 'fact_check' },
-    { label: 'Mocks', href: '/dashboard/mocks', show: true, icon: 'quiz' },
+    { label: 'Mocks', href: '/dashboard/mocks', show: true, icon: 'quiz', badge: ungradedMocksCount },
     
     // Tutor only
     { label: 'Notes', href: '/dashboard/notes', show: capabilities.isTutor, icon: 'description' },
@@ -90,7 +116,12 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
                   <span className="material-symbols-outlined mr-3 text-[24px]">
                     {item.icon}
                   </span>
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && item.badge > 0 ? (
+                    <span className="bg-[#ba1a1a] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ml-2">
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </Link>
               </li>
             )

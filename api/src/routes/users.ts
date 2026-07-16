@@ -77,6 +77,50 @@ usersRouter.get("/tutors", enforceAdmin, async (c) => {
   }
 });
 
+// GET /users/students — List students with their active enrolments
+usersRouter.get("/students", enforceAdmin, async (c) => {
+  try {
+    const profile = c.get("user");
+
+    // 1. Fetch all students in this school
+    const { data: students, error: studentsError } = await supabase
+      .from("user_profiles")
+      .select("id, kanvise_user_id, first_name, last_name, email, profile_photo_key, role")
+      .eq("school_id", profile.school_id)
+      .eq("role", "student")
+      .order("created_at", { ascending: false });
+
+    if (studentsError) throw studentsError;
+    if (!students || students.length === 0) return c.json({ data: [] });
+
+    // 2. Fetch enrolments for all these students
+    const studentIds = students.map((s) => s.id);
+    const { data: enrolments, error: enrolmentsError } = await supabase
+      .from("enrolments")
+      .select(`
+        id, 
+        student_id,
+        enrolled_at,
+        programmes (id, name),
+        courses (id, name)
+      `)
+      .eq("school_id", profile.school_id)
+      .in("student_id", studentIds);
+
+    if (enrolmentsError) throw enrolmentsError;
+
+    // 3. Join in JS
+    const studentsWithEnrolments = students.map((student) => {
+      const studentEnrolments = (enrolments || []).filter((e) => e.student_id === student.id);
+      return { ...student, enrolments: studentEnrolments };
+    });
+
+    return c.json({ data: studentsWithEnrolments });
+  } catch (error: any) {
+    return c.json({ error: error.message || "Internal server error" }, 500);
+  }
+});
+
 // GET /users — List all users in the school, filterable by role
 usersRouter.get("/", enforceAdmin, async (c) => {
   try {

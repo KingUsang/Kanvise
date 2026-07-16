@@ -31,6 +31,9 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [entityType, setEntityType] = useState<'programme' | 'sub_programme' | 'course'>('programme')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [schoolSlug, setSchoolSlug] = useState('')
 
   // Form State
   const [formData, setFormData] = useState({
@@ -43,7 +46,8 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
     sub_programme_id: '',
     course_placement: 'standalone', // 'standalone', 'programme', 'sub_programme'
     assign_tutor: false,
-    tutor_id: ''
+    tutor_id: '',
+    thumbnail_url: ''
   })
 
   const fetchData = async () => {
@@ -55,11 +59,12 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       const headers = { 'Authorization': `Bearer ${token}` }
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-      const [progRes, subProgRes, coursesRes, tutorsRes] = await Promise.all([
+      const [progRes, subProgRes, coursesRes, tutorsRes, schoolRes] = await Promise.all([
         fetch(`${baseUrl}/programmes`, { headers }),
         fetch(`${baseUrl}/sub-programmes`, { headers }),
         fetch(`${baseUrl}/courses`, { headers }),
-        fetch(`${baseUrl}/users?roles=admin,tutor`, { headers })
+        fetch(`${baseUrl}/users?roles=admin,tutor`, { headers }),
+        fetch(`${baseUrl}/schools/mine`, { headers })
       ])
 
       if (!progRes.ok) throw new Error('Failed to fetch programmes')
@@ -71,11 +76,15 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       const { data: subProgData } = await subProgRes.json()
       const { data: coursesData } = await coursesRes.json()
       const { data: tutorsData } = await tutorsRes.json()
+      const { data: schoolData } = await schoolRes.json()
 
       setProgrammes(progData)
       setSubProgrammes(subProgData)
       setCourses(coursesData)
       setTutors(tutorsData)
+      if (schoolData) {
+        setSchoolSlug(schoolData.slug)
+      }
       
       const active = coursesData.filter((c: any) => c.is_published).length
       const drafts = coursesData.length - active
@@ -125,6 +134,11 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
         price: formData.price,
         is_published: formData.is_published
       }
+      
+      // Only programmes support thumbnails in the database currently
+      if (entityType === 'programme' && formData.thumbnail_url) {
+        payload.thumbnail_key = formData.thumbnail_url
+      }
 
       if (entityType === 'sub_programme') {
         endpoint = `${baseUrl}/sub-programmes`
@@ -144,8 +158,11 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
+      const method = editingId ? 'PATCH' : 'POST'
+      const url = editingId ? `${endpoint}/${editingId}` : endpoint
+
+      const res = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -182,13 +199,75 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       setFormData({ 
         name: '', slug: '', description: '', price: '', is_published: true, 
         programme_id: '', sub_programme_id: '', course_placement: 'standalone', 
-        assign_tutor: false, tutor_id: '' 
+        assign_tutor: false, tutor_id: '', thumbnail_url: ''
       })
+      setEditingId(null)
       setEntityType('programme')
     } catch (err: any) {
       setSaveError(err.message)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const openNew = (type: 'programme' | 'sub_programme' | 'course') => {
+    setEditingId(null)
+    setEntityType(type)
+    setSaveError('')
+    setFormData({
+      name: '', slug: '', description: '', price: '', is_published: true, 
+      programme_id: '', sub_programme_id: '', course_placement: 'standalone', 
+      assign_tutor: false, tutor_id: '', thumbnail_url: ''
+    })
+    setIsModalOpen(true)
+  }
+
+  const openEdit = (entity: any, type: 'programme' | 'sub_programme' | 'course') => {
+    setEditingId(entity.id)
+    setEntityType(type)
+    setSaveError('')
+    setFormData({
+      name: entity.name,
+      slug: entity.slug,
+      description: entity.description || '',
+      price: entity.price || '',
+      is_published: entity.is_published,
+      programme_id: entity.programme_id || '',
+      sub_programme_id: entity.sub_programme_id || '',
+      course_placement: entity.programme_id ? 'programme' : entity.sub_programme_id ? 'sub_programme' : 'standalone',
+      assign_tutor: false,
+      tutor_id: '',
+      thumbnail_url: entity.thumbnail_url || ''
+    })
+    setIsModalOpen(true)
+  }
+
+  const copyLink = (path: string) => {
+    const fullUrl = `${window.location.origin}${path}`
+    navigator.clipboard.writeText(fullUrl)
+    alert("Copied public link: " + fullUrl)
+  }
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `thumbnails/${fileName}`
+      
+      const { error } = await supabase.storage.from('kanvise-media').upload(filePath, file)
+      if (error) throw error
+      
+      const { data: { publicUrl } } = supabase.storage.from('kanvise-media').getPublicUrl(filePath)
+      setFormData(p => ({ ...p, thumbnail_url: publicUrl }))
+    } catch (err) {
+      console.error(err)
+      alert("Upload failed")
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -239,8 +318,13 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
           {renderStatus(course.is_published)}
         </div>
         
-        <div className="col-span-3 md:col-span-2 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button className="p-1 text-[#474551] hover:text-[#2e2877] rounded">
+        <div className="col-span-3 md:col-span-2 flex justify-end gap-2">
+          {course.is_published && schoolSlug && (
+            <button onClick={() => copyLink(`/${schoolSlug}/course/${course.slug}`)} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Copy Public Link">
+              <span className="material-symbols-outlined text-[18px]">link</span>
+            </button>
+          )}
+          <button onClick={() => openEdit(course, 'course')} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Edit Course">
             <span className="material-symbols-outlined text-[18px]">edit</span>
           </button>
         </div>
@@ -264,19 +348,28 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
           <div className="flex flex-wrap gap-4">
             {/* Shortcut for Course Creation */}
             <button 
-              onClick={() => { setEntityType('course'); setIsModalOpen(true); }}
+              onClick={() => openNew('course')}
               className="bg-[#fbf9f8] border border-[#2e2877] text-[#2e2877] hover:bg-[#2e2877] hover:text-white transition-colors px-6 py-2.5 rounded text-sm font-semibold flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
               New Course
             </button>
             <button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => openNew('programme')}
               className="bg-[#994704] text-white hover:bg-[#753400] transition-colors px-6 py-2.5 rounded text-sm font-semibold shadow-sm flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[18px]">add_box</span>
               Create Programme
             </button>
+            {schoolSlug && (
+              <button 
+                onClick={() => window.open(`/${schoolSlug}`, '_blank')}
+                className="bg-[#fbf9f8] border border-[#c8c5d2] text-[#474551] hover:bg-[#e4e2e1] transition-colors px-6 py-2.5 rounded text-sm font-semibold flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">storefront</span>
+                View Storefront
+              </button>
+            )}
           </div>
         </div>
       {/* Density Data View */}
@@ -427,8 +520,13 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                               {renderStatus(prog.is_published)}
                             </div>
                             
-                            <div className="col-span-3 md:col-span-2 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button className="p-1 text-[#474551] hover:text-[#2e2877] rounded">
+                            <div className="col-span-3 md:col-span-2 flex justify-end gap-2">
+                              {prog.is_published && schoolSlug && (
+                                <button onClick={() => copyLink(`/${schoolSlug}/${prog.slug}`)} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Copy Public Link">
+                                  <span className="material-symbols-outlined text-[18px]">link</span>
+                                </button>
+                              )}
+                              <button onClick={() => openEdit(prog, 'programme')} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Edit Programme">
                                 <span className="material-symbols-outlined text-[18px]">edit</span>
                               </button>
                             </div>
@@ -479,8 +577,13 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                                         {renderStatus(sp.is_published)}
                                       </div>
                                       
-                                      <div className="col-span-3 md:col-span-2 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button className="p-1 text-[#474551] hover:text-[#2e2877] rounded">
+                                      <div className="col-span-3 md:col-span-2 flex justify-end gap-2">
+                                        {sp.is_published && schoolSlug && (
+                                          <button onClick={() => copyLink(`/${schoolSlug}/${sp.slug}`)} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Copy Public Link">
+                                            <span className="material-symbols-outlined text-[18px]">link</span>
+                                          </button>
+                                        )}
+                                        <button onClick={() => openEdit(sp, 'sub-programme', prog.id)} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Edit Sub-Programme">
                                           <span className="material-symbols-outlined text-[18px]">edit</span>
                                         </button>
                                       </div>
@@ -517,7 +620,9 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
           <div className="bg-[#fbf9f8] rounded-lg shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden border border-[#c8c5d2] animate-in zoom-in-95 slide-in-from-bottom-4 duration-200">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-[#c8c5d2] flex justify-between items-center bg-[#ffffff]">
-              <h2 className="text-lg font-bold text-[#2e2877]">Create New Programme</h2>
+              <h2 className="text-lg font-bold text-[#2e2877]">
+                {editingId ? "Edit" : "Create"} {entityType === 'programme' ? 'Programme' : entityType === 'course' ? 'Course' : 'Sub-Programme'}
+              </h2>
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="text-[#474551] hover:text-[#ba1a1a] transition-colors p-1"
@@ -602,12 +707,12 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Slug <span className="text-[#474551] font-normal">(Auto-generated)</span></label>
+                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Slug <span className="text-[#474551] font-normal">(Can be customized)</span></label>
                     <input 
-                      readOnly
                       type="text"
                       value={formData.slug}
-                      className="w-full bg-[#f5f3f2] border border-[#c8c5d2] rounded px-3 py-2 text-sm font-mono text-[#474551] outline-none" 
+                      onChange={e => setFormData(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') }))}
+                      className="w-full bg-white border border-[#c8c5d2] rounded px-3 py-2 text-sm font-mono focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none" 
                       placeholder={
                         entityType === 'programme' ? 'waec-prep-2026' : 
                         entityType === 'sub_programme' ? 'science-track' : 
@@ -783,12 +888,25 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                   {/* File Upload */}
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Thumbnail</label>
-                    <div className="border-2 border-dashed border-[#c8c5d2] rounded p-6 flex flex-col items-center justify-center bg-white hover:bg-[#f5f3f2] transition-colors cursor-pointer group">
-                      <div className="h-12 w-12 rounded-full bg-[#f0eded] flex items-center justify-center mb-2 group-hover:bg-[#2e2877] group-hover:text-white transition-colors">
-                        <span className="material-symbols-outlined">cloud_upload</span>
-                      </div>
-                      <span className="text-sm font-semibold text-[#1b1c1c]">Click to upload or drag and drop</span>
-                      <span className="text-xs font-normal text-[#474551] mt-1">SVG, PNG, JPG (max. 2MB)</span>
+                    <div className="border-2 border-dashed border-[#c8c5d2] rounded p-6 flex flex-col items-center justify-center bg-white hover:bg-[#f5f3f2] transition-colors relative">
+                      {formData.thumbnail_url ? (
+                        <img src={formData.thumbnail_url} alt="Thumbnail" className="h-32 object-contain" />
+                      ) : (
+                        <>
+                          <div className="h-12 w-12 rounded-full bg-[#f0eded] flex items-center justify-center mb-2 text-[#474551]">
+                            <span className="material-symbols-outlined">{isUploading ? 'hourglass_empty' : 'cloud_upload'}</span>
+                          </div>
+                          <span className="text-sm font-semibold text-[#1b1c1c]">{isUploading ? 'Uploading...' : 'Click to upload'}</span>
+                          <span className="text-xs font-normal text-[#474551] mt-1">SVG, PNG, JPG (max. 2MB)</span>
+                        </>
+                      )}
+                      <input 
+                        type="file" 
+                        onChange={handleUpload} 
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                        accept="image/*" 
+                        disabled={isUploading} 
+                      />
                     </div>
                   </div>
                 </div>

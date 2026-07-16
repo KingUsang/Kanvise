@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeOff, Loader2, Mail, Lock, User, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, User, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-export default function RegisterPage() {
+import { Suspense } from "react";
+
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
@@ -302,7 +304,7 @@ export default function RegisterPage() {
                 <p className="text-[11px] text-gray-400 mt-1 font-medium">Minimum 8 characters, at least 1 uppercase letter and 1 number.</p>
               </div>
 
-              {/* Terms & Privacy */}
+              {/* Terms & Privacy 
               <div className="flex items-start gap-3 pt-2">
                 <div className="flex items-center h-5 mt-0.5">
                   <input 
@@ -315,7 +317,7 @@ export default function RegisterPage() {
                 <label className="text-sm text-kv-dark/70" htmlFor="terms">
                   I agree to the <a href="#" className="text-kv-brown font-semibold hover:underline">Terms of Service</a> and <a href="#" className="text-kv-brown font-semibold hover:underline">Privacy Policy</a>.
                 </label>
-              </div>
+              </div>*/}
 
               {/* CTA */}
               <button 
@@ -357,5 +359,13 @@ export default function RegisterPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-kv-bg"><Loader2 className="w-8 h-8 animate-spin text-kv-blue" /></div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

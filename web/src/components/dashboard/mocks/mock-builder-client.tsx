@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Papa from "papaparse";
 
 type Course = {
@@ -26,9 +26,13 @@ type QuestionState = {
 
 export function MockBuilderClient({ token }: { token: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editMockId = searchParams.get("id");
+  const isEditMode = !!editMockId;
   
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
   // Assessment Parameters State
   const [title, setTitle] = useState("");
@@ -61,18 +65,85 @@ export function MockBuilderClient({ token }: { token: string }) {
         if (res.ok) {
           const { data } = await res.json();
           setCourses(data || []);
-          if (data && data.length > 0) {
+          if (data && data.length > 0 && !isEditMode) {
             setCourseId(data[0].id);
           }
         }
       } catch (err) {
         console.error("Failed to fetch courses", err);
       } finally {
+        if (!isEditMode) setIsLoading(false);
+      }
+    };
+
+    const fetchMockData = async () => {
+      if (!editMockId) return;
+      try {
+        const [mockRes, qRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${editMockId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${editMockId}/questions`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          })
+        ]);
+
+        if (mockRes.ok && qRes.ok) {
+          const mockData = (await mockRes.json()).data;
+          const qData = (await qRes.json()).data;
+
+          if (mockData.status !== "draft") {
+            setIsReadOnly(true);
+          }
+
+          setTitle(mockData.title || "");
+          setDescription(mockData.description || "");
+          setCourseId(mockData.course_id || "");
+          
+          if (mockData.time_limit_minutes === 0) {
+            setIsUntimed(true);
+          } else {
+            setIsUntimed(false);
+            setTimeLimit(mockData.time_limit_minutes);
+          }
+
+          if (mockData.publish_at) {
+            setPublishMode("scheduled");
+            const d = new Date(mockData.publish_at);
+            setPublishDate(d.toISOString().split('T')[0]);
+            setPublishTime(d.toTimeString().substring(0,5));
+          }
+
+          // Map questions to state
+          if (qData && qData.length > 0) {
+            setQuestions(qData.map((q: any) => ({
+              id: `q_${q.id}`, // mapped local id
+              question_type: q.question_type,
+              question_text: q.question_text,
+              marks: q.marks,
+              options: (q.options || []).map((o: any) => ({
+                id: `o_${o.id}`,
+                option_text: o.option_text,
+                is_correct: o.is_correct
+              })),
+              grading_rubric: q.grading_rubric || ""
+            })));
+          }
+        } else {
+          alert("Failed to load mock data or you do not have permission.");
+          router.push("/dashboard/mocks");
+        }
+      } catch (err) {
+        console.error("Failed to fetch mock data", err);
+      } finally {
         setIsLoading(false);
       }
     };
-    fetchCourses();
-  }, [token]);
+
+    fetchCourses().then(() => {
+      if (isEditMode) fetchMockData();
+    });
+  }, [token, editMockId, isEditMode, router]);
 
   const handleAddMCQ = () => {
     setQuestions([
@@ -212,50 +283,81 @@ export function MockBuilderClient({ token }: { token: string }) {
     }
 
     try {
-      // 1. Create Parent Mock (default status is draft)
+      let mockId = editMockId;
       const finalPublishAt = publishMode === "scheduled" && publishDate && publishTime 
         ? `${publishDate}T${publishTime}:00Z` 
         : null;
-        
-      const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title,
-          description,
-          course_id: courseId,
-          publish_at: finalPublishAt,
-          time_limit_minutes: isUntimed ? 0 : timeLimit
-        })
-      });
-      
-      if (!mockRes.ok) throw new Error("Failed to create mock");
-      const mockData = await mockRes.json();
-      const mockId = mockData.data.id;
 
-      // 2. Insert Questions
+      const payload = {
+        title,
+        description,
+        course_id: courseId,
+        publish_at: finalPublishAt,
+        time_limit_minutes: isUntimed ? 0 : timeLimit
+      };
+
+      if (isEditMode) {
+        // 1. Update existing Mock
+        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}`, {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!mockRes.ok) throw new Error("Failed to update mock");
+      } else {
+        // 1. Create Parent Mock
+        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!mockRes.ok) throw new Error("Failed to create mock");
+        const mockData = await mockRes.json();
+        mockId = mockData.data.id;
+      }
+
+      // 2. Insert/Update Questions
       if (questions.length > 0) {
-        await Promise.all(questions.map((q, index) => {
-          return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}/questions`, {
-            method: "POST",
+        if (isEditMode) {
+          // Bulk overwrite for edits
+          const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}/questions`, {
+            method: "PUT",
             headers: { 
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({
-              question_type: q.question_type,
-              question_text: q.question_text,
-              marks: q.marks,
-              order_index: index + 1,
-              options: q.options,
-              grading_rubric: q.grading_rubric
-            })
+            body: JSON.stringify({ questions })
           });
-        }));
+          if (!qRes.ok) throw new Error("Failed to update questions");
+        } else {
+          // Sequential insert for new mock (as it was)
+          await Promise.all(questions.map((q, index) => {
+            return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}/questions`, {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                question_type: q.question_type,
+                question_text: q.question_text,
+                marks: q.marks,
+                order_index: index + 1,
+                options: q.options,
+                grading_rubric: q.grading_rubric
+              })
+            });
+          }));
+        }
       }
+
+
 
       // 3. Publish if immediate
       if (shouldPublish && publishMode === "immediate") {
@@ -282,6 +384,16 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   return (
     <div className="w-full max-w-[1200px] mx-auto pb-20 font-sans">
+      {isReadOnly && (
+        <div className="bg-[#fff4f2] border-l-4 border-[#ba1a1a] text-[#ba1a1a] p-4 mb-6 rounded shadow-sm">
+          <p className="font-semibold text-[15px] flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px]">lock</span>
+            Read-Only Mode
+          </p>
+          <p className="text-[13px] mt-1">This mock has already been published. Its questions and parameters can no longer be edited to preserve grading integrity.</p>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {questionToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
@@ -312,19 +424,21 @@ export function MockBuilderClient({ token }: { token: string }) {
       {/* Page Header */}
       <div className="flex justify-between items-end mb-8 pb-4 border-b border-[#e4e2e1]">
         <div>
-          <h2 className="text-[32px] font-bold text-[#1b1c1c] leading-tight">Build Mock Assessment</h2>
+          <h2 className="text-[32px] font-bold text-[#1b1c1c] leading-tight">{isEditMode ? "Edit Mock Assessment" : "Build Mock Assessment"}</h2>
           <p className="text-[16px] text-[#474551] mt-1">Configure parameters and construct questions for the upcoming evaluation.</p>
         </div>
         <div className="flex gap-4">
           <button 
             onClick={() => handleSave(false)}
-            className="px-6 py-2.5 border border-[#c8c5d2] text-[#1b1c1c] font-semibold text-sm rounded hover:bg-gray-50 hover:shadow-sm transition-all cursor-pointer"
+            disabled={isReadOnly}
+            className="px-6 py-2.5 border border-[#c8c5d2] text-[#1b1c1c] font-semibold text-sm rounded hover:bg-gray-50 hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save as Draft
           </button>
           <button 
             onClick={() => handleSave(true)}
-            className="px-6 py-2.5 bg-[#C26627] text-white font-semibold text-sm rounded hover:bg-[#a55621] hover:shadow-md transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+            disabled={isReadOnly}
+            className="px-6 py-2.5 bg-[#C26627] text-white font-semibold text-sm rounded hover:bg-[#a55621] hover:shadow-md transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[18px]">publish</span>
             {publishMode === "immediate" ? "Publish Mock" : "Schedule Mock"}
@@ -353,21 +467,25 @@ export function MockBuilderClient({ token }: { token: string }) {
                     <label className="text-[14px] text-[#474551]">Marks:</label>
                     <input 
                       type="number" 
+                      disabled={isReadOnly}
                       value={q.marks}
                       onChange={(e) => updateQuestion(q.id, { marks: Number(e.target.value) })}
-                      className="w-16 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-2 py-1.5 text-center text-[14px] text-[#1b1c1c] outline-none transition-all" 
+                      className="w-16 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-2 py-1.5 text-center text-[14px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]" 
                     />
-                    <button onClick={() => confirmRemoveQuestion(q.id)} className="text-[#c8c5d2] hover:text-[#ba1a1a] transition-colors cursor-pointer hover:scale-110">
-                      <span className="material-symbols-outlined text-[20px]">delete</span>
-                    </button>
+                    {!isReadOnly && (
+                      <button onClick={() => confirmRemoveQuestion(q.id)} className="text-[#c8c5d2] hover:text-[#ba1a1a] transition-colors cursor-pointer hover:scale-110">
+                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <textarea 
                     value={q.question_text}
+                    disabled={isReadOnly}
                     onChange={(e) => updateQuestion(q.id, { question_text: e.target.value })}
-                    className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[15px] text-[#1b1c1c] outline-none transition-all mb-5 min-h-[100px] resize-y" 
+                    className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[15px] text-[#1b1c1c] outline-none transition-all mb-5 min-h-[100px] resize-y disabled:bg-[#f5f3f2]" 
                     placeholder="Enter question text here..."
                   />
 
@@ -391,12 +509,13 @@ export function MockBuilderClient({ token }: { token: string }) {
                           
                           <input 
                             type="text" 
+                            disabled={isReadOnly}
                             value={opt.option_text}
                             onChange={(e) => {
                               const newOpts = q.options.map(o => o.id === opt.id ? { ...o, option_text: e.target.value } : o);
                               updateQuestion(q.id, { options: newOpts });
                             }}
-                            className={`flex-1 border rounded px-4 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all ${opt.is_correct ? 'border-[#2e2877] bg-[#e3dfff]/20' : 'border-[#c8c5d2] bg-white'}`} 
+                            className={`flex-1 border rounded px-4 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2] ${opt.is_correct ? 'border-[#2e2877] bg-[#e3dfff]/20' : 'border-[#c8c5d2] bg-white'}`} 
                           />
                           <button 
                             onClick={() => {
@@ -409,15 +528,17 @@ export function MockBuilderClient({ token }: { token: string }) {
                           </button>
                         </div>
                       ))}
-                      <button 
-                        onClick={() => {
-                          const newOpts = [...q.options, { id: `o${Date.now()}`, option_text: "", is_correct: false }];
-                          updateQuestion(q.id, { options: newOpts });
-                        }}
-                        className="flex items-center gap-1.5 text-[#2e2877] text-[14px] font-semibold mt-4 hover:underline ml-9 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">add</span> Add Option
-                      </button>
+                      {!isReadOnly && (
+                        <button 
+                          onClick={() => {
+                            const newOpts = [...q.options, { id: `o${Date.now()}`, option_text: "", is_correct: false }];
+                            updateQuestion(q.id, { options: newOpts });
+                          }}
+                          className="flex items-center gap-1.5 text-[#2e2877] text-[14px] font-semibold mt-4 hover:underline ml-9 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">add</span> Add Option
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -428,8 +549,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                       </label>
                       <textarea 
                         value={q.grading_rubric || ""}
+                        disabled={isReadOnly}
                         onChange={(e) => updateQuestion(q.id, { grading_rubric: e.target.value })}
-                        className="flex-1 bg-[#fbf9f8] border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[14px] text-[#474551] outline-none transition-all min-h-[80px] resize-y" 
+                        className="flex-1 bg-[#fbf9f8] border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[14px] text-[#474551] outline-none transition-all min-h-[80px] resize-y disabled:bg-[#f5f3f2]" 
                         placeholder="Keywords expected for full marks..."
                       />
                     </div>
@@ -440,72 +562,76 @@ export function MockBuilderClient({ token }: { token: string }) {
           </div>
 
           {/* Bulk Import Section */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Bulk Import Questions</h3>
-              <button 
-                onClick={downloadTemplate} 
-                className="text-[#2e2877] text-[13px] font-medium hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">download</span> Download CSV Template
-              </button>
-            </div>
-            
-            <label 
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`w-full border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-colors cursor-pointer group ${
-                isDragging 
-                  ? 'border-[#2e2877] bg-[#f5f3f2]' 
-                  : 'border-[#c8c5d2] bg-white hover:bg-[#f5f3f2]'
-              }`}
-            >
-              <input type="file" accept=".csv" className="hidden" onChange={handleFileInput} />
-              
-              {isUploading ? (
-                <div className="flex flex-col items-center py-2">
-                  <span className="material-symbols-outlined animate-spin text-[32px] text-[#2e2877] mb-3">progress_activity</span>
-                  <p className="text-[14px] text-[#474551] font-semibold">Extracting questions...</p>
+          {!isReadOnly && (
+            <>
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Bulk Import Questions</h3>
+                  <button 
+                    onClick={downloadTemplate} 
+                    className="text-[#2e2877] text-[13px] font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">download</span> Download CSV Template
+                  </button>
                 </div>
-              ) : (
-                <>
-                  <div className="h-14 w-14 rounded-full bg-[#f0eded] flex items-center justify-center mb-3 group-hover:bg-[#2e2877] group-hover:text-white transition-colors">
-                    <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
-                  </div>
-                  <span className="text-[15px] font-semibold text-[#1b1c1c] mb-1">Click to upload or drag and drop</span>
-                  <span className="text-[13px] font-normal text-[#474551]">CSV file formatted to Kanvise standard</span>
-                </>
-              )}
-            </label>
-          </div>
+                
+                <label 
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`w-full border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-colors cursor-pointer group ${
+                    isDragging 
+                      ? 'border-[#2e2877] bg-[#f5f3f2]' 
+                      : 'border-[#c8c5d2] bg-white hover:bg-[#f5f3f2]'
+                  }`}
+                >
+                  <input type="file" accept=".csv" className="hidden" onChange={handleFileInput} />
+                  
+                  {isUploading ? (
+                    <div className="flex flex-col items-center py-2">
+                      <span className="material-symbols-outlined animate-spin text-[32px] text-[#2e2877] mb-3">progress_activity</span>
+                      <p className="text-[14px] text-[#474551] font-semibold">Extracting questions...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="h-14 w-14 rounded-full bg-[#f0eded] flex items-center justify-center mb-3 group-hover:bg-[#2e2877] group-hover:text-white transition-colors">
+                        <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
+                      </div>
+                      <span className="text-[15px] font-semibold text-[#1b1c1c] mb-1">Click to upload or drag and drop</span>
+                      <span className="text-[13px] font-normal text-[#474551]">CSV file formatted to Kanvise standard</span>
+                    </>
+                  )}
+                </label>
+              </div>
 
-          <div className="flex items-center justify-center py-6">
-            <div className="h-px bg-[#e4e2e1] w-full"></div>
-            <span className="px-4 text-[#787582] text-[13px] font-medium bg-white">OR</span>
-            <div className="h-px bg-[#e4e2e1] w-full"></div>
-          </div>
+              <div className="flex items-center justify-center py-6">
+                <div className="h-px bg-[#e4e2e1] w-full"></div>
+                <span className="px-4 text-[#787582] text-[13px] font-medium bg-white">OR</span>
+                <div className="h-px bg-[#e4e2e1] w-full"></div>
+              </div>
 
-          {/* Add Question Controls */}
-          <div className="flex items-center gap-6 p-6 border-2 border-dashed border-[#c8c5d2] rounded-lg bg-[#fbf9f8] justify-center mt-2">
-            <span className="text-[15px] text-[#474551]">Add new structural block:</span>
-            <div className="flex gap-4">
-              <button 
-                onClick={handleAddMCQ}
-                className="flex items-center gap-2 px-5 py-2.5 border border-[#2e2877] text-[#2e2877] font-semibold text-sm rounded hover:bg-[#2e2877] hover:text-white transition-all bg-white cursor-pointer hover:shadow-sm"
-              >
-                <span className="material-symbols-outlined text-[18px]">list_alt</span>
-                MCQ Question
-              </button>
-              <button 
-                onClick={handleAddTheory}
-                className="flex items-center gap-2 px-5 py-2.5 border border-[#2e2877] text-[#2e2877] font-semibold text-sm rounded hover:bg-[#2e2877] hover:text-white transition-all bg-white cursor-pointer hover:shadow-sm"
-              >
-                <span className="material-symbols-outlined text-[18px]">subject</span>
-                Theory Question
-              </button>
-            </div>
-          </div>
+              {/* Add Question Controls */}
+              <div className="flex items-center gap-6 p-6 border-2 border-dashed border-[#c8c5d2] rounded-lg bg-[#fbf9f8] justify-center mt-2">
+                <span className="text-[15px] text-[#474551]">Add new structural block:</span>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={handleAddMCQ}
+                    className="flex items-center gap-2 px-5 py-2.5 border border-[#2e2877] text-[#2e2877] font-semibold text-sm rounded hover:bg-[#2e2877] hover:text-white transition-all bg-white cursor-pointer hover:shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">list_alt</span>
+                    MCQ Question
+                  </button>
+                  <button 
+                    onClick={handleAddTheory}
+                    className="flex items-center gap-2 px-5 py-2.5 border border-[#2e2877] text-[#2e2877] font-semibold text-sm rounded hover:bg-[#2e2877] hover:text-white transition-all bg-white cursor-pointer hover:shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">subject</span>
+                    Theory Question
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right Column: General Settings (4 cols) */}
@@ -521,9 +647,10 @@ export function MockBuilderClient({ token }: { token: string }) {
                 <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Mock Title</label>
                 <input 
                   type="text" 
+                  disabled={isReadOnly}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all" 
+                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]" 
                 />
               </div>
               
@@ -531,8 +658,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                 <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Description / Instructions</label>
                 <textarea 
                   value={description}
+                  disabled={isReadOnly}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[14px] text-[#474551] outline-none transition-all min-h-[100px] resize-y" 
+                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[14px] text-[#474551] outline-none transition-all min-h-[100px] resize-y disabled:bg-[#f5f3f2]" 
                 />
               </div>
 
@@ -540,8 +668,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                 <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Target Programme/Course</label>
                 <select 
                   value={courseId}
+                  disabled={isReadOnly}
                   onChange={(e) => setCourseId(e.target.value)}
-                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all appearance-none"
+                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all appearance-none disabled:bg-[#f5f3f2]"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23787582' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                     backgroundPosition: 'right 0.5rem center',
@@ -622,9 +751,10 @@ export function MockBuilderClient({ token }: { token: string }) {
                   <div className="flex items-center gap-3">
                     <input 
                       type="number" 
+                      disabled={isReadOnly}
                       value={timeLimit}
                       onChange={(e) => setTimeLimit(Number(e.target.value))}
-                      className="w-24 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all" 
+                      className="w-24 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]" 
                     />
                     <span className="text-[13px] text-[#787582]">Strict enforcement in minutes</span>
                   </div>

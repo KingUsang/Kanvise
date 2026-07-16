@@ -23,6 +23,12 @@ import { subProgrammesRouter } from "./routes/sub-programmes";
 import { coursesRouter } from "./routes/courses";
 import { usersRouter } from "./routes/users";
 import { mocksRouter } from "./routes/mocks";
+import { enrolmentsRouter } from "./routes/enrolments";
+import { paymentsRouter } from "./routes/payments";
+import { attendanceRouter } from "./routes/attendance";
+import { publicRouter } from "./routes/public";
+import { storageRouter } from "./routes/storage";
+import { notesRouter } from "./routes/notes";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -36,6 +42,12 @@ app.route("/sub-programmes", subProgrammesRouter);
 app.route("/courses", coursesRouter);
 app.route("/users", usersRouter);
 app.route("/mocks", mocksRouter);
+app.route("/enrolments", enrolmentsRouter);
+app.route("/payments", paymentsRouter);
+app.route("/attendance", attendanceRouter);
+app.route("/public", publicRouter);
+app.route("/storage", storageRouter);
+app.route("/notes", notesRouter);
 
 // Waitlist Route
 app.post("/waitlist", async (c) => {

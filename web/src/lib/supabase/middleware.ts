@@ -63,7 +63,7 @@ export async function updateSession(request: NextRequest) {
           return NextResponse.redirect(url)
         }
         // Admin and tutor are allowed at /dashboard
-      } else if (request.nextUrl.pathname.startsWith('/dashboard/student')) {
+      } else if (request.nextUrl.pathname === '/dashboard/student' || request.nextUrl.pathname.startsWith('/dashboard/student/')) {
         if (kanvise_role !== 'student') {
           const url = request.nextUrl.clone()
           url.pathname = '/dashboard'

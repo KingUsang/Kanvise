@@ -64,7 +64,7 @@ There are three distinct registration �ows in Kanvise. Each results in a diffe
 
 - `school_id = NULL (no school yet)` 
 
-`9. Admin is redirected to /dashboard/admin/setup to create their school` 
+`9. Admin is redirected to /dashboard/setup to create their school` 
 
 `10. After school creation, school_id is set on the user_profiles record` 
 
@@ -117,7 +117,7 @@ invite_token: "xxxx" }
 
 - `school_id = extracted from token` 
 
-`12. Tutor is redirected to /dashboard/tutor` 
+`12. Tutor is redirected to /dashboard` 
 
 The invite token payload contains: 
 
@@ -207,9 +207,9 @@ introduced.
 
 `8. User is redirected to the correct dashboard based on their role:` 
 
-- `admin  → /dashboard/admin` 
+- `admin  → /dashboard` 
 
-- `tutor  → /dashboard/tutor` 
+- `tutor  → /dashboard` 
 
 - `student → /dashboard/student` 
 
@@ -353,8 +353,7 @@ Extract kanvise_role from user_metadata
 
 ```
 Does the role match the route?
-/dashboard/admin/** → requires kanvise_role = admin
-/dashboard/tutor/** → requires kanvise_role = tutor
+/dashboard/** → requires kanvise_role in [admin, tutor] (with internal component-level authorisation)
 /dashboard/student/** → requires kanvise_role = student
          │
 Role mismatch → Redirect to correct dashboard for their role

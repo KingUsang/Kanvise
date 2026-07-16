@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>Screen List</h1>
+  <div id="output">Loading...</div>
+  <script>
+    fetch('file:///home/kingusang/.gemini/antigravity-ide/brain/b4e76ad6-1746-4e2b-894c-604a78296666/.system_generated/steps/165/output.txt')
+      .then(r => r.json())
+      .then(data => {
+        let out = "";
+        data.screens.forEach(s => {
+          if (s.name && (s.name.includes('S:') || s.name.includes('P:') || s.name.includes('S1:') || s.name.includes('M:') || s.name.includes('T1'))) {
+             out += s.name + "<br/>";
+          }
+        });
+        document.getElementById('output').innerHTML = out || 'No matching screens found';
+      })
+      .catch(e => {
+        document.getElementById('output').innerHTML = 'Error: ' + e.message;
+      });
+  </script>
+</body>
+</html>

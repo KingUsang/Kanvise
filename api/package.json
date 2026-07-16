@@ -9,6 +9,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1087.0",
+    "@aws-sdk/s3-request-presigner": "^3.1087.0",
     "@hono/node-server": "^1.13.7",
     "@napi-rs/canvas": "^1.0.2",
     "@supabase/supabase-js": "^2.47.11",

@@ -36,7 +36,7 @@ export default function AccountSetupPage() {
       }
       setSessionToken(session.access_token);
 
-      const honoApiUrl = process.env.NEXT_PUBLIC_HONO_API_URL || "http://localhost:8787";
+      const honoApiUrl = process.env.NEXT_PUBLIC_HONO_API_URL || "http://localhost:3001";
 
       try {
         // Fetch profile
@@ -78,7 +78,7 @@ export default function AccountSetupPage() {
     setSaving(true);
     setError(null);
 
-    const honoApiUrl = process.env.NEXT_PUBLIC_HONO_API_URL || "http://localhost:8787";
+    const honoApiUrl = process.env.NEXT_PUBLIC_HONO_API_URL || "http://localhost:3001";
 
     try {
       // Save bio via PATCH /auth/me
