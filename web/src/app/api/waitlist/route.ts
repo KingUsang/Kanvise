@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+  const atIndex = contactEmail.indexOf("@");
+  const dotAfterAt = contactEmail.indexOf(".", atIndex + 2);
+  if (atIndex < 1 || dotAfterAt <= atIndex + 1 || dotAfterAt >= contactEmail.length - 1) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
