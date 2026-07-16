@@ -583,7 +583,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                                             <span className="material-symbols-outlined text-[18px]">link</span>
                                           </button>
                                         )}
-                                        <button onClick={() => openEdit(sp, 'sub-programme', prog.id)} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Edit Sub-Programme">
+                                        <button onClick={() => openEdit({ ...sp, programme_id: prog.id }, 'sub_programme')} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Edit Sub-Programme">
                                           <span className="material-symbols-outlined text-[18px]">edit</span>
                                         </button>
                                       </div>
