@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 type WaitlistPayload = {
   contact_name?: string;
@@ -21,43 +22,71 @@ export async function POST(req: NextRequest) {
   const contactName = body.contact_name?.trim();
   const contactEmail = body.contact_email?.trim();
   const centreName = body.centre_name?.trim();
+  const estimatedStudentCount =
+    typeof body.estimated_student_count === "number"
+      ? body.estimated_student_count
+      : body.estimated_student_count
+        ? Number.parseInt(body.estimated_student_count, 10)
+        : null;
 
   if (!contactName || !contactEmail || !centreName) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_HONO_API_URL || "http://localhost:3001";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  }
+
+  if (estimatedStudentCount !== null && Number.isNaN(estimatedStudentCount)) {
+    return NextResponse.json({ error: "Estimated student count must be a valid number" }, { status: 400 });
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.json(
+      { error: "Server missing Supabase environment configuration" },
+      { status: 500 }
+    );
+  }
 
   try {
-    const response = await fetch(`${apiUrl}/waitlist`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...body,
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    const { error } = await supabase.from("waitlist_signups").insert([
+      {
         contact_name: contactName,
         contact_email: contactEmail,
         centre_name: centreName,
-      }),
-    });
+        contact_phone: body.contact_phone?.trim() || null,
+        estimated_student_count: estimatedStudentCount,
+        wants_beta_testing: Boolean(body.wants_beta_testing),
+        status: "pending",
+      },
+    ]);
 
-    const text = await response.text();
-    let data: unknown = {};
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { message: text };
+    if (error) {
+      if (error.code === "23505") {
+        return NextResponse.json(
+          { message: "You're already on the list! We will be in touch soon." },
+          { status: 409 }
+        );
       }
+
+      console.error("[Waitlist Route] Failed to insert waitlist signup:", error);
+      return NextResponse.json(
+        { error: "Failed to join waitlist. Please try again." },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json({ message: "Successfully joined the waitlist!" }, { status: 201 });
   } catch (error) {
-    console.error("[Waitlist Route] Failed to reach backend API:", error);
+    console.error("[Waitlist Route] Unexpected error:", error);
     return NextResponse.json(
       { error: "Failed to process waitlist request. Please try again later." },
-      { status: 502 }
+      { status: 500 }
     );
   }
 }
