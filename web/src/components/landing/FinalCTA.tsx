@@ -25,7 +25,7 @@ export default function FinalCTA() {
     setMessage("");
 
     try {
-      const res = await fetch("http://localhost:3001/waitlist", {
+      const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
