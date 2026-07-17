@@ -1,0 +1,28 @@
+name: Deploy Backend to Scaleway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/**'   # only triggers deploy when backend code changes
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SCALEWAY_HOST }}
+          username: ${{ secrets.SCALEWAY_USER }}
+          key: ${{ secrets.SCALEWAY_SSH_KEY }}
+          port: ${{ secrets.SCALEWAY_PORT || 22 }}
+          script: |
+            cd ~/Kanvise                # root of the monorepo on the server
+            git pull origin main
+            cd api                      # move into the backend folder
+            npm install
+            npm run build               # remove this line if no build step
+            pm2 restart kanvise-backend || pm2 start npm --name kanvise-backend -- start # must match the name you gave pm2 on first start
+            pm2 save
