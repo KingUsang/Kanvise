@@ -8,7 +8,14 @@ const app = new Hono();
 
 // Middleware
 app.use("/*", cors({
-  origin: (origin) => origin || "*", // Dynamically allow frontend (Vercel, localhost, etc)
+  origin: (origin) => {
+    if (!origin) return process.env.FRONTEND_URL!;
+    // Securely allow the exact production URL OR any Vercel Preview URL
+    if (origin === process.env.FRONTEND_URL || origin.endsWith('.vercel.app') || origin === 'http://localhost:3000') {
+      return origin;
+    }
+    return process.env.FRONTEND_URL!; // Reject others by defaulting to prod
+  },
   credentials: true,
 }));
 
@@ -101,7 +108,7 @@ app.post("/waitlist", async (c) => {
   }
 });
 
-const port = Number(process.env.PORT) || 3001;
+const port = Number(process.env.PORT!);
 console.log(`Server is running on port ${port}`);
 
 serve({

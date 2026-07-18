@@ -18,7 +18,7 @@ const jobs = new Map<string, { status: 'processing' | 'complete' | 'error', slid
 const uploadWithRetry = async (fileName: string, buffer: Buffer, maxRetries = 3) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const { error } = await supabase.storage
-      .from(process.env.SUPABASE_STORAGE_BUCKET || 'slides')
+      .from(process.env.SUPABASE_STORAGE_BUCKET!)
       .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true })
       
     if (!error) return true
@@ -124,7 +124,7 @@ slidesRouter.post('/:id/slides/upload', requireRole('tutor', 'admin'), async (c)
         try {
           await uploadWithRetry(fileName, buffer)
           const { data } = supabase.storage
-            .from(process.env.SUPABASE_STORAGE_BUCKET || 'slides')
+            .from(process.env.SUPABASE_STORAGE_BUCKET!)
             .getPublicUrl(fileName)
             
           slideUrls[pageNumber - 1] = data.publicUrl
@@ -146,7 +146,7 @@ slidesRouter.post('/:id/slides/upload', requireRole('tutor', 'admin'), async (c)
             }).filter(Boolean) as string[]
             
             if (pathsToDelete.length > 0) {
-              await supabase.storage.from(process.env.SUPABASE_STORAGE_BUCKET || 'slides').remove(pathsToDelete)
+              await supabase.storage.from(process.env.SUPABASE_STORAGE_BUCKET!).remove(pathsToDelete)
             }
           }
           

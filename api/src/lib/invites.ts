@@ -8,7 +8,7 @@ export const generateInviteToken = (schoolId: string, adminUserId: string) => {
     expires_at: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
   }
   const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  const secret = process.env.INVITE_TOKEN_SECRET || 'dev_secret_only'
+  const secret = process.env.INVITE_TOKEN_SECRET!
   
   const signature = crypto
     .createHmac('sha256', secret)
@@ -21,7 +21,7 @@ export const generateInviteToken = (schoolId: string, adminUserId: string) => {
 export const validateInviteToken = (token: string) => {
   const [payloadBase64, signature] = token.split('.')
   
-  const secret = process.env.INVITE_TOKEN_SECRET || 'dev_secret_only'
+  const secret = process.env.INVITE_TOKEN_SECRET!
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(payloadBase64)

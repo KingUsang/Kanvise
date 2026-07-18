@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware } from '../middleware/auth'
+import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, Variables } from '../middleware/auth'
 
-export const dashboardRouter = new Hono()
+export const dashboardRouter = new Hono<{ Variables: Variables }>()
 
 dashboardRouter.use('*', jwtVerificationMiddleware)
 dashboardRouter.use('*', profileResolutionMiddleware)

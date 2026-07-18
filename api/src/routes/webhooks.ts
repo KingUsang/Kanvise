@@ -5,8 +5,8 @@ import { supabase } from '../lib/supabase'
 export const webhooksRouter = new Hono()
 
 const receiver = new WebhookReceiver(
-  process.env.LIVEKIT_API_KEY || '',
-  process.env.LIVEKIT_API_SECRET || '',
+  process.env.LIVEKIT_API_KEY!,
+  process.env.LIVEKIT_API_SECRET!,
 )
 
 // ── POST /webhooks/livekit ─────────────────────────────────────────────────

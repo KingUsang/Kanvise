@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole } from '../middleware/auth'
+import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole, Variables } from '../middleware/auth'
 import { generateInviteToken } from '../lib/invites'
 
-export const schoolsRouter = new Hono()
+export const schoolsRouter = new Hono<{ Variables: Variables }>()
 
 schoolsRouter.use('*', jwtVerificationMiddleware)
 schoolsRouter.use('*', profileResolutionMiddleware)
@@ -171,7 +171,7 @@ schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
     return c.json({ error: insertError.message }, 500)
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.FRONTEND_URL!
   const inviteUrl = `${appUrl}/join?token=${token}`
 
   // TODO(ux): The stateless HMAC token makes the URL very long (~150+ chars).

@@ -4,6 +4,11 @@ import { supabase } from '../lib/supabase'
 
 import { decode, verifyWithJwks } from 'hono/jwt'
 
+export type Variables = {
+  user: any;
+  jwt_payload: any;
+};
+
 // In-memory cache for JWKS public keys — fetched once on first request, reused forever
 // (until server restarts). Supabase rarely rotates keys.
 let cachedJwks: any[] | null = null

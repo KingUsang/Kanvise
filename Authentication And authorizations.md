@@ -750,8 +750,8 @@ Auth user. A user cannot change their own role — the `PATCH /auth/me` endpoint
 ## **13.4 Invite Token Security** 
 
 Invite tokens are HMAC-signed with a secret known only to the Hono server. A malicious actor cannot forge a valid invite token without the secret. The token expires in 7 days. If an Admin suspects a link has been shared with the wrong person, the practical mitigation at MVP is to change the 
-
-`INVITE_TOKEN_SECRET` environment variable — this invalidates all outstanding invite tokens. PostMVP, per-token revocation will be added. 
+INVITE_TOKEN_SECRET
+`` environment variable — this invalidates all outstanding invite tokens. PostMVP, per-token revocation will be added. 
 
 ## **13.5 Webhook Security** 
 
