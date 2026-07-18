@@ -155,12 +155,9 @@ function LoginContent() {
 
           {/* Sign Up Toggle */}
           <div className="mt-8 pt-6 border-t border-kv-dust/30 text-center">
-            <p className="text-sm text-kv-dark/70">
-              Don't have an account?{" "}
-              <Link
-                href="/auth/register"
-                className="text-kv-blue font-bold hover:underline"
-              >
+            <p className="text-center text-sm text-gray-600 mt-8">
+              Don&apos;t have an account?{" "}
+              <Link href="/auth/register" className="font-semibold text-kv-brown hover:text-kv-dark transition-colors">
                 Sign Up
               </Link>
             </p>

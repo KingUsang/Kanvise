@@ -24,6 +24,18 @@
 .animation-delay-400 { animation-delay: 0.4s; }
 .animation-delay-500 { animation-delay: 0.5s; }
 
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+  100% { transform: translateY(0px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-float-delayed {
+  animation: float 6s ease-in-out 3s infinite;
+}
+
 
 
 /* ── Kanvise Brand Tokens ── */
@@ -31,7 +43,7 @@
   /* Existing app tokens */
   --background: #fbf9f8;
   --foreground: #1b1c1c;
-  --primary: #180d62;
+  --primary: #2e2877;
   --primary-foreground: #ffffff;
   --secondary: #994704;
   --secondary-foreground: #ffffff;

@@ -9,6 +9,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 function RegisterContent() {
+import { Suspense } from "react";
+
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
@@ -90,7 +93,7 @@ function RegisterContent() {
           {/* Text Content */}
           <h1 className="text-2xl font-bold text-kv-dark mb-2 w-full">Check your email</h1>
           <p className="text-kv-dark/70 mb-8 w-full max-w-[360px] mx-auto text-sm leading-relaxed">
-            We've sent a verification link to <span className="font-semibold text-kv-dark">{email}</span>. Please click the link to activate your account.
+            We&apos;ve sent a verification link to <span className="font-semibold text-kv-dark">{email}</span>. Please click the link to activate your account.
           </p>
           
           {/* Contextual Reminder */}
@@ -99,7 +102,7 @@ function RegisterContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div className="flex-1">
-              <p className="text-xs font-bold text-kv-dark uppercase tracking-wider mb-1">Didn't receive the email?</p>
+              <p className="text-xs font-bold text-kv-dark uppercase tracking-wider mb-1">Didn&apos;t receive the email?</p>
               <p className="text-xs text-kv-dark/70">Check your spam folder or verify that the email address provided was correct.</p>
             </div>
           </div>
@@ -148,7 +151,7 @@ function RegisterContent() {
             <div>
               <h2 className="text-5xl font-bold text-white mb-4 leading-tight">
                 {isStudentFlow ? (
-                  <>Access Your<br/><span className="text-[#ff9653]">School's Portal</span></>
+                  <>Access Your<br/><span className="text-[#ff9653]">School&apos;s Portal</span></>
                 ) : (
                   <>Set up your<br/><span className="text-[#ff9653]">school.</span></>
                 )}

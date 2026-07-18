@@ -18,16 +18,16 @@ export default function WhyInviteOnly() {
         {/* Left Side: Story Text */}
         <div className={`w-full lg:w-1/2 ${inView ? "animate-fade-up" : "opacity-0"}`}>
           <h2 className="text-4xl md:text-[48px] leading-[56px] font-bold text-[#2E2877] mb-6 tracking-[-0.02em]">
-            We're not for everyone. <br/>
-            <span className="text-[#3C3027] opacity-80">That's the point.</span>
+            We&apos;re not for everyone. <br/>
+            <span className="text-[#3C3027] opacity-80">That&apos;s the point.</span>
           </h2>
           
           <div className="text-lg text-[#474551] space-y-6 leading-relaxed">
             <p>
-              Kanvise is not a marketplace. Your students don't browse to find you. They join your school because you invited them. We're building this deliberately — onboarding serious tutors in batches.
+              Kanvise is not a marketplace. Your students don&apos;t browse to find you. They join your school because you invited them. We&apos;re building this deliberately — onboarding serious tutors in batches.
             </p>
             <p className="font-semibold text-[#2E2877]">
-              When you join the waitlist, you're not signing up for a random app. You're applying to be part of the first generation of tutors to run a truly professional virtual school in Nigeria.
+              When you join the waitlist, you&apos;re not signing up for a random app. You&apos;re applying to be part of the first generation of tutors to run a truly professional virtual school in Nigeria.
             </p>
             <p className="font-bold text-[#2E2877] text-xl">
               That means something.
@@ -47,7 +47,7 @@ export default function WhyInviteOnly() {
             {[
               {
                 title: "Not a marketplace",
-                desc: "Students can't browse to find you.",
+                desc: "Students can&apos;t browse to find you.",
                 icon: "storefront"
               },
               {

@@ -14,6 +14,7 @@ export default function FoundersSection() {
       <div className="max-w-[1000px] mx-auto grid md:grid-cols-12 gap-10 lg:gap-16 items-center">
         
         <div className={`group md:col-span-6 relative aspect-[4/3] rounded-xl overflow-hidden shadow-2xl ${inView ? "animate-fade-up" : "opacity-0"}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             className="object-cover w-full h-full absolute inset-0 transition-transform duration-[10000ms] group-hover:scale-110" 
             alt="Kanvise founding team" 
@@ -29,7 +30,7 @@ export default function FoundersSection() {
           
           <div className="space-y-6 text-xl font-normal leading-relaxed text-[#a79b82] mb-10">
             <p>
-              Kanvise didn't start in a boardroom. It started in a tutorial centre — managing students on WhatsApp, sending attendance on Google Sheets, watching good tutors burn out from the admin, not the teaching.
+              Kanvise didn&apos;t start in a boardroom. It started in a tutorial centre — managing students on WhatsApp, sending attendance on Google Sheets, watching good tutors burn out from the admin, not the teaching.
             </p>
             <p className="text-white font-medium">
               We are tutors. We are builders. We are Nigerian.

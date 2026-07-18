@@ -58,10 +58,28 @@ app.route("/storage", storageRouter);
 app.route("/notes", notesRouter);
 
 // Waitlist Route
+app.get("/waitlist/count", async (c) => {
+  try {
+    const { count, error } = await supabase
+      .from("waitlist_signups")
+      .select("*", { count: "exact", head: true });
+    
+    if (error) {
+      console.error("Error fetching waitlist count:", error);
+      return c.json({ error: "Failed to fetch count" }, 500);
+    }
+    
+    return c.json({ count: count || 0 }, 200);
+  } catch (error) {
+    console.error("Waitlist count error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
 app.post("/waitlist", async (c) => {
   try {
     const body = await c.req.json();
-    const { contact_name, contact_email, centre_name, contact_phone, estimated_student_count } = body;
+    const { contact_name, contact_email, centre_name, contact_phone, estimated_student_count, wants_beta_testing } = body;
 
     // Basic validation
     if (!contact_email || !contact_name || !centre_name) {
@@ -92,6 +110,7 @@ app.post("/waitlist", async (c) => {
         centre_name,
         contact_phone: contact_phone || null,
         estimated_student_count: estimated_student_count ? parseInt(estimated_student_count, 10) : null,
+        wants_beta_testing: wants_beta_testing ? true : false,
         status: "pending",
       },
     ]);

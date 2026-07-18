@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: "Kanvise — Run your school. We handle the engine.",
   description: "Kanvise is the private operating system for serious Nigerian tutors — giving you the tools to run classes, track performance, collect payments, and manage your students like a real school. Invite-only. Built for you.",
   icons: {
-    icon: "/kanvise_logo.jpeg",
+    icon: "/kanvise_logo_small_blue.png",
   },
 };
 

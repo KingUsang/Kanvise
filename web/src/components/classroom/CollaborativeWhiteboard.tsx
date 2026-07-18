@@ -159,10 +159,11 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   let isHost = false;
   try {
     isHost = JSON.parse(room.localParticipant.metadata || "{}").isHost;
-  } catch (e) {
+  } catch {
     // ignore
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChange = useCallback((elements: readonly any[], appState: any) => {
     // If this onChange was triggered programmatically by updateScene, 
     // clear the guard flag and DO NOT broadcast to prevent infinite loops!

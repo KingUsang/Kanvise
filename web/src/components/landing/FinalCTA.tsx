@@ -25,7 +25,7 @@ export default function FinalCTA() {
     setMessage("");
 
     try {
-      const res = await fetch("http://localhost:3001/waitlist", {
+      const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -40,7 +40,7 @@ export default function FinalCTA() {
         setStatus("error");
         setMessage(data.error || "Something went wrong. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setStatus("error");
       setMessage("Failed to connect to the server. Please try again later.");
     }
@@ -60,7 +60,7 @@ export default function FinalCTA() {
             Your school deserves <br className="hidden lg:block"/> the right engine.
           </h2>
           <p className="text-lg text-[#9893e8] mb-8 max-w-[400px]">
-            Join the waitlist today. We're opening access in batches — and the first tutors in will shape what Kanvise becomes.
+            Join the waitlist today. We&apos;re opening access in batches — and the first tutors in will shape what Kanvise becomes.
           </p>
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3 text-white/80">
@@ -87,7 +87,7 @@ export default function FinalCTA() {
               </div>
               <h3 className="text-2xl font-bold text-[#2E2877] mb-2">Success!</h3>
               <p className="text-[#3C3027] font-medium">{message}</p>
-              <p className="text-[#3C3027]/70 text-sm mt-2">We'll reach out as soon as your batch opens.</p>
+              <p className="text-[#3C3027]/70 text-sm mt-2">We&apos;ll reach out as soon as your batch opens.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">

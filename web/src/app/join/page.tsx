@@ -89,7 +89,7 @@ function JoinContent() {
           </div>
           <h2 className="text-2xl font-bold text-kv-dark mb-3">Check your email</h2>
           <p className="text-gray-500 mb-6">
-            We've sent a verification link to <span className="font-semibold text-kv-dark">{email}</span>. 
+            We&apos;ve sent a verification link to <span className="font-semibold text-kv-dark">{email}</span>. 
             Please click the link to accept your invitation and activate your account.
           </p>
         </div>
