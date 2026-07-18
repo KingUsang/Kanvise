@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 async function getSchool(slug: string) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const res = await fetch(`${apiUrl}/public/schools/${slug}`, {
     next: { revalidate: 60 } // Cache for 60 seconds
   });

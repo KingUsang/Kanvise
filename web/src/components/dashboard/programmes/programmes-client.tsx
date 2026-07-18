@@ -57,7 +57,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       if (!token) return
 
       const headers = { 'Authorization': `Bearer ${token}` }
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
       const [progRes, subProgRes, coursesRes, tutorsRes, schoolRes] = await Promise.all([
         fetch(`${baseUrl}/programmes`, { headers }),
@@ -125,7 +125,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
     setSaveError('')
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL
       let endpoint = `${baseUrl}/programmes`
       let payload: any = {
         name: formData.name,

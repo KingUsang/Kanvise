@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CheckoutButton } from "../../../components/public/checkout-button";
 
 async function getProgramme(slug: string) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const res = await fetch(`${apiUrl}/public/programmes/${slug}`, {
     next: { revalidate: 60 }
   });

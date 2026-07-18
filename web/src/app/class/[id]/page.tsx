@@ -39,7 +39,7 @@ export default async function Page({ params, searchParams }: PageProps) {
   // Tutors navigate with ?start=true to create and start the room.
   // Everyone else calls /join which expects the room to already be live.
 
-  const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL || 'http://localhost:3001'
+  const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL
   const endpoint = isStarting
     ? `${honoUrl}/live-classes/${classId}/start`
     : `${honoUrl}/live-classes/${classId}/join`

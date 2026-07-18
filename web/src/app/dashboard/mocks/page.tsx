@@ -35,7 +35,7 @@ export default async function MocksPage() {
   }
 
   // Fetch capabilities
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/dashboard/stats`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

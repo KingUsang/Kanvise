@@ -31,7 +31,7 @@ export default async function SchedulePage() {
   }
 
   // Fetch capabilities to know if admin/tutor
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/dashboard/stats`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

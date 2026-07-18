@@ -44,7 +44,7 @@ export default async function DashboardLayout({
 
   // Fetch capabilities and basic user info from Hono stats endpoint
   // We do this to determine if the user is a tutor based on their assignments
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/dashboard/stats`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

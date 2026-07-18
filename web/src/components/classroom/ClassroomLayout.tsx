@@ -52,7 +52,7 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
   const handleEndClass = async () => {
     setIsEnding(true);
     try {
-      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL || 'http://localhost:3001';
+      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL;
       // The browser must send its own JWT — retrieve from Supabase client-side
       const { createBrowserClient } = await import('@supabase/ssr');
       const supabase = createBrowserClient(

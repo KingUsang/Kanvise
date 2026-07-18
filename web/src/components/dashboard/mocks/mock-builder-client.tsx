@@ -57,7 +57,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/courses`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -80,10 +80,10 @@ export function MockBuilderClient({ token }: { token: string }) {
       if (!editMockId) return;
       try {
         const [mockRes, qRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${editMockId}`, {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}`, {
             headers: { "Authorization": `Bearer ${token}` }
           }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${editMockId}/questions`, {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}/questions`, {
             headers: { "Authorization": `Bearer ${token}` }
           })
         ]);
@@ -298,7 +298,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
       if (isEditMode) {
         // 1. Update existing Mock
-        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}`, {
+        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}`, {
           method: "PUT",
           headers: { 
             "Content-Type": "application/json",
@@ -309,7 +309,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         if (!mockRes.ok) throw new Error("Failed to update mock");
       } else {
         // 1. Create Parent Mock
-        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks`, {
+        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
@@ -326,7 +326,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       if (questions.length > 0) {
         if (isEditMode) {
           // Bulk overwrite for edits
-          const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}/questions`, {
+          const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/questions`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -338,7 +338,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         } else {
           // Sequential insert for new mock (as it was)
           await Promise.all(questions.map((q, index) => {
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}/questions`, {
+            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/questions`, {
               method: "POST",
               headers: { 
                 "Content-Type": "application/json",
@@ -361,7 +361,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
       // 3. Publish if immediate
       if (shouldPublish && publishMode === "immediate") {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/mocks/${mockId}/publish`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/publish`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",

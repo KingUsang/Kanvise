@@ -26,7 +26,7 @@ export default function ParticipantsPanel({ isHost, classId }: { isHost: boolean
 
   const handleHostAction = async (action: "mute" | "kick" | "lowerHand", identity: string, trackSid?: string) => {
     try {
-      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL || 'http://localhost:3001';
+      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL;
       const { createBrowserClient } = await import('@supabase/ssr');
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,

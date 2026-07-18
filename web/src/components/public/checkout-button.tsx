@@ -35,7 +35,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       // The backend will enforce this, but let's assume it's valid for now.
       
       // Make checkout request
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${apiUrl}/payments/checkout`, {
         method: "POST",
         headers: {

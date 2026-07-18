@@ -26,7 +26,7 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL
         const res = await fetch(`${baseUrl}/mocks/ungraded-count`, {
           headers: { Authorization: `Bearer ${session.access_token}` }
         })

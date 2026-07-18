@@ -24,7 +24,7 @@ export default async function DashboardHomePage() {
   if (!token) return null
 
   // Fetch stats
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/dashboard/stats`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

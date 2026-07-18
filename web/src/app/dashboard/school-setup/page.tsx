@@ -11,7 +11,7 @@ export default async function SchoolSetupPage() {
   if (!token) return redirect('/auth/login')
 
   // Fetch school data
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/schools/mine`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schools/mine`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

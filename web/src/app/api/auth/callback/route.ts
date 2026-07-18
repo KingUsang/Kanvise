@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
       // For MVP, we will construct the Hono call here.
       try {
-        const honoApiUrl = process.env.NEXT_PUBLIC_HONO_API_URL || 'http://localhost:3001'
+        const honoApiUrl = process.env.NEXT_PUBLIC_HONO_API_URL
         
         console.log(`Pinging Hono backend at: ${honoApiUrl}/auth/profile/init`)
         const response = await fetch(`${honoApiUrl}/auth/profile/init`, {

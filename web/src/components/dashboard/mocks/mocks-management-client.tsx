@@ -55,7 +55,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
   const [filterCourse, setFilterCourse] = useState<string>('all')
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
   const fetchMocks = useCallback(async () => {
     setIsLoading(true)

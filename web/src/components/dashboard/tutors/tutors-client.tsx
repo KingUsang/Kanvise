@@ -41,7 +41,7 @@ export function TutorsClient() {
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [resendingId, setResendingId] = useState<string | null>(null)
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)

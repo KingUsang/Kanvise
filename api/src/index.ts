@@ -8,7 +8,8 @@ const app = new Hono();
 
 // Middleware
 app.use("/*", cors({
-  origin: ["http://localhost:3000"], // Allow local Next.js app
+  origin: (origin) => origin || "*", // Dynamically allow frontend (Vercel, localhost, etc)
+  credentials: true,
 }));
 
 import { authRouter } from "./routes/auth";

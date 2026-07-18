@@ -33,7 +33,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
       setLoadingBanks(true);
       setError(null);
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         const res = await fetch(`${apiUrl}/payments/banks`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -56,7 +56,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
         setAccountName("");
         setError(null);
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL;
           const res = await fetch(`${apiUrl}/payments/subaccount/resolve`, {
             method: "POST",
             headers: {
@@ -90,7 +90,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
     setSubmitting(true);
     setError(null);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${apiUrl}/payments/subaccount`, {
         method: "POST",
         headers: {

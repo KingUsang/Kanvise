@@ -45,7 +45,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
       const formData = new FormData();
       formData.append("file", file);
 
-      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL || "http://localhost:3001";
+      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL;
       
       const uploadRes = await fetch(`${honoUrl}/live-classes/${classId}/slides/upload`, {
         method: "POST",
@@ -72,7 +72,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
   };
 
   const pollJobStatus = (jobId: string, token: string) => {
-    const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL || "http://localhost:3001";
+    const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL;
     
     const interval = setInterval(async () => {
       try {

@@ -23,7 +23,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
   const [startDate, setStartDate] = useState('')
   const [page, setPage] = useState(1)
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL
 
   // Fetch dropdown data on mount
   useEffect(() => {

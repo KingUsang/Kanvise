@@ -38,7 +38,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     setErrorMessage('')
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/schools/mine`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schools/mine`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

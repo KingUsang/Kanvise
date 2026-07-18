@@ -15,7 +15,7 @@ export default function StudentDetailsSheet({ student, onClose }: { student: any
         const supabase = createClient();
         const { data: session } = await supabase.auth.getSession();
         
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const API_URL = process.env.NEXT_PUBLIC_API_URL;
         const res = await fetch(`${API_URL}/enrolments?student_id=${student.id}`, {
           headers: {
             Authorization: `Bearer ${session?.session?.access_token}`,

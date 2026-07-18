@@ -70,19 +70,19 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     const fetchData = async () => {
       try {
         setLoading(true)
-        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/live-classes`, {
+        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         const classesData = await classesRes.json()
         
-        const coursesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/courses`, {
+        const coursesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         const coursesData = await coursesRes.json()
 
         let tutorsData = { data: [] }
         if (capabilities.isAdmin) {
-          const tutorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/users/tutors`, {
+          const tutorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/tutors`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           if (tutorsRes.ok) {
@@ -107,7 +107,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     if (!capabilities.isAdmin || !courseId) return
     const fetchCourseTutors = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/courses/${courseId}/tutors`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/tutors`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (res.ok) {
@@ -128,7 +128,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     setIsSubmitting(true)
     const scheduledAt = new Date(`${date}T${time}`).toISOString()
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/live-classes`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
@@ -136,7 +136,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         })
       })
       if (res.ok) {
-        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/live-classes`, {
+        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         const classesData = await classesRes.json()
@@ -161,13 +161,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
   const handleStartClass = async (classId: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/live-classes/${classId}/start`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/start`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
         alert('Class started! (LiveKit token generated)')
-        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/live-classes`, {
+        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         const classesData = await classesRes.json()
@@ -184,7 +184,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
   const handleJoinClass = async (classId: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/live-classes/${classId}/join`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/join`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
