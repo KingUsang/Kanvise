@@ -9,9 +9,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 function RegisterContent() {
-import { Suspense } from "react";
-
-function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
