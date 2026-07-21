@@ -28,12 +28,13 @@ enrolmentsRouter.get("/", enforceAdmin, async (c) => {
     let query = supabase
       .from("enrolments")
       .select(`
-        id, 
+        id,
         student_id,
         programme_id,
         course_id,
         enrolled_at,
         programmes (id, name),
+        sub_programmes (id, name),
         courses (id, name)
       `)
       .eq("school_id", profile.school_id);

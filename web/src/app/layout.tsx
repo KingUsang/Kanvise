@@ -4,6 +4,8 @@ import "@livekit/components-styles";
 import "@excalidraw/excalidraw/index.css";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { Suspense } from "react";
+import NavigationProgress from "@/components/navigation/NavigationProgress";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -30,6 +32,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@300,1,0,24&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans antialiased overflow-x-hidden no-scrollbar">
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         {children}
         <Toaster position="bottom-right" richColors />
       </body>

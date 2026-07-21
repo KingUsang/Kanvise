@@ -12,8 +12,28 @@ interface NotesClientProps {
 
 interface Course {
   id: string
-  title: string
+  name: string
   programme?: { name: string }
+}
+
+function normalizeCourses(rows: Array<{ id: string; name: string; programme: { name: string }[] | { name: string } | null }>): Course[] {
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    programme: Array.isArray(row.programme) ? row.programme[0] : row.programme || undefined,
+  }))
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error !== null) {
+    const err = error as any;
+    if (err.message) return String(err.message);
+    if (err.details) return String(err.details);
+    if (err.error) return String(err.error);
+    return JSON.stringify(err);
+  }
+  return fallback
 }
 
 interface Note {
@@ -45,7 +65,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const token = session.access_token
-  const role = session.user.user_metadata?.role
+  const role = session.user.user_metadata?.kanvise_role
 
   useEffect(() => {
     fetchCourses()
@@ -54,46 +74,25 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
   useEffect(() => {
     if (courses.length > 0) {
       fetchAllNotes()
-    } else if (!isLoadingNotes && courses.length === 0) {
+    } else {
       setIsLoadingNotes(false)
     }
   }, [courses])
 
   const fetchCourses = async () => {
     try {
-      if (role === "admin") {
-        const { data, error } = await supabase
-          .from("courses")
-          .select("id, title, programme:programmes(name)")
-          .eq("school_id", schoolId)
-        
-        if (error) throw error
-        setCourses(data || [])
-      } else if (role === "tutor") {
-        const { data: assignments, error: assignmentError } = await supabase
-          .from("tutor_course_assignments")
-          .select("course_id")
-          .eq("tutor_id", session.user.user_metadata?.kanvise_user_id || session.user.id)
-          .eq("school_id", schoolId)
-
-        if (assignmentError) throw assignmentError
-
-        if (assignments && assignments.length > 0) {
-          const courseIds = assignments.map(a => a.course_id)
-          const { data, error } = await supabase
-            .from("courses")
-            .select("id, title, programme:programmes(name)")
-            .in("id", courseIds)
-          
-          if (error) throw error
-          setCourses(data || [])
-        } else {
-          setCourses([])
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      }
-    } catch (error) {
-      console.error("Failed to fetch courses:", error)
-      toast.error("Failed to load courses")
+      })
+      
+      if (!res.ok) throw new Error("Failed to load courses from API")
+      const json = await res.json()
+      setCourses(normalizeCourses(json.data || []))
+    } catch (error: any) {
+      console.error("Failed to fetch courses:", error?.message || error)
+      toast.error(errorMessage(error, "Failed to load courses"))
     }
   }
 
@@ -177,7 +176,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
 
     try {
       // 1. Get presigned URL
-      const presignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/presigned-url`, {
+      const presignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/presign/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -187,7 +186,8 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
           file_name: file.name,
           content_type: file.type,
           file_size_bytes: file.size,
-          entity_type: "note"
+          entity_type: "note",
+          course_id: selectedCourse
         })
       })
 
@@ -242,9 +242,9 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
       // Refresh list
       fetchAllNotes()
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error)
-      toast.error(error.message || "An error occurred during upload")
+      toast.error(errorMessage(error, "An error occurred during upload"))
     } finally {
       setIsUploading(false)
     }
@@ -266,9 +266,9 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
 
       toast.success("Resource deleted")
       setNotes(notes.filter(n => n.id !== noteId))
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error)
-      toast.error(error.message || "An error occurred")
+      toast.error(errorMessage(error, "An error occurred"))
     }
   }
 
@@ -313,7 +313,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
                     <option disabled value="">Select active course cohort...</option>
                     {courses.map(course => (
                       <option key={course.id} value={course.id}>
-                        {course.title} {course.programme?.name ? `(${course.programme.name})` : ''}
+                        {course.name} {course.programme?.name ? `(${course.programme.name})` : ''}
                       </option>
                     ))}
                   </select>
@@ -404,7 +404,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
                   >
                     <option value="">All Courses</option>
                     {courses.map(c => (
-                      <option key={c.id} value={c.id}>{c.title}</option>
+                      <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
                 </div>
@@ -453,7 +453,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface">{course ? course.title : "Unknown Course"}</td>
+                            <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface">{course ? course.name : "Unknown Course"}</td>
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{new Date(note.created_at).toLocaleDateString()}</td>
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{formatFileSize(note.file_size_bytes)}</td>
                             <td className="py-4 px-6 text-right">

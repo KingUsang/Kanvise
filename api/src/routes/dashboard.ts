@@ -42,17 +42,24 @@ dashboardRouter.get('/stats', async (c) => {
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    const endOfToday = new Date()
+    endOfToday.setHours(23, 59, 59, 999)
 
     const [
       { count: totalStudents },
       { count: activeTutors },
       { count: upcomingClasses },
-      { data: payments }
+      { data: payments },
+      { count: pendingPayments },
     ] = await Promise.all([
       supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('school_id', schoolId),
       supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'tutor').eq('school_id', schoolId),
-      supabase.from('live_classes').select('*', { count: 'exact', head: true }).eq('status', 'scheduled').eq('school_id', schoolId),
-      supabase.from('payments').select('centre_amount').eq('status', 'successful').eq('school_id', schoolId).gte('paid_at', startOfMonth.toISOString())
+      supabase.from('live_classes').select('*', { count: 'exact', head: true }).eq('status', 'scheduled').eq('school_id', schoolId)
+        .gte('scheduled_at', startOfToday.toISOString()).lte('scheduled_at', endOfToday.toISOString()),
+      supabase.from('payments').select('centre_amount').eq('status', 'successful').eq('school_id', schoolId).gte('paid_at', startOfMonth.toISOString()),
+      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('school_id', schoolId),
     ])
 
     const mtdRevenue = payments ? payments.reduce((sum, p) => sum + Number(p.centre_amount), 0) : 0
@@ -85,6 +92,7 @@ dashboardRouter.get('/stats', async (c) => {
       active_tutors: activeTutors || 0,
       upcoming_classes: upcomingClasses || 0,
       mtd_revenue: mtdRevenue,
+      pending_payments: pendingPayments || 0,
       needs_grading: needsGrading
     }
   }
@@ -132,6 +140,23 @@ dashboardRouter.get('/stats', async (c) => {
       my_courses: myCourses || 0
     }
   }
+
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  let scheduleQuery = supabase.from('live_classes')
+    .select('id, title, scheduled_at, duration_minutes, status, courses(name)')
+    .eq('school_id', schoolId)
+    .gte('scheduled_at', startOfToday.toISOString())
+    .lte('scheduled_at', endOfToday.toISOString())
+    .neq('status', 'cancelled')
+    .order('scheduled_at', { ascending: true })
+    .limit(6)
+  if (!isAdmin) scheduleQuery = scheduleQuery.eq('tutor_id', user.id)
+  const { data: todaySchedule, error: scheduleError } = await scheduleQuery
+  if (scheduleError) return c.json({ error: 'Failed to load dashboard schedule' }, 500)
+  responseData.today_schedule = todaySchedule || []
 
   return c.json({ data: responseData })
 })

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole } from "../middleware/auth";
 import { AppVariables } from "../types";
+import { notifyMockPublished } from "../notifications/triggers";
 
 export const mocksRouter = new Hono<{ Variables: AppVariables }>();
 
@@ -385,10 +386,21 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     .update({ status: "published", publish_at: new Date().toISOString() })
     .eq("id", mockId)
     .eq("school_id", user.school_id) // Tenant isolation
-    .select()
+    .select("*, course:courses(name)")
     .single();
 
   if (error) return c.json({ error: error.message }, 500);
 
-  return c.json({ message: "Mock published successfully", data });
+  const notification = await notifyMockPublished({
+    id: data.id,
+    schoolId: data.school_id,
+    courseId: data.course_id,
+    title: data.title,
+    courseName: (data.course as any)?.name || "Your course",
+  });
+  if (notification.failures.length === 0) {
+    await supabase.from("mock_exams").update({ notification_sent: true }).eq("id", data.id);
+  }
+
+  return c.json({ message: "Mock published successfully", data, notification });
 });

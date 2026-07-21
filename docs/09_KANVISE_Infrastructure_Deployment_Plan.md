@@ -22,7 +22,7 @@ This document defines the complete infrastructure setup for the Kanvise platform
 │  │     VERCEL       │    │            SCALEWAY                  │    │
 │  │                  │    │                                      │    │
 │  │  Next.js App     │    │  ┌─────────────┐  ┌─────────────┐  │    │
-│  │  kanvise.ng      │    │  │  Hono API   │  │  LiveKit    │  │    │
+│  │  kanvise.com      │    │  │  Hono API   │  │  LiveKit    │  │    │
 │  │                  │    │  │  Node.js    │  │  Server     │  │    │
 │  │  - SSR/SSG       │◄──►│  │  PM2        │  │             │  │    │
 │  │  - Edge CDN      │    │  │             │◄─►│             │  │    │
@@ -51,8 +51,8 @@ Kanvise runs three environments. Each is completely isolated — no environment 
 | Environment | Purpose | Domain | Deploy Trigger |
 |---|---|---|---|
 | **Local** | Developer machines | `localhost` | Manual |
-| **Staging** | Pre-production testing | `staging.kanvise.ng` | Push to `develop` branch |
-| **Production** | Live platform | `kanvise.ng` | Push to `main` branch |
+| **Staging** | Pre-production testing | `staging.kanvise.com` | Push to `develop` branch |
+| **Production** | Live platform | `kanvise.com` | Push to `main` branch |
 
 ### Environment Isolation Rules
 
@@ -72,8 +72,8 @@ The Next.js repository is connected to Vercel via GitHub integration. Vercel aut
 
 **Branch to environment mapping:**
 ```
-main    → Production (kanvise.ng)
-develop → Staging (staging.kanvise.ng)
+main    → Production (kanvise.com)
+develop → Staging (staging.kanvise.com)
 feature/* → Preview deployments (auto-generated URLs)
 ```
 
@@ -114,14 +114,14 @@ See Document 17 (Environment Configuration) for the complete variable list.
 ### 3.4 Custom Domain Configuration
 
 **Production:**
-- Root domain `kanvise.ng` → Vercel
-- `www.kanvise.ng` → redirects to `kanvise.ng` (301)
-- `cdn.kanvise.ng` → Cloudflare R2 public bucket
+- Root domain `kanvise.com` → Vercel
+- `www.kanvise.com` → redirects to `kanvise.com` (301)
+- `cdn.kanvise.com` → Cloudflare R2 public bucket
 
 **Staging:**
-- `staging.kanvise.ng` → Vercel staging deployment
+- `staging.kanvise.com` → Vercel staging deployment
 
-DNS is managed through Cloudflare. Cloudflare is set to "DNS only" (grey cloud) for the Vercel domains to let Vercel handle SSL. Cloudflare's proxy (orange cloud) is only active for `cdn.kanvise.ng` which serves R2 files.
+DNS is managed through Cloudflare. Cloudflare is set to "DNS only" (grey cloud) for the Vercel domains to let Vercel handle SSL. Cloudflare's proxy (orange cloud) is only active for `cdn.kanvise.com` which serves R2 files.
 
 ### 3.5 Vercel Build Settings
 
@@ -134,11 +134,11 @@ DNS is managed through Cloudflare. Cloudflare is set to "DNS only" (grey cloud) 
 module.exports = {
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'cdn.kanvise.ng' }
+      { protocol: 'https', hostname: 'cdn.kanvise.com' }
     ]
   },
   experimental: {
-    serverActions: { allowedOrigins: ['kanvise.ng', 'staging.kanvise.ng'] }
+    serverActions: { allowedOrigins: ['kanvise.com', 'staging.kanvise.com'] }
   }
 }
 ```
@@ -194,7 +194,7 @@ apt install -y nginx
 **6. Install Certbot for SSL:**
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d api.kanvise.ng
+certbot --nginx -d api.kanvise.com
 ```
 
 **7. Configure UFW firewall:**
@@ -212,10 +212,10 @@ Nginx sits in front of the Hono process. It handles SSL termination and proxies 
 ```nginx
 server {
     listen 443 ssl;
-    server_name api.kanvise.ng;
+    server_name api.kanvise.com;
 
-    ssl_certificate /etc/letsencrypt/live/api.kanvise.ng/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.kanvise.ng/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/api.kanvise.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.kanvise.com/privkey.pem;
 
     client_max_body_size 10M;
 
@@ -235,7 +235,7 @@ server {
 
 server {
     listen 80;
-    server_name api.kanvise.ng;
+    server_name api.kanvise.com;
     return 301 https://$server_name$request_uri;
 }
 ```
@@ -353,7 +353,7 @@ LiveKit runs on a dedicated Scaleway instance separate from the Hono API. Video 
 
 LiveKit setup and configuration is the responsibility of the live class developer. The Hono API server needs the following from the LiveKit setup:
 
-- The LiveKit server URL: `wss://livekit.kanvise.ng`
+- The LiveKit server URL: `wss://livekit.kanvise.com`
 - The LiveKit API key and secret (stored in Hono's environment)
 - The LiveKit webhook secret (for verifying webhook payloads)
 - The private network IP of the LiveKit server (for Hono to call LiveKit's internal API)
@@ -433,8 +433,8 @@ The following settings are configured in the Supabase dashboard under Authentica
 
 **Redirect URLs (allowed list):**
 ```
-https://kanvise.ng/api/auth/callback
-https://staging.kanvise.ng/api/auth/callback
+https://kanvise.com/api/auth/callback
+https://staging.kanvise.com/api/auth/callback
 http://localhost:3000/api/auth/callback
 ```
 
@@ -486,9 +486,9 @@ kanvise-production/
 
 ### 7.2 R2 Public Access Configuration
 
-The R2 bucket does not have blanket public access. Public files are served through a Cloudflare custom domain `cdn.kanvise.ng` which is configured as an R2 public bucket domain in the Cloudflare dashboard.
+The R2 bucket does not have blanket public access. Public files are served through a Cloudflare custom domain `cdn.kanvise.com` which is configured as an R2 public bucket domain in the Cloudflare dashboard.
 
-Only the `/public/` prefix path is served through `cdn.kanvise.ng`. The `/private/` prefix path requires presigned URLs.
+Only the `/public/` prefix path is served through `cdn.kanvise.com`. The `/private/` prefix path requires presigned URLs.
 
 ### 7.3 Cloudflare DNS Configuration
 
@@ -496,7 +496,7 @@ All DNS records are managed in Cloudflare. The following records are configured:
 
 | Type | Name | Value | Proxy |
 |---|---|---|---|
-| A/CNAME | `kanvise.ng` | Vercel | DNS only |
+| A/CNAME | `kanvise.com` | Vercel | DNS only |
 | CNAME | `www` | `cname.vercel-dns.com` | DNS only |
 | CNAME | `api` | Scaleway server IP | DNS only |
 | CNAME | `livekit` | LiveKit server IP | DNS only |
@@ -505,7 +505,7 @@ All DNS records are managed in Cloudflare. The following records are configured:
 
 **Why DNS only for Vercel and Scaleway:** Vercel and Scaleway handle their own SSL. Cloudflare proxying (orange cloud) would interfere with their SSL certificates.
 
-**Why proxied for CDN:** Cloudflare's proxy is enabled for `cdn.kanvise.ng` to benefit from Cloudflare's global CDN caching for public files. Files uploaded to R2 are automatically cached at Cloudflare's edge nodes closest to Nigerian users.
+**Why proxied for CDN:** Cloudflare's proxy is enabled for `cdn.kanvise.com` to benefit from Cloudflare's global CDN caching for public files. Files uploaded to R2 are automatically cached at Cloudflare's edge nodes closest to Nigerian users.
 
 ### 7.4 R2 API Access
 
@@ -593,7 +593,7 @@ Reviewer tests on the preview URL
 Pull request approved → Merge to develop
          │
          ▼
-Vercel deploys to staging.kanvise.ng (frontend)
+Vercel deploys to staging.kanvise.com (frontend)
 GitHub Action deploys to Scaleway staging (backend)
          │
 Staging tested and verified
@@ -602,7 +602,7 @@ Staging tested and verified
 Merge develop to main
          │
          ▼
-Vercel deploys to kanvise.ng (frontend — automatic)
+Vercel deploys to kanvise.com (frontend — automatic)
 GitHub Action deploys to Scaleway production (backend)
          │
          ▼
@@ -615,7 +615,7 @@ Production deployment complete
 
 ### 9.1 Uptime Monitoring
 
-**Tool:** Vercel Analytics (built-in) for the frontend. A free UptimeRobot monitor checks `api.kanvise.ng/health` every 5 minutes for the backend.
+**Tool:** Vercel Analytics (built-in) for the frontend. A free UptimeRobot monitor checks `api.kanvise.com/health` every 5 minutes for the backend.
 
 **Health check endpoint:** Hono exposes `GET /health` which returns `200 { status: "ok", timestamp: "..." }`. This endpoint requires no authentication and performs no database query — it is a pure liveness check.
 

@@ -4,10 +4,33 @@ import { useEffect, useState } from "react";
 import { X, Loader2, BookOpen, Clock, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function StudentDetailsSheet({ student, onClose }: { student: any, onClose: () => void }) {
+export default function StudentDetailsSheet({ student, onClose, onRemoved }: { student: any, onClose: () => void, onRemoved: () => void }) {
   const [enrolments, setEnrolments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
+
+  const removeStudent = async () => {
+    if (!window.confirm(`Remove ${student.first_name} ${student.last_name} from this school? Their historical records will be retained.`)) return;
+    setRemoving(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!session || !apiUrl) throw new Error('Your session is unavailable');
+      const response = await fetch(`${apiUrl}/users/${encodeURIComponent(student.id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Could not remove student');
+      onRemoved();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not remove student');
+      setRemoving(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchEnrolments() {
@@ -95,7 +118,7 @@ export default function StudentDetailsSheet({ student, onClose }: { student: any
                   <div key={enrolment.id} className="p-4 border border-kv-dust/40 rounded-lg hover:border-kv-blue/30 transition-colors bg-white shadow-sm">
                     <div className="flex justify-between items-start mb-1">
                       <div className="font-semibold text-kv-dark">
-                        {enrolment.programmes?.name || enrolment.courses?.name || "Unknown"}
+                        {enrolment.programmes?.name || enrolment.sub_programmes?.name || enrolment.courses?.name || "Unknown"}
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700">
                         {enrolment.status || "Active"}
@@ -120,9 +143,12 @@ export default function StudentDetailsSheet({ student, onClose }: { student: any
             Close
           </button>
           <button 
+            type="button"
+            onClick={() => void removeStudent()}
+            disabled={removing}
             className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
           >
-            Remove Student
+            {removing ? 'Removing…' : 'Remove Student'}
           </button>
         </div>
       </div>

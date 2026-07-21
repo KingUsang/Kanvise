@@ -96,7 +96,7 @@ export default async function DashboardHomePage() {
               title="Revenue (MTD)" 
               value={formatCurrency(statsData.admin_stats.mtd_revenue)} 
               icon="payments"
-              subtitle="Pending Clearance: ₦450k"
+              subtitle={`${statsData.admin_stats.pending_payments || 0} open checkouts`}
               isRevenue={true} 
             />
           </div>
@@ -143,20 +143,34 @@ export default async function DashboardHomePage() {
                 <h3 className="text-lg font-semibold text-[#1b1c1c]">Today's Schedule</h3>
                 <p className="text-sm text-[#474551] mt-1">{statsData.admin_stats?.upcoming_classes || 0} sessions remaining</p>
               </div>
-              <button className="text-[#c26627] font-semibold text-sm hover:text-[#994704] transition-colors flex items-center">
+              <Link href="/dashboard/schedule" className="text-[#c26627] font-semibold text-sm hover:text-[#994704] transition-colors flex items-center">
                 View Full Calendar
                 <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
-              </button>
+              </Link>
             </div>
 
-            {/* Stub Content */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-12 border-2 border-dashed border-[#eae8e7] rounded-lg">
-              <span className="material-symbols-outlined text-4xl text-[#c8c5d2] mb-3">calendar_month</span>
-              <h4 className="text-lg font-medium text-[#1b1c1c]">Schedule Table Coming Soon</h4>
-              <p className="text-[#474551] mt-1 max-w-sm mx-auto text-sm">
-                The detailed daily schedule table will be built in Step 5.
-              </p>
-            </div>
+            {statsData.today_schedule?.length ? (
+              <div className="divide-y divide-[#eae8e7]">
+                {statsData.today_schedule.map((item: any) => (
+                  <div key={item.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                    <div className="w-16 shrink-0 text-sm font-bold text-[#2e2877]">
+                      {new Date(item.scheduled_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-[#1b1c1c]">{item.title}</p>
+                      <p className="truncate text-sm text-[#474551]">{item.courses?.name || 'General class'}</p>
+                    </div>
+                    <span className="rounded-full bg-[#f0eded] px-3 py-1 text-xs text-[#474551]">{item.duration_minutes} min</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-12 border-2 border-dashed border-[#eae8e7] rounded-lg">
+                <span className="material-symbols-outlined text-4xl text-[#c8c5d2] mb-3">event_available</span>
+                <h4 className="text-lg font-medium text-[#1b1c1c]">No classes today</h4>
+                <p className="text-[#474551] mt-1 text-sm">Your next scheduled class will appear here.</p>
+              </div>
+            )}
           </div>
         </div>
 

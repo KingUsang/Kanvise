@@ -12,7 +12,7 @@ export default async function NotesPage() {
 
   // Next.js Middleware handles role protection.
   const schoolId = session.user.user_metadata?.school_id
-  const role = session.user.user_metadata?.role
+  const role = session.user.user_metadata?.kanvise_role
 
   if (role !== "admin" && role !== "tutor") {
      redirect('/dashboard') // Students can't access this page yet, though they can fetch notes in their view.

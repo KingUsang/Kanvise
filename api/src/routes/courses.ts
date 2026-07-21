@@ -58,7 +58,7 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
         .single();
       if (!progCheck) return c.json({ error: "Invalid programme", code: "INVALID_PARENT" }, 400);
     }
-    
+
     if (sub_programme_id) {
       const { data: subProgCheck } = await supabase
         .from("sub_programmes")
@@ -125,7 +125,7 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     let query = supabase
       .from("courses")
-      .select("*")
+      .select("*, programme:programmes(name)")
       .eq("school_id", profile.school_id);
 
     if (programme_id) query = query.eq("programme_id", programme_id);
@@ -144,12 +144,12 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
         .select("course_id")
         .eq("tutor_id", profile.kanvise_user_id || profile.id)
         .eq("school_id", profile.school_id);
-      
+
       const courseIds = assignments?.map(a => a.course_id) || [];
       if (courseIds.length === 0) {
         return c.json({ data: [] });
       }
-      
+
       query = query.in("id", courseIds as string[]);
     }
 
@@ -190,23 +190,52 @@ coursesRouter.get("/:id", async (c) => {
         .eq("tutor_id", profile.kanvise_user_id || profile.id)
         .eq("school_id", profile.school_id)
         .single();
-        
+
       if (!assignment) {
         return c.json({ error: "Not assigned to this course", code: "FORBIDDEN" }, 403);
       }
     } else if (profile.role === "student") {
-      // TODO: Check enrolments table once mapped
-      // For now, block students from direct curriculum fetch until enrolled table exists
-      return c.json({ error: "Not enrolled in this course", code: "NOT_ENROLLED" }, 403);
+      let parentProgrammeId = course.programme_id;
+      if (course.sub_programme_id) {
+        const { data: subProgramme } = await supabase
+          .from("sub_programmes")
+          .select("programme_id")
+          .eq("id", course.sub_programme_id)
+          .eq("school_id", profile.school_id)
+          .maybeSingle();
+        parentProgrammeId = subProgramme?.programme_id || null;
+      }
+
+      const targets = [`course_id.eq.${id}`];
+      if (course.sub_programme_id) targets.push(`sub_programme_id.eq.${course.sub_programme_id}`);
+      if (parentProgrammeId) targets.push(`programme_id.eq.${parentProgrammeId}`);
+      const { data: enrolment } = await supabase
+        .from("enrolments")
+        .select("id")
+        .eq("student_id", profile.id)
+        .eq("school_id", profile.school_id)
+        .or(targets.join(","))
+        .limit(1)
+        .maybeSingle();
+
+      if (!enrolment) return c.json({ error: "Not enrolled in this course", code: "NOT_ENROLLED" }, 403);
     }
 
-    // Mock content summaries for now since other tables aren't mapped
+    const [notes, assignments, mocks, liveClasses] = await Promise.all([
+      supabase.from("notes").select("*", { count: "exact", head: true }).eq("course_id", id).eq("school_id", profile.school_id),
+      supabase.from("assignments").select("*", { count: "exact", head: true }).eq("course_id", id).eq("school_id", profile.school_id),
+      supabase.from("mock_exams").select("*", { count: "exact", head: true }).eq("course_id", id).eq("school_id", profile.school_id),
+      supabase.from("live_classes").select("*", { count: "exact", head: true }).eq("course_id", id).eq("school_id", profile.school_id),
+    ]);
+    const countError = [notes.error, assignments.error, mocks.error, liveClasses.error].find(Boolean);
+    if (countError) throw countError;
+
     const enhancedData = {
       ...course,
-      notes_count: 0,
-      assignments_count: 0,
-      mocks_count: 0,
-      live_classes_count: 0
+      notes_count: notes.count || 0,
+      assignments_count: assignments.count || 0,
+      mocks_count: mocks.count || 0,
+      live_classes_count: liveClasses.count || 0,
     };
 
     return c.json({ data: enhancedData });
@@ -221,7 +250,7 @@ coursesRouter.patch("/:id", enforceAdmin, async (c) => {
     const profile = c.get("user");
     const id = c.req.param("id");
     const updates = await c.req.json();
-    
+
     // Prevent spoofing
     delete updates.school_id;
     delete updates.id;
@@ -283,15 +312,15 @@ coursesRouter.delete("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
-    
+
     const { error } = await supabase
       .from("courses")
       .delete()
       .eq("id", id)
       .eq("school_id", profile.school_id);
-      
+
     if (error) throw error;
-    
+
     return c.json({ message: "Course deleted" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
@@ -392,9 +421,9 @@ coursesRouter.delete("/:id/tutors/:tutorId", enforceAdmin, async (c) => {
       .eq("course_id", courseId)
       .eq("tutor_id", tutorId)
       .eq("school_id", profile.school_id);
-      
+
     if (error) throw error;
-    
+
     return c.json({ message: "Tutor removed from course" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
@@ -414,7 +443,7 @@ coursesRouter.get("/:id/tutors", enforceAdminOrTutor, async (c) => {
       .eq("school_id", profile.school_id);
 
     if (error) throw error;
-    
+
     // In a real app we'd join this with user_profiles, but for now just return the assignment rows
     return c.json({ data });
   } catch (error: any) {

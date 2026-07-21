@@ -27,7 +27,15 @@ class NodeCanvasFactory {
   }
 }
 
-async function convertPdfToImages(pdfBuffer: Uint8Array): Promise<void> {
+export type PdfConversionMessage =
+  | { type: 'start', numPages: number }
+  | { type: 'page', pageNumber: number, buffer: Buffer }
+  | { type: 'complete' }
+
+export async function convertPdfToImages(
+  pdfBuffer: Uint8Array,
+  emit: (message: PdfConversionMessage) => void,
+): Promise<void> {
   const standardFontDataUrl = path.join(process.cwd(), 'node_modules/pdfjs-dist/standard_fonts/');
 
   const loadingTask = pdfjsLib.getDocument({
@@ -41,7 +49,7 @@ async function convertPdfToImages(pdfBuffer: Uint8Array): Promise<void> {
   const numPages = pdfDocument.numPages;
   const canvasFactory = new NodeCanvasFactory();
 
-  parentPort!.postMessage({ type: 'start', numPages });
+  emit({ type: 'start', numPages });
 
   for (let i = 1; i <= numPages; i++) {
     const page = await pdfDocument.getPage(i);
@@ -62,7 +70,7 @@ async function convertPdfToImages(pdfBuffer: Uint8Array): Promise<void> {
     
     // Encode as JPEG (85% quality by default in napi-rs/canvas if we don't specify, or we can just use 'jpeg')
     const jpegBuffer = await canvasAndContext.canvas.encode('jpeg');
-    parentPort!.postMessage({ type: 'page', pageNumber: i, buffer: jpegBuffer });
+    emit({ type: 'page', pageNumber: i, buffer: jpegBuffer });
     
     canvasFactory.destroy(canvasAndContext);
     
@@ -73,20 +81,17 @@ async function convertPdfToImages(pdfBuffer: Uint8Array): Promise<void> {
   // Clean up document resources
   await pdfDocument.destroy();
   
-  parentPort!.postMessage({ type: 'complete' });
+  emit({ type: 'complete' });
 }
 
-if (!parentPort) {
-  throw new Error('This file must be run as a worker thread.');
-}
-
-// The worker entry point
-(async () => {
+// Worker entry point. Importing this module in tests does not execute it.
+const workerPort = parentPort
+if (workerPort) void (async () => {
   try {
     const { pdfBuffer } = workerData;
-    await convertPdfToImages(new Uint8Array(pdfBuffer));
+    await convertPdfToImages(new Uint8Array(pdfBuffer), message => workerPort.postMessage(message));
   } catch (error: any) {
     console.error('[pdf-converter worker] error:', error);
-    parentPort!.postMessage({ type: 'error', error: error.message });
+    workerPort.postMessage({ type: 'error', error: error.message });
   }
 })();

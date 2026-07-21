@@ -182,22 +182,9 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     }
   }
 
-  const handleJoinClass = async (classId: string) => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/join`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (res.ok) {
-        alert('Joining class! (LiveKit token generated)')
-      } else {
-        const errData = await res.json()
-        alert(`Error: ${errData.error}`)
-      }
-    } catch (err) {
-      console.error(err)
-      alert('Network error')
-    }
+  const handleJoinClass = (classId: string, classTutorId: string) => {
+    const isStarting = user.id === classTutorId;
+    router.push(`/class/${classId}${isStarting ? '?start=true' : ''}`);
   }
 
   const liveClasses = classes.filter(c => c.status === 'live')
@@ -486,7 +473,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                     </div>
                     <div className="mt-4 sm:mt-0 flex gap-2 w-full sm:w-auto">
                       <button 
-                        onClick={() => handleJoinClass(cls.id)}
+                        onClick={() => handleJoinClass(cls.id, cls.tutor_id)}
                         className="flex-1 sm:flex-none px-4 py-2 bg-[#994704] text-white text-[12px] leading-[16px] tracking-[0.05em] font-bold rounded hover:bg-[#a84e04] transition-colors flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(153,71,4,0.3)]"
                       >
                         <span className="material-symbols-outlined text-[18px]">login</span> Join Session

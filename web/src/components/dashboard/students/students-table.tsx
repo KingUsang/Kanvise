@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertTriangle, MoreVertical, HelpCircle } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, Clock, MoreVertical, HelpCircle, XCircle } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
 
-export default function StudentsTable({ students }: { students: any[] }) {
+export default function StudentsTable({ students, onStudentRemoved }: { students: any[], onStudentRemoved: (studentId: string) => void }) {
   const [programmeFilter, setProgrammeFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,11 +23,11 @@ export default function StudentsTable({ students }: { students: any[] }) {
     return Array.from(progs.entries()).map(([id, name]) => ({ id, name }));
   }, [students]);
 
-  // Compute payment status for a student (mock logic based on enrolment status since payment instalments aren't in DB yet)
   const getPaymentStatus = (student: any) => {
-    if (!student.enrolments || student.enrolments.length === 0) return { label: "No Enrolment", code: "none", color: "bg-gray-100 text-gray-800", icon: HelpCircle };
-    // Since there's no payment schedule/instalment tracking yet, any enrolment implies they have successfully paid.
-    return { label: "Fully Paid", code: "paid", color: "bg-green-100 text-green-800", icon: CheckCircle2 };
+    if (student.payment_status === "successful") return { label: "Paid", code: "successful", color: "bg-green-100 text-green-800", icon: CheckCircle2 };
+    if (student.payment_status === "pending") return { label: "Pending", code: "pending", color: "bg-amber-100 text-amber-800", icon: Clock };
+    if (student.payment_status === "failed") return { label: "Failed", code: "failed", color: "bg-red-100 text-red-800", icon: XCircle };
+    return { label: "No Payment", code: "none", color: "bg-gray-100 text-gray-800", icon: HelpCircle };
   };
 
   const filteredStudents = students.filter(student => {
@@ -74,9 +74,10 @@ export default function StudentsTable({ students }: { students: any[] }) {
               className="w-full appearance-none pl-4 pr-10 py-2 border border-kv-dust rounded text-sm focus:outline-none focus:border-kv-blue bg-transparent cursor-pointer"
             >
               <option value="">Payment Status</option>
-              <option value="paid">Fully Paid</option>
-              <option value="partial">Partially Paid</option>
-              <option value="overdue">Overdue</option>
+              <option value="successful">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+              <option value="none">No Payment</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={16} />
           </div>
@@ -111,7 +112,7 @@ export default function StudentsTable({ students }: { students: any[] }) {
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student Info</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student ID</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Enrolments</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Payment Status</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Latest Payment</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
@@ -136,11 +137,10 @@ export default function StudentsTable({ students }: { students: any[] }) {
                   >
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
-                        {/* TODO: In the future, parse `student.profile_photo_key` to a signed S3/Supabase Storage URL. Using initials as fallback. */}
-                        {student.profile_photo_key ? (
+                        {student.profile_photo_url ? (
                           <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                             <img 
-                              src={`https://kanvise-storage.com/${student.profile_photo_key}`} // Mocked URL structure
+                              src={student.profile_photo_url}
                               alt={`${student.first_name} avatar`}
                               className="w-full h-full object-cover"
                             />
@@ -164,7 +164,7 @@ export default function StudentsTable({ students }: { students: any[] }) {
                         {student.enrolments && student.enrolments.length > 0 ? (
                           student.enrolments.map((enr: any) => (
                             <span key={enr.id} className="px-2 py-1 bg-gray-100 border border-gray-200 rounded text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                              {enr.programmes?.name || enr.courses?.name || "Unknown"}
+                              {enr.programmes?.name || enr.sub_programmes?.name || enr.courses?.name || "Unknown"}
                             </span>
                           ))
                         ) : (
@@ -199,6 +199,10 @@ export default function StudentsTable({ students }: { students: any[] }) {
         <StudentDetailsSheet 
           student={selectedStudent} 
           onClose={() => setSelectedStudent(null)} 
+          onRemoved={() => {
+            onStudentRemoved(selectedStudent.id);
+            setSelectedStudent(null);
+          }}
         />
       )}
     </div>

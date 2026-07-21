@@ -1,6 +1,13 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
+import {
+  calculatePaymentBreakdown,
+  checkoutCallbackUrl,
+  createPaystackReference,
+  isUuid,
+  parseCheckoutTarget,
+} from "../payments/checkout";
 
 type Variables = {
   user: any;
@@ -23,14 +30,14 @@ const enforceAdmin = async (c: any, next: any) => {
 paymentsRouter.get("/summary", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
-    
+
     // Fetch Subaccount
     const { data: subaccount } = await supabase
       .from("paystack_subaccounts")
       .select("*")
       .eq("school_id", profile.school_id)
       .single();
-      
+
     // Fetch Subscription
     const { data: subscription } = await supabase
       .from("kanvise_subscriptions")
@@ -52,22 +59,54 @@ paymentsRouter.post("/checkout", async (c) => {
       return c.json({ error: "Only students can checkout", code: "FORBIDDEN" }, 403);
     }
 
-    const { programme_id, sub_programme_id, course_id } = await c.req.json();
-    if (!programme_id && !sub_programme_id && !course_id) {
-      return c.json({ error: "Target ID required", code: "INVALID_ENROLMENT_TARGET" }, 400);
+    const body = await c.req.json();
+    const checkoutTarget = parseCheckoutTarget(body);
+    if (!checkoutTarget) {
+      return c.json({ error: "Exactly one enrolment target is required", code: "INVALID_ENROLMENT_TARGET" }, 400);
+    }
+
+    const idempotencyKey = c.req.header("Idempotency-Key") || "";
+    if (!isUuid(idempotencyKey)) {
+      return c.json({ error: "A valid Idempotency-Key header is required", code: "INVALID_IDEMPOTENCY_KEY" }, 400);
+    }
+
+    if (!user.email) {
+      return c.json({ error: "Your account needs an email address before checkout", code: "EMAIL_REQUIRED" }, 400);
+    }
+
+    const existingCheckoutQuery = () => supabase
+      .from("payments")
+      .select("id, paystack_reference, paystack_authorization_url, amount, status, programme_id, sub_programme_id, course_id, kanvise_fee")
+      .eq("student_id", user.id)
+      .eq("checkout_idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    const { data: existingCheckout } = await existingCheckoutQuery();
+    if (existingCheckout) {
+      if (existingCheckout[checkoutTarget.column] !== checkoutTarget.id) {
+        return c.json({ error: "Idempotency key was already used for another checkout", code: "IDEMPOTENCY_KEY_REUSED" }, 409);
+      }
+      if (existingCheckout.paystack_authorization_url && existingCheckout.status === "pending") {
+        return c.json({ data: {
+          payment_id: existingCheckout.id,
+          paystack_reference: existingCheckout.paystack_reference,
+          payment_url: existingCheckout.paystack_authorization_url,
+          amount: existingCheckout.amount,
+          breakdown: { programme_price: existingCheckout.amount, kanvise_fee: existingCheckout.kanvise_fee },
+        } });
+      }
+      return c.json({
+        error: existingCheckout.status === "successful" ? "Payment already completed" : "Checkout is still being initialized",
+        code: existingCheckout.status === "successful" ? "PAYMENT_COMPLETED" : "PAYMENT_INITIALIZING",
+        data: { paystack_reference: existingCheckout.paystack_reference, status: existingCheckout.status },
+      }, 409);
     }
 
     // 1. Fetch Target & Price
-    let table = "";
-    let targetId = "";
-    if (programme_id) { table = "programmes"; targetId = programme_id; }
-    else if (sub_programme_id) { table = "sub_programmes"; targetId = sub_programme_id; }
-    else if (course_id) { table = "courses"; targetId = course_id; }
-
     const { data: target, error: targetError } = await supabase
-      .from(table)
+      .from(checkoutTarget.table)
       .select("id, name, price, school_id")
-      .eq("id", targetId)
+      .eq("id", checkoutTarget.id)
       .single();
 
     if (targetError || !target) {
@@ -79,7 +118,7 @@ paymentsRouter.post("/checkout", async (c) => {
       .from("enrolments")
       .select("id")
       .eq("student_id", user.id)
-      .eq(programme_id ? "programme_id" : sub_programme_id ? "sub_programme_id" : "course_id", targetId)
+      .eq(checkoutTarget.column, checkoutTarget.id)
       .maybeSingle();
 
     if (existingEnrolment) {
@@ -97,57 +136,86 @@ paymentsRouter.post("/checkout", async (c) => {
       return c.json({ error: "School payments not configured" }, 400);
     }
 
-    // 3. Initialize Paystack Transaction
-    const amountInKobo = Math.round(target.price * 100);
-    const reference = `REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: user.email,
-        amount: amountInKobo,
-        reference,
-        subaccount: subaccount.subaccount_code,
-        transaction_charge: Math.round(amountInKobo * (subaccount.percentage_charge / 100)), // Override global setting just in case
-        metadata: {
-          student_id: user.id,
-          school_id: target.school_id,
-          programme_id,
-          sub_programme_id,
-          course_id
-        }
-      }),
-    });
-
-    const paystackData = await paystackRes.json();
-    if (!paystackData.status) {
-      return c.json({ error: "Payment initiation failed", details: paystackData.message }, 500);
+    let breakdown;
+    try {
+      breakdown = calculatePaymentBreakdown(Number(target.price), Number(subaccount.percentage_charge));
+    } catch {
+      return c.json({ error: "Invalid payment configuration", code: "INVALID_PAYMENT_CONFIGURATION" }, 500);
     }
 
-    // 4. Create pending payment record
+    const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!paystackSecret || !frontendUrl) {
+      return c.json({ error: "Payments are not configured", code: "PAYMENTS_NOT_CONFIGURED" }, 503);
+    }
+
+    const reference = createPaystackReference();
+    const targetColumns = {
+      programme_id: checkoutTarget.column === "programme_id" ? checkoutTarget.id : null,
+      sub_programme_id: checkoutTarget.column === "sub_programme_id" ? checkoutTarget.id : null,
+      course_id: checkoutTarget.column === "course_id" ? checkoutTarget.id : null,
+    };
+
+    // Record the intent before contacting Paystack so a successful initialization
+    // can always be reconciled by its reference.
     const { data: payment, error: paymentError } = await supabase
       .from("payments")
       .insert({
         school_id: target.school_id,
         student_id: user.id,
-        amount: target.price,
+        amount: Number(target.price),
         paystack_reference: reference,
+        checkout_idempotency_key: idempotencyKey,
         status: "pending",
-        programme_id,
-        sub_programme_id,
-        course_id,
-        kanvise_fee: (target.price * (subaccount.percentage_charge / 100)),
-        centre_amount: (target.price * (1 - (subaccount.percentage_charge / 100)))
+        ...targetColumns,
+        kanvise_fee: breakdown.kanviseFee,
+        centre_amount: breakdown.centreAmount,
       })
       .select()
       .single();
 
     if (paymentError) {
+      if (paymentError.code === "23505") {
+        return c.json({ error: "Checkout is already being initialized", code: "PAYMENT_INITIALIZING" }, 409);
+      }
       return c.json({ error: "Failed to record payment" }, 500);
+    }
+
+    let paystackData: any;
+    try {
+      const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${paystackSecret}`, "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(15_000),
+        body: JSON.stringify({
+          email: user.email,
+          amount: breakdown.amountInKobo,
+          currency: "NGN",
+          reference,
+          callback_url: checkoutCallbackUrl(frontendUrl, reference),
+          subaccount: subaccount.subaccount_code,
+          transaction_charge: Math.round(breakdown.kanviseFee * 100),
+          metadata: JSON.stringify({ student_id: user.id, school_id: target.school_id, ...targetColumns }),
+        }),
+      });
+      paystackData = await paystackRes.json();
+      if (!paystackRes.ok || !paystackData.status || !paystackData.data?.authorization_url || !paystackData.data?.access_code) {
+        throw new Error(paystackData.message || "Invalid response from Paystack");
+      }
+    } catch (error: any) {
+      await supabase.from("payments").update({ status: "failed" }).eq("id", payment.id);
+      return c.json({ error: "Payment initiation failed", code: "PAYSTACK_INITIALIZATION_FAILED" }, 502);
+    }
+
+    const { error: updateError } = await supabase
+      .from("payments")
+      .update({
+        paystack_authorization_url: paystackData.data.authorization_url,
+        paystack_access_code: paystackData.data.access_code,
+      })
+      .eq("id", payment.id);
+    if (updateError) {
+      return c.json({ error: "Checkout was created but could not be finalized", code: "CHECKOUT_RECORD_UPDATE_FAILED" }, 500);
     }
 
     return c.json({
@@ -155,10 +223,10 @@ paymentsRouter.post("/checkout", async (c) => {
         payment_id: payment.id,
         paystack_reference: reference,
         payment_url: paystackData.data.authorization_url,
-        amount: target.price,
+        amount: Number(target.price),
         breakdown: {
-          programme_price: target.price,
-          kanvise_fee: payment.kanvise_fee
+          programme_price: Number(target.price),
+          kanvise_fee: breakdown.kanviseFee,
         }
       }
     }, 201);
@@ -166,6 +234,26 @@ paymentsRouter.post("/checkout", async (c) => {
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
+});
+
+// GET /payments/status/:reference — The return page polls this; it never grants access.
+paymentsRouter.get("/status/:reference", async (c) => {
+  const user = c.get("user");
+  if (user.role !== "student") {
+    return c.json({ error: "Only students can view checkout status", code: "FORBIDDEN" }, 403);
+  }
+
+  const reference = c.req.param("reference");
+  const { data, error } = await supabase
+    .from("payments")
+    .select("paystack_reference, status, amount, paid_at")
+    .eq("paystack_reference", reference)
+    .eq("student_id", user.id)
+    .maybeSingle();
+
+  if (error) return c.json({ error: "Could not load payment status" }, 500);
+  if (!data) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
+  return c.json({ data });
 });
 
 // GET /payments — List all transactions for the school
@@ -204,10 +292,11 @@ paymentsRouter.get("/", enforceAdmin, async (c) => {
 // GET /payments/banks — Fetch supported Nigerian banks from Paystack
 paymentsRouter.get("/banks", enforceAdmin, async (c) => {
   try {
+    const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+    if (!paystackSecret) return c.json({ error: "Payments are not configured" }, 503);
     const response = await fetch("https://api.paystack.co/bank?country=nigeria", {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
+      headers: { Authorization: `Bearer ${paystackSecret}` },
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!response.ok) {
@@ -226,18 +315,20 @@ paymentsRouter.post("/subaccount/resolve", enforceAdmin, async (c) => {
   try {
     const { account_number, bank_code } = await c.req.json();
 
-    if (!account_number || !bank_code) {
-      return c.json({ error: "account_number and bank_code are required" }, 400);
+    if (!/^\d{10}$/.test(account_number || "") || !/^\d{2,10}$/.test(bank_code || "")) {
+      return c.json({ error: "A valid account number and bank code are required" }, 400);
     }
+    const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+    if (!paystackSecret) return c.json({ error: "Payments are not configured" }, 503);
 
-    const response = await fetch(`https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
+    const params = new URLSearchParams({ account_number, bank_code });
+    const response = await fetch(`https://api.paystack.co/bank/resolve?${params}`, {
+      headers: { Authorization: `Bearer ${paystackSecret}` },
+      signal: AbortSignal.timeout(15_000),
     });
 
     const data = await response.json();
-    
+
     if (!data.status) {
       return c.json({ error: data.message || "Could not resolve account name" }, 400);
     }
@@ -254,20 +345,35 @@ paymentsRouter.post("/subaccount", enforceAdmin, async (c) => {
     const profile = c.get("user");
     const { business_name, bank_code, account_number } = await c.req.json();
 
-    if (!business_name || !bank_code || !account_number) {
-      return c.json({ error: "business_name, bank_code, and account_number are required" }, 400);
+    if (typeof business_name !== "string" || business_name.trim().length < 2 ||
+        !/^\d{2,10}$/.test(bank_code || "") || !/^\d{10}$/.test(account_number || "")) {
+      return c.json({ error: "Valid business, bank, and account details are required" }, 400);
     }
 
-    // 1. Create on Paystack (Kanvise takes 10% fee)
-    const paystackRes = await fetch("https://api.paystack.co/subaccount", {
-      method: "POST",
+    const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+    if (!paystackSecret) return c.json({ error: "Payments are not configured" }, 503);
+
+    const { data: existingSubaccount } = await supabase
+      .from("paystack_subaccounts")
+      .select("subaccount_code")
+      .eq("school_id", profile.school_id)
+      .maybeSingle();
+
+    // Update the existing Paystack destination instead of leaking a new
+    // subaccount every time an administrator edits their payout details.
+    const paystackUrl = existingSubaccount?.subaccount_code
+      ? `https://api.paystack.co/subaccount/${encodeURIComponent(existingSubaccount.subaccount_code)}`
+      : "https://api.paystack.co/subaccount";
+    const paystackRes = await fetch(paystackUrl, {
+      method: existingSubaccount?.subaccount_code ? "PUT" : "POST",
       headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${paystackSecret}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
-        business_name,
-        settlement_bank: bank_code,
+        business_name: business_name.trim(),
+        ...(existingSubaccount?.subaccount_code ? { bank_code } : { settlement_bank: bank_code }),
         account_number,
         percentage_charge: 10.0,
       }),
@@ -275,8 +381,8 @@ paymentsRouter.post("/subaccount", enforceAdmin, async (c) => {
 
     const paystackData = await paystackRes.json();
 
-    if (!paystackData.status) {
-      return c.json({ error: paystackData.message || "Failed to create Paystack subaccount" }, 400);
+    if (!paystackRes.ok || !paystackData.status || !paystackData.data?.subaccount_code) {
+      return c.json({ error: paystackData.message || "Failed to save Paystack subaccount" }, 502);
     }
 
     const subaccount_code = paystackData.data.subaccount_code;

@@ -39,12 +39,12 @@ export default async function Page({ params, searchParams }: PageProps) {
   // Tutors navigate with ?start=true to create and start the room.
   // Everyone else calls /join which expects the room to already be live.
 
-  const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL
+  const honoUrl = process.env.NEXT_PUBLIC_API_URL
   const endpoint = isStarting
     ? `${honoUrl}/live-classes/${classId}/start`
     : `${honoUrl}/live-classes/${classId}/join`
 
-  let classData: { livekit_room_name: string; access_token: string; livekit_url: string }
+  let classData: { livekit_room_name: string; access_token: string; livekit_url: string; is_host: boolean }
   let errorMessage: string | null = null
 
   try {
@@ -65,7 +65,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     } else {
       classData = json.data
     }
-  } catch (e: any) {
+  } catch {
     errorMessage = 'Could not reach the Kanvise API. Is the Hono server running?'
   }
 
@@ -85,7 +85,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     )
   }
 
-  const isHost = isStarting // The tutor who started is the host
+  const isHost = classData!.is_host === true // The backend securely confirms if they are the host
 
   return (
     <ClientClassroom

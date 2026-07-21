@@ -3,6 +3,7 @@
     "target": "ESNext",
     "module": "CommonJS",
     "moduleResolution": "Node",
+    "jsx": "react-jsx",
     "ignoreDeprecations": "6.0",
     "strict": true,
     "esModuleInterop": true,
@@ -12,5 +13,6 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

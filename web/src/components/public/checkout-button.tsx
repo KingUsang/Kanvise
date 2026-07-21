@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
+import { toast } from "sonner";
 
 interface CheckoutButtonProps {
   schoolSlug: string;
@@ -16,6 +17,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -36,11 +38,15 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       
       // Make checkout request
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) throw new Error("Checkout is temporarily unavailable");
+      const idempotencyKey = idempotencyKeyRef.current || crypto.randomUUID();
+      idempotencyKeyRef.current = idempotencyKey;
       const res = await fetch(`${apiUrl}/payments/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`
+          "Authorization": `Bearer ${session.access_token}`,
+          "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({
           programme_id: programmeId,
@@ -51,6 +57,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.code !== "PAYMENT_INITIALIZING") idempotencyKeyRef.current = null;
         throw new Error(data.error || "Checkout failed");
       }
 
@@ -63,7 +70,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
 
     } catch (err: any) {
       console.error("Checkout Error:", err);
-      alert(err.message || "An error occurred during checkout.");
+      toast.error(err.message || "An error occurred during checkout.");
     } finally {
       setLoading(false);
     }

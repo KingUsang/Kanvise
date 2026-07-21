@@ -30,7 +30,7 @@ export default function AdminSchoolSetupPage() {
       return;
     }
 
-    const honoApiUrl = process.env.NEXT_PUBLIC_HONO_API_URL;
+    const honoApiUrl = process.env.NEXT_PUBLIC_API_URL;
 
     try {
       const res = await fetch(`${honoApiUrl}/schools`, {

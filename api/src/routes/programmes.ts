@@ -39,7 +39,7 @@ programmesRouter.post("/", enforceAdmin, async (c) => {
     }
 
     const body = await c.req.json();
-    const { name, slug, description, price, currency, thumbnail_key } = body;
+    const { name, slug, description, price, currency } = body;
 
     if (!name || !slug) {
       return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
@@ -69,7 +69,7 @@ programmesRouter.post("/", enforceAdmin, async (c) => {
         description: description || null,
         price: parseFloat(price) || 0,
         currency: currency || "NGN",
-        thumbnail_key: thumbnail_key || null,
+        thumbnail_url: null,
         is_published: false,
         created_by: profile.id
       })
@@ -97,7 +97,7 @@ programmesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     let query = supabase
       .from("programmes")
-      .select("*, sub_programmes(count), courses(count)")
+      .select("*, sub_programmes(count), courses(count), enrolments(count)")
       .eq("school_id", profile.school_id);
 
     if (is_published !== undefined) {
@@ -139,7 +139,7 @@ programmesRouter.get("/", enforceAdminOrTutor, async (c) => {
       ...prog,
       sub_programmes_count: prog.sub_programmes?.[0]?.count || 0,
       courses_count: prog.courses?.[0]?.count || 0,
-      enrolled_count: 0 // Mocked for now
+      enrolled_count: prog.enrolments?.[0]?.count || 0,
     }));
 
     return c.json({ data: enhancedData });
@@ -157,7 +157,7 @@ programmesRouter.get("/:id", enforceAdminOrTutor, async (c) => {
 
     const { data, error } = await supabase
       .from("programmes")
-      .select("*, sub_programmes(*), courses(*)")
+      .select("*, sub_programmes(*), courses(*), enrolments(count)")
       .eq("id", id)
       .eq("school_id", profile.school_id)
       .single();
@@ -165,7 +165,7 @@ programmesRouter.get("/:id", enforceAdminOrTutor, async (c) => {
     if (error) throw error;
     if (!data) return c.json({ error: "Programme not found", code: "NOT_FOUND" }, 404);
 
-    return c.json({ data: { ...data, enrolled_count: 0 } }); // Enrolled count mocked for now
+    return c.json({ data: { ...data, enrolled_count: data.enrolments?.[0]?.count || 0 } });
   } catch (error: any) {
     console.error("GET /programmes/:id error:", error);
     return c.json({ error: error.message || "Internal server error" }, 500);
@@ -179,12 +179,11 @@ programmesRouter.patch("/:id", enforceAdmin, async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json();
     
-    const { name, description, price, thumbnail_key } = body;
+    const { name, description, price } = body;
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (price !== undefined) updates.price = parseFloat(price);
-    if (thumbnail_key !== undefined) updates.thumbnail_key = thumbnail_key;
 
     const { data, error } = await supabase
       .from("programmes")

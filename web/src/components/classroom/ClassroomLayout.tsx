@@ -4,14 +4,11 @@ import {
   useConnectionState,
   useRoomContext,
   useParticipants,
-  useTracks,
-  VideoTrack,
   useLocalParticipant,
 } from "@livekit/components-react";
-import { ConnectionState, Track, RoomEvent, Participant } from "livekit-client";
+import { ConnectionState, RoomEvent, Participant } from "livekit-client";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import AudioVideoControls from "./AudioVideoControls";
 import ChatBox from "./ChatBox";
 import VideoPiP from "./VideoPiP";
@@ -22,33 +19,28 @@ import {
   Hand,
   MessageSquare,
   Users,
-  MonitorPlay,
   LogOut,
   Clock,
   X,
-  ZoomIn,
-  ZoomOut,
-  Maximize,
 } from "lucide-react";
 
 export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; classId: string }) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const participants = useParticipants();
-  const screenShareTracks = useTracks([Track.Source.ScreenShare]);
   const { localParticipant } = useLocalParticipant();
-  
+
   const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
-  
+
   const whiteboardRef = useRef<WhiteboardRef>(null);
 
   const handleEndClass = async () => {
     setIsEnding(true);
     try {
-      const honoUrl = process.env.NEXT_PUBLIC_HONO_API_URL;
+      const honoUrl = process.env.NEXT_PUBLIC_API_URL;
       // The browser must send its own JWT — retrieve from Supabase client-side
       const { createBrowserClient } = await import('@supabase/ssr');
       const supabase = createBrowserClient(
@@ -182,7 +174,7 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
             <Clock size={14} />
             <span className="font-semibold">{formatTime(elapsedTime)}</span>
           </div>
-          
+
           <button
             onClick={handleLeaveBtnClick}
             className="flex items-center gap-1.5 bg-[#ba1a1a]/10 hover:bg-[#ba1a1a]/20 text-[#ba1a1a] px-4 py-2 rounded-lg text-[13px] font-bold transition-all ml-2"
@@ -199,60 +191,10 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
         <div className="flex-1 flex flex-col bg-[#f5f3f2] relative">
           <div className="flex-1 relative bg-black">
             <VideoPiP />
-            
-            <div className={`absolute inset-0 ${screenShareTracks.length > 0 ? "hidden pointer-events-none" : "block"}`}>
+
+            <div className="absolute inset-0">
               <CollaborativeWhiteboard ref={whiteboardRef} />
             </div>
-
-            {screenShareTracks.length > 0 && (
-              <div className="absolute inset-0 z-20 bg-black overflow-hidden group">
-                <TransformWrapper
-                  initialScale={1}
-                  minScale={1}
-                  maxScale={8}
-                  centerOnInit
-                  wheel={{ step: 0.1 }}
-                >
-                  {({ zoomIn, zoomOut, resetTransform }) => (
-                    <>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full flex items-center justify-center">
-                          <VideoTrack 
-                            trackRef={screenShareTracks[0]} 
-                            className="w-full h-full object-contain" 
-                          />
-                        </TransformComponent>
-                      </div>
-                      
-                      {/* Zoom Controls Overlay */}
-                      <div className="absolute bottom-6 right-6 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30">
-                        <button 
-                          onClick={() => zoomIn()}
-                          className="w-10 h-10 rounded-xl bg-[#180d62]/90 backdrop-blur text-white flex items-center justify-center hover:bg-[#180d62] shadow-lg transition-colors"
-                          title="Zoom In"
-                        >
-                          <ZoomIn size={18} />
-                        </button>
-                        <button 
-                          onClick={() => zoomOut()}
-                          className="w-10 h-10 rounded-xl bg-[#180d62]/90 backdrop-blur text-white flex items-center justify-center hover:bg-[#180d62] shadow-lg transition-colors"
-                          title="Zoom Out"
-                        >
-                          <ZoomOut size={18} />
-                        </button>
-                        <button 
-                          onClick={() => resetTransform()}
-                          className="w-10 h-10 rounded-xl bg-[#180d62]/90 backdrop-blur text-white flex items-center justify-center hover:bg-[#180d62] shadow-lg transition-colors mt-2"
-                          title="Reset Zoom"
-                        >
-                          <Maximize size={18} />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </TransformWrapper>
-              </div>
-            )}
 
             {!isTutorPresent && (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center backdrop-blur-md bg-black/40">
@@ -307,7 +249,7 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
             <div className={`absolute inset-0 transition-opacity duration-200 ${openSidebar === "chat" ? "opacity-100 z-10" : "opacity-0 pointer-events-none z-0"}`}>
               <ChatBox />
             </div>
-            
+
             <div className={`absolute inset-0 transition-opacity duration-200 ${openSidebar === "participants" ? "opacity-100 z-10" : "opacity-0 pointer-events-none z-0"}`}>
               <ParticipantsPanel isHost={isHost} classId={classId} />
             </div>
@@ -329,31 +271,15 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
         {/* Centre: Media Controls */}
         <div className="flex items-center gap-3">
           {isHost && (
-            <PresentationControls 
-              classId={classId} 
-              onSlideChange={(url) => whiteboardRef.current?.setSlide(url)} 
+            <PresentationControls
+              classId={classId}
+              onSlideChange={(url) => whiteboardRef.current?.setSlide(url)}
             />
           )}
           <AudioVideoControls />
-          
-          {isHost && (
-            <button
-              onClick={async () => {
-                if (localParticipant) {
-                  const isSharing = screenShareTracks.length > 0;
-                  await localParticipant.setScreenShareEnabled(!isSharing);
-                }
-              }}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all border
-                ${screenShareTracks.length > 0
-                  ? "bg-[#994704] text-white border-[#994704] shadow-md"
-                  : "bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] border-[#e4e2e1]"
-                }`}
-            >
-              <MonitorPlay size={16} />
-              <span className="hidden md:inline">{screenShareTracks.length > 0 ? "Stop Share" : "Share Screen"}</span>
-            </button>
-          )}
+
+          {/* Screen sharing is intentionally disabled. Slides are the only
+              presentation surface to avoid unexpected CPU/bandwidth spikes. */}
 
           {!isHost && (
             <button
@@ -414,20 +340,20 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
               Do you want to just leave temporarily, or end the class for everyone?
             </p>
             <div className="flex flex-col gap-3 w-full">
-              <button 
+              <button
                 onClick={() => room.disconnect()}
                 className="w-full py-2.5 bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] font-semibold rounded-lg transition-colors"
               >
                 Leave Class
               </button>
-              <button 
+              <button
                 onClick={handleEndClass}
                 disabled={isEnding}
                 className="w-full py-2.5 bg-[#ba1a1a] hover:bg-[#ba1a1a]/90 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
               >
                 {isEnding ? "Ending..." : "End Class for All"}
               </button>
-              <button 
+              <button
                 onClick={() => setShowLeaveModal(false)}
                 className="w-full py-2.5 text-[#787582] hover:text-[#1b1c1c] font-medium text-sm transition-colors mt-2"
               >
@@ -440,4 +366,3 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
     </div>
   );
 }
-

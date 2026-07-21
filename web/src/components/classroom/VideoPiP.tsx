@@ -27,11 +27,11 @@ export default function VideoPiP() {
   );
 
   const tutorTrack = cameraTracks.find((t) => t.participant.identity === tutor?.identity);
-  
+
   // If an active student is speaking, use them. Otherwise, if the local user is a student and has their camera on, show them as a preview.
   const isLocalHost = localParticipant?.identity === tutor?.identity;
   const showLocalPreview = !isLocalHost && localParticipant?.isCameraEnabled;
-  
+
   const displayStudent = activeStudent || (showLocalPreview ? localParticipant : null);
   const displayStudentTrack = displayStudent ? cameraTracks.find((t) => t.participant.identity === displayStudent.identity) : null;
 
@@ -62,8 +62,8 @@ export default function VideoPiP() {
   if (!tutor) return null;
 
   return (
-    <div 
-      className="absolute top-4 right-4 z-10 flex items-start gap-3 cursor-grab active:cursor-grabbing"
+    <div
+      className="absolute top-5 right-5 z-30 flex items-start gap-3 cursor-grab active:cursor-grabbing"
       style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -72,21 +72,14 @@ export default function VideoPiP() {
     >
       {/* Secondary PiP: Active Student or Local Preview */}
       {displayStudentTrack && displayStudent && (
-        <div className="w-32 h-24 rounded-lg overflow-hidden border-2 border-[#994704] shadow-lg shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto transition-all animate-in fade-in slide-in-from-right-4">
+        <div className="w-20 h-20 rounded-full overflow-hidden border-[3px] border-[#994704] shadow-lg shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto transition-all animate-in fade-in slide-in-from-right-4">
           <VideoTrack trackRef={displayStudentTrack} className="w-full h-full object-cover" />
-          <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
-            <span className="truncate max-w-[80px]">
-              {displayStudent.identity === localParticipant?.identity ? "You (Preview)" : (displayStudent.name || displayStudent.identity)}
-            </span>
-            {displayStudent.isSpeaking && (
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-            )}
-          </div>
+          {displayStudent.isSpeaking && <div className="absolute inset-0 rounded-full ring-4 ring-green-400/80" />}
         </div>
       )}
 
       {/* Primary PiP: Permanent Pinned Tutor */}
-      <div className="w-48 h-36 rounded-xl overflow-hidden border-2 border-[#180d62] shadow-xl shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto flex items-center justify-center">
+      <div className={`w-28 h-28 rounded-full overflow-hidden border-[3px] shadow-xl shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto flex items-center justify-center ${tutor.isSpeaking ? "border-green-400 ring-4 ring-green-400/30" : "border-white"}`}>
         {tutor.isCameraEnabled && tutorTrack ? (
           <VideoTrack trackRef={tutorTrack} className="w-full h-full object-cover" />
         ) : (
@@ -94,11 +87,8 @@ export default function VideoPiP() {
             {(tutor.name || tutor.identity).slice(0, 2).toUpperCase()}
           </div>
         )}
-        <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[11px] px-2 py-1 rounded-md font-semibold flex items-center gap-1.5">
-          <span>Tutor</span>
-          {tutor.isSpeaking && (
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          )}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent pt-5 pb-1.5 text-center text-white text-[10px] font-semibold">
+          Tutor
         </div>
       </div>
     </div>

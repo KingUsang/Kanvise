@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole, Variables } from '../middleware/auth'
 import { generateInviteToken } from '../lib/invites'
+import { sendTutorInvitation } from '../emails/send-tutor-invitation'
 
 export const schoolsRouter = new Hono<{ Variables: Variables }>()
 
@@ -174,6 +175,31 @@ schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
   const appUrl = process.env.FRONTEND_URL!
   const inviteUrl = `${appUrl}/join?token=${token}`
 
+  const { data: school } = await supabase
+    .from('schools')
+    .select('name')
+    .eq('id', user.school_id)
+    .single()
+
+  const invitedByName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'A school administrator'
+  let emailSent = false
+  let emailId: string | null = null
+
+  try {
+    const delivery = await sendTutorInvitation({
+      to: invite.email,
+      inviteUrl,
+      invitedByName,
+      schoolName: school?.name || 'your school',
+      expiresAt: invite.expires_at,
+    })
+    emailSent = true
+    emailId = delivery.id
+  } catch (error) {
+    // The invite remains usable and can still be copied by the Admin.
+    console.error('[schools/invites] Tutor invitation email failed:', error)
+  }
+
   // TODO(ux): The stateless HMAC token makes the URL very long (~150+ chars).
   // If this becomes a UX issue for sharing via SMS/WhatsApp, we should switch to a
   // Stateful Short Token architecture:
@@ -181,15 +207,16 @@ schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
   // 2. Add a `token` column to the `tutor_invites` table and save it there
   // 3. Update the frontend/backend to do a DB lookup `WHERE token = ?` to validate.
   //
-  // TODO(email): If email is provided, send the inviteUrl via Resend
-  // (Resend integration not yet built). Currently relying on Admin copying the link.
-
   return c.json({
     data: {
       invite_url: inviteUrl,
       expires_at: invite.expires_at,
+      email_sent: emailSent,
+      email_id: emailId,
     },
-    message: 'Invite created. Share the link with your tutor.'
+    message: emailSent
+      ? 'Invite created and emailed to the tutor.'
+      : 'Invite created, but the email could not be sent. Share the link with your tutor.'
   }, 201)
 })
 

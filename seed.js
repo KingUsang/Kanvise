@@ -610,30 +610,30 @@ async function run() {
   // ---------------------------------------------------------------------
   console.log('Creating live classes and attendance records...');
 
-  const physicsScheduled = await insertOne('live_classes', {
+  const chemistryScheduled = await insertOne('live_classes', {
     school_id: brightMinds.id,
-    course_id: physics.id,
-    tutor_id: amaka.id,
-    title: 'Physics — Waves and Optics',
+    course_id: chemistry.id,
+    tutor_id: chidi.id,
+    title: 'Chemistry — Chemical Bonding',
     scheduled_at: daysFromNow(2),
     duration_minutes: 60,
     status: 'scheduled',
     notification_sent: false,
-    created_by: amaka.id,
+    created_by: chidi.id,
   });
 
   await insertOne('live_classes', {
     school_id: brightMinds.id,
-    course_id: physics.id,
-    tutor_id: amaka.id,
-    title: 'Physics — Live doubt-clearing session',
+    course_id: chemistry.id,
+    tutor_id: chidi.id,
+    title: 'Chemistry — Live doubt-clearing session',
     scheduled_at: daysAgo(0), // "now"
     duration_minutes: 45,
     status: 'live',
-    livekit_room_name: 'seed-physics-live-room',
+    livekit_room_name: 'seed-chemistry-live-room',
     started_at: new Date(now - 10 * 60 * 1000).toISOString(), // started 10 min ago
     notification_sent: true,
-    created_by: amaka.id,
+    created_by: chidi.id,
   });
 
   const chemistryCompleted = await insertOne('live_classes', {
@@ -928,11 +928,11 @@ async function run() {
     school_id: brightMinds.id,
     user_id: ngozi.id,
     type: 'live_class_reminder',
-    title: 'Physics class starting soon',
-    body: 'Your Waves and Optics class starts in 2 days.',
+    title: 'Chemistry class starting soon',
+    body: 'Your Chemical Bonding class starts in 2 days.',
     is_read: false,
     related_entity_type: 'live_class',
-    related_entity_id: physicsScheduled.id,
+    related_entity_id: chemistryScheduled.id,
   });
 
   await insertOne('notifications', {

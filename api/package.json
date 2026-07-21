@@ -6,23 +6,31 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "vitest run src",
+    "email:smoke": "npm run build && node dist/scripts/email-smoke.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",
     "@aws-sdk/s3-request-presigner": "^3.1087.0",
     "@hono/node-server": "^1.13.7",
     "@napi-rs/canvas": "^1.0.2",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
     "@supabase/supabase-js": "^2.47.11",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "hono": "^4.6.14",
     "livekit-server-sdk": "^2.17.0",
-    "pdfjs-dist": "^3.11.174"
+    "node-cron": "^4.2.1",
+    "pdfjs-dist": "^3.11.174",
+    "resend": "^6.17.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/react": "^19.2.17",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
   }
 }

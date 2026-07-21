@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { AccessToken, RoomServiceClient, WebhookReceiver } from 'livekit-server-sdk'
+import { AccessToken, RoomServiceClient, TrackSource, WebhookReceiver } from 'livekit-server-sdk'
 import { supabase } from '../lib/supabase'
 import {
   jwtVerificationMiddleware,
@@ -8,6 +8,7 @@ import {
   requireRole,
 } from '../middleware/auth'
 import type { AppVariables } from '../types'
+import { notifyClassCancelled } from '../notifications/triggers'
 
 export const liveClassesRouter = new Hono<{ Variables: AppVariables }>()
 
@@ -36,23 +37,48 @@ async function generateToken(
   name: string,
   roomName: string,
   isHost: boolean,
+  avatarConfig: Record<string, string | null> | null,
 ): Promise<string> {
   const { apiKey, apiSecret } = getLiveKitConfig()
   const at = new AccessToken(apiKey, apiSecret, {
     identity,
     name,
-    metadata: JSON.stringify({ isHost }),
+    metadata: JSON.stringify(buildParticipantMetadata(isHost, avatarConfig)),
   })
   at.addGrant({
     roomJoin: true,
     room: roomName,
     canPublish: true,
+    // Screen sharing is disabled for the whole classroom. Limit every token
+    // to camera and microphone so the UI restriction cannot be bypassed.
+    canPublishSources: [TrackSource.CAMERA, TrackSource.MICROPHONE],
     canSubscribe: true,
     canPublishData: true,
     canUpdateOwnMetadata: true,
     roomAdmin: isHost,
   })
   return at.toJwt()
+}
+
+export function buildParticipantMetadata(
+  isHost: boolean,
+  avatarConfig: Record<string, string | null> | null,
+) {
+  return { isHost, avatar_config: avatarConfig }
+}
+
+async function getAvatarConfig(userId: string, schoolId: string | null) {
+  if (!schoolId) return null
+  const { data, error } = await supabase.from('avatar_configs')
+    .select('skin_tone, face_shape, hair_style, hair_colour, outfit_colour, accessory, headwear')
+    .eq('user_id', userId)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+  if (error) {
+    console.error('[live-classes] Failed to load avatar config:', error)
+    return null
+  }
+  return data
 }
 
 // ── Apply auth middleware to all routes ────────────────────────────────────
@@ -78,6 +104,28 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   if (new Date(scheduled_at) < new Date()) {
     return c.json({ error: 'Cannot schedule a class in the past', code: 'SCHEDULED_IN_PAST' }, 400)
   }
+
+  if (typeof duration_minutes !== 'number' || duration_minutes < 15 || duration_minutes > 240) {
+    return c.json({ error: 'Duration must be between 15 and 240 minutes', code: 'INVALID_DURATION' }, 400)
+  }
+
+  if (user.role === 'tutor' && tutor_id !== user.id) {
+    return c.json({ error: 'Tutors can only schedule classes for themselves', code: 'FORBIDDEN' }, 403)
+  }
+
+  // Ensure the tutor is assigned to the course and belongs to the school
+  const { data: assignment, error: assignmentError } = await supabase
+    .from('tutor_course_assignments')
+    .select('course_id')
+    .eq('tutor_id', tutor_id)
+    .eq('course_id', course_id)
+    .eq('school_id', user.school_id)
+    .maybeSingle()
+
+  if (assignmentError || !assignment) {
+    return c.json({ error: 'Tutor is not assigned to this course or course does not exist', code: 'INVALID_TUTOR_OR_COURSE' }, 403)
+  }
+
 
   const { data, error } = await supabase
     .from('live_classes')
@@ -160,7 +208,7 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
 
   const { data: existing, error: fetchError } = await supabase
     .from('live_classes')
-    .select('status, tutor_id')
+    .select('status, tutor_id, scheduled_at')
     .eq('id', id)
     .eq('school_id', user.school_id)
     .single()
@@ -169,14 +217,21 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
     return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
   }
 
-  if (existing.status === 'live' || existing.status === 'completed') {
-    return c.json({ error: 'Cannot update a live or completed class', code: 'CLASS_NOT_EDITABLE' }, 409)
+  if (existing.status !== 'scheduled') {
+    return c.json({ error: 'Only scheduled classes can be updated', code: 'CLASS_NOT_EDITABLE' }, 409)
   }
 
   const { title, scheduled_at, duration_minutes } = body
+  const isRescheduled = scheduled_at !== undefined && scheduled_at !== existing.scheduled_at
   const { data, error } = await supabase
     .from('live_classes')
-    .update({ title, scheduled_at, duration_minutes, updated_at: new Date().toISOString() })
+    .update({
+      title,
+      scheduled_at,
+      duration_minutes,
+      ...(isRescheduled ? { notification_sent: false } : {}),
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
     .eq('school_id', user.school_id)
     .select()
@@ -187,6 +242,48 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
   }
 
   return c.json({ data })
+})
+
+// ── DELETE /live-classes/:id — Cancel a scheduled class (Admin) ──────────
+
+liveClassesRouter.delete('/:id', requireRole('admin'), async (c) => {
+  const user = c.get('user')
+  const { id } = c.req.param()
+  const reason = c.req.query('reason') || undefined
+
+  const { data: liveClass, error: fetchError } = await supabase
+    .from('live_classes')
+    .select('*, school:schools(name)')
+    .eq('id', id)
+    .eq('school_id', user.school_id)
+    .single()
+
+  if (fetchError || !liveClass) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+  if (liveClass.status !== 'scheduled') {
+    return c.json({ error: 'Only scheduled classes can be cancelled', code: 'CLASS_NOT_CANCELLABLE' }, 409)
+  }
+
+  const { data, error } = await supabase.from('live_classes')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('school_id', user.school_id)
+    .eq('status', 'scheduled')
+    .select()
+    .single()
+
+  if (error || !data) return c.json({ error: 'Failed to cancel class' }, 500)
+
+  const notification = await notifyClassCancelled({
+    id: data.id,
+    schoolId: data.school_id,
+    schoolName: (liveClass.school as any)?.name || 'Your school',
+    courseId: data.course_id,
+    title: data.title,
+    scheduledAt: data.scheduled_at,
+    reason,
+  })
+
+  return c.json({ message: 'Class cancelled', data, notification })
 })
 
 // ── POST /live-classes/:id/start — Tutor starts a class ───────────────────
@@ -215,9 +312,9 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     // If the tutor refreshes the page, the class is already live. Just let them back in!
     const roomName = liveClass.livekit_room_name || `kanvise-class-${id}`
     const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Tutor'
-    const token = await generateToken(user.id, displayName, roomName, true)
+    const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
     const { wsUrl } = getLiveKitConfig()
-    return c.json({ data: { livekit_room_name: roomName, access_token: token, livekit_url: wsUrl } })
+    return c.json({ data: { livekit_room_name: roomName, access_token: token, livekit_url: wsUrl, is_host: true } })
   }
 
   if (liveClass.status !== 'scheduled') {
@@ -240,10 +337,10 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     .eq('id', id)
 
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Tutor'
-  const token = await generateToken(user.id, displayName, roomName, true)
+  const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
   const { wsUrl } = getLiveKitConfig()
 
-  return c.json({ data: { livekit_room_name: roomName, access_token: token, livekit_url: wsUrl } })
+  return c.json({ data: { livekit_room_name: roomName, access_token: token, livekit_url: wsUrl, is_host: true } })
 })
 
 // ── POST /live-classes/:id/join — Participant joins a class ───────────────
@@ -272,10 +369,16 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
   // TODO: Uncomment when enrolment data is populated.
   // if (user.role === 'student') { ... check enrolments table ... }
 
-  // Tutors joining their own class get host permissions
-  const isHost = user.role === 'tutor' && liveClass.tutor_id === user.id
+  // The assigned tutor (whether admin or tutor role) gets host permissions
+  const isHost = liveClass.tutor_id === user.id
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Participant'
-  const token = await generateToken(user.id, displayName, liveClass.livekit_room_name, isHost)
+  const token = await generateToken(
+    user.id,
+    displayName,
+    liveClass.livekit_room_name,
+    isHost,
+    await getAvatarConfig(user.id, user.school_id),
+  )
   const { wsUrl } = getLiveKitConfig()
 
   return c.json({
@@ -283,6 +386,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
       livekit_room_name: liveClass.livekit_room_name,
       access_token: token,
       livekit_url: wsUrl,
+      is_host: isHost,
     },
   })
 })

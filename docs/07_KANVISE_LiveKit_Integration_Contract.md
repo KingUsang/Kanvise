@@ -109,12 +109,23 @@ When Hono generates a participant token, it embeds participant metadata:
   "role": "tutor | student",
   "first_name": "string",
   "last_name": "string",
-  "avatar_url": "https://cdn.kanvise.ng/avatars/user-id/avatar.png",
+  "avatar_config": {
+    "skin_tone": "s3",
+    "face_shape": "f1",
+    "hair_style": "h4",
+    "hair_colour": "hc1",
+    "outfit_colour": "oc2",
+    "accessory": null,
+    "headwear": null
+  },
   "school_id": "uuid"
 }
 ```
 
-The `avatar_url` is used by the LiveKit client SDK to display the user's avatar when their camera is off. This URL must be a public Cloudflare CDN URL — not a presigned R2 URL (presigned URLs expire; the avatar must be accessible for the entire class duration).
+LiveKit transports this metadata but does not render the camera-off placeholder.
+The Kanvise classroom frontend reads `avatar_config` and renders the same layered
+SVG avatar used elsewhere in the application. No generated avatar image or CDN
+upload is required.
 
 ---
 
@@ -189,7 +200,7 @@ const generateHostToken = (liveClassId, tutorProfile) => {
         role: 'tutor',
         first_name: tutorProfile.first_name,
         last_name: tutorProfile.last_name,
-        avatar_url: tutorProfile.avatar_public_url,
+        avatar_config: tutorProfile.avatar_config,
         school_id: tutorProfile.school_id
       })
     }
@@ -226,7 +237,7 @@ const generateParticipantToken = (liveClassId, studentProfile) => {
         role: 'student',
         first_name: studentProfile.first_name,
         last_name: studentProfile.last_name,
-        avatar_url: studentProfile.avatar_public_url,
+        avatar_config: studentProfile.avatar_config,
         school_id: studentProfile.school_id
       })
     }
@@ -493,7 +504,7 @@ This section is for the Next.js developer implementing the live classroom UI.
    {
      "livekit_room_name": "kanvise-class-uuid",
      "access_token": "eyJ...",
-     "livekit_url": "wss://livekit.kanvise.ng"
+     "livekit_url": "wss://livekit.kanvise.com"
    }
 4. Frontend connects using LiveKit JS SDK:
 
@@ -530,14 +541,15 @@ const LiveClassroom = dynamic(
 
 ### 6.3 Avatar as Camera-Off Placeholder
 
-When a participant's camera is off, their avatar must be shown. The avatar URL is embedded in the participant metadata.
+When a participant's camera is off, the Kanvise frontend shows the avatar
+described by the JSON configuration embedded in participant metadata.
 
 ```javascript
 room.on(RoomEvent.ParticipantConnected, (participant) => {
   const metadata = JSON.parse(participant.metadata || '{}')
-  const avatarUrl = metadata.avatar_url
+  const avatarConfig = metadata.avatar_config
 
-  // Use avatarUrl when participant.isCameraEnabled === false
+  // Render <Avatar config={avatarConfig} /> when the camera is off.
 })
 
 // Listen for camera track changes
@@ -678,7 +690,7 @@ LIVEKIT_WEBHOOK_SECRET=same-as-api-secret
 
 ### Next.js (Vercel — browser-safe):
 ```
-NEXT_PUBLIC_LIVEKIT_URL=wss://livekit.kanvise.ng
+NEXT_PUBLIC_LIVEKIT_URL=wss://livekit.kanvise.com
 ```
 
 The `NEXT_PUBLIC_LIVEKIT_URL` is the public WebSocket URL the browser connects to for the WebRTC session. This is the Scaleway server's public domain with the LiveKit WebRTC port. A domain name with SSL is required — browsers will not connect to a bare IP over WebSocket for WebRTC.
@@ -727,7 +739,8 @@ The live class developer's responsibility is the LiveKit server configuration an
 - Enrolment verification — Hono checks enrolment before generating a student token
 - Attendance recording — Hono handles all attendance logic via webhooks
 - Class scheduling — Hono owns the schedule and notifies students
-- Avatar generation — Hono generates the avatar URL and embeds it in the token
+- Avatar configuration lookup — Hono embeds the JSON configuration in the token;
+  the classroom frontend renders the layered SVG avatar
 - Chat persistence — not in scope for MVP
 
 ---

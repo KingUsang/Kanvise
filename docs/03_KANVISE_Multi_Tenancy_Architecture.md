@@ -292,7 +292,7 @@ Note: `paystack_subaccounts` does reference a `school_id` as a foreign key but i
 
 The public pages (centre page, programme page, course page) are accessed without authentication. There is no JWT and therefore no middleware-derived school_id. Tenancy in the public layer is resolved differently:
 
-The school is identified by its slug in the URL — `kanvise.ng/[centre-slug]`. The Hono public API resolves the school from the slug:
+The school is identified by its slug in the URL — `kanvise.com/[centre-slug]`. The Hono public API resolves the school from the slug:
 
 ```javascript
 // Public route — no auth middleware

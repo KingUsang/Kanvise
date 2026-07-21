@@ -157,7 +157,7 @@ When a student or tutor has their camera off in a live class, their avatar is sh
 
 Since the avatar is stored as a config JSON and not an image, the Hono backend must generate a publicly accessible avatar image URL on demand. For MVP, this is a Next.js route that accepts the avatar config as query parameters and returns an SVG:
 
-`kanvise.ng/api/avatar/render?skin=s3&face=f1&hair=h1...`
+`kanvise.com/api/avatar/render?skin=s3&face=f1&hair=h1...`
 
 This rendered SVG URL is passed to LiveKit as the participant's avatar URL when generating the access token.
 
@@ -510,8 +510,8 @@ The payment record stores:
 8. Hono returns the authorization_url to the frontend
 9. Frontend redirects student to Paystack checkout page
 10. Student completes payment on Paystack
-11. Paystack redirects student back to kanvise.ng/payment/callback?reference=xxx
-12. Simultaneously, Paystack sends charge.success webhook to kanvise.ng/api/webhooks/paystack
+11. Paystack redirects student back to kanvise.com/payment/callback?reference=xxx
+12. Simultaneously, Paystack sends charge.success webhook to kanvise.com/api/webhooks/paystack
 13. Webhook handler verifies Paystack signature
 14. Webhook handler calls POST /internal/payments/confirm with the reference
 15. Hono looks up the payment record by reference

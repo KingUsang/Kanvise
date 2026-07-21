@@ -37,12 +37,12 @@ There are three distinct registration flows in Kanvise. Each results in a differ
 ### 2.1 Admin Registration Flow
 
 ```
-1. Admin visits kanvise.ng/auth/register
+1. Admin visits kanvise.com/auth/register
 2. Selects role: Admin
 3. Fills in: first name, last name, email, password
 4. Supabase Auth creates the user record and sends a verification email
 5. Admin clicks the verification link in email
-6. Supabase Auth callback fires at kanvise.ng/api/auth/callback
+6. Supabase Auth callback fires at kanvise.com/api/auth/callback
 7. Next.js callback handler calls Hono: POST /auth/profile/init
    with: { role: "admin", supabase_auth_id, first_name, last_name, email }
 8. Hono creates user_profiles record:
@@ -60,7 +60,7 @@ The Admin's `school_id` is null until they complete the school creation step. Al
 ```
 1. Admin generates an invite link from their dashboard
    - Hono creates a signed invite token (HMAC-SHA256, expires in 7 days)
-   - Invite URL: kanvise.ng/join?token=xxxx
+   - Invite URL: kanvise.com/join?token=xxxx
 2. Admin shares the link anywhere (WhatsApp, email, social media)
 3. Tutor clicks the link
 4. Next.js reads the token from the URL and stores it in sessionStorage
@@ -95,10 +95,10 @@ The invite token payload contains:
 
 ```
 1. Student clicks a shared programme or course link:
-   kanvise.ng/brightminds/waec-bootcamp
+   kanvise.com/brightminds/waec-bootcamp
 2. Student sees the public programme page
 3. Student clicks Enrol / Pay
-4. If not logged in — redirected to kanvise.ng/auth/register
+4. If not logged in — redirected to kanvise.com/auth/register
    with the programme URL stored in a redirect param
 5. Student fills in: first name, last name, email, password
    (Role is automatically set to "student" — not selectable on this flow)
@@ -124,7 +124,7 @@ A student's `school_id` is set at the point of first enrolment — when they pay
 ## 3. Login Flow
 
 ```
-1. User visits kanvise.ng/auth/login
+1. User visits kanvise.com/auth/login
 2. Enters email and password
 3. Next.js calls Supabase Auth JS client: signInWithPassword()
 4. Supabase Auth validates credentials
@@ -489,11 +489,11 @@ The following table defines which roles can perform which actions. This is the a
 ## 10. Password Reset Flow
 
 ```
-1. User visits kanvise.ng/auth/forgot-password
+1. User visits kanvise.com/auth/forgot-password
 2. Enters their email address
-3. Next.js calls Supabase Auth: resetPasswordForEmail(email, { redirectTo: 'kanvise.ng/api/auth/callback?next=/auth/reset-password' })
+3. Next.js calls Supabase Auth: resetPasswordForEmail(email, { redirectTo: 'kanvise.com/api/auth/callback?next=/auth/reset-password' })
 4. Supabase sends a password reset email containing a one-time link
-5. User clicks the link — Supabase callback fires at kanvise.ng/api/auth/callback
+5. User clicks the link — Supabase callback fires at kanvise.com/api/auth/callback
 6. Next.js callback processes the reset token and redirects to /auth/reset-password
 7. User enters their new password
 8. Next.js calls Supabase Auth: updateUser({ password: newPassword })
@@ -632,9 +632,9 @@ Invite tokens are HMAC-signed with a secret known only to the Hono server. A mal
 
 ### 13.5 Webhook Security
 
-The Paystack webhook at `kanvise.ng/api/webhooks/paystack` verifies the `x-paystack-signature` header using HMAC-SHA512 with the Paystack secret key before processing any payload. Any request that fails signature verification receives a `400` immediately with no processing.
+The Paystack webhook at `kanvise.com/api/webhooks/paystack` verifies the `x-paystack-signature` header using HMAC-SHA512 with the Paystack secret key before processing any payload. Any request that fails signature verification receives a `400` immediately with no processing.
 
-The LiveKit webhook at `api.kanvise.ng/webhooks/livekit` is on a private Scaleway network endpoint not exposed to the public internet. It additionally verifies the LiveKit webhook JWT in the `Authorization` header.
+The LiveKit webhook at `api.kanvise.com/webhooks/livekit` is on a private Scaleway network endpoint not exposed to the public internet. It additionally verifies the LiveKit webhook JWT in the `Authorization` header.
 
 ### 13.6 Password Requirements
 
@@ -668,7 +668,7 @@ INVITE_TOKEN_SECRET=random-256-bit-secret
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-NEXT_PUBLIC_HONO_API_URL=https://api.kanvise.ng
+NEXT_PUBLIC_HONO_API_URL=https://api.kanvise.com
 HONO_INTERNAL_SECRET=shared-secret-for-next-to-hono-internal-calls
 ```
 

@@ -1,12 +1,12 @@
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from "@/components/dashboard/shell";
 
-const jakarta = Plus_Jakarta_Sans({
+const poppins = Poppins({
   subsets: ["latin"],
-  variable: "--font-jakarta",
+  variable: "--font-poppins",
   weight: ["300", "400", "500", "600", "700"],
 });
 
@@ -63,11 +63,11 @@ export default async function DashboardLayout({
   const { data: statsData } = await res.json()
   
   const role = user.user_metadata?.kanvise_role || 'student'
-  
+
   if (role === 'student') {
     redirect('/dashboard/student')
   }
-
+  
   const capabilities = {
     isAdmin: !!statsData.admin_stats,
     isTutor: !!statsData.tutor_stats
@@ -80,7 +80,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className={`${jakarta.variable} font-sans`}>
+    <div className={`${poppins.variable} font-sans`}>
       <DashboardShell user={userInfo} capabilities={capabilities}>
         {children}
       </DashboardShell>

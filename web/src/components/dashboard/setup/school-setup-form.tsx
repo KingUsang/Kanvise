@@ -20,6 +20,62 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  const [mediaUrls, setMediaUrls] = useState({
+    logo: initialData?.logo_url || '',
+    banner: initialData?.banner_url || '',
+  })
+  const [uploadingMedia, setUploadingMedia] = useState<'logo' | 'banner' | null>(null)
+
+  const uploadMedia = async (entityType: 'logo' | 'banner', file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) {
+      setSaveStatus('error')
+      setErrorMessage('Choose a JPG, PNG, or WebP image no larger than 10MB.')
+      return
+    }
+    setUploadingMedia(entityType)
+    setSaveStatus('idle')
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl || !initialData?.id) throw new Error('School media upload is not configured')
+      const metadata = {
+        file_name: file.name,
+        content_type: file.type,
+        file_size_bytes: file.size,
+        entity_type: entityType,
+        context_id: initialData.id,
+      }
+      const presignResponse = await fetch(`${apiUrl}/storage/presign/public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(metadata),
+      })
+      const presignBody = await presignResponse.json()
+      if (!presignResponse.ok) throw new Error(presignBody.error || 'Could not prepare upload')
+
+      const uploadResponse = await fetch(presignBody.data.presigned_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!uploadResponse.ok) throw new Error('Could not upload image to storage')
+
+      const confirmResponse = await fetch(`${apiUrl}/storage/public/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...metadata, file_key: presignBody.data.file_key }),
+      })
+      const confirmBody = await confirmResponse.json()
+      if (!confirmResponse.ok) throw new Error(confirmBody.error || 'Could not save uploaded image')
+      setMediaUrls((current) => ({ ...current, [entityType]: confirmBody.public_url }))
+      setSaveStatus('success')
+    } catch (error) {
+      setSaveStatus('error')
+      setErrorMessage(error instanceof Error ? error.message : 'Media upload failed')
+    } finally {
+      setUploadingMedia(null)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value, type } = e.target
@@ -208,35 +264,34 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
             </div>
             
             <div className="flex flex-col gap-8">
-              {/* Logo Upload Stub */}
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-3 block">Institution Logo</label>
                 <div className="flex flex-col sm:flex-row items-start gap-6">
                   <div className="w-24 h-24 rounded border border-[#787582] bg-[#f5f3f2] flex items-center justify-center shrink-0 overflow-hidden relative group">
-                    <div className="absolute inset-0 bg-[#180d62] flex items-center justify-center text-white text-3xl font-bold">
-                      {initials}
-                    </div>
+                    {mediaUrls.logo ? <img src={mediaUrls.logo} alt="Institution logo" className="absolute inset-0 h-full w-full object-cover" /> : (
+                      <div className="absolute inset-0 bg-[#180d62] flex items-center justify-center text-white text-3xl font-bold">{initials}</div>
+                    )}
                   </div>
-                  <div className="flex-1 w-full border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-[#f5f3f2] transition-colors cursor-pointer group">
+                  <label className="flex-1 w-full border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-[#f5f3f2] transition-colors cursor-pointer group">
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploadingMedia !== null} onChange={(event) => void uploadMedia('logo', event.target.files?.[0])} />
                     <span className="material-symbols-outlined text-[#787582] group-hover:text-[#180d62] mb-2 text-3xl transition-colors">cloud_upload</span>
-                    <p className="font-semibold text-xs text-[#180d62] mb-1">Click to upload or drag and drop</p>
-                    <p className="text-sm text-[#474551]">SVG, PNG, JPG or GIF (max. 2MB)</p>
-                    {/* TODO (Production): Implement actual presigned URL generation and Cloudflare R2 upload here */}
-                    <p className="text-sm text-[#474551] mt-1 italic opacity-75">Cloudflare R2 Integration Coming Soon</p>
-                  </div>
+                    <p className="font-semibold text-xs text-[#180d62] mb-1">{uploadingMedia === 'logo' ? 'Uploading logo…' : 'Click to upload a logo'}</p>
+                    <p className="text-sm text-[#474551]">PNG, JPG or WebP (max. 10MB)</p>
+                  </label>
                 </div>
               </div>
 
-              {/* Banner Upload Stub */}
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-3 block">Dashboard Banner</label>
-                <div className="w-full h-32 border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-[#f5f3f2] transition-colors cursor-pointer group relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#180d62_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                <label className="w-full h-32 border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-[#f5f3f2] transition-colors cursor-pointer group relative overflow-hidden">
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploadingMedia !== null} onChange={(event) => void uploadMedia('banner', event.target.files?.[0])} />
+                  {mediaUrls.banner ? <img src={mediaUrls.banner} alt="Dashboard banner" className="absolute inset-0 h-full w-full object-cover opacity-30" /> : (
+                    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#180d62_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                  )}
                   <span className="material-symbols-outlined text-[#787582] group-hover:text-[#180d62] mb-2 text-3xl transition-colors relative z-10">image</span>
-                  <p className="font-semibold text-xs text-[#180d62] mb-1 relative z-10">Upload Banner Image</p>
-                  {/* TODO (Production): Implement actual presigned URL generation and Cloudflare R2 upload here */}
-                  <p className="text-sm text-[#474551] relative z-10 italic opacity-75">Cloudflare R2 Integration Coming Soon</p>
-                </div>
+                  <p className="font-semibold text-xs text-[#180d62] mb-1 relative z-10">{uploadingMedia === 'banner' ? 'Uploading banner…' : 'Upload banner image'}</p>
+                  <p className="text-sm text-[#474551] relative z-10">PNG, JPG or WebP (max. 10MB)</p>
+                </label>
               </div>
             </div>
           </div>

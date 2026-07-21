@@ -3,6 +3,10 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { supabase } from "./lib/supabase";
+import { validateProductionPaymentSecrets } from "./config/payment-secrets";
+import { startScheduledJobs } from "./jobs/scheduler";
+
+validateProductionPaymentSecrets();
 
 const app = new Hono();
 
@@ -37,6 +41,12 @@ import { attendanceRouter } from "./routes/attendance";
 import { publicRouter } from "./routes/public";
 import { storageRouter } from "./routes/storage";
 import { notesRouter } from "./routes/notes";
+import { internalPaymentsRouter } from "./routes/internal-payments";
+import { submissionsRouter } from "./routes/submissions";
+import { mockAnswersRouter } from "./routes/mock-answers";
+import { healthRouter } from "./routes/health";
+import { assignmentsRouter, courseAssignmentsRouter } from "./routes/assignments";
+import { promosRouter } from "./routes/promos";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -48,6 +58,8 @@ app.route("/dashboard", dashboardRouter);
 app.route("/programmes", programmesRouter);
 app.route("/sub-programmes", subProgrammesRouter);
 app.route("/courses", coursesRouter);
+app.route("/courses", courseAssignmentsRouter);
+app.route("/assignments", assignmentsRouter);
 app.route("/users", usersRouter);
 app.route("/mocks", mocksRouter);
 app.route("/enrolments", enrolmentsRouter);
@@ -56,6 +68,11 @@ app.route("/attendance", attendanceRouter);
 app.route("/public", publicRouter);
 app.route("/storage", storageRouter);
 app.route("/notes", notesRouter);
+app.route("/internal/payments", internalPaymentsRouter);
+app.route("/submissions", submissionsRouter);
+app.route("/mock-answers", mockAnswersRouter);
+app.route("/health", healthRouter);
+app.route("/", promosRouter);
 
 // Waitlist Route
 app.get("/waitlist/count", async (c) => {
@@ -130,7 +147,24 @@ app.post("/waitlist", async (c) => {
 const port = Number(process.env.PORT!);
 console.log(`Server is running on port ${port}`);
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port
 });
+
+const scheduledJobs = process.env.SCHEDULED_JOBS_ENABLED === 'false' ? null : startScheduledJobs();
+let shuttingDown = false;
+
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log('server.shutdown_started', { signal });
+  if (scheduledJobs) await scheduledJobs.stop();
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  });
+  console.log('server.shutdown_complete', { signal });
+}
+
+process.once('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.once('SIGINT', () => { void shutdown('SIGINT'); });

@@ -1,141 +1,241 @@
-import { Hono } from "hono";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
-import crypto from "crypto";
+import { Hono } from 'hono'
+import { supabase } from '../lib/supabase'
+import { jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
+import type { AppVariables } from '../types'
+import {
+  createPresignedDownload,
+  createPresignedPublicUpload,
+  createPresignedUpload,
+  deleteStoredObject,
+  isPrivateUploadType,
+  isPublicUploadType,
+  publicFileKeyFromUrl,
+  publicFileUrl,
+  StorageError,
+  verifyPublicUpload,
+} from '../storage/r2'
 
-type Variables = {
-  user: any;
-};
+export const storageRouter = new Hono<{ Variables: AppVariables }>()
 
-export const storageRouter = new Hono<{ Variables: Variables }>();
+storageRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware)
 
-// Apply authentication middleware
-storageRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
+async function canUploadToCourse(user: AppVariables['user'], courseId: string) {
+  const { data: course } = await supabase.from('courses')
+    .select('id')
+    .eq('id', courseId)
+    .eq('school_id', user.school_id)
+    .maybeSingle()
+  if (!course) return false
+  if (user.role === 'admin') return true
+  if (user.role !== 'tutor') return false
 
-const r2AccountId = process.env.R2_ACCOUNT_ID;
-const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID;
-const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-const r2BucketName = process.env.R2_BUCKET_NAME!
-
-const isR2Configured = r2AccountId && r2AccessKeyId && r2SecretAccessKey;
-
-let s3Client: S3Client | null = null;
-
-if (isR2Configured) {
-  s3Client = new S3Client({
-    region: "auto",
-    endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: r2AccessKeyId,
-      secretAccessKey: r2SecretAccessKey,
-    },
-  });
+  const { data: assignment } = await supabase.from('tutor_course_assignments')
+    .select('id')
+    .eq('school_id', user.school_id)
+    .eq('course_id', courseId)
+    .eq('tutor_id', user.id)
+    .maybeSingle()
+  return Boolean(assignment)
 }
 
-export const generatePresignedGetUrl = async (fileKey: string, expiresIn = 900) => {
-  if (!s3Client) return null;
-  const command = new GetObjectCommand({
-    Bucket: r2BucketName,
-    Key: fileKey,
-  });
-  return await getSignedUrl(s3Client, command, { expiresIn });
-};
+async function canSubmitAssignment(user: AppVariables['user'], assignmentId: string) {
+  if (!user.school_id || user.role !== 'student') return false
+  const { data: assignment } = await supabase.from('assignments')
+    .select('course_id, course:courses(programme_id)')
+    .eq('id', assignmentId)
+    .eq('school_id', user.school_id)
+    .eq('is_published', true)
+    .maybeSingle()
+  if (!assignment) return false
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB for notes, etc.
-const ALLOWED_TYPES = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "image/jpeg", "image/png"];
+  const programmeId = (assignment.course as any)?.programme_id
+  let query = supabase.from('enrolments').select('id')
+    .eq('school_id', user.school_id)
+    .eq('student_id', user.id)
+    .eq('status', 'active')
+  query = programmeId
+    ? query.or(`course_id.eq.${assignment.course_id},programme_id.eq.${programmeId}`)
+    : query.eq('course_id', assignment.course_id)
+  const { data } = await query.limit(1)
+  return Boolean(data?.length)
+}
 
-storageRouter.post("/presigned-url", async (c) => {
+async function presignUpload(c: any) {
   try {
-    const profile = c.get("user");
-    if (!profile.school_id) {
-      return c.json({ error: "User has no school setup", code: "NO_SCHOOL" }, 400);
-    }
+    const user = c.get('user') as AppVariables['user']
+    const body = await c.req.json()
+    const { file_name, content_type, file_size_bytes, entity_type, course_id } = body
 
-    if (!s3Client) {
-      return c.json({ error: "Storage not configured on server.", code: "STORAGE_NOT_CONFIGURED" }, 500);
-    }
-
-    const body = await c.req.json();
-    const { file_name, content_type, file_size_bytes, entity_type } = body;
-
+    if (!user.school_id) return c.json({ error: 'User has no school setup', code: 'NO_SCHOOL' }, 400)
     if (!file_name || !content_type || !file_size_bytes || !entity_type) {
-      return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
+      return c.json({ error: 'Missing required fields', code: 'BAD_REQUEST' }, 400)
+    }
+    if (!isPrivateUploadType(entity_type)) {
+      return c.json({ error: 'Unsupported upload entity type', code: 'INVALID_ENTITY_TYPE' }, 400)
     }
 
-    if (file_size_bytes > MAX_FILE_SIZE) {
-      return c.json({ error: "File exceeds 50MB limit", code: "FILE_TOO_LARGE" }, 400);
-    }
-
-    if (!ALLOWED_TYPES.includes(content_type)) {
-      return c.json({ error: "Invalid file type", code: "INVALID_FILE_TYPE" }, 400);
-    }
-
-    // Generate a unique file key scoped to the school
-    const uniqueId = crypto.randomUUID();
-    const extension = file_name.split('.').pop() || "";
-    const fileKey = `schools/${profile.school_id}/${entity_type}/${uniqueId}.${extension}`;
-
-    const command = new PutObjectCommand({
-      Bucket: r2BucketName,
-      Key: fileKey,
-      ContentType: content_type,
-      ContentLength: file_size_bytes,
-    });
-
-    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 }); // 15 mins
-
-    return c.json({
-      data: {
-        presigned_url: presignedUrl,
-        file_key: fileKey,
-        expires_in_seconds: 900
+    if (entity_type === 'note' || entity_type === 'assignment_attachment') {
+      if (!course_id) return c.json({ error: 'course_id is required', code: 'BAD_REQUEST' }, 400)
+      if (!(await canUploadToCourse(user, course_id))) {
+        return c.json({ error: 'Not permitted to upload files to this course', code: 'FORBIDDEN' }, 403)
       }
-    });
+    } else if (entity_type === 'submission') {
+      if (!body.assignment_id) return c.json({ error: 'assignment_id is required', code: 'BAD_REQUEST' }, 400)
+      if (!(await canSubmitAssignment(user, body.assignment_id))) {
+        return c.json({ error: 'Not permitted to submit this assignment', code: 'FORBIDDEN' }, 403)
+      }
+    }
 
+    const result = await createPresignedUpload({
+      schoolId: user.school_id,
+      entityType: entity_type,
+      contextId: entity_type === 'submission' ? body.assignment_id : course_id,
+      fileName: file_name,
+      contentType: content_type,
+      fileSizeBytes: Number(file_size_bytes),
+    })
+    return c.json({ data: {
+      presigned_url: result.presignedUrl,
+      file_key: result.fileKey,
+      expires_in_seconds: result.expiresInSeconds,
+    } })
   } catch (error: any) {
-    console.error("POST /storage/presigned-url error:", error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
+    console.error('POST /storage/presign/upload error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
   }
-});
+}
 
-storageRouter.get("/presigned-url", async (c) => {
+async function presignDownload(c: any) {
   try {
-    const profile = c.get("user");
-    if (!profile.school_id) {
-      return c.json({ error: "User has no school setup", code: "NO_SCHOOL" }, 400);
-    }
-
-    if (!s3Client) {
-      return c.json({ error: "Storage not configured on server.", code: "STORAGE_NOT_CONFIGURED" }, 500);
-    }
-
-    const fileKey = c.req.query("file_key");
-    if (!fileKey) {
-      return c.json({ error: "Missing file_key", code: "BAD_REQUEST" }, 400);
-    }
-
-    // Ensure the user's school ID matches the path (tenant isolation)
-    if (!fileKey.startsWith(`schools/${profile.school_id}/`)) {
-      return c.json({ error: "Forbidden: Cannot access files outside your school", code: "FORBIDDEN" }, 403);
-    }
-
-    const command = new GetObjectCommand({
-      Bucket: r2BucketName,
-      Key: fileKey,
-    });
-
-    const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
-
-    return c.json({
-      data: {
-        download_url: downloadUrl,
-        expires_in_seconds: 900
-      }
-    });
-
+    const user = c.get('user') as AppVariables['user']
+    const fileKey = c.req.query('file_key')
+    if (!user.school_id) return c.json({ error: 'User has no school setup', code: 'NO_SCHOOL' }, 400)
+    if (!fileKey) return c.json({ error: 'Missing file_key', code: 'BAD_REQUEST' }, 400)
+    const downloadUrl = await createPresignedDownload(fileKey, user.school_id)
+    return c.json({ data: { download_url: downloadUrl, expires_in_seconds: 900 } })
   } catch (error: any) {
-    console.error("GET /storage/presigned-url error:", error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
+    console.error('GET /storage/presign/download error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
   }
-});
+}
+
+async function authorizePublicContext(user: AppVariables['user'], entityType: string, contextId: string) {
+  if (!user.school_id) return false
+  if (entityType === 'profile_photo') return contextId === user.id
+  if (user.role !== 'admin') return false
+  if (['logo', 'banner', 'video_intro', 'promo'].includes(entityType)) return contextId === user.school_id
+  if (entityType === 'programme_thumbnail') {
+    const { data } = await supabase.from('programmes').select('id')
+      .eq('id', contextId).eq('school_id', user.school_id).maybeSingle()
+    return Boolean(data)
+  }
+  return false
+}
+
+async function presignPublicUpload(c: any) {
+  try {
+    const user = c.get('user') as AppVariables['user']
+    const body = await c.req.json()
+    const { file_name, content_type, file_size_bytes, entity_type, context_id } = body
+    if (!user.school_id) return c.json({ error: 'User has no school setup', code: 'NO_SCHOOL' }, 400)
+    if (!file_name || !content_type || !file_size_bytes || !entity_type || !context_id) {
+      return c.json({ error: 'Missing required fields', code: 'BAD_REQUEST' }, 400)
+    }
+    if (!isPublicUploadType(entity_type)) {
+      return c.json({ error: 'Unsupported public media type', code: 'INVALID_ENTITY_TYPE' }, 400)
+    }
+    if (!(await authorizePublicContext(user, entity_type, context_id))) {
+      return c.json({ error: 'Not permitted to update this media', code: 'FORBIDDEN' }, 403)
+    }
+    const result = await createPresignedPublicUpload({
+      schoolId: user.school_id,
+      entityType: entity_type,
+      contextId: context_id,
+      fileName: file_name,
+      contentType: content_type,
+      fileSizeBytes: Number(file_size_bytes),
+    })
+    return c.json({ data: {
+      presigned_url: result.presignedUrl,
+      file_key: result.fileKey,
+      public_url: result.publicUrl,
+      expires_in_seconds: result.expiresInSeconds,
+    } })
+  } catch (error: any) {
+    if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
+    console.error('POST /storage/presign/public error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+}
+
+async function confirmPublicUpload(c: any) {
+  try {
+    const user = c.get('user') as AppVariables['user']
+    const body = await c.req.json()
+    const { file_key, content_type, file_size_bytes, entity_type, context_id } = body
+    if (!user.school_id) return c.json({ error: 'User has no school setup', code: 'NO_SCHOOL' }, 400)
+    if (!file_key || !content_type || !file_size_bytes || !entity_type || !context_id) {
+      return c.json({ error: 'Missing required fields', code: 'BAD_REQUEST' }, 400)
+    }
+    if (!isPublicUploadType(entity_type) || entity_type === 'promo') {
+      return c.json({ error: 'Unsupported media registration type', code: 'INVALID_ENTITY_TYPE' }, 400)
+    }
+    if (!(await authorizePublicContext(user, entity_type, context_id))) {
+      return c.json({ error: 'Not permitted to update this media', code: 'FORBIDDEN' }, 403)
+    }
+    await verifyPublicUpload({
+      fileKey: file_key,
+      schoolId: user.school_id,
+      entityType: entity_type,
+      contextId: context_id,
+      contentType: content_type,
+      fileSizeBytes: Number(file_size_bytes),
+    })
+
+    let data: any
+    let oldKey: string | null = null
+    if (entity_type === 'profile_photo') {
+      const { data: old } = await supabase.from('user_profiles').select('profile_photo_key').eq('id', user.id).single()
+      oldKey = old?.profile_photo_key || null
+      const result = await supabase.from('user_profiles').update({ profile_photo_key: file_key }).eq('id', user.id).select().single()
+      if (result.error) throw result.error
+      data = result.data
+    } else if (entity_type === 'programme_thumbnail') {
+      const { data: old } = await supabase.from('programmes').select('thumbnail_url').eq('id', context_id).eq('school_id', user.school_id).single()
+      oldKey = publicFileKeyFromUrl(old?.thumbnail_url)
+      const result = await supabase.from('programmes').update({ thumbnail_url: publicFileUrl(file_key) })
+        .eq('id', context_id).eq('school_id', user.school_id).select().single()
+      if (result.error) throw result.error
+      data = result.data
+    } else {
+      const column = entity_type === 'logo' ? 'logo_url' : entity_type === 'banner' ? 'banner_url' : 'video_intro_url'
+      const { data: old } = await supabase.from('schools').select(column).eq('id', user.school_id).single()
+      const oldMedia = old as Partial<Record<typeof column, string | null>> | null
+      oldKey = publicFileKeyFromUrl(oldMedia?.[column])
+      const result = await supabase.from('schools').update({ [column]: publicFileUrl(file_key) })
+        .eq('id', user.school_id).select().single()
+      if (result.error) throw result.error
+      data = result.data
+    }
+
+    if (oldKey && oldKey !== file_key) {
+      deleteStoredObject(oldKey).catch(error => console.error('storage.old_public_media_cleanup_failed', { oldKey, error }))
+    }
+    return c.json({ data, file_key, public_url: publicFileUrl(file_key) })
+  } catch (error: any) {
+    if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
+    console.error('POST /storage/public/confirm error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+}
+
+storageRouter.post('/presign/upload', presignUpload)
+storageRouter.get('/presign/download', presignDownload)
+storageRouter.post('/presign/public', presignPublicUpload)
+storageRouter.post('/public/confirm', confirmPublicUpload)
+
+// Backward-compatible aliases while existing clients move to the documented paths.
+storageRouter.post('/presigned-url', presignUpload)
+storageRouter.get('/presigned-url', presignDownload)

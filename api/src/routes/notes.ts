@@ -1,7 +1,13 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
-import { generatePresignedGetUrl } from "./storage";
+import {
+  assertPrivateFileKey,
+  createPresignedDownload,
+  documentFileType,
+  StorageError,
+  verifyPrivateUpload,
+} from "../storage/r2";
 
 type Variables = {
   user: any;
@@ -37,6 +43,8 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
     }
 
+    assertPrivateFileKey(file_key, profile.school_id, "note", courseId);
+
     // Tenant Check: Ensure the course belongs to the school
     const { data: course, error: courseError } = await supabase
       .from("courses")
@@ -54,7 +62,7 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       const { data: assignment, error: assignmentError } = await supabase
         .from("tutor_course_assignments")
         .select("id")
-        .eq("tutor_id", profile.kanvise_user_id || profile.id)
+        .eq("tutor_id", profile.id)
         .eq("course_id", courseId)
         .eq("school_id", profile.school_id)
         .single();
@@ -64,18 +72,36 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       }
     }
 
+    await verifyPrivateUpload({
+      fileKey: file_key,
+      schoolId: profile.school_id,
+      entityType: "note",
+      contextId: courseId,
+      contentType: file_type,
+      fileSizeBytes: Number(file_size_bytes),
+    });
+
+    const { data: reusedFile } = await supabase.from("notes")
+      .select("id")
+      .eq("school_id", profile.school_id)
+      .eq("file_key", file_key)
+      .maybeSingle();
+    if (reusedFile) {
+      return c.json({ error: "File has already been registered", code: "FILE_ALREADY_REGISTERED" }, 409);
+    }
+
     // Insert note
     const { data: note, error: insertError } = await supabase
       .from("notes")
       .insert({
         school_id: profile.school_id,
         course_id: courseId,
-        tutor_id: profile.kanvise_user_id || profile.id,
+        tutor_id: profile.id,
         title,
         description: description || null,
         file_key,
         file_name,
-        file_type,
+        file_type: documentFileType(file_type),
         file_size_bytes
       })
       .select()
@@ -85,6 +111,9 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
 
     return c.json({ data: note, message: "Note created successfully" }, 201);
   } catch (error: any) {
+    if (error instanceof StorageError) {
+      return c.json({ error: error.message, code: error.code }, error.status);
+    }
     console.error(`POST /notes/:courseId error:`, error);
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
@@ -106,30 +135,28 @@ notesRouter.get("/:courseId", async (c) => {
       const { data: enrolments } = await supabase
         .from("enrolments")
         .select("programme_id, course_id")
-        .eq("student_id", profile.kanvise_user_id || profile.id)
+        .eq("student_id", profile.id)
         .eq("school_id", profile.school_id)
         .eq("status", "active");
 
-      const hasAccess = enrolments?.some(e => 
-        e.course_id === courseId || 
-        // Need a robust check for programme level enrolment if we fetch courses here
-        e.programme_id !== null // simplified for MVP, full check requires joining courses
-      );
-
-      // We'll perform a direct course fetch to check if programme enrolment covers it
+      const { data: course } = await supabase.from("courses")
+        .select("programme_id")
+        .eq("id", courseId)
+        .eq("school_id", profile.school_id)
+        .maybeSingle();
+      const hasAccess = Boolean(course) && Boolean(enrolments?.some(e =>
+        e.course_id === courseId ||
+        (e.programme_id !== null && e.programme_id === course?.programme_id)
+      ));
       if (!hasAccess) {
-        const { data: course } = await supabase.from("courses").select("programme_id").eq("id", courseId).single();
-        const hasProgrammeAccess = enrolments?.some(e => e.programme_id === course?.programme_id);
-        if (!hasProgrammeAccess) {
-             return c.json({ error: "Not enrolled in course", code: "FORBIDDEN" }, 403);
-        }
+        return c.json({ error: "Not enrolled in course", code: "FORBIDDEN" }, 403);
       }
     } else if (profile.role === "tutor") {
       // Must be assigned to course
       const { data: assignment, error: assignmentError } = await supabase
         .from("tutor_course_assignments")
         .select("id")
-        .eq("tutor_id", profile.kanvise_user_id || profile.id)
+        .eq("tutor_id", profile.id)
         .eq("course_id", courseId)
         .eq("school_id", profile.school_id)
         .single();
@@ -144,7 +171,7 @@ notesRouter.get("/:courseId", async (c) => {
       .from("notes")
       .select(`
         *,
-        tutor:users!notes_tutor_id_fkey(id, first_name, last_name)
+        tutor:user_profiles!notes_tutor_id_fkey(id, first_name, last_name)
       `)
       .eq("course_id", courseId)
       .eq("school_id", profile.school_id)
@@ -154,7 +181,7 @@ notesRouter.get("/:courseId", async (c) => {
 
     // Generate download_url for each note to match API Spec
     const enhancedNotes = await Promise.all((notes || []).map(async (note) => {
-      const download_url = await generatePresignedGetUrl(note.file_key);
+      const download_url = await createPresignedDownload(note.file_key, profile.school_id);
       return {
         ...note,
         download_url
@@ -186,7 +213,7 @@ notesRouter.delete("/:id", enforceAdminOrTutor, async (c) => {
     }
 
     // Only admin or the tutor who created it can delete
-    if (profile.role === "tutor" && note.tutor_id !== (profile.kanvise_user_id || profile.id)) {
+    if (profile.role === "tutor" && note.tutor_id !== profile.id) {
       return c.json({ error: "Cannot delete another tutor's note", code: "FORBIDDEN" }, 403);
     }
 
