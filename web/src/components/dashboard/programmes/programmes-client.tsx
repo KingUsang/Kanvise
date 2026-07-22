@@ -18,7 +18,7 @@ interface Programme {
   thumbnail_url?: string
 }
 
-export function ProgrammesClient({ schoolId }: { schoolId: string }) {
+export function ProgrammesClient() {
   const supabase = createClient()
   const [programmes, setProgrammes] = useState<Programme[]>([])
   const [subProgrammes, setSubProgrammes] = useState<any[]>([])
@@ -33,8 +33,8 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
   const [saveError, setSaveError] = useState('')
   const [entityType, setEntityType] = useState<'programme' | 'sub_programme' | 'course'>('programme')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
   const [schoolSlug, setSchoolSlug] = useState('')
+  const [loadError, setLoadError] = useState('')
 
   // Form State
   const [formData, setFormData] = useState({
@@ -52,6 +52,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
   })
 
   const fetchData = async () => {
+    setLoadError('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
@@ -72,6 +73,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       if (!subProgRes.ok) throw new Error('Failed to fetch sub-programmes')
       if (!coursesRes.ok) throw new Error('Failed to fetch courses')
       if (!tutorsRes.ok) throw new Error('Failed to fetch tutors')
+      if (!schoolRes.ok) throw new Error('Failed to fetch your centre details')
 
       const { data: progData } = await progRes.json()
       const { data: subProgData } = await subProgRes.json()
@@ -94,6 +96,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       
     } catch (err) {
       console.error(err)
+      setLoadError('We could not load your programmes. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -191,7 +194,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
         if (!assignRes.ok) {
           const assignErr = await assignRes.json()
           console.error("Failed to assign tutor", assignErr)
-          // We don't block the UI, just log it. The course was created.
+          toast.warning('Subject saved, but the tutor was not assigned', { description: 'Open the subject and try assigning the tutor again.' })
         }
       }
 
@@ -254,29 +257,6 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
     }
   }
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setIsUploading(true)
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `thumbnails/${fileName}`
-      
-      const { error } = await supabase.storage.from('kanvise-media').upload(filePath, file)
-      if (error) throw error
-      
-      const { data: { publicUrl } } = supabase.storage.from('kanvise-media').getPublicUrl(filePath)
-      setFormData(p => ({ ...p, thumbnail_url: publicUrl }))
-    } catch (err) {
-      console.error(err)
-      toast.error('Thumbnail upload failed', { description: err instanceof Error ? err.message : 'Please try again.' })
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
   const toggleNode = (nodeId: string) => {
     setExpandedNodes(prev => {
       const newSet = new Set(prev)
@@ -308,7 +288,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
           </div>
           <div>
             <div className="text-sm font-semibold text-[#1b1c1c]">{course.name}</div>
-            <div className="text-xs text-[#474551]">Course</div>
+            <div className="text-xs text-[#474551]">Subject</div>
           </div>
         </div>
         
@@ -344,11 +324,11 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-4 mb-4">
         <div>
             <div className="flex items-center gap-2 text-[#474551] mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Curriculum Management</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">What you teach</span>
             </div>
-            <h2 className="text-3xl font-bold text-[#1b1c1c]">Programmes & Courses</h2>
+            <h2 className="text-3xl font-bold text-[#1b1c1c]">Programmes & Subjects</h2>
             <p className="text-sm text-[#474551] mt-1 max-w-2xl">
-              Manage your educational hierarchy. Structure programmes, define nested cohorts, and assign modules and tutors to specific courses.
+              Organise what students can enrol for, from complete exam-prep programmes to individual subjects.
             </p>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -358,7 +338,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
               className="bg-[#fbf9f8] border border-[#2e2877] text-[#2e2877] hover:bg-[#2e2877] hover:text-white transition-colors px-6 py-2.5 rounded text-sm font-semibold flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
-              New Course
+              Add Subject
             </button>
             <button 
               onClick={() => openNew('programme')}
@@ -373,7 +353,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                 className="bg-[#fbf9f8] border border-[#c8c5d2] text-[#474551] hover:bg-[#e4e2e1] transition-colors px-6 py-2.5 rounded text-sm font-semibold flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">storefront</span>
-                View Storefront
+                View Student Page
               </button>
             )}
           </div>
@@ -381,29 +361,26 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       {/* Density Data View */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
         {/* Card 1 */}
-        <div className="bg-[#fbf9f8] border border-[#c2b59b] rounded-lg p-6 shadow-sm relative overflow-hidden group hover:border-[#2e2877] transition-colors">
+        <div className="bg-white border border-[#c2b59b] rounded-lg p-6 shadow-sm relative overflow-hidden group hover:border-[#2e2877] transition-colors">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-6xl text-[#2e2877]">account_tree</span>
           </div>
           <h3 className="text-xs font-semibold text-[#474551] uppercase tracking-wider mb-2">Total Programmes</h3>
           <div className="text-4xl font-bold text-[#1b1c1c]">{programmes.length}</div>
-          {/* TODO: Add real time metrics when analytics backend is ready */}
           <div className="mt-4 pt-4 border-t border-[#c8c5d2]/50 flex items-center justify-between">
-            <span className="text-xs text-[#753400]">+2 this month</span>
-            <a className="text-xs font-semibold text-[#2e2877] hover:underline" href="#">View All</a>
+            <span className="text-xs text-[#474551]">Complete packages students can enrol for</span>
           </div>
         </div>
         
         {/* Card 2 */}
-        <div className="bg-[#fbf9f8] border border-[#c2b59b] rounded-lg p-6 shadow-sm relative overflow-hidden group hover:border-[#2e2877] transition-colors">
+        <div className="bg-white border border-[#c2b59b] rounded-lg p-6 shadow-sm relative overflow-hidden group hover:border-[#2e2877] transition-colors">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-6xl text-[#994704]">library_books</span>
           </div>
-          <h3 className="text-xs font-semibold text-[#474551] uppercase tracking-wider mb-2">Active Courses</h3>
+          <h3 className="text-xs font-semibold text-[#474551] uppercase tracking-wider mb-2">Published Subjects</h3>
           <div className="text-4xl font-bold text-[#1b1c1c]">{activeCoursesCount}</div>
           <div className="mt-4 pt-4 border-t border-[#c8c5d2]/50 flex items-center justify-between">
-            <span className="text-xs text-[#753400]">{draftCoursesCount} Drafts pending</span>
-            <a className="text-xs font-semibold text-[#2e2877] hover:underline" href="#">Manage Drafts</a>
+            <span className="text-xs text-[#474551]">{draftCoursesCount} {draftCoursesCount === 1 ? 'draft' : 'drafts'} not visible to students</span>
           </div>
         </div>
 
@@ -417,30 +394,27 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
             </svg>
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">System Status</h3>
-            <div className="text-2xl font-bold text-white">All Systems Operational</div>
+            <h3 className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">All Subjects</h3>
+            <div className="text-4xl font-bold text-white">{courses.length}</div>
           </div>
           <div className="mt-auto pt-4 flex gap-2">
-            {/* TODO: Realtime sync check with Supabase */}
-            <span className="inline-flex items-center gap-1 bg-white/20 px-2 py-1 rounded text-xs font-semibold text-white">
-              <span className="w-2 h-2 rounded-full bg-[#4CAF50]"></span> Sync OK
-            </span>
+            <span className="text-xs text-white/80">Across programmes, tracks and standalone subjects</span>
           </div>
         </div>
       </div>
 
       {/* Hierarchy Data Table */}
-      <div className="bg-[#fbf9f8] border border-[#c2b59b] rounded-lg shadow-sm flex flex-col overflow-hidden">
+      <div className="bg-white border border-[#c2b59b] rounded-lg shadow-sm flex flex-col overflow-hidden">
         <div className="px-6 py-4 border-b border-[#c2b59b] bg-[#f5f3f2] flex justify-between items-center">
-          <h3 className="text-lg font-bold text-[#1b1c1c]">Curriculum Hierarchy</h3>
+          <div><h3 className="text-lg font-bold text-[#1b1c1c]">Programme structure</h3><p className="mt-1 text-sm text-[#474551]">See how your programmes, tracks and subjects are arranged.</p></div>
         </div>
         
         <div className="overflow-x-auto w-full no-scrollbar">
           <div className="min-w-[800px]">
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-[#f2ebd9] border-b border-[#c2b59b] text-xs font-semibold text-[#474551] uppercase tracking-wide">
-              <div className="col-span-12 md:col-span-4">Name / Hierarchy</div>
-              <div className="col-span-4 md:col-span-2 hidden md:block">Slug</div>
+              <div className="col-span-12 md:col-span-4">Name</div>
+              <div className="col-span-4 md:col-span-2 hidden md:block">Student link</div>
               <div className="col-span-4 md:col-span-2 hidden md:block">Price (NGN)</div>
               <div className="col-span-3 md:col-span-2">Status</div>
               <div className="col-span-3 md:col-span-2 text-right">Actions</div>
@@ -448,15 +422,17 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
 
             <div className="flex-1 bg-white">
               {isLoading ? (
-                <div className="p-8 text-center text-[#474551]">Loading curriculum...</div>
+                <div className="p-8 text-center text-[#474551]">Loading your programmes...</div>
+              ) : loadError ? (
+                <div className="p-10 text-center"><p className="text-sm text-[#474551]">{loadError}</p><button type="button" onClick={fetchData} className="mt-4 rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></div>
               ) : programmes.length === 0 && courses.length === 0 ? (
-                <div className="p-8 text-center text-[#474551]">No curriculum found. Click 'New Course' or 'Create Programme' to get started.</div>
+                <div className="p-10 text-center"><span className="material-symbols-outlined text-4xl text-[#994704]">school</span><h4 className="mt-3 font-bold text-[#1b1c1c]">Add what your centre teaches</h4><p className="mx-auto mt-2 max-w-lg text-sm text-[#474551]">Create a programme for a complete package such as WAEC Prep, or add a subject if students can enrol for it on its own.</p><div className="mt-5 flex justify-center gap-3"><button type="button" onClick={() => openNew('programme')} className="rounded bg-[#994704] px-4 py-2 text-sm font-semibold text-white">Create programme</button><button type="button" onClick={() => openNew('course')} className="rounded border border-[#2e2877] px-4 py-2 text-sm font-semibold text-[#2e2877]">Add subject</button></div></div>
               ) : (
                 <>
                   {/* Standalone Courses */}
                   {courses.filter(c => !c.programme_id && !c.sub_programme_id).length > 0 && (
                     <div className="bg-[#f5f3f2] px-6 py-2 border-b border-[#c2b59b] text-xs font-bold text-[#474551] uppercase tracking-wider">
-                      Standalone Courses
+                      Subjects sold separately
                     </div>
                   )}
                   {courses.filter(c => !c.programme_id && !c.sub_programme_id).map(course => 
@@ -500,7 +476,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                               </div>
                               <div>
                                 <div className="text-sm font-semibold text-[#2e2877]">{prog.name}</div>
-                                <div className="text-xs text-[#474551]">{prog.courses_count} Courses • {prog.sub_programmes_count} Sub-Programmes</div>
+                                <div className="text-xs text-[#474551]">{prog.courses_count} Subjects • {prog.sub_programmes_count} Tracks</div>
                               </div>
                             </div>
                             
@@ -557,7 +533,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                                         )}
                                         <div>
                                           <div className="text-sm font-semibold text-[#1b1c1c]">{sp.name}</div>
-                                          <div className="text-xs text-[#474551]">Sub-Programme</div>
+                                          <div className="text-xs text-[#474551]">Track</div>
                                         </div>
                                       </div>
                                       
@@ -574,11 +550,6 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                                       </div>
                                       
                                       <div className="col-span-3 md:col-span-2 flex justify-end gap-2">
-                                        {sp.is_published && schoolSlug && (
-                                          <button onClick={() => copyLink(`/${schoolSlug}/${sp.slug}`)} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Copy Public Link">
-                                            <span className="material-symbols-outlined text-[18px]">link</span>
-                                          </button>
-                                        )}
                                         <button onClick={() => openEdit({ ...sp, programme_id: prog.id }, 'sub_programme')} className="p-1 text-[#474551] hover:text-[#2e2877] rounded" title="Edit Sub-Programme">
                                           <span className="material-symbols-outlined text-[18px]">edit</span>
                                         </button>
@@ -617,7 +588,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-[#c8c5d2] flex justify-between items-center bg-[#ffffff]">
               <h2 className="text-lg font-bold text-[#2e2877]">
-                {editingId ? "Edit" : "Create"} {entityType === 'programme' ? 'Programme' : entityType === 'course' ? 'Course' : 'Sub-Programme'}
+                {editingId ? "Edit" : "Create"} {entityType === 'programme' ? 'Programme' : entityType === 'course' ? 'Subject' : 'Track'}
               </h2>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -640,7 +611,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                 <div className="grid grid-cols-2 gap-6">
                   {/* Entity Type Selector */}
                   <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-2 uppercase tracking-wide">Entity Type</label>
+                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-2 uppercase tracking-wide">What are you adding?</label>
                     <div className="flex gap-4 p-1 bg-[#f5f3f2] rounded border border-[#c8c5d2]/50 w-max">
                       <label className="cursor-pointer">
                         <input 
@@ -660,7 +631,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                           checked={entityType === 'sub_programme'}
                           onChange={() => setEntityType('sub_programme')}
                         />
-                        <div className="px-4 py-2 rounded text-sm font-semibold text-[#474551] peer-checked:bg-white peer-checked:text-[#2e2877] peer-checked:shadow-sm transition-all border border-transparent peer-checked:border-[#c8c5d2]">Sub-Programme</div>
+                        <div className="px-4 py-2 rounded text-sm font-semibold text-[#474551] peer-checked:bg-white peer-checked:text-[#2e2877] peer-checked:shadow-sm transition-all border border-transparent peer-checked:border-[#c8c5d2]">Track</div>
                       </label>
                       <label className="cursor-pointer">
                         <input 
@@ -670,19 +641,19 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                           checked={entityType === 'course'}
                           onChange={() => setEntityType('course')}
                         />
-                        <div className="px-4 py-2 rounded text-sm font-semibold text-[#474551] peer-checked:bg-white peer-checked:text-[#2e2877] peer-checked:shadow-sm transition-all border border-transparent peer-checked:border-[#c8c5d2]">Course</div>
+                        <div className="px-4 py-2 rounded text-sm font-semibold text-[#474551] peer-checked:bg-white peer-checked:text-[#2e2877] peer-checked:shadow-sm transition-all border border-transparent peer-checked:border-[#c8c5d2]">Subject</div>
                       </label>
                     </div>
                     {/* Helper Text to explain the Kanvise structure to users */}
                     <div className="mt-3 p-3 bg-[#e8e6fb]/30 border border-[#2e2877]/20 rounded text-sm text-[#474551] leading-relaxed">
                       {entityType === 'programme' && (
-                        <span><strong>Programme:</strong> The top-level bundle (e.g., "WAEC Prep 2026"). Students who enrol at this level get access to everything inside it.</span>
+                        <span><strong>Programme:</strong> A complete package, such as WAEC Prep 2026. Students pay once to access everything included in it.</span>
                       )}
                       {entityType === 'sub_programme' && (
-                        <span><strong>Sub-programme:</strong> A nested track or cohort (e.g., "Science Track"). Students who enrol here get access only to courses within that track.</span>
+                        <span><strong>Track:</strong> A group inside a programme, such as Science, Arts or Commercial.</span>
                       )}
                       {entityType === 'course' && (
-                        <span><strong>Course:</strong> A single subject or module (e.g., "Chemistry"). This is where you actually host live classes, upload notes, and assign tutors.</span>
+                        <span><strong>Subject:</strong> A class such as Chemistry. This is where you schedule live classes, share notes and assign a tutor.</span>
                       )}
                     </div>
                   </div>
@@ -703,7 +674,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Slug <span className="text-[#474551] font-normal">(Can be customized)</span></label>
+                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Student page link <span className="text-[#474551] font-normal">(created from the name)</span></label>
                     <input 
                       type="text"
                       value={formData.slug}
@@ -759,9 +730,9 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                           onChange={e => setFormData(p => ({ ...p, course_placement: e.target.value, programme_id: '', sub_programme_id: '' }))}
                           className="w-full bg-white border border-[#c8c5d2] rounded px-3 py-2 text-sm focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none"
                         >
-                          <option value="standalone">Standalone (Root Level)</option>
-                          <option value="programme">Under a Programme</option>
-                          <option value="sub_programme">Under a Sub-Programme</option>
+                          <option value="standalone">Sell it as an individual subject</option>
+                          <option value="programme">Inside a programme</option>
+                          <option value="sub_programme">Inside a track</option>
                         </select>
                       </div>
 
@@ -805,7 +776,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                   )}
 
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Base Price (NGN) <span className="text-[#ba1a1a]">*</span></label>
+                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Price students will pay (NGN) <span className="text-[#ba1a1a]">*</span></label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#474551] font-semibold">₦</span>
                       <input 
@@ -826,7 +797,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                       <div className="flex items-center justify-between mb-3">
                         <label className="text-sm font-semibold text-[#1b1c1c] flex items-center gap-2">
                           <span className="material-symbols-outlined text-[18px]">person</span>
-                          Assign Tutor (Optional)
+                          Choose a tutor (optional)
                         </label>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input 
@@ -881,30 +852,6 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                     </div>
                   )}
 
-                  {/* File Upload */}
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Thumbnail</label>
-                    <div className="border-2 border-dashed border-[#c8c5d2] rounded p-6 flex flex-col items-center justify-center bg-white hover:bg-[#f5f3f2] transition-colors relative">
-                      {formData.thumbnail_url ? (
-                        <img src={formData.thumbnail_url} alt="Thumbnail" className="h-32 object-contain" />
-                      ) : (
-                        <>
-                          <div className="h-12 w-12 rounded-full bg-[#f0eded] flex items-center justify-center mb-2 text-[#474551]">
-                            <span className="material-symbols-outlined">{isUploading ? 'hourglass_empty' : 'cloud_upload'}</span>
-                          </div>
-                          <span className="text-sm font-semibold text-[#1b1c1c]">{isUploading ? 'Uploading...' : 'Click to upload'}</span>
-                          <span className="text-xs font-normal text-[#474551] mt-1">SVG, PNG, JPG (max. 2MB)</span>
-                        </>
-                      )}
-                      <input 
-                        type="file" 
-                        onChange={handleUpload} 
-                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                        accept="image/*" 
-                        disabled={isUploading} 
-                      />
-                    </div>
-                  </div>
                 </div>
               </form>
             </div>
@@ -912,7 +859,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-[#c8c5d2] bg-[#ffffff] flex flex-wrap justify-between items-center gap-4">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-[#1b1c1c] uppercase">Publish Status</span>
+                <span className="text-xs font-semibold text-[#1b1c1c] uppercase">Visible to students</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input 
                     type="checkbox" 
@@ -936,7 +883,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                   disabled={isSaving}
                   className="px-6 py-2 rounded text-sm font-semibold bg-[#994704] text-white hover:bg-[#753400] transition-colors shadow-sm disabled:opacity-50"
                 >
-                  {isSaving ? 'Saving...' : 'Save Programme'}
+                  {isSaving ? 'Saving...' : editingId ? 'Save changes' : `Create ${entityType === 'programme' ? 'programme' : entityType === 'sub_programme' ? 'track' : 'subject'}`}
                 </button>
               </div>
             </div>

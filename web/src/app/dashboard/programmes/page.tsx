@@ -10,13 +10,9 @@ export default async function ProgrammesPage() {
     redirect('/')
   }
 
-  // Next.js Middleware handles role protection. 
-  // school_id is available in the JWT metadata.
-  const schoolId = session.user.user_metadata?.school_id
-
   return (
-    <div className="animate-in fade-in duration-500">
-      <ProgrammesClient schoolId={schoolId} />
+    <div className="mx-auto w-full max-w-[1440px] animate-in fade-in duration-500">
+      <ProgrammesClient />
     </div>
   )
 }
