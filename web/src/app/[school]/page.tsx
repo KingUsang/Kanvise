@@ -62,14 +62,14 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
         <section className="relative w-full h-[500px] md:h-[600px] flex flex-col justify-end pb-margin-desktop">
           <div 
             className="absolute inset-0 z-0 bg-cover bg-center" 
-            style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAXtAL24MjpnOOLbUw8QzJ4Ymi7osvzSIrOWWqLxrBh493wkGM7_JmpaLmg4Ig4jRJn-rKQ3Iw2FEgM-RQPSSRtOxZifRSpPWQNNIpJ_ceWr3qZKR6TzhmTQN97Ihod_X_t2Q3nbC_qjc5rOxEhiVkNpvTjuJVqlfRx3Ommk3nULHY3sWAp9LaT-xBmIVyAaOstQBmUF7FuVkFx1pJT1_eMzIgpYnGsPRK6DtP4kvR1YJmm7mxjIdDVRRuR5BzCIlquPJtZORyxpQg')" }}
+            style={{ backgroundImage: school.banner_url ? `url('${school.banner_url}')` : 'linear-gradient(135deg, #2e2877, #180d62)' }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
           </div>
           <div className="relative z-10 max-w-[1440px] mx-auto w-full px-6 md:px-margin-desktop flex items-end gap-gutter">
             {/* Institution Logo */}
             <div className="w-32 h-32 md:w-40 md:h-40 bg-white p-2 rounded shadow-industrial-md border border-outline-variant flex-shrink-0 flex items-center justify-center overflow-hidden">
-                <span className="text-4xl text-primary font-bold uppercase">{school.name.substring(0, 2)}</span>
+                {school.logo_url ? <img src={school.logo_url} alt={`${school.name} logo`} className="h-full w-full object-contain" /> : <span className="text-4xl text-primary font-bold uppercase">{school.name.substring(0, 2)}</span>}
             </div>
             
             <div className="text-white pb-2 flex-grow">
@@ -100,10 +100,8 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
                         <a className="hover:text-secondary transition-colors" href={school.website_url}>{school.website_url.replace(/^https?:\/\//, '')}</a>
                     </li>
                 )}
-                <li className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary text-xl">mail</span>
-                  <a className="hover:text-secondary transition-colors" href={`mailto:admissions@${resolvedParams.school}.edu.ng`}>admissions@{resolvedParams.school}.edu.ng</a>
-                </li>
+                {school.contact_email && <li className="flex items-center gap-3"><span className="material-symbols-outlined text-primary text-xl">mail</span><a className="hover:text-secondary transition-colors" href={`mailto:${school.contact_email}`}>{school.contact_email}</a></li>}
+                {school.contact_phone && <li className="flex items-center gap-3"><span className="material-symbols-outlined text-primary text-xl">call</span><a className="hover:text-secondary transition-colors" href={`tel:${school.contact_phone}`}>{school.contact_phone}</a></li>}
                 {school.whatsapp_number && (
                     <li className="flex items-center gap-3">
                         <span className="material-symbols-outlined text-primary text-xl">call</span>
@@ -112,9 +110,9 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
                 )}
               </ul>
               <div className="mt-6 pt-4 border-t border-[#C2B59B] flex gap-4">
-                <a className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href="#">
-                  <span className="material-symbols-outlined">share</span>
-                </a>
+                {school.instagram_url && <a aria-label="Instagram" className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={school.instagram_url} target="_blank" rel="noreferrer"><span className="material-symbols-outlined">photo_camera</span></a>}
+                {school.twitter_url && <a aria-label="X" className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={school.twitter_url} target="_blank" rel="noreferrer"><span className="text-xs font-bold">X</span></a>}
+                {school.facebook_url && <a aria-label="Facebook" className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={school.facebook_url} target="_blank" rel="noreferrer"><span className="text-sm font-bold">f</span></a>}
                 {school.whatsapp_number && (
                     <a className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={`https://wa.me/${school.whatsapp_number}`}>
                     <span className="material-symbols-outlined">chat</span>
@@ -123,20 +121,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
               </div>
             </div>
 
-            {/* Video Intro Placeholder */}
-            <div className="bg-white border border-[#C2B59B] rounded shadow-industrial-sm overflow-hidden group cursor-pointer relative">
-              <div className="h-48 w-full bg-surface-container-highest relative bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAqp4d5MXnULEohtzhbgOsw0v-TVkNO3O_XkLAwVIR7FXhfJo4LizIm-WMLAh6Iw-wPTs1TyZC5wQir7T_t0-naBWfDMt1gcm7pt_gPli4OZB8uYdTkwaHkom2hyeurromLea5uTi1t2zSUG6tCVKkP8FM2j8eFc9HdeoedCD_t1mue-dQO9MRfmefcnIPg12VS9Q_JAqhxas68g2q1vhKoM0LjZHWyGdupaakVs1iiz1wskwBAhjiXQfY_bbvoMXbQPk3NCx-74is')" }}>
-                <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/40 transition-colors flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-secondary text-4xl icon-fill">play_arrow</span>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 bg-white">
-                <h4 className="font-headline-sm text-headline-sm text-primary text-base">Campus Tour & Intro</h4>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">2 mins watch</p>
-              </div>
-            </div>
+            {school.video_intro_url && <div className="overflow-hidden rounded border border-[#C2B59B] bg-white shadow-industrial-sm"><video controls preload="metadata" className="aspect-video w-full bg-black" src={school.video_intro_url}>Your browser does not support this video.</video><div className="p-4"><h4 className="font-headline-sm text-base text-primary">Welcome to {school.name}</h4></div></div>}
           </aside>
 
           {/* Main Content Area */}

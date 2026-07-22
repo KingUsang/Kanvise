@@ -12,7 +12,7 @@ publicRouter.get('/schools/:slug', async (c) => {
     // 1. Resolve school from slug
     const { data: school, error: schoolError } = await supabase
       .from('schools')
-      .select('id, name, slug, description, contact_email, contact_phone, website_url, instagram_url, twitter_url, facebook_url, whatsapp_number')
+      .select('id, name, slug, description, logo_url, banner_url, video_intro_url, contact_email, contact_phone, website_url, instagram_url, twitter_url, facebook_url, whatsapp_number')
       .eq('slug', slug)
       .eq('is_active', true)
       .single()
@@ -89,7 +89,10 @@ publicRouter.get('/programmes/:slug', async (c) => {
       .from('schools')
       .select('id, name, slug')
       .eq('id', programme.school_id)
+      .eq('is_active', true)
       .single()
+
+    if (schoolError || !school) return c.json({ error: 'Programme not found' }, 404)
 
     // 3. Fetch sub-programmes under this programme
     const { data: subProgrammes, error: subProgError } = await supabase
@@ -136,11 +139,14 @@ publicRouter.get('/courses/:slug', async (c) => {
       return c.json({ error: 'Course not found' }, 404)
     }
 
-    const { data: school } = await supabase
+    const { data: school, error: schoolError } = await supabase
       .from('schools')
       .select('id, name, slug')
       .eq('id', course.school_id)
+      .eq('is_active', true)
       .single()
+
+    if (schoolError || !school) return c.json({ error: 'Course not found' }, 404)
 
     return c.json({
       data: {

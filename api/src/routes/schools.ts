@@ -96,13 +96,13 @@ schoolsRouter.patch('/mine', requireRole('admin'), async (c) => {
   const body = await c.req.json()
 
   if (body.name !== undefined && !String(body.name).trim()) {
-    return c.json({ error: 'Institution name is required', code: 'INVALID_NAME' }, 400)
+    return c.json({ error: 'Centre name is required', code: 'INVALID_NAME' }, 400)
   }
   if (body.slug !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(body.slug))) {
     return c.json({ error: 'Portal URL must use lowercase letters, numbers, and single hyphens only', code: 'INVALID_SLUG' }, 400)
   }
   if (body.description !== undefined && String(body.description).length > 500) {
-    return c.json({ error: 'Institution description cannot exceed 500 characters', code: 'DESCRIPTION_TOO_LONG' }, 400)
+    return c.json({ error: 'Centre description cannot exceed 500 characters', code: 'DESCRIPTION_TOO_LONG' }, 400)
   }
 
   // Prepare update payload according to Api spec.md
