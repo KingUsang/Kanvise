@@ -40,7 +40,6 @@ export default async function DashboardHomePage() {
   const tutor = data.tutor_stats
   const gradingItems: GradingItem[] = (isSoloTutor ? tutor?.needs_grading : admin?.needs_grading || tutor?.needs_grading) || []
   const schedule: ScheduleItem[] = (isTutor ? data.my_today_schedule : data.today_schedule) || []
-  const waitingToGrade = gradingItems.reduce((sum, item) => sum + Number(item.pending_count || 0), 0)
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-NG', {
     style: 'currency', currency: 'NGN', maximumFractionDigits: 0,
   }).format(amount)
@@ -70,18 +69,6 @@ export default async function DashboardHomePage() {
         </div>
       </header>
 
-      {isTutor && (
-        <section aria-labelledby="teaching-summary">
-          {isSoloTutor && <h2 id="teaching-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">My teaching</h2>}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="My Classes Today" value={tutor.classes_today} icon="laptop_chromebook" subtitle="Sessions assigned to you" />
-            <StatCard title="Waiting for Me to Grade" value={waitingToGrade} icon="assignment_late" subtitle="Mocks and assignments" />
-            <StatCard title="My Courses" value={tutor.my_courses} icon="library_books" subtitle="Courses you teach" />
-            <StatCard title="Mock Answers to Grade" value={tutor.mocks?.pending_count || 0} icon="quiz" subtitle={`${tutor.mocks?.active_count || 0} active mocks`} />
-          </div>
-        </section>
-      )}
-
       {isAdmin && (
         <section aria-labelledby="centre-summary">
           {isSoloTutor && <h2 id="centre-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">Centre overview</h2>}
@@ -89,7 +76,21 @@ export default async function DashboardHomePage() {
             <StatCard title="Enrolled Students" value={admin.total_students} icon="groups" subtitle="Across the centre" />
             <StatCard title="Classes Today" value={admin.upcoming_classes} icon="event" subtitle="Scheduled centre-wide" />
             <StatCard title="Earnings This Month" value={formatCurrency(admin.mtd_revenue)} icon="payments" subtitle={`${admin.successful_payments || 0} successful payments`} isRevenue />
-            <StatCard title="Mock Answers to Grade" value={admin.mocks?.pending_count || 0} icon="quiz" subtitle={`${admin.mocks?.active_count || 0} active mocks`} />
+            {isSoloTutor
+              ? <StatCard title="Tutor Team" value={admin.active_tutors} icon="school" subtitle="Other tutors in your centre" />
+              : <StatCard title="Mock Answers to Grade" value={admin.mocks?.pending_count || 0} icon="quiz" subtitle={`${admin.mocks?.active_count || 0} active mocks`} />}
+          </div>
+        </section>
+      )}
+
+      {isTutor && (
+        <section aria-labelledby="teaching-summary">
+          {isSoloTutor && <h2 id="teaching-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">My teaching</h2>}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard title="My Classes Today" value={tutor.classes_today} icon="laptop_chromebook" subtitle="Sessions assigned to you" />
+            <StatCard title="Assignment Submissions to Grade" value={tutor.pending_submissions} icon="assignment_late" subtitle="Waiting for your review" />
+            <StatCard title="Mock Answers to Grade" value={tutor.mocks?.pending_count || 0} icon="quiz" subtitle={`${tutor.mocks?.active_count || 0} active mocks`} />
+            <StatCard title="My Courses" value={tutor.my_courses} icon="library_books" subtitle="Courses you teach" />
           </div>
         </section>
       )}
