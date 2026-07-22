@@ -35,7 +35,7 @@ export function DashboardShell({ children, user, capabilities }: DashboardShellP
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f3f2] font-sans relative">
+    <div className="min-h-screen bg-[#fbf9f8] font-sans relative">
       <Sidebar 
         capabilities={capabilities} 
         isMobileOpen={isMobileMenuOpen} 
@@ -48,8 +48,8 @@ export function DashboardShell({ children, user, capabilities }: DashboardShellP
       />
       
       {/* Main Content Area */}
-      <main className="md:ml-64 pt-16 min-h-screen flex flex-col">
-        <div className="p-4 md:p-8 w-full flex-1">
+      <main className="md:ml-[280px] pt-16 min-h-screen flex flex-col">
+        <div className="p-4 md:p-10 w-full flex-1">
           {children}
         </div>
       </main>

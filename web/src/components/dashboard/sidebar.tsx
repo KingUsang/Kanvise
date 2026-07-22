@@ -53,7 +53,7 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
       
       {/* Sidebar Container */}
       <aside 
-        className={`w-64 bg-[#2e2877] h-screen fixed left-0 top-0 flex flex-col text-white z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`w-[280px] bg-[#2e2877] h-screen fixed left-0 top-0 flex flex-col text-white z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

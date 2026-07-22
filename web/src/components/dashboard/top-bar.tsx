@@ -36,7 +36,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   }
 
   return (
-    <header className="h-16 fixed top-0 right-0 left-0 md:left-64 bg-white/95 backdrop-blur-sm border-b border-[#c8c5d2] flex items-center justify-between px-4 md:px-8 z-40">
+    <header className="h-16 fixed top-0 right-0 left-0 md:left-[280px] bg-white/95 backdrop-blur-sm border-b border-[#c8c5d2] flex items-center justify-between px-4 md:px-10 z-40">
       
       {/* Search & Mobile Menu */}
       <div className="flex-1 flex items-center gap-4 max-w-md">

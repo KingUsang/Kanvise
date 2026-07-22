@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
+import { toast } from 'sonner'
+import { PUBLIC_APP_HOST } from '@/config/app'
 
 export function SchoolSetupForm({ initialData, token }: { initialData: any, token: string }) {
   const [formData, setFormData] = useState({
@@ -23,14 +25,18 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
   const [mediaUrls, setMediaUrls] = useState({
     logo: initialData?.logo_url || '',
     banner: initialData?.banner_url || '',
+    video_intro: initialData?.video_intro_url || '',
   })
-  const [uploadingMedia, setUploadingMedia] = useState<'logo' | 'banner' | null>(null)
+  const [uploadingMedia, setUploadingMedia] = useState<'logo' | 'banner' | 'video_intro' | null>(null)
 
-  const uploadMedia = async (entityType: 'logo' | 'banner', file?: File) => {
+  const uploadMedia = async (entityType: 'logo' | 'banner' | 'video_intro', file?: File) => {
     if (!file) return
-    if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) {
+    const isVideo = entityType === 'video_intro'
+    const validType = isVideo ? file.type.startsWith('video/') : file.type.startsWith('image/')
+    const maximumSize = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024
+    if (!validType || file.size > maximumSize) {
       setSaveStatus('error')
-      setErrorMessage('Choose a JPG, PNG, or WebP image no larger than 10MB.')
+      setErrorMessage(isVideo ? 'Choose an MP4, MOV, or WebM video no larger than 500MB.' : 'Choose a JPG, PNG, or WebP image no larger than 10MB.')
       return
     }
     setUploadingMedia(entityType)
@@ -69,9 +75,11 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
       if (!confirmResponse.ok) throw new Error(confirmBody.error || 'Could not save uploaded image')
       setMediaUrls((current) => ({ ...current, [entityType]: confirmBody.public_url }))
       setSaveStatus('success')
+      toast.success(isVideo ? 'Introduction video uploaded' : `${entityType === 'logo' ? 'Logo' : 'Banner'} uploaded`)
     } catch (error) {
       setSaveStatus('error')
       setErrorMessage(error instanceof Error ? error.message : 'Media upload failed')
+      toast.error('Could not upload media', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setUploadingMedia(null)
     }
@@ -89,6 +97,14 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.name.trim()) {
+      toast.error('Enter your institution name')
+      return
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formData.slug)) {
+      toast.error('Check your portal URL', { description: 'Use lowercase letters, numbers, and single hyphens only.' })
+      return
+    }
     setIsSaving(true)
     setSaveStatus('idle')
     setErrorMessage('')
@@ -109,10 +125,12 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
       }
 
       setSaveStatus('success')
+      toast.success('School configuration saved')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (err: any) {
       setSaveStatus('error')
       setErrorMessage(err.message)
+      toast.error('Could not save school configuration', { description: err.message })
     } finally {
       setIsSaving(false)
     }
@@ -133,12 +151,13 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
       whatsapp_number: initialData?.whatsapp_number || '',
       is_active: initialData?.is_active ?? true,
     })
+    setSaveStatus('idle')
   }
 
   const initials = formData.name ? formData.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'LM'
 
   return (
-    <div className="w-full">
+    <div className="mx-auto w-full max-w-[1440px]">
       {/* Page Header & Global Actions */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-8">
         <div>
@@ -186,7 +205,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
         <div className="col-span-12 xl:col-span-8 flex flex-col gap-6">
           
           {/* Basic Information Card */}
-          <div className="bg-[#fbf9f8] border border-[#c8c5d2] rounded-lg p-8 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
+          <div className="bg-white border border-[#c8c5d2] rounded-lg p-6 md:p-8 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
             <div className="border-b border-[#c8c5d2] pb-4 mb-6">
               <h3 className="text-xl font-semibold text-[#180d62] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#994704]">info</span>
@@ -219,12 +238,13 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
                   </label>
                   <div className="flex items-center">
                     <span className="bg-[#f5f3f2] border border-r-0 border-[#787582] px-3 py-3 rounded-l text-[#474551] text-sm select-none">
-                      kanvise.ng/
+                      {PUBLIC_APP_HOST}/
                     </span>
                     <input 
                       id="slug" 
                       type="text" 
                       required
+                      pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                       value={formData.slug}
                       onChange={handleChange}
                       className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded-r focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c]" 
@@ -242,6 +262,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
                 <textarea 
                   id="description" 
                   rows={4}
+                  maxLength={500}
                   value={formData.description}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c] resize-none" 
@@ -255,7 +276,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
           </div>
 
           {/* Media Assets Card */}
-          <div className="bg-[#fbf9f8] border border-[#c8c5d2] rounded-lg p-8 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
+          <div className="bg-white border border-[#c8c5d2] rounded-lg p-6 md:p-8 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
             <div className="border-b border-[#c8c5d2] pb-4 mb-6">
               <h3 className="text-xl font-semibold text-[#180d62] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#994704]">perm_media</span>
@@ -293,6 +314,16 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
                   <p className="text-sm text-[#474551] relative z-10">PNG, JPG or WebP (max. 10MB)</p>
                 </label>
               </div>
+
+              <div>
+                <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-3 block">Video Introduction <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
+                <label className="flex w-full cursor-pointer items-center justify-between gap-4 rounded border border-[#c8c5d2] bg-[#fbf9f8] px-4 py-3 transition-colors hover:bg-[#f5f3f2]">
+                  <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" disabled={uploadingMedia !== null} onChange={(event) => void uploadMedia('video_intro', event.target.files?.[0])} />
+                  <span className="min-w-0 truncate text-sm text-[#474551]">{uploadingMedia === 'video_intro' ? 'Uploading introduction video…' : mediaUrls.video_intro ? 'Replace introduction video' : 'Upload an MP4, MOV, or WebM video'}</span>
+                  <span className="inline-flex shrink-0 items-center gap-2 rounded border border-[#2e2877] bg-white px-3 py-2 text-xs font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-base">upload</span>Upload File</span>
+                </label>
+                {mediaUrls.video_intro && <a href={mediaUrls.video_intro} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#994704] hover:underline"><span className="material-symbols-outlined text-base">play_circle</span>Preview current video</a>}
+              </div>
             </div>
           </div>
           
@@ -302,7 +333,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
         <div className="col-span-12 xl:col-span-4 flex flex-col gap-6">
           
           {/* Visibility Status Card */}
-          <div className="bg-[#fbf9f8] border border-[#c8c5d2] rounded-lg p-6 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
+          <div className="bg-white border border-[#c8c5d2] rounded-lg p-6 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-[#180d62]">Portal Status</h3>
               {/* Toggle Switch */}
@@ -318,12 +349,12 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
               </label>
             </div>
             <p className="text-sm text-[#474551] bg-[#f5f3f2] p-3 rounded border border-[#c8c5d2]">
-              When active, students and tutors can log in and access learning materials. Set to inactive during major maintenance.
+              Controls whether your centre appears in public Kanvise listings. Existing staff access is not affected.
             </p>
           </div>
 
           {/* Contact Information Card */}
-          <div className="bg-[#fbf9f8] border border-[#c8c5d2] rounded-lg p-6 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
+          <div className="bg-white border border-[#c8c5d2] rounded-lg p-6 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
             <div className="border-b border-[#c8c5d2] pb-3 mb-5">
               <h3 className="text-xl font-semibold text-[#180d62] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#994704]">contact_support</span>
@@ -364,7 +395,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
           </div>
 
           {/* Social Links Card */}
-          <div className="bg-[#fbf9f8] border border-[#c8c5d2] rounded-lg p-6 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
+          <div className="bg-white border border-[#c8c5d2] rounded-lg p-6 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
             <div className="border-b border-[#c8c5d2] pb-3 mb-5">
               <h3 className="text-xl font-semibold text-[#180d62] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#994704]">language</span>
