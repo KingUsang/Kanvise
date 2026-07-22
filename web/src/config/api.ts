@@ -1,4 +1,4 @@
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_HONO_API_URL
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL
 
 export function getApiUrl() {
   if (!configuredApiUrl) {

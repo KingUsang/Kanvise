@@ -675,7 +675,7 @@ INVITE_TOKEN_SECRET=random-256-bit-secret
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-NEXT_PUBLIC_HONO_API_URL=https://api.kanvise.com
+NEXT_PUBLIC_API_URL=https://api.kanvise.com
 HONO_INTERNAL_SECRET=shared-secret-for-next-to-hono-internal-calls
 ```
 

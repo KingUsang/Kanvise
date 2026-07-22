@@ -609,6 +609,10 @@ GitHub Action deploys to Scaleway production (backend)
 Production deployment complete
 ```
 
+### 8.1 Frontend API environment
+
+The Vercel frontend project must define `NEXT_PUBLIC_API_URL=https://api.kanvise.com` for every environment that builds Kanvise, including Preview deployments for the staging branch. This is a build-time variable, so redeploy after adding or changing it.
+
 ---
 
 ## 9. Monitoring & Alerting
