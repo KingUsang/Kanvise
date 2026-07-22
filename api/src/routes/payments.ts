@@ -268,11 +268,13 @@ paymentsRouter.get("/status/:reference", async (c) => {
 paymentsRouter.get("/", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
+    const studentId = c.req.query("student_id");
 
-    const { data: payments, error } = await supabase
+    let query = supabase
       .from("payments")
       .select(`
         id,
+        paystack_reference,
         amount,
         kanvise_fee,
         centre_amount,
@@ -285,7 +287,9 @@ paymentsRouter.get("/", enforceAdmin, async (c) => {
         sub_programmes (id, name),
         courses (id, name)
       `)
-      .eq("school_id", profile.school_id)
+      .eq("school_id", profile.school_id);
+    if (studentId) query = query.eq("student_id", studentId);
+    const { data: payments, error } = await query
       .order("paid_at", { ascending: false })
       .order("created_at", { ascending: false });
 

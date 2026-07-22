@@ -31,6 +31,7 @@ enrolmentsRouter.get("/", enforceAdmin, async (c) => {
         id,
         student_id,
         programme_id,
+        sub_programme_id,
         course_id,
         enrolled_at,
         programmes (id, name),

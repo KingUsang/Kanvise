@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Loader2, AlertCircle, Download } from "lucide-react";
+import { Loader2, AlertCircle, Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import StudentsTable from "@/components/dashboard/students/students-table";
 
@@ -31,8 +31,9 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchStudents() {
+  async function fetchStudents() {
+      setLoading(true);
+      setError(null);
       try {
         const supabase = createClient();
         const { data: session } = await supabase.auth.getSession();
@@ -58,19 +59,21 @@ export default function StudentsPage() {
       } finally {
         setLoading(false);
       }
-    }
+  }
 
-    fetchStudents();
+  useEffect(() => {
+    void fetchStudents();
   }, []);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+    <div className="mx-auto max-w-[1440px] space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[32px] leading-[40px] tracking-[-0.01em] font-bold text-kv-dark">Manage Students</h1>
-          <p className="text-base leading-6 text-gray-500 mt-1">
-            View, filter, and manage student enrolments and payment statuses.
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your learners</span>
+          <h1 className="mt-2 text-[32px] leading-[40px] tracking-[-0.01em] font-bold text-kv-dark">Students</h1>
+          <p className="text-base leading-6 text-gray-500 mt-1 max-w-2xl">
+            See who has enrolled, what they can access, and their checkout history. Students appear here after their first successful enrolment.
           </p>
         </div>
         
@@ -80,10 +83,9 @@ export default function StudentsPage() {
             className="flex items-center gap-2 px-4 py-2 border border-kv-blue text-kv-blue rounded hover:bg-kv-blue/5 transition-colors"
           >
             <Download size={18} />
-            <span className="text-xs font-bold tracking-widest uppercase">Export List</span>
+            <span className="text-xs font-bold tracking-widest uppercase">Export students</span>
           </button>
         </div>
-        <p className="text-sm text-gray-500 md:text-right">Students join through your public school enrolment page.</p>
       </div>
 
       {/* Content */}
@@ -94,9 +96,10 @@ export default function StudentsPage() {
       ) : error ? (
         <div className="bg-red-50 border border-red-100 text-red-600 p-6 rounded-xl flex items-start gap-3 shadow-sm">
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <h3 className="font-bold mb-1">Error loading roster</h3>
             <p className="text-sm text-red-600/80">{error}</p>
+            <button type="button" onClick={() => void fetchStudents()} className="mt-4 rounded bg-[#ba1a1a] px-4 py-2 text-sm font-semibold text-white">Try again</button>
           </div>
         </div>
       ) : (

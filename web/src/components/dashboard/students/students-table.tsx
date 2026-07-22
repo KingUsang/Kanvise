@@ -1,40 +1,49 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, Clock, MoreVertical, HelpCircle, XCircle } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, Clock, HelpCircle, Search, XCircle } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
 
 export default function StudentsTable({ students, onStudentRemoved }: { students: any[], onStudentRemoved: (studentId: string) => void }) {
   const [programmeFilter, setProgrammeFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   // Extract unique programmes for the filter dropdown
-  const uniqueProgrammes = useMemo(() => {
+  const enrolmentOptions = useMemo(() => {
     const progs = new Map<string, string>();
     students.forEach(student => {
       (student.enrolments || []).forEach((enr: any) => {
-        if (enr.programmes?.id) progs.set(enr.programmes.id, enr.programmes.name);
+        if (enr.programmes?.id) progs.set(`programme:${enr.programmes.id}`, `Programme — ${enr.programmes.name}`);
+        if (enr.sub_programmes?.id) progs.set(`sub_programme:${enr.sub_programmes.id}`, `Sub-programme — ${enr.sub_programmes.name}`);
+        if (enr.courses?.id) progs.set(`course:${enr.courses.id}`, `Course — ${enr.courses.name}`);
       });
     });
     return Array.from(progs.entries()).map(([id, name]) => ({ id, name }));
   }, [students]);
 
   const getPaymentStatus = (student: any) => {
-    if (student.payment_status === "successful") return { label: "Paid", code: "successful", color: "bg-green-100 text-green-800", icon: CheckCircle2 };
-    if (student.payment_status === "pending") return { label: "Pending", code: "pending", color: "bg-amber-100 text-amber-800", icon: Clock };
+    if (student.payment_status === "successful") return { label: "Completed", code: "successful", color: "bg-green-100 text-green-800", icon: CheckCircle2 };
+    if (student.payment_status === "pending") return { label: "In progress", code: "pending", color: "bg-amber-100 text-amber-800", icon: Clock };
     if (student.payment_status === "failed") return { label: "Failed", code: "failed", color: "bg-red-100 text-red-800", icon: XCircle };
-    return { label: "No Payment", code: "none", color: "bg-gray-100 text-gray-800", icon: HelpCircle };
+    return { label: "No checkout", code: "none", color: "bg-gray-100 text-gray-800", icon: HelpCircle };
   };
 
   const filteredStudents = students.filter(student => {
-    // Programme Filter
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      const searchable = `${student.first_name || ''} ${student.last_name || ''} ${student.email || ''} ${student.kanvise_user_id || ''}`.toLowerCase();
+      if (!searchable.includes(query)) return false;
+    }
+
     if (programmeFilter) {
-      const hasProgramme = (student.enrolments || []).some((e: any) => e.programmes?.id === programmeFilter);
-      if (!hasProgramme) return false;
+      const [type, id] = programmeFilter.split(':');
+      const hasEnrolment = (student.enrolments || []).some((e: any) => type === 'programme' ? e.programmes?.id === id : type === 'sub_programme' ? e.sub_programmes?.id === id : e.courses?.id === id);
+      if (!hasEnrolment) return false;
     }
     
     // Payment Filter
@@ -52,16 +61,20 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
   return (
     <div>
       {/* Filters & Tools Bar */}
-      <div className="bg-white p-4 rounded-lg shadow-[0px_4px_20px_rgba(61,61,61,0.08)] border border-kv-dust/20 mb-4 flex gap-4 items-center">
-        <div className="flex-1 flex gap-4">
+      <div className="bg-white p-4 rounded-lg shadow-[0px_4px_20px_rgba(61,61,61,0.08)] border border-kv-dust/20 mb-4 flex flex-col gap-4 xl:flex-row xl:items-center">
+        <div className="flex flex-1 flex-col gap-3 md:flex-row">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+            <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} placeholder="Search name, email or student ID" className="w-full rounded border border-kv-dust bg-transparent py-2 pl-10 pr-3 text-sm outline-none focus:border-kv-blue" />
+          </div>
           <div className="relative min-w-[200px]">
             <select 
               value={programmeFilter}
               onChange={(e) => { setProgrammeFilter(e.target.value); setCurrentPage(1); }}
               className="w-full appearance-none pl-4 pr-10 py-2 border border-kv-dust rounded text-sm focus:outline-none focus:border-kv-blue bg-transparent cursor-pointer"
             >
-              <option value="">All Programmes</option>
-              {uniqueProgrammes.map(p => (
+              <option value="">All enrolments</option>
+              {enrolmentOptions.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
@@ -73,11 +86,11 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
               onChange={(e) => { setPaymentFilter(e.target.value); setCurrentPage(1); }}
               className="w-full appearance-none pl-4 pr-10 py-2 border border-kv-dust rounded text-sm focus:outline-none focus:border-kv-blue bg-transparent cursor-pointer"
             >
-              <option value="">Payment Status</option>
-              <option value="successful">Paid</option>
-              <option value="pending">Pending</option>
+              <option value="">Latest checkout</option>
+              <option value="successful">Completed</option>
+              <option value="pending">In progress</option>
               <option value="failed">Failed</option>
-              <option value="none">No Payment</option>
+              <option value="none">No checkout found</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={16} />
           </div>
@@ -105,14 +118,14 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-lg shadow-[0px_4px_20px_rgba(61,61,61,0.08)] border border-kv-dust/20 overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-lg shadow-[0px_4px_20px_rgba(61,61,61,0.08)] border border-kv-dust/20 overflow-x-auto">
+        <table className="w-full min-w-[900px] text-left border-collapse">
           <thead>
             <tr className="bg-[#F9F7F4] border-b border-kv-dust">
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student Info</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student ID</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Enrolments</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Latest Payment</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Latest checkout</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
@@ -179,12 +192,11 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      {/* TODO: Implement actions dropdown menu (e.g. Suspend, Send Payment Reminder, Reset Password) */}
                       <button 
                         onClick={(e) => { e.stopPropagation(); setSelectedStudent(student); }}
-                        className="text-gray-400 hover:text-kv-blue transition-colors p-1"
+                        className="rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877] hover:bg-[#2e2877]/5"
                       >
-                        <MoreVertical size={20} />
+                        View details
                       </button>
                     </td>
                   </tr>
