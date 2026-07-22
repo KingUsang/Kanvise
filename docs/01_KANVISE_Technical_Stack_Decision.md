@@ -90,7 +90,7 @@ The Hono server must never be deployed as a serverless function. It must always 
 
 All long-running operations (file processing, sending bulk notifications) must be handled asynchronously and must not block the request-response cycle.
 
-The Hono server is the only service that communicates directly with Supabase. The Next.js frontend never calls Supabase directly — it always goes through the Hono API. This is non-negotiable because it is how we enforce multi-tenancy and authorisation at a single choke point.
+Hono is the only service that queries Supabase application tables. Next.js and the browser may communicate with Supabase Auth for credentials and session management, but every application-data operation goes through Hono. This is non-negotiable because it is how we enforce multi-tenancy and authorisation at a single choke point.
 
 CORS must be configured to allow only the Vercel frontend origin. No wildcard CORS origins in production.
 
@@ -110,7 +110,7 @@ Paystack webhook receiver for student payments — Paystack sends the `charge.su
 
 File presigned URL requests for simple uploads — when a user needs to upload a profile image or a promo banner, the Next.js route handler requests a presigned R2 URL from Hono and returns it to the client.
 
-Simple page-level data mutations tightly coupled to a single Next.js page — for example, updating a user's avatar configuration where no complex business logic is involved.
+Small proxy endpoints that forward a request to Hono without reading or writing application data themselves.
 
 **Hono on Scaleway handles:**
 
@@ -128,7 +128,7 @@ All operations that require cross-table writes — any action that writes to mor
 
 **The rule for any new endpoint:**
 
-If it needs to run on a schedule or persist state between requests, it goes to Hono. If it involves payment processing or LiveKit, it goes to Hono. If it is a simple read or write tightly coupled to one page with no complex business logic, it can be a Next.js route handler. When in doubt, it goes to Hono.
+All application-data reads and writes go through Hono. Next.js route handlers may manage Supabase Auth sessions or proxy requests to Hono, but they must not query Supabase tables. If it needs to run on a schedule or persist state between requests, it goes to Hono. If it involves payment processing or LiveKit, it goes to Hono. When in doubt, it goes to Hono.
 
 ---
 

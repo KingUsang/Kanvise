@@ -1,28 +1,77 @@
-name: Deploy Backend to Scaleway
+name: Verify and deploy API to Scaleway
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, staging]
     paths:
-      - 'api/**'   # only triggers deploy when backend code changes
+      - 'api/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scaleway-api-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  verify:
+    name: Test and build API
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
     steps:
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
         with:
           host: ${{ secrets.SCALEWAY_HOST }}
           username: ${{ secrets.SCALEWAY_USER }}
           key: ${{ secrets.SCALEWAY_SSH_KEY }}
           port: ${{ secrets.SCALEWAY_PORT || 22 }}
+          envs: DEPLOY_BRANCH,FRONTEND_URL,CORS_ALLOWED_ORIGINS
           script: |
-            cd ~/Kanvise                # root of the monorepo on the server
-            git pull origin main
-            cd api                      # move into the backend folder
-            npm install
-            npm run build               # remove this line if no build step
-            pm2 restart kanvise-backend || pm2 start npm --name kanvise-backend -- start # must match the name you gave pm2 on first start
+            set -eu
+            test -n "$FRONTEND_URL"
+            test -n "$CORS_ALLOWED_ORIGINS"
+            cd ~/Kanvise
+            git fetch origin "$DEPLOY_BRANCH"
+            git checkout "$DEPLOY_BRANCH"
+            git pull --ff-only origin "$DEPLOY_BRANCH"
+            cd api
+            npm ci
+            npm run build
+            if pm2 describe kanvise-api >/dev/null 2>&1; then
+              pm2 restart kanvise-api --update-env
+            else
+              pm2 start dist/index.js --name kanvise-api
+            fi
             pm2 save
+
+      - name: Verify deployed API health
+        env:
+          API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+        run: |
+          test -n "$API_HEALTH_URL"
+          curl --fail --show-error --silent --retry 5 --retry-delay 5 "$API_HEALTH_URL/health"

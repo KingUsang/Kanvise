@@ -100,7 +100,7 @@ Every arrow in the architecture above represents a specific type of communicatio
 
 ### 2.1 Browser → Vercel (Next.js)
 
-All user-facing traffic enters through Vercel. The browser never speaks directly to Hono, Supabase, LiveKit, or any other backend service. Vercel is the single entry point for users.
+Page traffic enters through Vercel. After a page loads, the browser may call Hono for application operations, Supabase Auth for authentication/session operations, R2 through a presigned URL, and LiveKit for a live session. The browser never queries Supabase application tables directly.
 
 Public pages are served as pre-rendered HTML with JSON data embedded. The browser receives a fully rendered page immediately — no loading state for public content.
 
@@ -120,7 +120,7 @@ Some Next.js route handlers act as a proxy to Hono — for example, the Paystack
 
 ### 2.5 Hono → Supabase
 
-Hono is the only service that communicates with Supabase. It uses the Supabase JS client with the service role key. Every query is scoped to a school_id extracted from the authenticated user's context. Supabase is never called directly from the frontend.
+Hono is the only service that queries Supabase application tables. It uses the Supabase JS client with the service role key. Every query is scoped to a school_id extracted from the authenticated user's context. Next.js and the browser communicate with Supabase Auth only for credentials, callbacks, and session management; they never query application tables.
 
 ### 2.6 Hono → Cloudflare R2
 

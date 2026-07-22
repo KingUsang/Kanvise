@@ -51,7 +51,7 @@ Kanvise runs three environments. Each is completely isolated — no environment 
 | Environment | Purpose | Domain | Deploy Trigger |
 |---|---|---|---|
 | **Local** | Developer machines | `localhost` | Manual |
-| **Staging** | Pre-production testing | `staging.kanvise.com` | Push to `develop` branch |
+| **Staging** | Pre-production testing | `staging.kanvise.com` | Push to `staging` branch |
 | **Production** | Live platform | `kanvise.com` | Push to `main` branch |
 
 ### Environment Isolation Rules
@@ -73,7 +73,7 @@ The Next.js repository is connected to Vercel via GitHub integration. Vercel aut
 **Branch to environment mapping:**
 ```
 main    → Production (kanvise.com)
-develop → Staging (staging.kanvise.com)
+staging → Staging (staging.kanvise.com)
 feature/* → Preview deployments (auto-generated URLs)
 ```
 
@@ -286,39 +286,19 @@ pm2 startup  # Generates systemd startup command — run the output
 
 ### 4.5 Hono Deployment Process
 
-Deployments to the Hono server are triggered manually for MVP. A GitHub Action triggers on push to `main` and SSHs into the Scaleway server to pull, build, and restart.
+API deployments are automated by `.github/workflows/deploy.yml`. A push that changes `api/**` deploys `staging` to the staging Scaleway environment and `main` to production. Tests and a TypeScript build must pass before the workflow connects to the server. After deployment it verifies the environment's `/health` endpoint.
 
-**`.github/workflows/deploy-api.yml`:**
-```yaml
-name: Deploy API
+The repository uses GitHub Environments named `Preview` (the `staging` branch) and `Production` (the `main` branch). Configure `SCALEWAY_HOST`, `SCALEWAY_USER`, `SCALEWAY_SSH_KEY`, and optional `SCALEWAY_PORT` as secrets separately in each environment. Do not leave Scaleway credentials only at repository level because that would let staging and production resolve to the same server credentials. Configure these ordinary environment variables separately in each environment:
 
-on:
-  push:
-    branches: [main]
-    paths: ['apps/api/**']
+- `API_HEALTH_URL`: API origin without `/health`
+- `FRONTEND_URL`: canonical frontend origin used for links and redirects
+- `CORS_ALLOWED_ORIGINS`: comma-separated additional exact frontend origins
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to Scaleway
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SCALEWAY_API_HOST }}
-          username: kanvise
-          key: ${{ secrets.SCALEWAY_SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/kanvise/kanvise-api
-            git pull origin main
-            npm ci
-            npm run build
-            pm2 restart kanvise-api
-            pm2 save
-```
+The deployment passes the frontend-origin variables to PM2 and restarts it with `--update-env`, so future CORS changes do not require manually editing Scaleway. Other sensitive application variables remain in the API process environment on the server. The checked-out repository must be at `~/Kanvise` for the deployment user.
 
 **Deployment time:** Typically 2–4 minutes from push to live. The Hono server has zero-downtime restarts via PM2's graceful reload — in-flight requests complete before the process restarts.
 
-**Rollback:** If a deployment introduces a breaking issue, rollback by SSH-ing into the server and running `git checkout HEAD~1 && npm run build && pm2 restart kanvise-api`.
+**Rollback:** Revert the bad commit on the affected branch and push the revert. The same verified deployment pipeline will deploy that known Git state; do not put the server into a detached or untracked state with a manual checkout.
 
 ### 4.6 Log Management
 
@@ -551,10 +531,10 @@ kanvise/
 ### 8.2 GitHub Actions Workflows
 
 **Frontend (Next.js) — Auto-deployed by Vercel:**
-Vercel's GitHub integration handles frontend deployments automatically. No custom GitHub Action is needed for the frontend — Vercel detects pushes to `main` and `develop` and deploys automatically.
+Vercel's GitHub integration handles frontend deployments automatically. No custom GitHub Action is needed for the frontend — Vercel detects pushes to `main` and `staging` and deploys automatically.
 
 **Backend (Hono API) — Custom GitHub Action:**
-Defined in `.github/workflows/deploy-api.yml` (shown in Section 4.5).
+Defined in `.github/workflows/deploy.yml` (shown in Section 4.5).
 
 The workflow is path-filtered — it only triggers when files inside `apps/api/` change. A frontend-only change does not trigger an API deployment.
 
@@ -590,7 +570,7 @@ Vercel creates preview deployment automatically
 Reviewer tests on the preview URL
          │
          ▼
-Pull request approved → Merge to develop
+Pull request approved → Merge to staging
          │
          ▼
 Vercel deploys to staging.kanvise.com (frontend)
@@ -599,7 +579,7 @@ GitHub Action deploys to Scaleway staging (backend)
 Staging tested and verified
          │
          ▼
-Merge develop to main
+Merge staging to main
          │
          ▼
 Vercel deploys to kanvise.com (frontend — automatic)

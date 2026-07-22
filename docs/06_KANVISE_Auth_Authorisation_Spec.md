@@ -621,7 +621,7 @@ The Supabase RPC function `increment_user_sequence` runs as a single atomic oper
 
 ### 13.1 What the Frontend Can Never Do
 
-The Supabase service role key must never appear in any frontend code, Next.js Client Component, or any file that is bundled and sent to the browser. It lives only in Hono's environment on Scaleway and in Next.js server-only code.
+The Supabase service role key must never appear in frontend or Next.js code. It lives only in Hono's environment on Scaleway.
 
 The Supabase anon key is safe to expose — it is intentionally public. It only allows what Supabase RLS and Auth configurations permit, which for Kanvise is only auth operations.
 

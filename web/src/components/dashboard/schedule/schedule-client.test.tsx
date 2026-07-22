@@ -2,6 +2,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ScheduleClient } from './schedule-client'
+import { toast } from 'sonner'
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}))
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -170,17 +175,17 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
       return { ok: true, json: async () => ({ data: [] }) }
     })
     
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
-    
     await user.click(screen.getByRole('button', { name: /Schedule Class/i }))
     
     // Error should be shown
-    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Cannot schedule a class in the past')))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(
+      'Could not schedule the class',
+      { description: 'Cannot schedule a class in the past' },
+    ))
     
     // Form should NOT be cleared
     expect(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.')).toHaveValue('Failed Class')
     
-    alertSpy.mockRestore()
   })
 
   it('prevents duplicate submissions while the first request is pending', async () => {
