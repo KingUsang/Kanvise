@@ -8,6 +8,31 @@ dashboardRouter.use('*', jwtVerificationMiddleware)
 dashboardRouter.use('*', profileResolutionMiddleware)
 dashboardRouter.use('*', tenantMiddleware)
 
+type EnrolmentRow = {
+  programme_id: string | null
+  sub_programme_id: string | null
+  course_id: string | null
+}
+
+type CourseRow = {
+  id: string
+  name: string
+  programme_id: string | null
+  sub_programme_id: string | null
+}
+
+export function resolveStudentCourses(enrolments: EnrolmentRow[], courses: CourseRow[], subProgrammes: Array<{ id: string; programme_id: string }> = []) {
+  const programmeIds = new Set(enrolments.flatMap((item) => item.programme_id ? [item.programme_id] : []))
+  const subProgrammeIds = new Set(enrolments.flatMap((item) => item.sub_programme_id ? [item.sub_programme_id] : []))
+  const courseIds = new Set(enrolments.flatMap((item) => item.course_id ? [item.course_id] : []))
+  const subProgrammeParents = new Map(subProgrammes.map((item) => [item.id, item.programme_id]))
+
+  return courses.filter((course) => courseIds.has(course.id)
+    || Boolean(course.programme_id && programmeIds.has(course.programme_id))
+    || Boolean(course.sub_programme_id && subProgrammeIds.has(course.sub_programme_id))
+    || Boolean(course.sub_programme_id && programmeIds.has(subProgrammeParents.get(course.sub_programme_id) || '')))
+}
+
 async function loadNeedsGrading(schoolId: string, tutorId?: string) {
   let assignmentsQuery = supabase
     .from('assignments')
@@ -97,6 +122,91 @@ async function loadMockOverview(schoolId: string, tutorId?: string) {
     items,
   }
 }
+
+dashboardRouter.get('/student', async (c) => {
+  const user = c.get('user')
+  if (user.role !== 'student') {
+    return c.json({ error: 'Student access only', code: 'INSUFFICIENT_ROLE' }, 403)
+  }
+
+  const schoolId = user.school_id
+  if (!schoolId) return c.json({ error: 'User does not belong to a school' }, 400)
+
+  const [{ data: profile, error: profileError }, { data: school, error: schoolError }, { data: enrolments, error: enrolmentsError }, { data: schoolCourses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
+    supabase.from('user_profiles').select('first_name, last_name').eq('id', user.id).eq('school_id', schoolId).maybeSingle(),
+    supabase.from('schools').select('name').eq('id', schoolId).maybeSingle(),
+    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id').eq('school_id', schoolId).eq('student_id', user.id),
+    supabase.from('courses').select('id, name, programme_id, sub_programme_id').eq('school_id', schoolId).eq('is_published', true),
+    supabase.from('sub_programmes').select('id, programme_id').eq('school_id', schoolId),
+  ])
+
+  if (profileError || schoolError || enrolmentsError || coursesError || subProgrammesError) {
+    console.error('student_dashboard.context_failed', { profileError, schoolError, enrolmentsError, coursesError, subProgrammesError })
+    return c.json({ error: 'Failed to load student dashboard', code: 'DASHBOARD_LOAD_FAILED' }, 500)
+  }
+
+  const accessibleCourses = resolveStudentCourses(enrolments || [], schoolCourses || [], subProgrammes || [])
+  const courseIds = accessibleCourses.map((course) => course.id)
+  const courseNames = new Map(accessibleCourses.map((course) => [course.id, course.name]))
+
+  if (!courseIds.length) {
+    return c.json({ data: {
+      student: { first_name: profile?.first_name || '', last_name: profile?.last_name || '' },
+      school: { name: school?.name || 'Your school' },
+      course_count: 0,
+      next_class: null,
+      upcoming_classes: [],
+      assignments_due: [],
+      recent_updates: [],
+    } })
+  }
+
+  const now = new Date().toISOString()
+  const [{ data: classes, error: classesError }, { data: assignments, error: assignmentsError }, { data: submissions, error: submissionsError }, { data: notes, error: notesError }, { data: mocks, error: mocksError }, { data: attempts, error: attemptsError }] = await Promise.all([
+    supabase.from('live_classes').select('id, course_id, title, scheduled_at, duration_minutes, status')
+      .eq('school_id', schoolId).in('course_id', courseIds).in('status', ['scheduled', 'live'])
+      .order('scheduled_at', { ascending: true }).limit(12),
+    supabase.from('assignments').select('id, course_id, title, deadline_at, created_at')
+      .eq('school_id', schoolId).in('course_id', courseIds).eq('is_published', true)
+      .gte('deadline_at', now).order('deadline_at', { ascending: true }).limit(8),
+    supabase.from('submissions').select('assignment_id, submitted_at, score')
+      .eq('school_id', schoolId).eq('student_id', user.id),
+    supabase.from('notes').select('id, course_id, title, file_type, created_at')
+      .eq('school_id', schoolId).in('course_id', courseIds).order('created_at', { ascending: false }).limit(6),
+    supabase.from('mock_exams').select('id, course_id, title, publish_at, created_at, time_limit_minutes')
+      .eq('school_id', schoolId).in('course_id', courseIds).eq('status', 'published')
+      .order('created_at', { ascending: false }).limit(6),
+    supabase.from('mock_attempts').select('mock_exam_id, status, submitted_at, mcq_score')
+      .eq('school_id', schoolId).eq('student_id', user.id),
+  ])
+
+  if (classesError || assignmentsError || submissionsError || notesError || mocksError || attemptsError) {
+    console.error('student_dashboard.activity_failed', { classesError, assignmentsError, submissionsError, notesError, mocksError, attemptsError })
+    return c.json({ error: 'Failed to load student dashboard', code: 'DASHBOARD_LOAD_FAILED' }, 500)
+  }
+
+  const submittedAssignmentIds = new Set((submissions || []).map((item) => item.assignment_id))
+  const attemptedMockIds = new Set((attempts || []).map((item) => item.mock_exam_id))
+  const upcomingClasses = (classes || []).filter((item) => item.status === 'live' || item.scheduled_at >= now).slice(0, 6)
+    .map((item) => ({ ...item, course_name: courseNames.get(item.course_id) || 'Course' }))
+  const assignmentsDue = (assignments || []).filter((item) => !submittedAssignmentIds.has(item.id)).slice(0, 4)
+    .map((item) => ({ ...item, course_name: courseNames.get(item.course_id) || 'Course' }))
+  const recentUpdates = [
+    ...(assignments || []).map((item) => ({ id: item.id, type: 'assignment', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.created_at, href: `/dashboard/student/assignments` })),
+    ...(notes || []).map((item) => ({ id: item.id, type: 'material', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.created_at, href: `/dashboard/student/materials` })),
+    ...(mocks || []).filter((item) => !attemptedMockIds.has(item.id)).map((item) => ({ id: item.id, type: 'mock', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.publish_at || item.created_at, href: `/dashboard/student/mocks` })),
+  ].sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()).slice(0, 5)
+
+  return c.json({ data: {
+    student: { first_name: profile?.first_name || '', last_name: profile?.last_name || '' },
+    school: { name: school?.name || 'Your school' },
+    course_count: courseIds.length,
+    next_class: upcomingClasses[0] || null,
+    upcoming_classes: upcomingClasses,
+    assignments_due: assignmentsDue,
+    recent_updates: recentUpdates,
+  } })
+})
 
 dashboardRouter.get('/stats', async (c) => {
   const user = c.get('user')

@@ -9,6 +9,7 @@
 - `A:` is an admin-only workflow.
 - `T:` is a tutor-only workflow.
 - `A/T:` is a shared workflow available to both admins and tutors.
+- `S<n>:` is an authoritative student workflow.
 - `T<n>:` screens are legacy references and are not implementation targets.
 
 An admin who is assigned to teach has both admin and tutor capabilities. That user receives the union of `A:`, `T:`, and `A/T:` workflows. `A/T:` does not mean “solo tutor”; it means the workflow itself is shared.
@@ -37,8 +38,15 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | T: Live Classroom Instruction Hosting | Tutor | `/class/[id]` | Implemented; visual alignment in progress |
 | T: Instructional Materials Library | Tutor | — | Missing route |
 | T: Mock Examination Results Analysis | Tutor | `/dashboard/mocks/[mockId]/results` | Implemented as a mock-scoped results and theory-grading workspace |
+| S3: Student Dashboard | Student | `/dashboard/student` | First real-data slice implemented |
+| S4: My Classes | Student | `/dashboard/student/classes` | Shell route only; workflow pending |
+| S5: Assignments Management | Student | `/dashboard/student/assignments` | Shell route only; workflow pending |
+| S6: Mocks Management | Student | `/dashboard/student/mocks` | Shell route only; workflow pending |
+| S7: Materials Library | Student | `/dashboard/student/materials` | Shell route only; workflow pending |
+| S8: My Progress Tracking | Student | `/dashboard/student/progress` | Shell route only; workflow pending |
+| S9: Student Settings | Student | `/dashboard/student/settings` | Shell route only; workflow pending |
 
-Student screens and `/dashboard/student` are outside the current implementation phase and excluded from this audit.
+The student dashboard follows Stitch's hierarchy, spacing, colour, desktop sidebar, and mobile navigation direction, but only displays metrics supported by real Kanvise data. Generated countdowns, registration codes, attendance percentages, and scores must not be shown until the corresponding product logic exists.
 
 ## Deferred security audit: Supabase RLS
 
@@ -102,6 +110,9 @@ This matches the existing RLS migrations, which already read role and school fro
 - Split `/dashboard` into explicit admin, tutor, and combined admin-tutor experiences while retaining one shared route.
 - Made mocks a primary dashboard workflow with creation, active-mock, pending-theory, and grading-queue entry points.
 - Replaced accounting jargon and raw pending checkouts with “Earnings this month” and the count of successful payments.
+- Added a dedicated student shell and dashboard rather than reusing the admin/tutor shell.
+- Added `GET /dashboard/student`, which derives accessible courses from direct course, sub-programme, and programme enrolments and returns only tenant-scoped student activity.
+- Made the student dashboard action-oriented: next class, outstanding assignments, recent materials/mocks/assignments, and upcoming classes all come from Hono rather than hard-coded examples.
 
 ### Remaining product/UX work
 

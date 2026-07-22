@@ -36,6 +36,16 @@ export default async function DashboardLayout({
     redirect('/auth/login')
   }
 
+  // app_metadata is server-controlled and authoritative. user_metadata is a
+  // temporary display/redirect fallback for sessions issued before migration.
+  const role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role || 'student'
+
+  // Student pages provide their own navigation shell. Avoid loading the
+  // admin/tutor dashboard endpoint for a role it was not designed to serve.
+  if (role === 'student') {
+    return <div className="font-sans">{children}</div>
+  }
+
   // Fetch capabilities and basic user info from Hono stats endpoint
   // We do this to determine if the user is a tutor based on their assignments
   const res = await fetch(`${getApiUrl()}/dashboard/stats`, {
@@ -55,14 +65,6 @@ export default async function DashboardLayout({
   }
 
   const { data: statsData } = await res.json()
-  
-  // app_metadata is server-controlled and authoritative. user_metadata is a
-  // temporary display/redirect fallback for sessions issued before migration.
-  const role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role || 'student'
-
-  if (role === 'student') {
-    redirect('/dashboard/student')
-  }
   
   const capabilities = {
     isAdmin: !!statsData.admin_stats,
