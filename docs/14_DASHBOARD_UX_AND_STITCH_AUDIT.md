@@ -88,6 +88,9 @@ This matches the existing RLS migrations, which already read role and school fro
 - Replaced frontend browser alerts with non-blocking in-app notifications for success and error feedback.
 - Added server-validated mock publication, real attempt/grading counts, mock-scoped results, theory grading, and non-destructive archiving.
 - Interpret scheduled mock publication in the user's local timezone before storing the UTC timestamp.
+- Split `/dashboard` into explicit admin, tutor, and combined solo-tutor experiences while retaining one shared route.
+- Made mocks a primary dashboard workflow with creation, active-mock, pending-theory, and grading-queue entry points.
+- Replaced accounting jargon and raw pending checkouts with “Earnings this month” and the count of successful payments.
 
 ### Remaining product/UX work
 

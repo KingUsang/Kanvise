@@ -13,26 +13,89 @@ async function loadNeedsGrading(schoolId: string, tutorId?: string) {
     .from('assignments')
     .select('id, title, courses(name)')
     .eq('school_id', schoolId)
-    .limit(3)
+    .limit(20)
 
   if (tutorId) assignmentsQuery = assignmentsQuery.eq('tutor_id', tutorId)
 
   const { data: recentAssignments } = await assignmentsQuery
   if (!recentAssignments) return []
 
-  return Promise.all(recentAssignments.map(async (assignment) => {
+  const items = await Promise.all(recentAssignments.map(async (assignment) => {
     const [{ count: total }, { count: graded }] = await Promise.all([
-      supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', assignment.id),
-      supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', assignment.id).not('score', 'is', null),
+      supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', assignment.id).eq('school_id', schoolId),
+      supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', assignment.id).eq('school_id', schoolId).not('score', 'is', null),
     ])
 
     return {
       id: assignment.id,
+      kind: 'assignment',
+      href: `/dashboard/assignments/${assignment.id}/submissions`,
       title: assignment.title,
-      context: `${(assignment.courses as any)?.name || 'General'} • ${total || 0} submissions`,
+      context: `${(assignment.courses as any)?.name || 'General'} • ${(total || 0) - (graded || 0)} waiting`,
+      pending_count: (total || 0) - (graded || 0),
       progress: total ? Math.round(((graded || 0) / total) * 100) : 0,
     }
   }))
+
+  return items.filter((item) => item.pending_count > 0)
+    .sort((a, b) => b.pending_count - a.pending_count)
+    .slice(0, 3)
+}
+
+async function loadMockOverview(schoolId: string, tutorId?: string) {
+  let mocksQuery = supabase.from('mock_exams')
+    .select('id, title, course_id, courses(name)')
+    .eq('school_id', schoolId)
+    .eq('status', 'published')
+
+  if (tutorId) {
+    const { data: assignments } = await supabase.from('tutor_course_assignments')
+      .select('course_id').eq('school_id', schoolId).eq('tutor_id', tutorId)
+    const courseIds = (assignments || []).map((assignment) => assignment.course_id)
+    if (courseIds.length === 0) return { pending_count: 0, active_count: 0, items: [] }
+    mocksQuery = mocksQuery.in('course_id', courseIds)
+  }
+
+  const { data: mocks } = await mocksQuery
+  if (!mocks?.length) return { pending_count: 0, active_count: 0, items: [] }
+
+  const mockIds = mocks.map((mock) => mock.id)
+  const { data: attempts } = await supabase.from('mock_attempts')
+    .select('id, mock_exam_id, status').eq('school_id', schoolId).in('mock_exam_id', mockIds)
+    .in('status', ['submitted', 'timed_out'])
+  const attemptIds = (attempts || []).map((attempt) => attempt.id)
+  const { data: ungradedAnswers } = attemptIds.length
+    ? await supabase.from('mock_answers')
+      .select('attempt_id, question:mock_questions(question_type)')
+      .eq('school_id', schoolId).in('attempt_id', attemptIds).is('tutor_score', null)
+    : { data: [] }
+  const pendingAttemptIds = new Set((ungradedAnswers || [])
+    .filter((answer) => (answer.question as any)?.question_type === 'theory')
+    .map((answer) => answer.attempt_id))
+  const pendingByMock = new Map<string, number>()
+  for (const attempt of attempts || []) {
+    if (pendingAttemptIds.has(attempt.id)) {
+      pendingByMock.set(attempt.mock_exam_id, (pendingByMock.get(attempt.mock_exam_id) || 0) + 1)
+    }
+  }
+
+  const items = mocks.map((mock) => ({
+    id: mock.id,
+    kind: 'mock',
+    href: `/dashboard/mocks/${mock.id}/results`,
+    title: mock.title,
+    context: `${(mock.courses as any)?.name || 'General'} • ${pendingByMock.get(mock.id) || 0} waiting`,
+    pending_count: pendingByMock.get(mock.id) || 0,
+    progress: 0,
+  })).filter((item) => item.pending_count > 0)
+    .sort((a, b) => b.pending_count - a.pending_count)
+    .slice(0, 3)
+
+  return {
+    pending_count: [...pendingByMock.values()].reduce((sum, count) => sum + count, 0),
+    active_count: mocks.length,
+    items,
+  }
 }
 
 dashboardRouter.get('/stats', async (c) => {
@@ -79,27 +142,31 @@ dashboardRouter.get('/stats', async (c) => {
       { count: activeTutors },
       { count: upcomingClasses },
       { data: payments },
-      { count: pendingPayments },
+      { count: successfulPayments },
     ] = await Promise.all([
       supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('school_id', schoolId),
       supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'tutor').eq('school_id', schoolId),
       supabase.from('live_classes').select('*', { count: 'exact', head: true }).eq('status', 'scheduled').eq('school_id', schoolId)
         .gte('scheduled_at', startOfToday.toISOString()).lte('scheduled_at', endOfToday.toISOString()),
       supabase.from('payments').select('centre_amount').eq('status', 'successful').eq('school_id', schoolId).gte('paid_at', startOfMonth.toISOString()),
-      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('school_id', schoolId),
+      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('status', 'successful').eq('school_id', schoolId).gte('paid_at', startOfMonth.toISOString()),
     ])
 
     const mtdRevenue = payments ? payments.reduce((sum, p) => sum + Number(p.centre_amount), 0) : 0
 
-    const needsGrading = await loadNeedsGrading(schoolId)
+    const [needsGrading, mockOverview] = await Promise.all([
+      loadNeedsGrading(schoolId),
+      loadMockOverview(schoolId),
+    ])
 
     responseData.admin_stats = {
       total_students: totalStudents || 0,
       active_tutors: activeTutors || 0,
       upcoming_classes: upcomingClasses || 0,
       mtd_revenue: mtdRevenue,
-      pending_payments: pendingPayments || 0,
-      needs_grading: needsGrading
+      successful_payments: successfulPayments || 0,
+      needs_grading: [...mockOverview.items, ...needsGrading].slice(0, 4),
+      mocks: mockOverview,
     }
   }
 
@@ -140,11 +207,13 @@ dashboardRouter.get('/stats', async (c) => {
       pendingSubmissions = count || 0
     }
 
+    const mockOverview = await loadMockOverview(schoolId, user.id)
     responseData.tutor_stats = {
       classes_today: classesToday || 0,
       pending_submissions: pendingSubmissions,
       my_courses: myCourses || 0,
-      needs_grading: await loadNeedsGrading(schoolId, user.id),
+      needs_grading: [...mockOverview.items, ...await loadNeedsGrading(schoolId, user.id)].slice(0, 4),
+      mocks: mockOverview,
     }
   }
 
@@ -164,6 +233,16 @@ dashboardRouter.get('/stats', async (c) => {
   const { data: todaySchedule, error: scheduleError } = await scheduleQuery
   if (scheduleError) return c.json({ error: 'Failed to load dashboard schedule' }, 500)
   responseData.today_schedule = todaySchedule || []
+
+  if (isTutor) {
+    const { data: myTodaySchedule, error: myScheduleError } = await supabase.from('live_classes')
+      .select('id, title, scheduled_at, duration_minutes, status, courses(name)')
+      .eq('school_id', schoolId).eq('tutor_id', user.id)
+      .gte('scheduled_at', startOfToday.toISOString()).lte('scheduled_at', endOfToday.toISOString())
+      .neq('status', 'cancelled').order('scheduled_at', { ascending: true }).limit(6)
+    if (myScheduleError) return c.json({ error: 'Failed to load teaching schedule' }, 500)
+    responseData.my_today_schedule = myTodaySchedule || []
+  }
 
   return c.json({ data: responseData })
 })
