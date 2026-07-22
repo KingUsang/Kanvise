@@ -70,7 +70,7 @@ jobs:
               pm2 delete kanvise-api >/dev/null 2>&1 || true
               pm2 delete kanvise-api-canary >/dev/null 2>&1 || true
               PORT=3002 SCHEDULED_JOBS_ENABLED=false pm2 start dist/index.js --name kanvise-api-canary --update-env
-              curl --fail --show-error --silent --retry 5 --retry-delay 2 http://127.0.0.1:3002/health
+              curl --fail --show-error --silent --retry 5 --retry-connrefused --retry-delay 2 http://127.0.0.1:3002/health
               pm2 delete kanvise-api-canary
               pm2 delete kanvise-backend
               pm2 start dist/index.js --name kanvise-api
