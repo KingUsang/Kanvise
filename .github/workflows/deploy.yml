@@ -57,6 +57,9 @@ jobs:
             test -n "$CORS_ALLOWED_ORIGINS"
             cd ~/Kanvise
             git fetch origin "$DEPLOY_BRANCH"
+            if ! git diff --quiet || ! git diff --cached --quiet; then
+              git stash push -m "ci-pre-deploy-$DEPLOY_BRANCH"
+            fi
             git checkout "$DEPLOY_BRANCH"
             git pull --ff-only origin "$DEPLOY_BRANCH"
             cd api
