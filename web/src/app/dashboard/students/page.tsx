@@ -73,7 +73,7 @@ export default function StudentsPage() {
           <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your learners</span>
           <h1 className="mt-2 text-[32px] leading-[40px] tracking-[-0.01em] font-bold text-kv-dark">Students</h1>
           <p className="text-base leading-6 text-gray-500 mt-1 max-w-2xl">
-            See who has enrolled, what they can access, and their checkout history. Students appear here after their first successful enrolment.
+            See who has enrolled, what they can access, and their successful payment history. Students appear here after their first successful enrolment.
           </p>
         </div>
         

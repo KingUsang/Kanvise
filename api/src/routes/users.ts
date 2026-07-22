@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
 import { publicFileUrl } from "../storage/r2";
-import { summarizeStudentPayments } from "../users/payment-status";
 
 type Variables = {
   user: any;
@@ -112,18 +111,9 @@ usersRouter.get("/students", enforceAdmin, async (c) => {
 
     if (enrolmentsError) throw enrolmentsError;
 
-    const { data: payments, error: paymentsError } = await supabase
-      .from("payments")
-      .select("student_id, status, paid_at, created_at")
-      .eq("school_id", profile.school_id)
-      .in("student_id", studentIds);
-
-    if (paymentsError) throw paymentsError;
-
     // 3. Join in JS
     const studentsWithEnrolments = students.map((student) => {
       const studentEnrolments = (enrolments || []).filter((e) => e.student_id === student.id);
-      const studentPayments = (payments || []).filter((payment) => payment.student_id === student.id);
       let profilePhotoUrl: string | null = null;
       if (student.profile_photo_key && process.env.R2_PUBLIC_BASE_URL) {
         profilePhotoUrl = publicFileUrl(student.profile_photo_key);
@@ -132,7 +122,6 @@ usersRouter.get("/students", enforceAdmin, async (c) => {
         ...student,
         profile_photo_url: profilePhotoUrl,
         enrolments: studentEnrolments,
-        payment_status: summarizeStudentPayments(studentPayments),
       };
     });
 

@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, Clock, HelpCircle, Search, XCircle } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
 
 export default function StudentsTable({ students, onStudentRemoved }: { students: any[], onStudentRemoved: (studentId: string) => void }) {
   const [programmeFilter, setProgrammeFilter] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -26,13 +25,6 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
     return Array.from(progs.entries()).map(([id, name]) => ({ id, name }));
   }, [students]);
 
-  const getPaymentStatus = (student: any) => {
-    if (student.payment_status === "successful") return { label: "Completed", code: "successful", color: "bg-green-100 text-green-800", icon: CheckCircle2 };
-    if (student.payment_status === "pending") return { label: "In progress", code: "pending", color: "bg-amber-100 text-amber-800", icon: Clock };
-    if (student.payment_status === "failed") return { label: "Failed", code: "failed", color: "bg-red-100 text-red-800", icon: XCircle };
-    return { label: "No checkout", code: "none", color: "bg-gray-100 text-gray-800", icon: HelpCircle };
-  };
-
   const filteredStudents = students.filter(student => {
     const query = searchQuery.trim().toLowerCase();
     if (query) {
@@ -44,12 +36,6 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
       const [type, id] = programmeFilter.split(':');
       const hasEnrolment = (student.enrolments || []).some((e: any) => type === 'programme' ? e.programmes?.id === id : type === 'sub_programme' ? e.sub_programmes?.id === id : e.courses?.id === id);
       if (!hasEnrolment) return false;
-    }
-    
-    // Payment Filter
-    if (paymentFilter) {
-      const pStatus = getPaymentStatus(student);
-      if (pStatus.code !== paymentFilter) return false;
     }
     
     return true;
@@ -77,20 +63,6 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
               {enrolmentOptions.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={16} />
-          </div>
-          <div className="relative min-w-[200px]">
-            <select 
-              value={paymentFilter}
-              onChange={(e) => { setPaymentFilter(e.target.value); setCurrentPage(1); }}
-              className="w-full appearance-none pl-4 pr-10 py-2 border border-kv-dust rounded text-sm focus:outline-none focus:border-kv-blue bg-transparent cursor-pointer"
-            >
-              <option value="">Latest checkout</option>
-              <option value="successful">Completed</option>
-              <option value="pending">In progress</option>
-              <option value="failed">Failed</option>
-              <option value="none">No checkout found</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={16} />
           </div>
@@ -125,14 +97,13 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student Info</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student ID</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Enrolments</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Latest checkout</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="text-sm">
             {paginatedStudents.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 px-6 text-center text-gray-500">
+                <td colSpan={4} className="py-8 px-6 text-center text-gray-500">
                   No students found matching filters.
                 </td>
               </tr>
@@ -140,8 +111,6 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
               paginatedStudents.map((student, i) => {
                 const avatarColors = ["bg-kv-blue text-white", "bg-kv-brown text-white", "bg-kv-dark text-white"];
                 const avatarColor = avatarColors[i % avatarColors.length];
-                const paymentStatus = getPaymentStatus(student);
-
                 return (
                   <tr 
                     key={student.id} 
@@ -184,12 +153,6 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
                           <span className="text-xs text-gray-400">None</span>
                         )}
                       </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 ${paymentStatus.color} rounded text-xs font-bold uppercase tracking-wider`}>
-                        <paymentStatus.icon size={14} />
-                        {paymentStatus.label}
-                      </span>
                     </td>
                     <td className="py-4 px-6 text-right">
                       <button 

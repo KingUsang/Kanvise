@@ -51,7 +51,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
         const json = await res.json();
         const paymentsJson = await paymentsRes.json();
         setEnrolments(json.data || []);
-        setPayments(paymentsJson.data || []);
+        setPayments((paymentsJson.data || []).filter((payment: any) => payment.status === 'successful'));
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -140,10 +140,10 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
           <div className="mb-6">
             <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-400">
               <ReceiptText size={16} />
-              Checkout history
+              Payment history
             </h4>
             {payments.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-kv-dust p-6 text-center text-sm text-gray-500">No checkout records found.</div>
+              <div className="rounded-lg border border-dashed border-kv-dust p-6 text-center text-sm text-gray-500">No completed payment records found.</div>
             ) : (
               <div className="space-y-3">
                 {payments.map((payment) => {
@@ -152,7 +152,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
                     <div key={payment.id} className="rounded-lg border border-kv-dust/40 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div><p className="font-semibold text-kv-dark">{itemName}</p><p className="mt-1 text-xs text-gray-500">{payment.paystack_reference}</p></div>
-                        <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${payment.status === 'successful' ? 'bg-green-100 text-green-700' : payment.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{payment.status === 'successful' ? 'Completed' : payment.status === 'pending' ? 'In progress' : 'Failed'}</span>
+                        <span className="rounded bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700">Paid</span>
                       </div>
                       <div className="mt-3 flex items-center justify-between text-xs text-gray-500"><span className="font-semibold text-kv-dark">₦{Number(payment.amount).toLocaleString()}</span><span>{new Date(payment.paid_at || payment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span></div>
                     </div>
