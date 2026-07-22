@@ -10,7 +10,7 @@ describe('resolveDashboardPersona', () => {
     expect(resolveDashboardPersona({ isAdmin: false, isTutor: true })).toBe('tutor')
   })
 
-  it('gives an admin assigned to teach the combined solo-tutor experience', () => {
-    expect(resolveDashboardPersona({ isAdmin: true, isTutor: true })).toBe('solo-tutor')
+  it('gives an admin assigned to teach the combined admin-tutor experience', () => {
+    expect(resolveDashboardPersona({ isAdmin: true, isTutor: true })).toBe('admin-tutor')
   })
 })

@@ -139,13 +139,15 @@ dashboardRouter.get('/stats', async (c) => {
 
     const [
       { count: totalStudents },
-      { count: activeTutors },
+      { data: tutorProfiles },
+      { data: teachingAssignments },
       { count: upcomingClasses },
       { data: payments },
       { count: successfulPayments },
     ] = await Promise.all([
       supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('school_id', schoolId),
-      supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'tutor').eq('school_id', schoolId),
+      supabase.from('user_profiles').select('id').eq('role', 'tutor').eq('school_id', schoolId),
+      supabase.from('tutor_course_assignments').select('tutor_id').eq('school_id', schoolId),
       supabase.from('live_classes').select('*', { count: 'exact', head: true }).eq('status', 'scheduled').eq('school_id', schoolId)
         .gte('scheduled_at', startOfToday.toISOString()).lte('scheduled_at', endOfToday.toISOString()),
       supabase.from('payments').select('centre_amount').eq('status', 'successful').eq('school_id', schoolId).gte('paid_at', startOfMonth.toISOString()),
@@ -153,6 +155,10 @@ dashboardRouter.get('/stats', async (c) => {
     ])
 
     const mtdRevenue = payments ? payments.reduce((sum, p) => sum + Number(p.centre_amount), 0) : 0
+    const tutorIds = new Set([
+      ...(tutorProfiles || []).map((profile) => profile.id),
+      ...(teachingAssignments || []).map((assignment) => assignment.tutor_id),
+    ])
 
     const [needsGrading, mockOverview] = await Promise.all([
       loadNeedsGrading(schoolId),
@@ -161,7 +167,7 @@ dashboardRouter.get('/stats', async (c) => {
 
     responseData.admin_stats = {
       total_students: totalStudents || 0,
-      active_tutors: activeTutors || 0,
+      tutors_count: tutorIds.size,
       upcoming_classes: upcomingClasses || 0,
       mtd_revenue: mtdRevenue,
       successful_payments: successfulPayments || 0,

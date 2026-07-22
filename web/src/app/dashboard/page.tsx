@@ -35,17 +35,17 @@ export default async function DashboardHomePage() {
   const isAdmin = Boolean(data.admin_stats)
   const isTutor = Boolean(data.tutor_stats)
   const persona = resolveDashboardPersona({ isAdmin, isTutor })
-  const isSoloTutor = persona === 'solo-tutor'
+  const isAdminTutor = persona === 'admin-tutor'
   const admin = data.admin_stats
   const tutor = data.tutor_stats
-  const gradingItems: GradingItem[] = (isSoloTutor ? tutor?.needs_grading : admin?.needs_grading || tutor?.needs_grading) || []
+  const gradingItems: GradingItem[] = (isAdminTutor ? tutor?.needs_grading : admin?.needs_grading || tutor?.needs_grading) || []
   const schedule: ScheduleItem[] = (isTutor ? data.my_today_schedule : data.today_schedule) || []
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-NG', {
     style: 'currency', currency: 'NGN', maximumFractionDigits: 0,
   }).format(amount)
 
-  const heading = isSoloTutor ? 'Your centre and teaching today' : isAdmin ? 'Your centre today' : 'Your teaching today'
-  const description = isSoloTutor
+  const heading = isAdminTutor ? 'Your centre and teaching today' : isAdmin ? 'Your centre today' : 'Your teaching today'
+  const description = isAdminTutor
     ? 'See what needs your attention across teaching, assessments, students and payments.'
     : isAdmin
       ? 'Keep classes, assessments, students and payments moving.'
@@ -71,13 +71,13 @@ export default async function DashboardHomePage() {
 
       {isAdmin && (
         <section aria-labelledby="centre-summary">
-          {isSoloTutor && <h2 id="centre-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">Centre overview</h2>}
+          {isAdminTutor && <h2 id="centre-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">Centre overview</h2>}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <StatCard title="Enrolled Students" value={admin.total_students} icon="groups" subtitle="Across the centre" />
             <StatCard title="Classes Today" value={admin.upcoming_classes} icon="event" subtitle="Scheduled centre-wide" />
             <StatCard title="Earnings This Month" value={formatCurrency(admin.mtd_revenue)} icon="payments" subtitle={`${admin.successful_payments || 0} successful payments`} isRevenue />
-            {isSoloTutor
-              ? <StatCard title="Tutor Team" value={admin.active_tutors} icon="school" subtitle="Other tutors in your centre" />
+            {isAdminTutor
+              ? <StatCard title="Tutors" value={admin.tutors_count} icon="school" subtitle="Including you" />
               : <StatCard title="Mock Answers to Grade" value={admin.mocks?.pending_count || 0} icon="quiz" subtitle={`${admin.mocks?.active_count || 0} active mocks`} />}
           </div>
         </section>
@@ -85,7 +85,7 @@ export default async function DashboardHomePage() {
 
       {isTutor && (
         <section aria-labelledby="teaching-summary">
-          {isSoloTutor && <h2 id="teaching-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">My teaching</h2>}
+          {isAdminTutor && <h2 id="teaching-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">My teaching</h2>}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <StatCard title="My Classes Today" value={tutor.classes_today} icon="laptop_chromebook" subtitle="Sessions assigned to you" />
             <StatCard title="Assignment Submissions to Grade" value={tutor.pending_submissions} icon="assignment_late" subtitle="Waiting for your review" />
@@ -119,7 +119,7 @@ export default async function DashboardHomePage() {
         <div className="w-full shrink-0 lg:w-[420px]"><NeedsGradingCard items={gradingItems} /></div>
       </div>
 
-      {isAdmin && !isSoloTutor && (
+      {isAdmin && !isAdminTutor && (
         <section className="flex flex-col gap-4 rounded-lg bg-[#2e2877] p-6 text-white sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="text-lg font-semibold">Run an exam-ready mock</h2><p className="mt-1 text-sm text-[#d9d6ff]">Create practice for JAMB, WAEC, NECO, post-UTME or your next revision test.</p></div>
           <Link href="/dashboard/mocks/builder" className="shrink-0 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2877]">Build a Mock</Link>
