@@ -24,10 +24,29 @@ interface Invite {
   created_at: string
 }
 
+interface AssignmentPerson {
+  id: string
+  kanvise_user_id: string
+  first_name: string
+  last_name: string
+  email: string
+  role: string
+}
+
+interface CourseAssignmentOverview {
+  id: string
+  name: string
+  is_published: boolean
+  tutors: AssignmentPerson[]
+}
+
 export function TutorsClient() {
   const supabase = createClient()
   const [tutors, setTutors] = useState<Tutor[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
+  const [assignmentPeople, setAssignmentPeople] = useState<AssignmentPerson[]>([])
+  const [courseAssignments, setCourseAssignments] = useState<CourseAssignmentOverview[]>([])
+  const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [confirmation, setConfirmation] = useState<null | { type: 'revoke'; id: string; email: string } | { type: 'remove'; id: string; name: string }>(null)
@@ -56,15 +75,21 @@ export function TutorsClient() {
 
       const headers = { 'Authorization': `Bearer ${token}` }
 
-      const [tutorsRes, invitesRes] = await Promise.all([
+      const [tutorsRes, invitesRes, peopleRes, assignmentsRes] = await Promise.all([
         fetch(`${baseUrl}/users/tutors`, { headers }),
         fetch(`${baseUrl}/schools/invites`, { headers }),
+        fetch(`${baseUrl}/users?roles=admin,tutor`, { headers }),
+        fetch(`${baseUrl}/courses/assignment-overview`, { headers }),
       ])
-      if (!tutorsRes.ok || !invitesRes.ok) throw new Error('Could not load your tutors')
+      if (!tutorsRes.ok || !invitesRes.ok || !peopleRes.ok || !assignmentsRes.ok) throw new Error('Could not load your tutors')
       const { data: tutorData } = await tutorsRes.json()
       const { data: inviteData } = await invitesRes.json()
+      const { data: peopleData } = await peopleRes.json()
+      const { data: assignmentsData } = await assignmentsRes.json()
       setTutors(tutorData || [])
       setInvites(inviteData || [])
+      setAssignmentPeople(peopleData || [])
+      setCourseAssignments(assignmentsData || [])
     } catch (err) {
       console.error('Failed to fetch data', err)
       setLoadError('We could not load your tutors and invitations. Please check your connection and try again.')
@@ -197,6 +222,32 @@ export function TutorsClient() {
     }
   }
 
+  const updateCourseAssignment = async (courseId: string, person: AssignmentPerson, isAssigned: boolean) => {
+    setUpdatingCourseId(courseId)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(
+        isAssigned ? `${baseUrl}/courses/${courseId}/tutors/${person.id}` : `${baseUrl}/courses/${courseId}/tutors`,
+        {
+          method: isAssigned ? 'DELETE' : 'POST',
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            ...(isAssigned ? {} : { 'Content-Type': 'application/json' }),
+          },
+          ...(isAssigned ? {} : { body: JSON.stringify({ tutor_id: person.kanvise_user_id }) }),
+        }
+      )
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Could not update the Course assignment')
+      await fetchData()
+      toast.success(isAssigned ? 'Tutor removed from Course' : 'Tutor assigned to Course')
+    } catch (error) {
+      toast.error('Could not update the Course assignment', { description: error instanceof Error ? error.message : 'Please try again.' })
+    } finally {
+      setUpdatingCourseId(null)
+    }
+  }
+
   // ── Derived state ──────────────────────────────────────────────────────────
 
   const pendingInvites = invites.filter((i) => i.status === 'pending')
@@ -316,6 +367,54 @@ export function TutorsClient() {
             {!isLoading && tutors.length > 0 && (
               <div className="p-4 border-t border-[#c2b59b] bg-[#fbf9f8] flex justify-between items-center text-[14px]">
                 <span className="text-[#474551]">Total: {tutors.length} tutor{tutors.length !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="overflow-hidden rounded-lg border border-[#c2b59b] bg-white shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
+            <div className="border-b border-[#c2b59b] bg-[#fbf9f8] p-6">
+              <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Course assignments</h3>
+              <p className="mt-1 text-sm text-[#474551]">Choose who teaches each Course. A published Course must always have at least one tutor.</p>
+            </div>
+            {courseAssignments.length === 0 ? (
+              <div className="p-8 text-center text-sm text-[#474551]">Create a Course before assigning tutors.</div>
+            ) : (
+              <div className="divide-y divide-[#e4e2e1]">
+                {courseAssignments.map((course) => {
+                  const availablePeople = assignmentPeople.filter((person) => !course.tutors.some((tutor) => tutor.id === person.id))
+                  return (
+                    <div key={course.id} className="p-5">
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-[#1b1c1c]">{course.name}</p>
+                            {course.tutors.length === 0 && <span className="rounded bg-[#ffdad6] px-2 py-0.5 text-[10px] font-bold uppercase text-[#ba1a1a]">No tutor</span>}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {course.tutors.map((person) => (
+                              <span key={person.id} className="inline-flex items-center gap-1 rounded-full border border-[#c8c5d2] bg-[#f5f3f2] py-1 pl-3 pr-1 text-xs text-[#474551]">
+                                {person.first_name} {person.last_name}{person.role === 'admin' ? ' (you)' : ''}
+                                <button type="button" disabled={updatingCourseId === course.id} onClick={() => void updateCourseAssignment(course.id, person, true)} className="rounded-full p-1 hover:bg-[#ffdad6] hover:text-[#ba1a1a]" aria-label={`Remove ${person.first_name} from ${course.name}`}>
+                                  <span className="material-symbols-outlined text-[15px]">close</span>
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <select
+                          aria-label={`Assign a tutor to ${course.name}`}
+                          value=""
+                          disabled={updatingCourseId === course.id || availablePeople.length === 0}
+                          onChange={(event) => { const person = assignmentPeople.find((item) => item.id === event.target.value); if (person) void updateCourseAssignment(course.id, person, false) }}
+                          className="min-w-48 rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm text-[#474551] outline-none focus:border-[#2e2877] disabled:bg-[#f0eded]"
+                        >
+                          <option value="">{availablePeople.length === 0 ? 'Everyone assigned' : 'Add a tutor…'}</option>
+                          {availablePeople.map((person) => <option key={person.id} value={person.id}>{person.first_name} {person.last_name}{person.role === 'admin' ? ' (you)' : ''}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

@@ -171,6 +171,43 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
 });
 
 // Get single course (Admin, Tutor, Student if enrolled)
+coursesRouter.get("/assignment-overview", enforceAdmin, async (c) => {
+  try {
+    const profile = c.get("user");
+    const [{ data: courses, error: coursesError }, { data: assignments, error: assignmentsError }] = await Promise.all([
+      supabase.from("courses").select("id, name, is_published").eq("school_id", profile.school_id).order("name"),
+      supabase.from("tutor_course_assignments").select("course_id, tutor_id").eq("school_id", profile.school_id),
+    ]);
+    if (coursesError) throw coursesError;
+    if (assignmentsError) throw assignmentsError;
+
+    const tutorIds = [...new Set((assignments || []).map((assignment) => assignment.tutor_id))];
+    let people: any[] = [];
+    if (tutorIds.length > 0) {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id, kanvise_user_id, first_name, last_name, email, role")
+        .eq("school_id", profile.school_id)
+        .in("id", tutorIds);
+      if (error) throw error;
+      people = data || [];
+    }
+
+    return c.json({
+      data: (courses || []).map((course) => ({
+        ...course,
+        tutors: (assignments || [])
+          .filter((assignment) => assignment.course_id === course.id)
+          .map((assignment) => people.find((person) => person.id === assignment.tutor_id))
+          .filter(Boolean),
+      })),
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message || "Internal server error" }, 500);
+  }
+});
+
+// Get single course (Admin, Tutor, Student if enrolled)
 coursesRouter.get("/:id", async (c) => {
   try {
     const profile = c.get("user");
@@ -346,16 +383,14 @@ coursesRouter.post("/:id/tutors", enforceAdmin, async (c) => {
 
     if (!tutor_id) return c.json({ error: "tutor_id is required", code: "BAD_REQUEST" }, 400);
 
-    // Verify tutor exists in this school
-    const { data: tutorCheck } = await supabase
-      .from("user_profiles")
-      .select("id, role")
-      .eq("kanvise_user_id", tutor_id) // Or id if they are passing uuid directly, assuming frontend passes kanvise_user_id or id
+    const { data: course } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("id", id)
       .eq("school_id", profile.school_id)
       .single();
+    if (!course) return c.json({ error: "Course not found in this school", code: "COURSE_NOT_FOUND" }, 404);
 
-    // The query above might fail if tutor_id is UUID but we search against kanvise_user_id which is a string KNV-TUT-...
-    // Let's do an OR query
     let tutorQueryId = tutor_id;
     if (tutor_id === 'self') {
       tutorQueryId = profile.id;
