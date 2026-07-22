@@ -127,7 +127,7 @@ DNS is managed through Cloudflare. Cloudflare is set to "DNS only" (grey cloud) 
 
 **Build command:** `npm run build`
 **Install command:** `npm ci` (not `npm install` — `ci` is faster and more deterministic in CI)
-**Node.js version:** 20.x (LTS)
+**Node.js version:** 22.x (LTS)
 
 **`next.config.js` key settings:**
 ```javascript
@@ -168,11 +168,11 @@ The following steps are performed once on a fresh Scaleway instance. They are do
 apt update && apt upgrade -y
 ```
 
-**2. Install Node.js 20 via NodeSource:**
+**2. Install Node.js 22 via NodeSource:**
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt install -y nodejs
-node --version  # Should output v20.x.x
+node --version  # Should output v22.x.x or newer
 ```
 
 **3. Install PM2 globally:**
