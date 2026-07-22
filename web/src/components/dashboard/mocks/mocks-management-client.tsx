@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 
 interface MockExam {
   id: string
@@ -307,16 +308,16 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                         {mock.status === 'published' && (
                           <div className="flex items-center justify-end gap-3">
                             <button onClick={() => setMockToArchive(mock)} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704]">Archive</button>
-                            <button onClick={() => router.push(`/dashboard/mocks/${mock.id}/results`)} className="text-[#994704] text-[12px] font-semibold hover:underline">View Results</button>
+                            <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#994704] text-[12px] font-semibold hover:underline">View Results</button>
                           </div>
                         )}
                         {mock.status === 'draft' && (
-                          <button onClick={() => router.push(`/dashboard/mocks/builder?id=${mock.id}`)} className="text-[#994704] text-[12px] font-semibold hover:underline">
+                          <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/builder?id=${mock.id}`) }} className="text-[#994704] text-[12px] font-semibold hover:underline">
                             Edit Mock
                           </button>
                         )}
                         {mock.status === 'archived' && (
-                          <button onClick={() => router.push(`/dashboard/mocks/${mock.id}/results`)} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704] hover:underline">View Results</button>
+                          <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704] hover:underline">View Results</button>
                         )}
                       </td>
                     </tr>

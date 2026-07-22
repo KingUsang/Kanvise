@@ -4,6 +4,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const MAX_WAIT_MS = 15_000;
+const NAVIGATION_START_EVENT = "kanvise:navigation-start";
+
+export function startNavigationProgress() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(NAVIGATION_START_EVENT));
+  }
+}
 
 export default function NavigationProgress() {
   const pathname = usePathname();
@@ -16,6 +23,8 @@ export default function NavigationProgress() {
   const hasMountedRef = useRef(false);
   const visibleRef = useRef(false);
   const routeKey = `${pathname}?${searchParams.toString()}`;
+  const routeKeyRef = useRef(routeKey);
+  routeKeyRef.current = routeKey;
 
   const clearTimers = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -59,15 +68,28 @@ export default function NavigationProgress() {
       start();
     };
 
-    const handlePopState = () => start();
+    const handleProgrammaticStart = () => start();
+    const handlePopState = () => {
+      const destinationKey = `${window.location.pathname}?${window.location.search.slice(1)}`;
+      start();
+
+      // A browser history entry may be restored from Next.js' router cache
+      // before popstate reaches this listener. In that case there will be no
+      // later pathname effect to finish the bar, so finish on the next frame.
+      window.requestAnimationFrame(() => {
+        if (routeKeyRef.current === destinationKey && visibleRef.current) finish();
+      });
+    };
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", handlePopState);
+    window.addEventListener(NAVIGATION_START_EVENT, handleProgrammaticStart);
     return () => {
       document.removeEventListener("click", handleClick, true);
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener(NAVIGATION_START_EVENT, handleProgrammaticStart);
       clearTimers();
     };
-  }, [clearTimers, start]);
+  }, [clearTimers, finish, start]);
 
   useEffect(() => {
     if (!hasMountedRef.current) {

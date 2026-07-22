@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
+import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 
 interface TopBarProps {
   user: {
@@ -30,6 +31,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   const navigateTo = (href: string) => {
     setQuery('')
     setIsSearchOpen(false)
+    startNavigationProgress()
     router.push(href)
   }
 

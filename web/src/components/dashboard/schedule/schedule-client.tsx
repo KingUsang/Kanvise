@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 
 interface Capabilities {
   isAdmin: boolean
@@ -186,6 +187,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
   const handleJoinClass = (classId: string, classTutorId: string) => {
     const isStarting = user.id === classTutorId;
+    startNavigationProgress();
     router.push(`/class/${classId}${isStarting ? '?start=true' : ''}`);
   }
 

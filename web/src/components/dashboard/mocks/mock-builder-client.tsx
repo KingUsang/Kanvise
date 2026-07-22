@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
+import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
 
 type Course = {
   id: string;
@@ -133,6 +134,7 @@ export function MockBuilderClient({ token }: { token: string }) {
           }
         } else {
           toast.error("Could not open this mock", { description: "It may no longer exist or you may not have access." });
+          startNavigationProgress();
           router.push("/dashboard/mocks");
         }
       } catch (err) {
@@ -389,6 +391,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
       // 4. Navigate away
       toast.success(shouldPublish ? (publishMode === "scheduled" ? "Mock scheduled" : "Mock published") : "Draft saved");
+      startNavigationProgress();
       router.push("/dashboard/mocks"); 
     } catch (err) {
       console.error(err);
