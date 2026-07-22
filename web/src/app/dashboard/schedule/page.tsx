@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { ScheduleClient } from '@/components/dashboard/schedule/schedule-client'
+import { getApiUrl } from '@/config/api'
 
 export default async function SchedulePage() {
   const cookieStore = await cookies()
@@ -31,7 +32,7 @@ export default async function SchedulePage() {
   }
 
   // Fetch capabilities to know if admin/tutor
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
+  const res = await fetch(`${getApiUrl()}/dashboard/stats`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

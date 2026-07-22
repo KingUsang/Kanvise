@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { NeedsGradingCard, type GradingItem } from '@/components/dashboard/needs-grading-card'
 import { resolveDashboardPersona } from '@/lib/dashboard-persona'
+import { getApiUrl } from '@/config/api'
 
 type ScheduleItem = {
   id: string
@@ -25,7 +26,7 @@ export default async function DashboardHomePage() {
   const token = sessionData.session?.access_token
   if (!token) return null
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
+  const response = await fetch(`${getApiUrl()}/dashboard/stats`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   })

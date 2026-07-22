@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from "@/components/dashboard/shell";
+import { getApiUrl } from '@/config/api'
 
 export default async function DashboardLayout({
   children,
@@ -37,7 +38,7 @@ export default async function DashboardLayout({
 
   // Fetch capabilities and basic user info from Hono stats endpoint
   // We do this to determine if the user is a tutor based on their assignments
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
+  const res = await fetch(`${getApiUrl()}/dashboard/stats`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

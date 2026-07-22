@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { MocksManagementClient } from '@/components/dashboard/mocks/mocks-management-client'
+import { getApiUrl } from '@/config/api'
 
 export const metadata = {
   title: 'Mocks Management | Kanvise',
@@ -35,7 +36,7 @@ export default async function MocksPage() {
   }
 
   // Fetch capabilities
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/stats`, {
+  const res = await fetch(`${getApiUrl()}/dashboard/stats`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },
