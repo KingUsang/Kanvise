@@ -29,6 +29,8 @@ export function TutorsClient() {
   const [tutors, setTutors] = useState<Tutor[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [confirmation, setConfirmation] = useState<null | { type: 'revoke'; id: string; email: string } | { type: 'remove'; id: string; name: string }>(null)
 
   // Invite state
   const [inviteEmail, setInviteEmail] = useState('')
@@ -46,6 +48,7 @@ export function TutorsClient() {
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
+    setLoadError('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
@@ -57,16 +60,14 @@ export function TutorsClient() {
         fetch(`${baseUrl}/users/tutors`, { headers }),
         fetch(`${baseUrl}/schools/invites`, { headers }),
       ])
-      if (tutorsRes.ok) {
-        const { data } = await tutorsRes.json()
-        setTutors(data || [])
-      }
-      if (invitesRes.ok) {
-        const { data } = await invitesRes.json()
-        setInvites(data || [])
-      }
+      if (!tutorsRes.ok || !invitesRes.ok) throw new Error('Could not load your tutors')
+      const { data: tutorData } = await tutorsRes.json()
+      const { data: inviteData } = await invitesRes.json()
+      setTutors(tutorData || [])
+      setInvites(inviteData || [])
     } catch (err) {
       console.error('Failed to fetch data', err)
+      setLoadError('We could not load your tutors and invitations. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -98,7 +99,9 @@ export function TutorsClient() {
       setGeneratedLink(json.data.invite_url)
       setInviteEmail('') // Clear input on success
       await fetchData() // Refresh invites list
-      toast.success('Tutor invitation created')
+      toast.success(json.data.email_sent ? 'Invitation emailed to the tutor' : 'Invitation link created', {
+        description: json.data.email_sent ? 'They can use the email to join your centre.' : 'The email could not be sent. Copy and share the link yourself.'
+      })
     } catch (err: any) {
       setInviteError(err.message)
     } finally {
@@ -151,7 +154,6 @@ export function TutorsClient() {
   }
 
   const handleRevoke = async (inviteId: string, email: string) => {
-    if (!confirm(`Revoke the invite for ${email}? The link they received will no longer work.`)) return
     setRevokingId(inviteId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -174,7 +176,6 @@ export function TutorsClient() {
   }
 
   const handleRemoveTutor = async (tutorId: string, name: string) => {
-    if (!confirm(`Remove ${name} from your school?\n\nTheir account will lose access, but all their historical data is preserved.`)) return
     setRemovingId(tutorId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -212,9 +213,10 @@ export function TutorsClient() {
       {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Tutor Directory</h2>
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your teaching team</span>
+          <h2 className="mt-2 text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Tutors</h2>
           <p className="text-[16px] text-[#474551] mt-1">
-            Manage teaching staff, assignments, and invitations.
+            Invite tutors to your centre and see the Courses assigned to each person. If you teach alone, you do not need to invite yourself.
           </p>
         </div>
       </div>
@@ -230,7 +232,7 @@ export function TutorsClient() {
                 <div className="w-8 h-8 rounded bg-[#2e2877]/10 flex items-center justify-center text-[#2e2877]">
                   <span className="material-symbols-outlined icon-fill">school</span>
                 </div>
-                <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Active Roster</h3>
+                <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Tutors in your centre</h3>
               </div>
             </div>
 
@@ -239,7 +241,7 @@ export function TutorsClient() {
                 <thead>
                   <tr className="bg-[#f5f3f2] text-[#474551] border-b border-[#c2b59b]">
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Tutor</th>
-                    <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Active Courses</th>
+                    <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Assigned Courses</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
@@ -253,12 +255,14 @@ export function TutorsClient() {
                         </div>
                       </td>
                     </tr>
+                  ) : loadError ? (
+                    <tr><td colSpan={3} className="px-6 py-12 text-center"><p className="text-sm text-[#474551]">{loadError}</p><button type="button" onClick={fetchData} className="mt-4 rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></td></tr>
                   ) : tutors.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="py-12 text-center text-[#474551]">
                         <span className="material-symbols-outlined text-[48px] text-[#c8c5d2] mb-2">group_off</span>
                         <p className="font-medium">No tutors yet</p>
-                        <p className="text-sm mt-1 max-w-xs mx-auto">Invite a tutor from the panel to get started.</p>
+                        <p className="text-sm mt-1 max-w-sm mx-auto">You are currently teaching on your own. Invite someone only when another tutor needs access to teach Courses in your centre.</p>
                       </td>
                     </tr>
                   ) : (
@@ -277,9 +281,6 @@ export function TutorsClient() {
                                   <p className="font-bold text-[#1b1c1c] truncate">
                                     {tutor.first_name} {tutor.last_name}
                                   </p>
-                                  <span className="hidden md:inline text-[10px] text-[#474551] font-mono bg-[#f5f3f2] px-1.5 py-0.5 rounded border border-[#e4e2e1]">
-                                    {tutor.kanvise_user_id}
-                                  </span>
                                 </div>
                                 <p className="text-xs text-[#474551] truncate">{tutor.email}</p>
                               </div>
@@ -297,7 +298,7 @@ export function TutorsClient() {
                           </td>
                           <td className="py-4 px-6 text-right">
                             <button
-                              onClick={() => handleRemoveTutor(tutor.id, `${tutor.first_name} ${tutor.last_name}`)}
+                              onClick={() => setConfirmation({ type: 'remove', id: tutor.id, name: `${tutor.first_name} ${tutor.last_name}` })}
                               disabled={isRemoving}
                               title="Remove tutor"
                               className="text-[#2e2877] hover:text-[#ba1a1a] transition-colors p-2 rounded hover:bg-[#eae8e7] disabled:opacity-30 inline-flex items-center justify-center"
@@ -329,9 +330,9 @@ export function TutorsClient() {
               <span className="material-symbols-outlined text-[150px]">hub</span>
             </div>
             
-            <h3 className="text-[20px] font-semibold mb-2 relative z-10">Onboard New Tutor</h3>
+            <h3 className="text-[20px] font-semibold mb-2 relative z-10">Invite a tutor</h3>
             <p className="text-[14px] text-white/80 mb-6 relative z-10">
-              Generate a secure portal access link for new faculty members.
+              Enter their email address. We will email them a link to join your centre, and you can also copy the link yourself.
             </p>
             
             <form onSubmit={handleInvite} className="flex flex-col gap-4 relative z-10">
@@ -344,7 +345,7 @@ export function TutorsClient() {
                   required
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="faculty@institution.edu.ng"
+                  placeholder="tutor@example.com"
                   className="bg-white/10 border border-white/30 text-white placeholder:text-white/50 rounded-lg p-3 text-[14px] focus:ring-2 focus:ring-[#994704] focus:border-transparent outline-none transition-all"
                 />
               </div>
@@ -360,7 +361,7 @@ export function TutorsClient() {
                 <div className="bg-[#386a1f]/20 border border-[#386a1f]/50 rounded-lg p-3 flex flex-col gap-2">
                   <div className="flex items-center gap-2 text-[#b5f299] text-[12px] font-bold">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                    Link Generated
+                    Invitation link ready
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -389,7 +390,7 @@ export function TutorsClient() {
                 ) : (
                   <>
                     <span className="material-symbols-outlined icon-fill">send</span>
-                    Generate Invitation
+                    Send invitation
                   </>
                 )}
               </button>
@@ -401,7 +402,7 @@ export function TutorsClient() {
             <div className="p-4 border-b border-[#c2b59b] bg-[#f5f3f2]">
               <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#474551] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">pending_actions</span>
-                Access Keys
+                Invitations awaiting response
               </h3>
             </div>
             
@@ -413,7 +414,7 @@ export function TutorsClient() {
                 </div>
               ) : activeInvites.length === 0 ? (
                 <div className="p-6 text-center text-[#474551] text-[14px] italic">
-                  No active or expired invites.
+                  No outstanding invitations.
                 </div>
               ) : (
                 activeInvites.map((invite) => {
@@ -461,7 +462,7 @@ export function TutorsClient() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleRevoke(invite.id, invite.email)}
+                            onClick={() => setConfirmation({ type: 'revoke', id: invite.id, email: invite.email })}
                             disabled={isRevoking}
                             className="text-[12px] text-[#787582] hover:text-[#ba1a1a] transition-colors font-bold uppercase tracking-wider disabled:opacity-50"
                           >
@@ -478,6 +479,24 @@ export function TutorsClient() {
 
         </div>
       </div>
+      {confirmation && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#1b1c1c]/45 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-lg border border-[#c8c5d2] bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-[#1b1c1c]">{confirmation.type === 'remove' ? 'Remove this tutor?' : 'Cancel this invitation?'}</h3>
+            <p className="mt-2 text-sm leading-6 text-[#474551]">
+              {confirmation.type === 'remove'
+                ? `${confirmation.name} will lose access to your centre. Their previous teaching records will be kept.`
+                : `The invitation sent to ${confirmation.email} will stop working.`}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setConfirmation(null)} className="rounded px-4 py-2 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2]">Keep it</button>
+              <button type="button" onClick={() => { const action = confirmation; setConfirmation(null); if (action.type === 'remove') void handleRemoveTutor(action.id, action.name); else void handleRevoke(action.id, action.email) }} className="rounded bg-[#ba1a1a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#93000a]">
+                {confirmation.type === 'remove' ? 'Remove tutor' : 'Cancel invitation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

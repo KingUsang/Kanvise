@@ -154,11 +154,18 @@ schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
     .eq('status', 'pending')
     .maybeSingle()
 
-  if (existing) {
+  if (existing && new Date(existing.expires_at).getTime() > Date.now()) {
     return c.json({
       error: 'A pending invite already exists for this email. Revoke it first to generate a new link.',
       code: 'DUPLICATE_INVITE'
     }, 409)
+  }
+  if (existing) {
+    await supabase
+      .from('tutor_invites')
+      .update({ status: 'expired', updated_at: new Date().toISOString() })
+      .eq('id', existing.id)
+      .eq('school_id', user.school_id)
   }
 
   // Generate the HMAC-SHA256 signed token
@@ -251,7 +258,14 @@ schoolsRouter.get('/invites', requireRole('admin'), async (c) => {
     return c.json({ error: error.message }, 500)
   }
 
-  return c.json({ data })
+  return c.json({
+    data: (data || []).map((invite) => ({
+      ...invite,
+      status: invite.status === 'pending' && new Date(invite.expires_at).getTime() <= Date.now()
+        ? 'expired'
+        : invite.status,
+    }))
+  })
 })
 
 // POST /schools/invites/:id/revoke — Revoke a pending invite

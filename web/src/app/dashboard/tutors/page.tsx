@@ -8,11 +8,8 @@ export default async function TutorsPage() {
 
   if (!session) redirect('/')
 
-  // Next.js Middleware handles the role-based route protection by reading kanvise_role
-  // from the JWT user_metadata. No database lookup is needed here.
-
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="mx-auto w-full max-w-[1440px] animate-in fade-in duration-500">
       <TutorsClient />
     </div>
   )
