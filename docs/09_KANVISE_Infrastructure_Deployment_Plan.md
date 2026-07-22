@@ -613,6 +613,18 @@ Production deployment complete
 
 The Vercel frontend project must define `NEXT_PUBLIC_API_URL=https://api.kanvise.com` for every environment that builds Kanvise, including Preview deployments for the staging branch. This is a build-time variable, so redeploy after adding or changing it.
 
+The Hono process on Scaleway must also allow every stable frontend hostname that makes browser-side API requests:
+
+```env
+# Canonical public frontend used in email links and redirects
+FRONTEND_URL=https://kanvise.com
+
+# Additional exact browser origins, comma-separated and without paths
+CORS_ALLOWED_ORIGINS=https://staging.kanvise.com,https://app.kanvise.com
+```
+
+When a frontend subdomain is added, add its full origin to `CORS_ALLOWED_ORIGINS` in the Scaleway API process environment and restart the Hono process. DNS configuration alone does not authorize the origin. Vercel preview URLs under HTTPS `*.vercel.app` and local development at `http://localhost:3000` are handled by the application.
+
 ---
 
 ## 9. Monitoring & Alerting

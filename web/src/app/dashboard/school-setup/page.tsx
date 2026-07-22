@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { SchoolSetupForm } from '@/components/dashboard/setup/school-setup-form'
 import { redirect } from 'next/navigation'
+import { getApiUrl } from '@/config/api'
 
 export default async function SchoolSetupPage() {
   const supabase = await createClient()
@@ -11,7 +12,7 @@ export default async function SchoolSetupPage() {
   if (!token) return redirect('/auth/login')
 
   // Fetch school data
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schools/mine`, {
+  const res = await fetch(`${getApiUrl()}/schools/mine`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

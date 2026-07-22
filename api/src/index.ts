@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { supabase } from "./lib/supabase";
 import { validateProductionPaymentSecrets } from "./config/payment-secrets";
+import { resolveCorsOrigin } from "./config/cors";
 import { startScheduledJobs } from "./jobs/scheduler";
 
 validateProductionPaymentSecrets();
@@ -12,14 +13,7 @@ const app = new Hono();
 
 // Middleware
 app.use("/*", cors({
-  origin: (origin) => {
-    if (!origin) return process.env.FRONTEND_URL!;
-    // Securely allow the exact production URL OR any Vercel Preview URL
-    if (origin === process.env.FRONTEND_URL || origin.endsWith('.vercel.app') || origin === 'http://localhost:3000') {
-      return origin;
-    }
-    return process.env.FRONTEND_URL!; // Reject others by defaulting to prod
-  },
+  origin: (origin) => resolveCorsOrigin(origin),
   credentials: true,
 }));
 

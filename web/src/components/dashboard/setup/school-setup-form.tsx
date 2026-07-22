@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 import { PUBLIC_APP_HOST } from '@/config/app'
+import { getApiUrl } from '@/config/api'
 
 export function SchoolSetupForm({ initialData, token }: { initialData: any, token: string }) {
   const [formData, setFormData] = useState({
@@ -42,8 +43,8 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     setUploadingMedia(entityType)
     setSaveStatus('idle')
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
-      if (!apiUrl || !initialData?.id) throw new Error('School media upload is not configured')
+      const apiUrl = getApiUrl()
+      if (!initialData?.id) throw new Error('School media upload is not configured')
       const metadata = {
         file_name: file.name,
         content_type: file.type,
@@ -110,7 +111,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     setErrorMessage('')
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schools/mine`, {
+      const res = await fetch(`${getApiUrl()}/schools/mine`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

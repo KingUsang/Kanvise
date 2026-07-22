@@ -669,7 +669,11 @@ SUPABASE_URL=https://[project-ref].supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 SUPABASE_JWT_SECRET=your-jwt-secret
 INVITE_TOKEN_SECRET=random-256-bit-secret
+FRONTEND_URL=https://kanvise.com
+CORS_ALLOWED_ORIGINS=https://staging.kanvise.com,https://app.kanvise.com
 ```
+
+`FRONTEND_URL` is the canonical frontend used for generated links. `CORS_ALLOWED_ORIGINS` is a comma-separated list of additional exact frontend origins allowed to call Hono from a browser. Add new stable subdomains here and restart the API process after changing the value.
 
 **Next.js (Vercel — NEXT_PUBLIC_ prefix for browser-safe vars):**
 ```
