@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveStudentCourses } from './dashboard'
+import { resolveStudentCourses } from '../lib/student-course-access'
 
 const courses = [
   { id: 'direct', name: 'Direct course', programme_id: null, sub_programme_id: null },

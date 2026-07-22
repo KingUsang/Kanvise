@@ -9,6 +9,7 @@ import {
 } from '../middleware/auth'
 import type { AppVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
+import { resolveStudentCourses } from '../lib/student-course-access'
 
 export const liveClassesRouter = new Hono<{ Variables: AppVariables }>()
 
@@ -79,6 +80,23 @@ async function getAvatarConfig(userId: string, schoolId: string | null) {
     return null
   }
   return data
+}
+
+async function getStudentCourseIds(studentId: string, schoolId: string) {
+  const [{ data: enrolments, error: enrolmentsError }, { data: courses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
+    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id').eq('student_id', studentId).eq('school_id', schoolId),
+    supabase.from('courses').select('id, programme_id, sub_programme_id').eq('school_id', schoolId),
+    supabase.from('sub_programmes').select('id, programme_id').eq('school_id', schoolId),
+  ])
+  if (enrolmentsError || coursesError || subProgrammesError) {
+    console.error('[live-classes] student course access error', { enrolmentsError, coursesError, subProgrammesError })
+    throw new Error('Could not resolve student course access')
+  }
+  return resolveStudentCourses(enrolments || [], courses || [], subProgrammes || []).map((course) => course.id)
+}
+
+async function studentCanAccessCourse(studentId: string, schoolId: string, courseId: string) {
+  return (await getStudentCourseIds(studentId, schoolId)).includes(courseId)
 }
 
 // ── Apply auth middleware to all routes ────────────────────────────────────
@@ -158,12 +176,26 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('*')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
 
   if (user.role === 'tutor') {
     query = query.eq('tutor_id', user.id)
+  }
+
+  if (user.role === 'student') {
+    let courseIds: string[]
+    try {
+      courseIds = await getStudentCourseIds(user.id, user.school_id!)
+    } catch {
+      return c.json({ error: 'Failed to resolve class access', code: 'CLASS_ACCESS_FAILED' }, 500)
+    }
+    if (!courseIds.length) return c.json({ data: [] })
+    if (course_id && !courseIds.includes(course_id)) {
+      return c.json({ error: 'Not enrolled in this course', code: 'NOT_ENROLLED' }, 403)
+    }
+    query = query.in('course_id', courseIds)
   }
 
   if (course_id) query = query.eq('course_id', course_id)
@@ -193,6 +225,10 @@ liveClassesRouter.get('/:id', async (c) => {
     .single()
 
   if (error || !data) {
+    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+  }
+
+  if (user.role === 'student' && !(await studentCanAccessCourse(user.id, user.school_id!, data.course_id))) {
     return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
   }
 
@@ -377,13 +413,13 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
     return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
   }
 
+  if (user.role === 'student' && !(await studentCanAccessCourse(user.id, user.school_id!, liveClass.course_id))) {
+    return c.json({ error: 'You are not enrolled in this class', code: 'NOT_ENROLLED' }, 403)
+  }
+
   if (liveClass.status !== 'live') {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
   }
-
-  // NOTE: Enrolment check is deliberately skipped for MVP while there are no real users.
-  // TODO: Uncomment when enrolment data is populated.
-  // if (user.role === 'student') { ... check enrolments table ... }
 
   // The assigned tutor (whether admin or tutor role) gets host permissions
   const isHost = liveClass.tutor_id === user.id

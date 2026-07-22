@@ -39,7 +39,7 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | T: Instructional Materials Library | Tutor | — | Missing route |
 | T: Mock Examination Results Analysis | Tutor | `/dashboard/mocks/[mockId]/results` | Implemented as a mock-scoped results and theory-grading workspace |
 | S3: Student Dashboard | Student | `/dashboard/student` | First real-data slice implemented |
-| S4: My Classes | Student | `/dashboard/student/classes` | Shell route only; workflow pending |
+| S4: My Classes | Student | `/dashboard/student/classes` | Implemented with enrolment-scoped class sessions |
 | S5: Assignments Management | Student | `/dashboard/student/assignments` | Shell route only; workflow pending |
 | S6: Mocks Management | Student | `/dashboard/student/mocks` | Shell route only; workflow pending |
 | S7: Materials Library | Student | `/dashboard/student/materials` | Shell route only; workflow pending |
@@ -113,6 +113,8 @@ This matches the existing RLS migrations, which already read role and school fro
 - Added a dedicated student shell and dashboard rather than reusing the admin/tutor shell.
 - Added `GET /dashboard/student`, which derives accessible courses from direct course, sub-programme, and programme enrolments and returns only tenant-scoped student activity.
 - Made the student dashboard action-oriented: next class, outstanding assignments, recent materials/mocks/assignments, and upcoming classes all come from Hono rather than hard-coded examples.
+- Implemented the student “My classes” schedule with all/upcoming/past and course filters, truthful live/scheduled/completed states, and a join action that appears only when a class is live.
+- Enforced student enrolment on class lists, class details, and LiveKit joins. Programme and sub-programme purchases grant access to their descendant courses; unrelated school classes are not exposed.
 
 ### Remaining product/UX work
 
