@@ -40,6 +40,17 @@ Stitch is a visual reference, not the authority for permissions, product languag
 
 Student screens and `/dashboard/student` are outside the current implementation phase and excluded from this audit.
 
+## Deferred security audit: Supabase RLS
+
+The connected development database currently has Row Level Security disabled on 26 public tables. This matches the documented application-layer tenancy approach, where the Hono API uses the service role and scopes queries by `school_id`, but it becomes unsafe if browser code can query those tables directly with the public Supabase key.
+
+Before production launch, audit every frontend Supabase call and choose one consistent boundary:
+
+- keep database access server-only through Hono and revoke direct `anon`/`authenticated` table access; or
+- enable RLS and add tested tenant-, role-, and ownership-aware policies for every exposed table.
+
+Do not enable RLS without the corresponding policies: doing so would block legitimate application access. Track this as production-blocking security work rather than a dashboard UX change.
+
 ## 3. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:
