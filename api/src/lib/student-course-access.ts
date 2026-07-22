@@ -25,3 +25,16 @@ export function resolveStudentCourses<T extends StudentCourse>(
     || Boolean(course.sub_programme_id && subProgrammeIds.has(course.sub_programme_id))
     || Boolean(course.sub_programme_id && programmeIds.has(subProgrammeParents.get(course.sub_programme_id) || '')))
 }
+
+export async function loadStudentCourseIds(studentId: string, schoolId: string) {
+  const [{ data: enrolments, error: enrolmentsError }, { data: courses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
+    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id').eq('student_id', studentId).eq('school_id', schoolId),
+    supabase.from('courses').select('id, programme_id, sub_programme_id').eq('school_id', schoolId),
+    supabase.from('sub_programmes').select('id, programme_id').eq('school_id', schoolId),
+  ])
+  if (enrolmentsError || coursesError || subProgrammesError) {
+    throw new Error('Could not resolve student course access')
+  }
+  return resolveStudentCourses(enrolments || [], courses || [], subProgrammes || []).map((course) => course.id)
+}
+import { supabase } from './supabase'

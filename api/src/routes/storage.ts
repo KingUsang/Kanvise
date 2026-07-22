@@ -14,6 +14,7 @@ import {
   StorageError,
   verifyPublicUpload,
 } from '../storage/r2'
+import { loadStudentCourseIds } from '../lib/student-course-access'
 
 export const storageRouter = new Hono<{ Variables: AppVariables }>()
 
@@ -41,23 +42,14 @@ async function canUploadToCourse(user: AppVariables['user'], courseId: string) {
 async function canSubmitAssignment(user: AppVariables['user'], assignmentId: string) {
   if (!user.school_id || user.role !== 'student') return false
   const { data: assignment } = await supabase.from('assignments')
-    .select('course_id, course:courses(programme_id)')
+    .select('course_id')
     .eq('id', assignmentId)
     .eq('school_id', user.school_id)
     .eq('is_published', true)
     .maybeSingle()
   if (!assignment) return false
 
-  const programmeId = (assignment.course as any)?.programme_id
-  let query = supabase.from('enrolments').select('id')
-    .eq('school_id', user.school_id)
-    .eq('student_id', user.id)
-    .eq('status', 'active')
-  query = programmeId
-    ? query.or(`course_id.eq.${assignment.course_id},programme_id.eq.${programmeId}`)
-    : query.eq('course_id', assignment.course_id)
-  const { data } = await query.limit(1)
-  return Boolean(data?.length)
+  return (await loadStudentCourseIds(user.id, user.school_id)).includes(assignment.course_id)
 }
 
 async function presignUpload(c: any) {

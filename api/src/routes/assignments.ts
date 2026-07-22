@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import type { AppVariables, KanviseUser } from '../types'
 import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
+import { loadStudentCourseIds } from '../lib/student-course-access'
 
 export const courseAssignmentsRouter = new Hono<{ Variables: AppVariables }>()
 export const assignmentsRouter = new Hono<{ Variables: AppVariables }>()
@@ -35,16 +36,7 @@ async function tutorCanManageCourse(user: KanviseUser, courseId: string) {
 
 async function studentCanAccessCourse(user: KanviseUser, courseId: string) {
   if (!user.school_id) return false
-  const course = await courseForSchool(courseId, user.school_id)
-  if (!course) return false
-  const { data } = await supabase.from('enrolments')
-    .select('id')
-    .eq('school_id', user.school_id)
-    .eq('student_id', user.id)
-    .eq('status', 'active')
-    .or(`course_id.eq.${courseId},programme_id.eq.${course.programme_id}`)
-    .limit(1)
-  return Boolean(data?.length)
+  return (await loadStudentCourseIds(user.id, user.school_id)).includes(courseId)
 }
 
 function storageFailure(c: any, error: unknown) {
@@ -277,21 +269,12 @@ assignmentsRouter.delete('/:id{[0-9a-fA-F-]{36}}', requireRole('tutor', 'admin')
 
 assignmentsRouter.get('/me', requireRole('student'), async (c) => {
   const user = c.get('user')
-  const { data: enrolments, error: enrolmentError } = await supabase.from('enrolments')
-    .select('course_id, programme_id')
-    .eq('school_id', user.school_id)
-    .eq('student_id', user.id)
-    .eq('status', 'active')
-  if (enrolmentError) return c.json({ error: enrolmentError.message }, 500)
-
-  const directCourseIds = (enrolments || []).map((item) => item.course_id).filter(Boolean)
-  const programmeIds = (enrolments || []).map((item) => item.programme_id).filter(Boolean)
-  if (programmeIds.length) {
-    const { data: programmeCourses } = await supabase.from('courses').select('id')
-      .eq('school_id', user.school_id).in('programme_id', programmeIds)
-    directCourseIds.push(...(programmeCourses || []).map((item) => item.id))
+  let courseIds: string[]
+  try {
+    courseIds = await loadStudentCourseIds(user.id, user.school_id!)
+  } catch {
+    return c.json({ error: 'Failed to resolve assignment access', code: 'ASSIGNMENT_ACCESS_FAILED' }, 500)
   }
-  const courseIds = [...new Set(directCourseIds)]
   if (!courseIds.length) return c.json({ data: [] })
 
   const { data, error } = await supabase.from('assignments')
@@ -305,13 +288,14 @@ assignmentsRouter.get('/me', requireRole('student'), async (c) => {
     .eq('school_id', user.school_id).eq('student_id', user.id)
     .in('assignment_id', (data || []).map((item) => item.id))
   const byAssignment = new Map((submissions || []).map((item) => [item.assignment_id, item]))
-  const enhanced = await Promise.all((data || []).map(async (assignment) => ({
-    ...assignment,
-    attachment_download_url: assignment.attachment_file_key
-      ? await createPresignedDownload(assignment.attachment_file_key, user.school_id!)
-      : null,
-    submission: byAssignment.get(assignment.id) || null,
-  })))
+  const enhanced = await Promise.all((data || []).map(async (assignment) => {
+    const submission = byAssignment.get(assignment.id) || null
+    return {
+      ...assignment,
+      attachment_download_url: assignment.attachment_file_key ? await createPresignedDownload(assignment.attachment_file_key, user.school_id!) : null,
+      submission: submission ? { ...submission, download_url: await createPresignedDownload(submission.file_key, user.school_id!) } : null,
+    }
+  }))
   return c.json({ data: enhanced })
 })
 
@@ -347,10 +331,15 @@ assignmentsRouter.post('/:assignmentId/submit', requireRole('student'), async (c
     student_id: user.id,
     file_key,
     file_name,
+    is_late: isLate,
   }).select().single()
   if (error?.code === '23505') return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
   if (error) return c.json({ error: error.message }, 500)
-  return c.json({ data: { ...data, is_late: isLate } }, 201)
+  return c.json({ data: {
+    ...data,
+    is_late: isLate,
+    download_url: await createPresignedDownload(file_key, user.school_id!),
+  } }, 201)
 })
 
 assignmentsRouter.get('/:assignmentId/submissions', requireRole('tutor', 'admin'), async (c) => {

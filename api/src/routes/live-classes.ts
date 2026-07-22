@@ -9,7 +9,7 @@ import {
 } from '../middleware/auth'
 import type { AppVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
-import { resolveStudentCourses } from '../lib/student-course-access'
+import { loadStudentCourseIds } from '../lib/student-course-access'
 
 export const liveClassesRouter = new Hono<{ Variables: AppVariables }>()
 
@@ -82,21 +82,8 @@ async function getAvatarConfig(userId: string, schoolId: string | null) {
   return data
 }
 
-async function getStudentCourseIds(studentId: string, schoolId: string) {
-  const [{ data: enrolments, error: enrolmentsError }, { data: courses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
-    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id').eq('student_id', studentId).eq('school_id', schoolId),
-    supabase.from('courses').select('id, programme_id, sub_programme_id').eq('school_id', schoolId),
-    supabase.from('sub_programmes').select('id, programme_id').eq('school_id', schoolId),
-  ])
-  if (enrolmentsError || coursesError || subProgrammesError) {
-    console.error('[live-classes] student course access error', { enrolmentsError, coursesError, subProgrammesError })
-    throw new Error('Could not resolve student course access')
-  }
-  return resolveStudentCourses(enrolments || [], courses || [], subProgrammes || []).map((course) => course.id)
-}
-
 async function studentCanAccessCourse(studentId: string, schoolId: string, courseId: string) {
-  return (await getStudentCourseIds(studentId, schoolId)).includes(courseId)
+  return (await loadStudentCourseIds(studentId, schoolId)).includes(courseId)
 }
 
 // ── Apply auth middleware to all routes ────────────────────────────────────
@@ -187,7 +174,7 @@ liveClassesRouter.get('/', async (c) => {
   if (user.role === 'student') {
     let courseIds: string[]
     try {
-      courseIds = await getStudentCourseIds(user.id, user.school_id!)
+      courseIds = await loadStudentCourseIds(user.id, user.school_id!)
     } catch {
       return c.json({ error: 'Failed to resolve class access', code: 'CLASS_ACCESS_FAILED' }, 500)
     }

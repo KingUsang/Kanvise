@@ -28,6 +28,7 @@ function query(result: any, eqSpy = vi.fn()) {
     select: () => builder, insert: () => builder, eq: (...args: any[]) => { eqSpy(...args); return builder },
     or: () => builder, in: () => builder, order: () => builder,
     limit: async () => result, maybeSingle: async () => result, single: async () => result,
+    then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
   }
   return builder
 }
@@ -53,8 +54,9 @@ describe('student submission authorization and races', () => {
   it('rejects an unenrolled student before R2 verification', async () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
-      if (table === 'courses') return query({ data: { id: 'course-1', programme_id: 'programme-1' }, error: null })
+      if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: 'programme-1', sub_programme_id: null }], error: null })
       if (table === 'enrolments') return query({ data: [], error: null })
+      if (table === 'sub_programmes') return query({ data: [], error: null })
       throw new Error(`Unexpected table ${table}`)
     })
     const response = await assignmentsRouter.request(`/${assignmentId}/submit`, {
@@ -69,8 +71,9 @@ describe('student submission authorization and races', () => {
     let submissionCalls = 0
     mocks.from.mockImplementation((table: string) => {
       if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
-      if (table === 'courses') return query({ data: { id: 'course-1', programme_id: null }, error: null })
-      if (table === 'enrolments') return query({ data: [{ id: 'enrolment-1' }], error: null })
+      if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
+      if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
+      if (table === 'sub_programmes') return query({ data: [], error: null })
       if (table === 'submissions') { submissionCalls += 1; return query({ data: null, error: null }) }
       throw new Error(`Unexpected table ${table}`)
     })
@@ -86,8 +89,9 @@ describe('student submission authorization and races', () => {
     let submissionCalls = 0
     mocks.from.mockImplementation((table: string) => {
       if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
-      if (table === 'courses') return query({ data: { id: 'course-1', programme_id: null }, error: null })
-      if (table === 'enrolments') return query({ data: [{ id: 'enrolment-1' }], error: null })
+      if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
+      if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
+      if (table === 'sub_programmes') return query({ data: [], error: null })
       if (table === 'submissions') {
         submissionCalls += 1
         if (submissionCalls < 3) return query({ data: null, error: null })

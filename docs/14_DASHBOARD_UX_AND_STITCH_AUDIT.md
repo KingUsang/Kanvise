@@ -40,7 +40,7 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | T: Mock Examination Results Analysis | Tutor | `/dashboard/mocks/[mockId]/results` | Implemented as a mock-scoped results and theory-grading workspace |
 | S3: Student Dashboard | Student | `/dashboard/student` | First real-data slice implemented |
 | S4: My Classes | Student | `/dashboard/student/classes` | Implemented with enrolment-scoped class sessions |
-| S5: Assignments Management | Student | `/dashboard/student/assignments` | Shell route only; workflow pending |
+| S5: Assignments Management | Student | `/dashboard/student/assignments` | Implemented with private submission upload and feedback |
 | S6: Mocks Management | Student | `/dashboard/student/mocks` | Shell route only; workflow pending |
 | S7: Materials Library | Student | `/dashboard/student/materials` | Shell route only; workflow pending |
 | S8: My Progress Tracking | Student | `/dashboard/student/progress` | Shell route only; workflow pending |
@@ -115,6 +115,9 @@ This matches the existing RLS migrations, which already read role and school fro
 - Made the student dashboard action-oriented: next class, outstanding assignments, recent materials/mocks/assignments, and upcoming classes all come from Hono rather than hard-coded examples.
 - Implemented the student “My classes” schedule with all/upcoming/past and course filters, truthful live/scheduled/completed states, and a join action that appears only when a class is live.
 - Enforced student enrolment on class lists, class details, and LiveKit joins. Programme and sub-programme purchases grant access to their descendant courses; unrelated school classes are not exposed.
+- Implemented student assignment filtering, instructions, private resource downloads, Cloudflare R2 submission uploads, submitted/late/graded states, marks, tutor feedback, and own-file downloads.
+- Centralised student course access so assignment listing, submission permission, storage presigning, class listing, and LiveKit joins use the same programme → sub-programme → course inheritance rules.
+- Persist late-submission status in the database; the earlier API calculated it for the response but failed to save it on the submission row.
 
 ### Remaining product/UX work
 
