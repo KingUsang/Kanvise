@@ -8,6 +8,33 @@ dashboardRouter.use('*', jwtVerificationMiddleware)
 dashboardRouter.use('*', profileResolutionMiddleware)
 dashboardRouter.use('*', tenantMiddleware)
 
+async function loadNeedsGrading(schoolId: string, tutorId?: string) {
+  let assignmentsQuery = supabase
+    .from('assignments')
+    .select('id, title, courses(name)')
+    .eq('school_id', schoolId)
+    .limit(3)
+
+  if (tutorId) assignmentsQuery = assignmentsQuery.eq('tutor_id', tutorId)
+
+  const { data: recentAssignments } = await assignmentsQuery
+  if (!recentAssignments) return []
+
+  return Promise.all(recentAssignments.map(async (assignment) => {
+    const [{ count: total }, { count: graded }] = await Promise.all([
+      supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', assignment.id),
+      supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', assignment.id).not('score', 'is', null),
+    ])
+
+    return {
+      id: assignment.id,
+      title: assignment.title,
+      context: `${(assignment.courses as any)?.name || 'General'} • ${total || 0} submissions`,
+      progress: total ? Math.round(((graded || 0) / total) * 100) : 0,
+    }
+  }))
+}
+
 dashboardRouter.get('/stats', async (c) => {
   const user = c.get('user')
   const schoolId = user.school_id
@@ -64,28 +91,7 @@ dashboardRouter.get('/stats', async (c) => {
 
     const mtdRevenue = payments ? payments.reduce((sum, p) => sum + Number(p.centre_amount), 0) : 0
 
-    // Fetch needs grading (Admin sees all)
-    const { data: recentAssignments } = await supabase
-      .from('assignments')
-      .select('id, title, courses(name)')
-      .eq('school_id', schoolId)
-      .limit(3)
-      // .order('created_at', { ascending: false }) // Commented out to avoid crashing if created_at doesn't exist, we just rely on default order
-
-    let needsGrading = []
-    if (recentAssignments) {
-      for (const a of recentAssignments) {
-        const { count: total } = await supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', a.id)
-        const { count: graded } = await supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', a.id).not('score', 'is', null)
-        
-        needsGrading.push({
-          id: a.id,
-          title: a.title,
-          context: `${(a.courses as any)?.name || 'General'} • ${total || 0} Submissions`,
-          progress: total ? Math.round(((graded || 0) / total) * 100) : 0
-        })
-      }
-    }
+    const needsGrading = await loadNeedsGrading(schoolId)
 
     responseData.admin_stats = {
       total_students: totalStudents || 0,
@@ -137,7 +143,8 @@ dashboardRouter.get('/stats', async (c) => {
     responseData.tutor_stats = {
       classes_today: classesToday || 0,
       pending_submissions: pendingSubmissions,
-      my_courses: myCourses || 0
+      my_courses: myCourses || 0,
+      needs_grading: await loadNeedsGrading(schoolId, user.id),
     }
   }
 

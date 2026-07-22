@@ -4,12 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { useState, useEffect } from 'react'
+import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
 
 interface SidebarProps {
-  capabilities: {
-    isAdmin: boolean;
-    isTutor: boolean;
-  };
+  capabilities: DashboardCapabilities;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -41,29 +39,7 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
     fetchBadgeCount()
   }, [])
   
-  const navItems = [
-    { label: 'Dashboard', href: '/dashboard', show: true, icon: 'space_dashboard' },
-    
-    // Admin only
-    { label: 'School Setup', href: '/dashboard/school-setup', show: capabilities.isAdmin, icon: 'settings_applications' },
-    { label: 'Programmes', href: '/dashboard/programmes', show: capabilities.isAdmin, icon: 'library_books' },
-    { label: 'Tutors', href: '/dashboard/tutors', show: capabilities.isAdmin, icon: 'groups_3' },
-    { label: 'Students', href: '/dashboard/students', show: capabilities.isAdmin, icon: 'face' },
-    { label: 'Payments', href: '/dashboard/payments', show: capabilities.isAdmin, icon: 'payments' },
-    
-    // Shared Admin/Tutor
-    { label: 'Schedule', href: '/dashboard/schedule', show: true, icon: 'calendar_month' },
-    { label: 'Attendance', href: '/dashboard/attendance', show: true, icon: 'fact_check' },
-    { label: 'Mocks', href: '/dashboard/mocks', show: true, icon: 'quiz', badge: ungradedMocksCount },
-    
-    // Tutor only
-    { label: 'Notes', href: '/dashboard/notes', show: capabilities.isTutor, icon: 'description' },
-    { label: 'Assignments', href: '/dashboard/assignments', show: capabilities.isTutor, icon: 'assignment' },
-    { label: 'Submissions', href: '/dashboard/submissions', show: capabilities.isTutor, icon: 'check_circle' },
-    
-    // Always show
-    { label: 'Settings', href: '/dashboard/settings', show: true, icon: 'settings' }
-  ].filter(item => item.show)
+  const navItems = getDashboardNavItems(capabilities)
 
   return (
     <>
@@ -97,7 +73,8 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
         <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`))
+            const badge = item.badge === 'ungradedMocks' ? ungradedMocksCount : 0
             return (
               <li key={item.href}>
                 <Link 
@@ -117,9 +94,9 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
                     {item.icon}
                   </span>
                   <span className="flex-1">{item.label}</span>
-                  {item.badge && item.badge > 0 ? (
+                  {badge > 0 ? (
                     <span className="bg-[#ba1a1a] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ml-2">
-                      {item.badge}
+                      {badge}
                     </span>
                   ) : null}
                 </Link>

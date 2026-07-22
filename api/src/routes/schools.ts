@@ -49,12 +49,12 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     return c.json({ error: profileError.message }, 500)
   }
 
-  // Update Supabase Auth metadata
+  // Update the trusted tenant claim used by the API fast path and RLS.
   const { data: userData } = await supabase.auth.admin.getUserById(user.supabase_auth_id)
   if (userData.user) {
-    const currentMetadata = userData.user.user_metadata || {}
+    const currentMetadata = userData.user.app_metadata || {}
     await supabase.auth.admin.updateUserById(user.supabase_auth_id, {
-      user_metadata: {
+      app_metadata: {
         ...currentMetadata,
         school_id: school.id
       }

@@ -24,13 +24,21 @@ import {
   X,
 } from "lucide-react";
 
-export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; classId: string }) {
+interface ClassroomLayoutProps {
+  isHost: boolean
+  classId: string
+  classTitle: string
+  courseName: string | null
+  courseCode: string | null
+}
+
+export default function ClassroomLayout({ isHost, classId, classTitle, courseName, courseCode }: ClassroomLayoutProps) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
-  const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(null);
+  const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(isHost ? "participants" : null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
@@ -144,7 +152,7 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
   };
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-[#fbf9f8] font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-[#fbf9f8] font-sans">
       {/* ── TOP BAR (Solid, Pinned) ─────── */}
       <header className="flex-shrink-0 h-16 bg-white border-b border-[#e4e2e1] flex items-center justify-between px-4 md:px-6 z-20">
         {/* Left: session info */}
@@ -153,10 +161,11 @@ export default function ClassroomLayout({ isHost, classId }: { isHost: boolean; 
             <span className="text-white font-bold text-lg">K</span>
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-[#180d62] font-bold text-[15px] leading-tight">{room.name || "Kanvise Live Class"}</h1>
+            <h1 className="text-[#180d62] font-bold text-[15px] leading-tight">{classTitle || "Kanvise Live Class"}</h1>
             <p className="text-[#787582] text-[11px] font-medium uppercase tracking-wider flex items-center gap-2 mt-0.5">
               <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-yellow-500"}`} />
-              {isConnected ? "Live" : "Connecting"} · {room.metadata || "Mathematics · SS3"}
+              {isConnected ? "Live" : "Connecting"}
+              {(courseCode || courseName) ? ` · ${[courseCode, courseName].filter(Boolean).join(' · ')}` : ''}
             </p>
           </div>
         </div>

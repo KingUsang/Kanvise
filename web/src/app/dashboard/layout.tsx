@@ -1,14 +1,7 @@
-import { Poppins } from "next/font/google";
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from "@/components/dashboard/shell";
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  variable: "--font-poppins",
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 export default async function DashboardLayout({
   children,
@@ -62,7 +55,9 @@ export default async function DashboardLayout({
 
   const { data: statsData } = await res.json()
   
-  const role = user.user_metadata?.kanvise_role || 'student'
+  // app_metadata is server-controlled and authoritative. user_metadata is a
+  // temporary display/redirect fallback for sessions issued before migration.
+  const role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role || 'student'
 
   if (role === 'student') {
     redirect('/dashboard/student')
@@ -80,7 +75,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className={`${poppins.variable} font-sans`}>
+    <div className="font-sans">
       <DashboardShell user={userInfo} capabilities={capabilities}>
         {children}
       </DashboardShell>

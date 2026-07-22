@@ -26,7 +26,7 @@ export default async function MockBuilderPage() {
   const token = sessionData.session?.access_token;
 
   if (!token) {
-    redirect("/login");
+    redirect("/auth/login");
   }
 
   // The backend extracts user details from the token

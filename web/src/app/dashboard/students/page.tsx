@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Loader2, AlertCircle, Download, UserPlus } from "lucide-react";
+import { Users, Loader2, AlertCircle, Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import StudentsTable from "@/components/dashboard/students/students-table";
 
@@ -53,7 +53,8 @@ export default function StudentsPage() {
         const json = await res.json();
         setStudents(json.data || []);
       } catch (err: any) {
-        setError(err.message);
+        console.error('Failed to load student roster', err);
+        setError('We could not load the student roster. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -69,7 +70,7 @@ export default function StudentsPage() {
         <div>
           <h1 className="text-[32px] leading-[40px] tracking-[-0.01em] font-bold text-kv-dark">Manage Students</h1>
           <p className="text-base leading-6 text-gray-500 mt-1">
-            View, filter, and manage student enrollments and payment statuses.
+            View, filter, and manage student enrolments and payment statuses.
           </p>
         </div>
         
@@ -81,14 +82,8 @@ export default function StudentsPage() {
             <Download size={18} />
             <span className="text-xs font-bold tracking-widest uppercase">Export List</span>
           </button>
-          <button 
-            onClick={() => alert("Students enrol themselves via the public landing page. Invites are for Tutors only.")}
-            className="flex items-center gap-2 px-4 py-2 bg-kv-brown text-white rounded hover:bg-kv-brown/90 transition-colors"
-          >
-            <UserPlus size={18} />
-            <span className="text-xs font-bold tracking-widest uppercase">Add Student</span>
-          </button>
         </div>
+        <p className="text-sm text-gray-500 md:text-right">Students join through your public school enrolment page.</p>
       </div>
 
       {/* Content */}

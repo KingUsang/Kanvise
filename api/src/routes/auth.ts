@@ -113,15 +113,20 @@ authRouter.post('/profile/init', async (c) => {
     return c.json({ error: error.message }, 500)
   }
 
-  // Update Supabase Auth user_metadata via Admin API
+  // Keep editable presentation data in user_metadata. Authorisation claims
+  // belong in app_metadata, which cannot be changed by the signed-in user.
   await supabase.auth.admin.updateUserById(supabaseAuthId, {
     user_metadata: {
+      first_name,
+      last_name
+    },
+    app_metadata: {
+      ...(jwtPayload.app_metadata || {}),
+      role,
       kanvise_role: role,
       school_id: schoolId,
       kanvise_user_id: kanviseUserId,
-      profile_id: profile.id,
-      first_name,
-      last_name
+      profile_id: profile.id
     }
   })
 

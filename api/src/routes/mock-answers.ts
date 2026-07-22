@@ -18,7 +18,7 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
   }
 
   const { data: answer, error: fetchError } = await supabase.from('mock_answers')
-    .select('*, question:mock_questions(question_type), attempt:mock_attempts(id, student_id, status, mcq_score, mock_exam_id, mock_exam:mock_exams(id, title, tutor_id))')
+    .select('*, question:mock_questions(question_type, marks), attempt:mock_attempts(id, student_id, status, mcq_score, mock_exam_id, mock_exam:mock_exams(id, title, tutor_id))')
     .eq('id', answerId)
     .eq('school_id', user.school_id)
     .single()
@@ -26,6 +26,9 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
   if (fetchError || !answer) return c.json({ error: 'Mock answer not found', code: 'NOT_FOUND' }, 404)
   if ((answer.question as any)?.question_type !== 'theory') {
     return c.json({ error: 'Only theory answers can be manually graded', code: 'NOT_THEORY_ANSWER' }, 409)
+  }
+  if (Number(tutor_score) > Number((answer.question as any)?.marks || 0)) {
+    return c.json({ error: 'Score cannot be higher than the marks available', code: 'SCORE_ABOVE_MAXIMUM' }, 400)
   }
 
   const attempt = answer.attempt as any

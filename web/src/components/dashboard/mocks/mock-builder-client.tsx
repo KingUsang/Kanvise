@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Papa from "papaparse";
+import { toast } from "sonner";
 
 type Course = {
   id: string;
@@ -52,6 +53,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   // CSV Upload & Modal State
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
   useEffect(() => {
@@ -130,7 +132,7 @@ export function MockBuilderClient({ token }: { token: string }) {
             })));
           }
         } else {
-          alert("Failed to load mock data or you do not have permission.");
+          toast.error("Could not open this mock", { description: "It may no longer exist or you may not have access." });
           router.push("/dashboard/mocks");
         }
       } catch (err) {
@@ -243,11 +245,15 @@ export function MockBuilderClient({ token }: { token: string }) {
         
         setQuestions(prev => [...prev, ...parsedQuestions]);
         setIsUploading(false);
-        alert(`Successfully imported ${parsedQuestions.length} questions!`);
+        if (parsedQuestions.length > 0) {
+          toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`);
+        } else {
+          toast.warning("No valid questions found", { description: "Check the CSV headings and question types, then try again." });
+        }
       },
       error: (error) => {
         console.error(error);
-        alert("Error parsing CSV file");
+        toast.error("Could not read the CSV file");
         setIsUploading(false);
       }
     });
@@ -268,7 +274,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     if (file && (file.type === "text/csv" || file.name.endsWith(".csv"))) {
       processCSV(file);
     } else {
-      alert("Please upload a valid .csv file.");
+      toast.error("Choose a valid CSV file");
     }
   };
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,14 +284,42 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const handleSave = async (shouldPublish: boolean) => {
     if (!title || !courseId) {
-      alert("Please provide a Mock Title and select a Course.");
+      toast.error("Add a mock title and choose a course");
       return;
     }
 
+    if (shouldPublish) {
+      if (questions.length === 0) {
+        toast.error("Add at least one question before publishing");
+        return;
+      }
+      const invalidQuestionIndex = questions.findIndex((question) => {
+        if (!question.question_text.trim() || !Number.isFinite(question.marks) || question.marks <= 0) return true;
+        if (question.question_type !== "mcq") return false;
+        const completedOptions = question.options.filter((option) => option.option_text.trim());
+        return completedOptions.length < 2 || completedOptions.filter((option) => option.is_correct).length !== 1;
+      });
+      if (invalidQuestionIndex >= 0) {
+        toast.error(`Check question ${invalidQuestionIndex + 1}`, {
+          description: "Every question needs text and positive marks. MCQs need at least two options and exactly one correct answer.",
+        });
+        return;
+      }
+      if (!isUntimed && (!Number.isFinite(timeLimit) || timeLimit <= 0)) {
+        toast.error("Set a positive time limit or choose Untimed Exam");
+        return;
+      }
+      if (publishMode === "scheduled" && (!publishDate || !publishTime || new Date(`${publishDate}T${publishTime}:00`).getTime() <= Date.now())) {
+        toast.error("Choose a future publication date and time");
+        return;
+      }
+    }
+
+    setIsSaving(true);
     try {
       let mockId = editMockId;
       const finalPublishAt = publishMode === "scheduled" && publishDate && publishTime 
-        ? `${publishDate}T${publishTime}:00Z` 
+        ? new Date(`${publishDate}T${publishTime}:00`).toISOString()
         : null;
 
       const payload = {
@@ -323,58 +357,44 @@ export function MockBuilderClient({ token }: { token: string }) {
       }
 
       // 2. Insert/Update Questions
-      if (questions.length > 0) {
-        if (isEditMode) {
-          // Bulk overwrite for edits
-          const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/questions`, {
-            method: "PUT",
-            headers: { 
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ questions })
-          });
-          if (!qRes.ok) throw new Error("Failed to update questions");
-        } else {
-          // Sequential insert for new mock (as it was)
-          await Promise.all(questions.map((q, index) => {
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/questions`, {
-              method: "POST",
-              headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                question_type: q.question_type,
-                question_text: q.question_text,
-                marks: q.marks,
-                order_index: index + 1,
-                options: q.options,
-                grading_rubric: q.grading_rubric
-              })
-            });
-          }));
-        }
+      const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/questions`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ questions })
+      });
+      if (!qRes.ok) {
+        const body = await qRes.json().catch(() => null);
+        throw new Error(body?.details?.[0] || body?.error || "Failed to save questions");
       }
 
 
 
       // 3. Publish if immediate
       if (shouldPublish && publishMode === "immediate") {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/publish`, {
+        const publishResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/publish`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
           }
         });
+        if (!publishResponse.ok) {
+          const body = await publishResponse.json().catch(() => null);
+          throw new Error(body?.error || "Failed to publish mock");
+        }
       }
 
       // 4. Navigate away
+      toast.success(shouldPublish ? (publishMode === "scheduled" ? "Mock scheduled" : "Mock published") : "Draft saved");
       router.push("/dashboard/mocks"); 
     } catch (err) {
       console.error(err);
-      alert("Failed to save mock");
+      toast.error("Could not save the mock", { description: err instanceof Error ? err.message : "Please try again." });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -430,14 +450,14 @@ export function MockBuilderClient({ token }: { token: string }) {
         <div className="flex gap-4">
           <button 
             onClick={() => handleSave(false)}
-            disabled={isReadOnly}
+            disabled={isReadOnly || isSaving}
             className="px-6 py-2.5 border border-[#c8c5d2] text-[#1b1c1c] font-semibold text-sm rounded hover:bg-gray-50 hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save as Draft
+            {isSaving ? "Saving…" : "Save as Draft"}
           </button>
           <button 
             onClick={() => handleSave(true)}
-            disabled={isReadOnly}
+            disabled={isReadOnly || isSaving}
             className="px-6 py-2.5 bg-[#C26627] text-white font-semibold text-sm rounded hover:bg-[#a55621] hover:shadow-md transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[18px]">publish</span>

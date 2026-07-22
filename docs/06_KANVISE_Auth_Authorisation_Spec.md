@@ -167,27 +167,32 @@ Supabase Auth issues JWTs signed with the project's JWT secret. The Hono backend
   "email": "user@example.com",
   "role": "authenticated",
   "app_metadata": {
-    "provider": "email"
-  },
-  "user_metadata": {
+    "provider": "email",
+    "role": "admin | tutor | student",
     "kanvise_role": "admin | tutor | student",
     "school_id": "uuid | null",
-    "kanvise_user_id": "KNV-ADM-00001"
+    "kanvise_user_id": "KNV-ADM-00001",
+    "profile_id": "uuid"
+  },
+  "user_metadata": {
+    "first_name": "Ada",
+    "last_name": "Okafor"
   }
 }
 ```
 
-**Custom claims stored in `user_metadata`:**
+**Authorisation claims stored in `app_metadata`:**
 
-- `kanvise_role` — the user's role on Kanvise. Stored here so it is available in the JWT without a database lookup on every request.
-- `school_id` — the user's school UUID. Same reason.
+- `role` / `kanvise_role` — the user's role on Kanvise. Both names are emitted during the compatibility period; `role` also matches the RLS policies.
+- `school_id` — the user's school UUID.
 - `kanvise_user_id` — the human-readable user ID.
+- `profile_id` — the canonical `user_profiles.id` used by API relationships.
 
-**When user_metadata is populated:**
+Supabase users can edit their own `user_metadata`, so it must never be used to decide a role, tenant, or profile identity. Editable presentation fields such as `first_name` and `last_name` remain in `user_metadata`. The server writes access-control claims to `app_metadata` with the Admin API; signed-in users cannot change that field.
 
-Hono updates the Supabase Auth user's `user_metadata` via the Supabase Admin API immediately after creating the `user_profiles` record in `POST /auth/profile/init`. This means the second JWT the user receives (after the first token refresh) will contain the custom claims.
+**When app_metadata is populated:**
 
-The profile resolution middleware in Hono handles the case where `user_metadata` is empty (first request after registration before the first refresh) by falling back to a database lookup using the `sub` claim.
+Hono updates the Supabase Auth user's `app_metadata` immediately after creating the `user_profiles` record in `POST /auth/profile/init`. The next JWT issued after token refresh contains the custom claims. The profile resolution middleware falls back to a database lookup when trusted claims are missing, including existing sessions created before this migration. After a successful canonical lookup, it opportunistically backfills `app_metadata`; the request still succeeds if that backfill is temporarily unavailable.
 
 ---
 
@@ -266,7 +271,7 @@ No session found → Redirect to /auth/login?redirect=[original-path]
          │
 Session found ↓
          ▼
-Extract kanvise_role from user_metadata
+Extract kanvise_role from app_metadata (legacy user_metadata fallback for redirects only)
          │
          ▼
 Does the role match the route?
@@ -326,14 +331,16 @@ const profileResolutionMiddleware = async (ctx, next) => {
   const jwtPayload = ctx.get('jwt_payload')
   const supabaseAuthId = jwtPayload.sub
 
-  // Check user_metadata first (fast path — no DB call)
-  const { kanvise_role, school_id, kanvise_user_id } = jwtPayload.user_metadata || {}
+  // Check trusted app_metadata first (fast path — no DB call)
+  const { kanvise_role, role, school_id, kanvise_user_id, profile_id } = jwtPayload.app_metadata || {}
+  const resolvedRole = kanvise_role || role
 
-  if (kanvise_role && school_id && kanvise_user_id) {
+  if (resolvedRole && kanvise_user_id && profile_id) {
     // Fast path — metadata is populated
     ctx.set('user', {
       supabase_auth_id: supabaseAuthId,
-      role: kanvise_role,
+      id: profile_id,
+      role: resolvedRole,
       school_id: school_id,
       kanvise_user_id: kanvise_user_id
     })
@@ -624,7 +631,7 @@ Because `school_id` is always derived from the authenticated user's profile in H
 
 ### 13.3 Role Escalation
 
-Role is stored in the `user_profiles` database record and in `user_metadata` in the Supabase Auth user. A user cannot change their own role — the `PATCH /auth/me` endpoint explicitly excludes `role` from the list of updatable fields. Role can only be set at registration time in `POST /auth/profile/init`.
+Role is canonical in `user_profiles` and copied to Supabase Auth `app_metadata` by trusted server code for fast JWT-based resolution. It is never read from `user_metadata` for authorisation because users can update that field through Supabase Auth independently of `PATCH /auth/me`. Role-changing operations must update the database and `app_metadata`, then refresh or revoke affected sessions because existing JWTs remain valid until refreshed or expired.
 
 ### 13.4 Invite Token Security
 

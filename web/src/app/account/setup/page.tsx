@@ -104,8 +104,7 @@ export default function AccountSetupPage() {
       });
 
       // Redirect to correct dashboard based on role
-      if (profile?.role === "admin") router.push("/dashboard/admin");
-      else if (profile?.role === "tutor") router.push("/dashboard/tutor");
+      if (profile?.role === "admin" || profile?.role === "tutor") router.push("/dashboard");
       else router.push("/dashboard/student");
       
       router.refresh();

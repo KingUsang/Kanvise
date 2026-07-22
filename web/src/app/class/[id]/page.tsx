@@ -44,7 +44,15 @@ export default async function Page({ params, searchParams }: PageProps) {
     ? `${honoUrl}/live-classes/${classId}/start`
     : `${honoUrl}/live-classes/${classId}/join`
 
-  let classData: { livekit_room_name: string; access_token: string; livekit_url: string; is_host: boolean }
+  let classData: {
+    livekit_room_name: string
+    access_token: string
+    livekit_url: string
+    is_host: boolean
+    class_title: string
+    course_name: string | null
+    course_code: string | null
+  }
   let errorMessage: string | null = null
 
   try {
@@ -73,7 +81,7 @@ export default async function Page({ params, searchParams }: PageProps) {
 
   if (errorMessage || !classData!) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#fbf9f8] font-['Plus_Jakarta_Sans',sans-serif]">
+      <div className="flex h-screen items-center justify-center bg-[#fbf9f8] font-sans">
         <div className="bg-white rounded-2xl p-8 shadow-xl max-w-sm w-full text-center">
           <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-red-600 text-2xl">!</span>
@@ -94,6 +102,9 @@ export default async function Page({ params, searchParams }: PageProps) {
       roomName={classData!.livekit_room_name}
       classId={classId}
       isHost={isHost}
+      classTitle={classData!.class_title}
+      courseName={classData!.course_name}
+      courseCode={classData!.course_code}
     />
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface Capabilities {
   isAdmin: boolean
@@ -147,13 +148,14 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         setDate('')
         setTime('')
         setDuration('60')
+        toast.success('Class scheduled')
       } else {
         const errData = await res.json()
-        alert(`Error scheduling class: ${errData.error}`)
+        toast.error('Could not schedule the class', { description: errData.error })
       }
     } catch (err) {
       console.error(err)
-      alert('Network error')
+      toast.error('Could not schedule the class', { description: 'Check your connection and try again.' })
     } finally {
       setIsSubmitting(false)
     }
@@ -166,7 +168,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
-        alert('Class started! (LiveKit token generated)')
+        toast.success('Class started')
         const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -174,11 +176,11 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         if (classesRes.ok) setClasses(classesData.data || [])
       } else {
         const errData = await res.json()
-        alert(`Error: ${errData.error}`)
+        toast.error('Could not start the class', { description: errData.error })
       }
     } catch (err) {
       console.error(err)
-      alert('Network error')
+      toast.error('Could not start the class', { description: 'Check your connection and try again.' })
     }
   }
 
@@ -235,7 +237,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         <div className="flex gap-3 shrink-0">
           <button 
             className="h-10 px-4 rounded bg-[#fbf9f8] border border-[#2e2877] text-[#2e2877] text-[12px] leading-[16px] tracking-[0.05em] font-bold hover:bg-[#f5f3f2] transition-colors flex items-center gap-2"
-            onClick={() => alert("Coming Soon: Export student roster")}
+            onClick={() => toast.info("Roster export is coming soon")}
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             Export Roster
@@ -542,12 +544,6 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         <td className="py-4 px-6 text-[#474551]">{cls.tutor?.first_name || 'Tutor'}</td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="w-8 h-8 rounded hover:bg-[#f0eded] flex items-center justify-center text-[#474551]" title="Edit">
-                              <span className="material-symbols-outlined text-[18px]">edit</span>
-                            </button>
-                            <button className="w-8 h-8 rounded hover:bg-[#ba1a1a]/10 flex items-center justify-center text-[#ba1a1a]" title="Cancel">
-                              <span className="material-symbols-outlined text-[18px]">cancel</span>
-                            </button>
                             {(capabilities.isAdmin || cls.tutor_id === user.id) && (
                               <button 
                                 onClick={() => handleStartClass(cls.id)}

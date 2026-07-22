@@ -65,7 +65,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const token = session.access_token
-  const role = session.user.user_metadata?.kanvise_role
+  const role = session.user.app_metadata?.kanvise_role || session.user.app_metadata?.role
 
   useEffect(() => {
     fetchCourses()

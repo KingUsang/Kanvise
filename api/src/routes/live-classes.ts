@@ -295,7 +295,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   const { data: liveClass, error: fetchError } = await supabase
     .from('live_classes')
-    .select('*')
+    .select('*, courses(name, code)')
     .eq('id', id)
     .eq('school_id', user.school_id)
     .single()
@@ -314,7 +314,15 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Tutor'
     const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
     const { wsUrl } = getLiveKitConfig()
-    return c.json({ data: { livekit_room_name: roomName, access_token: token, livekit_url: wsUrl, is_host: true } })
+    return c.json({ data: {
+      livekit_room_name: roomName,
+      access_token: token,
+      livekit_url: wsUrl,
+      is_host: true,
+      class_title: liveClass.title,
+      course_name: (liveClass.courses as any)?.name || null,
+      course_code: (liveClass.courses as any)?.code || null,
+    } })
   }
 
   if (liveClass.status !== 'scheduled') {
@@ -340,7 +348,15 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
   const { wsUrl } = getLiveKitConfig()
 
-  return c.json({ data: { livekit_room_name: roomName, access_token: token, livekit_url: wsUrl, is_host: true } })
+  return c.json({ data: {
+    livekit_room_name: roomName,
+    access_token: token,
+    livekit_url: wsUrl,
+    is_host: true,
+    class_title: liveClass.title,
+    course_name: (liveClass.courses as any)?.name || null,
+    course_code: (liveClass.courses as any)?.code || null,
+  } })
 })
 
 // ── POST /live-classes/:id/join — Participant joins a class ───────────────
@@ -352,7 +368,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   const { data: liveClass, error: fetchError } = await supabase
     .from('live_classes')
-    .select('*')
+    .select('*, courses(name, code)')
     .eq('id', id)
     .eq('school_id', user.school_id)
     .single()
@@ -387,6 +403,9 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
       access_token: token,
       livekit_url: wsUrl,
       is_host: isHost,
+      class_title: liveClass.title,
+      course_name: (liveClass.courses as any)?.name || null,
+      course_code: (liveClass.courses as any)?.code || null,
     },
   })
 })

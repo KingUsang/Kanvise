@@ -40,7 +40,7 @@ export default function NavigationProgress() {
     clearTimers();
     visibleRef.current = true;
     setVisible(true);
-    setProgress(12);
+    setProgress(18);
     intervalRef.current = setInterval(() => {
       setProgress((current) => Math.min(90, current + Math.max(1, (90 - current) * 0.12)));
     }, 220);
@@ -81,7 +81,7 @@ export default function NavigationProgress() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[9999] h-[3px] bg-[#180d62]/10"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[9999] h-1 bg-black/10"
       role="progressbar"
       aria-label="Loading page"
       aria-valuemin={0}
@@ -89,9 +89,11 @@ export default function NavigationProgress() {
       aria-valuenow={Math.round(progress)}
     >
       <div
-        className="h-full bg-gradient-to-r from-[#180d62] via-[#2e2877] to-[#994704] shadow-[0_0_10px_rgba(153,71,4,0.5)] transition-[width] duration-200 ease-out"
+        className="relative h-full bg-gradient-to-r from-[#f59e0b] via-[#c26627] to-[#2e2877] shadow-[0_1px_4px_rgba(255,255,255,0.9),0_0_14px_rgba(194,102,39,0.9)] transition-[width] duration-200 ease-out"
         style={{ width: `${progress}%` }}
-      />
+      >
+        <span className="absolute right-0 top-1/2 size-2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_10px_3px_rgba(245,158,11,0.9)]" />
+      </div>
     </div>
   );
 }

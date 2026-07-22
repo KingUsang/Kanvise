@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
     setTimeout(async () => {
       // The updateUser call usually updates the session, but we can explicitly get the user
       const { data: { user } } = await supabase.auth.getUser();
-      const role = user?.user_metadata?.kanvise_role;
+      const role = user?.app_metadata?.kanvise_role || user?.app_metadata?.role;
       
       let redirectUrl = "/";
       if (role === "admin") {

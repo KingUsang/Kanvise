@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 
 export interface GradingItem {
   id: string;
@@ -30,7 +31,7 @@ export function NeedsGradingCard({ items }: { items: GradingItem[] }) {
           </div>
         ) : (
           items.map((item, index) => (
-            <div key={item.id} className={`p-6 ${index !== items.length - 1 ? 'border-b border-[#f0eded]' : ''}`}>
+            <Link href={`/dashboard/assignments/${item.id}/submissions`} key={item.id} className={`block p-6 transition-colors hover:bg-[#fbf9f8] ${index !== items.length - 1 ? 'border-b border-[#f0eded]' : ''}`}>
               <div className="flex justify-between items-center mb-1">
                 <h4 className="text-[#1b1c1c] font-medium text-[16px]">{item.title}</h4>
                 <span className="material-symbols-outlined text-[#c8c5d2] text-[20px]">chevron_right</span>
@@ -46,16 +47,16 @@ export function NeedsGradingCard({ items }: { items: GradingItem[] }) {
                 </div>
                 <span className="text-[#474551] text-[12px] font-semibold w-8 text-right">{item.progress}%</span>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>
 
       {/* Footer */}
       <div className="p-4 border-t border-[#f0eded] text-center mt-auto">
-        <button className="text-[#c26627] font-semibold text-[14px] hover:text-[#994704] transition-colors">
+        <Link href="/dashboard/assignments" className="text-[#c26627] font-semibold text-[14px] hover:text-[#994704] transition-colors">
           View All Submissions
-        </button>
+        </Link>
       </div>
     </div>
   )

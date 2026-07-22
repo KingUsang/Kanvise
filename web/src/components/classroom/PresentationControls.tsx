@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Upload, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { toast } from "sonner";
 import {
   hasSlidePollingTimedOut,
   SLIDE_POLL_INTERVAL_MS,
@@ -32,12 +33,12 @@ export default function PresentationControls({ classId, onSlideChange }: Present
     if (!file) return;
 
     if (file.type !== "application/pdf") {
-      alert("Please upload a PDF file.");
+      toast.error("Please upload a PDF file");
       return;
     }
 
     if (file.size > 25 * 1024 * 1024) {
-      alert("File exceeds 25MB limit. Please compress your PDF.");
+      toast.error("PDF is larger than 25 MB", { description: "Compress the file and try again." });
       return;
     }
 
@@ -70,7 +71,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
       setStatusMessage("Converting...");
       pollJobStatus(job_id, session?.access_token || "");
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Upload failed");
+      toast.error("Could not upload the PDF", { description: err instanceof Error ? err.message : "Please try again." });
       setIsUploading(false);
       setStatusMessage("");
     }
@@ -88,7 +89,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
         pollTimerRef.current = null;
         setIsUploading(false);
         setStatusMessage("");
-        alert("PDF conversion took too long. Please try a smaller PDF.");
+        toast.error("PDF conversion timed out", { description: "Try a smaller PDF." });
         return;
       }
 
@@ -105,7 +106,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
             pollTimerRef.current = null;
             setIsUploading(false);
             setStatusMessage("");
-            alert("The PDF conversion job was not found. Please upload it again.");
+            toast.error("PDF conversion was not found", { description: "Upload the file again." });
           }
           return;
         }
@@ -121,12 +122,13 @@ export default function PresentationControls({ classId, onSlideChange }: Present
           if (data.slides.length > 0) {
             onSlideChange(data.slides[0]);
           }
+          toast.success("Teaching material is ready");
         } else if (data.status === "error") {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           pollTimerRef.current = null;
           setIsUploading(false);
           setStatusMessage("");
-          alert("Error converting PDF: " + data.error);
+          toast.error("Could not convert the PDF", { description: data.error });
         }
       } catch {
         // ignore fetch errors and keep polling

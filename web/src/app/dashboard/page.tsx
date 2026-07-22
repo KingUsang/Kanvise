@@ -51,7 +51,9 @@ export default async function DashboardHomePage() {
   }
 
   // Fallback to empty array if no grading items
-  const gradingItems: GradingItem[] = statsData.admin_stats?.needs_grading || []
+  const gradingItems: GradingItem[] = statsData.tutor_stats?.needs_grading || statsData.admin_stats?.needs_grading || []
+  const isAdmin = !!statsData.admin_stats
+  const isTutor = !!statsData.tutor_stats
 
   return (
     <div className="animate-in fade-in duration-500 space-y-8">
@@ -62,12 +64,17 @@ export default async function DashboardHomePage() {
           <h2 className="text-2xl font-bold text-[#1b1c1c]">Welcome back</h2>
           <p className="text-[#474551] mt-1">Here's what's happening in your centre today.</p>
         </div>
-        {statsData.admin_stats && (
-          <button className="bg-[#c26627] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#994704] transition-colors flex items-center">
+        {isAdmin ? (
+          <Link href="/dashboard/programmes" className="bg-[#c26627] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#994704] transition-colors flex items-center">
             <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
             New Programme
-          </button>
-        )}
+          </Link>
+        ) : isTutor ? (
+          <Link href="/dashboard/assignments" className="bg-[#c26627] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#994704] transition-colors flex items-center">
+            <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
+            New Assignment
+          </Link>
+        ) : null}
       </div>
 
       {/* Admin Stats Region (Full Width Top Row) */}
@@ -141,7 +148,7 @@ export default async function DashboardHomePage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-[#1b1c1c]">Today's Schedule</h3>
-                <p className="text-sm text-[#474551] mt-1">{statsData.admin_stats?.upcoming_classes || 0} sessions remaining</p>
+                <p className="text-sm text-[#474551] mt-1">{statsData.today_schedule?.length || 0} sessions today</p>
               </div>
               <Link href="/dashboard/schedule" className="text-[#c26627] font-semibold text-sm hover:text-[#994704] transition-colors flex items-center">
                 View Full Calendar

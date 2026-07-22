@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface MockExam {
   id: string
@@ -54,6 +55,8 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterCourse, setFilterCourse] = useState<string>('all')
   const [apiError, setApiError] = useState<string | null>(null)
+  const [mockToArchive, setMockToArchive] = useState<MockExam | null>(null)
+  const [isArchiving, setIsArchiving] = useState(false)
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
@@ -84,6 +87,28 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
     fetchMocks()
   }, [fetchMocks])
 
+  const archiveMock = async () => {
+    if (!mockToArchive) return
+    setIsArchiving(true)
+    try {
+      const response = await fetch(`${baseUrl}/mocks/${mockToArchive.id}/archive`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Failed to archive mock')
+      toast.success('Mock archived', { description: 'Its attempts and results are still available.' })
+      setMockToArchive(null)
+      await fetchMocks()
+    } catch (error) {
+      toast.error('Could not archive the mock', {
+        description: error instanceof Error ? error.message : 'Please try again.'
+      })
+    } finally {
+      setIsArchiving(false)
+    }
+  }
+
   const uniqueCourses = Array.from(new Set(mocks.map(m => m.course?.name).filter(Boolean))) as string[]
 
   const filteredMocks = mocks.filter((mock) => {
@@ -94,17 +119,31 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
 
   return (
     <div className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-10 bg-[#fbf9f8] animate-in fade-in duration-500">
+      {mockToArchive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="archive-mock-title">
+          <div className="w-full max-w-md rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-xl">
+            <h2 id="archive-mock-title" className="text-lg font-semibold text-[#1b1c1c]">Archive this mock?</h2>
+            <p className="mt-2 text-sm text-[#474551]">
+              {mockToArchive.title} will leave the active list, but its attempts and results will be preserved.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" disabled={isArchiving} onClick={() => setMockToArchive(null)} className="rounded-md px-4 py-2 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2] disabled:opacity-50">Cancel</button>
+              <button type="button" disabled={isArchiving} onClick={archiveMock} className="rounded-md bg-[#994704] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7a3903] disabled:opacity-50">
+                {isArchiving ? 'Archiving…' : 'Archive mock'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header Section */}
       <div className="flex justify-between items-end mb-8 border-b border-[#e4e2e1] pb-6">
         <div>
           <h1 className="text-[32px] leading-[40px] tracking-tight font-bold text-[#1b1c1c] mb-2">Mocks</h1>
           <p className="text-[16px] text-[#474551]">Manage and evaluate student mock examinations.</p>
         </div>
-        <Link href="/dashboard/mocks/builder">
-          <button className="bg-[#994704] text-white text-[14px] font-semibold px-6 py-3 rounded-lg hover:bg-[#7a3903] transition-colors flex items-center gap-2 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
+        <Link href="/dashboard/mocks/builder" className="bg-[#994704] text-white text-[14px] font-semibold px-6 py-3 rounded-lg hover:bg-[#7a3903] transition-colors flex items-center gap-2 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
             <span className="material-symbols-outlined text-[20px]">add</span>
             Create Mock
-          </button>
         </Link>
       </div>
 
@@ -266,9 +305,10 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
 
                       <td className="py-5 px-6 text-right align-top pt-6">
                         {mock.status === 'published' && (
-                          <button onClick={() => router.push(`/dashboard/mocks/${mock.id}/results`)} className="text-[#180d62] text-[12px] font-semibold hover:underline">
-                            View Results
-                          </button>
+                          <div className="flex items-center justify-end gap-3">
+                            <button onClick={() => setMockToArchive(mock)} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704]">Archive</button>
+                            <button onClick={() => router.push(`/dashboard/mocks/${mock.id}/results`)} className="text-[#994704] text-[12px] font-semibold hover:underline">View Results</button>
+                          </div>
                         )}
                         {mock.status === 'draft' && (
                           <button onClick={() => router.push(`/dashboard/mocks/builder?id=${mock.id}`)} className="text-[#994704] text-[12px] font-semibold hover:underline">
@@ -276,9 +316,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                           </button>
                         )}
                         {mock.status === 'archived' && (
-                          <button className="text-[#787582] text-[12px] font-semibold hover:text-[#1b1c1c] transition-colors">
-                            View Archive
-                          </button>
+                          <button onClick={() => router.push(`/dashboard/mocks/${mock.id}/results`)} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704] hover:underline">View Results</button>
                         )}
                       </td>
                     </tr>

@@ -43,7 +43,10 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    const kanvise_role = user.user_metadata?.kanvise_role || 'student'
+    // Route redirects improve UX only; API/RLS still enforce permissions.
+    // Prefer server-controlled app_metadata and retain a legacy fallback until
+    // existing sessions have refreshed.
+    const kanvise_role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role || 'student'
     // Redirect logged in users away from auth routes (unless they are doing a password reset or similar)
     if (isAuthRoute && !request.nextUrl.pathname.includes('reset-password')) {
       const url = request.nextUrl.clone()

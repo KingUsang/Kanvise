@@ -110,18 +110,8 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c] font-['Plus_Jakarta_Sans']">Attendance Records</h2>
-          <p className="text-[16px] text-[#474551] mt-1 font-['Plus_Jakarta_Sans']">Detailed attendance data for all active sessions.</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 border border-[#c2b59b] text-[#1b1c1c] bg-white text-[14px] font-semibold rounded hover:bg-[#f5f3f2] transition-colors flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            Export CSV
-          </button>
-          <button className="px-4 py-2 bg-[#c26627] text-white text-[14px] font-semibold rounded hover:bg-[#994704] transition-colors flex items-center gap-2 shadow-md">
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            Manual Entry
-          </button>
+          <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Attendance Records</h2>
+          <p className="text-[16px] text-[#474551] mt-1">Detailed attendance data for all active sessions.</p>
         </div>
       </div>
 
@@ -197,7 +187,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       <div className="bg-white border border-[#c2b59b] rounded-lg shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-[#c2b59b] flex justify-between items-center bg-[#fbf9f8]">
           <div>
-            <h3 className="text-[20px] font-semibold text-[#1b1c1c] font-['Plus_Jakarta_Sans']">Session Data Log</h3>
+            <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Session Data Log</h3>
             <p className="text-[14px] text-[#474551]">Live view of student check-ins and duration.</p>
           </div>
         </div>
@@ -211,13 +201,12 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Join Time</th>
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Duration</th>
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="text-[14px] text-[#1b1c1c]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-[#474551]">
+                  <td colSpan={5} className="p-12 text-center text-[#474551]">
                     <div className="flex justify-center items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2e2877]" />
                       Loading records...
@@ -226,7 +215,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
                 </tr>
               ) : records?.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-[#474551]">
+                  <td colSpan={5} className="p-12 text-center text-[#474551]">
                     No attendance records found for the selected criteria.
                   </td>
                 </tr>
@@ -261,9 +250,6 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
                     {r.status === 'Absent' && (
                       <span className="inline-flex items-center px-2 py-1 rounded-sm text-[10px] font-bold bg-[#ffdad6] text-[#ba1a1a] uppercase tracking-wide border border-[#ba1a1a]/30">Absent</span>
                     )}
-                  </td>
-                  <td className="p-4 text-right">
-                    <button className="text-[#2e2877] hover:text-[#c26627] transition-colors p-2 rounded hover:bg-[#eae8e7]"><span className="material-symbols-outlined text-[20px]">edit</span></button>
                   </td>
                 </tr>
               ))}

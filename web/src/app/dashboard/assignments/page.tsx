@@ -403,12 +403,6 @@ export default function AssignmentsPage() {
             )}
           </div>
 
-          {/* View All Footer */}
-          <div className="p-3 bg-surface border-t border-outline-variant text-center">
-            <button className="text-xs font-semibold tracking-wider text-primary hover:underline inline-flex items-center gap-1">
-              View All Assignments <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 interface Tutor {
   id: string
@@ -97,6 +98,7 @@ export function TutorsClient() {
       setGeneratedLink(json.data.invite_url)
       setInviteEmail('') // Clear input on success
       await fetchData() // Refresh invites list
+      toast.success('Tutor invitation created')
     } catch (err: any) {
       setInviteError(err.message)
     } finally {
@@ -123,8 +125,9 @@ export function TutorsClient() {
       setGeneratedLink(json.data.invite_url)
       setInviteError('')
       await fetchData() // Refresh invites list
+      toast.success('Invitation resent')
     } catch (err: any) {
-      alert(err.message)
+      toast.error('Could not resend the invitation', { description: err.message })
     } finally {
       setResendingId(null)
     }
@@ -160,9 +163,10 @@ export function TutorsClient() {
       })
       if (!res.ok) {
         const json = await res.json()
-        alert(json.error || 'Failed to revoke invite')
+        toast.error('Could not revoke the invitation', { description: json.error || 'Please try again.' })
       } else {
         await fetchData()
+        toast.success('Invitation revoked')
       }
     } finally {
       setRevokingId(null)
@@ -182,9 +186,10 @@ export function TutorsClient() {
       })
       if (!res.ok) {
         const json = await res.json()
-        alert(json.error || 'Failed to remove tutor')
+        toast.error('Could not remove the tutor', { description: json.error || 'Please try again.' })
       } else {
         await fetchData()
+        toast.success('Tutor removed')
       }
     } finally {
       setRemovingId(null)
@@ -207,8 +212,8 @@ export function TutorsClient() {
       {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c] font-['Plus_Jakarta_Sans']">Tutor Directory</h2>
-          <p className="text-[16px] text-[#474551] mt-1 font-['Plus_Jakarta_Sans']">
+          <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Tutor Directory</h2>
+          <p className="text-[16px] text-[#474551] mt-1">
             Manage teaching staff, assignments, and invitations.
           </p>
         </div>
@@ -225,7 +230,7 @@ export function TutorsClient() {
                 <div className="w-8 h-8 rounded bg-[#2e2877]/10 flex items-center justify-center text-[#2e2877]">
                   <span className="material-symbols-outlined icon-fill">school</span>
                 </div>
-                <h3 className="text-[20px] font-semibold text-[#1b1c1c] font-['Plus_Jakarta_Sans']">Active Roster</h3>
+                <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Active Roster</h3>
               </div>
             </div>
 

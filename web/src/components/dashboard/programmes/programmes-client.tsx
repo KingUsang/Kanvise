@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 interface Programme {
   id: string
@@ -203,6 +204,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       })
       setEditingId(null)
       setEntityType('programme')
+      toast.success(editingId ? 'Changes saved' : `${entityType.replace('_', ' ')} created`)
     } catch (err: any) {
       setSaveError(err.message)
     } finally {
@@ -242,10 +244,14 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
     setIsModalOpen(true)
   }
 
-  const copyLink = (path: string) => {
+  const copyLink = async (path: string) => {
     const fullUrl = `${window.location.origin}${path}`
-    navigator.clipboard.writeText(fullUrl)
-    alert("Copied public link: " + fullUrl)
+    try {
+      await navigator.clipboard.writeText(fullUrl)
+      toast.success('Public link copied')
+    } catch {
+      toast.error('Could not copy the public link')
+    }
   }
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,7 +271,7 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       setFormData(p => ({ ...p, thumbnail_url: publicUrl }))
     } catch (err) {
       console.error(err)
-      alert("Upload failed")
+      toast.error('Thumbnail upload failed', { description: err instanceof Error ? err.message : 'Please try again.' })
     } finally {
       setIsUploading(false)
     }
@@ -427,16 +433,6 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
       <div className="bg-[#fbf9f8] border border-[#c2b59b] rounded-lg shadow-sm flex flex-col overflow-hidden">
         <div className="px-6 py-4 border-b border-[#c2b59b] bg-[#f5f3f2] flex justify-between items-center">
           <h3 className="text-lg font-bold text-[#1b1c1c]">Curriculum Hierarchy</h3>
-          <div className="flex gap-2">
-            {/* TODO: Wire up expand/collapse functionality */}
-            <button className="p-1.5 text-[#474551] hover:bg-[#e4e2e1] rounded transition-colors" title="Expand All">
-              <span className="material-symbols-outlined text-[20px]">unfold_more</span>
-            </button>
-            {/* TODO: Implement filtering side panel */}
-            <button className="p-1.5 text-[#474551] hover:bg-[#e4e2e1] rounded transition-colors" title="Filter">
-              <span className="material-symbols-outlined text-[20px]">filter_list</span>
-            </button>
-          </div>
         </div>
         
         <div className="overflow-x-auto w-full no-scrollbar">
@@ -680,10 +676,10 @@ export function ProgrammesClient({ schoolId }: { schoolId: string }) {
                     {/* Helper Text to explain the Kanvise structure to users */}
                     <div className="mt-3 p-3 bg-[#e8e6fb]/30 border border-[#2e2877]/20 rounded text-sm text-[#474551] leading-relaxed">
                       {entityType === 'programme' && (
-                        <span><strong>Programme:</strong> The top-level bundle (e.g., "WAEC Prep 2026"). Students who enroll at this level get access to absolutely everything inside it.</span>
+                        <span><strong>Programme:</strong> The top-level bundle (e.g., "WAEC Prep 2026"). Students who enrol at this level get access to everything inside it.</span>
                       )}
                       {entityType === 'sub_programme' && (
-                        <span><strong>Sub-Programme:</strong> A nested track or cohort (e.g., "Science Track"). Students who enroll here get access to only the courses within this specific track.</span>
+                        <span><strong>Sub-programme:</strong> A nested track or cohort (e.g., "Science Track"). Students who enrol here get access only to courses within that track.</span>
                       )}
                       {entityType === 'course' && (
                         <span><strong>Course:</strong> A single subject or module (e.g., "Chemistry"). This is where you actually host live classes, upload notes, and assign tutors.</span>

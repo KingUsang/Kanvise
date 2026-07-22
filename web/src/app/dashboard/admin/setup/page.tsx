@@ -62,7 +62,7 @@ export default function AdminSchoolSetupPage() {
       }
 
       // Once created, redirect to the real admin dashboard
-      router.push("/dashboard/admin");
+      router.push("/dashboard");
       router.refresh();
       
     } catch (err: unknown) {

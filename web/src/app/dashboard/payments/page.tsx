@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, AlertCircle, Landmark, Wallet, Plus, BadgeCheck, ListFilter, MoreVertical } from "lucide-react";
+import { Loader2, AlertCircle, Landmark, Wallet, Plus, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import EditPayoutModal from "@/components/dashboard/payments/edit-payout-modal";
 
@@ -49,7 +49,8 @@ export default function PaymentsPage() {
         setSummary(summaryData.data);
         setPayments(paymentsData.data);
       } catch (err: any) {
-        setError(err.message);
+        console.error('Failed to load financials', err);
+        setError('We could not load your financial information. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -91,7 +92,7 @@ export default function PaymentsPage() {
       <div className="flex-1 flex flex-col items-center justify-center min-h-[500px] text-[#ba1a1a] p-6">
         <AlertCircle size={48} className="mb-4" />
         <h2 className="text-xl font-bold mb-2">Failed to load financials</h2>
-        <p className="text-center max-w-md bg-[#ba1a1a]/10 p-4 rounded-md font-mono text-sm">{error}</p>
+        <p className="text-center max-w-md bg-[#ba1a1a]/10 p-4 rounded-md text-sm">{error}</p>
       </div>
     );
   }
@@ -105,10 +106,6 @@ export default function PaymentsPage() {
         <div>
           <h2 className="text-[#180d62] text-[32px] leading-[40px] tracking-[-0.01em] font-bold mb-1">Financial Overview</h2>
           <p className="text-[#474551] text-[16px] leading-[24px]">Manage revenue, payouts, and platform subscriptions.</p>
-        </div>
-        <div className="flex gap-4">
-          <button className="bg-[#fbf9f8] text-[#180d62] border border-[#180d62] px-6 py-2 rounded text-[12px] font-semibold tracking-wider hover:bg-[#f5f3f2] transition-colors">Download Report</button>
-          <button className="bg-[#994704] text-white px-6 py-2 rounded text-[12px] font-semibold tracking-wider hover:bg-[#ff9653] transition-colors shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">New Invoice</button>
         </div>
       </header>
 
@@ -183,9 +180,6 @@ export default function PaymentsPage() {
                 <span className="text-[14px] font-semibold">Enabled</span>
               </div>
             </div>
-            <div className="mt-auto pt-4">
-              <button className="w-full bg-white text-[#2e2877] px-4 py-2 rounded text-[12px] font-bold tracking-wider hover:bg-[#f0eded] transition-colors">Manage Billing</button>
-            </div>
           </div>
         </section>
       </div>
@@ -196,14 +190,6 @@ export default function PaymentsPage() {
           <div>
             <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Recent Transactions</h3>
             <p className="text-[12px] font-semibold tracking-wider text-[#474551] mt-1">Last 30 days revenue split</p>
-          </div>
-          <div className="flex gap-2">
-            <button className="text-[#474551] hover:text-[#180d62] p-2 flex items-center justify-center border border-[#c8c5d2] rounded bg-[#fbf9f8]">
-              <ListFilter size={20} />
-            </button>
-            <button className="text-[#474551] hover:text-[#180d62] p-2 flex items-center justify-center border border-[#c8c5d2] rounded bg-[#fbf9f8]">
-              <MoreVertical size={20} />
-            </button>
           </div>
         </div>
         <div className="overflow-x-auto">
