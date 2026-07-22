@@ -38,10 +38,13 @@ subProgrammesRouter.post("/", enforceAdmin, async (c) => {
     }
 
     const body = await c.req.json();
-    const { name, slug, description, price, currency, programme_id } = body;
+    const { name, slug, description, price, currency, programme_id, is_available_separately } = body;
 
     if (!name || !slug || !programme_id) {
       return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
+    }
+    if (is_available_separately && !(parseFloat(price) > 0)) {
+      return c.json({ error: "Enter a price before allowing separate purchase", code: "PRICE_REQUIRED" }, 400);
     }
 
     // Verify programme exists and belongs to school
@@ -79,7 +82,8 @@ subProgrammesRouter.post("/", enforceAdmin, async (c) => {
         name,
         slug,
         description: description || null,
-        price: parseFloat(price) || 0,
+        price: is_available_separately ? parseFloat(price) || 0 : 0,
+        is_available_separately: Boolean(is_available_separately),
         currency: currency || "NGN",
         is_published: false,
         created_by: profile.id
@@ -163,6 +167,10 @@ subProgrammesRouter.patch("/:id", enforceAdmin, async (c) => {
     // Ensure school_id cannot be spoofed
     delete updates.school_id;
     delete updates.id;
+    if (updates.is_available_separately === false) updates.price = 0;
+    if (updates.is_available_separately === true && !(parseFloat(updates.price) > 0)) {
+      return c.json({ error: "Enter a price before allowing separate purchase", code: "PRICE_REQUIRED" }, 400);
+    }
 
     const { data, error } = await supabase
       .from("sub_programmes")

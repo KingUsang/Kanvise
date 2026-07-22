@@ -43,6 +43,7 @@ export function ProgrammesClient() {
     description: '',
     price: '',
     is_published: true,
+    is_available_separately: false,
     programme_id: '',
     sub_programme_id: '',
     course_placement: 'standalone', // 'standalone', 'programme', 'sub_programme'
@@ -136,7 +137,12 @@ export function ProgrammesClient() {
         slug: formData.slug,
         description: formData.description,
         price: formData.price,
-        is_published: formData.is_published
+        is_published: formData.is_published,
+        is_available_separately: entityType === 'programme' || (entityType === 'course' && formData.course_placement === 'standalone') || formData.is_available_separately
+      }
+
+      if (payload.is_available_separately && !(Number(formData.price) > 0)) {
+        throw new Error('Enter a price greater than zero for an item students can buy')
       }
       
       // Only programmes support thumbnails in the database currently
@@ -201,7 +207,7 @@ export function ProgrammesClient() {
       await fetchData()
       setIsModalOpen(false)
       setFormData({ 
-        name: '', slug: '', description: '', price: '', is_published: true, 
+        name: '', slug: '', description: '', price: '', is_published: true, is_available_separately: false,
         programme_id: '', sub_programme_id: '', course_placement: 'standalone', 
         assign_tutor: false, tutor_id: '', thumbnail_url: ''
       })
@@ -220,7 +226,7 @@ export function ProgrammesClient() {
     setEntityType(type)
     setSaveError('')
     setFormData({
-      name: '', slug: '', description: '', price: '', is_published: true, 
+      name: '', slug: '', description: '', price: '', is_published: true, is_available_separately: type === 'course',
       programme_id: '', sub_programme_id: '', course_placement: 'standalone', 
       assign_tutor: false, tutor_id: '', thumbnail_url: ''
     })
@@ -237,6 +243,7 @@ export function ProgrammesClient() {
       description: entity.description || '',
       price: entity.price || '',
       is_published: entity.is_published,
+      is_available_separately: entity.is_available_separately ?? true,
       programme_id: entity.programme_id || '',
       sub_programme_id: entity.sub_programme_id || '',
       course_placement: entity.programme_id ? 'programme' : entity.sub_programme_id ? 'sub_programme' : 'standalone',
@@ -736,7 +743,7 @@ export function ProgrammesClient() {
                         </label>
                         <select 
                           value={formData.course_placement}
-                          onChange={e => setFormData(p => ({ ...p, course_placement: e.target.value, programme_id: '', sub_programme_id: '' }))}
+                          onChange={e => setFormData(p => ({ ...p, course_placement: e.target.value, programme_id: '', sub_programme_id: '', is_available_separately: e.target.value === 'standalone', price: '' }))}
                           className="w-full bg-white border border-[#c8c5d2] rounded px-3 py-2 text-sm focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none"
                         >
                           <option value="standalone">Sell it as an individual Course</option>
@@ -784,25 +791,45 @@ export function ProgrammesClient() {
                     </div>
                   )}
 
+                  {entityType !== 'programme' && !(entityType === 'course' && formData.course_placement === 'standalone') && (
+                    <div className="col-span-2 rounded-lg border border-[#c8c5d2] bg-white p-4">
+                      <label className="flex cursor-pointer items-start justify-between gap-4">
+                        <span>
+                          <span className="block text-sm font-semibold text-[#1b1c1c]">Allow students to buy this {entityType === 'course' ? 'Course' : 'Sub-programme'} separately</span>
+                          <span className="mt-1 block text-xs leading-5 text-[#474551]">Leave this off when it should only be included as part of its parent {entityType === 'course' ? 'Programme or Sub-programme' : 'Programme'}.</span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={formData.is_available_separately}
+                          onChange={e => setFormData(p => ({ ...p, is_available_separately: e.target.checked, price: e.target.checked ? p.price : '' }))}
+                          className="mt-1 h-5 w-5 rounded border-[#c8c5d2] text-[#2e2877] focus:ring-[#2e2877]"
+                        />
+                      </label>
+                    </div>
+                  )}
+
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Price students will pay (NGN) <span className="text-[#ba1a1a]">*</span></label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#474551] font-semibold">₦</span>
                       <input 
-                        required
+                        required={entityType === 'programme' || (entityType === 'course' && formData.course_placement === 'standalone') || formData.is_available_separately}
+                        disabled={entityType !== 'programme' && !(entityType === 'course' && formData.course_placement === 'standalone') && !formData.is_available_separately}
                         type="number"
                         min="0"
                         value={formData.price}
                         onChange={e => setFormData(p => ({ ...p, price: e.target.value }))}
-                        className="w-full bg-white border border-[#c8c5d2] rounded pl-8 pr-3 py-2 text-sm focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none" 
+                        className="w-full bg-white border border-[#c8c5d2] rounded pl-8 pr-3 py-2 text-sm focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none disabled:cursor-not-allowed disabled:bg-[#f0eded] disabled:text-[#787582]"
                         placeholder="0.00"
                       />
                     </div>
                     <p className="mt-1.5 text-xs leading-5 text-[#474551]">
                       {entityType === 'programme' && 'One payment for every Course in this Programme, including Courses in its Sub-programmes.'}
-                      {entityType === 'sub_programme' && 'One payment for every Course inside this Sub-programme. The full Programme keeps its own price.'}
+                      {entityType === 'sub_programme' && !formData.is_available_separately && 'No separate price is needed. Access is included with the parent Programme.'}
+                      {entityType === 'sub_programme' && formData.is_available_separately && 'One payment for every Course inside this Sub-programme. The full Programme keeps its own price.'}
                       {entityType === 'course' && formData.course_placement === 'standalone' && 'The price for enrolling in this Course on its own.'}
-                      {entityType === 'course' && formData.course_placement !== 'standalone' && 'Used only when this Course is offered for separate purchase. Students who buy its parent already have access.'}
+                      {entityType === 'course' && formData.course_placement !== 'standalone' && !formData.is_available_separately && 'No separate price is needed. Students receive access through its parent.'}
+                      {entityType === 'course' && formData.course_placement !== 'standalone' && formData.is_available_separately && 'The price for students who buy this Course without buying its parent.'}
                     </p>
                   </div>
 

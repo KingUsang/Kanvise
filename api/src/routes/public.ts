@@ -36,6 +36,7 @@ publicRouter.get('/schools/:slug', async (c) => {
       .is('programme_id', null)
       .is('sub_programme_id', null)
       .eq('is_published', true)
+      .eq('is_available_separately', true)
 
     // 4. Fetch Tutors associated with this school (user_profiles where role='tutor' and school_id matches)
     const { data: tutors, error: tutorsError } = await supabase
@@ -133,6 +134,7 @@ publicRouter.get('/courses/:slug', async (c) => {
       .select('id, name, slug, description, price, school_id')
       .eq('slug', slug)
       .eq('is_published', true)
+      .eq('is_available_separately', true)
       .single()
 
     if (courseError || !course) {

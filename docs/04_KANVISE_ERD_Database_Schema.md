@@ -361,7 +361,8 @@ An optional layer between a programme and its courses. Used when a programme has
 | name | TEXT | NOT NULL | e.g. `JAMB Science Track` |
 | slug | TEXT | NOT NULL | URL-safe identifier |
 | description | TEXT | NULLABLE | |
-| price | NUMERIC(12,2) | NOT NULL | Price if sold as a standalone unit |
+| price | NUMERIC(12,2) | NOT NULL | Separate-purchase price; `0` when included only |
+| is_available_separately | BOOLEAN | NOT NULL, DEFAULT false | Whether students may buy this without buying the parent programme |
 | currency | TEXT | NOT NULL, DEFAULT 'NGN' | |
 | is_published | BOOLEAN | NOT NULL, DEFAULT false | |
 | created_by | UUID | NOT NULL, FK → user_profiles.id | |
@@ -385,7 +386,8 @@ The atomic content unit. Can exist standalone (no programme), directly under a p
 | name | TEXT | NOT NULL | e.g. `Chemistry`, `English Language` |
 | slug | TEXT | NOT NULL | URL-safe identifier |
 | description | TEXT | NULLABLE | |
-| price | NUMERIC(12,2) | NOT NULL | Price if purchased as a standalone course |
+| price | NUMERIC(12,2) | NOT NULL | Separate-purchase price; `0` when included only |
+| is_available_separately | BOOLEAN | NOT NULL, DEFAULT false | Whether students may buy this course without buying its parent |
 | currency | TEXT | NOT NULL, DEFAULT 'NGN' | |
 | is_published | BOOLEAN | NOT NULL, DEFAULT false | |
 | created_by | UUID | NOT NULL, FK → user_profiles.id | |

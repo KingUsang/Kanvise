@@ -103,14 +103,22 @@ paymentsRouter.post("/checkout", async (c) => {
     }
 
     // 1. Fetch Target & Price
-    const { data: target, error: targetError } = await supabase
+    const targetFields: string = checkoutTarget.column === "programme_id"
+      ? "id, name, price, school_id, is_published"
+      : "id, name, price, school_id, is_published, is_available_separately";
+    const { data: rawTarget, error: targetError } = await supabase
       .from(checkoutTarget.table)
-      .select("id, name, price, school_id")
+      .select(targetFields)
       .eq("id", checkoutTarget.id)
       .single();
+    const target = rawTarget as any;
 
     if (targetError || !target) {
       return c.json({ error: "Target not found", code: "TARGET_NOT_FOUND" }, 404);
+    }
+
+    if (!target.is_published || (checkoutTarget.column !== "programme_id" && !(target as any).is_available_separately)) {
+      return c.json({ error: "This item is not available for separate purchase", code: "NOT_AVAILABLE_SEPARATELY" }, 400);
     }
 
     // Check if already enrolled

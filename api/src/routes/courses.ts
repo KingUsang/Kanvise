@@ -38,7 +38,7 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
     }
 
     const body = await c.req.json();
-    const { name, slug, description, price, currency, programme_id, sub_programme_id } = body;
+    const { name, slug, description, price, currency, programme_id, sub_programme_id, is_available_separately } = body;
 
     if (!name || !slug) {
       return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
@@ -46,6 +46,11 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
 
     if (programme_id && sub_programme_id) {
       return c.json({ error: "Cannot specify both programme and sub-programme", code: "INVALID_PARENT" }, 400);
+    }
+    const isStandalone = !programme_id && !sub_programme_id;
+    const availableSeparately = isStandalone || Boolean(is_available_separately);
+    if (availableSeparately && !(parseFloat(price) > 0)) {
+      return c.json({ error: "Enter a price before allowing separate purchase", code: "PRICE_REQUIRED" }, 400);
     }
 
     // Verify parent belongs to school if provided
@@ -93,7 +98,8 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
         name,
         slug,
         description: description || null,
-        price: parseFloat(price) || 0,
+        price: availableSeparately ? parseFloat(price) : 0,
+        is_available_separately: availableSeparately,
         currency: currency || "NGN",
         is_published: false,
         created_by: profile.id
@@ -254,6 +260,10 @@ coursesRouter.patch("/:id", enforceAdmin, async (c) => {
     // Prevent spoofing
     delete updates.school_id;
     delete updates.id;
+    if (updates.is_available_separately === false) updates.price = 0;
+    if (updates.is_available_separately === true && !(parseFloat(updates.price) > 0)) {
+      return c.json({ error: "Enter a price before allowing separate purchase", code: "PRICE_REQUIRED" }, 400);
+    }
 
     const { data, error } = await supabase
       .from("courses")
