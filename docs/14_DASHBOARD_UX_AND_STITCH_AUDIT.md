@@ -1,6 +1,6 @@
 # Kanvise Dashboard UX and Stitch Audit
 
-**Status:** Active implementation guide  
+**Status:** Route audit complete; follow-up backlog remains
 **Stitch source:** `Duplicate of Remix of Kanvise LMS Web App` (`projects/5053904257875503539`)  
 **Typography:** Poppins throughout Kanvise
 
@@ -31,7 +31,7 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | A/T: Attendance & Participation Reports | Shared | `/dashboard/attendance` | Implemented |
 | A/T: Mocks Management Workspace | Shared | `/dashboard/mocks` | Implemented |
 | A/T: Comprehensive Mock Builder | Shared | `/dashboard/mocks/builder` | Implemented |
-| A/T: Digital Avatar Customisation Hub | Shared | — | Missing route |
+| A/T: Digital Avatar Customisation Hub | Shared | `/account/setup` | Legacy prototype; rebuild required |
 | T: Tutor Dashboard | Tutor | `/dashboard` | Implemented conditionally |
 | T: Assignment Definition & Tasks | Tutor | `/dashboard/assignments` | Implemented |
 | T: Student Submission Review | Tutor | `/dashboard/assignments/[assignmentId]/submissions` | Implemented |
@@ -377,6 +377,26 @@ The LiveKit boundary is portable. Hono reads `LIVEKIT_URL`, `LIVEKIT_API_KEY`, a
 URL with a short-lived participant token. Switching from LiveKit Cloud to a
 self-hosted local or Scaleway instance therefore requires environment and server
 configuration, not classroom UI changes.
+
+### A/T: Digital Avatar Customisation Hub — audit finding
+
+This is the one authoritative dashboard screen that does not yet have a usable
+production implementation. `/account/setup` is a hidden legacy prototype, not a
+finished substitute:
+
+- it is outside the dashboard navigation and is framed as first-time account setup;
+- it stores colour hex codes and labels such as `Short`/`Oval`, while the database
+  and LiveKit contract use stable option IDs such as `s3`, `f1`, and `h4`;
+- its “preview” is only a coloured circle with placeholder text, not the layered
+  Kanvise avatar;
+- save requests do not check failed HTTP responses before redirecting;
+- the classroom currently receives `avatar_config` metadata but falls back to
+  initials when a camera is off because there is no shared avatar renderer.
+
+The existing authenticated `GET/PUT /avatars/me` API is a useful foundation, but
+the UI and renderer must be rebuilt against the modern A/T Stitch screen and the
+canonical option catalogue. It should then be reachable as a shared profile
+workflow for admins and tutors rather than silently remaining in onboarding.
 
 ## 4. Capability and navigation rules
 
