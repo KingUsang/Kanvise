@@ -1,6 +1,6 @@
 # Kanvise Mock Engine and Question Bank Implementation Plan
 
-**Status:** In implementation — database foundation, authoring, immutable publication, and student CBT workflow implemented
+**Status:** Core CBT engine operational — advanced import and bank-selection UX remain
 **Scope:** Tutor/admin authoring, centre question banks, student CBT attempts, grading, and results  
 **Related documents:** `04_KANVISE_ERD_Database_Schema.md`, `05_KANVISE_API_Specification.md`, `08_KANVISE_Feature_Specifications.md`, `14_DASHBOARD_UX_AND_STITCH_AUDIT.md`
 
@@ -12,7 +12,8 @@ The first release is centre-first. It includes:
 
 1. A tutor's private question banks.
 2. Question banks shared with tutors in the same centre.
-3. Manual question creation and validated CSV/DOCX import.
+3. Manual question creation and validated CSV import. DOCX import is a later
+   authoring enhancement.
 4. Search and filtering by subject, topic, type, author, and bank.
 5. Reusing one question in multiple mocks without duplicating its source record.
 6. Random question selection from a bank or filtered pool.
@@ -73,7 +74,7 @@ Implemented in the repository:
 - Image-only question authoring, local preview, accessible descriptions, and signed
   image rendering in the tutor question list.
 
-Not yet operational:
+Operational checkpoint:
 
 - The seven foundation, authoring, media-binding, versioned-publication, and
   versioned-attempt migrations were applied to the connected `dev` Supabase project
@@ -83,8 +84,20 @@ Not yet operational:
 - Immutable assembly/publication and the student mock list, preflight, attempt,
   autosave, flagging, authoritative timeout, calculator, submission, and
   release-controlled results workflows are implemented through Hono.
-- The CSV/DOCX import pipeline, tutor mock-builder bank picker, legacy published-
-  mock backfill, retry-grant UI, and notification delivery remain subsequent work.
+- The visual tutor builder now writes manual and CSV-authored questions through
+  `replace_authored_mock_questions` into a private reusable bank and versioned mock
+  section. Publication always creates an immutable `mock_exam_version`; old drafts
+  are upgraded on first publication instead of producing student-invisible mocks.
+- Builder controls now cover calculator mode, attempts, pass mark, result release,
+  opening/closing times, and question/option shuffling.
+- Tutor result loading and theory grading use versioned questions and answers.
+- A five-question, ten-mark `JAMB Physics CBT Practice — Versioned Demo` fixture was
+  published in the connected development project on 23 July 2026. It includes MCQ,
+  theory, mathematical content blocks, corrections, shuffling, two attempts, and a
+  scientific calculator.
+- The DOCX import pipeline, visual “choose from bank” picker, legacy **published**
+  mock backfill, and retry-grant UI remain subsequent work. CSV import is available
+  in the builder.
 - A cleanup job should remove verified question media that remains unbound after a
   safe retention period. This can occur when R2 upload/registration succeeds but the
   later atomic question creation fails; it does not expose the file or corrupt a

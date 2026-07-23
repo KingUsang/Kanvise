@@ -18,13 +18,19 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
   }
 
   const { data: answer, error: fetchError } = await supabase.from('mock_answers')
-    .select('*, question:mock_questions(question_type, marks), attempt:mock_attempts(id, student_id, status, mcq_score, mock_exam_id, mock_exam:mock_exams(id, title, tutor_id))')
+    .select(`*,
+      question:mock_version_questions(id, marks,
+        version:bank_question_versions(question:bank_questions(question_type))
+      ),
+      attempt:mock_attempts(id, student_id, status, mcq_score, mock_exam_id, mock_exam_version_id,
+        mock_exam:mock_exams(id, title, tutor_id)
+      )`)
     .eq('id', answerId)
     .eq('school_id', user.school_id)
     .single()
 
   if (fetchError || !answer) return c.json({ error: 'Mock answer not found', code: 'NOT_FOUND' }, 404)
-  if ((answer.question as any)?.question_type !== 'theory') {
+  if ((answer.question as any)?.version?.question?.question_type !== 'theory') {
     return c.json({ error: 'Only theory answers can be manually graded', code: 'NOT_THEORY_ANSWER' }, 409)
   }
   if (Number(tutor_score) > Number((answer.question as any)?.marks || 0)) {
@@ -42,15 +48,18 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
   }).eq('id', answerId).eq('school_id', user.school_id).select().single()
   if (error || !data) return c.json({ error: 'Failed to grade mock answer' }, 500)
 
-  const { data: theoryQuestions, error: questionError } = await supabase.from('mock_questions')
-    .select('id')
-    .eq('mock_exam_id', attempt.mock_exam_id)
-    .eq('question_type', 'theory')
+  const { data: versionQuestions, error: questionError } = await supabase.from('mock_version_questions')
+    .select('id, version:bank_question_versions(question:bank_questions(question_type))')
+    .eq('mock_exam_version_id', attempt.mock_exam_version_id)
+    .eq('school_id', user.school_id)
   if (questionError) return c.json({ error: 'Answer graded but completion check failed' }, 500)
 
-  const theoryIds = (theoryQuestions || []).map((question) => question.id)
+  const theoryIds = (versionQuestions || [])
+    .filter((question: any) => question.version?.question?.question_type === 'theory')
+    .map((question) => question.id)
   const { data: theoryAnswers, error: answersError } = theoryIds.length
-    ? await supabase.from('mock_answers').select('tutor_score').eq('attempt_id', attempt.id).in('question_id', theoryIds)
+    ? await supabase.from('mock_answers').select('mock_version_question_id, tutor_score')
+      .eq('attempt_id', attempt.id).in('mock_version_question_id', theoryIds)
     : { data: [], error: null }
   if (answersError) return c.json({ error: 'Answer graded but completion check failed' }, 500)
 
@@ -63,7 +72,7 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
     const theoryScore = (theoryAnswers || []).reduce((sum, item) => sum + Number(item.tutor_score || 0), 0)
     const totalScore = Number(attempt.mcq_score || 0) + theoryScore
     const { error: attemptError } = await supabase.from('mock_attempts')
-      .update({ status: 'fully_graded' })
+      .update({ status: 'fully_graded', theory_score: theoryScore, total_score: totalScore })
       .eq('id', attempt.id)
       .eq('school_id', user.school_id)
     if (attemptError) return c.json({ error: 'Answer graded but attempt update failed' }, 500)

@@ -47,6 +47,16 @@ export function MockBuilderClient({ token }: { token: string }) {
   
   const [isUntimed, setIsUntimed] = useState(false);
   const [timeLimit, setTimeLimit] = useState(60);
+  const [calculatorMode, setCalculatorMode] = useState<"none" | "basic" | "scientific">("none");
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
+  const [shuffleOptions, setShuffleOptions] = useState(false);
+  const [maxAttempts, setMaxAttempts] = useState(1);
+  const [passMark, setPassMark] = useState(50);
+  const [resultReleaseMode, setResultReleaseMode] = useState<
+    "score_only" | "immediately_with_corrections" | "after_close" | "after_theory_grading"
+  >("score_only");
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [closesAt, setClosesAt] = useState("");
 
   // Questions State
   const [questions, setQuestions] = useState<QuestionState[]>([]);
@@ -102,6 +112,14 @@ export function MockBuilderClient({ token }: { token: string }) {
           setTitle(mockData.title || "");
           setDescription(mockData.description || "");
           setCourseId(mockData.course_id || "");
+          setCalculatorMode(mockData.calculator_mode || "none");
+          setShuffleQuestions(!!mockData.shuffle_questions);
+          setShuffleOptions(!!mockData.shuffle_options);
+          setMaxAttempts(mockData.max_attempts || 1);
+          setPassMark(mockData.pass_mark ?? 50);
+          setResultReleaseMode(mockData.result_release_mode || "score_only");
+          setAvailableFrom(mockData.available_from ? new Date(mockData.available_from).toISOString().slice(0, 16) : "");
+          setClosesAt(mockData.closes_at ? new Date(mockData.closes_at).toISOString().slice(0, 16) : "");
           
           if (mockData.time_limit_minutes === 0) {
             setIsUntimed(true);
@@ -315,6 +333,10 @@ export function MockBuilderClient({ token }: { token: string }) {
         toast.error("Choose a future publication date and time");
         return;
       }
+      if (availableFrom && closesAt && new Date(closesAt) <= new Date(availableFrom)) {
+        toast.error("Closing time must be after the opening time");
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -329,7 +351,15 @@ export function MockBuilderClient({ token }: { token: string }) {
         description,
         course_id: courseId,
         publish_at: finalPublishAt,
-        time_limit_minutes: isUntimed ? 0 : timeLimit
+        time_limit_minutes: isUntimed ? 0 : timeLimit,
+        calculator_mode: calculatorMode,
+        shuffle_questions: shuffleQuestions,
+        shuffle_options: shuffleOptions,
+        max_attempts: maxAttempts,
+        pass_mark: passMark,
+        result_release_mode: resultReleaseMode,
+        available_from: availableFrom ? new Date(availableFrom).toISOString() : null,
+        closes_at: closesAt ? new Date(closesAt).toISOString() : null,
       };
 
       if (isEditMode) {
@@ -755,6 +785,76 @@ export function MockBuilderClient({ token }: { token: string }) {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="border-t border-[#e4e2e1] pt-5">
+                <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Calculator students can use</label>
+                <select
+                  value={calculatorMode}
+                  disabled={isReadOnly}
+                  onChange={(event) => setCalculatorMode(event.target.value as typeof calculatorMode)}
+                  className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] text-[#1b1c1c] outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]"
+                >
+                  <option value="none">No calculator</option>
+                  <option value="basic">Basic calculator</option>
+                  <option value="scientific">Scientific calculator</option>
+                </select>
+                <p className="mt-1.5 text-xs leading-5 text-[#787582]">The calculator opens inside the exam, so students do not need to leave the page.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Attempts allowed</label>
+                  <input type="number" min={1} max={20} value={maxAttempts} disabled={isReadOnly}
+                    onChange={(event) => setMaxAttempts(Number(event.target.value))}
+                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Pass mark (%)</label>
+                  <input type="number" min={0} max={100} value={passMark} disabled={isReadOnly}
+                    onChange={(event) => setPassMark(Number(event.target.value))}
+                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">What students see after submitting</label>
+                <select value={resultReleaseMode} disabled={isReadOnly}
+                  onChange={(event) => setResultReleaseMode(event.target.value as typeof resultReleaseMode)}
+                  className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] disabled:bg-[#f5f3f2]">
+                  <option value="score_only">Score only</option>
+                  <option value="immediately_with_corrections">Score and corrections immediately</option>
+                  <option value="after_close">Corrections after the mock closes</option>
+                  <option value="after_theory_grading">Corrections after theory is graded</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Students can start from</label>
+                  <input type="datetime-local" value={availableFrom} disabled={isReadOnly}
+                    onChange={(event) => setAvailableFrom(event.target.value)}
+                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Mock closes</label>
+                  <input type="datetime-local" value={closesAt} disabled={isReadOnly}
+                    onChange={(event) => setClosesAt(event.target.value)}
+                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+                <label className="flex cursor-pointer items-start gap-3 text-sm text-[#474551]">
+                  <input type="checkbox" checked={shuffleQuestions} disabled={isReadOnly}
+                    onChange={(event) => setShuffleQuestions(event.target.checked)} className="mt-1" />
+                  <span><strong className="block text-[#1b1c1c]">Mix question order</strong>Each student sees the questions in a stable but different order.</span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 text-sm text-[#474551]">
+                  <input type="checkbox" checked={shuffleOptions} disabled={isReadOnly}
+                    onChange={(event) => setShuffleOptions(event.target.checked)} className="mt-1" />
+                  <span><strong className="block text-[#1b1c1c]">Mix answer options</strong>Useful for reducing answer copying during timed mocks.</span>
+                </label>
               </div>
 
               <div>
