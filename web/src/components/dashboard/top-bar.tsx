@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
+import { toast } from 'sonner'
 
 interface TopBarProps {
   user: {
@@ -29,6 +30,13 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   }, [query, searchableItems])
 
   const navigateTo = (href: string) => {
+    if (capabilities.setupRequired && href !== '/dashboard/school-setup') {
+      setIsSearchOpen(false)
+      toast.info('Create your centre first', {
+        description: 'This page will unlock as soon as you complete the required setup.',
+      })
+      return
+    }
     setQuery('')
     setIsSearchOpen(false)
     startNavigationProgress()

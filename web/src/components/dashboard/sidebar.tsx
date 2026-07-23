@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { toast } from 'sonner'
 
 import { useState, useEffect } from 'react'
 import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
@@ -76,13 +77,24 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`))
             const badge = item.badge === 'ungradedMocks' ? ungradedMocksCount : 0
+            const isLocked = capabilities.setupRequired && item.href !== '/dashboard/school-setup'
             return (
               <li key={item.href}>
-                <Link 
-                  href={item.href}
+                <Link
+                  href={isLocked ? '/dashboard/school-setup' : item.href}
+                  aria-disabled={isLocked}
+                  onClick={(event) => {
+                    if (!isLocked) return
+                    event.preventDefault()
+                    toast.info('Create your centre first', {
+                      description: `${item.label} will unlock as soon as you complete the required setup.`,
+                    })
+                  }}
                   className={`
                     flex items-center px-6 py-3 text-sm font-medium transition-colors relative
-                    ${isActive 
+                    ${isLocked
+                      ? 'cursor-not-allowed text-[#7772bd]'
+                      : isActive
                       ? 'text-white bg-white/5' 
                       : 'text-[#9893e8] hover:text-white hover:bg-white/5'
                     }
@@ -95,6 +107,9 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
                     {item.icon}
                   </span>
                   <span className="flex-1">{item.label}</span>
+                  {isLocked && (
+                    <span className="material-symbols-outlined text-[17px]" title="Complete school setup to unlock">lock</span>
+                  )}
                   {badge > 0 ? (
                     <span className="bg-[#ba1a1a] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ml-2">
                       {badge}

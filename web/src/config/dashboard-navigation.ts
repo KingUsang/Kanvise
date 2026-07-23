@@ -40,9 +40,6 @@ export function canAccessDashboardItem(item: DashboardNavItem, capabilities: Das
 }
 
 export function getDashboardNavItems(capabilities: DashboardCapabilities) {
-  if (capabilities.setupRequired) {
-    return dashboardNavItems.filter((item) => item.href === '/dashboard/school-setup')
-  }
   return dashboardNavItems.filter((item) => canAccessDashboardItem(item, capabilities))
 }
 
