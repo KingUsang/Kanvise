@@ -386,7 +386,7 @@ A mock can only be created by a tutor who is assigned to the relevant course.
 
 **Minimum question requirement:** A mock must have at least one question before it can be published. Attempting to publish with zero questions returns `400 NO_QUESTIONS`.
 
-**Time limit:** `time_limit_minutes` is optional. If null, students can take as long as they need. If set, the frontend countdown timer auto-submits when it reaches zero.
+**Time limit:** `time_limit_minutes` is optional. If null, students can take as long as they need. If set, Hono calculates an authoritative `deadline_at` from server time when the attempt starts. The browser displays that remaining time and requests submission at zero, but it does not control whether time has expired.
 
 ### 7.2 Question Management Rules
 
@@ -425,9 +425,9 @@ Theory questions receive `is_correct = null` on submission. They are stored as `
 
 ### 7.4 Timer Implementation
 
-**Frontend responsibility:** The countdown timer is managed entirely on the frontend. When a student opens a mock, the timer starts from `time_limit_minutes` and counts down. When it reaches zero, the frontend automatically calls `POST /attempts/:attemptId/submit` with whatever answers the student has provided so far.
+**Frontend responsibility:** The countdown displays the difference between the server-issued `deadline_at` and synchronized server time. It periodically reconciles, continues across tab changes, and requests submission when it reaches zero. It cannot extend or pause the attempt.
 
-**Backend protection:** The backend records `started_at` when the attempt is created. On submission, Hono checks: if `time_limit_minutes` is set and `submitted_at - started_at > time_limit_minutes + 2 minutes` (2 minute grace for network latency), the submission is marked as `status = timed_out` rather than `submitted`. The score is still computed — the student does not lose their answers.
+**Backend protection:** Hono records `started_at` and `deadline_at`, rejects answer changes after the deadline, and idempotently finalizes expired attempts. A scheduled worker closes abandoned attempts, while attempt reads/writes also perform lazy timeout finalization so correctness does not depend on the worker running at an exact moment. Saved answers are still graded when an attempt times out.
 
 **Tab switching:** If a student switches tabs or minimises the browser, the timer continues running. The frontend does not pause the timer on tab blur.
 

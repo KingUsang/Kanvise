@@ -1383,6 +1383,13 @@ Returns all of the current student's submissions across all courses.
 
 ## Module 16 — Mock Exams
 
+> **Implementation transition (July 2026):** The versioned question-bank and CBT
+> contracts in `15_MOCK_ENGINE_AND_QUESTION_BANK_IMPLEMENTATION_PLAN.md` supersede
+> the legacy direct-question attempt contract below. Tutor CRUD/results remain the
+> current implementation. Student start, resume, autosave, timeout, and results
+> endpoints in this section are planned contracts until their versioned Hono routes
+> and tests land; documentation alone must not be treated as implementation.
+
 ---
 
 ### POST `api.kanvise.com/courses/:courseId/mocks`
