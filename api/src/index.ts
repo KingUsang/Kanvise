@@ -60,8 +60,6 @@ app.route("/assignments", assignmentsRouter);
 app.route("/users", usersRouter);
 app.route("/mocks", mocksRouter);
 app.route("/question-banks", questionBanksRouter);
-app.route("/", studentMocksRouter);
-app.route("/", studentSettingsRouter);
 app.route("/enrolments", enrolmentsRouter);
 app.route("/payments", paymentsRouter);
 app.route("/attendance", attendanceRouter);
@@ -143,6 +141,12 @@ app.post("/waitlist", async (c) => {
     return c.json({ error: "Internal server error" }, 500);
   }
 });
+
+// These student routers contain several top-level paths (/students, /mocks and
+// /attempts). Register them last so their router-wide student middleware cannot
+// intercept unrelated endpoints such as /payments/summary or /waitlist.
+app.route("/", studentMocksRouter);
+app.route("/", studentSettingsRouter);
 
 const port = Number(process.env.PORT!);
 console.log(`Server is running on port ${port}`);
