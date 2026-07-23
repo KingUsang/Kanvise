@@ -290,6 +290,9 @@ paymentsRouter.get("/", enforceAdmin, async (c) => {
       .eq("school_id", profile.school_id);
     if (studentId) query = query.eq("student_id", studentId);
     const { data: payments, error } = await query
+      // School admins need a record of money actually received. Failed and
+      // abandoned checkout attempts are operational diagnostics, not income.
+      .eq("status", "successful")
       .order("paid_at", { ascending: false })
       .order("created_at", { ascending: false });
 

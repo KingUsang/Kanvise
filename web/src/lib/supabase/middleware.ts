@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getDashboardAccess } from '@/config/dashboard-navigation'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -86,6 +87,13 @@ export async function updateSession(request: NextRequest) {
         // Student trying to access some non-student dashboard route (e.g. /dashboard/school-setup)
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard/student'
+        return NextResponse.redirect(url)
+      } else if (kanvise_role === 'tutor' && getDashboardAccess(request.nextUrl.pathname) === 'admin') {
+        // Do not rely on hidden navigation: stop a tutor who types or follows an
+        // admin-only URL before any page code or API request runs.
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        url.searchParams.set('notice', 'not-authorised')
         return NextResponse.redirect(url)
       }
     }

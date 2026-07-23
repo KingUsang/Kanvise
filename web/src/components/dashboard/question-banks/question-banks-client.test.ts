@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildQuestionContent, buildQuestionOptions } from './question-banks-client'
-import { getDashboardNavItems } from '@/config/dashboard-navigation'
+import { canAccessDashboardPath, getDashboardAccess, getDashboardNavItems } from '@/config/dashboard-navigation'
 
 describe('question-bank authoring helpers', () => {
   it('keeps the correct answer attached to its original option when blank rows are removed', () => {
@@ -33,5 +33,14 @@ describe('question-bank authoring helpers', () => {
     expect(getDashboardNavItems({ isAdmin: true, isTutor: false }).some(item => item.href === '/dashboard/question-banks')).toBe(true)
     expect(getDashboardNavItems({ isAdmin: false, isTutor: true }).some(item => item.href === '/dashboard/question-banks')).toBe(true)
     expect(getDashboardNavItems({ isAdmin: true, isTutor: true }).some(item => item.href === '/dashboard/question-banks')).toBe(true)
+  })
+
+  it('classifies nested dashboard routes using their parent page privileges', () => {
+    expect(getDashboardAccess('/dashboard/payments')).toBe('admin')
+    expect(getDashboardAccess('/dashboard/mocks/mock-1/results')).toBe('shared')
+    expect(getDashboardAccess('/dashboard/assignments/assignment-1/submissions')).toBe('tutor')
+    expect(canAccessDashboardPath('/dashboard/payments', { isAdmin: false, isTutor: true })).toBe(false)
+    expect(canAccessDashboardPath('/dashboard/notes', { isAdmin: true, isTutor: false })).toBe(false)
+    expect(canAccessDashboardPath('/dashboard/notes', { isAdmin: true, isTutor: true })).toBe(true)
   })
 })

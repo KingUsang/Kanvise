@@ -42,10 +42,19 @@ export function getDashboardNavItems(capabilities: DashboardCapabilities) {
   return dashboardNavItems.filter((item) => canAccessDashboardItem(item, capabilities))
 }
 
-export function canAccessDashboardPath(pathname: string, capabilities: DashboardCapabilities) {
+export function getDashboardAccess(pathname: string): DashboardAccess | null {
   const item = dashboardNavItems
     .filter((candidate) => pathname === candidate.href || pathname.startsWith(`${candidate.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0]
 
-  return item ? canAccessDashboardItem(item, capabilities) : true
+  return item?.access ?? null
+}
+
+export function canAccessDashboardPath(pathname: string, capabilities: DashboardCapabilities) {
+  const access = getDashboardAccess(pathname)
+  if (!access) return true
+  if (access === 'all') return capabilities.isAdmin || capabilities.isTutor
+  if (access === 'admin') return capabilities.isAdmin
+  if (access === 'tutor') return capabilities.isTutor
+  return capabilities.isAdmin || capabilities.isTutor
 }
