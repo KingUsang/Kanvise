@@ -26,6 +26,49 @@ type QuestionState = {
   grading_rubric?: string; // only for theory
 };
 
+export function parseDocxQuestionText(rawText: string): QuestionState[] {
+  const blocks = rawText
+    .replace(/\r/g, "")
+    .split(/\n\s*(?:---+|={3,})\s*\n/g)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return blocks.flatMap((block, blockIndex) => {
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    const field = (name: string) => lines.find((line) => line.toLowerCase().startsWith(`${name.toLowerCase()}:`))
+      ?.slice(name.length + 1).trim();
+    const type = field("Type")?.toLowerCase();
+    const questionText = field("Question");
+    if (!questionText || (type !== "mcq" && type !== "theory")) return [];
+
+    const marks = Number(field("Marks")) || 1;
+    const id = `docx_${Date.now()}_${blockIndex}`;
+    if (type === "theory") {
+      return [{
+        id,
+        question_type: "theory" as const,
+        question_text: questionText,
+        marks,
+        options: [],
+        grading_rubric: field("Rubric") || "",
+      }];
+    }
+
+    const answer = field("Answer")?.toUpperCase();
+    const options = lines.flatMap((line, optionIndex) => {
+      const match = line.match(/^([A-Z])[\).:-]\s+(.+)$/i);
+      if (!match) return [];
+      return [{
+        id: `${id}_option_${optionIndex}`,
+        option_text: match[2].trim(),
+        is_correct: match[1].toUpperCase() === answer,
+      }];
+    });
+    if (options.length < 2 || options.filter((option) => option.is_correct).length !== 1) return [];
+    return [{ id, question_type: "mcq" as const, question_text: questionText, marks, options }];
+  });
+}
+
 export function MockBuilderClient({ token }: { token: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -279,6 +322,41 @@ export function MockBuilderClient({ token }: { token: string }) {
     });
   };
 
+  const processDocx = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const mammoth = await import("mammoth/mammoth.browser");
+      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+      const parsedQuestions = parseDocxQuestionText(result.value);
+      setQuestions((current) => [...current, ...parsedQuestions]);
+      if (parsedQuestions.length) {
+        toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
+          description: "Please review every question before publishing.",
+        });
+      } else {
+        toast.warning("No questions matched the Word template", {
+          description: "Separate questions with --- and include Type, Question, Marks and Answer fields.",
+        });
+      }
+    } catch (error) {
+      console.error("Could not read DOCX", error);
+      toast.error("Could not read that Word document");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const processImportFile = (file: File) => {
+    const lowerName = file.name.toLowerCase();
+    if (file.type === "text/csv" || lowerName.endsWith(".csv")) {
+      processCSV(file);
+    } else if (lowerName.endsWith(".docx")) {
+      void processDocx(file);
+    } else {
+      toast.error("Choose a CSV or DOCX file");
+    }
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -291,15 +369,11 @@ export function MockBuilderClient({ token }: { token: string }) {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file && (file.type === "text/csv" || file.name.endsWith(".csv"))) {
-      processCSV(file);
-    } else {
-      toast.error("Choose a valid CSV file");
-    }
+    if (file) processImportFile(file);
   };
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) processCSV(file);
+    if (file) processImportFile(file);
   };
 
   const handleSave = async (shouldPublish: boolean) => {
@@ -638,7 +712,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                       : 'border-[#c8c5d2] bg-white hover:bg-[#f5f3f2]'
                   }`}
                 >
-                  <input type="file" accept=".csv" className="hidden" onChange={handleFileInput} />
+                  <input type="file" accept=".csv,.docx" className="hidden" onChange={handleFileInput} />
                   
                   {isUploading ? (
                     <div className="flex flex-col items-center py-2">
@@ -651,7 +725,10 @@ export function MockBuilderClient({ token }: { token: string }) {
                         <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
                       </div>
                       <span className="text-[15px] font-semibold text-[#1b1c1c] mb-1">Click to upload or drag and drop</span>
-                      <span className="text-[13px] font-normal text-[#474551]">CSV file formatted to Kanvise standard</span>
+                      <span className="text-[13px] font-normal text-[#474551]">CSV or Word (.docx) file using the Kanvise format</span>
+                      <span className="mt-2 max-w-lg text-center text-[12px] leading-5 text-[#787582]">
+                        In Word, separate questions with <strong>---</strong>. Use: Type: MCQ, Question:, Marks:, A. to D., and Answer: A. For theory, use Type: Theory and Rubric:.
+                      </span>
                     </>
                   )}
                 </label>

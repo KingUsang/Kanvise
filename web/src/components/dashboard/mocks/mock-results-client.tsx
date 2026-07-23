@@ -61,6 +61,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [savingAnswerId, setSavingAnswerId] = useState<string | null>(null)
+  const [grantingAttemptId, setGrantingAttemptId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, { score: string; feedback: string }>>({})
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
 
@@ -150,6 +151,24 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
     toast.success('Results exported')
   }
 
+  const allowAnotherAttempt = async (attempt: Attempt) => {
+    setGrantingAttemptId(attempt.id)
+    try {
+      const response = await fetch(`${apiUrl}/mocks/${mockId}/attempt-grants`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attempt_id: attempt.id, reason: 'Allowed from the mock results page' }),
+      })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not allow another attempt')
+      toast.success(`${studentName(attempt)} can try this mock one more time`)
+    } catch (error) {
+      toast.error('Could not allow another attempt', { description: error instanceof Error ? error.message : 'Please try again.' })
+    } finally {
+      setGrantingAttemptId(null)
+    }
+  }
+
   if (isLoading) return <div className="py-20 text-center text-on-surface-variant">Loading mock results…</div>
   if (!data) return <div className="py-20 text-center"><p className="text-error">Mock results are unavailable.</p><Link href="/dashboard/mocks" className="mt-4 inline-block font-semibold text-primary">Back to mocks</Link></div>
 
@@ -201,7 +220,13 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
             <main className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-outline-variant bg-white">
               <div className="flex flex-col gap-4 border-b border-outline-variant p-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white">{studentName(selectedAttempt).split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</div><div><h2 className="font-semibold text-on-surface">{studentName(selectedAttempt)}</h2><p className="text-xs text-on-surface-variant">Submitted {selectedAttempt.submitted_at ? new Date(selectedAttempt.submitted_at).toLocaleString('en-NG') : '—'}</p></div></div>
-                <div className="flex gap-6 text-right"><div><p className="text-[10px] font-semibold uppercase text-on-surface-variant">Auto-graded MCQ</p><p className="mt-1 text-lg font-bold text-on-surface">{selectedAttempt.mcq_score ?? 0}</p></div><div><p className="text-[10px] font-semibold uppercase text-[#994704]">Theory score</p><p className="mt-1 text-lg font-bold text-[#994704]">{theoryAnswers(selectedAttempt).reduce((sum, answer) => sum + Number(answer.tutor_score || 0), 0)}</p></div></div>
+                <div className="flex flex-wrap items-center justify-end gap-4 text-right">
+                  <button type="button" onClick={() => void allowAnotherAttempt(selectedAttempt)} disabled={grantingAttemptId === selectedAttempt.id} className="rounded-md border border-outline-variant bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary-fixed disabled:opacity-50">
+                    {grantingAttemptId === selectedAttempt.id ? 'Allowing…' : 'Allow another attempt'}
+                  </button>
+                  <div><p className="text-[10px] font-semibold uppercase text-on-surface-variant">Auto-graded MCQ</p><p className="mt-1 text-lg font-bold text-on-surface">{selectedAttempt.mcq_score ?? 0}</p></div>
+                  <div><p className="text-[10px] font-semibold uppercase text-[#994704]">Theory score</p><p className="mt-1 text-lg font-bold text-[#994704]">{theoryAnswers(selectedAttempt).reduce((sum, answer) => sum + Number(answer.tutor_score || 0), 0)}</p></div>
+                </div>
               </div>
 
               {selectedAnswer && currentDraft ? (

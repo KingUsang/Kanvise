@@ -243,6 +243,44 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
   } });
 });
 
+// POST /mocks/:id/attempt-grants — allow a student one more attempt without
+// changing the mock-wide attempt limit for everyone else.
+mocksRouter.post("/:id/attempt-grants", requireTutorOrAdmin, async (c) => {
+  const user = c.get("user");
+  const mockId = c.req.param("id");
+  const body = await c.req.json();
+  const attemptId = typeof body.attempt_id === "string" ? body.attempt_id : "";
+  const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : null;
+  if (!attemptId) return c.json({ error: "Choose a student attempt", code: "VALIDATION_ERROR" }, 400);
+
+  const { data: mock, error: mockError } = await supabase.from("mock_exams")
+    .select("id, course_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+  if (mockError || !mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
+  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
+    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
+  }
+
+  const { data: attempt, error: attemptError } = await supabase.from("mock_attempts")
+    .select("id, student_id, mock_exam_version_id")
+    .eq("id", attemptId).eq("mock_exam_id", mockId).eq("school_id", user.school_id).maybeSingle();
+  if (attemptError) return mockDatabaseError(c, attemptError, "Could not check the student's attempt");
+  if (!attempt) return c.json({ error: "Student attempt not found", code: "ATTEMPT_NOT_FOUND" }, 404);
+  if (!attempt.mock_exam_version_id) {
+    return c.json({ error: "Extra attempts are available only for versioned mocks", code: "LEGACY_ATTEMPT" }, 409);
+  }
+
+  const { data, error } = await supabase.from("mock_attempt_grants").insert({
+    school_id: user.school_id,
+    mock_exam_version_id: attempt.mock_exam_version_id,
+    student_id: attempt.student_id,
+    granted_by: user.id,
+    additional_attempts: 1,
+    reason,
+  }).select("id, created_at, additional_attempts, reason").single();
+  if (error) return mockDatabaseError(c, error, "Could not allow another attempt");
+  return c.json({ data, message: "One extra attempt allowed" }, 201);
+});
+
 // GET /mocks/:id (Fetch mock details)
 mocksRouter.get("/:id", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
