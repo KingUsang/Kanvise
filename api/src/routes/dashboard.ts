@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, Variables } from '../middleware/auth'
-import { resolveStudentCourses } from '../lib/student-course-access'
+import { loadStudentCourseIds, resolveStudentCourses } from '../lib/student-course-access'
+import { buildStudentProgress } from '../domain/student-progress'
 
 export const dashboardRouter = new Hono<{ Variables: Variables }>()
 
@@ -111,7 +112,8 @@ dashboardRouter.get('/student', async (c) => {
   const [{ data: profile, error: profileError }, { data: school, error: schoolError }, { data: enrolments, error: enrolmentsError }, { data: schoolCourses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
     supabase.from('user_profiles').select('first_name, last_name').eq('id', user.id).eq('school_id', schoolId).maybeSingle(),
     supabase.from('schools').select('name').eq('id', schoolId).maybeSingle(),
-    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id').eq('school_id', schoolId).eq('student_id', user.id),
+    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id')
+      .eq('school_id', schoolId).eq('student_id', user.id).eq('status', 'active'),
     supabase.from('courses').select('id, name, programme_id, sub_programme_id').eq('school_id', schoolId).eq('is_published', true),
     supabase.from('sub_programmes').select('id, programme_id').eq('school_id', schoolId),
   ])
@@ -182,6 +184,42 @@ dashboardRouter.get('/student', async (c) => {
     assignments_due: assignmentsDue,
     recent_updates: recentUpdates,
   } })
+})
+
+dashboardRouter.get('/student/progress', async c => {
+  const user = c.get('user')
+  if (user.role !== 'student') return c.json({ error: 'Student access only', code: 'INSUFFICIENT_ROLE' }, 403)
+  if (!user.school_id) return c.json({ error: 'User does not belong to a school', code: 'NO_SCHOOL' }, 400)
+  try {
+    const courseIds = await loadStudentCourseIds(user.id, user.school_id)
+    if (!courseIds.length) return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], mocks: [], attempts: [] }) })
+    const [
+      { data: courses, error: courseError }, { data: classes, error: classError },
+      { data: assignments, error: assignmentError }, { data: submissions, error: submissionError },
+      { data: mocks, error: mockError }, { data: attempts, error: attemptError },
+    ] = await Promise.all([
+      supabase.from('courses').select('id, name').eq('school_id', user.school_id).in('id', courseIds),
+      supabase.from('live_classes').select('id, course_id').eq('school_id', user.school_id).in('course_id', courseIds).eq('status', 'completed'),
+      supabase.from('assignments').select('id, course_id').eq('school_id', user.school_id).in('course_id', courseIds).eq('is_published', true),
+      supabase.from('submissions').select('assignment_id').eq('school_id', user.school_id).eq('student_id', user.id),
+      supabase.from('mock_exams').select('id, course_id, title').eq('school_id', user.school_id).in('course_id', courseIds),
+      supabase.from('mock_attempts').select('id, mock_exam_id, status, submitted_at, total_score, total_marks, correct_mcq_answers, total_mcq_questions')
+        .eq('school_id', user.school_id).eq('student_id', user.id),
+    ])
+    if (courseError || classError || assignmentError || submissionError || mockError || attemptError) throw courseError || classError || assignmentError || submissionError || mockError || attemptError
+    const classIds = (classes || []).map(item => item.id)
+    const { data: attendance, error: attendanceError } = classIds.length
+      ? await supabase.from('attendance_records').select('live_class_id').eq('school_id', user.school_id).eq('student_id', user.id).in('live_class_id', classIds)
+      : { data: [], error: null }
+    if (attendanceError) throw attendanceError
+    return c.json({ data: buildStudentProgress({
+      courses: courses || [], classes: classes || [], attendance: attendance || [],
+      assignments: assignments || [], submissions: submissions || [], mocks: mocks || [], attempts: attempts || [],
+    }) })
+  } catch (error) {
+    console.error('student_progress.load_failed', { studentId: user.id, error })
+    return c.json({ error: 'Could not load your progress', code: 'PROGRESS_LOAD_FAILED' }, 500)
+  }
 })
 
 dashboardRouter.get('/stats', async (c) => {

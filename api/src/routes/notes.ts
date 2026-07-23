@@ -8,6 +8,7 @@ import {
   StorageError,
   verifyPrivateUpload,
 } from "../storage/r2";
+import { loadStudentCourseIds } from "../lib/student-course-access";
 
 type Variables = {
   user: any;
@@ -26,6 +27,32 @@ const enforceAdminOrTutor = async (c: any, next: any) => {
   }
   await next();
 };
+
+// Student materials library. This aggregate route avoids one request per course
+// and uses the same programme/sub-programme/course entitlement resolver as the
+// rest of the student portal.
+notesRouter.get("/me", async (c) => {
+  try {
+    const profile = c.get("user");
+    if (profile.role !== "student") return c.json({ error: "Only students can view this library", code: "FORBIDDEN" }, 403);
+    if (!profile.school_id) return c.json({ data: [] });
+    const courseIds = await loadStudentCourseIds(profile.id, profile.school_id);
+    if (!courseIds.length) return c.json({ data: [] });
+
+    const { data, error } = await supabase.from("notes")
+      .select("id, title, description, file_key, file_name, file_type, file_size_bytes, created_at, course_id, course:courses(id, name), tutor:user_profiles!notes_tutor_id_fkey(id, first_name, last_name)")
+      .eq("school_id", profile.school_id).in("course_id", courseIds)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    const notes = await Promise.all((data || []).map(async ({ file_key, ...note }) => ({
+      ...note, download_url: await createPresignedDownload(file_key, profile.school_id),
+    })));
+    return c.json({ data: notes });
+  } catch (error: any) {
+    console.error("GET /notes/me error:", error);
+    return c.json({ error: "Could not load learning materials", code: "MATERIALS_LOAD_FAILED" }, 500);
+  }
+});
 
 // Create a new note
 notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {

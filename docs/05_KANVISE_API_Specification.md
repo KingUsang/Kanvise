@@ -1386,14 +1386,15 @@ Returns all of the current student's submissions across all courses.
 > **Implementation transition (July 2026):** The versioned question-bank and CBT
 > contracts in `15_MOCK_ENGINE_AND_QUESTION_BANK_IMPLEMENTATION_PLAN.md` supersede
 > the legacy direct-question attempt contract below. Tutor CRUD/results remain the
-> current implementation. Student start, resume, autosave, timeout, and results
-> endpoints in this section are planned contracts until their versioned Hono routes
-> and tests land; documentation alone must not be treated as implementation.
+> current implementation. The versioned student list, preflight, start/resume,
+> autosave, flag, timeout, submission, and results routes listed below are now
+> implemented and tested through Hono. The older whole-attempt submission examples
+> are retained only as legacy context and must not be used by new clients.
 
 ### Question-bank authoring checkpoint
 
-The Hono service now exposes the first authoring contract, pending application of
-the question-bank migrations in the target environment:
+The Hono service exposes the authoring contract below. Its migrations were applied
+and verified against the connected development Supabase project on 23 July 2026:
 
 - `GET /question-banks` — list private banks owned by the tutor and centre banks
   visible to the tutor; admins see all active banks in their centre.
@@ -1417,6 +1418,30 @@ the question-bank migrations in the target environment:
 
 These routes are tutor/admin-only and always scope queries to the verified profile's
 `school_id`. Next.js does not query the question-bank tables directly.
+
+### Implemented versioned student CBT routes
+
+- `GET /students/me/mocks` — list published mocks from the authenticated student's
+  entitled courses, classified as available, in progress, upcoming, or completed.
+- `GET /mocks/:mockId/preflight` — return instructions, availability, attempts,
+  question count, marks, timing, and calculator mode without answer keys.
+- `POST /mocks/:mockId/attempts` — atomically start or resume the authenticated
+  student's attempt against the latest immutable published version.
+- `GET /attempts/:attemptId` — resume the owner's immutable question payload and
+  saved responses; the server derives the remaining time from `deadline_at`.
+- `PUT /attempts/:attemptId/answers/:questionId` — idempotently autosave one MCQ or
+  theory response for the authenticated attempt owner.
+- `PATCH /attempts/:attemptId/questions/:questionId/flag` — set or clear the
+  student's review flag for one attempt question.
+- `POST /attempts/:attemptId/submit` — submit or lazily time out an attempt using
+  server-authoritative timing and atomic grading.
+- `GET /attempts/:attemptId/results` — return only the score, corrections,
+  explanations, and theory details allowed by that published version's release
+  settings.
+
+Every route derives student and school IDs from verified authentication, applies
+programme/sub-programme/course entitlement, and returns `404` rather than revealing
+an inaccessible cross-tenant or unenrolled resource.
 
 ---
 
@@ -1644,6 +1669,42 @@ Tutor grades a theory answer.
 ```
 
 **Response 200:** Updated answer object.
+
+---
+
+## Module 16A — Student Portal Aggregates
+
+These routes are Hono-owned presentation aggregates. Next.js supplies the student's
+verified access token but does not read application tables from Supabase directly.
+
+### GET `api.kanvise.com/notes/me`
+**Host:** Hono | **Auth:** `S`
+
+Returns learning materials across every course granted by the student's active
+programme, sub-programme, or direct-course enrolments. Each item contains a
+short-lived Cloudflare R2 `download_url`; private `file_key` values are never
+returned.
+
+### GET `api.kanvise.com/dashboard/student/progress`
+**Host:** Hono | **Auth:** `S`
+
+Returns overall and per-course attendance, assignment completion, mock averages,
+and recent mock results for the authenticated student. Percentages are `null` when
+no denominator has been recorded; the API does not invent missing progress.
+
+### GET `api.kanvise.com/students/me/settings`
+**Host:** Hono | **Auth:** `S`
+
+Returns the student's safe profile fields and centre name. The response exposes a
+public profile-photo URL, not its storage key.
+
+### PATCH `api.kanvise.com/students/me/settings`
+**Host:** Hono | **Auth:** `S`
+
+Updates only `first_name`, `last_name`, and optional `bio`. Email, role, school,
+student ID, and arbitrary fields are ignored and cannot be changed through this
+route. Profile photos use the verified `/storage/presign/public` and
+`/storage/public/confirm` flow with `entity_type = profile_photo`.
 
 ---
 

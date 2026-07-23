@@ -43,6 +43,7 @@ import { assignmentsRouter, courseAssignmentsRouter } from "./routes/assignments
 import { promosRouter } from "./routes/promos";
 import { questionBanksRouter } from "./routes/question-banks";
 import { studentMocksRouter } from "./routes/student-mocks";
+import { studentSettingsRouter } from "./routes/student-settings";
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -60,6 +61,7 @@ app.route("/users", usersRouter);
 app.route("/mocks", mocksRouter);
 app.route("/question-banks", questionBanksRouter);
 app.route("/", studentMocksRouter);
+app.route("/", studentSettingsRouter);
 app.route("/enrolments", enrolmentsRouter);
 app.route("/payments", paymentsRouter);
 app.route("/attendance", attendanceRouter);

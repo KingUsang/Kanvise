@@ -38,15 +38,35 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | T: Live Classroom Instruction Hosting | Tutor | `/class/[id]` | Implemented; visual alignment in progress |
 | T: Instructional Materials Library | Tutor | — | Missing route |
 | T: Mock Examination Results Analysis | Tutor | `/dashboard/mocks/[mockId]/results` | Implemented as a mock-scoped results and theory-grading workspace |
-| S3: Student Dashboard | Student | `/dashboard/student` | First real-data slice implemented |
+| S3: Student Dashboard | Student | `/dashboard/student` | Implemented with enrolment-scoped Hono data |
 | S4: My Classes | Student | `/dashboard/student/classes` | Implemented with enrolment-scoped class sessions |
 | S5: Assignments Management | Student | `/dashboard/student/assignments` | Implemented with private submission upload and feedback |
-| S6: Mocks Management | Student | `/dashboard/student/mocks` | Shell route only; workflow pending |
-| S7: Materials Library | Student | `/dashboard/student/materials` | Shell route only; workflow pending |
-| S8: My Progress Tracking | Student | `/dashboard/student/progress` | Shell route only; workflow pending |
-| S9: Student Settings | Student | `/dashboard/student/settings` | Shell route only; workflow pending |
+| S6: Mocks Management | Student | `/dashboard/student/mocks` | Implemented through preflight, CBT attempt, submission, and released results |
+| S7: Materials Library | Student | `/dashboard/student/materials` | Implemented with entitled-course filtering and signed R2 downloads |
+| S8: My Progress Tracking | Student | `/dashboard/student/progress` | Implemented from recorded attendance, assignments, and mock attempts |
+| S9: Student Settings | Student | `/dashboard/student/settings` | Implemented with safe profile edits, profile photo upload, and password-reset entry point |
 
 The student dashboard follows Stitch's hierarchy, spacing, colour, desktop sidebar, and mobile navigation direction, but only displays metrics supported by real Kanvise data. Generated countdowns, registration codes, attendance percentages, and scores must not be shown until the corresponding product logic exists.
+
+### Student S3–S9 completion evidence — 23 July 2026
+
+| Workflow | Hono source | Access invariant | UX verification |
+| --- | --- | --- | --- |
+| S3 Dashboard | `GET /dashboard/student` | Student role, school, and active inherited enrolments | Action-oriented empty/data states; responsive main/aside layout |
+| S4 Classes | `GET /live-classes` and protected join/detail routes | Only entitled course IDs; unenrolled details are hidden and joins rejected | All/upcoming/past filters; join appears only for live sessions |
+| S5 Assignments | `GET /assignments/me` plus submission/storage routes | Student role, own submission, active course entitlement, verified private R2 object | Pending/submitted/graded/overdue states and responsive submission flow |
+| S6 Mocks | Versioned `/students/me/mocks`, `/mocks/:id/preflight`, and `/attempts/*` routes | Student/tenant ownership, active entitlement, immutable version, no answer-key leakage | Responsive CBT runner, flags, autosave/recovery, calculator, timer, submit and results |
+| S7 Materials | `GET /notes/me` | Student role, active entitled courses, signed private download, no object-key leakage | Search plus course/type filters; responsive cards and empty state |
+| S8 Progress | `GET /dashboard/student/progress` | Student role, own activity, active entitled courses | Recorded-only totals, per-course cards, recent results, honest missing-data state |
+| S9 Settings | `GET/PATCH /students/me/settings` and verified public storage routes | Student role, own tenant/profile, allowlisted fields; role/school/email cannot be overwritten | Responsive editable profile, photo progress, in-app feedback, password-reset link |
+
+Verification passed with the complete API test suite (42 files/142 tests), web
+component suite (8 files/19 tests), API TypeScript build, explicit web TypeScript
+check, targeted ESLint, and the Next.js production build. The Supabase mock lifecycle
+was also exercised inside a rollback-only transaction. CSS breakpoints and mobile
+navigation cover narrow, tablet, and desktop layouts; a signed-in device/browser
+visual regression pass remains a release-environment check rather than a missing
+workflow.
 
 ## Deferred security audit: Supabase RLS
 
@@ -118,15 +138,22 @@ This matches the existing RLS migrations, which already read role and school fro
 - Implemented student assignment filtering, instructions, private resource downloads, Cloudflare R2 submission uploads, submitted/late/graded states, marks, tutor feedback, and own-file downloads.
 - Centralised student course access so assignment listing, submission permission, storage presigning, class listing, and LiveKit joins use the same programme → sub-programme → course inheritance rules.
 - Persist late-submission status in the database; the earlier API calculated it for the response but failed to save it on the submission row.
+- Implemented the student mock list, preflight, immutable attempt runner, server-owned timer, autosave/offline retry, flags, calculator, keyboard controls, submission confirmation, and release-controlled results through Hono.
+- Implemented the Materials library as one aggregate Hono request. It resolves programme, sub-programme, and direct-course enrolments server-side, signs private Cloudflare R2 downloads, and never returns storage object keys.
+- Implemented Progress using only recorded activity. Attendance, assignment completion, and mock averages remain explicitly unavailable when their denominator is absent instead of inventing percentages.
+- Implemented Student Settings with tenant/role-scoped profile reads and an allowlisted update contract. Email, role, school, and student ID cannot be edited there; profile photos use verified public R2 uploads.
+- Added responsive layouts and narrow-screen behaviour for every authoritative S3–S9 route.
 
 ### Remaining product/UX work
 
-- Decide the information architecture for Materials and Avatar Customisation before adding links.
+- Decide the information architecture for Avatar Customisation before adding a link.
 - Extend dashboard search to records only after a tenant-scoped search API and clear result categories are defined.
 - Add a shareable public enrolment link to the student roster once the school slug is available in that route.
 - Ensure an admin who teaches sees teaching priorities without overwhelming the admin overview.
 - Add consistent route-level loading, empty, forbidden, and recoverable error states.
 - Audit mobile behavior against product needs; numbered legacy mobile screens are not authoritative.
+- Add notification preferences after a canonical preference model and delivery channels exist.
+- Complete the tutor mock-builder question-bank picker, CSV/DOCX import, legacy mock backfill, and marketplace growth phases documented in the mock-engine plan.
 
 ## 6. Content standard
 

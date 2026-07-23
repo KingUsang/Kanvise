@@ -28,7 +28,8 @@ export function resolveStudentCourses<T extends StudentCourse>(
 
 export async function loadStudentCourseIds(studentId: string, schoolId: string) {
   const [{ data: enrolments, error: enrolmentsError }, { data: courses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
-    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id').eq('student_id', studentId).eq('school_id', schoolId),
+    supabase.from('enrolments').select('programme_id, sub_programme_id, course_id')
+      .eq('student_id', studentId).eq('school_id', schoolId).eq('status', 'active'),
     supabase.from('courses').select('id, programme_id, sub_programme_id').eq('school_id', schoolId),
     supabase.from('sub_programmes').select('id, programme_id').eq('school_id', schoolId),
   ])
