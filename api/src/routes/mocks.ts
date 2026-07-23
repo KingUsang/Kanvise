@@ -10,6 +10,8 @@ import {
   type MockAssemblySection,
 } from "../domain/mock-assembly";
 import { canReadQuestionBank } from "../domain/question-bank";
+import { createPresignedDownload } from "../storage/r2";
+import { REVIEWABLE_ATTEMPT_STATUSES } from "../domain/mock-results";
 
 export const mocksRouter = new Hono<{ Variables: AppVariables }>();
 
@@ -200,7 +202,9 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
 
   const { data: attempts, error: attemptsError } = await supabase.from("mock_attempts")
     .select("id, student_id, mock_exam_version_id, started_at, submitted_at, status, mcq_score, theory_score, total_score, total_marks, total_mcq_questions, correct_mcq_answers, student:user_profiles(first_name, last_name, email)")
-    .eq("mock_exam_id", mockId).eq("school_id", user.school_id).order("submitted_at", { ascending: false });
+    .eq("mock_exam_id", mockId).eq("school_id", user.school_id)
+    .in("status", [...REVIEWABLE_ATTEMPT_STATUSES])
+    .order("submitted_at", { ascending: false });
   if (attemptsError) return c.json({ error: "Failed to load mock attempts" }, 500);
 
   const attemptIds = (attempts || []).map((attempt: any) => attempt.id);
@@ -208,13 +212,33 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
     ? await supabase.from("mock_answers")
       .select(`id, attempt_id, theory_answer_text, is_correct, tutor_score, tutor_feedback,
         question:mock_version_questions(id, marks, order_index,
-          version:bank_question_versions(plain_text,
+          version:bank_question_versions(plain_text, content_blocks,
             question:bank_questions(question_type)
           )
         )`)
       .eq("school_id", user.school_id).in("attempt_id", attemptIds)
     : { data: [], error: null };
   if (answersError) return c.json({ error: "Failed to load mock answers" }, 500);
+
+  const mediaIds = [...new Set((answers || []).flatMap((answer: any) =>
+    (answer.question?.version?.content_blocks || []).flatMap((block: any) =>
+      block?.type === "image" && typeof block.media_id === "string" ? [block.media_id] : [])))];
+  const mediaById = new Map<string, any>();
+  if (mediaIds.length) {
+    const { data: media, error: mediaError } = await supabase.from("question_media")
+      .select("id, storage_key, alt_text, width, height")
+      .eq("school_id", user.school_id).eq("processing_status", "ready").in("id", mediaIds);
+    if (mediaError) return c.json({ error: "Failed to load question images" }, 500);
+    for (const item of media || []) {
+      mediaById.set(item.id, {
+        media_id: item.id,
+        alt_text: item.alt_text,
+        width: item.width,
+        height: item.height,
+        url: await createPresignedDownload(item.storage_key, user.school_id!),
+      });
+    }
+  }
 
   const answersByAttempt = new Map<string, any[]>();
   for (const answer of answers || []) {
@@ -225,6 +249,8 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
       question: {
         id: snapshot?.id,
         question_text: snapshot?.version?.plain_text || "",
+        content_blocks: (snapshot?.version?.content_blocks || []).map((block: any) =>
+          block?.type === "image" ? { ...block, ...mediaById.get(block.media_id) } : block),
         question_type: snapshot?.version?.question?.question_type,
         marks: snapshot?.marks,
         order_index: snapshot?.order_index,

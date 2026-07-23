@@ -308,6 +308,35 @@ The API restricts tutor creation and Course listing to assigned Courses, restric
 tutor deletion to materials they created, and allows centre admins to manage
 materials across their own school.
 
+### T: Mock Examination Results Analysis — 23 July 2026
+
+The implementation follows Stitch's submissions-and-marking workspace while
+retaining Kanvise's real versioned mock data, score export, feedback, and
+per-student extra-attempt control.
+
+Corrections made during this pass:
+
+- Renamed “Grading Dashboard,” “Pending Theory,” and “Auto-graded MCQ” using
+  straightforward mock results, written answers, and multiple-choice language.
+- Added a recoverable load-error state; an API outage no longer leaves a permanent
+  generic dead end.
+- Exclude in-progress attempts from tutor results and reject marking until an
+  attempt has been submitted or timed out. Tutors must never see or mark a
+  student's live work.
+- Aligned marking permission with the results workspace: a tutor assigned to the
+  Course may mark its written answers, whether or not that tutor originally created
+  the mock. Admin access remains school-scoped.
+- Render question text, mathematical equations, chemistry notation, tables, and
+  question images with the shared CBT renderer. Private question images receive
+  expiring signed R2 URLs rather than exposing storage keys.
+- Use the attempt's stored total marks as the result denominator instead of
+  reconstructing it only from answer rows.
+
+CSV export is real and spreadsheet-formula injection is neutralised. Stitch's
+“Publish all results” control was not copied because result visibility is already
+governed by each mock's configured release policy; a second decorative publication
+action would conflict with that model.
+
 ## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:

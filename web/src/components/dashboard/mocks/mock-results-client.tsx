@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { QuestionContent, type ContentBlock } from '@/components/questions/question-content'
 
 type MockAnswer = {
   id: string
   theory_answer_text: string | null
   tutor_score: number | null
   tutor_feedback: string | null
-  question: { id: string; question_text: string; question_type: string; marks: number; order_index: number }
+  question: { id: string; question_text: string; content_blocks: ContentBlock[]; question_type: string; marks: number; order_index: number }
 }
 
 type Attempt = {
@@ -19,6 +20,7 @@ type Attempt = {
   mcq_score: number | null
   correct_mcq_answers: number | null
   total_mcq_questions: number | null
+  total_marks: number | null
   student: { first_name: string; last_name: string; email: string } | null
   answers: MockAnswer[]
 }
@@ -41,7 +43,7 @@ function attemptScore(attempt: Attempt) {
 }
 
 function maximumScore(attempt: Attempt) {
-  return attempt.answers.reduce((sum, answer) => sum + Number(answer.question?.marks || 0), 0)
+  return Number(attempt.total_marks || 0)
 }
 
 function needsGrading(attempt: Attempt) {
@@ -62,10 +64,13 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
   const [isLoading, setIsLoading] = useState(true)
   const [savingAnswerId, setSavingAnswerId] = useState<string | null>(null)
   const [grantingAttemptId, setGrantingAttemptId] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState('')
   const [drafts, setDrafts] = useState<Record<string, { score: string; feedback: string }>>({})
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
 
   const loadResults = useCallback(async () => {
+    setIsLoading(true)
+    setLoadError('')
     try {
       const response = await fetch(`${apiUrl}/mocks/${mockId}/results`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -75,7 +80,9 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
       setData(body.data)
       setSelectedAttemptId((current) => current || body.data.attempts[0]?.id || null)
     } catch (error) {
-      toast.error('Could not load mock results', { description: error instanceof Error ? error.message : 'Please try again.' })
+      const message = error instanceof Error ? error.message : 'Please try again.'
+      setLoadError(message)
+      toast.error('Could not load mock results', { description: message })
     } finally {
       setIsLoading(false)
     }
@@ -170,7 +177,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
   }
 
   if (isLoading) return <div className="py-20 text-center text-on-surface-variant">Loading mock results…</div>
-  if (!data) return <div className="py-20 text-center"><p className="text-error">Mock results are unavailable.</p><Link href="/dashboard/mocks" className="mt-4 inline-block font-semibold text-primary">Back to mocks</Link></div>
+  if (!data) return <div className="py-20 text-center"><span className="material-symbols-outlined text-4xl text-error">cloud_off</span><p className="mt-3 font-semibold text-on-surface">Mock results are unavailable</p><p className="mt-1 text-sm text-on-surface-variant">{loadError}</p><div className="mt-5 flex justify-center gap-4"><button type="button" onClick={() => void loadResults()} className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white">Try again</button><Link href="/dashboard/mocks" className="px-4 py-2 text-sm font-semibold text-primary">Back to mocks</Link></div></div>
 
   const pending = data.attempts.filter(needsGrading).length
   const averageMcq = data.attempts.length
@@ -185,8 +192,8 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs text-on-surface-variant"><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</p>
-          <h1 className="mt-2 text-3xl font-bold text-on-surface">Grading Dashboard</h1>
-          <p className="mt-1 text-sm text-on-surface-variant">Reviewing submissions for {data.mock.course?.name || 'this course'}.</p>
+          <h1 className="mt-2 text-3xl font-bold text-on-surface">Mock results</h1>
+          <p className="mt-1 text-sm text-on-surface-variant">Review scores and mark written answers for {data.mock.course?.name || 'this course'}.</p>
         </div>
         <button type="button" onClick={exportCsv} disabled={data.attempts.length === 0} className="inline-flex items-center justify-center gap-2 rounded-md border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-50">
           <span className="material-symbols-outlined text-lg">download</span> Export CSV
@@ -196,7 +203,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-outline-variant bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Total submissions</p><p className="mt-3 text-3xl font-bold text-on-surface">{data.attempts.length}</p></div>
         <div className="rounded-lg border border-outline-variant bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Average MCQ score</p><p className="mt-3 text-3xl font-bold text-on-surface">{averageMcq}%</p></div>
-        <div className="rounded-lg border border-outline-variant bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Pending theory</p><p className="mt-3 text-3xl font-bold text-[#994704]">{pending} <span className="text-xs font-medium text-on-surface-variant">needs grading</span></p></div>
+        <div className="rounded-lg border border-outline-variant bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Written answers to mark</p><p className="mt-3 text-3xl font-bold text-[#994704]">{pending} <span className="text-xs font-medium text-on-surface-variant">submissions</span></p></div>
       </section>
 
       {data.attempts.length === 0 ? (
@@ -224,15 +231,15 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
                   <button type="button" onClick={() => void allowAnotherAttempt(selectedAttempt)} disabled={grantingAttemptId === selectedAttempt.id} className="rounded-md border border-outline-variant bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary-fixed disabled:opacity-50">
                     {grantingAttemptId === selectedAttempt.id ? 'Allowing…' : 'Allow another attempt'}
                   </button>
-                  <div><p className="text-[10px] font-semibold uppercase text-on-surface-variant">Auto-graded MCQ</p><p className="mt-1 text-lg font-bold text-on-surface">{selectedAttempt.mcq_score ?? 0}</p></div>
-                  <div><p className="text-[10px] font-semibold uppercase text-[#994704]">Theory score</p><p className="mt-1 text-lg font-bold text-[#994704]">{theoryAnswers(selectedAttempt).reduce((sum, answer) => sum + Number(answer.tutor_score || 0), 0)}</p></div>
+                  <div><p className="text-[10px] font-semibold uppercase text-on-surface-variant">Multiple choice</p><p className="mt-1 text-lg font-bold text-on-surface">{selectedAttempt.mcq_score ?? 0}</p></div>
+                  <div><p className="text-[10px] font-semibold uppercase text-[#994704]">Written answers</p><p className="mt-1 text-lg font-bold text-[#994704]">{theoryAnswers(selectedAttempt).reduce((sum, answer) => sum + Number(answer.tutor_score || 0), 0)}</p></div>
                 </div>
               </div>
 
               {selectedAnswer && currentDraft ? (
                 <div className="flex flex-1 flex-col">
                   <div className="flex-1 space-y-5 p-6">
-                    <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold text-on-surface-variant">Q{selectedAnswer.question.order_index} of {selectedTheoryAnswers.length} theory questions</p><h3 className="mt-2 max-w-3xl font-semibold leading-6 text-on-surface">{selectedAnswer.question.question_text}</h3></div><span className="shrink-0 text-xs font-semibold text-on-surface-variant">Maximum points: {selectedAnswer.question.marks}</span></div>
+                    <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold text-on-surface-variant">Written question {selectedQuestionIndex + 1} of {selectedTheoryAnswers.length}</p><div className="mt-2 max-w-3xl font-semibold leading-6 text-on-surface"><QuestionContent plainText={selectedAnswer.question.question_text} blocks={selectedAnswer.question.content_blocks} /></div></div><span className="shrink-0 text-xs font-semibold text-on-surface-variant">{selectedAnswer.question.marks} marks</span></div>
                     <div className="rounded-lg bg-surface-container-low p-5 text-sm leading-7 text-on-surface whitespace-pre-wrap">{selectedAnswer.theory_answer_text || 'No answer provided.'}</div>
                     <div className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)]">
                       <label className="text-sm font-semibold text-on-surface">Score<input type="number" min="0" max={selectedAnswer.question.marks} value={currentDraft.score} onChange={(event) => setDrafts((current) => ({ ...current, [selectedAnswer.id]: { ...currentDraft, score: event.target.value } }))} className="mt-2 w-full rounded-md border border-outline-variant px-3 py-2.5 focus:border-primary focus:outline-none" /></label>

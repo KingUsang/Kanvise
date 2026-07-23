@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import { notifyMockFullyGraded } from '../notifications/triggers'
 import type { AppVariables } from '../types'
+import { isReviewableAttemptStatus } from '../domain/mock-results'
 
 export const mockAnswersRouter = new Hono<{ Variables: AppVariables }>()
 
@@ -23,7 +24,7 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
         version:bank_question_versions(question:bank_questions(question_type))
       ),
       attempt:mock_attempts(id, student_id, status, mcq_score, mock_exam_id, mock_exam_version_id,
-        mock_exam:mock_exams(id, title, tutor_id)
+        mock_exam:mock_exams(id, title, tutor_id, course_id)
       )`)
     .eq('id', answerId)
     .eq('school_id', user.school_id)
@@ -39,8 +40,19 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
 
   const attempt = answer.attempt as any
   const mockExam = attempt?.mock_exam as any
-  if (user.role === 'tutor' && mockExam?.tutor_id !== user.id) {
-    return c.json({ error: 'You are not the tutor for this mock', code: 'FORBIDDEN' }, 403)
+  if (!isReviewableAttemptStatus(attempt?.status)) {
+    return c.json({ error: 'This attempt has not been submitted', code: 'ATTEMPT_NOT_SUBMITTED' }, 409)
+  }
+  if (user.role === 'tutor') {
+    const { data: assignment } = await supabase.from('tutor_course_assignments')
+      .select('id')
+      .eq('school_id', user.school_id)
+      .eq('tutor_id', user.id)
+      .eq('course_id', mockExam?.course_id)
+      .maybeSingle()
+    if (!assignment) {
+      return c.json({ error: 'You are not assigned to this mock’s course', code: 'FORBIDDEN' }, 403)
+    }
   }
 
   const { data, error } = await supabase.from('mock_answers').update({
