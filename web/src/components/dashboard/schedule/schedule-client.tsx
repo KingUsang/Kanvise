@@ -75,11 +75,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
+        if (!classesRes.ok) throw new Error('Could not load scheduled classes')
         const classesData = await classesRes.json()
         
         const coursesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
+        if (!coursesRes.ok) throw new Error('Could not load courses')
         const coursesData = await coursesRes.json()
 
         let tutorsData = { data: [] }
@@ -92,12 +94,15 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           }
         }
 
-        if (classesRes.ok) setClasses(classesData.data || [])
-        if (coursesRes.ok) setCourses(coursesData.data || [])
+        setClasses(classesData.data || [])
+        setCourses(coursesData.data || [])
         if (capabilities.isAdmin) setTutors(tutorsData.data || [])
 
       } catch (err) {
         console.error('Error fetching schedule data:', err)
+        toast.error('Could not load the class schedule', {
+          description: 'Check your connection and try again.',
+        })
       } finally {
         setLoading(false)
       }
@@ -191,6 +196,35 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     router.push(`/class/${classId}${isStarting ? '?start=true' : ''}`);
   }
 
+  const handleDownloadSchedule = () => {
+    if (classes.length === 0) {
+      toast.info('There are no classes to download yet')
+      return
+    }
+
+    const escapeCsvCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
+    const rows = classes.map((item) => [
+      item.title,
+      item.course?.name || '',
+      item.course?.code || '',
+      `${item.tutor?.first_name || ''} ${item.tutor?.last_name || ''}`.trim(),
+      new Date(item.scheduled_at).toLocaleString(),
+      item.duration_minutes,
+      item.status,
+    ])
+    const csv = [
+      ['Class', 'Course', 'Course code', 'Tutor', 'Date and time', 'Duration (minutes)', 'Status'],
+      ...rows,
+    ].map((row) => row.map(escapeCsvCell).join(',')).join('\n')
+
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'kanvise-class-schedule.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const liveClasses = classes.filter(c => c.status === 'live')
   
   let scheduledClasses = classes.filter(c => c.status === 'scheduled')
@@ -206,7 +240,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const completedClasses = classes.filter(c => c.status === 'completed')
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()
-  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay()
+  const firstDayOfMonth = (new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() + 6) % 7
   const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i)
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
@@ -233,16 +267,16 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         <div>
           <h2 className="text-[32px] leading-[40px] font-bold text-[#1b1c1c] tracking-tight">Schedule Manager</h2>
           <p className="text-[16px] leading-[24px] text-[#474551] mt-1 max-w-2xl">
-            Coordinate live sessions, manage tutor availability, and track class status across all active programmes.
+            Plan live classes, assign tutors, and keep track of upcoming sessions.
           </p>
         </div>
         <div className="flex gap-3 shrink-0">
           <button 
             className="h-10 px-4 rounded bg-[#fbf9f8] border border-[#2e2877] text-[#2e2877] text-[12px] leading-[16px] tracking-[0.05em] font-bold hover:bg-[#f5f3f2] transition-colors flex items-center gap-2"
-            onClick={() => toast.info("Roster export is coming soon")}
+            onClick={handleDownloadSchedule}
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
-            Export Roster
+            Download Schedule
           </button>
           <button 
             className="h-10 px-5 rounded bg-[#994704] text-white text-[12px] leading-[16px] tracking-[0.05em] font-bold hover:bg-[#a84e04] transition-colors shadow-[0_4px_14px_rgba(153,71,4,0.3)] flex items-center gap-2"
@@ -262,7 +296,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           <div className="bg-white border border-[#C2B59B] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] p-6">
             <div className="border-b border-[#C2B59B] pb-4 mb-6">
               <h3 className="text-[20px] leading-[28px] font-bold text-[#180d62]">Schedule New Class</h3>
-              <p className="text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] mt-1">Book a session in the main roster</p>
+              <p className="text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] mt-1">Choose when the class will hold and who will teach it</p>
             </div>
             
             <form className="flex flex-col gap-5" onSubmit={handleScheduleClass}>
@@ -546,7 +580,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         <td className="py-4 px-6 text-[#474551]">{cls.tutor?.first_name || 'Tutor'}</td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {(capabilities.isAdmin || cls.tutor_id === user.id) && (
+                            {cls.tutor_id === user.id && (
                               <button 
                                 onClick={() => handleStartClass(cls.id)}
                                 className="px-3 py-1 bg-[#180d62] text-white text-[12px] leading-[16px] tracking-[0.05em] font-bold rounded hover:bg-[#2e2877] transition-colors ml-1"

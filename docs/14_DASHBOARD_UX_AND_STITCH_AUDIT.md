@@ -68,18 +68,51 @@ navigation cover narrow, tablet, and desktop layouts; a signed-in device/browser
 visual regression pass remains a release-environment check rather than a missing
 workflow.
 
-## Deferred security audit: Supabase RLS
+## Supabase data-access boundary
 
-The connected development database currently has Row Level Security disabled on 26 public tables. This matches the documented application-layer tenancy approach, where the Hono API uses the service role and scopes queries by `school_id`, but it becomes unsafe if browser code can query those tables directly with the public Supabase key.
+The connected development database now has Row Level Security enabled on every
+public application table. Browser `anon` and `authenticated` roles have no public
+table, sequence, or RPC privileges. Hono remains the application-data boundary and
+uses the service role with explicit school, role, and ownership checks.
 
-Before production launch, audit every frontend Supabase call and choose one consistent boundary:
+The browser may use Supabase Auth for sessions, but dashboard business data must
+come through the Hono API. New database migrations must preserve this boundary and
+new API routes still require application-layer tenancy tests; enabling RLS does not
+replace correct Hono authorisation.
 
-- keep database access server-only through Hono and revoke direct `anon`/`authenticated` table access; or
-- enable RLS and add tested tenant-, role-, and ownership-aware policies for every exposed table.
+## 3. Page audit log
 
-Do not enable RLS without the corresponding policies: doing so would block legitimate application access. Track this as production-blocking security work rather than a dashboard UX change.
+### A/T: Class Schedule Manager — 23 July 2026
 
-## 3. Capability and navigation rules
+The implementation follows the modern Stitch screen's hierarchy: page heading and
+actions, scheduling form and calendar in the left column, and live, scheduled, and
+completed sessions in the wider right column. It uses the dashboard shell's shared
+page padding rather than adding a second outer gutter.
+
+Corrections made during the product and implementation audit:
+
+- Simplified generated terms such as “main roster” and “manage tutor availability”
+  into language that describes what the page actually does.
+- Kept the page shared: admins see their centre's schedule and can assign an
+  eligible tutor; tutors see and schedule only their own assigned classes.
+- Corrected the Monday-first calendar offset.
+- Included course codes in the API response consumed by the schedule.
+- Replaced the decorative export action with a real CSV schedule download.
+- Stopped showing admins a Start Class action that the API correctly reserves for
+  the assigned tutor.
+- Enforced the same tutor ownership rule on class edits at the API boundary.
+- Added a visible recoverable error when the schedule API fails, so an outage is
+  not presented as an empty timetable.
+
+Follow-up items are deliberately separate from this completed alignment pass:
+
+- Add reschedule and cancel controls to the page using the existing API contracts,
+  with confirmation and notification feedback.
+- Add explicit date-range selection if centres need more than the current
+  day/all-upcoming calendar filter.
+- Test narrow-screen table behaviour in a signed-in browser during release QA.
+
+## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:
 
@@ -90,7 +123,7 @@ Dashboard navigation is configured centrally in `web/src/config/dashboard-naviga
 
 Hiding a sidebar item is not security. Hono route middleware and Supabase RLS remain responsible for authorization. The frontend route check prevents confusing page flashes and raw API errors when someone opens a URL outside their capabilities.
 
-## 4. Authentication claim decision
+## 5. Authentication claim decision
 
 The JWT fast path is retained, but authorization claims are read from Supabase `app_metadata`, not `user_metadata`.
 
@@ -103,7 +136,7 @@ The JWT fast path is retained, but authorization claims are read from Supabase `
 
 This matches the existing RLS migrations, which already read role and school from `app_metadata`.
 
-## 5. Confirmed UX issues and decisions
+## 6. Confirmed UX issues and decisions
 
 ### Resolved in the current pass
 
@@ -153,9 +186,10 @@ This matches the existing RLS migrations, which already read role and school fro
 - Add consistent route-level loading, empty, forbidden, and recoverable error states.
 - Audit mobile behavior against product needs; numbered legacy mobile screens are not authoritative.
 - Add notification preferences after a canonical preference model and delivery channels exist.
-- Complete the tutor mock-builder question-bank picker, CSV/DOCX import, legacy mock backfill, and marketplace growth phases documented in the mock-engine plan.
+- Define and validate the mock marketplace pilot before exposing public listings,
+  cross-centre licensing, payments, or creator payouts.
 
-## 6. Content standard
+## 7. Content standard
 
 Kanvise uses clear Nigerian/British English:
 

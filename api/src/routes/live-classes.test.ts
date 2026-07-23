@@ -20,7 +20,7 @@ import { liveClassesRouter } from './live-classes'
 
 function builder(result: any) {
   const value: any = {
-    select: () => value, insert: () => value, eq: () => value,
+    select: () => value, insert: () => value, update: () => value, eq: () => value,
     in: () => value, order: () => value,
     maybeSingle: async () => result, single: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
@@ -212,5 +212,32 @@ describe('live classes API - student access', () => {
     const response = await liveClassesRouter.request(new Request('http://localhost/class-2/join', { method: 'POST' }))
     expect(response.status).toBe(403)
     expect((await response.json() as any).code).toBe('NOT_ENROLLED')
+  })
+})
+
+describe('live classes API - editing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('prevents a tutor from editing another tutor’s class', async () => {
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+    mocks.from.mockReturnValue(builder({
+      data: {
+        status: 'scheduled',
+        tutor_id: 'tutor-2',
+        scheduled_at: new Date(Date.now() + 86400000).toISOString(),
+      },
+      error: null,
+    }))
+
+    const response = await liveClassesRouter.request('/class-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Changed title' }),
+    })
+
+    expect(response.status).toBe(403)
+    expect((await response.json() as any).code).toBe('NOT_CLASS_TUTOR')
   })
 })
