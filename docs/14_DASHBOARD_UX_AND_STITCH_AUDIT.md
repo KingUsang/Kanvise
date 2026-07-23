@@ -96,13 +96,16 @@ Corrections made during the product and implementation audit:
 - Kept the page shared: admins see their centre's schedule and can assign an
   eligible tutor; tutors see and schedule only their own assigned classes.
 - Corrected the Monday-first calendar offset.
-- Included course codes in the API response consumed by the schedule.
+- Display Course names consistently; the Kanvise Course schema does not define a
+  separate Course code.
 - Replaced the decorative export action with a real CSV schedule download.
 - Stopped showing admins a Start Class action that the API correctly reserves for
   the assigned tutor.
 - Enforced the same tutor ownership rule on class edits at the API boundary.
 - Added a visible recoverable error when the schedule API fails, so an outage is
   not presented as an empty timetable.
+- Replaced the empty scheduled-classes table for a new centre with a balanced,
+  instructive first-class state that points back to the scheduling form.
 
 Follow-up items are deliberately separate from this completed alignment pass:
 

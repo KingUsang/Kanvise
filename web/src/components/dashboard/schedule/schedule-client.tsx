@@ -31,14 +31,13 @@ interface LiveClass {
   duration_minutes: number
   status: 'scheduled' | 'live' | 'completed' | 'cancelled'
   livekit_room_name?: string
-  course?: { name: string, code: string }
+  course?: { name: string }
   tutor?: { first_name: string, last_name: string }
 }
 
 interface Course {
   id: string
   name: string
-  code: string
 }
 
 interface Tutor {
@@ -67,11 +66,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
+        setLoadFailed(false)
         const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -100,6 +101,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
       } catch (err) {
         console.error('Error fetching schedule data:', err)
+        setLoadFailed(true)
         toast.error('Could not load the class schedule', {
           description: 'Check your connection and try again.',
         })
@@ -206,14 +208,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     const rows = classes.map((item) => [
       item.title,
       item.course?.name || '',
-      item.course?.code || '',
       `${item.tutor?.first_name || ''} ${item.tutor?.last_name || ''}`.trim(),
       new Date(item.scheduled_at).toLocaleString(),
       item.duration_minutes,
       item.status,
     ])
     const csv = [
-      ['Class', 'Course', 'Course code', 'Tutor', 'Date and time', 'Duration (minutes)', 'Status'],
+      ['Class', 'Course', 'Tutor', 'Date and time', 'Duration (minutes)', 'Status'],
       ...rows,
     ].map((row) => row.map(escapeCsvCell).join(',')).join('\n')
 
@@ -324,7 +325,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                   >
                     <option value="" disabled>Select active course...</option>
                     {courses.map(course => (
-                      <option key={course.id} value={course.id}>{course.code} - {course.name}</option>
+                      <option key={course.id} value={course.id}>{course.name}</option>
                     ))}
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#474551] pointer-events-none">arrow_drop_down</span>
@@ -498,7 +499,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                     <div className="flex-1 pl-2">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[10px] leading-[16px] tracking-[0.05em] font-semibold uppercase text-[#474551] bg-[#f0eded] px-2 py-0.5 rounded">
-                          {cls.course?.code || 'COURSE'}
+                          {cls.course?.name || 'Course'}
                         </span>
                         <span className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#994704]">
                           {new Date(cls.scheduled_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -523,7 +524,49 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
             </div>
           )}
 
-          {/* Scheduled Classes Data Table */}
+          {/* Scheduled Classes */}
+          {!loading && loadFailed ? (
+            <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-[#c8c5d2] bg-white px-6 py-12 text-center shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#ffdad6] text-[#ba1a1a]">
+                <span className="material-symbols-outlined text-[28px]">cloud_off</span>
+              </div>
+              <h3 className="mt-5 text-xl font-bold text-[#1b1c1c]">We could not load the schedule</h3>
+              <p className="mt-2 max-w-md text-sm leading-6 text-[#474551]">Check that the API is running, then try loading this page again.</p>
+              <button type="button" onClick={() => window.location.reload()} className="mt-6 rounded-md bg-[#2e2877] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#180d62]">
+                Try again
+              </button>
+            </div>
+          ) : !loading && classes.length === 0 ? (
+            <div className="flex min-h-[430px] flex-col items-center justify-center rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-12 text-center shadow-[0px_4px_20px_rgba(61,61,61,0.06)]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
+                <span className="material-symbols-outlined text-[32px]">calendar_add_on</span>
+              </div>
+              <h3 className="mt-5 text-2xl font-bold text-[#180d62]">No classes scheduled yet</h3>
+              <p className="mt-3 max-w-md text-sm leading-6 text-[#474551]">
+                Use the form beside this message to choose a Course, tutor, date, and time. The class will then appear here for everyone who needs it.
+              </p>
+              <button
+                type="button"
+                onClick={() => document.getElementById('class-title-input')?.focus()}
+                className="mt-6 inline-flex items-center gap-2 rounded-md bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#7a3903]"
+              >
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                Schedule your first class
+              </button>
+              <div className="mt-8 grid w-full max-w-xl grid-cols-1 gap-3 border-t border-[#e4e2e1] pt-6 text-left sm:grid-cols-3">
+                {[
+                  ['1', 'Choose the Course'],
+                  ['2', 'Set the date and time'],
+                  ['3', 'Students see the class'],
+                ].map(([step, label]) => (
+                  <div key={step} className="flex items-center gap-3 rounded-md bg-[#fbf9f8] px-3 py-3 text-xs font-semibold text-[#474551]">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#2e2877] text-white">{step}</span>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
           <div className="bg-white border border-[#C2B59B] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] flex flex-col">
             <div className="px-6 py-4 border-b border-[#C2B59B] flex justify-between items-center">
               <div>
@@ -573,7 +616,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex flex-col">
-                            <span className="text-[10px] leading-[16px] tracking-[0.05em] font-bold uppercase text-[#994704]">{cls.course?.code || 'COURSE'}</span>
+                            <span className="text-[10px] leading-[16px] tracking-[0.05em] font-bold uppercase text-[#994704]">{cls.course?.name || 'Course'}</span>
                             <span className="font-bold text-[#1b1c1c] truncate max-w-[250px]">{cls.title}</span>
                           </div>
                         </td>
@@ -597,6 +640,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </table>
             </div>
           </div>
+          )}
 
           {/* Completed Classes (Simplified) */}
           {completedClasses.length > 0 && (
@@ -623,7 +667,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                       <div className="flex-1 pl-2">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] leading-[16px] tracking-[0.05em] font-semibold uppercase text-[#474551] bg-[#f0eded] px-2 py-0.5 rounded">
-                            {cls.course?.code || 'COURSE'}
+                            {cls.course?.name || 'Course'}
                           </span>
                           <span className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#474551]">
                             {new Date(cls.scheduled_at).toLocaleDateString()} at {new Date(cls.scheduled_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}

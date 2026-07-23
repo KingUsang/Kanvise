@@ -59,6 +59,14 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
     })
   })
 
+  it('guides a new centre to schedule its first class instead of showing an empty table', async () => {
+    render(<ScheduleClient {...defaultAdminProps} />)
+
+    expect(await screen.findByRole('heading', { name: 'No classes scheduled yet' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Schedule your first class/i })).toBeInTheDocument()
+    expect(screen.queryByText('No upcoming classes scheduled.')).not.toBeInTheDocument()
+  })
+
   it('sends the expected POST request with ISO timestamp on successful submission', async () => {
     const user = userEvent.setup()
     render(<ScheduleClient {...defaultAdminProps} />)
