@@ -176,6 +176,12 @@ This matches the existing RLS migrations, which already read role and school fro
 - Implemented Progress using only recorded activity. Attendance, assignment completion, and mock averages remain explicitly unavailable when their denominator is absent instead of inventing percentages.
 - Implemented Student Settings with tenant/role-scoped profile reads and an allowlisted update contract. Email, role, school, and student ID cannot be edited there; profile photos use verified public R2 uploads.
 - Added responsive layouts and narrow-screen behaviour for every authoritative S3–S9 route.
+- Kept onboarding destinations visible but locked until the required centre setup
+  is complete, then force-reloaded the dashboard shell after refreshing the trusted
+  school claim so stale layout state cannot leave those destinations locked.
+- Clarified that the setup action creates a centre only on first use and saves
+  changes thereafter; setup errors now appear once as in-app notifications rather
+  than being duplicated beside the action.
 
 ### Remaining product/UX work
 

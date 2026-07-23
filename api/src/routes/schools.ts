@@ -15,9 +15,23 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
   const body = await c.req.json()
   const name = String(body.name || '').trim()
 
-  // Ensure they don't already have a school configured
-  if (user.school_id) {
-    return c.json({ error: 'School is already configured for this account' }, 400)
+  // Check the canonical profile as well as the JWT claim. A browser can still
+  // hold its pre-setup token immediately after the first centre is created.
+  const { data: canonicalProfile, error: profileLookupError } = await supabase
+    .from('user_profiles')
+    .select('school_id')
+    .eq('id', user.id)
+    .single()
+
+  if (profileLookupError) {
+    return c.json({ error: 'Could not verify your centre setup status' }, 500)
+  }
+
+  if (user.school_id || canonicalProfile?.school_id) {
+    return c.json({
+      error: 'A centre is already configured for this account',
+      code: 'SCHOOL_ALREADY_CONFIGURED',
+    }, 409)
   }
 
   if (!name) {
@@ -158,6 +172,12 @@ schoolsRouter.patch('/me', requireRole('admin'), async (c) => {
     .single()
 
   if (error) {
+    if (error.code === '23505') {
+      return c.json({
+        error: 'That student page link is already in use. Choose another one.',
+        code: 'SLUG_TAKEN',
+      }, 409)
+    }
     return c.json({ error: error.message }, 500)
   }
 

@@ -5,10 +5,8 @@ import { toast } from 'sonner'
 import { PUBLIC_APP_HOST } from '@/config/app'
 import { getApiUrl } from '@/config/api'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 
 export function SchoolSetupForm({ initialData, token }: { initialData: any, token: string }) {
-  const router = useRouter()
   const isFirstSetup = !initialData?.id
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -25,8 +23,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
   })
 
   const [isSaving, setIsSaving] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [errorMessage, setErrorMessage] = useState('')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle')
   const [mediaUrls, setMediaUrls] = useState({
     logo: initialData?.logo_url || '',
     banner: initialData?.banner_url || '',
@@ -40,8 +37,9 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     const validType = isVideo ? file.type.startsWith('video/') : file.type.startsWith('image/')
     const maximumSize = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024
     if (!validType || file.size > maximumSize) {
-      setSaveStatus('error')
-      setErrorMessage(isVideo ? 'Choose an MP4, MOV, or WebM video no larger than 500MB.' : 'Choose a JPG, PNG, or WebP image no larger than 10MB.')
+      toast.error(isVideo
+        ? 'Choose an MP4, MOV, or WebM video no larger than 500MB.'
+        : 'Choose a JPG, PNG, or WebP image no larger than 10MB.')
       return
     }
     setUploadingMedia(entityType)
@@ -82,8 +80,6 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
       setSaveStatus('success')
       toast.success(isVideo ? 'Introduction video uploaded' : `${entityType === 'logo' ? 'Logo' : 'Banner'} uploaded`)
     } catch (error) {
-      setSaveStatus('error')
-      setErrorMessage(error instanceof Error ? error.message : 'Media upload failed')
       toast.error('Could not upload media', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setUploadingMedia(null)
@@ -112,9 +108,15 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     }
     setIsSaving(true)
     setSaveStatus('idle')
-    setErrorMessage('')
 
     try {
+      const refreshSetupSession = async () => {
+        const { data: refreshed, error: refreshError } = await createClient().auth.refreshSession()
+        if (refreshError || !refreshed.session?.user.app_metadata?.school_id) {
+          throw new Error('Your centre exists, but the dashboard session could not be refreshed. Please sign out and sign in again.')
+        }
+      }
+
       const res = await fetch(`${getApiUrl()}${isFirstSetup ? '/schools' : '/schools/me'}`, {
         method: isFirstSetup ? 'POST' : 'PATCH',
         headers: {
@@ -124,24 +126,31 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
         body: JSON.stringify(formData)
       })
 
+      const responseBody = await res.json().catch(() => null)
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to save configuration')
+        if (isFirstSetup && responseBody?.code === 'SCHOOL_ALREADY_CONFIGURED') {
+          await refreshSetupSession()
+          window.location.assign('/dashboard')
+          return
+        }
+        throw new Error(responseBody?.error || 'Failed to save configuration')
       }
 
       setSaveStatus('success')
-      toast.success(isFirstSetup ? 'Your centre is ready' : 'School configuration saved')
       if (isFirstSetup) {
-        await createClient().auth.refreshSession()
-        router.replace('/dashboard')
-        router.refresh()
+        await refreshSetupSession()
+        toast.success('Your centre is ready')
+        // Dashboard layouts persist across soft navigation. A full navigation
+        // rebuilds the shell with setupRequired=false from the refreshed JWT.
+        window.location.assign('/dashboard')
         return
       }
+      toast.success('Centre details saved')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (err: any) {
-      setSaveStatus('error')
-      setErrorMessage(err.message)
-      toast.error('Could not save school configuration', { description: err.message })
+      toast.error(isFirstSetup ? 'Could not create your centre' : 'Could not save centre details', {
+        description: err.message,
+      })
     } finally {
       setIsSaving(false)
     }
@@ -188,12 +197,6 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
               Saved
             </span>
           )}
-          {saveStatus === 'error' && (
-            <span className="text-red-600 text-sm font-semibold flex items-center mr-2">
-              <span className="material-symbols-outlined mr-1 text-[18px]">error</span>
-              {errorMessage}
-            </span>
-          )}
           <button 
             type="button"
             onClick={handleDiscard}
@@ -202,7 +205,6 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
           >
             Reset Changes
           </button>
-          {/* TODO (Production): Add more robust error handling and validation (e.g. Zod schemas) */}
           <button 
             type="button"
             onClick={handleSave}
