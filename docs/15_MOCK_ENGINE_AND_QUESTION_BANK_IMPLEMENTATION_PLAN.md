@@ -1,6 +1,6 @@
 # Kanvise Mock Engine and Question Bank Implementation Plan
 
-**Status:** Core CBT engine operational — advanced import and bank-selection UX remain
+**Status:** Core CBT engine and centre question-bank workflow operational
 **Scope:** Tutor/admin authoring, centre question banks, student CBT attempts, grading, and results  
 **Related documents:** `04_KANVISE_ERD_Database_Schema.md`, `05_KANVISE_API_Specification.md`, `08_KANVISE_Feature_Specifications.md`, `14_DASHBOARD_UX_AND_STITCH_AUDIT.md`
 
@@ -12,8 +12,7 @@ The first release is centre-first. It includes:
 
 1. A tutor's private question banks.
 2. Question banks shared with tutors in the same centre.
-3. Manual question creation and validated CSV import. DOCX import is a later
-   authoring enhancement.
+3. Manual question creation plus validated CSV and DOCX import.
 4. Search and filtering by subject, topic, type, author, and bank.
 5. Reusing one question in multiple mocks without duplicating its source record.
 6. Random question selection from a bank or filtered pool.
@@ -95,16 +94,21 @@ Operational checkpoint:
   published in the connected development project on 23 July 2026. It includes MCQ,
   theory, mathematical content blocks, corrections, shuffling, two attempts, and a
   scientific calculator.
-- The DOCX import pipeline, visual “choose from bank” picker, legacy **published**
-  mock backfill, and retry-grant UI remain subsequent work. CSV import is available
-  in the builder.
+- The builder accepts CSV and structured DOCX imports and requires review before
+  publication. It also provides a visual bank picker whose selected immutable
+  question-version references are stored in the draft assembly rather than copied.
+- The results workspace lets an authorised Admin or assigned Tutor grant one extra
+  attempt to a specific student without changing the mock-wide limit.
+- Valid legacy published mocks were backfilled into immutable versions. A legacy
+  record that had been marked published with zero questions was returned to Draft
+  because it could not form a valid exam.
 - A cleanup job should remove verified question media that remains unbound after a
   safe retention period. This can occur when R2 upload/registration succeeds but the
   later atomic question creation fails; it does not expose the file or corrupt a
   question version.
-- The wider legacy-table RLS audit remains production-blocking and is tracked in
-  `14_DASHBOARD_UX_AND_STITCH_AUDIT.md`; it is separate from the new tables, whose
-  browser roles are revoked and whose RPCs are service-role only.
+- RLS is enabled on every public application table. Browser `anon` and
+  `authenticated` roles have no public table, sequence, or RPC privileges; Hono is
+  the sole application-data boundary through `service_role`.
 
 ## 3. Product language
 
