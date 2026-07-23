@@ -174,6 +174,12 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
         <div>
           <h2 className="text-3xl font-bold text-[#180d62] mb-1">Set Up Your Centre</h2>
           <p className="max-w-2xl text-base text-[#474551]">Help students recognise your tutorial centre and know how to reach you. These details appear on the page students use to explore your programmes and enrol.</p>
+          {isFirstSetup && (
+            <p className="mt-3 inline-flex max-w-2xl items-start gap-2 rounded-lg border border-[#d8c7a8] bg-[#fff8eb] px-4 py-3 text-sm leading-6 text-[#5f430e]">
+              <span className="material-symbols-outlined mt-0.5 text-[18px]">info</span>
+              <span><strong>Required to continue:</strong> your centre name and student page link. Everything marked optional can be completed later.</span>
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-3 items-center">
           {saveStatus === 'success' && (
@@ -204,7 +210,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
             className="px-6 py-2 bg-[#994704] text-white font-semibold text-xs uppercase tracking-wide rounded hover:bg-[#753400] transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-sm">{isSaving ? 'sync' : 'save'}</span>
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? 'Saving...' : isFirstSetup ? 'Create Centre' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -222,7 +228,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
                 <span className="material-symbols-outlined text-[#994704]">info</span>
                 About Your Centre
               </h3>
-              <p className="mt-1 text-sm text-[#474551]">Start with the name and short introduction students will see on your enrolment page.</p>
+              <p className="mt-1 text-sm text-[#474551]">The centre name and student page link are required. The introduction is optional.</p>
             </div>
             
             <div className="flex flex-col gap-6">
@@ -270,7 +276,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
               {/* Description */}
               <div className="flex flex-col gap-2">
                 <label htmlFor="description" className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">
-                  Tell Students About Your Centre
+                  Tell Students About Your Centre <span className="normal-case tracking-normal text-[#787582]">(optional)</span>
                 </label>
                 <textarea 
                   id="description" 
@@ -293,14 +299,14 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
             <div className="border-b border-[#c8c5d2] pb-4 mb-6">
               <h3 className="text-xl font-semibold text-[#180d62] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#994704]">perm_media</span>
-                Photos and Welcome Video
+                Photos and Welcome Video <span className="text-sm font-normal text-[#787582]">(optional)</span>
               </h3>
               <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so students know they are enrolling with the right tutorial centre.</p>
             </div>
             
             <div className="flex flex-col gap-8">
               <div>
-                <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Centre Logo</label>
+                <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Centre Logo <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
                 <p className="mb-3 text-xs leading-5 text-[#787582]">Shown beside your centre name on the student enrolment page.</p>
                 <div className="flex flex-col sm:flex-row items-start gap-6">
                   <div className="w-24 h-24 rounded border border-[#787582] bg-[#f5f3f2] flex items-center justify-center shrink-0 overflow-hidden relative group">
@@ -318,7 +324,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
               </div>
 
               <div>
-                <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Cover Image</label>
+                <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Cover Image <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
                 <p className="mb-3 text-xs leading-5 text-[#787582]">A wide image at the top of your student enrolment page. A classroom or teaching photo works well.</p>
                 <label className="w-full h-32 border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-[#f5f3f2] transition-colors cursor-pointer group relative overflow-hidden">
                   <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploadingMedia !== null} onChange={(event) => void uploadMedia('banner', event.target.files?.[0])} />
@@ -375,13 +381,13 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
             <div className="border-b border-[#c8c5d2] pb-3 mb-5">
               <h3 className="text-xl font-semibold text-[#180d62] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#994704]">contact_support</span>
-                Contact Info
+                Contact Info <span className="text-sm font-normal text-[#787582]">(optional)</span>
               </h3>
               <p className="mt-1 text-sm text-[#474551]">Where students and parents can ask questions before enrolling.</p>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <label htmlFor="contact_email" className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">Support Email</label>
+                <label htmlFor="contact_email" className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">Support Email <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#787582] text-sm">mail</span>
                   <input 
@@ -396,7 +402,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
               </div>
               
               <div className="flex flex-col gap-1">
-                <label htmlFor="contact_phone" className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">Main Phone</label>
+                <label htmlFor="contact_phone" className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">Main Phone <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#787582] text-sm">call</span>
                   <input 

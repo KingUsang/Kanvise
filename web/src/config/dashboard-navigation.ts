@@ -1,6 +1,7 @@
 export type DashboardCapabilities = {
   isAdmin: boolean
   isTutor: boolean
+  setupRequired?: boolean
 }
 
 export type DashboardArea = 'overview' | 'administration' | 'shared' | 'teaching'
@@ -39,6 +40,9 @@ export function canAccessDashboardItem(item: DashboardNavItem, capabilities: Das
 }
 
 export function getDashboardNavItems(capabilities: DashboardCapabilities) {
+  if (capabilities.setupRequired) {
+    return dashboardNavItems.filter((item) => item.href === '/dashboard/school-setup')
+  }
   return dashboardNavItems.filter((item) => canAccessDashboardItem(item, capabilities))
 }
 
@@ -51,6 +55,9 @@ export function getDashboardAccess(pathname: string): DashboardAccess | null {
 }
 
 export function canAccessDashboardPath(pathname: string, capabilities: DashboardCapabilities) {
+  if (capabilities.setupRequired) {
+    return pathname === '/dashboard/school-setup'
+  }
   const access = getDashboardAccess(pathname)
   if (!access) return true
   if (access === 'all') return capabilities.isAdmin || capabilities.isTutor

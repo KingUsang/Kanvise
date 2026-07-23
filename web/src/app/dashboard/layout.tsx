@@ -58,7 +58,7 @@ export default async function DashboardLayout({
   if (role === 'admin' && !schoolId) {
     return (
       <div className="font-sans">
-        <DashboardShell user={userInfo} capabilities={{ isAdmin: true, isTutor: false }}>
+        <DashboardShell user={userInfo} capabilities={{ isAdmin: true, isTutor: false, setupRequired: true }}>
           {children}
         </DashboardShell>
       </div>

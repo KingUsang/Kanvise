@@ -17,6 +17,7 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
   const [ungradedMocksCount, setUngradedMocksCount] = useState(0)
 
   useEffect(() => {
+    if (capabilities.setupRequired) return
     async function fetchBadgeCount() {
       try {
         const { createClient } = await import('@/lib/supabase/client')
@@ -37,7 +38,7 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
       }
     }
     fetchBadgeCount()
-  }, [])
+  }, [capabilities.setupRequired])
   
   const navItems = getDashboardNavItems(capabilities)
 
