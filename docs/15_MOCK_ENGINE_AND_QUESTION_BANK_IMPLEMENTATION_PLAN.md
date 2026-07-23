@@ -58,14 +58,21 @@ Implemented in the repository:
   MCQ answer keys, and theory questions.
 - Student-response sanitation utilities and tests that remove correct-answer,
   explanation, and rubric fields.
+- Responsive admin/tutor Question Banks screen using real Hono endpoints, with
+  private/centre creation, archive confirmation, text search, subject filtering,
+  MCQ/theory authoring, course/topic classification, and answer explanations.
+- KaTeX and `mhchem` rendering for mathematical and chemical content in the
+  question list and live authoring preview.
 
 Not yet operational:
 
 - The new migrations have not been applied to staging because this workspace has
   neither an authenticated/linked Supabase CLI project nor a database connection
   string. A service-role API key cannot execute schema DDL.
-- The tutor question-bank screens, import pipeline, mock-builder integration,
-  publication snapshots, and student attempt runner remain subsequent phases.
+- Secure R2 question-image registration, the import pipeline, mock-builder
+  integration, publication snapshots, and student attempt runner remain subsequent
+  phases. The question editor must not show a non-functional image control before
+  the media registration and immutable binding flow lands.
 - No new route should be enabled in a deployed environment until both migrations
   are applied and verified there.
 

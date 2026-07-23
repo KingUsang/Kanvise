@@ -4,6 +4,7 @@ import "@livekit/components-styles";
 import "@excalidraw/excalidraw/index.css";
 import "./globals.css";
 import { Toaster } from "sonner";
+import "katex/dist/katex.min.css";
 import { Suspense } from "react";
 import NavigationProgress from "@/components/navigation/NavigationProgress";
 

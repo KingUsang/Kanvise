@@ -26,6 +26,7 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { label: 'Schedule', href: '/dashboard/schedule', icon: 'calendar_month', area: 'shared', access: 'shared', keywords: ['schedule', 'calendar', 'classes', 'sessions'] },
   { label: 'Attendance', href: '/dashboard/attendance', icon: 'fact_check', area: 'shared', access: 'shared', keywords: ['attendance', 'participation', 'sessions'] },
   { label: 'Mocks', href: '/dashboard/mocks', icon: 'quiz', area: 'shared', access: 'shared', keywords: ['mocks', 'exams', 'tests', 'grading'], badge: 'ungradedMocks' },
+  { label: 'Question Banks', href: '/dashboard/question-banks', icon: 'inventory_2', area: 'shared', access: 'shared', keywords: ['questions', 'banks', 'mocks', 'reuse', 'import'] },
   { label: 'Notes', href: '/dashboard/notes', icon: 'description', area: 'teaching', access: 'tutor', keywords: ['notes', 'materials', 'teaching'] },
   { label: 'Assignments', href: '/dashboard/assignments', icon: 'assignment', area: 'teaching', access: 'tutor', keywords: ['assignments', 'tasks', 'submissions', 'grading'] },
 ]
