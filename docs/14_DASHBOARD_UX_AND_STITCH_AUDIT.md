@@ -159,6 +159,38 @@ Remaining attendance work:
 - Replace blank avatars with signed/public profile-photo URLs only after a
   dedicated safe response contract is defined.
 
+### A/T: Mocks Management Workspace — 23 July 2026
+
+The current page preserves the modern Stitch screen's heading, primary creation
+action, status tabs, course filter, compact results table, and purposeful empty
+state. The implementation appropriately extends the generated design with archived
+mocks, preserved results, theory-grading counts, and links into the completed
+versioned CBT workflow.
+
+Corrections made during this pass:
+
+- Removed a second `p-4 md:p-10` page wrapper. The dashboard shell already owns the
+  main content gutter, so the old wrapper doubled the padding and visibly diverged
+  from Stitch and neighbouring pages.
+- Replaced vague “manage and evaluate” copy with the actual tutor journey: create,
+  publish, and review results.
+- Added a Try Again action to the recoverable API error state.
+- Expanded “Qs” to “questions” and replaced “No Course” with the clearer “Course
+  unavailable”.
+
+Verified role behaviour:
+
+- Admins list and manage centre mocks.
+- Tutors list, create, archive, and review only mocks whose Courses are assigned to
+  them; the Hono routes enforce school and Course access.
+- Students use the separate answer-safe CBT routes and cannot access this workspace.
+- Archiving preserves attempts and results rather than deleting assessment history.
+
+Stitch's two side-by-side “empty state demonstrations” are design examples, not
+simultaneous production content. Kanvise correctly renders one state based on real
+data. The newer Question Banks workspace remains a separate authoring tool because
+forcing reusable banks into this compact management table would weaken both tasks.
+
 ## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:

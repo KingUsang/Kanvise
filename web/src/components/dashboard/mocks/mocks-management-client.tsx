@@ -119,7 +119,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
   })
 
   return (
-    <div className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-10 bg-[#fbf9f8] animate-in fade-in duration-500">
+    <div className="w-full animate-in fade-in duration-500">
       {mockToArchive && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="archive-mock-title">
           <div className="w-full max-w-md rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-xl">
@@ -140,7 +140,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       <div className="flex justify-between items-end mb-8 border-b border-[#e4e2e1] pb-6">
         <div>
           <h1 className="text-[32px] leading-[40px] tracking-tight font-bold text-[#1b1c1c] mb-2">Mocks</h1>
-          <p className="text-[16px] text-[#474551]">Manage and evaluate student mock examinations.</p>
+          <p className="text-[16px] text-[#474551]">Create practice exams, publish them to students, and review their results.</p>
         </div>
         <Link href="/dashboard/mocks/builder" className="bg-[#994704] text-white text-[14px] font-semibold px-6 py-3 rounded-lg hover:bg-[#7a3903] transition-colors flex items-center gap-2 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -211,8 +211,15 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                   <td colSpan={4} className="py-16 text-center text-[#ba1a1a]">
                     <div className="flex flex-col items-center justify-center">
                       <span className="material-symbols-outlined text-[32px] mb-2">error</span>
-                      <p className="font-semibold">Failed to load mocks</p>
+                      <p className="font-semibold">We could not load your mocks</p>
                       <p className="text-[14px] mt-1">{apiError}</p>
+                      <button
+                        type="button"
+                        onClick={fetchMocks}
+                        className="mt-4 rounded-md border border-[#994704] px-4 py-2 text-sm font-semibold text-[#994704] hover:bg-[#994704]/5"
+                      >
+                        Try again
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -257,7 +264,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                             {mock.title}
                           </span>
                           <span className={`text-[14px] ${mock.status === 'archived' ? 'text-[#787582]' : 'text-[#474551]'}`}>
-                            {mock.course?.name || 'No Course'} • {mock.status === 'draft' ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago` : mock.status === 'archived' ? `Archived ${formatMMMdd(new Date(mock.updated_at))}` : `Created ${formatMMMdd(new Date(mock.created_at))}`}
+                            {mock.course?.name || 'Course unavailable'} • {mock.status === 'draft' ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago` : mock.status === 'archived' ? `Archived ${formatMMMdd(new Date(mock.updated_at))}` : `Created ${formatMMMdd(new Date(mock.created_at))}`}
                           </span>
                         </div>
                       </td>
@@ -290,7 +297,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                       <td className="py-5 px-6 text-right align-top pt-6">
                         <div className={`flex flex-col items-end gap-1 ${mock.status === 'archived' ? 'text-[#787582]' : ''}`}>
                           <div className="flex items-center justify-end gap-3 w-full">
-                            <span className="text-[14px] text-[#474551] min-w-[48px] text-right" title="Questions">{totalQs} Qs</span>
+                            <span className="text-[14px] text-[#474551] min-w-[78px] text-right" title="Questions">{totalQs} questions</span>
                             <span className="text-[#c8c5d2]">|</span>
                             <span className={`text-[16px] min-w-[32px] text-right ${mock.status === 'draft' ? 'text-[#474551]' : 'font-semibold text-[#1b1c1c]'}`} title="Attempts">
                               {mock.status === 'draft' ? '-' : mock.metrics.attempts}
