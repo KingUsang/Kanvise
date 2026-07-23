@@ -15,7 +15,7 @@ export type JobsRepository = {
 export const jobsRepository: JobsRepository = {
   async claimDueMocks(now, limit) {
     const { data: candidates, error } = await supabase.from('mock_exams')
-      .select('id, status, school_id, course_id, title, course:courses(name)')
+      .select('id, status, school_id, course_id, tutor_id, title, course:courses(name)')
       .in('status', ['draft', 'published'])
       .eq('notification_sent', false)
       .not('publish_at', 'is', null)
@@ -33,6 +33,25 @@ export const jobsRepository: JobsRepository = {
         })
         continue
       }
+      const { count: sectionCount, error: sectionError } = await supabase.from('mock_sections')
+        .select('id', { count: 'exact', head: true })
+        .eq('school_id', candidate.school_id).eq('mock_exam_id', candidate.id)
+      if (sectionError) throw sectionError
+      if ((sectionCount || 0) > 0) {
+        const { error: publishError } = await supabase.rpc('publish_versioned_mock', {
+          p_school_id: candidate.school_id,
+          p_mock_exam_id: candidate.id,
+          p_published_by: candidate.tutor_id,
+          p_published_at: now.toISOString(),
+        })
+        if (publishError) throw publishError
+        claimed.push({
+          id: candidate.id, schoolId: candidate.school_id, courseId: candidate.course_id,
+          title: candidate.title, courseName: (candidate.course as any)?.name || 'Your course',
+        })
+        continue
+      }
+      // Compatibility for scheduled drafts created before versioned question banks.
       const { data, error: claimError } = await supabase.from('mock_exams')
         .update({ status: 'published', updated_at: now.toISOString() })
         .eq('id', candidate.id)

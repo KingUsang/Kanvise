@@ -335,16 +335,16 @@ GRANT ALL ON TABLE question_banks, question_stimuli, question_media,
 -- Reuse the canonical timestamp trigger function introduced by the initial schema.
 CREATE TRIGGER trg_question_banks_updated_at
     BEFORE UPDATE ON question_banks
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_question_stimuli_updated_at
     BEFORE UPDATE ON question_stimuli
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_bank_questions_updated_at
     BEFORE UPDATE ON bank_questions
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_mock_sections_updated_at
     BEFORE UPDATE ON mock_sections
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_mock_question_rules_updated_at
     BEFORE UPDATE ON mock_question_rules
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();

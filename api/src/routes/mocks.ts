@@ -3,6 +3,13 @@ import { supabase } from "../lib/supabase";
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole } from "../middleware/auth";
 import { AppVariables } from "../types";
 import { notifyMockPublished } from "../notifications/triggers";
+import {
+  normalizeMockSettings,
+  referencedAssemblyIds,
+  validateMockAssembly,
+  type MockAssemblySection,
+} from "../domain/mock-assembly";
+import { canReadQuestionBank } from "../domain/question-bank";
 
 export const mocksRouter = new Hono<{ Variables: AppVariables }>();
 
@@ -62,6 +69,58 @@ async function loadMockMetrics(mockIds: string[], schoolId: string) {
     if (attempt.status === "submitted" || attempt.status === "timed_out") item.pending_grading += 1;
   }
   return metrics;
+}
+
+async function validateAssemblyAccess(user: any, sections: MockAssemblySection[]) {
+  const ids = referencedAssemblyIds(sections)
+  const { data: questions, error: questionError } = ids.questionIds.length
+    ? await supabase.from("bank_questions").select("id, bank_id, course_id")
+      .eq("school_id", user.school_id).eq("status", "active").is("archived_at", null)
+      .in("id", ids.questionIds)
+    : { data: [], error: null }
+  if (questionError) throw questionError
+  if ((questions || []).length !== ids.questionIds.length) {
+    return { status: 400 as const, error: "One or more questions are unavailable", code: "QUESTION_NOT_FOUND" }
+  }
+
+  const bankIds = [...new Set([...ids.bankIds, ...(questions || []).map((question: any) => question.bank_id)])]
+  const { data: banks, error: bankError } = bankIds.length
+    ? await supabase.from("question_banks").select("id, school_id, owner_id, visibility, archived_at")
+      .eq("school_id", user.school_id).is("archived_at", null).in("id", bankIds)
+    : { data: [], error: null }
+  if (bankError) throw bankError
+  if ((banks || []).length !== bankIds.length || (banks || []).some((bank: any) => !canReadQuestionBank(user, bank))) {
+    return { status: 403 as const, error: "You cannot use one or more selected question banks", code: "BANK_ACCESS_DENIED" }
+  }
+
+  if (user.role === "tutor") {
+    const courseIds = [...new Set([...ids.courseIds, ...(questions || []).flatMap((question: any) => question.course_id ? [question.course_id] : [])])]
+    if (courseIds.length) {
+      const { data: assignments, error } = await supabase.from("tutor_course_assignments").select("course_id")
+        .eq("school_id", user.school_id).eq("tutor_id", user.id).in("course_id", courseIds)
+      if (error) throw error
+      if ((assignments || []).length !== courseIds.length) {
+        return { status: 403 as const, error: "You can only use questions from courses assigned to you", code: "COURSE_ACCESS_DENIED" }
+      }
+    }
+  }
+  return null
+}
+
+function mockDatabaseError(c: any, error: any, fallback: string) {
+  const message = String(error?.message || "")
+  const codes = [
+    "MOCK_NOT_FOUND", "MOCK_NOT_DRAFT", "MOCK_HAS_NO_SECTIONS", "MOCK_HAS_NO_QUESTIONS",
+    "SECTION_TITLE_REQUIRED", "SECTION_COURSE_NOT_FOUND", "QUESTION_VERSION_NOT_FOUND",
+    "RULE_BANK_NOT_FOUND", "RULE_QUESTION_COUNT_INVALID", "RANDOM_POOL_TOO_SMALL",
+  ]
+  const code = codes.find(candidate => message.includes(candidate))
+  if (code) {
+    const status = code === "MOCK_NOT_FOUND" ? 404 : code === "MOCK_NOT_DRAFT" ? 409 : 400
+    return c.json({ error: code.replaceAll("_", " ").toLowerCase(), code }, status)
+  }
+  console.error("mocks.database_error", { message, code: error?.code })
+  return c.json({ error: fallback, code: "DATABASE_ERROR" }, 500)
 }
 
 // GET /mocks (Lists mocks, primarily for the tutor dashboard)
@@ -211,6 +270,108 @@ mocksRouter.get("/:id/questions", requireTutorOrAdmin, async (c) => {
   return c.json({ data: data || [] });
 });
 
+// GET /mocks/:id/assembly — versioned draft sections, fixed questions and random pools.
+mocksRouter.get("/:id/assembly", requireTutorOrAdmin, async (c) => {
+  const user = c.get("user");
+  const mockId = c.req.param("id");
+  const { data: mock, error: mockError } = await supabase.from("mock_exams")
+    .select("id, status, course_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+  if (mockError) return mockDatabaseError(c, mockError, "Could not load mock assembly");
+  if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
+  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
+    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
+  }
+
+  const { data: sections, error: sectionError } = await supabase.from("mock_sections")
+    .select("id, course_id, title, subject_name, instructions, order_index")
+    .eq("mock_exam_id", mockId).eq("school_id", user.school_id).order("order_index");
+  if (sectionError) return mockDatabaseError(c, sectionError, "Could not load mock sections");
+  const sectionIds = (sections || []).map((section: any) => section.id);
+  const [{ data: fixed, error: fixedError }, { data: rules, error: ruleError }] = sectionIds.length
+    ? await Promise.all([
+      supabase.from("mock_section_questions")
+        .select("id, section_id, question_id, question_version_id, order_index, marks_override, question:bank_questions(id, bank_id, course_id, subject_name, topic, subtopic, question_type, current_version:bank_question_versions!bank_questions_current_version_fkey(id, version_number, plain_text, content_blocks, marks))")
+        .eq("school_id", user.school_id).in("section_id", sectionIds).order("order_index"),
+      supabase.from("mock_question_rules")
+        .select("id, section_id, bank_id, subject_name, topic, subtopic, question_type, question_count")
+        .eq("school_id", user.school_id).in("section_id", sectionIds).order("created_at"),
+    ])
+    : [{ data: [], error: null }, { data: [], error: null }];
+  if (fixedError || ruleError) return mockDatabaseError(c, fixedError || ruleError, "Could not load mock questions");
+
+  return c.json({ data: {
+    sections: (sections || []).map((section: any) => ({
+      ...section,
+      questions: (fixed || []).filter((question: any) => question.section_id === section.id),
+      rules: (rules || []).filter((rule: any) => rule.section_id === section.id),
+    })),
+  } });
+});
+
+// PUT /mocks/:id/assembly — atomically replace a draft's versioned assembly.
+mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
+  const user = c.get("user");
+  const mockId = c.req.param("id");
+  const body = await c.req.json();
+  const errors = validateMockAssembly(body.sections);
+  if (errors.length) return c.json({ error: "Check the mock sections", code: "VALIDATION_ERROR", details: errors }, 400);
+
+  const { data: mock, error: mockError } = await supabase.from("mock_exams")
+    .select("id, status, course_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+  if (mockError) return mockDatabaseError(c, mockError, "Could not check mock");
+  if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
+  if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited", code: "MOCK_NOT_DRAFT" }, 409);
+  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
+    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
+  }
+
+  try {
+    const accessError = await validateAssemblyAccess(user, body.sections);
+    if (accessError) return c.json({ error: accessError.error, code: accessError.code }, accessError.status);
+    const { data, error } = await supabase.rpc("replace_versioned_mock_assembly", {
+      p_school_id: user.school_id,
+      p_mock_exam_id: mockId,
+      p_sections: body.sections,
+    });
+    if (error) return mockDatabaseError(c, error, "Could not save mock sections");
+    return c.json({ message: "Mock sections saved", data: data?.[0] || data });
+  } catch (error) {
+    return mockDatabaseError(c, error, "Could not save mock sections");
+  }
+});
+
+// POST /mocks/:id/random-pool/preview — show availability without exposing answer keys.
+mocksRouter.post("/:id/random-pool/preview", requireTutorOrAdmin, async (c) => {
+  const user = c.get("user");
+  const mockId = c.req.param("id");
+  const body = await c.req.json();
+  const bankId = typeof body.bank_id === "string" ? body.bank_id : "";
+  if (!bankId) return c.json({ error: "Choose a question bank", code: "VALIDATION_ERROR" }, 400);
+
+  const { data: mock } = await supabase.from("mock_exams").select("course_id")
+    .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+  if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
+  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
+    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
+  }
+  const { data: bank, error: bankError } = await supabase.from("question_banks")
+    .select("id, school_id, owner_id, visibility, archived_at").eq("id", bankId)
+    .eq("school_id", user.school_id).is("archived_at", null).maybeSingle();
+  if (bankError) return mockDatabaseError(c, bankError, "Could not check question bank");
+  if (!bank || !canReadQuestionBank(user, bank)) {
+    return c.json({ error: "Question bank not found", code: "BANK_NOT_FOUND" }, 404);
+  }
+
+  let query = supabase.from("bank_questions").select("id", { count: "exact", head: true })
+    .eq("school_id", user.school_id).eq("bank_id", bankId).eq("status", "active").is("archived_at", null);
+  for (const field of ["subject_name", "topic", "subtopic", "question_type"] as const) {
+    if (typeof body[field] === "string" && body[field].trim()) query = query.eq(field, body[field].trim());
+  }
+  const { count, error } = await query;
+  if (error) return mockDatabaseError(c, error, "Could not count matching questions");
+  return c.json({ data: { available_questions: count || 0 } });
+});
+
 // POST /mocks/:id/archive — preserve attempts and results while removing the
 // mock from active teaching workflows.
 mocksRouter.post("/:id/archive", requireTutorOrAdmin, async (c) => {
@@ -241,6 +402,14 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
   if (!title || !course_id) {
     return c.json({ error: "Missing required fields" }, 400);
   }
+  const duration = Number(time_limit_minutes || 0);
+  if (!Number.isInteger(duration) || duration < 0 || duration > 1440) {
+    return c.json({ error: "Time limit must be between 0 and 1,440 minutes", code: "VALIDATION_ERROR" }, 400);
+  }
+  const settings = normalizeMockSettings(body);
+  if (settings.errors.length) {
+    return c.json({ error: "Check the mock settings", code: "VALIDATION_ERROR", details: settings.errors }, 400);
+  }
   if (!(await tutorCanAccessCourse(user, course_id))) return c.json({ error: "You are not assigned to this course" }, 403);
 
   // Use the kanvise_user_id (which is a UUID in the kanvise_users table) for tutor_id
@@ -257,9 +426,10 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
         description,
         status: "draft",
         publish_at,
-        time_limit_minutes: time_limit_minutes || 0,
+        time_limit_minutes: duration,
         total_mcq_questions: 0,
         total_theory_questions: 0,
+        ...settings.updates,
       },
     ])
     .select()
@@ -282,7 +452,7 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   // Verify mock exists and is draft
   const { data: existingMock, error: fetchError } = await supabase
     .from("mock_exams")
-    .select("status, tutor_id, course_id")
+    .select("status, tutor_id, course_id, available_from, closes_at")
     .eq("id", mockId)
     .eq("school_id", user.school_id)
     .single();
@@ -291,6 +461,19 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   
   if (existingMock.status !== "draft") {
     return c.json({ error: "Only draft mocks can be edited" }, 400);
+  }
+
+  const duration = Number(time_limit_minutes || 0);
+  if (!Number.isInteger(duration) || duration < 0 || duration > 1440) {
+    return c.json({ error: "Time limit must be between 0 and 1,440 minutes", code: "VALIDATION_ERROR" }, 400);
+  }
+  const settings = normalizeMockSettings({
+    ...body,
+    available_from: body.available_from !== undefined ? body.available_from : existingMock.available_from,
+    closes_at: body.closes_at !== undefined ? body.closes_at : existingMock.closes_at,
+  });
+  if (settings.errors.length) {
+    return c.json({ error: "Check the mock settings", code: "VALIDATION_ERROR", details: settings.errors }, 400);
   }
 
   if (!(await tutorCanAccessCourse(user, course_id))) return c.json({ error: "You are not assigned to this course" }, 403);
@@ -302,7 +485,8 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
       description,
       course_id,
       publish_at,
-      time_limit_minutes: time_limit_minutes || 0,
+      time_limit_minutes: duration,
+      ...settings.updates,
       updated_at: new Date().toISOString()
     })
     .eq("id", mockId)
@@ -510,6 +694,40 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     return c.json({ error: "Time limit cannot be negative" }, 400);
   }
 
+  const { count: sectionCount, error: sectionError } = await supabase.from("mock_sections")
+    .select("id", { count: "exact", head: true }).eq("mock_exam_id", mockId).eq("school_id", user.school_id);
+  if (sectionError) return mockDatabaseError(c, sectionError, "Failed to validate mock sections");
+  if ((sectionCount || 0) > 0) {
+    const publishedAt = new Date().toISOString();
+    const { data: versionResult, error: publishError } = await supabase.rpc("publish_versioned_mock", {
+      p_school_id: user.school_id,
+      p_mock_exam_id: mockId,
+      p_published_by: user.id,
+      p_published_at: publishedAt,
+    });
+    if (publishError) return mockDatabaseError(c, publishError, "Could not publish the mock");
+    const { data, error } = await supabase.from("mock_exams")
+      .select("*, course:courses(name)").eq("id", mockId).eq("school_id", user.school_id).single();
+    if (error) return mockDatabaseError(c, error, "Mock was published but could not be reloaded");
+    const notification = await notifyMockPublished({
+      id: data.id,
+      schoolId: data.school_id,
+      courseId: data.course_id,
+      title: data.title,
+      courseName: (data.course as any)?.name || "Your course",
+    });
+    if (notification.failures.length === 0) {
+      await supabase.from("mock_exams").update({ notification_sent: true }).eq("id", data.id);
+    }
+    return c.json({
+      message: "Mock published successfully",
+      data,
+      version: versionResult?.[0] || versionResult,
+      notification,
+    });
+  }
+
+  // Compatibility for drafts created before versioned question banks were introduced.
   const { data: questions, error: questionError } = await supabase.from("mock_questions")
     .select("question_text, question_type, marks, options:mock_question_options(option_text, is_correct)")
     .eq("mock_exam_id", mockId).eq("school_id", user.school_id).order("order_index");
