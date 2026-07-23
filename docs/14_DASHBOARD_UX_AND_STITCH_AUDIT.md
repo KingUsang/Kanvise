@@ -194,6 +194,37 @@ simultaneous production content. Kanvise correctly renders one state based on re
 data. The newer Question Banks workspace remains a separate authoring tool because
 forcing reusable banks into this compact management table would weaken both tasks.
 
+### A/T: Comprehensive Mock Builder — 23 July 2026
+
+The implementation keeps Stitch's two-column authoring structure: questions occupy
+the wider working area and mock settings remain visible in a narrower sticky panel.
+It extends that original design with the completed CBT controls: calculator choice,
+attempt allowance, result release, opening/closing times, shuffling, CSV/DOCX
+imports, and reusable question-bank selection.
+
+Corrections made during this pass:
+
+- Removed the unnecessary inner `max-w-[1200px]` constraint so the builder uses the
+  dashboard shell's established content width and gutters.
+- Added a clear first-question state with direct multiple-choice and theory actions;
+  a blank builder no longer leads with bulk-import instructions.
+- Replaced generated technical language such as “assessment parameters,”
+  “construct questions,” “structural block,” and “publishing strategy” with Mock
+  settings, add a question, and when students should see it.
+- Clarified that a theory marking guide is visible only to tutors.
+- Labelled the selector accurately as Course because mocks attach to a Course, not
+  directly to a Programme.
+- Added guidance when no Course is available or assigned.
+- Made the page header actions wrap on narrow screens.
+- Surface real API messages when Course loading or mock create/update fails instead
+  of silently leaving empty controls or returning a generic failure.
+- Kept published versions visibly locked and explained the student-results reason
+  in plain language.
+
+The richer builder intentionally goes beyond the older Stitch screen. Removing
+calculator, attempt, result-release, import, and bank controls merely to match the
+generated image would regress the Nigerian CBT workflow already implemented.
+
 ## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:

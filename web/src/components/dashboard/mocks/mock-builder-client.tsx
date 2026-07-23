@@ -143,20 +143,27 @@ export function MockBuilderClient({ token }: { token: string }) {
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, { headers }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`, { headers }),
         ]);
-        if (res.ok) {
-          const { data } = await res.json();
-          setCourses(data || []);
-          if (data && data.length > 0 && !isEditMode) {
-            setCourseId(data[0].id);
-          }
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.error || "Could not load Courses");
+        }
+        const { data } = await res.json();
+        setCourses(data || []);
+        if (data && data.length > 0 && !isEditMode) {
+          setCourseId(data[0].id);
         }
         if (banksRes.ok) {
           const { data } = await banksRes.json();
           setBanks(data || []);
           setSelectedBankId(data?.[0]?.id || "");
+        } else {
+          toast.error("Could not load question banks", { description: "You can still type questions manually." });
         }
       } catch (err) {
         console.error("Failed to fetch courses", err);
+        toast.error("Could not prepare the mock builder", {
+          description: err instanceof Error ? err.message : "Refresh the page and try again.",
+        });
       } finally {
         if (!isEditMode) setIsLoading(false);
       }
@@ -243,6 +250,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         }
       } catch (err) {
         console.error("Failed to fetch mock data", err);
+        toast.error("Could not open this mock", { description: "Check your connection and try again." });
       } finally {
         setIsLoading(false);
       }
@@ -509,7 +517,8 @@ export function MockBuilderClient({ token }: { token: string }) {
           },
           body: JSON.stringify(payload)
         });
-        if (!mockRes.ok) throw new Error("Failed to update mock");
+        const mockBody = await mockRes.json().catch(() => null);
+        if (!mockRes.ok) throw new Error(mockBody?.details?.[0] || mockBody?.error || "Failed to update mock");
       } else {
         // 1. Create Parent Mock
         const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks`, {
@@ -520,9 +529,9 @@ export function MockBuilderClient({ token }: { token: string }) {
           },
           body: JSON.stringify(payload)
         });
-        if (!mockRes.ok) throw new Error("Failed to create mock");
-        const mockData = await mockRes.json();
-        mockId = mockData.data.id;
+        const mockBody = await mockRes.json().catch(() => null);
+        if (!mockRes.ok) throw new Error(mockBody?.details?.[0] || mockBody?.error || "Failed to create mock");
+        mockId = mockBody.data.id;
       }
 
       // 2. Insert/Update Questions
@@ -609,14 +618,14 @@ export function MockBuilderClient({ token }: { token: string }) {
   }
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto pb-20 font-sans">
+    <div className="w-full pb-20">
       {isReadOnly && (
         <div className="bg-[#fff4f2] border-l-4 border-[#ba1a1a] text-[#ba1a1a] p-4 mb-6 rounded shadow-sm">
           <p className="font-semibold text-[15px] flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px]">lock</span>
-            Read-Only Mode
+            Published mock
           </p>
-          <p className="text-[13px] mt-1">This mock has already been published. Its questions and parameters can no longer be edited to preserve grading integrity.</p>
+          <p className="text-[13px] mt-1">This version has already been given to students, so its questions and settings are locked to keep their results fair.</p>
         </div>
       )}
 
@@ -648,12 +657,12 @@ export function MockBuilderClient({ token }: { token: string }) {
       )}
 
       {/* Page Header */}
-      <div className="flex justify-between items-end mb-8 pb-4 border-b border-[#e4e2e1]">
+      <div className="mb-8 flex flex-col gap-4 border-b border-[#e4e2e1] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-[32px] font-bold text-[#1b1c1c] leading-tight">{isEditMode ? "Edit Mock Assessment" : "Build Mock Assessment"}</h2>
-          <p className="text-[16px] text-[#474551] mt-1">Configure parameters and construct questions for the upcoming evaluation.</p>
+          <h2 className="text-[32px] font-bold text-[#1b1c1c] leading-tight">{isEditMode ? "Edit Mock" : "Build a Mock"}</h2>
+          <p className="text-[16px] text-[#474551] mt-1">Choose how the mock should work, then add or reuse questions for your students.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-3">
           <button 
             onClick={() => handleSave(false)}
             disabled={isReadOnly || isSaving}
@@ -676,6 +685,25 @@ export function MockBuilderClient({ token }: { token: string }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Question Builder (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
+          {!isReadOnly && questions.length === 0 && selectedBankQuestions.length === 0 && (
+            <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
+                <span className="material-symbols-outlined text-[28px]">quiz</span>
+              </div>
+              <h3 className="mt-4 text-xl font-bold text-[#180d62]">Add your first question</h3>
+              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#474551]">
+                Type a question now, reuse one from your question bank, or import several questions below.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
+                <button type="button" onClick={handleAddMCQ} className="rounded-md bg-[#2e2877] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#180d62]">
+                  Add multiple-choice question
+                </button>
+                <button type="button" onClick={handleAddTheory} className="rounded-md border border-[#2e2877] px-4 py-2.5 text-sm font-semibold text-[#2e2877] hover:bg-[#2e2877]/5">
+                  Add theory question
+                </button>
+              </div>
+            </div>
+          )}
           <div className="space-y-6">
             {selectedBankQuestions.map((question, index) => (
               <div key={question.questionId} className="rounded-lg border border-[#c8c5d2] bg-[#f8f6ff] p-5 shadow-sm">
@@ -787,7 +815,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                   {q.question_type === 'theory' && (
                     <div className="flex items-start gap-4 mt-2">
                       <label className="text-[13px] text-[#474551] font-medium pt-2 w-32 shrink-0">
-                        Grading Rubric / Keywords (Internal)
+                        Marking guide (only tutors see this)
                       </label>
                       <textarea 
                         value={q.grading_rubric || ""}
@@ -887,7 +915,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
               {/* Add Question Controls */}
               <div className="flex items-center gap-6 p-6 border-2 border-dashed border-[#c8c5d2] rounded-lg bg-[#fbf9f8] justify-center mt-2">
-                <span className="text-[15px] text-[#474551]">Add new structural block:</span>
+                <span className="text-[15px] text-[#474551]">Add another question:</span>
                 <div className="flex gap-4">
                   <button 
                     onClick={handleAddMCQ}
@@ -914,7 +942,7 @@ export function MockBuilderClient({ token }: { token: string }) {
           <div className="bg-white border border-[#e4e2e1] rounded-lg p-7 shadow-sm">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-6 flex items-center gap-3 border-b border-[#e4e2e1] pb-4">
               <span className="material-symbols-outlined text-[#2e2877]">tune</span>
-              Assessment Parameters
+              Mock settings
             </h3>
             
             <div className="space-y-6">
@@ -940,7 +968,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
 
               <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Target Programme/Course</label>
+                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Course</label>
                 <select 
                   value={courseId}
                   disabled={isReadOnly}
@@ -958,10 +986,13 @@ export function MockBuilderClient({ token }: { token: string }) {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+                {courses.length === 0 && (
+                  <p className="mt-2 text-xs leading-5 text-[#994704]">No Courses are available. Ask the centre admin to create a Course or assign one to you.</p>
+                )}
               </div>
 
               <div className="bg-[#fbf9f8] p-4 rounded-lg border border-[#e4e2e1]">
-                <label className="block text-[13px] text-[#1b1c1c] mb-3 font-semibold">Publishing Strategy</label>
+                <label className="block text-[13px] text-[#1b1c1c] mb-3 font-semibold">When students should see it</label>
                 <div className="flex gap-4 mb-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input 
@@ -1081,7 +1112,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
               <div>
                 <label className="block text-[13px] text-[#474551] mb-2 font-medium flex items-center justify-between">
-                  Time Limit
+                  Time allowed
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -1089,7 +1120,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                       onChange={(e) => setIsUntimed(e.target.checked)}
                       className="text-[#2e2877] rounded focus:ring-[#2e2877] cursor-pointer"
                     />
-                    <span className="text-[12px] font-normal">Untimed Exam</span>
+                    <span className="text-[12px] font-normal">Untimed mock</span>
                   </label>
                 </label>
                 {!isUntimed && (
@@ -1101,7 +1132,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                       onChange={(e) => setTimeLimit(Number(e.target.value))}
                       className="w-24 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]" 
                     />
-                    <span className="text-[13px] text-[#787582]">Strict enforcement in minutes</span>
+                    <span className="text-[13px] text-[#787582]">Minutes</span>
                   </div>
                 )}
               </div>
