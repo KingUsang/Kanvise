@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChevronDown, CloudUpload, ArrowRight, FileText } from "lucide-react";
+import { ChevronDown, CloudUpload, FileText } from "lucide-react";
 import { createBrowserClient } from '@supabase/ssr';
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
 
 export default function AssignmentsPage() {
+  const router = useRouter();
   const [courses, setCourses] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
 
@@ -14,12 +18,9 @@ export default function AssignmentsPage() {
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [isPublished, setIsPublished] = useState(true);
-
   // Status state
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [isFetching, setIsFetching] = useState(true);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,21 +37,24 @@ export default function AssignmentsPage() {
       const resCourses = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (resCourses.ok) {
-        const data = await resCourses.json();
-        setCourses(data.data || []);
-      }
+      const courseBody = await resCourses.json().catch(() => null);
+      if (!resCourses.ok) throw new Error(courseBody?.error || "Could not load Courses");
+      setCourses(courseBody.data || []);
 
       // Fetch assignments using the new aggregated backend endpoint
       const resAssignments = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments?page=1&page_size=20`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (resAssignments.ok) {
-        const data = await resAssignments.json();
-        setAssignments(data.data || []);
-      }
+      const assignmentBody = await resAssignments.json().catch(() => null);
+      if (!resAssignments.ok) throw new Error(assignmentBody?.error || "Could not load assignments");
+      setAssignments(assignmentBody.data || []);
     } catch (err) {
       console.error("Failed to fetch initial data", err);
+      toast.error("Could not load assignments", {
+        description: err instanceof Error ? err.message : "Refresh the page and try again.",
+      });
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -59,10 +63,8 @@ export default function AssignmentsPage() {
   }, []);
 
   const handleSubmit = async (publish: boolean) => {
-    setError("");
-    setSuccess("");
     if (!courseId || !title || !description || !deadline) {
-      setError("Please fill out all required fields.");
+      toast.error("Complete the required assignment details");
       return;
     }
 
@@ -134,7 +136,7 @@ export default function AssignmentsPage() {
         throw new Error(errorData.error || "Failed to create assignment");
       }
 
-      setSuccess(publish ? "Assignment successfully published!" : "Assignment saved as draft!");
+      toast.success(publish ? "Assignment published" : "Assignment saved as a draft");
       setTitle("");
       setDescription("");
       setDeadline("");
@@ -142,7 +144,7 @@ export default function AssignmentsPage() {
       setCourseId("");
       fetchData(); // Refresh the ledger immediately
     } catch (err: any) {
-      setError(err.message);
+      toast.error("Could not save the assignment", { description: err.message });
     } finally {
       setIsLoading(false);
     }
@@ -151,8 +153,22 @@ export default function AssignmentsPage() {
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+      selectAttachment(e.dataTransfer.files[0]);
     }
+  };
+
+  const selectAttachment = (selectedFile: File) => {
+    const allowedExtensions = [".pdf", ".docx", ".pptx", ".jpg", ".jpeg", ".png"];
+    const lowerName = selectedFile.name.toLowerCase();
+    if (!allowedExtensions.some((extension) => lowerName.endsWith(extension))) {
+      toast.error("Choose a PDF, Word, PowerPoint, JPG or PNG file");
+      return;
+    }
+    if (selectedFile.size > 50 * 1024 * 1024) {
+      toast.error("The attachment must be 50 MB or smaller");
+      return;
+    }
+    setFile(selectedFile);
   };
 
   return (
@@ -169,22 +185,11 @@ export default function AssignmentsPage() {
         <div className="bg-surface-container-lowest rounded border border-outline-variant shadow-[0px_4px_20px_rgba(61,61,61,0.08)] flex flex-col flex-1">
           <div className="p-6 flex-1 flex flex-col gap-6 border-b border-outline-variant">
             
-            {error && (
-              <div className="p-3 bg-error-container text-on-error-container text-sm rounded border border-error/20">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="p-3 bg-primary-fixed text-on-primary-fixed text-sm rounded border border-primary/20">
-                {success}
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Course Selector */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold tracking-wider text-on-background" htmlFor="course-select">
-                  Target Programme / Course
+                  Course
                 </label>
                 <div className="relative">
                   <select 
@@ -193,13 +198,16 @@ export default function AssignmentsPage() {
                     onChange={(e) => setCourseId(e.target.value)}
                     className="w-full appearance-none bg-surface border border-outline-variant rounded px-3 py-2.5 text-base text-on-background focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
                   >
-                    <option disabled value="">Select a programme...</option>
+                    <option disabled value="">Select a Course...</option>
                     {courses.map(c => (
                       <option key={c.id} value={c.id}>{c.title || c.name}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
                 </div>
+                {courses.length === 0 && !isFetching && (
+                  <p className="text-xs leading-5 text-secondary">No Courses are available. Ask the centre admin to create a Course or assign one to you.</p>
+                )}
               </div>
 
               {/* Deadline */}
@@ -229,7 +237,7 @@ export default function AssignmentsPage() {
                 type="text" 
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Final Essay Draft - Modernism"
+                placeholder="e.g. SS2 Physics: Motion and Forces"
                 className="w-full bg-surface border border-outline-variant rounded px-3 py-2.5 text-base text-on-background focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-outline"
               />
             </div>
@@ -243,7 +251,7 @@ export default function AssignmentsPage() {
                 id="description" 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Provide clear guidelines, formatting requirements, and grading rubrics..."
+                placeholder="Explain what students should do, what to submit, and how their work will be marked."
                 className="w-full h-full resize-none bg-surface border border-outline-variant rounded px-3 py-2.5 text-base text-on-background focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-outline"
               />
             </div>
@@ -262,8 +270,12 @@ export default function AssignmentsPage() {
                 <input 
                   type="file" 
                   id="file-upload" 
+                  accept=".pdf,.docx,.pptx,.jpg,.jpeg,.png"
                   className="hidden" 
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    const selectedFile = e.target.files?.[0];
+                    if (selectedFile) selectAttachment(selectedFile);
+                  }}
                 />
                 
                 {file ? (
@@ -280,7 +292,7 @@ export default function AssignmentsPage() {
                       <CloudUpload className="text-on-surface-variant group-hover:text-primary transition-colors w-6 h-6" />
                     </div>
                     <p className="text-base text-on-background">Drag & drop files here, or <span className="text-primary font-bold">browse</span></p>
-                    <p className="text-sm font-light text-on-surface-variant mt-1">Supports PDF, DOCX, ZIP up to 50MB</p>
+                    <p className="text-sm font-light text-on-surface-variant mt-1">PDF, Word, PowerPoint, JPG or PNG up to 50 MB</p>
                   </>
                 )}
               </div>
@@ -288,26 +300,11 @@ export default function AssignmentsPage() {
           </div>
 
           {/* Card Footer Actions */}
-          <div className="p-4 bg-surface-container-lowest flex items-center justify-between rounded-b">
-            {/* Publish Toggle */}
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className="relative">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={isPublished}
-                  onChange={(e) => setIsPublished(e.target.checked)}
-                />
-                <div className="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"></div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold tracking-wider text-on-background">Publish Immediately</span>
-                <span className="text-[10px] text-on-surface-variant">Students will be notified</span>
-              </div>
-            </label>
+          <div className="flex flex-col gap-4 rounded-b bg-surface-container-lowest p-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-xs leading-5 text-on-surface-variant">Save a draft to finish later, or publish when students should receive it.</p>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-end gap-3">
               <button 
                 type="button" 
                 onClick={() => {
@@ -324,7 +321,7 @@ export default function AssignmentsPage() {
                 disabled={isLoading}
                 className="px-4 py-2 border border-primary text-primary text-xs font-semibold tracking-wider rounded hover:bg-primary/5 transition-colors disabled:opacity-50"
               >
-                {isLoading && !isPublished ? "Saving..." : "Save as Draft"}
+                {isLoading ? "Saving..." : "Save as Draft"}
               </button>
               <button 
                 type="button" 
@@ -332,7 +329,7 @@ export default function AssignmentsPage() {
                 disabled={isLoading}
                 className="px-6 py-2 bg-secondary text-white text-xs font-semibold tracking-wider rounded hover:bg-secondary/90 transition-colors shadow-sm disabled:opacity-50"
               >
-                {isLoading && isPublished ? "Publishing..." : "Publish Assignment"}
+                {isLoading ? "Publishing..." : "Publish Assignment"}
               </button>
             </div>
           </div>
@@ -358,9 +355,13 @@ export default function AssignmentsPage() {
 
           {/* Scrollable List Area */}
           <div className="overflow-y-auto flex-1">
-            {assignments.length === 0 ? (
+            {isFetching ? (
+              <div className="p-8 text-center text-sm text-on-surface-variant">Loading assignments…</div>
+            ) : assignments.length === 0 ? (
               <div className="p-8 text-center text-sm text-on-surface-variant">
-                No assignments found.
+                <FileText className="mx-auto mb-3 h-8 w-8 text-outline" />
+                <p className="font-semibold text-on-background">No assignments yet</p>
+                <p className="mt-1">Create one using the form beside this list.</p>
               </div>
             ) : (
               assignments.map((assignment, index) => {
@@ -370,6 +371,18 @@ export default function AssignmentsPage() {
                 return (
                   <div 
                     key={assignment.id || index}
+                    onClick={() => {
+                      startNavigationProgress();
+                      router.push(`/dashboard/assignments/${assignment.id}/submissions`);
+                    }}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        startNavigationProgress();
+                        router.push(`/dashboard/assignments/${assignment.id}/submissions`);
+                      }
+                    }}
                     className={`group grid grid-cols-12 gap-4 px-5 py-4 border-b border-outline-variant hover:bg-primary-fixed/5 transition-colors items-center cursor-pointer ${isDraft ? 'bg-surface-container-low/50' : ''}`}
                   >
                     <div className="col-span-6 flex flex-col gap-1">
@@ -377,7 +390,7 @@ export default function AssignmentsPage() {
                         {assignment.title}
                       </span>
                       <span className={`text-xs font-semibold tracking-wider truncate ${isDraft ? 'text-outline' : 'text-on-surface-variant'}`}>
-                        {assignment.course?.title || assignment.course?.name || "Unknown Course"}
+                        {assignment.course?.title || assignment.course?.name || "Course unavailable"}
                       </span>
                     </div>
                     <div className="col-span-3 flex flex-col gap-1 items-end">
@@ -393,7 +406,7 @@ export default function AssignmentsPage() {
                       ) : (
                         <div className="px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed text-xs font-semibold tracking-wider inline-flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                          {assignment.submission_count || 0}
+                          {assignment.submission_count || 0} submissions
                         </div>
                       )}
                     </div>

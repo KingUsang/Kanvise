@@ -225,6 +225,37 @@ The richer builder intentionally goes beyond the older Stitch screen. Removing
 calculator, attempt, result-release, import, and bank controls merely to match the
 generated image would regress the Nigerian CBT workflow already implemented.
 
+### T: Assignment Definition & Tasks — 23 July 2026
+
+The implementation follows Stitch's split workspace: assignment creation occupies
+the wider left card and recent assignments form the right-hand ledger. Admins see
+this tutor-capability page only when they teach a Course; pure tutors work only
+within assigned Courses.
+
+Corrections made during this pass:
+
+- Removed the “Publish immediately” switch because it did not control the request;
+  the explicit Save as Draft and Publish Assignment actions are now the single,
+  understandable choice.
+- Changed “Target Programme / Course” to Course and added guidance when an admin
+  has not created one or a tutor has not been assigned one.
+- Replaced a culturally irrelevant Modernism placeholder and technical
+  “grading rubric” wording with a familiar school-subject example and plain marking
+  instructions.
+- Matched attachment copy and browser selection to the real R2 contract: PDF,
+  DOCX, PPTX, JPG, and PNG up to 50 MB. ZIP is no longer promised, and size/type
+  errors are caught before upload.
+- Replaced embedded success/error banners with consistent in-app notifications.
+- Added a real loading state and a useful first-assignment empty state.
+- Made recent assignment rows open their submissions workspace by pointer or
+  keyboard; they no longer only look clickable.
+- Expanded the bare submission number into a labelled submission count and replaced
+  “Unknown Course” with “Course unavailable”.
+- Made footer actions wrap instead of overflowing on narrow screens.
+
+The API already enforces school tenancy and Course assignment for creation,
+listing, publishing, editing, deletion, and tutor submission review.
+
 ## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:
