@@ -19,15 +19,23 @@ export default async function SchoolSetupPage() {
     cache: 'no-store'
   })
 
-  if (!res.ok && res.status !== 400) {
+  const responseBody = await res.json().catch(() => null)
+  const isNewAdmin = !res.ok && (
+    responseBody?.code === 'SCHOOL_NOT_CONFIGURED'
+    || (res.status === 400 && responseBody?.error === 'User does not belong to a school')
+  )
+
+  if (!res.ok && !isNewAdmin) {
     return (
       <div className="p-8 text-center text-red-500">
-        Failed to load school profile.
+        We could not load your centre details. Please refresh the page and try again.
       </div>
     )
   }
 
-  const schoolData = res.ok ? (await res.json()).data : null
+  // A missing centre is the expected first-login state for an Admin. Passing
+  // null opens the creation form, which submits to POST /schools.
+  const schoolData = res.ok ? responseBody?.data : null
 
   return (
     <div className="animate-in fade-in duration-500">
