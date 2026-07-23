@@ -15,7 +15,7 @@ vi.mock('../middleware/auth', () => ({
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
 }))
 
-import { notesRouter } from './notes'
+import { notesRouter, withoutPrivateFileKey } from './notes'
 
 function query(result: any, inSpy = vi.fn(), eqSpy = vi.fn()) {
   const value: any = {
@@ -55,5 +55,13 @@ describe('student materials library security', () => {
     const body = await response.json() as any
     expect(body.data[0]).not.toHaveProperty('file_key')
     expect(body.data[0].download_url).toBe('signed-download')
+  })
+
+  it('removes the private object key from material responses', () => {
+    expect(withoutPrivateFileKey({
+      id: 'note-1',
+      file_key: 'school-1/private/note/course-1/secret.pdf',
+      file_name: 'revision.pdf',
+    })).toEqual({ id: 'note-1', file_name: 'revision.pdf' })
   })
 })

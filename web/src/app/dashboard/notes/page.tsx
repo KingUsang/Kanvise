@@ -11,7 +11,6 @@ export default async function NotesPage() {
   }
 
   // Next.js Middleware handles role protection.
-  const schoolId = session.user.user_metadata?.school_id
   const role = session.user.app_metadata?.kanvise_role || session.user.app_metadata?.role
 
   if (role !== "admin" && role !== "tutor") {
@@ -20,7 +19,7 @@ export default async function NotesPage() {
 
   return (
     <div className="animate-in fade-in duration-500 h-full">
-      <NotesClient schoolId={schoolId} session={session} />
+      <NotesClient session={session} />
     </div>
   )
 }

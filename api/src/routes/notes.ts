@@ -16,6 +16,11 @@ type Variables = {
 
 export const notesRouter = new Hono<{ Variables: Variables }>();
 
+export function withoutPrivateFileKey<T extends Record<string, any>>(note: T): Omit<T, "file_key"> {
+  const { file_key: _fileKey, ...safeNote } = note;
+  return safeNote as Omit<T, "file_key">;
+}
+
 // Apply authentication middleware
 notesRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
 
@@ -210,7 +215,7 @@ notesRouter.get("/:courseId", async (c) => {
     const enhancedNotes = await Promise.all((notes || []).map(async (note) => {
       const download_url = await createPresignedDownload(note.file_key, profile.school_id);
       return {
-        ...note,
+        ...withoutPrivateFileKey(note),
         download_url
       };
     }));

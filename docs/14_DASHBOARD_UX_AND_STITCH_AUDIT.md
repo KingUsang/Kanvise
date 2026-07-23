@@ -36,7 +36,7 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | T: Assignment Definition & Tasks | Tutor | `/dashboard/assignments` | Implemented |
 | T: Student Submission Review | Tutor | `/dashboard/assignments/[assignmentId]/submissions` | Implemented |
 | T: Live Classroom Instruction Hosting | Tutor | `/class/[id]` | Implemented; visual alignment in progress |
-| T: Instructional Materials Library | Tutor | — | Missing route |
+| T: Instructional Materials Library | Tutor | `/dashboard/notes` | Implemented |
 | T: Mock Examination Results Analysis | Tutor | `/dashboard/mocks/[mockId]/results` | Implemented as a mock-scoped results and theory-grading workspace |
 | S3: Student Dashboard | Student | `/dashboard/student` | Implemented with enrolment-scoped Hono data |
 | S4: My Classes | Student | `/dashboard/student/classes` | Implemented with enrolment-scoped class sessions |
@@ -279,6 +279,34 @@ Corrections made during this pass:
 The API verifies school, assignment, and Course-management access before returning
 submissions or accepting a review. Student assignment responses remain limited to
 the signed-in student's own submission.
+
+### T: Instructional Materials Library — 23 July 2026
+
+The implementation retains Stitch's practical two-column arrangement: tutors share
+a file from the left and manage existing course materials from the wider table.
+It is available at `/dashboard/notes`; the earlier audit map incorrectly marked the
+implemented route as missing.
+
+Corrections made during this pass:
+
+- Replaced “active cohorts,” “resource details,” and “distributed materials” with
+  Course and learning-material language tutors and centre admins can understand.
+- Added guidance for a tutor without an assigned Course and disabled sharing until
+  a Course is available.
+- Validate PDF, DOCX, PPTX, JPG, and PNG files and the 50 MB limit before an R2
+  upload begins; this mirrors the API storage contract.
+- Stopped converting a failed per-Course request into an empty list. A real API
+  failure now has a visible retry state and cannot be mistaken for “no materials”.
+- Replaced the browser deletion popup with an accessible in-app confirmation that
+  explains the student-facing consequence.
+- Added useful first-material and filtered-course empty states.
+- Removed private Cloudflare R2 object keys from tutor/admin Course responses.
+  Browsers receive only the original filename and an expiring signed download URL,
+  matching the existing student aggregate route.
+
+The API restricts tutor creation and Course listing to assigned Courses, restricts
+tutor deletion to materials they created, and allows centre admins to manage
+materials across their own school.
 
 ## 4. Capability and navigation rules
 

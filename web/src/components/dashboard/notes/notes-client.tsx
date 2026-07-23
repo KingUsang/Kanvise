@@ -6,7 +6,6 @@ import { Session } from "@supabase/supabase-js"
 import { toast } from "sonner"
 
 interface NotesClientProps {
-  schoolId: string
   session: Session
 }
 
@@ -50,7 +49,16 @@ interface Note {
   tutor?: { first_name: string; last_name: string }
 }
 
-export function NotesClient({ schoolId, session }: NotesClientProps) {
+const MAX_FILE_SIZE = 50 * 1024 * 1024
+const ACCEPTED_FILE_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "image/jpeg",
+  "image/png",
+])
+
+export function NotesClient({ session }: NotesClientProps) {
   const supabase = createClient()
   const [courses, setCourses] = useState<Course[]>([])
   const [notes, setNotes] = useState<Note[]>([])
@@ -62,6 +70,8 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [isLoadingNotes, setIsLoadingNotes] = useState(true)
   const [isDragActive, setIsDragActive] = useState(false)
+  const [loadError, setLoadError] = useState("")
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const token = session.access_token
@@ -87,17 +97,20 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
         }
       })
       
-      if (!res.ok) throw new Error("Failed to load courses from API")
+      if (!res.ok) throw new Error("We could not load your courses. Please try again.")
       const json = await res.json()
       setCourses(normalizeCourses(json.data || []))
     } catch (error: any) {
       console.error("Failed to fetch courses:", error?.message || error)
-      toast.error(errorMessage(error, "Failed to load courses"))
+      const message = errorMessage(error, "We could not load your courses. Please try again.")
+      setLoadError(message)
+      toast.error(message)
     }
   }
 
   const fetchAllNotes = async () => {
     setIsLoadingNotes(true)
+    setLoadError("")
     try {
       let allNotes: Note[] = []
       
@@ -106,11 +119,9 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${course.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
-        if (res.ok) {
-          const { data } = await res.json()
-          return data
-        }
-        return []
+        if (!res.ok) throw new Error(`Could not load materials for ${course.name}`)
+        const { data } = await res.json()
+        return data
       })
 
       const results = await Promise.all(fetchPromises)
@@ -122,7 +133,9 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
       setNotes(allNotes)
     } catch (error) {
       console.error("Failed to fetch notes:", error)
-      toast.error("Failed to load notes")
+      const message = errorMessage(error, "We could not load your materials. Please try again.")
+      setLoadError(message)
+      toast.error(message)
     } finally {
       setIsLoadingNotes(false)
     }
@@ -141,14 +154,26 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
     e.preventDefault()
     setIsDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setFile(e.dataTransfer.files[0])
+      chooseFile(e.dataTransfer.files[0])
     }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0])
+      chooseFile(e.target.files[0])
     }
+  }
+
+  const chooseFile = (nextFile: File) => {
+    if (!ACCEPTED_FILE_TYPES.has(nextFile.type)) {
+      toast.error("Choose a PDF, DOCX, PPTX, JPG, or PNG file.")
+      return
+    }
+    if (nextFile.size > MAX_FILE_SIZE) {
+      toast.error("Choose a file smaller than 50 MB.")
+      return
+    }
+    setFile(nextFile)
   }
 
   const formatFileSize = (bytes: number) => {
@@ -168,9 +193,9 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
   }
 
   const handleUpload = async () => {
-    if (!selectedCourse) return toast.error("Please select a target course")
-    if (!title) return toast.error("Please enter a document title")
-    if (!file) return toast.error("Please select a file to upload")
+    if (!selectedCourse) return toast.error("Choose the course that should receive this material.")
+    if (!title.trim()) return toast.error("Enter a title students will recognise.")
+    if (!file) return toast.error("Choose a file to upload.")
 
     setIsUploading(true)
 
@@ -217,8 +242,8 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          title,
-          description,
+          title: title.trim(),
+          description: description.trim(),
           file_key,
           file_name: file.name,
           file_type: file.type,
@@ -231,7 +256,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
         throw new Error(error.error || "Failed to record note")
       }
 
-      toast.success("Resource published successfully!")
+      toast.success("Material shared with students.")
       
       // Reset form
       setTitle("")
@@ -251,8 +276,6 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
   }
 
   const handleDelete = async (noteId: string) => {
-    if (!confirm("Are you sure you want to delete this resource?")) return
-
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${noteId}`, {
         method: "DELETE",
@@ -266,6 +289,7 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
 
       toast.success("Resource deleted")
       setNotes(notes.filter(n => n.id !== noteId))
+      setNoteToDelete(null)
     } catch (error: unknown) {
       console.error(error)
       toast.error(errorMessage(error, "An error occurred"))
@@ -291,8 +315,8 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
     <div className="flex-1 p-6 md:p-margin-desktop overflow-y-auto">
       <div className="max-w-[1440px] mx-auto">
         <div className="mb-8">
-          <h2 className="text-headline-lg font-headline-lg text-primary mb-2">Upload Notes</h2>
-          <p className="text-body-md font-body-md text-on-surface-variant">Distribute course materials, syllabi, and reference documents to your active cohorts.</p>
+          <h2 className="text-headline-lg font-headline-lg text-primary mb-2">Learning materials</h2>
+          <p className="text-body-md font-body-md text-on-surface-variant">Share notes, slides, and helpful documents with students in a course.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
@@ -300,23 +324,26 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
           {/* Upload Panel */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
-              <h3 className="text-headline-sm font-headline-sm text-on-surface mb-6 border-b border-outline-variant pb-4">Resource Details</h3>
+              <h3 className="text-headline-sm font-headline-sm text-on-surface mb-6 border-b border-outline-variant pb-4">Share a material</h3>
               
               <div className="space-y-5">
                 <div>
-                  <label className="block text-label-md font-label-md text-on-surface mb-2">Target Course *</label>
+                  <label className="block text-label-md font-label-md text-on-surface mb-2">Course *</label>
                   <select 
                     value={selectedCourse}
                     onChange={(e) => setSelectedCourse(e.target.value)}
                     className="w-full border border-outline-variant rounded bg-surface py-2.5 px-3 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container"
                   >
-                    <option disabled value="">Select active course cohort...</option>
+                    <option disabled value="">Choose a course</option>
                     {courses.map(course => (
                       <option key={course.id} value={course.id}>
                         {course.name} {course.programme?.name ? `(${course.programme.name})` : ''}
                       </option>
                     ))}
                   </select>
+                  {courses.length === 0 && !loadError && (
+                    <p className="mt-2 text-label-md text-on-surface-variant">Create a course or ask your centre admin to assign you to one first.</p>
+                  )}
                 </div>
                 
                 <div>
@@ -326,17 +353,17 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full border border-outline-variant rounded bg-surface py-2.5 px-3 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container" 
-                    placeholder="e.g., Week 3: Data Structures Overview" 
+                    placeholder="e.g., Week 3 algebra revision notes"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-label-md font-label-md text-on-surface mb-2">Description / Instructions</label>
+                  <label className="block text-label-md font-label-md text-on-surface mb-2">Note for students <span className="font-normal text-on-surface-variant">(optional)</span></label>
                   <textarea 
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full border border-outline-variant rounded bg-surface py-2.5 px-3 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container resize-none" 
-                    placeholder="Provide context or reading instructions for the students..." 
+                    placeholder="Tell students what this material covers or how to use it."
                     rows={3}
                   />
                 </div>
@@ -377,10 +404,10 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
                 <div className="pt-4 border-t border-outline-variant">
                   <button 
                     onClick={handleUpload}
-                    disabled={isUploading}
+                    disabled={isUploading || courses.length === 0}
                     className="w-full bg-secondary text-on-secondary py-3 px-4 rounded text-body-md font-headline-md font-bold hover:bg-on-secondary-fixed-variant transition-colors shadow-sm disabled:opacity-50"
                   >
-                    {isUploading ? "Publishing..." : "Publish Resource"}
+                    {isUploading ? "Sharing..." : "Share material"}
                   </button>
                 </div>
               </div>
@@ -393,8 +420,8 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
               
               <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-[#fbf9f8]">
                 <div>
-                  <h3 className="text-headline-sm font-headline-sm text-on-surface">Recent Uploads</h3>
-                  <p className="text-label-md font-label-md text-on-surface-variant mt-1">Manage distributed materials across all courses.</p>
+                  <h3 className="text-headline-sm font-headline-sm text-on-surface">Shared materials</h3>
+                  <p className="text-label-md font-label-md text-on-surface-variant mt-1">Open, download, or remove materials already shared with students.</p>
                 </div>
                 <div className="flex gap-2">
                   <select 
@@ -429,11 +456,21 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
                            <p>Loading notes...</p>
                         </td>
                       </tr>
+                    ) : loadError ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-14 text-center">
+                          <span className="material-symbols-outlined text-4xl text-error">cloud_off</span>
+                          <p className="mt-3 font-semibold text-on-surface">Materials could not be loaded</p>
+                          <p className="mt-1 text-body-sm text-on-surface-variant">{loadError}</p>
+                          <button type="button" onClick={() => void fetchAllNotes()} className="mt-4 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary">Try again</button>
+                        </td>
+                      </tr>
                     ) : filteredNotes.length === 0 ? (
                        <tr>
-                         <td colSpan={5} className="py-8 text-center text-on-surface-variant">
-                            <span className="material-symbols-outlined text-4xl mb-2 text-outline-variant">inventory_2</span>
-                            <p>No resources found.</p>
+                         <td colSpan={5} className="py-14 px-6 text-center text-on-surface-variant">
+                            <span className="material-symbols-outlined text-4xl mb-2 text-outline-variant">menu_book</span>
+                            <p className="font-semibold text-on-surface">{filterCourse ? "No materials in this course yet" : "Share your first learning material"}</p>
+                            <p className="mt-1 text-body-sm">{filterCourse ? "Choose another course or use the form to add one." : "Choose a course and upload notes, slides, or a document for your students."}</p>
                          </td>
                        </tr>
                     ) : (
@@ -457,12 +494,12 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{new Date(note.created_at).toLocaleDateString()}</td>
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{formatFileSize(note.file_size_bytes)}</td>
                             <td className="py-4 px-6 text-right">
-                              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => handleDownload(note.download_url, note.file_name)} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors" title="Download">
                                   <span className="material-symbols-outlined text-sm">download</span>
                                 </button>
                                 {(role === "admin" || (session.user.user_metadata?.kanvise_user_id || session.user.id) === note.tutor_id) && (
-                                  <button onClick={() => handleDelete(note.id)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors" title="Delete">
+                                  <button onClick={() => setNoteToDelete(note)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors" title="Delete">
                                     <span className="material-symbols-outlined text-sm">delete</span>
                                   </button>
                                 )}
@@ -483,6 +520,20 @@ export function NotesClient({ schoolId, session }: NotesClientProps) {
           </div>
         </div>
       </div>
+      {noteToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-material-title">
+          <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
+            <h3 id="delete-material-title" className="text-xl font-bold text-on-surface">Remove this material?</h3>
+            <p className="mt-2 text-body-md text-on-surface-variant">
+              Students will no longer see “{noteToDelete.title}”. This cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setNoteToDelete(null)} className="rounded border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface">Keep material</button>
+              <button type="button" onClick={() => void handleDelete(noteToDelete.id)} className="rounded bg-error px-4 py-2 text-sm font-semibold text-on-error">Remove material</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
