@@ -1390,6 +1390,28 @@ Returns all of the current student's submissions across all courses.
 > endpoints in this section are planned contracts until their versioned Hono routes
 > and tests land; documentation alone must not be treated as implementation.
 
+### Question-bank authoring checkpoint
+
+The Hono service now exposes the first authoring contract, pending application of
+the question-bank migrations in the target environment:
+
+- `GET /question-banks` — list private banks owned by the tutor and centre banks
+  visible to the tutor; admins see all active banks in their centre.
+- `POST /question-banks` — create a private or centre bank.
+- `GET /question-banks/:bankId` — load accessible bank metadata.
+- `PATCH /question-banks/:bankId` — owner/admin rename, visibility, description,
+  or archive changes.
+- `GET /question-banks/:bankId/questions` — paginated search by text, subject,
+  topic, type, or course.
+- `POST /question-banks/:bankId/questions` — atomically create the source question,
+  immutable version, and answer options.
+- `PATCH /question-banks/questions/:questionId` — author/admin creates a new
+  immutable version rather than rewriting history.
+- `GET /question-banks/questions/:questionId/versions` — accessible version history.
+
+These routes are tutor/admin-only and always scope queries to the verified profile's
+`school_id`. Next.js does not query the question-bank tables directly.
+
 ---
 
 ### POST `api.kanvise.com/courses/:courseId/mocks`

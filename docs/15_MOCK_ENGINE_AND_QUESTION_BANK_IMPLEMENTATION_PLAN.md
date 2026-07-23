@@ -1,6 +1,6 @@
 # Kanvise Mock Engine and Question Bank Implementation Plan
 
-**Status:** Product and engineering blueprint — not yet implemented  
+**Status:** In implementation — foundation and authoring API committed/in review
 **Scope:** Tutor/admin authoring, centre question banks, student CBT attempts, grading, and results  
 **Related documents:** `04_KANVISE_ERD_Database_Schema.md`, `05_KANVISE_API_Specification.md`, `08_KANVISE_Feature_Specifications.md`, `14_DASHBOARD_UX_AND_STITCH_AUDIT.md`
 
@@ -40,7 +40,34 @@ The current tutor builder supports manual MCQ/theory authoring and CSV import. T
 
 The existing specification says the frontend owns the countdown and the API checks lateness only on submission. That is insufficient: a closed browser, lost connection, modified client clock, or missing submit request can leave an attempt in the wrong state. The new engine must calculate and enforce a server-owned `deadline_at`.
 
-There is also an uncommitted provisional `GET /mocks/student` route in the current worktree. It is not the final student contract and must be removed or replaced during Phase 0 rather than treated as completed work.
+The earlier provisional `GET /mocks/student` route was removed during Phase 0. It
+must not be restored as the final student contract; the versioned attempt endpoints
+in this plan replace it.
+
+### 2.1 Implementation checkpoint — 23 July 2026
+
+Implemented in the repository:
+
+- Additive question-bank, rich-content, immutable-version, mock-section, published-
+  snapshot, attempt-timing, and retry-grant schema migrations.
+- Atomic `SECURITY INVOKER` functions for creating and revising a question with its
+  options in one database transaction.
+- Hono-only private/centre question-bank CRUD, searchable question listing,
+  version creation, version history, tenant/owner/course checks, and pagination.
+- Runtime validation for text, equations, chemistry, accessible images, tables,
+  MCQ answer keys, and theory questions.
+- Student-response sanitation utilities and tests that remove correct-answer,
+  explanation, and rubric fields.
+
+Not yet operational:
+
+- The new migrations have not been applied to staging because this workspace has
+  neither an authenticated/linked Supabase CLI project nor a database connection
+  string. A service-role API key cannot execute schema DDL.
+- The tutor question-bank screens, import pipeline, mock-builder integration,
+  publication snapshots, and student attempt runner remain subsequent phases.
+- No new route should be enabled in a deployed environment until both migrations
+  are applied and verified there.
 
 ## 3. Product language
 
