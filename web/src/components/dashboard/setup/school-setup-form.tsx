@@ -111,7 +111,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     setErrorMessage('')
 
     try {
-      const res = await fetch(`${getApiUrl()}/schools/mine`, {
+      const res = await fetch(`${getApiUrl()}/schools/me`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

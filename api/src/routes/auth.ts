@@ -10,17 +10,21 @@ async function deliverWelcome(profile: any, email: string) {
   try {
     const frontendUrl = process.env.FRONTEND_URL
     if (!frontendUrl) throw new Error('FRONTEND_URL is required for welcome email delivery')
+    const base = frontendUrl.replace(/\/$/, '')
+    const dashboardUrl = profile.role === 'student' ? `${base}/dashboard/student` : `${base}/dashboard`
     return await ensureWelcomeEmail({
       profileId: profile.id,
       recipientEmail: email,
       firstName: profile.first_name,
-      dashboardUrl: `${frontendUrl.replace(/\/$/, '')}/dashboard`,
+      dashboardUrl,
     })
   } catch (error) {
     console.error('[auth/profile/init] Welcome email failed:', error)
     return { sent: false, id: null, alreadySent: false }
   }
 }
+
+const ALLOWED_ROLES = ['admin', 'tutor', 'student'] as const
 
 authRouter.use('*', jwtVerificationMiddleware)
 authRouter.use('*', profileResolutionMiddleware)
@@ -36,6 +40,10 @@ authRouter.post('/profile/init', async (c) => {
 
   if (!email) {
     return c.json({ error: 'Authenticated user has no email address' }, 400)
+  }
+
+  if (!ALLOWED_ROLES.includes(role)) {
+    return c.json({ error: 'Invalid role' }, 400)
   }
 
   const { data: existingProfile } = await supabase

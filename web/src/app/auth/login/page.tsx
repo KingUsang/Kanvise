@@ -3,14 +3,18 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeOff, Loader2, Mail, Lock, BookOpen } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
+import { AuthLogo } from "@/components/auth/auth-logo";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParams = searchParams.get("redirect");
   const reason = searchParams.get("reason");
+  const registerHref = redirectParams
+    ? `/auth/register?redirect=${encodeURIComponent(redirectParams)}`
+    : "/auth/register";
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,11 +58,8 @@ function LoginContent() {
       <main className="w-full max-w-[440px] animate-in fade-in duration-700 slide-in-from-bottom-4">
         <div className="bg-white border border-kv-dust/40 p-8 md:p-10 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] rounded-lg">
           {/* Logo Section */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 mb-4 flex items-center justify-center bg-kv-blue rounded">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-kv-blue tracking-tight">Kanvise</h1>
+          <div className="mb-8">
+            <AuthLogo />
             <p className="text-sm text-kv-dark/70 font-light mt-1 uppercase tracking-widest text-center">Private OS for Nigerian Tutors</p>
           </div>
 
@@ -157,7 +158,7 @@ function LoginContent() {
           <div className="mt-8 pt-6 border-t border-kv-dust/30 text-center">
             <p className="text-center text-sm text-gray-600 mt-8">
               Don&apos;t have an account?{" "}
-              <Link href="/auth/register" className="font-semibold text-kv-brown hover:text-kv-dark transition-colors">
+              <Link href={registerHref} className="font-semibold text-kv-brown hover:text-kv-dark transition-colors">
                 Sign Up
               </Link>
             </p>

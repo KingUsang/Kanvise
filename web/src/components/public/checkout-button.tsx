@@ -27,9 +27,9 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // Not logged in: redirect to login/register with redirect context
+        // New students should create a student profile, then return here to pay.
         const redirectUrl = `/${schoolSlug}/${programmeSlug}?checkout=true`;
-        router.push(`/auth/login?redirect=${encodeURIComponent(redirectUrl)}`);
+        router.push(`/auth/register?redirect=${encodeURIComponent(redirectUrl)}`);
         return;
       }
 

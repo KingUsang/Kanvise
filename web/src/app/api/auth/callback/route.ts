@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       // Alternatively, we can let the Client handle the profile initialization.
 
       // For MVP, we will construct the Hono call here.
+      let profileInitOk = false
       try {
         const honoApiUrl = process.env.NEXT_PUBLIC_API_URL
         
@@ -66,19 +67,25 @@ export async function GET(request: Request) {
           const errorText = await response.text()
           console.error(`❌ Hono API returned status ${response.status}:`, errorText)
         } else {
+          profileInitOk = true
           console.log('✅ Hono Profile successfully initialized!')
         }
       } catch (err) {
         console.error("❌ Failed to reach Hono API (Network Error):", err)
       }
 
+      // If we couldn't set up the account, don't pretend onboarding succeeded.
+      if (!profileInitOk) {
+        return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+      }
+
       // Redirecting...
       let redirectUrl = origin
       
       if (role === 'admin') {
-        redirectUrl = `${origin}/dashboard/admin/setup`
+        redirectUrl = `${origin}/dashboard/setup`
       } else if (role === 'tutor') {
-        redirectUrl = `${origin}/dashboard/tutor`
+        redirectUrl = `${origin}/dashboard`
       } else if (redirect) {
         redirectUrl = `${origin}${redirect}`
       } else {

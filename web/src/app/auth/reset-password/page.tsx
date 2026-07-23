@@ -51,12 +51,8 @@ export default function ResetPasswordPage() {
       const role = user?.app_metadata?.kanvise_role || user?.app_metadata?.role;
       
       let redirectUrl = "/";
-      if (role === "admin") {
-        // Technically an admin without a school needs to go to setup, but the Hono middleware handles it
-        // and Next.js middleware might also handle it, but we can just send them to /dashboard/admin
-        redirectUrl = "/dashboard/admin";
-      } else if (role === "tutor") {
-        redirectUrl = "/dashboard/tutor";
+      if (role === "admin" || role === "tutor") {
+        redirectUrl = "/dashboard";
       } else if (role === "student") {
         redirectUrl = "/dashboard/student";
       }
@@ -82,13 +78,13 @@ export default function ResetPasswordPage() {
             <div className="w-16 h-16 rounded-full bg-primary-container text-on-primary flex items-center justify-center mx-auto mb-stack-md animate-bounce">
               <span className="material-symbols-outlined text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
             </div>
-            <h2 className="font-headline-md text-headline-md font-bold text-primary-container mb-3 tracking-tight">System Secured</h2>
+            <h2 className="font-headline-md text-headline-md font-bold text-primary-container mb-3 tracking-tight">Password updated</h2>
             <p className="font-body-md text-body-md text-on-surface-variant mb-stack-lg leading-relaxed">
-                Your password has been successfully updated. Your institutional access is ready.
+                Your password has been changed. Taking you to your dashboard now.
             </p>
             <div className="w-full flex items-center justify-center gap-2 bg-primary-container text-on-primary font-label-md text-label-md uppercase tracking-wider font-semibold py-4 px-6 rounded opacity-80 cursor-wait">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Redirecting to Portal...</span>
+              <span>Redirecting...</span>
             </div>
           </div>
         ) : (
@@ -99,9 +95,9 @@ export default function ResetPasswordPage() {
                 <span className="material-symbols-outlined text-[24px]">lock_reset</span>
               </div>
               <h1 className="font-headline-md text-headline-md font-bold text-primary-container mb-2 tracking-tight">Kanvise</h1>
-              <h2 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Create New Password</h2>
+              <h2 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Set a new password</h2>
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-2 max-w-[85%] mx-auto leading-relaxed">
-                  Your new password must be unique from those previously used to maintain elite security.
+                  Choose a password you haven't used before to keep your account safe.
               </p>
             </header>
 

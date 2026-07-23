@@ -38,7 +38,7 @@ function query(result: unknown, terminal: 'maybeSingle' | 'single') {
   return builder
 }
 
-describe('POST /schools/invites', () => {
+describe('POST /schools/me/invite/tutor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv('FRONTEND_URL', 'https://kanvise.com')
@@ -64,7 +64,7 @@ describe('POST /schools/invites', () => {
     })
     mocks.sendTutorInvitation.mockRejectedValue(new Error('provider unavailable'))
 
-    const response = await schoolsRouter.request('/invites', {
+    const response = await schoolsRouter.request('/me/invite/tutor', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email: 'Tutor@Example.com' }),

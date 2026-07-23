@@ -77,7 +77,7 @@ export function TutorsClient() {
 
       const [tutorsRes, invitesRes, peopleRes, assignmentsRes] = await Promise.all([
         fetch(`${baseUrl}/users/tutors`, { headers }),
-        fetch(`${baseUrl}/schools/invites`, { headers }),
+        fetch(`${baseUrl}/schools/me/invites`, { headers }),
         fetch(`${baseUrl}/users?roles=admin,tutor`, { headers }),
         fetch(`${baseUrl}/courses/assignment-overview`, { headers }),
       ])
@@ -111,7 +111,7 @@ export function TutorsClient() {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
 
-      const res = await fetch(`${baseUrl}/schools/invites`, {
+      const res = await fetch(`${baseUrl}/schools/me/invite/tutor`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`, 
@@ -140,7 +140,7 @@ export function TutorsClient() {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
 
-      const res = await fetch(`${baseUrl}/schools/invites`, {
+      const res = await fetch(`${baseUrl}/schools/me/invite/tutor`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`, 
@@ -184,7 +184,7 @@ export function TutorsClient() {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
 
-      const res = await fetch(`${baseUrl}/schools/invites/${inviteId}/revoke`, {
+      const res = await fetch(`${baseUrl}/schools/me/invites/${inviteId}/revoke`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       })

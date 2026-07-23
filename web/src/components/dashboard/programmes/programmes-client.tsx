@@ -67,7 +67,7 @@ export function ProgrammesClient() {
         fetch(`${baseUrl}/sub-programmes`, { headers }),
         fetch(`${baseUrl}/courses`, { headers }),
         fetch(`${baseUrl}/users?roles=admin,tutor`, { headers }),
-        fetch(`${baseUrl}/schools/mine`, { headers })
+        fetch(`${baseUrl}/schools/me`, { headers })
       ])
 
       if (!progRes.ok) throw new Error('Failed to fetch programmes')

@@ -64,7 +64,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
   return c.json({ school })
 })
 
-schoolsRouter.get('/mine', requireRole('admin'), async (c) => {
+schoolsRouter.get('/me', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const schoolId = user.school_id
 
@@ -85,7 +85,7 @@ schoolsRouter.get('/mine', requireRole('admin'), async (c) => {
   return c.json({ data: school })
 })
 
-schoolsRouter.patch('/mine', requireRole('admin'), async (c) => {
+schoolsRouter.patch('/me', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const schoolId = user.school_id
 
@@ -135,8 +135,8 @@ schoolsRouter.patch('/mine', requireRole('admin'), async (c) => {
   return c.json({ data: school })
 })
 
-// POST /schools/invites — Generate a signed tutor invite link
-schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
+// POST /schools/me/invite/tutor — Generate a signed tutor invite link
+schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
   const { email } = body
@@ -214,7 +214,7 @@ schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
     emailId = delivery.id
   } catch (error) {
     // The invite remains usable and can still be copied by the Admin.
-    console.error('[schools/invites] Tutor invitation email failed:', error)
+    console.error('[schools/me/invite/tutor] Tutor invitation email failed:', error)
   }
 
   // TODO(ux): The stateless HMAC token makes the URL very long (~150+ chars).
@@ -237,8 +237,8 @@ schoolsRouter.post('/invites', requireRole('admin'), async (c) => {
   }, 201)
 })
 
-// GET /schools/invites — List all invites for this school
-schoolsRouter.get('/invites', requireRole('admin'), async (c) => {
+// GET /schools/me/invites — List all invites for this school
+schoolsRouter.get('/me/invites', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const status = c.req.query('status') // optional filter: pending | accepted | expired | revoked
 
@@ -268,8 +268,8 @@ schoolsRouter.get('/invites', requireRole('admin'), async (c) => {
   })
 })
 
-// POST /schools/invites/:id/revoke — Revoke a pending invite
-schoolsRouter.post('/invites/:id/revoke', requireRole('admin'), async (c) => {
+// POST /schools/me/invites/:id/revoke — Revoke a pending invite
+schoolsRouter.post('/me/invites/:id/revoke', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const id = c.req.param('id')
 

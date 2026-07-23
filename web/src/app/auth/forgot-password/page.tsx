@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { AuthLogo } from "@/components/auth/auth-logo";
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +43,7 @@ export default function ForgotPasswordPage() {
 
       {/* Main Recovery Card */}
       <main className="relative z-10 w-full max-w-[480px]">
-        {/* Brand Identity Header */}
-        <div className="text-center mb-stack-lg">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-container rounded-xl mb-stack-md shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
-            <span className="material-symbols-outlined text-on-primary text-4xl" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>school</span>
-          </div>
-          <h2 className="font-headline-md text-headline-md text-primary tracking-tight font-semibold">Kanvise LMS</h2>
-        </div>
+        <AuthLogo className="mb-stack-lg" />
 
         {/* Focused Recovery Surface */}
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-10 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
@@ -59,7 +52,7 @@ export default function ForgotPasswordPage() {
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-stack-lg">
                 <span className="material-symbols-outlined text-green-600 text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
               </div>
-              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-sm font-semibold">Email Sent!</h2>
+              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-sm font-semibold">Email sent</h2>
               <p className="font-body-md text-body-md text-on-surface-variant mb-stack-lg">
                 We've sent a password reset link to <br />
                 <span className="font-bold text-primary">{email}</span>
@@ -120,7 +113,7 @@ export default function ForgotPasswordPage() {
                   {loading ? (
                     <>
                       <Loader2 className="animate-spin w-5 h-5" />
-                      <span>Processing...</span>
+                      <span>Sending...</span>
                     </>
                   ) : (
                     <>
@@ -138,23 +131,11 @@ export default function ForgotPasswordPage() {
                   Back to Login
                 </Link>
                 <p className="font-body-sm text-body-sm text-on-surface-variant text-center max-w-[280px]">
-                  If you don't receive an email within 5 minutes, please check your spam folder or 
-                  <a className="text-secondary hover:underline font-medium ml-1" href="#">Contact Support</a>.
+                    If you do not receive an email within 5 minutes, please check your spam folder.
                 </p>
               </footer>
             </>
           )}
-        </div>
-
-        {/* System Status Footer (Subtle) */}
-        <div className="mt-stack-lg flex justify-between items-center px-4">
-          <span className="font-label-md text-label-md font-semibold text-on-surface-variant/60 flex items-center gap-1 uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            System Operational
-          </span>
-          <span className="font-label-md text-label-md font-semibold text-on-surface-variant/60 tracking-wider">
-            v2.4.1 Build 2024
-          </span>
         </div>
       </main>
     </div>

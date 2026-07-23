@@ -12,7 +12,7 @@ export default async function SchoolSetupPage() {
   if (!token) return redirect('/auth/login')
 
   // Fetch school data
-  const res = await fetch(`${getApiUrl()}/schools/mine`, {
+  const res = await fetch(`${getApiUrl()}/schools/me`, {
     headers: {
       'Authorization': `Bearer ${token}`
     },

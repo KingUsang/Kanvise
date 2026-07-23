@@ -561,7 +561,7 @@ const validateInviteToken = (token) => {
 }
 ```
 
-**Invite token storage:** Tokens are not stored in the database for MVP. They are stateless — the signature is sufficient to validate authenticity and the payload contains the expiry. Post-MVP, a token revocation table can be added so Admins can invalidate outstanding invite links.
+**Invite token storage:** The invite token itself is stateless — profile initialisation validates it purely from its HMAC signature and the expiry inside the payload, with no database lookup. Separately, a `tutor_invites` row is recorded when an Admin generates an invite so the dashboard can list pending/accepted/expired invites and revoke outstanding ones. Revocation and the stored row are an Admin convenience layer; they are not part of the token's cryptographic validation. Changing the `INVITE_TOKEN_SECRET` still invalidates every outstanding token at once.
 
 ---
 
