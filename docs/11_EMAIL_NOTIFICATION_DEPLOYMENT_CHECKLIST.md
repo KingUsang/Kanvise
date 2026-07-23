@@ -22,17 +22,24 @@ Configure these in Authentication → URL Configuration.
 - Site URL: `https://staging.kanvise.com`
 - Redirect URL: `https://staging.kanvise.com/api/auth/callback`
 - Redirect URL: `https://staging.kanvise.com/auth/reset-password`
+- Vercel environment: `NEXT_PUBLIC_SITE_URL=https://staging.kanvise.com`
 
 ### Production
 
 - Site URL: `https://kanvise.com`
 - Redirect URL: `https://kanvise.com/api/auth/callback`
 - Redirect URL: `https://kanvise.com/auth/reset-password`
+- Vercel environment: `NEXT_PUBLIC_SITE_URL=https://kanvise.com`
 
 Keep `http://localhost:3000/**` only in the development project. Use an explicit,
 account-scoped Vercel preview pattern only when preview authentication is required.
 Ensure confirmation/reset templates use `RedirectTo` when application code supplies
 `emailRedirectTo` or `redirectTo`.
+
+If an email still points to localhost after the application environment is correct,
+the hosted Auth project's Site URL or template is still using `{{ .SiteURL }}`.
+Update the hosted project in the Supabase Dashboard; changing a local `.env` file
+does not change Supabase's hosted email templates.
 
 ## 3. Resend
 

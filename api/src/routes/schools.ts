@@ -197,8 +197,6 @@ schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
       .eq('school_id', user.school_id)
   }
 
-  // Generate the HMAC-SHA256 signed token
-  const token = generateInviteToken(user.school_id, user.id)
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
   // Create the tutor_invites row
@@ -217,6 +215,10 @@ schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
   if (insertError) {
     return c.json({ error: insertError.message }, 500)
   }
+
+  // Bind the signed link to this exact database row and recipient. Revocation,
+  // expiry and single-use status are therefore enforced during acceptance.
+  const token = generateInviteToken(invite.id, user.school_id, invite.email)
 
   const appUrl = process.env.FRONTEND_URL!
   const inviteUrl = `${appUrl}/join?token=${token}`
@@ -246,13 +248,6 @@ schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
     console.error('[schools/me/invite/tutor] Tutor invitation email failed:', error)
   }
 
-  // TODO(ux): The stateless HMAC token makes the URL very long (~150+ chars).
-  // If this becomes a UX issue for sharing via SMS/WhatsApp, we should switch to a
-  // Stateful Short Token architecture:
-  // 1. Generate a random 16-char string (e.g. nanoid)
-  // 2. Add a `token` column to the `tutor_invites` table and save it there
-  // 3. Update the frontend/backend to do a DB lookup `WHERE token = ?` to validate.
-  //
   return c.json({
     data: {
       invite_url: inviteUrl,

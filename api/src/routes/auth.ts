@@ -73,7 +73,21 @@ authRouter.post('/profile/init', async (c) => {
     if (!invite_token) return c.json({ error: 'Invite token required for tutors' }, 400)
     try {
       const payload = validateInviteToken(invite_token)
-      schoolId = payload.school_id
+      if (String(payload.email).toLowerCase() !== String(email).toLowerCase()) {
+        return c.json({ error: 'This invitation was sent to a different email address' }, 403)
+      }
+      const { data: claimed, error: claimError } = await supabase.rpc('consume_tutor_invite', {
+        p_invite_id: payload.invite_id,
+        p_email: email,
+        p_supabase_auth_id: supabaseAuthId,
+      })
+      if (claimError || !claimed) {
+        return c.json({ error: claimError?.message || 'This invitation is no longer valid' }, 400)
+      }
+      schoolId = claimed
+      if (schoolId !== payload.school_id) {
+        return c.json({ error: 'Invalid invitation' }, 400)
+      }
     } catch (e: any) {
       return c.json({ error: e.message || 'Invalid invite token' }, 400)
     }

@@ -561,7 +561,12 @@ const validateInviteToken = (token) => {
 }
 ```
 
-**Invite token storage:** The invite token itself is stateless — profile initialisation validates it purely from its HMAC signature and the expiry inside the payload, with no database lookup. Separately, a `tutor_invites` row is recorded when an Admin generates an invite so the dashboard can list pending/accepted/expired invites and revoke outstanding ones. Revocation and the stored row are an Admin convenience layer; they are not part of the token's cryptographic validation. Changing the `INVITE_TOKEN_SECRET` still invalidates every outstanding token at once.
+**Invite enforcement:** The signed token contains the exact `tutor_invites.id`,
+school, recipient email, and expiry. Profile initialisation verifies the HMAC and
+then atomically consumes that database row. The row must still be pending,
+unexpired, and addressed to the verified Supabase email. Revocation therefore
+invalidates one invite immediately, and an accepted invite cannot be reused by a
+different Auth user. A callback retry by the same verified Auth user is idempotent.
 
 ---
 
@@ -635,7 +640,9 @@ Role is canonical in `user_profiles` and copied to Supabase Auth `app_metadata` 
 
 ### 13.4 Invite Token Security
 
-Invite tokens are HMAC-signed with a secret known only to the Hono server. A malicious actor cannot forge a valid invite token without the secret. The token expires in 7 days. If an Admin suspects a link has been shared with the wrong person, the practical mitigation at MVP is to change the `INVITE_TOKEN_SECRET` environment variable — this invalidates all outstanding invite tokens. Post-MVP, per-token revocation will be added.
+Invite tokens are HMAC-signed with a secret known only to Hono and bound to one
+database invite row and one normalized recipient email. They expire after seven
+days, are atomically marked accepted, and honour per-invite revocation.
 
 ### 13.5 Webhook Security
 
@@ -680,6 +687,7 @@ CORS_ALLOWED_ORIGINS=https://staging.kanvise.com,https://app.kanvise.com
 NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 NEXT_PUBLIC_API_URL=https://api.kanvise.com
+NEXT_PUBLIC_SITE_URL=https://staging.kanvise.com
 HONO_INTERNAL_SECRET=shared-secret-for-next-to-hono-internal-calls
 ```
 
