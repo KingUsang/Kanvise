@@ -376,7 +376,15 @@ mocksRouter.get("/:id/assembly", requireTutorOrAdmin, async (c) => {
   const [{ data: fixed, error: fixedError }, { data: rules, error: ruleError }] = sectionIds.length
     ? await Promise.all([
       supabase.from("mock_section_questions")
-        .select("id, section_id, question_id, question_version_id, order_index, marks_override, question:bank_questions(id, bank_id, course_id, subject_name, topic, subtopic, question_type, current_version:bank_question_versions!bank_questions_current_version_fkey(id, version_number, plain_text, content_blocks, marks))")
+        .select(`id, section_id, question_id, question_version_id, order_index, marks_override,
+          question:bank_questions(
+            id, bank_id, course_id, subject_name, topic, subtopic, question_type,
+            bank:question_banks(name, source_mock_exam_id),
+            current_version:bank_question_versions!bank_questions_current_version_fkey(
+              id, version_number, plain_text, content_blocks, grading_rubric_blocks, marks,
+              options:bank_question_option_versions(id, plain_text, content_blocks, is_correct, order_index)
+            )
+          )`)
         .eq("school_id", user.school_id).in("section_id", sectionIds).order("order_index"),
       supabase.from("mock_question_rules")
         .select("id, section_id, bank_id, subject_name, topic, subtopic, question_type, question_count")

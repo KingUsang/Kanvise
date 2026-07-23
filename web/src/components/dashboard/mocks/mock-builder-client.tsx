@@ -26,6 +26,25 @@ type QuestionState = {
   grading_rubric?: string; // only for theory
 };
 
+type Bank = { id: string; name: string; question_count: number };
+type BankQuestion = {
+  id: string;
+  question_type: "mcq" | "theory";
+  current_version: {
+    id: string;
+    plain_text: string;
+    marks: number;
+  };
+};
+type SelectedBankQuestion = {
+  questionId: string;
+  questionVersionId: string;
+  questionText: string;
+  questionType: "mcq" | "theory";
+  marks: number;
+  bankName: string;
+};
+
 export function parseDocxQuestionText(rawText: string): QuestionState[] {
   const blocks = rawText
     .replace(/\r/g, "")
@@ -33,7 +52,7 @@ export function parseDocxQuestionText(rawText: string): QuestionState[] {
     .map((block) => block.trim())
     .filter(Boolean);
 
-  return blocks.flatMap((block, blockIndex) => {
+  return blocks.flatMap<QuestionState>((block, blockIndex) => {
     const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
     const field = (name: string) => lines.find((line) => line.toLowerCase().startsWith(`${name.toLowerCase()}:`))
       ?.slice(name.length + 1).trim();
@@ -103,6 +122,12 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   // Questions State
   const [questions, setQuestions] = useState<QuestionState[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [selectedBankId, setSelectedBankId] = useState("");
+  const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
+  const [selectedBankQuestions, setSelectedBankQuestions] = useState<SelectedBankQuestion[]>([]);
+  const [showBankPicker, setShowBankPicker] = useState(false);
+  const [isLoadingBankQuestions, setIsLoadingBankQuestions] = useState(false);
 
   // CSV Upload & Modal State
   const [isDragging, setIsDragging] = useState(false);
@@ -113,17 +138,22 @@ export function MockBuilderClient({ token }: { token: string }) {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
+        const headers = { "Authorization": `Bearer ${token}` };
+        const [res, banksRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`, { headers }),
+        ]);
         if (res.ok) {
           const { data } = await res.json();
           setCourses(data || []);
           if (data && data.length > 0 && !isEditMode) {
             setCourseId(data[0].id);
           }
+        }
+        if (banksRes.ok) {
+          const { data } = await banksRes.json();
+          setBanks(data || []);
+          setSelectedBankId(data?.[0]?.id || "");
         }
       } catch (err) {
         console.error("Failed to fetch courses", err);
@@ -135,18 +165,18 @@ export function MockBuilderClient({ token }: { token: string }) {
     const fetchMockData = async () => {
       if (!editMockId) return;
       try {
-        const [mockRes, qRes] = await Promise.all([
+        const [mockRes, assemblyRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}`, {
             headers: { "Authorization": `Bearer ${token}` }
           }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}/questions`, {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}/assembly`, {
             headers: { "Authorization": `Bearer ${token}` }
           })
         ]);
 
-        if (mockRes.ok && qRes.ok) {
+        if (mockRes.ok && assemblyRes.ok) {
           const mockData = (await mockRes.json()).data;
-          const qData = (await qRes.json()).data;
+          const assemblyData = (await assemblyRes.json()).data;
 
           if (mockData.status !== "draft") {
             setIsReadOnly(true);
@@ -178,21 +208,34 @@ export function MockBuilderClient({ token }: { token: string }) {
             setPublishTime(d.toTimeString().substring(0,5));
           }
 
-          // Map questions to state
-          if (qData && qData.length > 0) {
-            setQuestions(qData.map((q: any) => ({
-              id: `q_${q.id}`, // mapped local id
+          const assembledQuestions = (assemblyData.sections || []).flatMap((section: any) => section.questions || []);
+          const authoredQuestions = assembledQuestions.filter((item: any) => item.question?.bank?.source_mock_exam_id === editMockId);
+          const reusedQuestions = assembledQuestions.filter((item: any) => item.question?.bank?.source_mock_exam_id !== editMockId);
+          if (authoredQuestions.length > 0) {
+            setQuestions(authoredQuestions.map((item: any) => {
+              const q = item.question;
+              return {
+              id: `q_${q.id}`,
               question_type: q.question_type,
-              question_text: q.question_text,
-              marks: q.marks,
-              options: (q.options || []).map((o: any) => ({
+              question_text: q.current_version?.plain_text || "",
+              marks: item.marks_override || q.current_version?.marks,
+              options: (q.current_version?.options || []).map((o: any) => ({
                 id: `o_${o.id}`,
-                option_text: o.option_text,
+                option_text: o.plain_text,
                 is_correct: o.is_correct
               })),
-              grading_rubric: q.grading_rubric || ""
-            })));
+              grading_rubric: (q.current_version?.grading_rubric_blocks || [])
+                .filter((block: any) => block?.type === "text").map((block: any) => block.text).join("\n")
+            }}));
           }
+          setSelectedBankQuestions(reusedQuestions.map((item: any) => ({
+            questionId: item.question.id,
+            questionVersionId: item.question_version_id,
+            questionText: item.question.current_version?.plain_text || "",
+            questionType: item.question.question_type,
+            marks: item.marks_override || item.question.current_version?.marks,
+            bankName: item.question.bank?.name || "Question bank",
+          })));
         } else {
           toast.error("Could not open this mock", { description: "It may no longer exist or you may not have access." });
           startNavigationProgress();
@@ -209,6 +252,26 @@ export function MockBuilderClient({ token }: { token: string }) {
       if (isEditMode) fetchMockData();
     });
   }, [token, editMockId, isEditMode, router]);
+
+  useEffect(() => {
+    if (!showBankPicker || !selectedBankId) return;
+    const load = async () => {
+      setIsLoadingBankQuestions(true);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks/${selectedBankId}/questions?page_size=100`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Could not load questions");
+        setBankQuestions(body.data || []);
+      } catch (error) {
+        toast.error("Could not load the question bank", { description: error instanceof Error ? error.message : "Please try again." });
+      } finally {
+        setIsLoadingBankQuestions(false);
+      }
+    };
+    void load();
+  }, [selectedBankId, showBankPicker, token]);
 
   const handleAddMCQ = () => {
     setQuestions([
@@ -325,7 +388,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   const processDocx = async (file: File) => {
     setIsUploading(true);
     try {
-      const mammoth = await import("mammoth/mammoth.browser");
+      const mammoth = await import("mammoth");
       const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
       const parsedQuestions = parseDocxQuestionText(result.value);
       setQuestions((current) => [...current, ...parsedQuestions]);
@@ -383,7 +446,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     }
 
     if (shouldPublish) {
-      if (questions.length === 0) {
+      if (questions.length + selectedBankQuestions.length === 0) {
         toast.error("Add at least one question before publishing");
         return;
       }
@@ -474,6 +537,42 @@ export function MockBuilderClient({ token }: { token: string }) {
       if (!qRes.ok) {
         const body = await qRes.json().catch(() => null);
         throw new Error(body?.details?.[0] || body?.error || "Failed to save questions");
+      }
+
+      if (selectedBankQuestions.length > 0) {
+        const assemblyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`, {
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        const assemblyBody = await assemblyResponse.json().catch(() => null);
+        if (!assemblyResponse.ok) throw new Error(assemblyBody?.error || "Could not load the saved questions");
+        const authored = (assemblyBody.data?.sections || []).flatMap((section: any) => section.questions || []);
+        const combined = [
+          ...authored.map((item: any) => ({
+            question_id: item.question_id,
+            question_version_id: item.question_version_id,
+            marks_override: item.marks_override,
+          })),
+          ...selectedBankQuestions.map((item) => ({
+            question_id: item.questionId,
+            question_version_id: item.questionVersionId,
+            marks_override: null,
+          })),
+        ];
+        const replaceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({
+            sections: [{
+              title: "Questions",
+              course_id: courseId,
+              instructions: null,
+              questions: combined,
+              rules: [],
+            }],
+          }),
+        });
+        const replaceBody = await replaceResponse.json().catch(() => null);
+        if (!replaceResponse.ok) throw new Error(replaceBody?.details?.[0] || replaceBody?.error || "Could not add bank questions");
       }
 
 
@@ -578,6 +677,22 @@ export function MockBuilderClient({ token }: { token: string }) {
         {/* Left Column: Question Builder (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           <div className="space-y-6">
+            {selectedBankQuestions.map((question, index) => (
+              <div key={question.questionId} className="rounded-lg border border-[#c8c5d2] bg-[#f8f6ff] p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#2e2877]">
+                      <span className="material-symbols-outlined text-base">inventory_2</span>
+                      {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks
+                    </div>
+                    <p className="text-[15px] leading-6 text-[#1b1c1c]">{question.questionText}</p>
+                  </div>
+                  {!isReadOnly && <button type="button" onClick={() => setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId))} className="text-[#787582] hover:text-[#ba1a1a]" aria-label={`Remove bank question ${index + 1}`}>
+                    <span className="material-symbols-outlined">close</span>
+                  </button>}
+                </div>
+              </div>
+            ))}
             {questions.map((q, idx) => (
               <div key={q.id} className="bg-white border border-[#e4e2e1] rounded-lg p-6 shadow-sm group relative">
                 
@@ -738,6 +853,36 @@ export function MockBuilderClient({ token }: { token: string }) {
                 <div className="h-px bg-[#e4e2e1] w-full"></div>
                 <span className="px-4 text-[#787582] text-[13px] font-medium bg-white">OR</span>
                 <div className="h-px bg-[#e4e2e1] w-full"></div>
+              </div>
+
+              <div className="rounded-lg border border-[#c8c5d2] bg-white p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div><h3 className="font-semibold text-[#1b1c1c]">Reuse questions from your bank</h3><p className="mt-1 text-sm text-[#474551]">Choose prepared questions instead of typing them again.</p></div>
+                  <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">{showBankPicker ? "Close question bank" : "Choose questions"}</button>
+                </div>
+                {showBankPicker && (
+                  <div className="mt-5 border-t border-[#e4e2e1] pt-5">
+                    {banks.length === 0 ? <p className="text-sm text-[#474551]">Create a question bank first, then return here to reuse its questions.</p> : <>
+                      <select value={selectedBankId} onChange={(event) => setSelectedBankId(event.target.value)} className="mb-4 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm">
+                        {banks.map((bank) => <option key={bank.id} value={bank.id}>{bank.name} ({bank.question_count})</option>)}
+                      </select>
+                      {isLoadingBankQuestions ? <p className="py-6 text-center text-sm text-[#474551]">Loading questions…</p> : (
+                        <div className="max-h-80 space-y-2 overflow-y-auto">
+                          {bankQuestions.map((question) => {
+                            const selected = selectedBankQuestions.some((item) => item.questionId === question.id);
+                            const bankName = banks.find((bank) => bank.id === selectedBankId)?.name || "Question bank";
+                            return <label key={question.id} className="flex cursor-pointer items-start gap-3 rounded border border-[#e4e2e1] p-3 hover:bg-[#f8f6ff]">
+                              <input type="checkbox" checked={selected} onChange={() => setSelectedBankQuestions((current) => selected
+                                ? current.filter((item) => item.questionId !== question.id)
+                                : [...current, { questionId: question.id, questionVersionId: question.current_version.id, questionText: question.current_version.plain_text, questionType: question.question_type, marks: question.current_version.marks, bankName }])} className="mt-1" />
+                              <span><span className="block text-sm text-[#1b1c1c]">{question.current_version.plain_text}</span><span className="mt-1 block text-xs text-[#787582]">{question.question_type === "mcq" ? "Multiple choice" : "Theory"} · {question.current_version.marks} marks</span></span>
+                            </label>;
+                          })}
+                        </div>
+                      )}
+                    </>}
+                  </div>
+                )}
               </div>
 
               {/* Add Question Controls */}
