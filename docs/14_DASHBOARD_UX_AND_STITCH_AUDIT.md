@@ -112,6 +112,53 @@ Follow-up items are deliberately separate from this completed alignment pass:
   day/all-upcoming calendar filter.
 - Test narrow-screen table behaviour in a signed-in browser during release QA.
 
+### A/T: Attendance & Participation Reports — 23 July 2026
+
+The implementation retains the modern Stitch screen's useful hierarchy: report
+heading, programme/class/date filters, summary cards, and a paginated student
+attendance table. Poppins, shared dashboard padding, borders, restrained shadows,
+and Kanvise colour roles remain consistent with the dashboard shell.
+
+Corrections made during the product, security, and data audit:
+
+- Restricted centre attendance reports to Admin and Tutor roles. A student token
+  can no longer request another student's attendance through these endpoints.
+- Kept Admin visibility centre-wide and Tutor visibility limited to classes
+  assigned to that tutor.
+- Changed the single misleading “Date Range” field into real From and Until dates.
+- Report only completed classes, avoiding premature Absent labels and incomplete
+  percentages while a class is still live.
+- Deduplicate multiple LiveKit join records for the same student and class when
+  calculating attendance, while summing time across reconnections as required by
+  the feature specification.
+- Removed the private profile-photo storage key from report responses instead of
+  treating it as a browser-loadable URL.
+- Scoped programme-to-course filter resolution to the current school.
+- Replaced generated terms such as “Session Data Log” and “sessions monitored”
+  with class and attendance language tutors use.
+- Removed the unsupported positive-trend claim. The card now states that the
+  percentage applies to the selected filters.
+- Made the at-risk percentage configurable through
+  `ATTENDANCE_RISK_THRESHOLD_PERCENT`; the API returns the effective threshold so
+  the interface never hard-codes a conflicting value.
+- Added visible failure notifications for filter and report API requests.
+
+Stitch's Manual Entry action was not adopted. Kanvise's documented source of truth
+is verified LiveKit participation; silently hand-editing those events would make
+the report less trustworthy. A future correction workflow would need a reason,
+original value, replacement value, actor, and audit history rather than a generic
+manual-entry form.
+
+Remaining attendance work:
+
+- Implement the documented cleanup job for attendance rows left open when LiveKit
+  does not deliver a participant-left event. Until then, time spent can be
+  understated for interrupted connections.
+- Add a server-generated full CSV export if centres demonstrate a reporting need;
+  exporting only the visible browser page would be misleading.
+- Replace blank avatars with signed/public profile-photo URLs only after a
+  dedicated safe response contract is defined.
+
 ## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:

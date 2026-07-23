@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 
 interface AttendanceClientProps {
   token: string
@@ -21,6 +22,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
   const [programmeId, setProgrammeId] = useState('')
   const [classId, setClassId] = useState('')
   const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
@@ -35,20 +37,18 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           fetch(`${apiUrl}/live-classes`, { headers }),
           fetch(`${apiUrl}/courses`, { headers })
         ])
-        if (progRes.ok) {
-          const { data } = await progRes.json()
-          setAvailableProgrammes(data || [])
-        }
-        if (classRes.ok) {
-          const { data } = await classRes.json()
-          setAvailableClasses(data || [])
-        }
-        if (courseRes.ok) {
-          const { data } = await courseRes.json()
-          setCourses(data || [])
-        }
+        if (!progRes.ok || !classRes.ok || !courseRes.ok) throw new Error('Could not load attendance filters')
+        const [{ data: programmes }, { data: classes }, { data: courseData }] = await Promise.all([
+          progRes.json(),
+          classRes.json(),
+          courseRes.json(),
+        ])
+        setAvailableProgrammes(programmes || [])
+        setAvailableClasses(classes || [])
+        setCourses(courseData || [])
       } catch (e) {
         console.error('Failed to fetch filters', e)
+        toast.error('Could not load attendance filters', { description: 'Refresh the page and try again.' })
       }
     }
     fetchFilters()
@@ -61,6 +61,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       if (programmeId) query.append('programme_id', programmeId)
       if (classId) query.append('class_id', classId)
       if (startDate) query.append('start_date', startDate)
+      if (endDate) query.append('end_date', `${endDate}T23:59:59.999`)
       query.append('page', String(page))
 
       const headers = { 'Authorization': `Bearer ${token}` }
@@ -69,21 +70,24 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
         fetch(`${apiUrl}/attendance/records?${query.toString()}`, { headers })
       ])
 
-      if (metricsRes.ok) {
-        const { data } = await metricsRes.json()
-        setMetrics(data)
-      }
-      if (recordsRes.ok) {
-        const { data, meta } = await recordsRes.json()
-        setRecords(data || [])
-        setMeta(meta)
-      }
+      if (!metricsRes.ok || !recordsRes.ok) throw new Error('Could not load attendance records')
+      const [{ data: metricData }, { data, meta: recordMeta }] = await Promise.all([
+        metricsRes.json(),
+        recordsRes.json(),
+      ])
+      setMetrics(metricData)
+      setRecords(data || [])
+      setMeta(recordMeta)
     } catch (e) {
       console.error('Failed to fetch records', e)
+      setMetrics(null)
+      setRecords([])
+      setMeta(null)
+      toast.error('Could not load attendance records', { description: 'Check your connection and try again.' })
     } finally {
       setIsLoading(false)
     }
-  }, [apiUrl, token, programmeId, classId, startDate, page])
+  }, [apiUrl, token, programmeId, classId, startDate, endDate, page])
 
   useEffect(() => {
     fetchRecords()
@@ -111,16 +115,16 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
         <div>
           <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Attendance Records</h2>
-          <p className="text-[16px] text-[#474551] mt-1">Detailed attendance data for all active sessions.</p>
+          <p className="text-[16px] text-[#474551] mt-1">See who attended completed classes and how long they stayed.</p>
         </div>
       </div>
 
       {/* Filters Grid */}
       <div className="bg-white border border-[#c2b59b] p-6 rounded-lg mb-8 shadow-sm">
-        <h3 className="text-[12px] font-semibold text-[#474551] mb-4 uppercase tracking-wider">Filter Criteria</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <h3 className="text-[12px] font-semibold text-[#474551] mb-4 uppercase tracking-wider">Filter attendance</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Course Programme</label>
+            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Programme</label>
             <select value={programmeId} onChange={handleProgrammeChange} className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none">
               <option value="">All Programmes</option>
               {availableProgrammes?.map(p => (
@@ -139,8 +143,18 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Date Range</label>
+            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">From date</label>
             <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1) }} className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none" />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Until date</label>
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => { setEndDate(e.target.value); setPage(1) }}
+              className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none"
+            />
           </div>
         </div>
       </div>
@@ -155,18 +169,18 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
           <div className="mt-4 flex items-center gap-1 text-[12px] text-green-700 font-semibold">
             <span className="material-symbols-outlined text-[14px]">trending_up</span>
-            Current Period
+            For the selected classes
           </div>
         </div>
         
         <div className="bg-white border border-[#c2b59b] p-6 rounded-lg shadow-sm relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-[#c26627]/10 rounded-bl-full -mr-4 -mt-4"></div>
-          <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">Total Sessions Monitored</p>
+          <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">Completed Classes</p>
           <div className="flex items-baseline gap-2">
             <span className="text-[40px] leading-[48px] font-bold text-[#2e2877]">{metrics?.total_sessions || 0}</span>
           </div>
           <div className="mt-4 flex items-center gap-1 text-[12px] text-[#474551] font-semibold">
-            Across active classes
+            Included in this report
           </div>
         </div>
 
@@ -178,7 +192,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
           <div className="mt-4 flex items-center gap-1 text-[12px] text-[#ba1a1a] font-semibold">
             <span className="material-symbols-outlined text-[14px]">warning</span>
-            Below 70% threshold
+            Below {metrics?.risk_threshold ?? 70}% attendance
           </div>
         </div>
       </div>
@@ -187,8 +201,8 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       <div className="bg-white border border-[#c2b59b] rounded-lg shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-[#c2b59b] flex justify-between items-center bg-[#fbf9f8]">
           <div>
-            <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Session Data Log</h3>
-            <p className="text-[14px] text-[#474551]">Live view of student check-ins and duration.</p>
+            <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Class attendance</h3>
+            <p className="text-[14px] text-[#474551]">Student arrival times and time spent in completed classes.</p>
           </div>
         </div>
         

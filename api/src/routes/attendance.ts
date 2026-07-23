@@ -4,14 +4,26 @@ import {
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
   tenantMiddleware,
+  requireRole,
 } from '../middleware/auth'
 import type { AppVariables } from '../types'
+import {
+  attendancePairKey,
+  summariseStudentEvents,
+  uniqueAttendancePairCount,
+} from '../domain/attendance'
 
 export const attendanceRouter = new Hono<{ Variables: AppVariables }>()
 
 attendanceRouter.use('*', jwtVerificationMiddleware)
 attendanceRouter.use('*', profileResolutionMiddleware)
 attendanceRouter.use('*', tenantMiddleware)
+attendanceRouter.use('*', requireRole('admin', 'tutor'))
+
+const configuredRiskThreshold = Number(process.env.ATTENDANCE_RISK_THRESHOLD_PERCENT || 70)
+const riskThreshold = Number.isFinite(configuredRiskThreshold)
+  ? Math.min(100, Math.max(0, configuredRiskThreshold))
+  : 70
 
 // ── GET /attendance/metrics ────────────────────────────────────────────────
 attendanceRouter.get('/metrics', async (c) => {
@@ -33,14 +45,18 @@ attendanceRouter.get('/metrics', async (c) => {
     .from('live_classes')
     .select('id, course_id, status, scheduled_at, courses(id, name)')
     .eq('school_id', schoolId)
-    .in('status', ['live', 'completed'])
+    .eq('status', 'completed')
 
   if (role !== 'admin') {
      classesQuery = classesQuery.eq('tutor_id', user.id)
   }
   
   if (programmeId) {
-     const { data: pCourses } = await supabase.from('courses').select('id').eq('programme_id', programmeId)
+     const { data: pCourses } = await supabase
+       .from('courses')
+       .select('id')
+       .eq('school_id', schoolId)
+       .eq('programme_id', programmeId)
      if (pCourses && pCourses.length > 0) {
         classesQuery = classesQuery.in('course_id', pCourses.map(c => c.id))
      } else {
@@ -59,7 +75,7 @@ attendanceRouter.get('/metrics', async (c) => {
   const totalSessions = liveClasses ? liveClasses.length : 0
 
   if (totalSessions === 0) {
-     return c.json({ data: { average_attendance: 0, total_sessions: 0, at_risk_students: 0 } })
+     return c.json({ data: { average_attendance: 0, total_sessions: 0, at_risk_students: 0, risk_threshold: riskThreshold } })
   }
 
   const classIds = liveClasses!.map(c => c.id)
@@ -104,7 +120,10 @@ attendanceRouter.get('/metrics', async (c) => {
 
   // Calculate Metrics
   let totalExpectedAttendees = 0
-  let totalActualAttendees = records ? records.length : 0
+  const attendedClassPairs = new Set(
+    (records || []).map(attendancePairKey),
+  )
+  const totalActualAttendees = uniqueAttendancePairCount(records || [])
 
   liveClasses!.forEach(lc => {
      const courseInfo = coursesData?.find(c => c.id === lc.course_id)
@@ -139,9 +158,11 @@ attendanceRouter.get('/metrics', async (c) => {
           }).length
           
           if (expectedClassesCount > 0) {
-              const attendedClassesCount = records?.filter(r => r.student_id === sId).length || 0
+              const attendedClassesCount = liveClasses!.filter(liveClass =>
+                attendedClassPairs.has(`${liveClass.id}:${sId}`),
+              ).length
               const rate = (attendedClassesCount / expectedClassesCount) * 100
-              if (rate < 70) atRiskCount++
+              if (rate < riskThreshold) atRiskCount++
           }
       }
   }
@@ -150,7 +171,8 @@ attendanceRouter.get('/metrics', async (c) => {
       data: {
           average_attendance: Math.min(100, averageAttendance),
           total_sessions: totalSessions,
-          at_risk_students: atRiskCount
+          at_risk_students: atRiskCount,
+          risk_threshold: riskThreshold,
       }
   })
 })
@@ -178,7 +200,7 @@ attendanceRouter.get('/records', async (c) => {
     .from('live_classes')
     .select('id, course_id, status, scheduled_at, title, courses(id, name, programmes(name))')
     .eq('school_id', schoolId)
-    .in('status', ['live', 'completed'])
+    .eq('status', 'completed')
     .order('scheduled_at', { ascending: false })
     .limit(50)
 
@@ -187,7 +209,11 @@ attendanceRouter.get('/records', async (c) => {
   }
   
   if (programmeId) {
-     const { data: pCourses } = await supabase.from('courses').select('id').eq('programme_id', programmeId)
+     const { data: pCourses } = await supabase
+       .from('courses')
+       .select('id')
+       .eq('school_id', schoolId)
+       .eq('programme_id', programmeId)
      if (pCourses && pCourses.length > 0) {
         classesQuery = classesQuery.in('course_id', pCourses.map(c => c.id))
      } else {
@@ -219,7 +245,7 @@ attendanceRouter.get('/records', async (c) => {
   // Fetch enrolments optimally using the database (PostgREST OR syntax without quotes)
   let enrolmentsQuery = supabase
     .from('enrolments')
-    .select('student_id, course_id, sub_programme_id, programme_id, user_profiles(first_name, last_name, profile_photo_key)')
+    .select('student_id, course_id, sub_programme_id, programme_id, user_profiles(first_name, last_name)')
     .eq('school_id', schoolId)
 
   const orConditions = []
@@ -268,7 +294,9 @@ attendanceRouter.get('/records', async (c) => {
           uniqueStudentIds.add(enr.student_id);
 
           const studentProfile = enr.user_profiles as any
-          const record = classRecords.find(r => r.student_id === enr.student_id)
+          const studentRecords = classRecords.filter(r => r.student_id === enr.student_id)
+          const attendanceSummary = summariseStudentEvents(studentRecords)
+          const record = attendanceSummary?.earliest
           
           let status = 'Absent'
           let durationStr = '--'
@@ -285,9 +313,10 @@ attendanceRouter.get('/records', async (c) => {
               // Format joined time (e.g. 09:15 AM)
               joinedStr = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' }).format(new Date(record.joined_at))
               
-              if (record.duration_seconds) {
-                  const hrs = Math.floor(record.duration_seconds / 3600)
-                  const mins = Math.floor((record.duration_seconds % 3600) / 60)
+              const totalDurationSeconds = attendanceSummary?.totalDurationSeconds || 0
+              if (totalDurationSeconds) {
+                  const hrs = Math.floor(totalDurationSeconds / 3600)
+                  const mins = Math.floor((totalDurationSeconds % 3600) / 60)
                   if (hrs > 0) {
                       durationStr = `${hrs}h ${mins}m`
                   } else {
@@ -297,10 +326,10 @@ attendanceRouter.get('/records', async (c) => {
           }
           
           roster.push({
-              id: record ? record.id : `${lc.id}-${enr.student_id}`, // Fake ID for absentees just for React keys
+              id: record?.id || `${lc.id}-${enr.student_id}`,
               student_id: enr.student_id,
               student_name: `${studentProfile?.first_name || ''} ${studentProfile?.last_name || ''}`.trim(),
-              avatar_url: studentProfile?.profile_photo_key,
+              avatar_url: null,
               course_name: courseName,
               programme_name: programmeName,
               class_title: lc.title,
