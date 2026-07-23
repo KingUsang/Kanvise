@@ -47,10 +47,14 @@ export async function updateSession(request: NextRequest) {
     // Prefer server-controlled app_metadata and retain a legacy fallback until
     // existing sessions have refreshed.
     const kanvise_role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role || 'student'
+    const schoolId = user.app_metadata?.school_id
+    const needsAdminSetup = kanvise_role === 'admin' && !schoolId
     // Redirect logged in users away from auth routes (unless they are doing a password reset or similar)
     if (isAuthRoute && !request.nextUrl.pathname.includes('reset-password')) {
       const url = request.nextUrl.clone()
-      if (kanvise_role === 'admin' || kanvise_role === 'tutor') {
+      if (needsAdminSetup) {
+        url.pathname = '/dashboard/school-setup'
+      } else if (kanvise_role === 'admin' || kanvise_role === 'tutor') {
         url.pathname = '/dashboard'
       } else {
         url.pathname = '/dashboard/student' // Default
@@ -59,6 +63,12 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (isDashboardRoute) {
+      if (needsAdminSetup && request.nextUrl.pathname !== '/dashboard/school-setup') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard/school-setup'
+        return NextResponse.redirect(url)
+      }
+
       if (request.nextUrl.pathname === '/dashboard') {
         if (kanvise_role === 'student') {
           const url = request.nextUrl.clone()

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, Loader2, Mail, Lock, User, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { getBrowserAppUrl } from "@/config/app";
 
 import { Suspense } from "react";
 
@@ -35,7 +36,7 @@ function RegisterContent() {
     setError(null);
 
     // Prepare redirect URL for the Supabase email verification callback
-    let redirectTo = `${window.location.origin}/api/auth/callback?role=${role}`;
+    let redirectTo = `${getBrowserAppUrl()}/api/auth/callback?role=${role}`;
     if (redirectParam) {
       redirectTo += `&redirect=${encodeURIComponent(redirectParam)}`;
     }

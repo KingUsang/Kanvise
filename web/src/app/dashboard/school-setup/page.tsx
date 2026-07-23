@@ -19,7 +19,7 @@ export default async function SchoolSetupPage() {
     cache: 'no-store'
   })
 
-  if (!res.ok) {
+  if (!res.ok && res.status !== 400) {
     return (
       <div className="p-8 text-center text-red-500">
         Failed to load school profile.
@@ -27,7 +27,7 @@ export default async function SchoolSetupPage() {
     )
   }
 
-  const { data: schoolData } = await res.json()
+  const schoolData = res.ok ? (await res.json()).data : null
 
   return (
     <div className="animate-in fade-in duration-500">

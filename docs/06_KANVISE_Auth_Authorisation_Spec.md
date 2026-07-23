@@ -49,7 +49,7 @@ There are three distinct registration flows in Kanvise. Each results in a differ
    - kanvise_user_id generated: KNV-ADM-XXXXX
    - role = admin
    - school_id = NULL (no school yet)
-9. Admin is redirected to /dashboard/setup to create their school
+9. Admin is redirected to `/dashboard/school-setup` to create their school
 10. After school creation, school_id is set on the user_profiles record
 ```
 

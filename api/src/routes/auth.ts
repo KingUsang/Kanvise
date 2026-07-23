@@ -46,6 +46,10 @@ authRouter.post('/profile/init', async (c) => {
     return c.json({ error: 'Invalid role' }, 400)
   }
 
+  if (!String(first_name || '').trim() || !String(last_name || '').trim()) {
+    return c.json({ error: 'First name and last name are required' }, 400)
+  }
+
   const { data: existingProfile } = await supabase
     .from('user_profiles')
     .select('*')
@@ -77,14 +81,11 @@ authRouter.post('/profile/init', async (c) => {
 
   // Generate Kanvise User ID
   const { data: seqData, error: seqError } = await supabase.rpc('increment_user_sequence', { p_role: role })
-  let number = '00001'
-  if (!seqError && seqData) {
-    number = seqData.toString().padStart(5, '0')
-  } else if (seqError) {
-    console.error("RPC Error:", seqError)
-    // If RPC doesn't exist yet, fallback to timestamp based
-    number = Math.floor(Math.random() * 100000).toString().padStart(5, '0')
+  if (seqError || !seqData) {
+    console.error('[auth/profile/init] Could not allocate user ID:', seqError)
+    return c.json({ error: 'Account setup is temporarily unavailable. Please try again.' }, 503)
   }
+  const number = seqData.toString().padStart(5, '0')
   
   const roleCode = { admin: 'ADM', tutor: 'TUT', student: 'STU' }[role as string]
   const kanviseUserId = `KNV-${roleCode}-${number}`
@@ -157,18 +158,31 @@ authRouter.get('/me', async (c) => {
 authRouter.patch('/me', async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
-  
-  // Security: Cannot update role or school_id
-  delete body.role
-  delete body.school_id
+  const allowedFields = ['first_name', 'last_name', 'bio'] as const
+  const updates = Object.fromEntries(
+    allowedFields
+      .filter((field) => body[field] !== undefined)
+      .map((field) => [field, typeof body[field] === 'string' ? body[field].trim() : body[field]])
+  )
+
+  if (!Object.keys(updates).length) {
+    return c.json({ error: 'No editable profile fields were provided' }, 400)
+  }
   
   const { data, error } = await supabase.from('user_profiles')
-    .update(body)
+    .update(updates)
     .eq('id', user.id)
     .select()
     .single()
     
   if (error) return c.json({ error: error.message }, 500)
+
+  await supabase.auth.admin.updateUserById(user.supabase_auth_id, {
+    user_metadata: {
+      first_name: data.first_name,
+      last_name: data.last_name,
+    },
+  })
   
   return c.json({ user: data })
 })

@@ -4,8 +4,12 @@ import React, { useState } from 'react'
 import { toast } from 'sonner'
 import { PUBLIC_APP_HOST } from '@/config/app'
 import { getApiUrl } from '@/config/api'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 export function SchoolSetupForm({ initialData, token }: { initialData: any, token: string }) {
+  const router = useRouter()
+  const isFirstSetup = !initialData?.id
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     slug: initialData?.slug || '',
@@ -111,8 +115,8 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     setErrorMessage('')
 
     try {
-      const res = await fetch(`${getApiUrl()}/schools/me`, {
-        method: 'PATCH',
+      const res = await fetch(`${getApiUrl()}${isFirstSetup ? '/schools' : '/schools/me'}`, {
+        method: isFirstSetup ? 'POST' : 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -126,7 +130,13 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
       }
 
       setSaveStatus('success')
-      toast.success('School configuration saved')
+      toast.success(isFirstSetup ? 'Your centre is ready' : 'School configuration saved')
+      if (isFirstSetup) {
+        await createClient().auth.refreshSession()
+        router.replace('/dashboard')
+        router.refresh()
+        return
+      }
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (err: any) {
       setSaveStatus('error')

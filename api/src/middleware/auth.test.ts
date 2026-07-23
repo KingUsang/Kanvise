@@ -17,6 +17,7 @@ describe('resolveTrustedProfileClaims', () => {
       role: 'admin',
       school_id: 'school-1',
       kanvise_user_id: 'KNV-ADM-00001',
+      email: null,
     })
   })
 

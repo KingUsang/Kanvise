@@ -22,6 +22,7 @@ export function resolveTrustedProfileClaims(jwtPayload: any) {
     role,
     school_id: school_id || null,
     kanvise_user_id,
+    email: jwtPayload.email || null,
   }
 }
 
@@ -102,7 +103,7 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   // Slow path - lookup from DB
   const { data: profile, error } = await supabase
     .from('user_profiles')
-    .select('id, role, school_id, kanvise_user_id, first_name, last_name')
+    .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active')
     .eq('supabase_auth_id', supabaseAuthId)
     .single()
     
@@ -114,6 +115,10 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
     }
     return c.json({ error: 'User profile not found', code: 'PROFILE_NOT_FOUND' }, 403)
   }
+
+  if (profile.is_active === false) {
+    return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
+  }
   
   c.set('user', {
     id: profile.id,
@@ -122,7 +127,8 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
     school_id: profile.school_id,
     kanvise_user_id: profile.kanvise_user_id,
     first_name: profile.first_name,
-    last_name: profile.last_name
+    last_name: profile.last_name,
+    email: profile.email || jwtPayload.email || null,
   })
 
   // Existing users may have been issued tokens before trusted claims moved to

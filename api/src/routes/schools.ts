@@ -13,20 +13,36 @@ schoolsRouter.use('*', tenantMiddleware)
 schoolsRouter.post('/', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
+  const name = String(body.name || '').trim()
 
   // Ensure they don't already have a school configured
   if (user.school_id) {
     return c.json({ error: 'School is already configured for this account' }, 400)
   }
 
-  // Generate a basic slug if one isn't provided (for MVP)
-  const slug = body.slug || body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  if (!name) {
+    return c.json({ error: 'Centre name is required', code: 'INVALID_NAME' }, 400)
+  }
+
+  const slug = String(body.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+    .replace(/^-+|-+$/g, '')
+
+  if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    return c.json({
+      error: 'Portal URL must use lowercase letters, numbers, and single hyphens only',
+      code: 'INVALID_SLUG',
+    }, 400)
+  }
+
+  if (body.description !== undefined && String(body.description).length > 500) {
+    return c.json({ error: 'Centre description cannot exceed 500 characters', code: 'DESCRIPTION_TOO_LONG' }, 400)
+  }
 
   // Create school
   const { data: school, error: schoolError } = await supabase
     .from('schools')
     .insert({
-      name: body.name,
+      name,
       slug: slug,
       description: body.description,
       contact_email: body.contact_email,
@@ -36,6 +52,12 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     .single()
 
   if (schoolError) {
+    if (schoolError.code === '23505') {
+      return c.json({
+        error: 'That student page link is already in use. Choose another one.',
+        code: 'SLUG_TAKEN',
+      }, 409)
+    }
     return c.json({ error: schoolError.message }, 500)
   }
 
@@ -53,12 +75,19 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
   const { data: userData } = await supabase.auth.admin.getUserById(user.supabase_auth_id)
   if (userData.user) {
     const currentMetadata = userData.user.app_metadata || {}
-    await supabase.auth.admin.updateUserById(user.supabase_auth_id, {
+    const { error: metadataError } = await supabase.auth.admin.updateUserById(user.supabase_auth_id, {
       app_metadata: {
         ...currentMetadata,
         school_id: school.id
       }
     })
+    if (metadataError) {
+      console.error('[schools] School created but trusted tenant claim update failed:', metadataError)
+      return c.json({
+        error: 'Your centre was created, but your session could not be updated. Please sign in again.',
+        code: 'SESSION_UPDATE_REQUIRED',
+      }, 503)
+    }
   }
 
   return c.json({ school })

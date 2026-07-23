@@ -3,26 +3,19 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
-  console.log('\n=== AUTH CALLBACK TRIGGERED ===')
-  console.log('Full Request URL:', request.url)
   
   const code = searchParams.get('code')
-  console.log('Extracted Code:', code ? 'YES (Hidden for security)' : 'NO CODE FOUND')
   const next = searchParams.get('next') ?? '/'
   const role = searchParams.get('role') // from the email redirect url
   const redirect = searchParams.get('redirect') // specific course redirect
   const inviteToken = searchParams.get('invite_token')
 
   if (code) {
-    console.log('Attempting to exchange code for session...')
     const supabase = await createClient()
     const { error, data } = await supabase.auth.exchangeCodeForSession(code)
     
     if (error) {
-      console.error('❌ Supabase Exchange Error:', error.message)
-      console.error('Error Details:', error)
-    } else {
-      console.log('✅ Exchange Success! User ID:', data?.user?.id)
+      console.error('[auth/callback] Supabase code exchange failed:', error.message)
     }
 
     if (!error && data.user) {
@@ -46,7 +39,7 @@ export async function GET(request: Request) {
       try {
         const honoApiUrl = process.env.NEXT_PUBLIC_API_URL
         
-        console.log(`Pinging Hono backend at: ${honoApiUrl}/auth/profile/init`)
+        if (!honoApiUrl) throw new Error('NEXT_PUBLIC_API_URL is not configured')
         const response = await fetch(`${honoApiUrl}/auth/profile/init`, {
           method: 'POST',
           headers: {
@@ -65,13 +58,12 @@ export async function GET(request: Request) {
 
         if (!response.ok) {
           const errorText = await response.text()
-          console.error(`❌ Hono API returned status ${response.status}:`, errorText)
+          console.error(`[auth/callback] Profile initialization returned ${response.status}:`, errorText)
         } else {
           profileInitOk = true
-          console.log('✅ Hono Profile successfully initialized!')
         }
       } catch (err) {
-        console.error("❌ Failed to reach Hono API (Network Error):", err)
+        console.error("[auth/callback] Could not initialize profile:", err)
       }
 
       // If we couldn't set up the account, don't pretend onboarding succeeded.
@@ -83,7 +75,7 @@ export async function GET(request: Request) {
       let redirectUrl = origin
       
       if (role === 'admin') {
-        redirectUrl = `${origin}/dashboard/setup`
+        redirectUrl = `${origin}/dashboard/school-setup`
       } else if (role === 'tutor') {
         redirectUrl = `${origin}/dashboard`
       } else if (redirect) {
@@ -94,11 +86,8 @@ export async function GET(request: Request) {
       
       return NextResponse.redirect(redirectUrl)
     }
-  } else {
-    console.log('❌ Auth callback failed: No "code" parameter found in the URL.')
   }
 
-  console.log('Redirecting user to auth-code-error page...')
   // Return the user to an error page with some instructions
   return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }
