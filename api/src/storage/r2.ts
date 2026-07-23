@@ -12,6 +12,7 @@ export const PRIVATE_UPLOAD_TYPES = [
   'note',
   'assignment_attachment',
   'submission',
+  'question_media',
 ] as const
 
 export type PrivateUploadType = typeof PRIVATE_UPLOAD_TYPES[number]
@@ -54,6 +55,13 @@ export const DOCUMENT_CONTENT_TYPES = {
 export type DocumentContentType = keyof typeof DOCUMENT_CONTENT_TYPES
 
 export const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024
+export const MAX_QUESTION_IMAGE_SIZE = 10 * 1024 * 1024
+
+const QUESTION_IMAGE_CONTENT_TYPES = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+} as const
 
 export class StorageError extends Error {
   constructor(
@@ -198,6 +206,30 @@ export function validateDocumentMetadata(input: {
   return { extension: expectedExtension, fileSizeBytes }
 }
 
+export function validatePrivateUploadMetadata(input: {
+  entityType: PrivateUploadType
+  fileName: string
+  contentType: string
+  fileSizeBytes: number
+}) {
+  if (input.entityType !== 'question_media') return validateDocumentMetadata(input)
+  const fileSizeBytes = Number(input.fileSizeBytes)
+  if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) {
+    throw new StorageError('File size must be a positive integer', 'INVALID_FILE_SIZE')
+  }
+  if (fileSizeBytes > MAX_QUESTION_IMAGE_SIZE) {
+    throw new StorageError('Question image exceeds 10MB limit', 'FILE_TOO_LARGE')
+  }
+  const extension = QUESTION_IMAGE_CONTENT_TYPES[input.contentType as keyof typeof QUESTION_IMAGE_CONTENT_TYPES]
+  if (!extension) throw new StorageError('Question media must be a JPG, PNG, or WebP image', 'INVALID_FILE_TYPE')
+  const suppliedExtension = input.fileName.split('.').pop()?.toLowerCase()
+  const validExtensions = extension === 'jpg' ? ['jpg', 'jpeg'] : [extension]
+  if (!suppliedExtension || !validExtensions.includes(suppliedExtension)) {
+    throw new StorageError('Filename extension does not match content type', 'FILE_TYPE_MISMATCH')
+  }
+  return { extension, fileSizeBytes }
+}
+
 export function buildPrivateFileKey(
   schoolId: string,
   entityType: PrivateUploadType,
@@ -294,7 +326,7 @@ export async function createPresignedUpload(input: {
   contentType: string
   fileSizeBytes: number
 }) {
-  const { extension, fileSizeBytes } = validateDocumentMetadata(input)
+  const { extension, fileSizeBytes } = validatePrivateUploadMetadata(input)
   const fileKey = buildPrivateFileKey(input.schoolId, input.entityType, input.contextId, extension)
   const { client, bucketName } = configuredClient()
   const command = new PutObjectCommand({
@@ -365,6 +397,10 @@ async function verifyStoredObject(input: { fileKey: string; contentType: string;
   if (!signatureMatches(input.contentType, bytes)) {
     throw new StorageError('Uploaded file contents do not match the declared file type', 'INVALID_FILE_CONTENT', 409)
   }
+  return {
+    checksum: head.ChecksumSHA256 || head.ETag?.replaceAll('"', '')
+      || crypto.createHash('sha256').update(`${input.fileKey}:${input.fileSizeBytes}`).digest('hex'),
+  }
 }
 
 export async function verifyPrivateUpload(input: {
@@ -376,14 +412,14 @@ export async function verifyPrivateUpload(input: {
   fileSizeBytes: number
 }) {
   assertPrivateFileKey(input.fileKey, input.schoolId, input.entityType, input.contextId)
-  validateDocumentMetadata({
+  validatePrivateUploadMetadata({
+    entityType: input.entityType,
     fileName: input.fileKey,
     contentType: input.contentType,
     fileSizeBytes: input.fileSizeBytes,
   })
 
-  await verifyStoredObject(input, 'private')
-  return true
+  return verifyStoredObject(input, 'private')
 }
 
 export async function verifyPublicUpload(input: {
@@ -401,8 +437,7 @@ export async function verifyPublicUpload(input: {
     contentType: input.contentType,
     fileSizeBytes: input.fileSizeBytes,
   })
-  await verifyStoredObject(input, 'public')
-  return true
+  return verifyStoredObject(input, 'public')
 }
 
 export async function deleteStoredObject(fileKey: string) {

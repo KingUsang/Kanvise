@@ -52,6 +52,15 @@ async function canSubmitAssignment(user: AppVariables['user'], assignmentId: str
   return (await loadStudentCourseIds(user.id, user.school_id)).includes(assignment.course_id)
 }
 
+async function canUploadQuestionMedia(user: AppVariables['user'], bankId: string) {
+  if (!user.school_id || !['admin', 'tutor'].includes(user.role)) return false
+  const { data: bank } = await supabase.from('question_banks')
+    .select('owner_id, visibility, archived_at')
+    .eq('id', bankId).eq('school_id', user.school_id).maybeSingle()
+  if (!bank || bank.archived_at) return false
+  return user.role === 'admin' || bank.owner_id === user.id || bank.visibility === 'centre'
+}
+
 async function presignUpload(c: any) {
   try {
     const user = c.get('user') as AppVariables['user']
@@ -76,12 +85,19 @@ async function presignUpload(c: any) {
       if (!(await canSubmitAssignment(user, body.assignment_id))) {
         return c.json({ error: 'Not permitted to submit this assignment', code: 'FORBIDDEN' }, 403)
       }
+    } else if (entity_type === 'question_media') {
+      if (!body.bank_id) return c.json({ error: 'bank_id is required', code: 'BAD_REQUEST' }, 400)
+      if (!(await canUploadQuestionMedia(user, body.bank_id))) {
+        return c.json({ error: 'Not permitted to add images to this question bank', code: 'FORBIDDEN' }, 403)
+      }
     }
 
     const result = await createPresignedUpload({
       schoolId: user.school_id,
       entityType: entity_type,
-      contextId: entity_type === 'submission' ? body.assignment_id : course_id,
+      contextId: entity_type === 'submission' ? body.assignment_id
+        : entity_type === 'question_media' ? body.bank_id
+        : course_id,
       fileName: file_name,
       contentType: content_type,
       fileSizeBytes: Number(file_size_bytes),
@@ -104,6 +120,13 @@ async function presignDownload(c: any) {
     const fileKey = c.req.query('file_key')
     if (!user.school_id) return c.json({ error: 'User has no school setup', code: 'NO_SCHOOL' }, 400)
     if (!fileKey) return c.json({ error: 'Missing file_key', code: 'BAD_REQUEST' }, 400)
+    const questionMediaMarker = '/private/question_media/'
+    if (fileKey.includes(questionMediaMarker)) {
+      const bankId = fileKey.split(questionMediaMarker)[1]?.split('/')[0]
+      if (!bankId || !(await canUploadQuestionMedia(user, bankId))) {
+        return c.json({ error: 'Not permitted to access this question image', code: 'FORBIDDEN' }, 403)
+      }
+    }
     const downloadUrl = await createPresignedDownload(fileKey, user.school_id)
     return c.json({ data: { download_url: downloadUrl, expires_in_seconds: 900 } })
   } catch (error: any) {

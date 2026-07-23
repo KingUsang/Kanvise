@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import type { AppVariables, KanviseUser } from '../types'
+import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
 import {
   BANK_VISIBILITIES,
   canEditQuestionBank,
@@ -33,6 +34,53 @@ async function loadBank(bankId: string, schoolId: string) {
     .eq('id', bankId).eq('school_id', schoolId).maybeSingle()
   if (error) throw error
   return data
+}
+
+function canContributeToBank(user: KanviseUser, bank: any) {
+  return canReadQuestionBank(user, bank)
+    && (canEditQuestionBank(user, bank) || bank.visibility === 'centre')
+}
+
+function imageMediaIds(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value.flatMap(block => block && typeof block === 'object'
+    && (block as any).type === 'image' && typeof (block as any).media_id === 'string'
+    ? [(block as any).media_id as string] : [])
+}
+
+async function addSignedMediaUrls(rows: any[], schoolId: string) {
+  const mediaIds = [...new Set(rows.flatMap(question => {
+    const version = question.current_version
+    return [
+      ...imageMediaIds(version?.content_blocks),
+      ...imageMediaIds(version?.explanation_blocks),
+      ...imageMediaIds(version?.grading_rubric_blocks),
+      ...(version?.options || []).flatMap((option: any) => imageMediaIds(option.content_blocks)),
+    ]
+  }))]
+  if (!mediaIds.length) return rows
+  const { data: media, error } = await supabase.from('question_media')
+    .select('id, storage_key, alt_text, width, height')
+    .eq('school_id', schoolId).eq('processing_status', 'ready').in('id', mediaIds)
+  if (error) throw error
+  const resolved = new Map(await Promise.all((media || []).map(async item => [item.id, {
+    ...item,
+    url: await createPresignedDownload(item.storage_key, schoolId),
+  }] as const)))
+  const attach = (blocks: any[]) => (blocks || []).map(block => block?.type === 'image'
+    ? { ...block, ...resolved.get(block.media_id), storage_key: undefined } : block)
+  return rows.map(question => ({
+    ...question,
+    current_version: question.current_version ? {
+      ...question.current_version,
+      content_blocks: attach(question.current_version.content_blocks),
+      explanation_blocks: attach(question.current_version.explanation_blocks),
+      grading_rubric_blocks: attach(question.current_version.grading_rubric_blocks),
+      options: (question.current_version.options || []).map((option: any) => ({
+        ...option, content_blocks: attach(option.content_blocks),
+      })),
+    } : question.current_version,
+  }))
 }
 
 async function tutorCanUseCourse(user: KanviseUser, courseId: string | null) {
@@ -187,13 +235,14 @@ questionBanksRouter.get('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
     const { data, error, count } = await query.order('updated_at', { ascending: false })
       .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
     if (error) return databaseError(c, error, 'Could not load questions')
+    const questions = await addSignedMediaUrls(data || [], user.school_id!)
     return c.json({
-      data: data || [],
+      data: questions,
       pagination: {
         page: pagination.page,
         page_size: pagination.pageSize,
         total: count || 0,
-        has_more: pagination.offset + (data?.length || 0) < (count || 0),
+        has_more: pagination.offset + questions.length < (count || 0),
       },
     })
   } catch (error) {
@@ -206,8 +255,7 @@ questionBanksRouter.post('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
   const bankId = c.req.param('bankId')!
   try {
     const bank = await loadBank(bankId, user.school_id!)
-    const canContribute = bank && canReadQuestionBank(user, bank)
-      && (canEditQuestionBank(user, bank) || bank.visibility === 'centre')
+    const canContribute = bank && canContributeToBank(user, bank)
     if (!canContribute) return c.json({ error: 'Question bank not found', code: 'NOT_FOUND' }, 404)
 
     const body = await c.req.json()
@@ -240,9 +288,91 @@ questionBanksRouter.post('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
     const { data, error: loadError } = await supabase.from('bank_questions')
       .select(questionSelect).eq('id', questionId).eq('school_id', user.school_id).single()
     if (loadError) return databaseError(c, loadError, 'Question was created but could not be reloaded')
-    return c.json({ data }, 201)
+    const [withMedia] = await addSignedMediaUrls([data], user.school_id!)
+    return c.json({ data: withMedia }, 201)
   } catch (error) {
     return databaseError(c, error, 'Could not create question')
+  }
+})
+
+questionBanksRouter.post('/media/confirm', async c => {
+  const user = c.get('user')
+  const body = await c.req.json()
+  const bankId = typeof body.bank_id === 'string' ? body.bank_id : ''
+  const altText = typeof body.alt_text === 'string' ? body.alt_text.trim() : ''
+  const width = body.width == null ? null : Number(body.width)
+  const height = body.height == null ? null : Number(body.height)
+  if (!bankId || !body.file_key || !body.file_name || !body.content_type || !body.file_size_bytes || !altText) {
+    return c.json({ error: 'Bank, file details, and alternative text are required', code: 'BAD_REQUEST' }, 400)
+  }
+  if ((width !== null && (!Number.isInteger(width) || width <= 0))
+    || (height !== null && (!Number.isInteger(height) || height <= 0))) {
+    return c.json({ error: 'Image dimensions must be positive integers', code: 'BAD_REQUEST' }, 400)
+  }
+  try {
+    const bank = await loadBank(bankId, user.school_id!)
+    if (!bank || !canContributeToBank(user, bank)) {
+      return c.json({ error: 'Question bank not found', code: 'NOT_FOUND' }, 404)
+    }
+    const verified = await verifyPrivateUpload({
+      fileKey: body.file_key,
+      schoolId: user.school_id!,
+      entityType: 'question_media',
+      contextId: bankId,
+      contentType: body.content_type,
+      fileSizeBytes: Number(body.file_size_bytes),
+    })
+    const { data: existing, error: existingError } = await supabase.from('question_media').select('*')
+      .eq('school_id', user.school_id).eq('storage_key', body.file_key).maybeSingle()
+    if (existingError) return databaseError(c, existingError, 'Could not check question image registration')
+    if (existing) return c.json({ data: existing })
+    const { data, error } = await supabase.from('question_media').insert({
+      school_id: user.school_id,
+      owner_id: user.id,
+      storage_key: body.file_key,
+      original_filename: body.file_name,
+      mime_type: body.content_type,
+      byte_size: Number(body.file_size_bytes),
+      width,
+      height,
+      checksum: verified.checksum,
+      alt_text: altText,
+      processing_status: 'ready',
+    }).select('id, original_filename, mime_type, byte_size, width, height, alt_text, processing_status').single()
+    if (error) return databaseError(c, error, 'Could not register question image')
+    return c.json({ data }, 201)
+  } catch (error) {
+    if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
+    return databaseError(c, error, 'Could not register question image')
+  }
+})
+
+questionBanksRouter.get('/media/:mediaId{[0-9a-fA-F-]{36}}/url', async c => {
+  const user = c.get('user')
+  const bankId = c.req.query('bank_id')
+  if (!bankId) return c.json({ error: 'bank_id is required', code: 'BAD_REQUEST' }, 400)
+  try {
+    const bank = await loadBank(bankId, user.school_id!)
+    if (!bank || !canReadQuestionBank(user, bank)) return c.json({ error: 'Image not found', code: 'NOT_FOUND' }, 404)
+    const { data: media, error } = await supabase.from('question_media')
+      .select('id, storage_key, alt_text, width, height, processing_status')
+      .eq('id', c.req.param('mediaId')).eq('school_id', user.school_id).maybeSingle()
+    if (error) return databaseError(c, error, 'Could not load question image')
+    if (!media || media.processing_status !== 'ready'
+      || !media.storage_key.startsWith(`schools/${user.school_id}/private/question_media/${bankId}/`)) {
+      return c.json({ error: 'Image not found', code: 'NOT_FOUND' }, 404)
+    }
+    return c.json({ data: {
+      id: media.id,
+      alt_text: media.alt_text,
+      width: media.width,
+      height: media.height,
+      url: await createPresignedDownload(media.storage_key, user.school_id!),
+      expires_in_seconds: 900,
+    } })
+  } catch (error) {
+    if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
+    return databaseError(c, error, 'Could not load question image')
   }
 })
 

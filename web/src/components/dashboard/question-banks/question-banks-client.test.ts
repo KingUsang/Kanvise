@@ -26,6 +26,7 @@ describe('question-bank authoring helpers', () => {
     expect(buildQuestionContent('Balance', 'chemistry', String.raw`\ce{H2 + O2 -> H2O}`)[1]).toEqual({
       type: 'chemistry', latex: String.raw`\ce{H2 + O2 -> H2O}`,
     })
+    expect(buildQuestionContent('', 'none', '')).toEqual([])
   })
 
   it('shows question banks to admins, tutors, and combined admin-tutors', () => {

@@ -63,16 +63,27 @@ Implemented in the repository:
   MCQ/theory authoring, course/topic classification, and answer explanations.
 - KaTeX and `mhchem` rendering for mathematical and chemical content in the
   question list and live authoring preview.
+- Bank-scoped private Cloudflare R2 question-image uploads for JPG, PNG, and WebP,
+  with a 10 MB limit, object metadata/signature verification, required alternative
+  text, captured dimensions, expiring signed URLs, and student denial on the generic
+  private-download route.
+- Relational database triggers that reject unregistered, cross-school, or unready
+  media IDs and bind accepted media to immutable question/option versions so files
+  cannot be removed underneath a published examination.
+- Image-only question authoring, local preview, accessible descriptions, and signed
+  image rendering in the tutor question list.
 
 Not yet operational:
 
 - The new migrations have not been applied to staging because this workspace has
   neither an authenticated/linked Supabase CLI project nor a database connection
   string. A service-role API key cannot execute schema DDL.
-- Secure R2 question-image registration, the import pipeline, mock-builder
-  integration, publication snapshots, and student attempt runner remain subsequent
-  phases. The question editor must not show a non-functional image control before
-  the media registration and immutable binding flow lands.
+- The import pipeline, mock-builder integration, publication snapshots, and student
+  attempt runner remain subsequent phases.
+- A cleanup job should remove verified question media that remains unbound after a
+  safe retention period. This can occur when R2 upload/registration succeeds but the
+  later atomic question creation fails; it does not expose the file or corrupt a
+  question version.
 - No new route should be enabled in a deployed environment until both migrations
   are applied and verified there.
 

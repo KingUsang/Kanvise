@@ -1408,6 +1408,12 @@ the question-bank migrations in the target environment:
 - `PATCH /question-banks/questions/:questionId` — author/admin creates a new
   immutable version rather than rewriting history.
 - `GET /question-banks/questions/:questionId/versions` — accessible version history.
+- `POST /storage/presign/upload` with `entity_type = question_media` and `bank_id`
+  — issue a private, bank-scoped R2 upload intent after tutor/admin bank access.
+- `POST /question-banks/media/confirm` — verify the stored image signature and
+  metadata, require alternative text, and register immutable media metadata.
+- `GET /question-banks/media/:mediaId/url?bank_id=:bankId` — return a short-lived
+  signed URL after school and bank access checks.
 
 These routes are tutor/admin-only and always scope queries to the verified profile's
 `school_id`. Next.js does not query the question-bank tables directly.

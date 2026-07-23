@@ -11,10 +11,12 @@ import {
   isR2Configured,
   MAX_DOCUMENT_SIZE,
   MAX_PUBLIC_IMAGE_SIZE,
+  MAX_QUESTION_IMAGE_SIZE,
   publicFileKeyFromUrl,
   publicFileUrl,
   StorageError,
   validateDocumentMetadata,
+  validatePrivateUploadMetadata,
   validatePublicMediaMetadata,
   uploadPublicObject,
 } from './r2'
@@ -52,8 +54,21 @@ describe('R2 storage policy', () => {
   it('allows only implemented private upload types', () => {
     expect(isPrivateUploadType('note')).toBe(true)
     expect(isPrivateUploadType('submission')).toBe(true)
+    expect(isPrivateUploadType('question_media')).toBe(true)
     expect(isPrivateUploadType('logo')).toBe(false)
     expect(isPrivateUploadType('../note')).toBe(false)
+  })
+
+  it('limits question media to private JPG, PNG, or WebP images', () => {
+    expect(validatePrivateUploadMetadata({
+      entityType: 'question_media', fileName: 'diagram.webp', contentType: 'image/webp', fileSizeBytes: 2048,
+    })).toEqual({ extension: 'webp', fileSizeBytes: 2048 })
+    expect(() => validatePrivateUploadMetadata({
+      entityType: 'question_media', fileName: 'question.pdf', contentType: 'application/pdf', fileSizeBytes: 2048,
+    })).toThrowError('Question media must be a JPG, PNG, or WebP image')
+    expect(() => validatePrivateUploadMetadata({
+      entityType: 'question_media', fileName: 'diagram.png', contentType: 'image/png', fileSizeBytes: MAX_QUESTION_IMAGE_SIZE + 1,
+    })).toThrowError('Question image exceeds 10MB limit')
   })
 
   it('keeps public upload types separate from private documents', () => {
