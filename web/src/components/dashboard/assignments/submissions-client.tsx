@@ -91,7 +91,7 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
         throw new Error(error.error || "Failed to submit grade");
       }
 
-      toast.success("Grade submitted successfully");
+      toast.success("Grade and feedback saved");
       await fetchSubmissions(); // Refresh list to update UI
     } catch (error: any) {
       console.error(error);
@@ -127,7 +127,7 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
           <h2 className="text-2xl md:text-3xl font-bold text-[#180d62] mb-2 font-poppins">Submission Review</h2>
           <p className="text-gray-600 flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Assignment Submissions ({summary.total_reviewed} / {summary.total_submitted} Reviewed)
+            {summary.total_reviewed} of {summary.total_submitted} submissions reviewed
           </p>
         </div>
       </div>
@@ -156,7 +156,11 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
               {isLoading ? (
                 <div className="text-center py-10 text-gray-400">Loading submissions...</div>
               ) : filteredSubmissions.length === 0 ? (
-                <div className="text-center py-10 text-gray-400">No submissions found.</div>
+                <div className="py-10 text-center text-gray-500">
+                  <FileText className="mx-auto mb-3 h-8 w-8 text-gray-300" />
+                  <p className="font-semibold text-gray-700">{search ? "No matching students" : "No submissions yet"}</p>
+                  <p className="mt-1 text-xs">{search ? "Try another name." : "Student work will appear here after it is submitted."}</p>
+                </div>
               ) : (
                 filteredSubmissions.map((sub) => {
                   const isSelected = selectedSubmission?.id === sub.id;
@@ -181,7 +185,7 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
                           </div>
                           <div className={`text-xs flex items-center gap-1 ${isGraded ? 'text-gray-500' : (sub.is_late ? 'text-red-500' : 'text-gray-500')}`}>
                             {isGraded ? (
-                              <><CheckCircle className="w-3 h-3" /> Graded ({sub.score}/100)</>
+                              <><CheckCircle className="w-3 h-3" /> Reviewed ({sub.score}/100)</>
                             ) : sub.is_late ? (
                               <><AlertTriangle className="w-3 h-3" /> Late Submission</>
                             ) : (
@@ -213,7 +217,7 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
                     <p className="text-sm text-gray-500">Submitted: {new Date(selectedSubmission.submitted_at).toLocaleString()}</p>
                   </div>
                   <button 
-                    onClick={() => handleDownload(selectedSubmission.download_url, `${selectedSubmission.student?.first_name}_submission.pdf`)}
+                    onClick={() => handleDownload(selectedSubmission.download_url, selectedSubmission.file_name || "submission")}
                     className="flex items-center gap-2 text-[#180d62] hover:text-[#2e2877] font-semibold text-sm py-1 px-3 border border-[#180d62] rounded transition-colors"
                   >
                     <Download className="w-4 h-4" />
@@ -226,9 +230,9 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
                   <div className="absolute inset-0 bg-opacity-5" style={{ backgroundImage: 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMWgxOHYxOEgxem0xIDF2MTZoMTZWNHoiIGZpbGw9IiNlNGEyZTEiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvc3ZnPg==")'}}></div>
                   <FileText className="w-16 h-16 text-gray-400 mb-4" />
                   <p className="text-gray-600 font-medium">Submission Document</p>
-                  <p className="text-gray-400 text-sm mt-1">{selectedSubmission.file_key.split('/').pop()}</p>
+                  <p className="text-gray-400 text-sm mt-1">{selectedSubmission.file_name || "Student submission"}</p>
                   <button 
-                    onClick={() => handleDownload(selectedSubmission.download_url, `${selectedSubmission.student?.first_name}_submission.pdf`)}
+                    onClick={() => handleDownload(selectedSubmission.download_url, selectedSubmission.file_name || "submission")}
                     className="mt-6 px-4 py-2 bg-white text-[#180d62] border border-[#180d62] rounded font-semibold text-sm shadow-sm hover:bg-gray-50 transition-colors opacity-0 group-hover:opacity-100"
                   >
                     Click to Download
@@ -240,13 +244,13 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
               <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                 <h4 className="text-xl font-semibold text-[#180d62] mb-6 flex items-center gap-2">
                   <Edit className="w-5 h-5" />
-                  Grading & Feedback
+                  Grade and feedback
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                   {/* Score Input */}
                   <div className="md:col-span-4 flex flex-col">
-                    <label className="block text-sm font-semibold text-[#180d62] mb-2">Final Score</label>
+                    <label className="block text-sm font-semibold text-[#180d62] mb-2">Score</label>
                     <div className="flex items-center gap-2">
                       <input 
                         className="w-24 text-2xl font-bold text-center border border-gray-200 rounded-md py-3 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] focus:outline-none" 
@@ -263,10 +267,10 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
 
                   {/* Written Feedback */}
                   <div className="md:col-span-8 flex flex-col">
-                    <label className="block text-sm font-semibold text-[#180d62] mb-2">Written Feedback</label>
+                    <label className="block text-sm font-semibold text-[#180d62] mb-2">Feedback for the student</label>
                     <textarea 
                       className="w-full flex-1 min-h-[120px] p-4 border border-gray-200 rounded-md resize-none text-sm focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] focus:outline-none" 
-                      placeholder="Provide constructive feedback for the student..."
+                      placeholder="Explain what the student did well and what they should improve."
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                     />
@@ -276,7 +280,7 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
                         disabled={isSubmitting}
                         className="px-6 py-2 bg-[#994704] text-white font-semibold text-sm rounded-md hover:bg-[#994704]/90 transition-colors shadow-sm disabled:opacity-50"
                       >
-                        {isSubmitting ? "Submitting..." : "Submit Grade"}
+                        {isSubmitting ? "Saving..." : "Save grade"}
                       </button>
                     </div>
                   </div>
@@ -285,7 +289,7 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
             </>
           ) : (
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex items-center justify-center h-full text-gray-500">
-              Select a student submission from the list to begin reviewing.
+              Choose a student submission to begin reviewing.
             </div>
           )}
         </div>

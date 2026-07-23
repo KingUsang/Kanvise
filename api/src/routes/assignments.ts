@@ -47,6 +47,11 @@ function storageFailure(c: any, error: unknown) {
   return c.json({ error: 'Could not verify uploaded file', code: 'STORAGE_VERIFICATION_FAILED' }, 500)
 }
 
+function withoutPrivateFileKey<T extends Record<string, any>>(submission: T): Omit<T, 'file_key'> {
+  const { file_key: _fileKey, ...safeSubmission } = submission
+  return safeSubmission as Omit<T, 'file_key'>
+}
+
 courseAssignmentsRouter.post('/:courseId/assignments', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
   const courseId = c.req.param('courseId')!
@@ -293,7 +298,10 @@ assignmentsRouter.get('/me', requireRole('student'), async (c) => {
     return {
       ...assignment,
       attachment_download_url: assignment.attachment_file_key ? await createPresignedDownload(assignment.attachment_file_key, user.school_id!) : null,
-      submission: submission ? { ...submission, download_url: await createPresignedDownload(submission.file_key, user.school_id!) } : null,
+      submission: submission ? {
+        ...withoutPrivateFileKey(submission),
+        download_url: await createPresignedDownload(submission.file_key, user.school_id!),
+      } : null,
     }
   }))
   return c.json({ data: enhanced })
@@ -336,7 +344,7 @@ assignmentsRouter.post('/:assignmentId/submit', requireRole('student'), async (c
   if (error?.code === '23505') return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
   if (error) return c.json({ error: error.message }, 500)
   return c.json({ data: {
-    ...data,
+    ...withoutPrivateFileKey(data),
     is_late: isLate,
     download_url: await createPresignedDownload(file_key, user.school_id!),
   } }, 201)
@@ -354,8 +362,8 @@ assignmentsRouter.get('/:assignmentId/submissions', requireRole('tutor', 'admin'
     .select('*, student:user_profiles!submissions_student_id_fkey(id, first_name, last_name)')
     .eq('school_id', user.school_id).eq('assignment_id', assignmentId).order('submitted_at')
   if (error) return c.json({ error: error.message }, 500)
-  const enhanced = await Promise.all((data || []).map(async (submission) => ({
-    ...submission,
+  const enhanced: Array<Record<string, any>> = await Promise.all((data || []).map(async (submission: any) => ({
+    ...withoutPrivateFileKey(submission),
     download_url: await createPresignedDownload(submission.file_key, user.school_id!),
   })))
   return c.json({ data: enhanced, summary: {

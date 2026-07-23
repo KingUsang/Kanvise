@@ -256,6 +256,30 @@ Corrections made during this pass:
 The API already enforces school tenancy and Course assignment for creation,
 listing, publishing, editing, deletion, and tutor submission review.
 
+### T: Student Submission Review — 23 July 2026
+
+The implementation matches Stitch's master-detail review structure: a searchable
+student submission list sits beside the selected document and grading workspace.
+It uses real signed R2 downloads and persists tutor scores and feedback.
+
+Corrections made during this pass:
+
+- Removed private R2 object keys from tutor and student assignment responses. The
+  browser now receives only the original filename and an expiring signed download
+  URL.
+- Display and download the submitted file using its real filename rather than
+  parsing an internal storage path or forcing a `.pdf` extension.
+- Replaced “Grading & Feedback,” “Final Score,” and “Submit Grade” with shorter,
+  clearer review language.
+- Improved the no-submission and no-search-result states so tutors know whether
+  they are waiting for student work or should change the search.
+- Changed the summary into a readable “reviewed out of submitted” statement and
+  made saved feedback confirmation explicit.
+
+The API verifies school, assignment, and Course-management access before returning
+submissions or accepting a review. Student assignment responses remain limited to
+the signed-in student's own submission.
+
 ## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:
