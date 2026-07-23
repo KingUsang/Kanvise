@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import ClientClassroom from './ClientClassroom'
 
 interface PageProps {
@@ -51,7 +52,6 @@ export default async function Page({ params, searchParams }: PageProps) {
     is_host: boolean
     class_title: string
     course_name: string | null
-    course_code: string | null
   }
   let errorMessage: string | null = null
 
@@ -88,6 +88,9 @@ export default async function Page({ params, searchParams }: PageProps) {
           </div>
           <h2 className="text-[#180d62] font-bold text-lg mb-2">Cannot Join Class</h2>
           <p className="text-[#787582] text-sm">{errorMessage}</p>
+          <Link href="/dashboard" className="mt-5 inline-flex rounded-lg bg-[#180d62] px-4 py-2 text-sm font-semibold text-white">
+            Back to dashboard
+          </Link>
         </div>
       </div>
     )
@@ -104,7 +107,6 @@ export default async function Page({ params, searchParams }: PageProps) {
       isHost={isHost}
       classTitle={classData!.class_title}
       courseName={classData!.course_name}
-      courseCode={classData!.course_code}
     />
   )
 }

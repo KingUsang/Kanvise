@@ -241,3 +241,34 @@ describe('live classes API - editing', () => {
     expect((await response.json() as any).code).toBe('NOT_CLASS_TUTOR')
   })
 })
+
+describe('live classes API - host permissions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+  })
+
+  it('does not let an unassigned admin join a tutor classroom', async () => {
+    mocks.from.mockReturnValue(builder({
+      data: { id: 'class-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live' },
+      error: null,
+    }))
+
+    const response = await liveClassesRouter.request('/class-1/join', { method: 'POST' })
+
+    expect(response.status).toBe(403)
+    expect((await response.json() as any).code).toBe('NOT_CLASS_TUTOR')
+  })
+
+  it('does not let an unassigned admin end a tutor classroom', async () => {
+    mocks.from.mockReturnValue(builder({
+      data: { id: 'class-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
+      error: null,
+    }))
+
+    const response = await liveClassesRouter.request('/class-1/end', { method: 'POST' })
+
+    expect(response.status).toBe(403)
+    expect((await response.json() as any).code).toBe('NOT_CLASS_TUTOR')
+  })
+})

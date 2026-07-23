@@ -322,7 +322,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   const { data: liveClass, error: fetchError } = await supabase
     .from('live_classes')
-    .select('*, courses(name, code)')
+    .select('*, courses(name)')
     .eq('id', id)
     .eq('school_id', user.school_id)
     .single()
@@ -348,7 +348,6 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       is_host: true,
       class_title: liveClass.title,
       course_name: (liveClass.courses as any)?.name || null,
-      course_code: (liveClass.courses as any)?.code || null,
     } })
   }
 
@@ -366,10 +365,18 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     return c.json({ error: 'Failed to create LiveKit room' }, 500)
   }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('live_classes')
     .update({ status: 'live', livekit_room_name: roomName, started_at: new Date().toISOString() })
     .eq('id', id)
+  if (updateError) {
+    try {
+      await getRoomService().deleteRoom(roomName)
+    } catch {
+      // The database error is the actionable failure; room cleanup is best effort.
+    }
+    return c.json({ error: 'Could not start the class', code: 'CLASS_START_FAILED' }, 500)
+  }
 
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Tutor'
   const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
@@ -382,20 +389,18 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     is_host: true,
     class_title: liveClass.title,
     course_name: (liveClass.courses as any)?.name || null,
-    course_code: (liveClass.courses as any)?.code || null,
   } })
 })
 
 // ── POST /live-classes/:id/join — Participant joins a class ───────────────
 
-// TODO(auth): Remove 'admin' role bypass after MVP testing is complete
 liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
 
   const { data: liveClass, error: fetchError } = await supabase
     .from('live_classes')
-    .select('*, courses(name, code)')
+    .select('*, courses(name)')
     .eq('id', id)
     .eq('school_id', user.school_id)
     .single()
@@ -414,6 +419,9 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   // The assigned tutor (whether admin or tutor role) gets host permissions
   const isHost = liveClass.tutor_id === user.id
+  if (user.role !== 'student' && !isHost) {
+    return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
+  }
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Participant'
   const token = await generateToken(
     user.id,
@@ -432,7 +440,6 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
       is_host: isHost,
       class_title: liveClass.title,
       course_name: (liveClass.courses as any)?.name || null,
-      course_code: (liveClass.courses as any)?.code || null,
     },
   })
 })
@@ -457,6 +464,9 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   if (liveClass.status !== 'live') {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
   }
+  if (liveClass.tutor_id !== user.id) {
+    return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
+  }
 
   try {
     const roomService = getRoomService()
@@ -466,10 +476,13 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
     console.warn('[live-classes] deleteRoom warning (may already be gone):', e)
   }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('live_classes')
     .update({ status: 'completed', ended_at: new Date().toISOString() })
     .eq('id', id)
+  if (updateError) {
+    return c.json({ error: 'The room closed, but the class record could not be completed', code: 'CLASS_END_UPDATE_FAILED' }, 500)
+  }
 
   return c.json({ message: 'Live class ended' })
 })

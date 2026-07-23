@@ -12,7 +12,6 @@ interface ClientClassroomProps {
   isHost: boolean;
   classTitle: string;
   courseName: string | null;
-  courseCode: string | null;
 }
 
 export default function ClientClassroom({
@@ -23,7 +22,6 @@ export default function ClientClassroom({
   isHost,
   classTitle,
   courseName,
-  courseCode,
 }: ClientClassroomProps) {
   const router = useRouter();
 
@@ -36,7 +34,7 @@ export default function ClientClassroom({
       connect={true}
       data-lk-theme="default"
       className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden"
-      onDisconnected={() => router.push(isHost ? "/dashboard" : "/")}
+      onDisconnected={() => router.push(isHost ? "/dashboard" : "/dashboard/student/classes")}
     >
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
@@ -47,7 +45,6 @@ export default function ClientClassroom({
         classId={classId}
         classTitle={classTitle}
         courseName={courseName}
-        courseCode={courseCode}
       />
     </LiveKitRoom>
   );

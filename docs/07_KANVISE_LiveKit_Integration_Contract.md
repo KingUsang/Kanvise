@@ -680,20 +680,20 @@ Additionally, the LiveKit developer should configure a **TURN server** to ensure
 
 ## 8. Environment Variables
 
-### Hono (Scaleway):
+### Hono (Scaleway or local development):
 ```
-LIVEKIT_API_URL=http://localhost:7881
+LIVEKIT_URL=wss://livekit.kanvise.com
 LIVEKIT_API_KEY=your-livekit-api-key
 LIVEKIT_API_SECRET=your-livekit-api-secret
 LIVEKIT_WEBHOOK_SECRET=same-as-api-secret
 ```
 
-### Next.js (Vercel — browser-safe):
-```
-NEXT_PUBLIC_LIVEKIT_URL=wss://livekit.kanvise.com
-```
-
-The `NEXT_PUBLIC_LIVEKIT_URL` is the public WebSocket URL the browser connects to for the WebRTC session. This is the Scaleway server's public domain with the LiveKit WebRTC port. A domain name with SSL is required — browsers will not connect to a bare IP over WebSocket for WebRTC.
+`LIVEKIT_URL` is the WebSocket URL returned to an authorised classroom browser.
+Hono derives the matching HTTP(S) Room Service URL from it, so the same three
+variables work with LiveKit Cloud, a self-hosted Scaleway instance, or a local
+LiveKit server. The browser does not read LiveKit credentials or a
+`NEXT_PUBLIC_LIVEKIT_URL`; it receives the URL and participant token only after
+Hono has checked the class, role, and enrolment.
 
 ---
 
@@ -761,7 +761,9 @@ docker run --rm \
   --dev
 ```
 
-Update Hono's `LIVEKIT_API_URL` to `http://localhost:7881`, `LIVEKIT_API_KEY` to `devkey`, and `LIVEKIT_API_SECRET` to `devsecret` for local development.
+Set Hono's `LIVEKIT_URL` to `ws://localhost:7880`, `LIVEKIT_API_KEY` to
+`devkey`, and `LIVEKIT_API_SECRET` to `devsecret` for local development. No
+frontend environment change is required.
 
 ### 11.2 Webhook Testing Locally
 

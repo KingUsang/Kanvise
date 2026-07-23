@@ -337,6 +337,47 @@ CSV export is real and spreadsheet-formula injection is neutralised. Stitch's
 governed by each mock's configured release policy; a second decorative publication
 action would conflict with that model.
 
+### T: Live Classroom Instruction Hosting — 23 July 2026
+
+The implementation uses the modern Stitch classroom as its visual reference:
+lesson context stays in a compact top bar, the teaching surface dominates the
+screen, participant/chat tools stay at the side, and media controls remain pinned.
+Intentional product changes are the circular tutor video, PDF teaching materials,
+and removal of screen sharing and recording.
+
+Corrections confirmed or made during this pass:
+
+- Removed the nonexistent Course-code field from start and join queries. Course
+  context now uses the schema's real Course name, so joining a class cannot fail
+  with `courses.code does not exist`.
+- Prevent an unassigned pure admin or tutor from joining, ending, or controlling
+  another tutor's classroom. A combined admin-tutor can host the class only when
+  they are its assigned tutor; enrolled students retain join access.
+- Check the end-class API response before disconnecting the tutor. A rejected
+  request now remains recoverable and displays an in-app error.
+- Check the database transition when a LiveKit room starts or ends instead of
+  reporting success after a failed class-state update.
+- Return students to My classes after leaving and provide a route back when joining
+  fails.
+- Start the classroom timer only after LiveKit connects and report browser
+  microphone/camera permission failures through in-app notifications.
+- Keep screen sharing disabled to avoid unplanned CPU and bandwidth use. Tutors
+  upload one PDF up to 25 MB; Hono converts it into pages, and Previous/Next plus a
+  visible page count control the lesson.
+- Each participant downloads the current page from private storage and LiveKit
+  synchronises only the page URL and annotations. Late joiners request the current
+  page and board state.
+- The Excalidraw menu is deliberately replaced rather than exposing its default
+  GitHub/export/file actions. Students receive a view-only board. The host retains
+  the useful drawing surface; a newly selected PDF page is fitted to the viewport
+  and clears annotations from the previous page.
+
+The LiveKit boundary is portable. Hono reads `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and
+`LIVEKIT_API_SECRET`, derives the Room Service HTTP URL, and returns the WebSocket
+URL with a short-lived participant token. Switching from LiveKit Cloud to a
+self-hosted local or Scaleway instance therefore requires environment and server
+configuration, not classroom UI changes.
+
 ## 4. Capability and navigation rules
 
 Dashboard navigation is configured centrally in `web/src/config/dashboard-navigation.ts`. The same configuration controls:

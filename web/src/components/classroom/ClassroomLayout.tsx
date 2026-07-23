@@ -29,10 +29,9 @@ interface ClassroomLayoutProps {
   classId: string
   classTitle: string
   courseName: string | null
-  courseCode: string | null
 }
 
-export default function ClassroomLayout({ isHost, classId, classTitle, courseName, courseCode }: ClassroomLayoutProps) {
+export default function ClassroomLayout({ isHost, classId, classTitle, courseName }: ClassroomLayoutProps) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const participants = useParticipants();
@@ -56,17 +55,19 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       );
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch(`${honoUrl}/live-classes/${classId}/end`, {
+      const response = await fetch(`${honoUrl}/live-classes/${classId}/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token}`,
         },
       });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Could not end the class');
       room.disconnect();
     } catch (e) {
       console.error('Failed to end class', e);
-      toast.error('Failed to end class');
+      toast.error('Could not end the class', { description: e instanceof Error ? e.message : 'Please try again.' });
     } finally {
       setIsEnding(false);
     }
@@ -136,9 +137,10 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
 
   // Timer
   useEffect(() => {
+    if (!isConnected) return;
     const t = setInterval(() => setElapsedTime((s) => s + 1), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [isConnected]);
 
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600).toString().padStart(2, "0");
@@ -165,7 +167,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
             <p className="text-[#787582] text-[11px] font-medium uppercase tracking-wider flex items-center gap-2 mt-0.5">
               <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-yellow-500"}`} />
               {isConnected ? "Live" : "Connecting"}
-              {(courseCode || courseName) ? ` · ${[courseCode, courseName].filter(Boolean).join(' · ')}` : ''}
+              {courseName ? ` · ${courseName}` : ''}
             </p>
           </div>
         </div>
