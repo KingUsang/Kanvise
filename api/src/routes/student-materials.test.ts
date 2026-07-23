@@ -49,7 +49,9 @@ describe('student materials library security', () => {
     })
     const response = await notesRouter.request('/me')
     expect(response.status).toBe(200)
-    expect(enrolmentFilter).toHaveBeenCalledWith('status', 'active')
+    expect(enrolmentFilter).toHaveBeenCalledWith('student_id', 'student-1')
+    expect(enrolmentFilter).toHaveBeenCalledWith('school_id', 'school-1')
+    expect(enrolmentFilter).not.toHaveBeenCalledWith('status', 'active')
     expect(courseFilter).toHaveBeenCalledWith('course_id', ['course-1'])
     expect(mocks.download).toHaveBeenCalledWith('private-key', 'school-1')
     const body = await response.json() as any

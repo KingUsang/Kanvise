@@ -70,23 +70,33 @@ Defer until pilot evidence supports them:
 ### Creator
 
 - An admin may publish a centre-owned mock.
-- A tutor may submit a mock they own or are assigned to, subject to centre policy.
+- A tutor may create and submit a mock they own or are assigned to. A tutor working
+  under a centre needs centre-admin approval before it becomes a public listing.
+- A verified solo tutor is both the centre admin and tutor, so they can approve
+  their own listing before Kanvise review.
+- Creating or listing a mock always requires a verified Kanvise account. Anonymous
+  visitors may browse safe previews but cannot author or publish content.
 - Only an admin may connect or change the centre's payout destination.
 - Publication to enrolled centre students and publication to the public marketplace
   are separate choices.
 
 ### Student
 
-- Any authenticated Kanvise student may claim a free listing or buy a paid one.
+- Anyone may browse the public catalogue and safe preview without signing in.
+- A student must create or sign in to a Kanvise student account before claiming,
+  buying, or attempting a mock so access, attempts, payment, and results have one
+  accountable owner.
 - Marketplace access is based on an entitlement, not the student's centre
   enrolment.
 - An entitlement grants only the advertised number of attempts against the
   purchased immutable version.
 
-### Kanvise operations
+### Kanvise support and moderation team
 
-- May review, suspend, or remove a listing without deleting attempts or financial
-  history.
+- This means authorised internal Kanvise staff, not a tutorial-centre admin and not
+  a public user role.
+- They may review, approve, suspend, or remove a listing without deleting attempts
+  or financial history.
 - Cannot silently edit creator questions or answer keys.
 - Has an auditable reason and actor for moderation changes.
 
@@ -234,10 +244,12 @@ Only after the pilot demonstrates demand should Kanvise decide commission, autom
 payouts, ratings, bundles, public question-bank licensing, and recommendation
 systems.
 
-## 10. Decisions required before implementation
+## 10. Pilot decisions
 
-1. Is the seller displayed as the tutor, the tutorial centre, or both?
-2. Must every tutor listing receive centre-admin approval before Kanvise review?
+1. Display both the tutorial centre and the tutor who authored the mock. For a solo
+   tutor, the centre name may be their teaching brand.
+2. A tutor working under a centre requires centre-admin approval before Kanvise
+   moderation. A solo tutor performs that approval as their own centre admin.
 3. What attempt allowance does a one-time purchase include by default?
 4. Is a paid entitlement permanent for its frozen version, or can listings expire?
 5. What refund conditions apply after a student has opened or submitted an attempt?

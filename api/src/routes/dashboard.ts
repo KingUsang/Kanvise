@@ -113,7 +113,7 @@ dashboardRouter.get('/student', async (c) => {
     supabase.from('user_profiles').select('first_name, last_name').eq('id', user.id).eq('school_id', schoolId).maybeSingle(),
     supabase.from('schools').select('name').eq('id', schoolId).maybeSingle(),
     supabase.from('enrolments').select('programme_id, sub_programme_id, course_id')
-      .eq('school_id', schoolId).eq('student_id', user.id).eq('status', 'active'),
+      .eq('school_id', schoolId).eq('student_id', user.id),
     supabase.from('courses').select('id, name, programme_id, sub_programme_id').eq('school_id', schoolId).eq('is_published', true),
     supabase.from('sub_programmes').select('id, programme_id').eq('school_id', schoolId),
   ])

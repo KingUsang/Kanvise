@@ -163,24 +163,8 @@ notesRouter.get("/:courseId", async (c) => {
 
     // Enrolment / Assignment Check
     if (profile.role === "student") {
-      // Must be enrolled in course or its parent programme
-      const { data: enrolments } = await supabase
-        .from("enrolments")
-        .select("programme_id, course_id")
-        .eq("student_id", profile.id)
-        .eq("school_id", profile.school_id)
-        .eq("status", "active");
-
-      const { data: course } = await supabase.from("courses")
-        .select("programme_id")
-        .eq("id", courseId)
-        .eq("school_id", profile.school_id)
-        .maybeSingle();
-      const hasAccess = Boolean(course) && Boolean(enrolments?.some(e =>
-        e.course_id === courseId ||
-        (e.programme_id !== null && e.programme_id === course?.programme_id)
-      ));
-      if (!hasAccess) {
+      const courseIds = await loadStudentCourseIds(profile.id, profile.school_id);
+      if (!courseIds.includes(courseId)) {
         return c.json({ error: "Not enrolled in course", code: "FORBIDDEN" }, 403);
       }
     } else if (profile.role === "tutor") {
