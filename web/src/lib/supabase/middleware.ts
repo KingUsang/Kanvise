@@ -28,27 +28,53 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
   const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard')
   const isJoinRoute = request.nextUrl.pathname.startsWith('/join')
   const isAccountSetupRoute = request.nextUrl.pathname.startsWith('/account/setup')
+  const isProtectedRoute = isDashboardRoute || isAccountSetupRoute
+
+  let claims: Record<string, any> | null = null
+  try {
+    const { data, error } = await supabase.auth.getClaims()
+    if (error) {
+      const isTemporaryAuthFailure = error.name === 'AuthRetryableFetchError' || error.status === 0
+      if (isTemporaryAuthFailure && isProtectedRoute) {
+        const unavailableUrl = request.nextUrl.clone()
+        unavailableUrl.pathname = '/auth/service-unavailable'
+        unavailableUrl.search = ''
+        return NextResponse.rewrite(unavailableUrl, { status: 503 })
+      }
+    } else {
+      claims = (data?.claims as Record<string, any> | undefined) || null
+    }
+  } catch (error) {
+    console.error('auth.middleware_claims_unavailable', {
+      path: request.nextUrl.pathname,
+      message: error instanceof Error ? error.message : 'Unknown Auth error',
+    })
+    if (isProtectedRoute) {
+      const unavailableUrl = request.nextUrl.clone()
+      unavailableUrl.pathname = '/auth/service-unavailable'
+      unavailableUrl.search = ''
+      return NextResponse.rewrite(unavailableUrl, { status: 503 })
+    }
+  }
   
-  if (!user && (isDashboardRoute || isAccountSetupRoute)) {
+  if (!claims && isProtectedRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
-  if (user) {
+  if (claims) {
     // Route redirects improve UX only; API/RLS still enforce permissions.
     // Prefer server-controlled app_metadata and retain a legacy fallback until
     // existing sessions have refreshed.
-    const kanvise_role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role || 'student'
-    const schoolId = user.app_metadata?.school_id
+    const appMetadata = claims.app_metadata || {}
+    const userMetadata = claims.user_metadata || {}
+    const kanvise_role = appMetadata.kanvise_role || appMetadata.role || userMetadata.kanvise_role || 'student'
+    const schoolId = appMetadata.school_id
     const needsAdminSetup = kanvise_role === 'admin' && !schoolId
     // Redirect logged in users away from auth routes (unless they are doing a password reset or similar)
     if (isAuthRoute && !request.nextUrl.pathname.includes('reset-password')) {
