@@ -901,16 +901,24 @@ export function ProgrammesClient() {
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-[#c8c5d2] bg-[#ffffff] flex flex-wrap justify-between items-center gap-4">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-[#1b1c1c] uppercase">Visible to students</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    className="sr-only peer"
-                    checked={formData.is_published}
-                    onChange={e => setFormData(p => ({ ...p, is_published: e.target.checked }))}
-                  />
-                  <div className="w-11 h-6 bg-[#c8c5d2] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#c8c5d2] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#994704]"></div>
-                </label>
+                {editingId ? (
+                  <>
+                    <span className="text-xs font-semibold text-[#1b1c1c] uppercase">Visible to students</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer"
+                        checked={formData.is_published}
+                        onChange={e => setFormData(p => ({ ...p, is_published: e.target.checked }))}
+                      />
+                      <div className="w-11 h-6 bg-[#c8c5d2] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#c8c5d2] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#994704]"></div>
+                    </label>
+                  </>
+                ) : (
+                  <p className="text-xs text-[#474551] leading-5 max-w-xs">
+                    <span className="font-semibold text-[#1b1c1c]">Starts as draft.</span> Add at least one course, then publish it to make it visible to students.
+                  </p>
+                )}
               </div>
               <div className="flex gap-3">
                 <button 

@@ -39,7 +39,7 @@ programmesRouter.post("/", enforceAdmin, async (c) => {
     }
 
     const body = await c.req.json();
-    const { name, slug, description, price, currency } = body;
+    const { name, slug, description, price, currency, is_published } = body;
 
     if (!name || !slug) {
       return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
@@ -70,7 +70,7 @@ programmesRouter.post("/", enforceAdmin, async (c) => {
         price: parseFloat(price) || 0,
         currency: currency || "NGN",
         thumbnail_url: null,
-        is_published: false,
+        is_published: typeof is_published === 'boolean' ? is_published : false,
         created_by: profile.id
       })
       .select()
@@ -179,11 +179,12 @@ programmesRouter.patch("/:id", enforceAdmin, async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json();
     
-    const { name, description, price } = body;
+    const { name, description, price, is_published } = body;
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (price !== undefined) updates.price = parseFloat(price);
+    if (typeof is_published === 'boolean') updates.is_published = is_published;
 
     const { data, error } = await supabase
       .from("programmes")
