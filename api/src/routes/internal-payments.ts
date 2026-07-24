@@ -137,6 +137,7 @@ internalPaymentsRouter.post('/marketplace-confirm', async (c) => {
   })
   if (error) {
     const code = String(error.message || '')
+    if (code.includes('MARKETPLACE_ORDER_NOT_FOUND')) return c.json({ error: 'Marketplace order not found' }, 404)
     return c.json({ error: code.includes('AMOUNT_MISMATCH') ? 'Payment amount does not match this order' : 'Marketplace payment confirmation failed' }, code.includes('AMOUNT_MISMATCH') ? 409 : 500)
   }
   const order: any = data?.[0] || data

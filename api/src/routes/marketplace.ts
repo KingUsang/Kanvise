@@ -81,7 +81,11 @@ marketplaceRouter.get('/marketplace/mocks/:slug', async c => {
     .eq('slug', c.req.param('slug')).maybeSingle()
   if (error) return c.json({ error: 'Could not load this mock' }, 500)
   if (!data || !listingAvailable(data)) return c.json({ error: 'Mock not found' }, 404)
-  return c.json({ data })
+  const breakdown = data.pricing_type === 'paid' ? marketplacePaymentBreakdown(Number(data.price_kobo)) : null
+  return c.json({ data: {
+    ...data,
+    checkout_summary: breakdown ? { mock_price_kobo: Number(data.price_kobo), processing_fee_kobo: breakdown.processingFee, total_kobo: breakdown.total } : null,
+  } })
 })
 
 marketplaceRouter.use('/marketplace/*', jwtVerificationMiddleware, profileResolutionMiddleware)

@@ -23,6 +23,7 @@ export type MarketplaceListing = {
   creator_school: { id: string; name: string } | null
   creator: { id: string; first_name: string; last_name: string } | null
   instructions?: string | null
+  checkout_summary?: { mock_price_kobo: number; processing_fee_kobo: number; total_kobo: number } | null
 }
 
 async function publicApi<T>(path: string): Promise<T> {

@@ -5,6 +5,7 @@ export type StudentDashboardData = {
   student: { first_name: string; last_name: string };
   school: { name: string } | null;
   capabilities?: { hasCentreLearning: boolean; hasMarketplaceAccess: boolean };
+  marketplace?: { mocks_owned: number; attempts_in_progress: number };
   course_count: number;
   next_class: null | { id: string; title: string; course_name: string; scheduled_at: string; duration_minutes: number; status: string };
   upcoming_classes: Array<{ id: string; title: string; course_name: string; scheduled_at: string }>;

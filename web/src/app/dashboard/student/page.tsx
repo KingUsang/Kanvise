@@ -27,6 +27,16 @@ export default async function StudentDashboardPage() {
   const firstName = data.student.first_name || "there";
   const nextClass = data.next_class;
 
+  if (data.capabilities?.hasCentreLearning === false) {
+    const owned = data.marketplace?.mocks_owned || 0;
+    const inProgress = data.marketplace?.attempts_in_progress || 0;
+    return <main className="mx-auto max-w-[1120px] px-4 py-7 pb-24 sm:px-6 lg:px-10 lg:py-10">
+      <section className="rounded-3xl bg-[#2e2877] px-6 py-8 text-white sm:px-9 sm:py-10"><p className="text-sm text-white/70">Kanvise Marketplace</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Welcome, {firstName}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">Claim a free mock or buy one, practise at your own pace, and keep every result in one place.</p><Link href="/mocks" className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2877]">Explore mocks <ArrowRight className="ml-2" size={16}/></Link></section>
+      <section className="mt-6 grid gap-4 sm:grid-cols-2"><article className="rounded-2xl border border-[#e3ded9] bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[#716c76]">My mocks</p><p className="mt-2 text-3xl font-semibold text-[#2e2877]">{owned}</p><p className="mt-2 text-sm text-[#716c76]">Claimed or purchased practice mocks.</p><Link href="/dashboard/student/mocks" className="mt-4 inline-flex text-sm font-semibold text-[#2e2877]">Open my mocks</Link></article><article className="rounded-2xl border border-[#e3ded9] bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[#716c76]">Continue practising</p><p className="mt-2 text-3xl font-semibold text-[#2e2877]">{inProgress}</p><p className="mt-2 text-sm text-[#716c76]">Attempt{inProgress === 1 ? '' : 's'} currently in progress.</p><Link href="/dashboard/student/mocks" className="mt-4 inline-flex text-sm font-semibold text-[#2e2877]">Continue a mock</Link></article></section>
+      <section className="mt-6 rounded-2xl border border-[#e3ded9] bg-white p-6"><h2 className="text-lg font-semibold">Joining a tutorial centre later?</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Your marketplace account stays the same. When a Kanvise-powered centre enrols you, your classes, assignments, and learning materials will appear here alongside your mock history.</p></section>
+    </main>
+  }
+
   return <main className="mx-auto max-w-[1440px] px-4 py-6 pb-24 sm:px-6 lg:px-10 lg:py-9">
     <section className="rounded-3xl bg-[#2e2877] px-6 py-7 text-white sm:px-8 sm:py-9">
       <p className="text-sm text-white/70">{data.school?.name || "Kanvise Marketplace"}</p>

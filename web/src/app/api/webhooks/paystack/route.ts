@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       // Forward to Hono backend API internal confirmation endpoint
       const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-      const confirmRes = await fetch(`${apiUrl}/internal/payments/confirm`, {
+      let confirmRes = await fetch(`${apiUrl}/internal/payments/confirm`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -53,6 +53,24 @@ export async function POST(req: NextRequest) {
           paystack_transaction_id: transactionId ? String(transactionId) : null
         })
       });
+
+      // A reference belongs to either an existing course/programme checkout or
+      // an immutable marketplace order. Both paths re-verify the transaction
+      // server-side; this fallback only chooses the correct entitlement ledger.
+      if (confirmRes.status === 404) {
+        confirmRes = await fetch(`${apiUrl}/internal/payments/marketplace-confirm`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Kanvise-Internal-Secret": internalSecret
+          },
+          signal: AbortSignal.timeout(20_000),
+          body: JSON.stringify({
+            paystack_reference: reference,
+            paystack_transaction_id: transactionId ? String(transactionId) : null
+          })
+        });
+      }
 
       if (!confirmRes.ok) {
         const errText = await confirmRes.text();

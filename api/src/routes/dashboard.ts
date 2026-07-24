@@ -11,7 +11,7 @@ dashboardRouter.use('*', profileResolutionMiddleware)
 dashboardRouter.use('*', async (c, next) => {
   // Marketplace-only students have no school. Keep every staff/centre route
   // tenant-protected, but let their capability-aware home load.
-  if (c.req.path === '/dashboard/student') return next()
+  if (c.req.path === '/dashboard/student' || c.req.path === '/dashboard/student/progress') return next()
   return tenantMiddleware(c, next)
 })
 
@@ -209,10 +209,30 @@ dashboardRouter.get('/student', async (c) => {
 dashboardRouter.get('/student/progress', async c => {
   const user = c.get('user')
   if (user.role !== 'student') return c.json({ error: 'Student access only', code: 'INSUFFICIENT_ROLE' }, 403)
-  if (!user.school_id) return c.json({ error: 'User does not belong to a school', code: 'NO_SCHOOL' }, 400)
   try {
+    const loadMarketplaceProgress = async () => {
+      const { data: entitlements, error: entitlementError } = await supabase.from('mock_marketplace_entitlements').select(
+        'mock_version_id, listing:mock_marketplace_listings(source_mock_id, title)'
+      ).eq('student_id', user.id).is('revoked_at', null)
+      if (entitlementError) throw entitlementError
+      const listings = (entitlements || []).map((item: any) => item.listing).filter(Boolean)
+      const mockIds = [...new Set(listings.map((listing: any) => listing.source_mock_id))]
+      if (!mockIds.length) return { mocks: [], attempts: [] }
+      const { data: attempts, error: attemptError } = await supabase.from('mock_attempts')
+        .select('id, mock_exam_id, status, submitted_at, total_score, total_marks, correct_mcq_answers, total_mcq_questions')
+        .eq('student_id', user.id).eq('access_source', 'marketplace_entitlement').in('mock_exam_id', mockIds)
+      if (attemptError) throw attemptError
+      return { mocks: listings.map((listing: any) => ({ id: listing.source_mock_id, course_id: null, title: listing.title })), attempts: attempts || [] }
+    }
+    if (!user.school_id) {
+      const marketplace = await loadMarketplaceProgress()
+      return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], ...marketplace }) })
+    }
     const courseIds = await loadStudentCourseIds(user.id, user.school_id)
-    if (!courseIds.length) return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], mocks: [], attempts: [] }) })
+    if (!courseIds.length) {
+      const marketplace = await loadMarketplaceProgress()
+      return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], ...marketplace }) })
+    }
     const [
       { data: courses, error: courseError }, { data: classes, error: classError },
       { data: assignments, error: assignmentError }, { data: submissions, error: submissionError },
@@ -228,13 +248,16 @@ dashboardRouter.get('/student/progress', async c => {
     ])
     if (courseError || classError || assignmentError || submissionError || mockError || attemptError) throw courseError || classError || assignmentError || submissionError || mockError || attemptError
     const classIds = (classes || []).map(item => item.id)
-    const { data: attendance, error: attendanceError } = classIds.length
+    const [{ data: attendance, error: attendanceError }, marketplace] = await Promise.all([
+      classIds.length
       ? await supabase.from('attendance_records').select('live_class_id').eq('school_id', user.school_id).eq('student_id', user.id).in('live_class_id', classIds)
-      : { data: [], error: null }
+      : Promise.resolve({ data: [], error: null }),
+      loadMarketplaceProgress(),
+    ])
     if (attendanceError) throw attendanceError
     return c.json({ data: buildStudentProgress({
       courses: courses || [], classes: classes || [], attendance: attendance || [],
-      assignments: assignments || [], submissions: submissions || [], mocks: mocks || [], attempts: attempts || [],
+      assignments: assignments || [], submissions: submissions || [], mocks: [...(mocks || []), ...marketplace.mocks], attempts: [...(attempts || []), ...marketplace.attempts],
     }) })
   } catch (error) {
     console.error('student_progress.load_failed', { studentId: user.id, error })

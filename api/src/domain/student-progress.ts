@@ -3,7 +3,7 @@ type ClassSession = { id: string; course_id: string }
 type Attendance = { live_class_id: string }
 type Assignment = { id: string; course_id: string }
 type Submission = { assignment_id: string }
-type Mock = { id: string; course_id: string; title?: string }
+type Mock = { id: string; course_id: string | null; title?: string }
 type Attempt = {
   id: string; mock_exam_id: string; status: string; submitted_at?: string | null;
   total_score?: number | string | null; total_marks?: number | string | null;

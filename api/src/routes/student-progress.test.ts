@@ -19,6 +19,7 @@ function query(result: any) {
     select: () => value,
     eq: () => value,
     in: () => value,
+    is: () => value,
     order: () => value,
     limit: () => value,
     then: (resolve: (result: any) => void) => Promise.resolve(result).then(resolve),
@@ -50,6 +51,7 @@ describe('student progress route security', () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'enrolments') return query({ data: [], error: null })
       if (table === 'courses' || table === 'sub_programmes') return query({ data: [], error: null })
+      if (table === 'mock_marketplace_entitlements') return query({ data: [], error: null })
       throw new Error(`Progress must not query ${table} without an entitled course`)
     })
 
@@ -58,6 +60,20 @@ describe('student progress route security', () => {
     const body = await response.json() as any
     expect(body.data.courses).toEqual([])
     expect(body.data.overall.attendance_percentage).toBeNull()
-    expect(mocks.from).toHaveBeenCalledTimes(3)
+    expect(mocks.from).toHaveBeenCalledTimes(4)
+  })
+
+  it('includes marketplace results for a centreless student without querying centre data', async () => {
+    mocks.user = { id: 'student-1', school_id: null, role: 'student' }
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'mock_marketplace_entitlements') return query({ data: [{ listing: { source_mock_id: 'market-mock-1', title: 'JAMB practice' } }], error: null })
+      if (table === 'mock_attempts') return query({ data: [{ id: 'attempt-1', mock_exam_id: 'market-mock-1', status: 'submitted', submitted_at: '2026-07-24', total_score: 16, total_marks: 20 }], error: null })
+      throw new Error(`Centre table ${table} must not be queried for a marketplace-only student`)
+    })
+    const response = await dashboardRouter.request('/student/progress')
+    expect(response.status).toBe(200)
+    const body = await response.json() as any
+    expect(body.data.overall.mock_average_percentage).toBe(80)
+    expect(body.data.recent_mock_results[0].title).toBe('JAMB practice')
   })
 })
