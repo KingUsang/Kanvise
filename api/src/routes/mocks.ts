@@ -18,6 +18,11 @@ import {
   distributionUsesMarketplace,
   parseMockDistributionMode,
 } from "../domain/mock-distribution";
+import {
+  importQuestionsFromPdf,
+  importQuestionsFromDocumentText,
+  MAX_MOCK_PDF_SIZE_BYTES,
+} from "../domain/mock-pdf-import";
 
 export const mocksRouter = new Hono<{ Variables: AppVariables }>();
 
@@ -197,6 +202,71 @@ mocksRouter.get("/ungraded-count", requireTutorOrAdmin, async (c) => {
   const metrics = await loadMockMetrics((mocks || []).map((mock: any) => mock.id), user.school_id);
   const count = [...metrics.values()].reduce((sum, item) => sum + item.pending_grading, 0);
   return c.json({ data: { count } });
+});
+
+// POST /mocks/import/pdf — extract editable questions from a text-based PDF.
+// This deliberately returns a draft for tutor review; it never publishes or
+// persists imported questions by itself.
+mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
+  const contentLength = Number(c.req.header("content-length") || 0);
+  if (contentLength > MAX_MOCK_PDF_SIZE_BYTES + 1024 * 1024) {
+    return c.json({ error: "PDFs must be 15 MB or smaller", code: "PDF_TOO_LARGE" }, 413);
+  }
+
+  try {
+    const body = await c.req.parseBody();
+    const file = body.file;
+    if (!(file instanceof File)) {
+      return c.json({ error: "Choose a PDF file to import", code: "PDF_REQUIRED" }, 400);
+    }
+    if (file.size > MAX_MOCK_PDF_SIZE_BYTES) {
+      return c.json({ error: "PDFs must be 15 MB or smaller", code: "PDF_TOO_LARGE" }, 413);
+    }
+    const looksLikePdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!looksLikePdf) {
+      return c.json({ error: "Only PDF files can be imported here", code: "INVALID_PDF_TYPE" }, 400);
+    }
+
+    const result = await importQuestionsFromPdf(new Uint8Array(await file.arrayBuffer()));
+    if (result.questions.length === 0) {
+      return c.json({
+        error: result.warnings[0] || "No questions could be recognised in this PDF",
+        code: "NO_QUESTIONS_FOUND",
+      }, 422);
+    }
+    return c.json({ data: result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not read this PDF";
+    const expected = /scanned images|no more than|Invalid PDF|PasswordException|password/i.test(message);
+    if (!expected) console.error("[mocks] PDF import failed", error);
+    return c.json({
+      error: /password/i.test(message)
+        ? "Password-protected PDFs cannot be imported. Remove the password and try again."
+        : message,
+      code: "PDF_IMPORT_FAILED",
+    }, 422);
+  }
+});
+
+// POST /mocks/import/document-text — parse text extracted from a Word document.
+// The browser only extracts the document's readable text; Gemini decides how
+// questions, options, answer keys, and rubrics are organised.
+mocksRouter.post("/import/document-text", requireTutorOrAdmin, async (c) => {
+  try {
+    const body = await c.req.json<{ document_text?: unknown; file_name?: unknown }>();
+    if (typeof body.document_text !== "string" || !body.document_text.trim()) {
+      return c.json({ error: "The Word document did not contain readable text", code: "DOCUMENT_TEXT_REQUIRED" }, 400);
+    }
+    const result = await importQuestionsFromDocumentText(body.document_text, typeof body.file_name === "string" ? body.file_name : undefined);
+    if (result.questions.length === 0) {
+      return c.json({ error: result.warnings[0] || "No questions could be recognised in this document", code: "NO_QUESTIONS_FOUND" }, 422);
+    }
+    return c.json({ data: result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not read this Word document";
+    if (!/AI document import|Word document|No questions|too large/i.test(message)) console.error("[mocks] document import failed", error);
+    return c.json({ error: message, code: "DOCUMENT_IMPORT_FAILED" }, 422);
+  }
 });
 
 // GET /mocks/:id/results — tutor/admin review workspace data.

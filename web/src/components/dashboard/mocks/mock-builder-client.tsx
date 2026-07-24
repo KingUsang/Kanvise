@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
+import { QuestionContent, type ContentBlock } from "@/components/questions/question-content";
+import { buildPrePublishReview, type PrePublishReview } from "./mock-builder-validation";
 
 type Course = {
   id: string;
@@ -16,6 +18,7 @@ type OptionState = {
   id: string; // local id
   option_text: string;
   is_correct: boolean;
+  content_blocks?: ContentBlock[];
 };
 
 type QuestionState = {
@@ -25,6 +28,9 @@ type QuestionState = {
   marks: number;
   options: OptionState[]; // only for MCQ
   grading_rubric?: string; // only for theory
+  source_page?: number | null;
+  review_reasons?: string[];
+  content_blocks?: ContentBlock[];
 };
 
 type Bank = { id: string; name: string; question_count: number };
@@ -45,49 +51,6 @@ type SelectedBankQuestion = {
   marks: number;
   bankName: string;
 };
-
-export function parseDocxQuestionText(rawText: string): QuestionState[] {
-  const blocks = rawText
-    .replace(/\r/g, "")
-    .split(/\n\s*(?:---+|={3,})\s*\n/g)
-    .map((block) => block.trim())
-    .filter(Boolean);
-
-  return blocks.flatMap<QuestionState>((block, blockIndex) => {
-    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
-    const field = (name: string) => lines.find((line) => line.toLowerCase().startsWith(`${name.toLowerCase()}:`))
-      ?.slice(name.length + 1).trim();
-    const type = field("Type")?.toLowerCase();
-    const questionText = field("Question");
-    if (!questionText || (type !== "mcq" && type !== "theory")) return [];
-
-    const marks = Number(field("Marks")) || 1;
-    const id = `docx_${Date.now()}_${blockIndex}`;
-    if (type === "theory") {
-      return [{
-        id,
-        question_type: "theory" as const,
-        question_text: questionText,
-        marks,
-        options: [],
-        grading_rubric: field("Rubric") || "",
-      }];
-    }
-
-    const answer = field("Answer")?.toUpperCase();
-    const options = lines.flatMap((line, optionIndex) => {
-      const match = line.match(/^([A-Z])[\).:-]\s+(.+)$/i);
-      if (!match) return [];
-      return [{
-        id: `${id}_option_${optionIndex}`,
-        option_text: match[2].trim(),
-        is_correct: match[1].toUpperCase() === answer,
-      }];
-    });
-    if (options.length < 2 || options.filter((option) => option.is_correct).length !== 1) return [];
-    return [{ id, question_type: "mcq" as const, question_text: questionText, marks, options }];
-  });
-}
 
 export function MockBuilderClient({ token }: { token: string }) {
   const router = useRouter();
@@ -143,6 +106,9 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
+  const [publishReview, setPublishReview] = useState<PrePublishReview | null>(null);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [documentImportSummary, setDocumentImportSummary] = useState<{ pageCount: number | null; warnings: string[] } | null>(null);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -239,8 +205,10 @@ export function MockBuilderClient({ token }: { token: string }) {
               options: (q.current_version?.options || []).map((o: any) => ({
                 id: `o_${o.id}`,
                 option_text: o.plain_text,
-                is_correct: o.is_correct
+                is_correct: o.is_correct,
+                content_blocks: o.content_blocks || [],
               })),
+              content_blocks: q.current_version?.content_blocks || [],
               grading_rubric: (q.current_version?.grading_rubric_blocks || [])
                 .filter((block: any) => block?.type === "text").map((block: any) => block.text).join("\n")
             }}));
@@ -405,23 +373,90 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const processDocx = async (file: File) => {
     setIsUploading(true);
+    setDocumentImportSummary(null);
     try {
       const mammoth = await import("mammoth");
       const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-      const parsedQuestions = parseDocxQuestionText(result.value);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/import/document-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ document_text: result.value, file_name: file.name }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || "Could not import that Word document");
+      const imported = body?.data;
+      const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => ({
+        id: question.id || `docx_${Date.now()}_${Math.random()}`,
+        question_type: question.question_type === "mcq" ? "mcq" : "theory",
+        question_text: question.question_text || "",
+        marks: Number(question.marks) || 1,
+        options: (question.options || []).map((option: any, index: number) => ({ id: option.id || `docx_option_${Date.now()}_${index}`, option_text: option.option_text || "", is_correct: option.is_correct === true, content_blocks: option.content_blocks || [] })),
+        grading_rubric: question.grading_rubric || "",
+        source_page: question.source_page ?? null,
+        review_reasons: question.review_reasons || [],
+        content_blocks: question.content_blocks || [],
+      }));
       setQuestions((current) => [...current, ...parsedQuestions]);
+      const warnings = imported?.warnings || [];
+      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings });
       if (parsedQuestions.length) {
         toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
-          description: "Please review every question before publishing.",
+          description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
         });
       } else {
-        toast.warning("No questions matched the Word template", {
-          description: "Separate questions with --- and include Type, Question, Marks and Answer fields.",
-        });
+        toast.warning("No questions were found in that Word document", { description: warnings[0] || "Try another document." });
       }
     } catch (error) {
       console.error("Could not read DOCX", error);
-      toast.error("Could not read that Word document");
+      toast.error("Could not import that Word document", { description: error instanceof Error ? error.message : "Please try again." });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const processPDF = async (file: File) => {
+    setIsUploading(true);
+    setDocumentImportSummary(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/import/pdf`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || "Could not import that PDF");
+      const imported = body?.data;
+      const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => ({
+        id: question.id || `pdf_${Date.now()}_${Math.random()}`,
+        question_type: question.question_type === "mcq" ? "mcq" : "theory",
+        question_text: question.question_text || "",
+        marks: Number(question.marks) || 1,
+        options: (question.options || []).map((option: any, index: number) => ({
+          id: option.id || `pdf_option_${Date.now()}_${index}`,
+          option_text: option.option_text || "",
+          is_correct: option.is_correct === true,
+          content_blocks: option.content_blocks || [],
+        })),
+        grading_rubric: question.grading_rubric || "",
+        source_page: question.source_page ?? null,
+        review_reasons: question.review_reasons || [],
+        content_blocks: question.content_blocks || [],
+      }));
+      setQuestions((current) => [...current, ...parsedQuestions]);
+      const warnings = imported?.warnings || [];
+      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings });
+      if (parsedQuestions.length) {
+        toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
+          description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
+        });
+      } else {
+        toast.warning("No questions were found in that PDF", { description: warnings[0] || "Try another document." });
+      }
+    } catch (error) {
+      console.error("Could not import PDF", error);
+      toast.error("Could not import that PDF", { description: error instanceof Error ? error.message : "Please try again." });
     } finally {
       setIsUploading(false);
     }
@@ -433,8 +468,10 @@ export function MockBuilderClient({ token }: { token: string }) {
       processCSV(file);
     } else if (lowerName.endsWith(".docx")) {
       void processDocx(file);
+    } else if (file.type === "application/pdf" || lowerName.endsWith(".pdf")) {
+      void processPDF(file);
     } else {
-      toast.error("Choose a CSV or DOCX file");
+      toast.error("Choose a PDF, CSV or DOCX file");
     }
   };
 
@@ -457,6 +494,32 @@ export function MockBuilderClient({ token }: { token: string }) {
     if (file) processImportFile(file);
   };
 
+  const getPrePublishReview = () => buildPrePublishReview({
+    title,
+    distributionMode,
+    courseId,
+    questions,
+    selectedBankQuestions,
+    isUntimed,
+    timeLimit,
+    publishMode,
+    publishDate,
+    publishTime,
+    availableFrom,
+    closesAt,
+    marketplaceExam,
+    marketplaceSubjects,
+    marketplacePriceType,
+    marketplacePrice,
+    marketplaceRightsConfirmed,
+  });
+
+  const requestPublish = () => {
+    const review = getPrePublishReview();
+    setPublishReview(review);
+    setIsReviewOpen(true);
+  };
+
   const handleSave = async (shouldPublish: boolean) => {
     if (!title || ((distributionMode === "centre" || distributionMode === "both") && !courseId)) {
       toast.error(distributionMode === "marketplace" ? "Add a mock title" : "Add a mock title and choose a course");
@@ -464,40 +527,9 @@ export function MockBuilderClient({ token }: { token: string }) {
     }
 
     if (shouldPublish) {
-      if (questions.length + selectedBankQuestions.length === 0) {
-        toast.error("Add at least one question before publishing");
-        return;
-      }
-      const invalidQuestionIndex = questions.findIndex((question) => {
-        if (!question.question_text.trim() || !Number.isFinite(question.marks) || question.marks <= 0) return true;
-        if (question.question_type !== "mcq") return false;
-        const completedOptions = question.options.filter((option) => option.option_text.trim());
-        return completedOptions.length < 2 || completedOptions.filter((option) => option.is_correct).length !== 1;
-      });
-      if (invalidQuestionIndex >= 0) {
-        toast.error(`Check question ${invalidQuestionIndex + 1}`, {
-          description: "Every question needs text and positive marks. MCQs need at least two options and exactly one correct answer.",
-        });
-        return;
-      }
-      if (!isUntimed && (!Number.isFinite(timeLimit) || timeLimit <= 0)) {
-        toast.error("Set a positive time limit or choose Untimed Exam");
-        return;
-      }
-      if (publishMode === "scheduled" && (!publishDate || !publishTime || new Date(`${publishDate}T${publishTime}:00`).getTime() <= Date.now())) {
-        toast.error("Choose a future publication date and time");
-        return;
-      }
-      if (availableFrom && closesAt && new Date(closesAt) <= new Date(availableFrom)) {
-        toast.error("Closing time must be after the opening time");
-        return;
-      }
-      if ((distributionMode === "marketplace" || distributionMode === "both") && !marketplaceRightsConfirmed) {
-        toast.error("Confirm that you have the right to publish these questions publicly");
-        return;
-      }
-      if (distributionMode !== "centre" && marketplacePriceType === "paid" && (!Number.isFinite(Number(marketplacePrice)) || Number(marketplacePrice) < 50)) {
-        toast.error("Set a public price of at least ₦50, or make this mock free");
+      const review = getPrePublishReview();
+      if (review.errors.length) {
+        toast.error("Finish the pre-publish checks", { description: review.errors[0] });
         return;
       }
     }
@@ -714,6 +746,49 @@ export function MockBuilderClient({ token }: { token: string }) {
         </div>
       )}
 
+      {isReviewOpen && publishReview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C26627]">Before you publish</p>
+                <h3 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Review this mock</h3>
+                <p className="mt-2 text-sm leading-6 text-[#474551]">Check the questions and settings below. Imported content is still editable after this review.</p>
+              </div>
+              <button type="button" onClick={() => setIsReviewOpen(false)} className="rounded p-1 text-[#787582] hover:bg-[#f5f3f2]" aria-label="Close review">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Questions</p><p className="mt-1 text-lg font-bold text-[#1b1c1c]">{questions.length + selectedBankQuestions.length}</p></div>
+              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Audience</p><p className="mt-1 text-sm font-bold text-[#1b1c1c]">{distributionMode === "centre" ? "Centre students" : distributionMode === "marketplace" ? "Public marketplace" : "Centre + marketplace"}</p></div>
+              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Timing</p><p className="mt-1 text-sm font-bold text-[#1b1c1c]">{isUntimed ? "Untimed" : `${timeLimit} minutes`}</p></div>
+            </div>
+
+            {publishReview.errors.length > 0 && (
+              <div className="mt-5 rounded-lg border border-[#f0b6b6] bg-[#fff4f2] p-4">
+                <p className="font-semibold text-[#ba1a1a]">Fix these before publishing</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-5 text-[#7f1d1d]">{publishReview.errors.map((error) => <li key={error}>{error}</li>)}</ul>
+              </div>
+            )}
+            {publishReview.warnings.length > 0 && (
+              <div className="mt-5 rounded-lg border border-[#e8d7a5] bg-[#fffaf0] p-4">
+                <p className="font-semibold text-[#7a4b00]">Please check these items</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-5 text-[#7a4b00]">{publishReview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+              </div>
+            )}
+            {publishReview.errors.length === 0 && publishReview.warnings.length === 0 && (
+              <div className="mt-5 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 text-sm text-[#166534]">The mock passed the pre-publish checks. You can still edit it after closing this review.</div>
+            )}
+            <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-[#e4e2e1] pt-5">
+              <button type="button" onClick={() => setIsReviewOpen(false)} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#474551] hover:bg-[#f8f6ff]">Go back and edit</button>
+              <button type="button" disabled={publishReview.errors.length > 0 || isSaving} onClick={() => { setIsReviewOpen(false); void handleSave(true); }} className="rounded-lg bg-[#C26627] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{publishMode === "scheduled" ? "Confirm schedule" : "Confirm and publish"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="mb-8 flex flex-col gap-4 border-b border-[#e4e2e1] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -729,7 +804,7 @@ export function MockBuilderClient({ token }: { token: string }) {
             {isSaving ? "Saving…" : "Save as Draft"}
           </button>
           <button 
-            onClick={() => handleSave(true)}
+            onClick={requestPublish}
             disabled={isReadOnly || isSaving}
             className="px-6 py-2.5 bg-[#C26627] text-white font-semibold text-sm rounded hover:bg-[#a55621] hover:shadow-md transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -807,6 +882,12 @@ export function MockBuilderClient({ token }: { token: string }) {
                     )}
                   </div>
                 </div>
+                {(q.source_page || q.review_reasons?.length) && (
+                  <div className="mb-4 rounded-lg border border-[#e8d7a5] bg-[#fffaf0] px-4 py-3 text-xs leading-5 text-[#7a4b00]">
+                    {q.source_page && <p className="font-semibold">Imported from PDF page {q.source_page}.</p>}
+                    {(q.review_reasons || []).map((reason) => <p key={reason}>Review: {reason}</p>)}
+                  </div>
+                )}
 
                 <div>
                   <textarea 
@@ -816,6 +897,23 @@ export function MockBuilderClient({ token }: { token: string }) {
                     className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[15px] text-[#1b1c1c] outline-none transition-all mb-5 min-h-[100px] resize-y disabled:bg-[#f5f3f2]" 
                     placeholder="Enter question text here..."
                   />
+                  {q.content_blocks?.length ? (
+                    <div className="mb-5 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#787582]">Formatted content preview</p>
+                      {q.content_blocks.map((block, blockIndex) => (block.type === "equation" || block.type === "chemistry") ? (
+                        <label key={`${q.id}_block_${blockIndex}`} className="mb-3 block text-xs font-semibold text-[#474551]">
+                          {block.type === "equation" ? "Mathematical equation (LaTeX)" : "Chemical formula or reaction (mhchem/LaTeX)"}
+                          <textarea
+                            disabled={isReadOnly}
+                            value={block.latex}
+                            onChange={(event) => updateQuestion(q.id, { content_blocks: q.content_blocks?.map((currentBlock, index) => index === blockIndex ? { ...currentBlock, latex: event.target.value } : currentBlock) })}
+                            className="mt-1.5 min-h-16 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 font-mono text-xs font-normal outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]"
+                          />
+                        </label>
+                      ) : null)}
+                      <QuestionContent plainText={null} blocks={q.content_blocks} />
+                    </div>
+                  ) : null}
 
                   {q.question_type === 'mcq' && (
                     <div className="space-y-3">
@@ -845,6 +943,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                             }}
                             className={`flex-1 border rounded px-4 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2] ${opt.is_correct ? 'border-[#2e2877] bg-[#e3dfff]/20' : 'border-[#c8c5d2] bg-white'}`} 
                           />
+                          {opt.content_blocks?.length ? <QuestionContent plainText={null} blocks={opt.content_blocks} /> : null}
                           <button 
                             onClick={() => {
                               const newOpts = q.options.filter(o => o.id !== opt.id);
@@ -918,7 +1017,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                       : 'border-[#c8c5d2] bg-white hover:bg-[#f5f3f2]'
                   }`}
                 >
-                  <input type="file" accept=".csv,.docx" className="hidden" onChange={handleFileInput} />
+                  <input type="file" accept=".pdf,.csv,.docx,application/pdf" className="hidden" onChange={handleFileInput} />
                   
                   {isUploading ? (
                     <div className="flex flex-col items-center py-2">
@@ -931,13 +1030,19 @@ export function MockBuilderClient({ token }: { token: string }) {
                         <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
                       </div>
                       <span className="text-[15px] font-semibold text-[#1b1c1c] mb-1">Click to upload or drag and drop</span>
-                      <span className="text-[13px] font-normal text-[#474551]">CSV or Word (.docx) file using the Kanvise format</span>
+                      <span className="text-[13px] font-normal text-[#474551]">PDF, CSV or Word (.docx) file</span>
                       <span className="mt-2 max-w-lg text-center text-[12px] leading-5 text-[#787582]">
-                        In Word, separate questions with <strong>---</strong>. Use: Type: MCQ, Question:, Marks:, A. to D., and Answer: A. For theory, use Type: Theory and Rubric:.
+                        PDFs and Word files are read with AI and returned as an editable draft. Review every imported question before publishing. CSV remains available for spreadsheet imports.
                       </span>
                     </>
                   )}
                 </label>
+                {documentImportSummary && (
+                  <div className="mt-3 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-3 text-xs leading-5 text-[#474551]">
+                    <p className="font-semibold text-[#2e2877]">Document draft imported{documentImportSummary.pageCount ? ` · ${documentImportSummary.pageCount} pages` : ""}</p>
+                    <p className="mt-1">Review the questions below. {documentImportSummary.warnings.length ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? "" : "s"} need attention.` : "No provider warnings were returned."}</p>
+                  </div>
+                )}
               </div>
 
               <div className="order-2 flex items-center justify-center py-6">

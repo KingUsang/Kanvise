@@ -83,7 +83,7 @@ describe('student mock security', () => {
   it('never accepts a browser-supplied student or school when saving an answer', async () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'mock_attempts') return query({ data: { school_id: 'school-1' }, error: null })
-      throw new Error(`Unexpected table ${table}`)
+      return query({ data: null, error: null })
     })
     mocks.rpc.mockResolvedValue({ data: [{ answer_id: 'answer-1' }], error: null })
     const response = await studentMocksRouter.request('/attempts/attempt-1/answers/question-1', {

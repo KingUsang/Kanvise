@@ -1,9 +1,33 @@
 # Kanvise Mock Marketplace Delivery Plan
 
-**Status:** Product contract agreed; implementation and marketplace migrations not yet started
+**Status:** Marketplace foundation is implemented on `staging`; tutor PDF import and pre-publish review are the current authoring slice
 **Foundation:** `15_MOCK_ENGINE_AND_QUESTION_BANK_IMPLEMENTATION_PLAN.md`  
 **Initial product shape:** One Kanvise application and API; no separate subdomain or
 second authentication system
+
+### Current tutor authoring slice
+
+The first practical authoring path is intentionally mixed-subject: tutors may put
+questions from different subjects into one mock, but Kanvise does not yet split the
+mock into subject sections or calculate subject-specific scores. The builder accepts
+PDF, CSV, and DOCX imports. PDF and DOCX imports are sent from the API to Gemini as
+editable drafts; mathematical equations and chemical notation are saved as Kanvise
+content blocks and rendered in the review screen. The tutor must review the returned
+questions before publishing.
+Configure `GEMINI_API_KEY` on the API server and optionally set
+`GEMINI_MOCK_IMPORT_MODEL`. The browser never receives the provider key.
+
+**Deferred follow-up — PDF image preservation:** Gemini can recognise diagrams,
+graphs, maps, circuits, and other images during import, but the current import
+slice saves text and review warnings only. A later slice must extract or crop
+those visual assets, upload them to Cloudflare R2, save them as question
+`content_blocks`, and render them in the tutor review and student CBT screens.
+
+**Deferred follow-up — visual scientific editor:** The current review screen lets
+ tutors edit the imported LaTeX or mhchem source directly and see a live preview.
+ Add a small visual toolbar later for common fractions, roots, powers, symbols,
+ chemical arrows, subscripts, and superscripts so tutors do not need to learn
+ LaTeX syntax before correcting an imported question.
 
 ## 1. Product definition
 
