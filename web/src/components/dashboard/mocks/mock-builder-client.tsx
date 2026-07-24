@@ -10,6 +10,7 @@ type Course = {
   id: string;
   name: string;
 };
+type DistributionMode = "centre" | "marketplace" | "both";
 
 type OptionState = {
   id: string; // local id
@@ -102,6 +103,14 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [distributionMode, setDistributionMode] = useState<DistributionMode>("centre");
+  // These fields are only relevant when the public marketplace audience is on.
+  // They deliberately live in this builder instead of a second creation flow.
+  const [marketplaceExam, setMarketplaceExam] = useState("");
+  const [marketplaceSubjects, setMarketplaceSubjects] = useState("");
+  const [marketplacePriceType, setMarketplacePriceType] = useState<"free" | "paid">("free");
+  const [marketplacePrice, setMarketplacePrice] = useState("");
+  const [marketplaceRightsConfirmed, setMarketplaceRightsConfirmed] = useState(false);
   
   const [publishMode, setPublishMode] = useState<"immediate" | "scheduled">("immediate");
   const [publishDate, setPublishDate] = useState("");
@@ -192,6 +201,7 @@ export function MockBuilderClient({ token }: { token: string }) {
           setTitle(mockData.title || "");
           setDescription(mockData.description || "");
           setCourseId(mockData.course_id || "");
+          setDistributionMode(mockData.distribution_mode || "centre");
           setCalculatorMode(mockData.calculator_mode || "none");
           setShuffleQuestions(!!mockData.shuffle_questions);
           setShuffleOptions(!!mockData.shuffle_options);
@@ -448,8 +458,8 @@ export function MockBuilderClient({ token }: { token: string }) {
   };
 
   const handleSave = async (shouldPublish: boolean) => {
-    if (!title || !courseId) {
-      toast.error("Add a mock title and choose a course");
+    if (!title || ((distributionMode === "centre" || distributionMode === "both") && !courseId)) {
+      toast.error(distributionMode === "marketplace" ? "Add a mock title" : "Add a mock title and choose a course");
       return;
     }
 
@@ -482,6 +492,14 @@ export function MockBuilderClient({ token }: { token: string }) {
         toast.error("Closing time must be after the opening time");
         return;
       }
+      if ((distributionMode === "marketplace" || distributionMode === "both") && !marketplaceRightsConfirmed) {
+        toast.error("Confirm that you have the right to publish these questions publicly");
+        return;
+      }
+      if (distributionMode !== "centre" && marketplacePriceType === "paid" && (!Number.isFinite(Number(marketplacePrice)) || Number(marketplacePrice) < 50)) {
+        toast.error("Set a public price of at least ₦50, or make this mock free");
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -494,7 +512,8 @@ export function MockBuilderClient({ token }: { token: string }) {
       const payload = {
         title,
         description,
-        course_id: courseId,
+        course_id: courseId || null,
+        distribution_mode: distributionMode,
         publish_at: finalPublishAt,
         time_limit_minutes: isUntimed ? 0 : timeLimit,
         calculator_mode: calculatorMode,
@@ -573,7 +592,7 @@ export function MockBuilderClient({ token }: { token: string }) {
           body: JSON.stringify({
             sections: [{
               title: "Questions",
-              course_id: courseId,
+              course_id: courseId || null,
               instructions: null,
               questions: combined,
               rules: [],
@@ -586,8 +605,11 @@ export function MockBuilderClient({ token }: { token: string }) {
 
 
 
-      // 3. Publish if immediate
-      if (shouldPublish && publishMode === "immediate") {
+      // 3. Marketplace tutors submit immediately for approval. Marketplace admins
+      // publish immediately but public availability can still be scheduled by the
+      // configured date/time. Centre-only mocks retain their existing scheduler.
+      let publishMessage: string | null = null;
+      if (shouldPublish && (publishMode === "immediate" || distributionMode !== "centre")) {
         const publishResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/publish`, {
           method: "POST",
           headers: { 
@@ -599,10 +621,46 @@ export function MockBuilderClient({ token }: { token: string }) {
           const body = await publishResponse.json().catch(() => null);
           throw new Error(body?.error || "Failed to publish mock");
         }
+        const body = await publishResponse.json().catch(() => null);
+        publishMessage = typeof body?.message === "string" ? body.message : null;
+      }
+
+      // A public mock gets one immutable marketplace listing after its version
+      // has been frozen. The same action submits for approval (tutor) or lists
+      // immediately (admin/solo tutor-admin).
+      if (shouldPublish && (distributionMode === "marketplace" || distributionMode === "both")) {
+        const priceNaira = marketplacePriceType === "paid" ? Number(marketplacePrice) : 0;
+        const listingResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marketplace/creator/listings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({
+            source_mock_id: mockId,
+            title,
+            short_description: description,
+            examination: marketplaceExam || null,
+            subjects: marketplaceSubjects.split(",").map((value) => value.trim()).filter(Boolean),
+            pricing_type: marketplacePriceType,
+            price_kobo: marketplacePriceType === "paid" ? Math.round(priceNaira * 100) : 0,
+            available_from: availableFrom ? new Date(availableFrom).toISOString() : null,
+            closes_at: closesAt ? new Date(closesAt).toISOString() : null,
+            rights_confirmed: true,
+          }),
+        });
+        const listingBody = await listingResponse.json().catch(() => null);
+        if (!listingResponse.ok) throw new Error(listingBody?.error || "Could not create the public listing");
+        const submitResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marketplace/creator/listings/${listingBody.data.id}/submit`, {
+          method: "POST", headers: { Authorization: `Bearer ${token}` },
+        });
+        const submitBody = await submitResponse.json().catch(() => null);
+        if (!submitResponse.ok) throw new Error(submitBody?.error || "Could not submit the public listing");
+        publishMessage = submitBody?.message || publishMessage;
       }
 
       // 4. Navigate away
-      toast.success(shouldPublish ? (publishMode === "scheduled" ? "Mock scheduled" : "Mock published") : "Draft saved");
+      const publicationMessage = shouldPublish
+        ? (publishMessage || (publishMode === "scheduled" ? "Mock scheduled" : "Mock published"))
+        : "Draft saved";
+      toast.success(publicationMessage);
       startNavigationProgress();
       router.push("/dashboard/mocks"); 
     } catch (err) {
@@ -834,9 +892,14 @@ export function MockBuilderClient({ token }: { token: string }) {
           {/* Bulk Import Section */}
           {!isReadOnly && (
             <>
-              <div className="mt-8">
+              <div className="order-2 mt-2 border-t border-[#e4e2e1] pt-6">
+                <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Other ways to add questions</h3>
+                <p className="mt-1 text-sm text-[#474551]">Import a prepared set or reuse questions you have already created.</p>
+              </div>
+
+              <div className="order-2">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Bulk Import Questions</h3>
+                  <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Import a prepared set</h3>
                   <button 
                     onClick={downloadTemplate} 
                     className="text-[#2e2877] text-[13px] font-medium hover:underline flex items-center gap-1 cursor-pointer"
@@ -877,13 +940,13 @@ export function MockBuilderClient({ token }: { token: string }) {
                 </label>
               </div>
 
-              <div className="flex items-center justify-center py-6">
+              <div className="order-2 flex items-center justify-center py-6">
                 <div className="h-px bg-[#e4e2e1] w-full"></div>
                 <span className="px-4 text-[#787582] text-[13px] font-medium bg-white">OR</span>
                 <div className="h-px bg-[#e4e2e1] w-full"></div>
               </div>
 
-              <div className="rounded-lg border border-[#c8c5d2] bg-white p-5">
+              <div className="order-2 rounded-lg border border-[#c8c5d2] bg-white p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div><h3 className="font-semibold text-[#1b1c1c]">Reuse questions from your bank</h3><p className="mt-1 text-sm text-[#474551]">Choose prepared questions instead of typing them again.</p></div>
                   <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">{showBankPicker ? "Close question bank" : "Choose questions"}</button>
@@ -914,7 +977,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
 
               {/* Add Question Controls */}
-              <div className="flex items-center gap-6 p-6 border-2 border-dashed border-[#c8c5d2] rounded-lg bg-[#fbf9f8] justify-center mt-2">
+              <div className="order-1 flex items-center gap-6 p-6 border-2 border-dashed border-[#c8c5d2] rounded-lg bg-[#fbf9f8] justify-center mt-2">
                 <span className="text-[15px] text-[#474551]">Add another question:</span>
                 <div className="flex gap-4">
                   <button 
@@ -967,8 +1030,26 @@ export function MockBuilderClient({ token }: { token: string }) {
                 />
               </div>
 
+              <div className="rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+                <p className="text-[13px] font-semibold text-[#1b1c1c]">Who is this mock for?</p>
+                <p className="mt-1 text-xs leading-5 text-[#787582]">Marketplace mocks can be claimed or bought by any student. Centre mocks stay with students enrolled in the chosen course.</p>
+                <div className="mt-3 space-y-2">
+                  {([
+                    ["centre", "My centre students"],
+                    ["marketplace", "Public marketplace"],
+                    ["both", "Both my centre and the marketplace"],
+                  ] as const).map(([value, label]) => (
+                    <label key={value} className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]">
+                      <input type="radio" name="distributionMode" value={value} checked={distributionMode === value}
+                        disabled={isReadOnly} onChange={() => setDistributionMode(value)} className="text-[#2e2877]" />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Course</label>
+                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Course {distributionMode === "marketplace" ? "(optional)" : ""}</label>
                 <select 
                   value={courseId}
                   disabled={isReadOnly}
@@ -981,15 +1062,26 @@ export function MockBuilderClient({ token }: { token: string }) {
                     backgroundSize: '1.5em 1.5em',
                   }}
                 >
-                  <option value="" disabled>Select a course</option>
+                  <option value="">{distributionMode === "marketplace" ? "No course — public marketplace only" : "Select a course"}</option>
                   {courses.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
-                {courses.length === 0 && (
+                {courses.length === 0 && distributionMode !== "marketplace" && (
                   <p className="mt-2 text-xs leading-5 text-[#994704]">No Courses are available. Ask the centre admin to create a Course or assign one to you.</p>
                 )}
               </div>
+
+              {(distributionMode === "marketplace" || distributionMode === "both") && (
+                <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">
+                  <div><p className="text-[13px] font-semibold text-[#1b1c1c]">Public marketplace details</p><p className="mt-1 text-xs leading-5 text-[#787582]">Students will see these details before they claim or buy this mock. Your questions stay private until they start an entitled attempt.</p></div>
+                  <div className="mt-4 grid gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2"><label className="text-[12px] font-medium text-[#474551]">Exam or category<input value={marketplaceExam} disabled={isReadOnly} onChange={(event) => setMarketplaceExam(event.target.value)} placeholder="e.g. JAMB 2026" className="mt-1.5 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm outline-none focus:border-[#2e2877]" /></label><label className="text-[12px] font-medium text-[#474551]">Subjects<input value={marketplaceSubjects} disabled={isReadOnly} onChange={(event) => setMarketplaceSubjects(event.target.value)} placeholder="e.g. Physics, Mathematics" className="mt-1.5 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm outline-none focus:border-[#2e2877]" /><span className="mt-1 block text-[11px] font-normal text-[#787582]">Separate subjects with commas.</span></label></div>
+                    <div><p className="text-[12px] font-medium text-[#474551]">Price</p><div className="mt-1.5 flex rounded border border-[#c8c5d2] bg-white p-1"><button type="button" disabled={isReadOnly} onClick={() => setMarketplacePriceType("free")} className={`flex-1 rounded px-3 py-2 text-sm font-medium ${marketplacePriceType === "free" ? "bg-[#2e2877] text-white" : "text-[#474551]"}`}>Free</button><button type="button" disabled={isReadOnly} onClick={() => setMarketplacePriceType("paid")} className={`flex-1 rounded px-3 py-2 text-sm font-medium ${marketplacePriceType === "paid" ? "bg-[#2e2877] text-white" : "text-[#474551]"}`}>Paid</button></div>{marketplacePriceType === "paid" && <label className="mt-3 block text-[12px] font-medium text-[#474551]">Price students pay for the mock (₦)<input value={marketplacePrice} disabled={isReadOnly} inputMode="decimal" onChange={(event) => setMarketplacePrice(event.target.value)} placeholder="e.g. 1500" className="mt-1.5 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm outline-none focus:border-[#2e2877]" /><span className="mt-1 block text-[11px] font-normal text-[#787582]">The Paystack processing charge is shown separately to the student at checkout.</span></label>}</div>
+                    <label className="flex cursor-pointer items-start gap-2 rounded bg-white p-3 text-xs leading-5 text-[#474551]"><input type="checkbox" checked={marketplaceRightsConfirmed} disabled={isReadOnly} onChange={(event) => setMarketplaceRightsConfirmed(event.target.checked)} className="mt-0.5" /><span>I confirm that I have the right to publish these questions publicly and understand that a live mock cannot be edited. To correct it later, I will withdraw it and publish a new version.</span></label>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-[#fbf9f8] p-4 rounded-lg border border-[#e4e2e1]">
                 <label className="block text-[13px] text-[#1b1c1c] mb-3 font-semibold">When students should see it</label>

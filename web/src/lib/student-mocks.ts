@@ -2,9 +2,11 @@ import { getApiUrl } from '@/config/api'
 
 export type StudentMockCard = {
   id: string
+  source?: 'centre' | 'marketplace'
+  marketplace_listing_id?: string
   title: string
   description: string | null
-  course_id: string
+  course_id: string | null
   course: { name: string } | null
   available_from: string | null
   closes_at: string | null

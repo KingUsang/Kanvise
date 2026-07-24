@@ -29,7 +29,7 @@ export default async function StudentDashboardPage() {
 
   return <main className="mx-auto max-w-[1440px] px-4 py-6 pb-24 sm:px-6 lg:px-10 lg:py-9">
     <section className="rounded-3xl bg-[#2e2877] px-6 py-7 text-white sm:px-8 sm:py-9">
-      <p className="text-sm text-white/70">{data.school.name}</p>
+      <p className="text-sm text-white/70">{data.school?.name || "Kanvise Marketplace"}</p>
       <div className="mt-2 flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Welcome back, {firstName}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-white/72">Here’s what needs your attention today. Keep learning at your own pace.</p></div>
         <div className="rounded-2xl bg-white/10 px-5 py-3"><p className="text-xs uppercase tracking-wider text-white/60">Courses you can access</p><p className="mt-1 text-2xl font-semibold">{data.course_count}</p></div>

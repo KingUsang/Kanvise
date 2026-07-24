@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, CalendarDays, ClipboardCheck, FileText, Home, LogOut, Menu, Settings, UserRound, X } from "lucide-react";
+import { BookOpen, CalendarDays, ClipboardCheck, FileText, Home, LogOut, Menu, Search, Settings, ShoppingBag, UserRound, X } from "lucide-react";
 import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -13,9 +13,11 @@ const navigation = [
   { label: "Mocks", href: "/dashboard/student/mocks", icon: BookOpen },
   { label: "Materials", href: "/dashboard/student/materials", icon: FileText },
   { label: "My progress", href: "/dashboard/student/progress", icon: UserRound },
+  { label: "Explore mocks", href: "/mocks", icon: Search },
+  { label: "Purchases", href: "/dashboard/student/purchases", icon: ShoppingBag },
 ];
 
-export function StudentShell({ children, studentName, schoolName }: { children: React.ReactNode; studentName: string; schoolName: string }) {
+export function StudentShell({ children, studentName, schoolName, hasCentreLearning = true }: { children: React.ReactNode; studentName: string; schoolName: string; hasCentreLearning?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -32,7 +34,7 @@ export function StudentShell({ children, studentName, schoolName }: { children: 
         <p className="mt-1 truncate text-xs text-white/60">{schoolName}</p>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-5">
-        {navigation.map((item) => {
+        {navigation.filter(item => hasCentreLearning || !['My classes', 'Assignments', 'Materials'].includes(item.label)).map((item) => {
           const active = item.href === "/dashboard/student" ? pathname === item.href : pathname.startsWith(item.href);
           return <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-white/14 font-medium text-white" : "text-white/72 hover:bg-white/8 hover:text-white"}`}>
             <item.icon size={18} />{item.label}

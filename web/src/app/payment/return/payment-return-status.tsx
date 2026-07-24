@@ -29,17 +29,20 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         if (!apiUrl) throw new Error("Payment status is unavailable");
-        const response = await fetch(`${apiUrl}/payments/status/${encodeURIComponent(reference)}`, {
+        let response = await fetch(`${apiUrl}/marketplace/orders/${encodeURIComponent(reference)}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
           cache: "no-store",
+        });
+        if (response.status === 404) response = await fetch(`${apiUrl}/payments/status/${encodeURIComponent(reference)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store",
         });
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Could not check payment status");
         if (cancelled) return;
 
-        if (body.data.status === "successful") {
+        if (body.data.status === "successful" || body.data.status === "paid") {
           setState("success");
-          setMessage("Payment confirmed. Your class access is ready.");
+          setMessage("Payment confirmed. Your access is ready.");
           return;
         }
         if (body.data.status === "failed") {
@@ -78,8 +81,8 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
         </h1>
         <p className="mt-3 text-on-surface-variant">{message}</p>
         {reference && <p className="mt-5 break-all text-xs text-outline">Reference: {reference}</p>}
-        <Link href="/" className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90">
-          Return home
+        <Link href="/dashboard/student/purchases" className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90">
+          View purchases
         </Link>
       </section>
     </main>

@@ -8,7 +8,12 @@ export const dashboardRouter = new Hono<{ Variables: Variables }>()
 
 dashboardRouter.use('*', jwtVerificationMiddleware)
 dashboardRouter.use('*', profileResolutionMiddleware)
-dashboardRouter.use('*', tenantMiddleware)
+dashboardRouter.use('*', async (c, next) => {
+  // Marketplace-only students have no school. Keep every staff/centre route
+  // tenant-protected, but let their capability-aware home load.
+  if (c.req.path === '/dashboard/student') return next()
+  return tenantMiddleware(c, next)
+})
 
 async function loadNeedsGrading(schoolId: string, tutorId?: string) {
   let assignmentsQuery = supabase
@@ -107,7 +112,20 @@ dashboardRouter.get('/student', async (c) => {
   }
 
   const schoolId = user.school_id
-  if (!schoolId) return c.json({ error: 'User does not belong to a school' }, 400)
+  if (!schoolId) {
+    const [{ data: profile, error: profileError }, { count: entitlementCount, error: entitlementError }, { count: activeAttempts, error: attemptError }] = await Promise.all([
+      supabase.from('user_profiles').select('first_name, last_name').eq('id', user.id).maybeSingle(),
+      supabase.from('mock_marketplace_entitlements').select('id', { count: 'exact', head: true }).eq('student_id', user.id).is('revoked_at', null),
+      supabase.from('mock_attempts').select('id', { count: 'exact', head: true }).eq('student_id', user.id).eq('access_source', 'marketplace_entitlement').eq('status', 'in_progress'),
+    ])
+    if (profileError || entitlementError || attemptError) return c.json({ error: 'Failed to load student dashboard', code: 'DASHBOARD_LOAD_FAILED' }, 500)
+    return c.json({ data: {
+      student: { first_name: profile?.first_name || '', last_name: profile?.last_name || '' },
+      school: null, course_count: 0, next_class: null, upcoming_classes: [], assignments_due: [], recent_updates: [],
+      capabilities: { hasCentreLearning: false, hasMarketplaceAccess: (entitlementCount || 0) > 0 },
+      marketplace: { mocks_owned: entitlementCount || 0, attempts_in_progress: activeAttempts || 0 },
+    } })
+  }
 
   const [{ data: profile, error: profileError }, { data: school, error: schoolError }, { data: enrolments, error: enrolmentsError }, { data: schoolCourses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
     supabase.from('user_profiles').select('first_name, last_name').eq('id', user.id).eq('school_id', schoolId).maybeSingle(),
@@ -136,6 +154,7 @@ dashboardRouter.get('/student', async (c) => {
       upcoming_classes: [],
       assignments_due: [],
       recent_updates: [],
+      capabilities: { hasCentreLearning: true, hasMarketplaceAccess: false },
     } })
   }
 
@@ -183,6 +202,7 @@ dashboardRouter.get('/student', async (c) => {
     upcoming_classes: upcomingClasses,
     assignments_due: assignmentsDue,
     recent_updates: recentUpdates,
+    capabilities: { hasCentreLearning: true, hasMarketplaceAccess: false },
   } })
 })
 

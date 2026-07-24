@@ -12,6 +12,12 @@ import {
 import { canReadQuestionBank } from "../domain/question-bank";
 import { createPresignedDownload } from "../storage/r2";
 import { REVIEWABLE_ATTEMPT_STATUSES } from "../domain/mock-results";
+import {
+  canTutorPublishMarketplace,
+  distributionRequiresCourse,
+  distributionUsesMarketplace,
+  parseMockDistributionMode,
+} from "../domain/mock-distribution";
 
 export const mocksRouter = new Hono<{ Variables: AppVariables }>();
 
@@ -43,8 +49,9 @@ export function validateMockForPublication(questions: PublishableQuestion[]) {
   return errors;
 }
 
-async function tutorCanAccessCourse(user: any, courseId: string) {
+async function tutorCanAccessCourse(user: any, courseId: string | null | undefined) {
   if (user.role === "admin") return true;
+  if (!courseId) return false;
   const { data } = await supabase.from("tutor_course_assignments")
     .select("course_id")
     .eq("school_id", user.school_id)
@@ -52,6 +59,13 @@ async function tutorCanAccessCourse(user: any, courseId: string) {
     .eq("course_id", courseId)
     .maybeSingle();
   return !!data;
+}
+
+async function canManageMock(user: any, mock: { tutor_id?: string | null; course_id?: string | null; distribution_mode?: string | null }) {
+  if (user.role === "admin") return true;
+  if (mock.tutor_id !== user.id) return false;
+  const distribution = parseMockDistributionMode(mock.distribution_mode) || "centre";
+  return distribution === "marketplace" || await tutorCanAccessCourse(user, mock.course_id);
 }
 
 async function loadMockMetrics(mockIds: string[], schoolId: string) {
@@ -139,30 +153,26 @@ mocksRouter.get("/", requireTutorOrAdmin, async (c) => {
     .eq("school_id", user.school_id)
     .order("created_at", { ascending: false });
 
+  const { data, error } = await query;
+  if (error) return c.json({ error: error.message }, 500);
+
+  let visibleMocks = data || [];
   if (user.role === "tutor") {
-    // Tutors only see mocks for courses they are assigned to
     const { data: assignments, error: assignError } = await supabase
       .from("tutor_course_assignments")
       .select("course_id")
       .eq("tutor_id", user.id)
       .eq("school_id", user.school_id);
-
     if (assignError) return c.json({ error: assignError.message }, 500);
 
-    const assignedCourseIds = assignments.map((a: any) => a.course_id);
-    
-    if (assignedCourseIds.length === 0) {
-      return c.json({ data: [] });
-    }
-    
-    query = query.in("course_id", assignedCourseIds);
+    const assignedCourseIds = new Set((assignments || []).map((assignment: any) => assignment.course_id));
+    visibleMocks = visibleMocks.filter((mock: any) =>
+      assignedCourseIds.has(mock.course_id)
+      || (mock.tutor_id === user.id && distributionUsesMarketplace(parseMockDistributionMode(mock.distribution_mode) || "centre")));
   }
 
-  const { data, error } = await query;
-  if (error) return c.json({ error: error.message }, 500);
-
-  const metrics = await loadMockMetrics((data || []).map((mock: any) => mock.id), user.school_id);
-  const mocksWithMetrics = (data || []).map((mock: any) => ({
+  const metrics = await loadMockMetrics(visibleMocks.map((mock: any) => mock.id), user.school_id);
+  const mocksWithMetrics = visibleMocks.map((mock: any) => ({
     ...mock,
     metrics: metrics.get(mock.id) || { attempts: 0, pending_grading: 0 }
   }));
@@ -195,10 +205,10 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id");
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, title, status, course_id, course:courses(name)")
+    .select("id, title, status, course_id, tutor_id, distribution_mode, course:courses(name)")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) return c.json({ error: "You are not assigned to this mock's course" }, 403);
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock" }, 403);
 
   const { data: attempts, error: attemptsError } = await supabase.from("mock_attempts")
     .select("id, student_id, mock_exam_version_id, started_at, submitted_at, status, mcq_score, theory_score, total_score, total_marks, total_mcq_questions, correct_mcq_answers, student:user_profiles(first_name, last_name, email)")
@@ -280,11 +290,9 @@ mocksRouter.post("/:id/attempt-grants", requireTutorOrAdmin, async (c) => {
   if (!attemptId) return c.json({ error: "Choose a student attempt", code: "VALIDATION_ERROR" }, 400);
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, course_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, course_id, tutor_id, distribution_mode").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
-    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
-  }
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot manage this mock", code: "MOCK_ACCESS_DENIED" }, 403);
 
   const { data: attempt, error: attemptError } = await supabase.from("mock_attempts")
     .select("id, student_id, mock_exam_version_id")
@@ -322,7 +330,7 @@ mocksRouter.get("/:id", requireTutorOrAdmin, async (c) => {
 
   if (error) return c.json({ error: error.message }, 500);
   if (!data) return c.json({ error: "Mock not found" }, 404);
-  if (!(await tutorCanAccessCourse(user, data.course_id))) return c.json({ error: "You are not assigned to this mock's course" }, 403);
+  if (!(await canManageMock(user, data))) return c.json({ error: "You cannot access this mock" }, 403);
   return c.json({ data });
 });
 
@@ -332,10 +340,10 @@ mocksRouter.get("/:id/questions", requireTutorOrAdmin, async (c) => {
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
   const mockId = c.req.param("id");
 
-  const { data: mock } = await supabase.from("mock_exams").select("course_id")
+  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found" }, 404);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) return c.json({ error: "You are not assigned to this mock's course" }, 403);
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock" }, 403);
 
   const { data: sections, error: sectionError } = await supabase.from("mock_sections")
     .select("id").eq("mock_exam_id", mockId).eq("school_id", user.school_id)
@@ -387,12 +395,10 @@ mocksRouter.get("/:id/assembly", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   const mockId = c.req.param("id");
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, status, course_id, tutor_id, distribution_mode").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError) return mockDatabaseError(c, mockError, "Could not load mock assembly");
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
-    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
-  }
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock", code: "MOCK_ACCESS_DENIED" }, 403);
 
   const { data: sections, error: sectionError } = await supabase.from("mock_sections")
     .select("id, course_id, title, subject_name, instructions, order_index")
@@ -437,13 +443,11 @@ mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
   if (errors.length) return c.json({ error: "Check the mock sections", code: "VALIDATION_ERROR", details: errors }, 400);
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, status, course_id, tutor_id, distribution_mode").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError) return mockDatabaseError(c, mockError, "Could not check mock");
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited", code: "MOCK_NOT_DRAFT" }, 409);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
-    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
-  }
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot edit this mock", code: "MOCK_ACCESS_DENIED" }, 403);
 
   try {
     const accessError = await validateAssemblyAccess(user, body.sections);
@@ -468,12 +472,10 @@ mocksRouter.post("/:id/random-pool/preview", requireTutorOrAdmin, async (c) => {
   const bankId = typeof body.bank_id === "string" ? body.bank_id : "";
   if (!bankId) return c.json({ error: "Choose a question bank", code: "VALIDATION_ERROR" }, 400);
 
-  const { data: mock } = await supabase.from("mock_exams").select("course_id")
+  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) {
-    return c.json({ error: "You are not assigned to this mock's course", code: "COURSE_ACCESS_DENIED" }, 403);
-  }
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock", code: "MOCK_ACCESS_DENIED" }, 403);
   const { data: bank, error: bankError } = await supabase.from("question_banks")
     .select("id, school_id, owner_id, visibility, archived_at").eq("id", bankId)
     .eq("school_id", user.school_id).is("archived_at", null).maybeSingle();
@@ -499,10 +501,10 @@ mocksRouter.post("/:id/archive", requireTutorOrAdmin, async (c) => {
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
   const mockId = c.req.param("id");
-  const { data: mock } = await supabase.from("mock_exams").select("course_id")
+  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found" }, 404);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) return c.json({ error: "You are not assigned to this mock's course" }, 403);
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot archive this mock" }, 403);
 
   const { data, error } = await supabase.from("mock_exams")
     .update({ status: "archived", updated_at: new Date().toISOString() })
@@ -517,9 +519,11 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
   const body = await c.req.json();
-  const { title, description, course_id, publish_at, time_limit_minutes } = body;
+  const { title, description, publish_at, time_limit_minutes } = body;
+  const distributionMode = parseMockDistributionMode(body.distribution_mode ?? "centre");
+  const courseId = typeof body.course_id === "string" && body.course_id ? body.course_id : null;
 
-  if (!title || !course_id) {
+  if (!title || !distributionMode || (distributionRequiresCourse(distributionMode) && !courseId)) {
     return c.json({ error: "Missing required fields" }, 400);
   }
   const duration = Number(time_limit_minutes || 0);
@@ -530,7 +534,9 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
   if (settings.errors.length) {
     return c.json({ error: "Check the mock settings", code: "VALIDATION_ERROR", details: settings.errors }, 400);
   }
-  if (!(await tutorCanAccessCourse(user, course_id))) return c.json({ error: "You are not assigned to this course" }, 403);
+  if (distributionRequiresCourse(distributionMode) && !(await tutorCanAccessCourse(user, courseId))) {
+    return c.json({ error: "You are not assigned to this course" }, 403);
+  }
 
   // Use the kanvise_user_id (which is a UUID in the kanvise_users table) for tutor_id
   const tutorId = user.id;
@@ -541,7 +547,8 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
       {
         school_id: user.school_id,
         tutor_id: tutorId,
-        course_id,
+        course_id: courseId,
+        distribution_mode: distributionMode,
         title,
         description,
         status: "draft",
@@ -567,12 +574,12 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
 
   const mockId = c.req.param("id");
   const body = await c.req.json();
-  const { title, description, course_id, publish_at, time_limit_minutes } = body;
+  const { title, description, publish_at, time_limit_minutes } = body;
 
   // Verify mock exists and is draft
   const { data: existingMock, error: fetchError } = await supabase
     .from("mock_exams")
-    .select("status, tutor_id, course_id, available_from, closes_at")
+    .select("status, tutor_id, course_id, distribution_mode, available_from, closes_at")
     .eq("id", mockId)
     .eq("school_id", user.school_id)
     .single();
@@ -582,6 +589,15 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   if (existingMock.status !== "draft") {
     return c.json({ error: "Only draft mocks can be edited" }, 400);
   }
+
+  const distributionMode = parseMockDistributionMode(body.distribution_mode ?? existingMock.distribution_mode ?? "centre");
+  const courseId = body.course_id === undefined
+    ? existingMock.course_id
+    : typeof body.course_id === "string" && body.course_id ? body.course_id : null;
+  if (!distributionMode || (distributionRequiresCourse(distributionMode) && !courseId)) {
+    return c.json({ error: "Choose a course for mocks shared with centre students", code: "VALIDATION_ERROR" }, 400);
+  }
+  if (!(await canManageMock(user, existingMock))) return c.json({ error: "You cannot edit this mock", code: "MOCK_ACCESS_DENIED" }, 403);
 
   const duration = Number(time_limit_minutes || 0);
   if (!Number.isInteger(duration) || duration < 0 || duration > 1440) {
@@ -596,14 +612,17 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
     return c.json({ error: "Check the mock settings", code: "VALIDATION_ERROR", details: settings.errors }, 400);
   }
 
-  if (!(await tutorCanAccessCourse(user, course_id))) return c.json({ error: "You are not assigned to this course" }, 403);
+  if (distributionRequiresCourse(distributionMode) && !(await tutorCanAccessCourse(user, courseId))) {
+    return c.json({ error: "You are not assigned to this course" }, 403);
+  }
 
   const { data, error } = await supabase
     .from("mock_exams")
     .update({
       title,
       description,
-      course_id,
+      course_id: courseId,
+      distribution_mode: distributionMode,
       publish_at,
       time_limit_minutes: duration,
       ...settings.updates,
@@ -631,11 +650,11 @@ mocksRouter.post("/:id/questions", requireTutorOrAdmin, async (c) => {
     return c.json({ error: "Missing required fields" }, 400);
   }
 
-  const { data: mock } = await supabase.from("mock_exams").select("status, course_id")
+  const { data: mock } = await supabase.from("mock_exams").select("status, course_id, tutor_id, distribution_mode")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited" }, 409);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) return c.json({ error: "You are not assigned to this mock's course" }, 403);
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot edit this mock" }, 403);
 
   if (question_type === "mcq" && (!options || options.length === 0)) {
     return c.json({ error: "MCQ_REQUIRES_OPTIONS" }, 400);
@@ -718,14 +737,14 @@ mocksRouter.put("/:id/questions", requireTutorOrAdmin, async (c) => {
   // Verify mock exists, is draft, and passes security constraints
   const { data: existingMock } = await supabase
     .from("mock_exams")
-    .select("status, tutor_id, course_id")
+    .select("status, tutor_id, course_id, distribution_mode")
     .eq("id", mockId)
     .eq("school_id", user.school_id)
     .single();
 
   if (!existingMock) return c.json({ error: "Mock not found" }, 404);
   if (existingMock.status !== "draft") return c.json({ error: "Only draft mocks can be edited" }, 400);
-  if (!(await tutorCanAccessCourse(user, existingMock.course_id))) return c.json({ error: "You are not assigned to this mock's course" }, 403);
+  if (!(await canManageMock(user, existingMock))) return c.json({ error: "You cannot edit this mock" }, 403);
 
   if (questions.length > 0) {
     const validationErrors = validateMockForPublication(questions);
@@ -753,15 +772,16 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id");
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, time_limit_minutes")
+    .select("id, status, course_id, tutor_id, distribution_mode, time_limit_minutes")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be published" }, 409);
-  if (!(await tutorCanAccessCourse(user, mock.course_id))) return c.json({ error: "You are not assigned to this mock's course" }, 403);
+  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot publish this mock" }, 403);
   if (mock.time_limit_minutes !== null && Number(mock.time_limit_minutes) < 0) {
     return c.json({ error: "Time limit cannot be negative" }, 400);
   }
 
+  const distributionMode = parseMockDistributionMode(mock.distribution_mode) || "centre";
   let { count: sectionCount, error: sectionError } = await supabase.from("mock_sections")
     .select("id", { count: "exact", head: true }).eq("mock_exam_id", mockId).eq("school_id", user.school_id);
   if (sectionError) return mockDatabaseError(c, sectionError, "Failed to validate mock sections");
@@ -786,6 +806,35 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     sectionCount = 1;
   }
 
+  if (distributionUsesMarketplace(distributionMode) && !canTutorPublishMarketplace(user.role)) {
+    // Freeze the exact version the tutor is submitting. It remains unavailable
+    // publicly until a centre admin creates/approves its marketplace listing.
+    const submittedAt = new Date().toISOString();
+    const { data: versionResult, error: versionError } = await supabase.rpc("publish_versioned_mock", {
+      p_school_id: user.school_id,
+      p_mock_exam_id: mockId,
+      p_published_by: user.id,
+      p_published_at: submittedAt,
+    });
+    if (versionError) return mockDatabaseError(c, versionError, "Could not freeze this mock for approval");
+    const { data, error } = await supabase.from("mock_exams")
+      .update({
+        marketplace_approval_status: "pending",
+        marketplace_submitted_at: submittedAt,
+        marketplace_rejection_reason: null,
+        updated_at: submittedAt,
+      })
+      .eq("id", mockId).eq("school_id", user.school_id)
+      .select("id, marketplace_approval_status")
+      .single();
+    if (error) return mockDatabaseError(c, error, "Could not submit this mock for approval");
+    return c.json({
+      message: "Mock submitted for centre-admin approval",
+      data,
+      version: versionResult?.[0] || versionResult,
+    }, 202);
+  }
+
   const publishedAt = new Date().toISOString();
   const { data: versionResult, error: publishError } = await supabase.rpc("publish_versioned_mock", {
     p_school_id: user.school_id,
@@ -798,13 +847,27 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     .select("*, course:courses(name)").eq("id", mockId).eq("school_id", user.school_id).single();
   if (error) return mockDatabaseError(c, error, "Mock was published but could not be reloaded");
 
-  const notification = await notifyMockPublished({
-    id: data.id,
-    schoolId: data.school_id,
-    courseId: data.course_id,
-    title: data.title,
-    courseName: (data.course as any)?.name || "Your course",
-  });
+  if (distributionUsesMarketplace(distributionMode)) {
+    const { error: approvalError } = await supabase.from("mock_exams")
+      .update({
+        marketplace_approval_status: "approved",
+        marketplace_approved_at: publishedAt,
+        marketplace_approved_by: user.id,
+        marketplace_rejection_reason: null,
+      })
+      .eq("id", mockId).eq("school_id", user.school_id);
+    if (approvalError) return mockDatabaseError(c, approvalError, "Mock was published but marketplace approval could not be recorded");
+  }
+
+  const notification = distributionMode === "marketplace"
+    ? { failures: [] }
+    : await notifyMockPublished({
+      id: data.id,
+      schoolId: data.school_id,
+      courseId: data.course_id,
+      title: data.title,
+      courseName: (data.course as any)?.name || "Your course",
+    });
   if (notification.failures.length === 0) {
     await supabase.from("mock_exams").update({ notification_sent: true }).eq("id", data.id);
   }

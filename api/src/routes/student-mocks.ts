@@ -2,13 +2,21 @@ import { createHash } from 'node:crypto'
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { loadStudentCourseIds } from '../lib/student-course-access'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
+import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole } from '../middleware/auth'
 import { createPresignedDownload } from '../storage/r2'
 import type { AppVariables } from '../types'
 
 export const studentMocksRouter = new Hono<{ Variables: AppVariables }>()
 
-studentMocksRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
+// `bank_questions.current_version_id` and `bank_question_versions.question_id`
+// create two PostgREST relationships between these tables. Student reads always
+// need the question that owns a version, so the foreign-key hint is mandatory.
+export const studentQuestionVersionSelect = 'question:bank_questions!bank_question_versions_question_id_fkey(question_type)'
+
+// A marketplace learner has no centre, but can still own a valid attempt. Each
+// route below performs its own course/entitlement check; do not put the generic
+// school-required middleware back on this router.
+studentMocksRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware)
 studentMocksRouter.use('/*', requireRole('student'))
 
 const attemptErrors = [
@@ -32,6 +40,7 @@ function attemptDatabaseError(c: any, error: any, fallback: string) {
 }
 
 async function accessibleMock(user: any, mockId: string) {
+  if (!user.school_id) return null
   const courseIds = await loadStudentCourseIds(user.id, user.school_id)
   if (!courseIds.length) return null
   const { data, error } = await supabase.from('mock_exams')
@@ -46,6 +55,46 @@ function availability(mock: any, now: Date) {
   if (mock.available_from && now < new Date(mock.available_from)) return 'upcoming'
   if (mock.closes_at && now >= new Date(mock.closes_at)) return 'closed'
   return 'open'
+}
+
+async function marketplaceMockGroups(user: any) {
+  const groups: Record<string, any[]> = { available: [], in_progress: [], upcoming: [], completed: [] }
+  const { data: entitlements, error } = await supabase.from('mock_marketplace_entitlements').select(`
+    id, attempts_granted, attempts_consumed, granted_at, expires_at,
+    listing:mock_marketplace_listings(id, source_mock_id, mock_version_id, title, short_description, available_from, closes_at,
+      duration_minutes, question_count, total_marks, calculator_mode, approval_status, publication_status, creator_school:schools!mock_marketplace_listings_creator_school_id_fkey(name))
+  `).eq('student_id', user.id).is('revoked_at', null).order('granted_at', { ascending: false })
+  if (error) throw error
+  const active = (entitlements || []).filter((item: any) => item.listing && (!item.expires_at || new Date(item.expires_at) > new Date()))
+  if (!active.length) return groups
+  const entitlementIds = active.map((item: any) => item.id)
+  const { data: attempts, error: attemptsError } = await supabase.from('mock_attempts')
+    .select('id, marketplace_entitlement_id, attempt_number, status, started_at, deadline_at, submitted_at, total_score, total_marks')
+    .eq('student_id', user.id).in('marketplace_entitlement_id', entitlementIds)
+  if (attemptsError) throw attemptsError
+  const now = new Date()
+  for (const entitlement of active as any[]) {
+    const listing = entitlement.listing
+    const listingAttempts = (attempts || []).filter((attempt: any) => attempt.marketplace_entitlement_id === entitlement.id)
+    const inProgress = listingAttempts.find((attempt: any) => attempt.status === 'in_progress' && (!attempt.deadline_at || now < new Date(attempt.deadline_at)))
+    const completed = [...listingAttempts].filter((attempt: any) => attempt.status !== 'in_progress').sort((a: any, b: any) => b.attempt_number - a.attempt_number)[0]
+    const item = {
+      id: listing.source_mock_id, marketplace_listing_id: listing.id, source: 'marketplace', title: listing.title,
+      description: listing.short_description, course_id: null, course: listing.creator_school ? { name: (listing.creator_school as any).name } : null,
+      available_from: listing.available_from, closes_at: listing.closes_at, time_limit_minutes: listing.duration_minutes,
+      calculator_mode: listing.calculator_mode, version: { id: listing.mock_version_id, total_questions: listing.question_count, total_marks: listing.total_marks },
+      attempts_used: entitlement.attempts_consumed, attempts_allowed: entitlement.attempts_granted,
+    }
+    if (inProgress) groups.in_progress.push({ ...item, attempt: inProgress })
+    else if (completed && entitlement.attempts_consumed >= entitlement.attempts_granted) groups.completed.push({ ...item, attempt: completed })
+    else if (listing.approval_status === 'approved' && listing.publication_status === 'listed') {
+      const state = availability(listing, now)
+      if (state === 'open') groups.available.push(item)
+      if (state === 'upcoming') groups.upcoming.push(item)
+      if (state === 'closed' && completed) groups.completed.push({ ...item, attempt: completed })
+    } else if (completed) groups.completed.push({ ...item, attempt: completed })
+  }
+  return groups
 }
 
 function seededOrder<T extends { id: string }>(items: T[], seed: string) {
@@ -91,9 +140,9 @@ async function latestVersion(mockId: string, schoolId: string) {
   return data
 }
 
-async function submitAttempt(user: any, attemptId: string, reason: 'student' | 'timeout') {
+async function submitAttempt(user: any, schoolId: string, attemptId: string, reason: 'student' | 'timeout') {
   return supabase.rpc('submit_versioned_mock_attempt', {
-    p_school_id: user.school_id,
+    p_school_id: schoolId,
     p_attempt_id: attemptId,
     p_student_id: user.id,
     p_now: new Date().toISOString(),
@@ -101,17 +150,24 @@ async function submitAttempt(user: any, attemptId: string, reason: 'student' | '
   })
 }
 
+async function ownedAttemptSchoolId(user: any, attemptId: string) {
+  const { data, error } = await supabase.from('mock_attempts').select('school_id')
+    .eq('id', attemptId).eq('student_id', user.id).maybeSingle()
+  if (error) throw error
+  return data?.school_id || null
+}
+
 async function loadAttempt(user: any, attemptId: string, lazyFinalize = true) {
   let { data, error } = await supabase.from('mock_attempts')
     .select('*, mock_exam:mock_exams(id, title, description, course_id, calculator_mode, shuffle_questions, shuffle_options, result_release_mode, pass_mark, closes_at, course:courses(name)), version:mock_exam_versions(id, version_number, settings, total_questions, total_marks)')
-    .eq('id', attemptId).eq('school_id', user.school_id).eq('student_id', user.id).maybeSingle()
+    .eq('id', attemptId).eq('student_id', user.id).maybeSingle()
   if (error) throw error
   if (data?.status === 'in_progress' && data.deadline_at && new Date() >= new Date(data.deadline_at) && lazyFinalize) {
-    const result = await submitAttempt(user, attemptId, 'timeout')
+    const result = await submitAttempt(user, data.school_id, attemptId, 'timeout')
     if (result.error) throw result.error
     const reloaded = await supabase.from('mock_attempts')
       .select('*, mock_exam:mock_exams(id, title, description, course_id, calculator_mode, shuffle_questions, shuffle_options, result_release_mode, pass_mark, closes_at, course:courses(name)), version:mock_exam_versions(id, version_number, settings, total_questions, total_marks)')
-      .eq('id', attemptId).eq('school_id', user.school_id).eq('student_id', user.id).maybeSingle()
+      .eq('id', attemptId).eq('student_id', user.id).maybeSingle()
     if (reloaded.error) throw reloaded.error
     data = reloaded.data
   }
@@ -121,6 +177,7 @@ async function loadAttempt(user: any, attemptId: string, lazyFinalize = true) {
 studentMocksRouter.get('/students/me/mocks', async c => {
   const user = c.get('user')
   try {
+    if (!user.school_id) return c.json({ data: await marketplaceMockGroups(user), server_now: new Date().toISOString() })
     const courseIds = await loadStudentCourseIds(user.id, user.school_id!)
     if (!courseIds.length) return c.json({ data: { available: [], in_progress: [], upcoming: [], completed: [] } })
     const { data: mocks, error } = await supabase.from('mock_exams')
@@ -145,7 +202,7 @@ studentMocksRouter.get('/students/me/mocks', async c => {
     const now = new Date()
     for (const attempt of attempts || []) {
       if (attempt.status === 'in_progress' && attempt.deadline_at && now >= new Date(attempt.deadline_at)) {
-        const finalized = await submitAttempt(user, attempt.id, 'timeout')
+        const finalized = await submitAttempt(user, user.school_id!, attempt.id, 'timeout')
         if (finalized.error) throw finalized.error
         Object.assign(attempt, finalized.data?.[0] || {}, { status: finalized.data?.[0]?.status || 'timed_out' })
       }
@@ -170,6 +227,8 @@ studentMocksRouter.get('/students/me/mocks', async c => {
         else if (completed) groups.completed.push({ ...item, attempt: completed })
       }
     }
+    const marketplaceGroups = await marketplaceMockGroups(user)
+    for (const key of Object.keys(groups)) groups[key].push(...marketplaceGroups[key])
     return c.json({ data: groups, server_now: now.toISOString() })
   } catch (error) {
     return attemptDatabaseError(c, error, 'Could not load your mocks')
@@ -192,7 +251,7 @@ studentMocksRouter.get('/mocks/:mockId/preflight', async c => {
     if (attemptError || grantError) throw attemptError || grantError
     for (const attempt of attempts || []) {
       if (attempt.status === 'in_progress' && attempt.deadline_at && new Date() >= new Date(attempt.deadline_at)) {
-        const finalized = await submitAttempt(user, attempt.id, 'timeout')
+        const finalized = await submitAttempt(user, user.school_id!, attempt.id, 'timeout')
         if (finalized.error) throw finalized.error
         Object.assign(attempt, finalized.data?.[0] || {}, { status: finalized.data?.[0]?.status || 'timed_out' })
       }
@@ -229,7 +288,7 @@ studentMocksRouter.post('/mocks/:mockId/attempts', async c => {
       const { data: expired } = await supabase.from('mock_attempts').select('id').eq('school_id', user.school_id)
         .eq('student_id', user.id).eq('mock_exam_version_id', version!.id).eq('status', 'in_progress').maybeSingle()
       if (expired) {
-        const finalized = await submitAttempt(user, expired.id, 'timeout')
+        const finalized = await submitAttempt(user, user.school_id!, expired.id, 'timeout')
         if (finalized.error) throw finalized.error
       }
       result = await supabase.rpc('start_or_resume_versioned_mock_attempt', {
@@ -251,11 +310,11 @@ studentMocksRouter.get('/attempts/:attemptId', async c => {
     if (attempt.status !== 'in_progress') return c.json({ error: 'Attempt has ended', code: 'ATTEMPT_FINALIZED', data: { status: attempt.status } }, 409)
     const [{ data: snapshots, error: questionError }, { data: answers, error: answerError }] = await Promise.all([
       supabase.from('mock_version_questions')
-        .select('id, section_title, section_order_index, order_index, marks, version:bank_question_versions(id, plain_text, content_blocks, stimulus:question_stimuli(id, title, plain_text, content_blocks), question:bank_questions(question_type), options:bank_question_option_versions(id, plain_text, content_blocks, order_index))')
-        .eq('school_id', user.school_id).eq('mock_exam_version_id', attempt.mock_exam_version_id)
+        .select(`id, section_title, section_order_index, order_index, marks, version:bank_question_versions(id, plain_text, content_blocks, stimulus:question_stimuli(id, title, plain_text, content_blocks), ${studentQuestionVersionSelect}, options:bank_question_option_versions(id, plain_text, content_blocks, order_index))`)
+        .eq('school_id', attempt.school_id).eq('mock_exam_version_id', attempt.mock_exam_version_id)
         .order('section_order_index').order('order_index'),
       supabase.from('mock_answers').select('mock_version_question_id, selected_option_version_id, theory_answer_text, is_flagged, saved_at')
-        .eq('school_id', user.school_id).eq('attempt_id', attempt.id),
+        .eq('school_id', attempt.school_id).eq('attempt_id', attempt.id),
     ])
     if (questionError || answerError) throw questionError || answerError
     let questions = (snapshots || []).map((snapshot: any) => ({
@@ -271,7 +330,7 @@ studentMocksRouter.get('/attempts/:attemptId', async c => {
       ...question,
       options: attempt.mock_exam?.shuffle_options ? seededOrder(question.options, `${attempt.id}:${question.id}`) : question.options,
     }))
-    questions = await attachStudentMedia(questions, user.school_id!)
+    questions = await attachStudentMedia(questions, attempt.school_id)
     return c.json({ data: {
       attempt: {
         id: attempt.id, status: attempt.status, attempt_number: attempt.attempt_number,
@@ -298,8 +357,10 @@ studentMocksRouter.put('/attempts/:attemptId/answers/:questionId', async c => {
     return c.json({ error: 'Theory answer is too long', code: 'VALIDATION_ERROR' }, 400)
   }
   try {
+    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId'))
+    if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
     const { data, error } = await supabase.rpc('save_versioned_mock_answer', {
-      p_school_id: user.school_id,
+      p_school_id: schoolId,
       p_attempt_id: c.req.param('attemptId'),
       p_student_id: user.id,
       p_mock_version_question_id: c.req.param('questionId'),
@@ -320,12 +381,14 @@ studentMocksRouter.patch('/attempts/:attemptId/questions/:questionId/flag', asyn
   const body = await c.req.json()
   if (typeof body.is_flagged !== 'boolean') return c.json({ error: 'is_flagged must be true or false', code: 'VALIDATION_ERROR' }, 400)
   try {
+    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId'))
+    if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
     const { data: current, error: loadError } = await supabase.from('mock_answers')
-      .select('selected_option_version_id, theory_answer_text').eq('school_id', user.school_id)
+      .select('selected_option_version_id, theory_answer_text').eq('school_id', schoolId)
       .eq('attempt_id', c.req.param('attemptId')).eq('mock_version_question_id', c.req.param('questionId')).maybeSingle()
     if (loadError) throw loadError
     const { data, error } = await supabase.rpc('save_versioned_mock_answer', {
-      p_school_id: user.school_id, p_attempt_id: c.req.param('attemptId'), p_student_id: user.id,
+      p_school_id: schoolId, p_attempt_id: c.req.param('attemptId'), p_student_id: user.id,
       p_mock_version_question_id: c.req.param('questionId'),
       p_selected_option_version_id: current?.selected_option_version_id || null,
       p_theory_answer_text: current?.theory_answer_text || null,
@@ -341,7 +404,9 @@ studentMocksRouter.patch('/attempts/:attemptId/questions/:questionId/flag', asyn
 studentMocksRouter.post('/attempts/:attemptId/submit', async c => {
   const user = c.get('user')
   try {
-    const { data, error } = await submitAttempt(user, c.req.param('attemptId'), 'student')
+    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId'))
+    if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
+    const { data, error } = await submitAttempt(user, schoolId, c.req.param('attemptId'), 'student')
     if (error) return attemptDatabaseError(c, error, 'Could not submit your mock')
     return c.json({ data: data?.[0] || data })
   } catch (error) {
@@ -357,13 +422,13 @@ studentMocksRouter.get('/attempts/:attemptId/results', async c => {
     if (attempt.status === 'in_progress') return c.json({ error: 'Submit the mock before viewing results', code: 'ATTEMPT_IN_PROGRESS' }, 409)
     const mode = attempt.mock_exam?.result_release_mode || 'score_only'
     const { data: questionTypes, error: typeError } = await supabase.from('mock_version_questions')
-      .select('id, version:bank_question_versions(question:bank_questions(question_type))')
-      .eq('school_id', user.school_id).eq('mock_exam_version_id', attempt.mock_exam_version_id)
+      .select(`id, version:bank_question_versions(${studentQuestionVersionSelect})`)
+      .eq('school_id', attempt.school_id).eq('mock_exam_version_id', attempt.mock_exam_version_id)
     if (typeError) throw typeError
     const theoryIds = (questionTypes || []).filter((item: any) => (item.version as any)?.question?.question_type === 'theory').map((item: any) => item.id)
     const { data: theoryAnswers, error: theoryError } = theoryIds.length
       ? await supabase.from('mock_answers').select('mock_version_question_id, tutor_score')
-        .eq('school_id', user.school_id).eq('attempt_id', attempt.id).in('mock_version_question_id', theoryIds)
+        .eq('school_id', attempt.school_id).eq('attempt_id', attempt.id).in('mock_version_question_id', theoryIds)
       : { data: [], error: null }
     if (theoryError) throw theoryError
     const scoredTheoryIds = new Set((theoryAnswers || []).filter((answer: any) => answer.tutor_score !== null).map((answer: any) => answer.mock_version_question_id))
@@ -374,13 +439,13 @@ studentMocksRouter.get('/attempts/:attemptId/results', async c => {
     let corrections: any[] | undefined
     if (correctionsReleased) {
       const { data, error } = await supabase.from('mock_version_questions')
-        .select('id, section_title, order_index, marks, version:bank_question_versions(plain_text, content_blocks, explanation_blocks, question:bank_questions(question_type), options:bank_question_option_versions(id, plain_text, content_blocks, is_correct, order_index))')
-        .eq('school_id', user.school_id).eq('mock_exam_version_id', attempt.mock_exam_version_id)
+        .select(`id, section_title, order_index, marks, version:bank_question_versions(plain_text, content_blocks, explanation_blocks, ${studentQuestionVersionSelect}, options:bank_question_option_versions(id, plain_text, content_blocks, is_correct, order_index))`)
+        .eq('school_id', attempt.school_id).eq('mock_exam_version_id', attempt.mock_exam_version_id)
         .order('section_order_index').order('order_index')
       if (error) throw error
       const { data: answers, error: answerError } = await supabase.from('mock_answers')
         .select('mock_version_question_id, selected_option_version_id, theory_answer_text, is_correct, tutor_score, tutor_feedback')
-        .eq('school_id', user.school_id).eq('attempt_id', attempt.id)
+        .eq('school_id', attempt.school_id).eq('attempt_id', attempt.id)
       if (answerError) throw answerError
       const answerMap = new Map((answers || []).map((answer: any) => [answer.mock_version_question_id, answer]))
       corrections = (data || []).map((snapshot: any) => ({
@@ -390,7 +455,7 @@ studentMocksRouter.get('/attempts/:attemptId/results', async c => {
         explanation_blocks: snapshot.version?.explanation_blocks || [], options: snapshot.version?.options || [],
         answer: answerMap.get(snapshot.id) || null,
       }))
-      corrections = await attachStudentMedia(corrections, user.school_id!)
+      corrections = await attachStudentMedia(corrections, attempt.school_id)
     }
     return c.json({ data: {
       attempt: {
