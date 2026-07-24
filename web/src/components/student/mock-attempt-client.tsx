@@ -53,6 +53,7 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  const [isOnline, setIsOnline] = useState(true)
   const serverOffset = useRef(new Date(data.server_now).getTime() - Date.now())
   const debounce = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const active = questions[current]
@@ -110,6 +111,19 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
     const interval = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    const markOnline = () => setIsOnline(true)
+    const markOffline = () => setIsOnline(false)
+    markOnline()
+    if (!navigator.onLine) markOffline()
+    window.addEventListener('online', markOnline)
+    window.addEventListener('offline', markOffline)
+    return () => {
+      window.removeEventListener('online', markOnline)
+      window.removeEventListener('offline', markOffline)
+    }
+  }, [])
   const timedOut = remaining === 0
   const timeoutSubmitted = useRef(false)
   useEffect(() => {
@@ -156,6 +170,7 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
 
   return <main className="min-h-[calc(100vh-4rem)] bg-[#f8f7f5] pb-28 lg:pb-8">
     <header className="sticky top-16 z-20 border-b border-[#dfdad5] bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:top-16 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{data.mock.title}</p><p className="truncate text-xs text-[#716c76]">{active.section_title}</p></div><div className="flex items-center gap-2">{data.mock.calculator_mode !== 'none' && <button onClick={() => setCalculatorOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm font-medium text-[#2e2877]"><Calculator size={16} /><span className="hidden sm:inline">Calculator</span></button>}<button onClick={() => setShortcutsOpen(true)} className="hidden min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm text-[#716c76] sm:inline-flex"><Keyboard size={16} />Shortcuts</button>{remaining !== null && <span className={`min-w-[78px] rounded-lg px-3 py-2 text-center font-mono text-sm font-semibold ${remaining < 300 ? 'bg-[#fde8e4] text-[#a43522]' : 'bg-[#eeeafe] text-[#2e2877]'}`}>{formatRemaining(remaining)}</span>}</div></div></header>
+    {!isOnline && <div role="status" className="border-b border-[#f0c8bb] bg-[#fff4ee] px-4 py-3 text-sm text-[#87351f] sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-start gap-2"><CloudOff className="mt-0.5 shrink-0" size={17} /><p><strong>Connection lost.</strong> Keep working—your answers are stored on this device and will retry when you reconnect. The mock timer continues and answers received after time runs out cannot be accepted.</p></div></div>}
     <div className="mx-auto grid max-w-[1440px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[230px_minmax(0,1fr)] lg:px-10">
       <aside className="order-2 lg:order-1"><div className="sticky top-36 rounded-2xl border border-[#e2ddd8] bg-white p-4"><div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Questions</h2><span className="text-xs text-[#716c76]">{answeredCount}/{questions.length} answered</span></div><div className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible">{questions.map((question, index) => { const saved = answers.get(question.id); const answered = Boolean(saved?.selected_option_version_id || saved?.theory_answer_text?.trim()); return <button key={question.id} onClick={() => setCurrent(index)} aria-label={`Question ${index + 1}${saved?.is_flagged ? ', flagged' : ''}${answered ? ', answered' : ''}`} className={`relative h-10 min-w-10 rounded-lg border text-xs font-semibold ${index === current ? 'border-[#2e2877] bg-[#2e2877] text-white' : answered ? 'border-[#9bceb0] bg-[#edf8f1] text-[#276744]' : 'border-[#d9d3cf] bg-white text-[#5f5964]'}`}>{index + 1}{saved?.is_flagged && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#c26627]" />}</button>})}</div><button onClick={() => setConfirming(true)} className="mt-5 hidden min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] text-sm font-semibold text-white lg:flex"><Send size={16} />Review and submit</button></div></aside>
       <section className="order-1 min-w-0 lg:order-2"><article className="rounded-2xl border border-[#e2ddd8] bg-white p-5 sm:p-7 lg:p-9">

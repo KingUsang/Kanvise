@@ -15,7 +15,7 @@ vi.mock('../middleware/auth', () => ({
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
 }))
 
-import { notesRouter, withoutPrivateFileKey } from './notes'
+import { notesRouter, studentMaterialsSelect, withoutPrivateFileKey } from './notes'
 
 function query(result: any, inSpy = vi.fn(), eqSpy = vi.fn()) {
   const value: any = {
@@ -65,5 +65,25 @@ describe('student materials library security', () => {
       file_key: 'school-1/private/note/course-1/secret.pdf',
       file_name: 'revision.pdf',
     })).toEqual({ id: 'note-1', file_name: 'revision.pdf' })
+  })
+
+  it('keeps the library available when an old note key cannot be signed', async () => {
+    mocks.download.mockRejectedValueOnce(new Error('old file key'))
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
+      if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
+      if (table === 'sub_programmes') return query({ data: [], error: null })
+      if (table === 'notes') return query({ data: [{ id: 'note-1', file_key: 'legacy-key', course_id: 'course-1' }], error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+
+    const response = await notesRouter.request('/me')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ data: [{ id: 'note-1', download_url: null, download_available: false }] })
+  })
+
+  it('uses the notes course foreign key explicitly', () => {
+    expect(studentMaterialsSelect).toContain('courses!notes_course_id_fkey')
   })
 })

@@ -16,6 +16,8 @@ type Variables = {
 
 export const notesRouter = new Hono<{ Variables: Variables }>();
 
+export const studentMaterialsSelect = 'id, title, description, file_key, file_name, file_type, file_size_bytes, created_at, course_id, course:courses!notes_course_id_fkey(id, name), tutor:user_profiles!notes_tutor_id_fkey(id, first_name, last_name)'
+
 export function withoutPrivateFileKey<T extends Record<string, any>>(note: T): Omit<T, "file_key"> {
   const { file_key: _fileKey, ...safeNote } = note;
   return safeNote as Omit<T, "file_key">;
@@ -45,13 +47,28 @@ notesRouter.get("/me", async (c) => {
     if (!courseIds.length) return c.json({ data: [] });
 
     const { data, error } = await supabase.from("notes")
-      .select("id, title, description, file_key, file_name, file_type, file_size_bytes, created_at, course_id, course:courses(id, name), tutor:user_profiles!notes_tutor_id_fkey(id, first_name, last_name)")
+      .select(studentMaterialsSelect)
       .eq("school_id", profile.school_id).in("course_id", courseIds)
       .order("created_at", { ascending: false });
     if (error) throw error;
-    const notes = await Promise.all((data || []).map(async ({ file_key, ...note }) => ({
-      ...note, download_url: await createPresignedDownload(file_key, profile.school_id),
-    })));
+    const notes = await Promise.all((data || []).map(async ({ file_key, ...note }) => {
+      try {
+        return {
+          ...note,
+          download_url: await createPresignedDownload(file_key, profile.school_id),
+          download_available: true,
+        }
+      } catch (downloadError: any) {
+        // Old records may predate the current tenant-scoped private-key format.
+        // Keep the student's library usable, without exposing the key or issuing a
+        // link outside the permitted school path.
+        console.error('notes.download_unavailable', {
+          noteId: note.id,
+          code: downloadError instanceof StorageError ? downloadError.code : undefined,
+        })
+        return { ...note, download_url: null, download_available: false }
+      }
+    }))
     return c.json({ data: notes });
   } catch (error: any) {
     console.error("GET /notes/me error:", error);

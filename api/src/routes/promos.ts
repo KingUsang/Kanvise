@@ -13,7 +13,7 @@ promosRouter.use("*", requireRole("admin"));
 // ---------------------------------------------------------------------------
 // 1. POST /schools/me/promos - Create a Promotional Banner
 // ---------------------------------------------------------------------------
-promosRouter.post("/schools/me/promos", async (c) => {
+promosRouter.post("/", async (c) => {
   const user = c.get("user");
   const body = await c.req.json();
   const { title, image_key, link_type, link_id, order_index, content_type, file_size_bytes } = body;
@@ -57,7 +57,7 @@ promosRouter.post("/schools/me/promos", async (c) => {
 // ---------------------------------------------------------------------------
 // 2. GET /schools/me/promos - List all Promos for Admin's School
 // ---------------------------------------------------------------------------
-promosRouter.get("/schools/me/promos", async (c) => {
+promosRouter.get("/", async (c) => {
   const user = c.get("user");
   const { data: promos, error } = await supabase
     .from("school_promos")
@@ -72,7 +72,7 @@ promosRouter.get("/schools/me/promos", async (c) => {
 // ---------------------------------------------------------------------------
 // 3. PATCH /schools/me/promos/reorder - Reorder Promos Carousel
 // ---------------------------------------------------------------------------
-promosRouter.patch("/schools/me/promos/reorder", async (c) => {
+promosRouter.patch("/reorder", async (c) => {
   const user = c.get("user");
   const body = await c.req.json();
   const { order } = body;

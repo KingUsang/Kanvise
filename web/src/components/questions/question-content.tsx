@@ -19,9 +19,15 @@ function Formula({ latex }: { latex: string }) {
     : <code className="my-3 block overflow-x-auto rounded-lg bg-[#f3f0ed] p-3">{latex}</code>
 }
 
+export function shouldRenderPlainText(plainText: string | null | undefined, blocks: ContentBlock[]) {
+  const normalizedPlainText = plainText?.trim().replace(/\s+/g, ' ')
+  if (!normalizedPlainText) return false
+  return !blocks.some(block => block.type === 'text' && block.text.trim().replace(/\s+/g, ' ') === normalizedPlainText)
+}
+
 export function QuestionContent({ plainText, blocks = [] }: { plainText?: string | null; blocks?: ContentBlock[] }) {
   return <div className="space-y-3 text-[15px] leading-7 text-[#302d36]">
-    {plainText && <p className="whitespace-pre-wrap">{plainText}</p>}
+    {shouldRenderPlainText(plainText, blocks) && <p className="whitespace-pre-wrap">{plainText}</p>}
     {blocks.map((block, index) => {
       if (block.type === 'text') return <p key={index} className="whitespace-pre-wrap">{block.text}</p>
       if (block.type === 'equation' || block.type === 'chemistry') return <Formula key={index} latex={block.latex} />

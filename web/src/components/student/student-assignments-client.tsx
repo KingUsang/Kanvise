@@ -20,7 +20,10 @@ function dateTime(value: string) { return new Intl.DateTimeFormat("en-NG", { day
 
 export function StudentAssignmentsClient({ assignments: initialAssignments }: { assignments: StudentAssignment[] }) {
   const [assignments, setAssignments] = useState(initialAssignments);
-  const [selectedId, setSelectedId] = useState<string | null>(initialAssignments[0]?.id || null);
+  // Opening this page should show the assignment list first. On small screens a
+  // selected assignment is presented as a full-screen sheet, so selecting the
+  // first item here made that sheet appear as soon as the page loaded.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("all");
   const [search, setSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);

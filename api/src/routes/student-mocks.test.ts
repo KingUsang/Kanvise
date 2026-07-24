@@ -18,7 +18,7 @@ vi.mock('../middleware/auth', () => ({
   },
 }))
 
-import { studentMocksRouter } from './student-mocks'
+import { studentMocksRouter, studentQuestionVersionSelect } from './student-mocks'
 
 function query(result: any, eqSpy = vi.fn()) {
   const value: any = {
@@ -81,6 +81,10 @@ describe('student mock security', () => {
   })
 
   it('never accepts a browser-supplied student or school when saving an answer', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'mock_attempts') return query({ data: { school_id: 'school-1' }, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
     mocks.rpc.mockResolvedValue({ data: [{ answer_id: 'answer-1' }], error: null })
     const response = await studentMocksRouter.request('/attempts/attempt-1/answers/question-1', {
       method: 'PUT', headers: { 'content-type': 'application/json' },
@@ -90,5 +94,9 @@ describe('student mock security', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('save_versioned_mock_answer', expect.objectContaining({
       p_school_id: 'school-1', p_student_id: 'student-1', p_attempt_id: 'attempt-1',
     }))
+  })
+
+  it('uses the owning-question relationship when loading a question version', () => {
+    expect(studentQuestionVersionSelect).toContain('bank_questions!bank_question_versions_question_id_fkey')
   })
 })
