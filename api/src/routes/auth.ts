@@ -93,26 +93,36 @@ authRouter.post('/profile/init', async (c) => {
     }
   }
 
-  // Generate the canonical Kanvise User ID. The database function accepts the
-  // full sequence prefix and returns the already-formatted ID (for example,
-  // ACA-STU-00004). Do not add another role prefix in the API.
-  const rolePrefix = { admin: 'ACA-ADM', tutor: 'ACA-TUT', student: 'ACA-STU' }[role]
-  const { data: seqData, error: seqError } = await supabase.rpc('increment_user_sequence', { p_prefix: rolePrefix })
-  if (seqError || !seqData) {
-    console.error('[auth/profile/init] Could not allocate user ID:', seqError)
-    return c.json({ error: 'Account setup is temporarily unavailable. Please try again.' }, 503)
-  }
-  const kanviseUserId = String(seqData)
+  // Staging's deployed RPC accepts p_role and returns the next numeric value.
+  // Retry a few times when the sequence is behind existing seeded profiles;
+  // this lets the allocator catch up without making signup fail.
+  const roleCode = { admin: 'ADM', tutor: 'TUT', student: 'STU' }[role]
+  let kanviseUserId = ''
+  let profile: any = null
+  let error: any = null
 
-  let { data: profile, error } = await supabase.from('user_profiles').insert({
-    supabase_auth_id: supabaseAuthId,
-    role,
-    school_id: schoolId,
-    kanvise_user_id: kanviseUserId,
-    first_name,
-    last_name,
-    email,
-  }).select().single()
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const { data: seqData, error: seqError } = await supabase.rpc('increment_user_sequence', { p_role: role })
+    if (seqError || seqData === null || seqData === undefined) {
+      console.error('[auth/profile/init] Could not allocate user ID:', seqError)
+      return c.json({ error: 'Account setup is temporarily unavailable. Please try again.' }, 503)
+    }
+
+    kanviseUserId = `KNV-${roleCode}-${String(seqData).padStart(5, '0')}`
+    const insertResult = await supabase.from('user_profiles').insert({
+      supabase_auth_id: supabaseAuthId,
+      role,
+      school_id: schoolId,
+      kanvise_user_id: kanviseUserId,
+      first_name,
+      last_name,
+      email,
+    }).select().single()
+
+    profile = insertResult.data
+    error = insertResult.error
+    if (!error || error.code !== '23505' || !String(error.message).includes('kanvise_user_id')) break
+  }
 
   if (error) {
     // A concurrent callback may have created this same profile after our initial read.
