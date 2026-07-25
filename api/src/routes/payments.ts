@@ -224,11 +224,10 @@ paymentsRouter.post("/checkout", async (c) => {
       .from("payments")
       .update({
         paystack_authorization_url: paystackData.data.authorization_url,
-        paystack_access_code: paystackData.data.access_code,
       })
       .eq("id", payment.id);
     if (updateError) {
-      return c.json({ error: "Checkout was created but could not be finalized", code: "CHECKOUT_RECORD_UPDATE_FAILED" }, 500);
+      console.warn("[payments/checkout] Checkout was created but could not be finalized:", updateError);
     }
 
     return c.json({
