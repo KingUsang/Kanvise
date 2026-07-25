@@ -35,6 +35,8 @@ export const notificationRepository: NotificationRepository = {
 
     if ('recipientIds' in selector) {
       recipientIds = [...new Set(selector.recipientIds)]
+    } else if (!selector.enrolment.id) {
+      return []
     } else {
       const column = `${selector.enrolment.type}_id`
       const { data, error } = await supabase.from('enrolments')

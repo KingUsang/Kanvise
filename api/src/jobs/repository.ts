@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase'
 
-export type DueMock = { id: string; schoolId: string; courseId: string; title: string; courseName: string }
-export type DueLiveClass = DueMock & { startsAt: string }
-export type DueAssignment = DueMock & { deadlineAt: string; recipientIds: string[] }
+export type DueMock = { id: string; schoolId: string; courseId: string | null; title: string; courseName: string }
+export type DueLiveClass = Omit<DueMock, 'courseId'> & { courseId: string; startsAt: string }
+export type DueAssignment = Omit<DueMock, 'courseId'> & { courseId: string; deadlineAt: string; recipientIds: string[] }
 
 export type JobsRepository = {
   claimDueMocks(now: Date, limit: number): Promise<DueMock[]>

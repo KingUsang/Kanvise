@@ -29,7 +29,12 @@ export async function runMockPublicationJob(now = new Date(), dependencies = def
   let failures = 0
   for (const mock of mocks) {
     try {
-      const delivery = await dependencies.notifyMock({ ...mock })
+      // Marketplace mocks have no course, so there are no course enrolments to notify.
+      if (!mock.courseId) {
+        await dependencies.repository.markMockPublicationNotified(mock.id)
+        continue
+      }
+      const delivery = await dependencies.notifyMock({ ...mock, courseId: mock.courseId })
       failures += delivery.failures.length
       if (delivery.failures.length === 0) await dependencies.repository.markMockPublicationNotified(mock.id)
     } catch (error) {
