@@ -36,8 +36,8 @@ describe("payment checkout helpers", () => {
   });
 
   it("builds a callback URL without trusting client input", () => {
-    expect(checkoutCallbackUrl("https://kanvise.com/", "KAN-123")).toBe(
-      "https://kanvise.com/payment/return?reference=KAN-123",
+    expect(checkoutCallbackUrl("https://kanvise.com/")).toBe(
+      "https://kanvise.com/payment/return",
     );
   });
 });

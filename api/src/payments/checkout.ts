@@ -41,8 +41,7 @@ export function calculatePaymentBreakdown(price: number, percentageCharge: numbe
   };
 }
 
-export function checkoutCallbackUrl(frontendUrl: string, reference: string): string {
+export function checkoutCallbackUrl(frontendUrl: string): string {
   const url = new URL("/payment/return", frontendUrl);
-  url.searchParams.set("reference", reference);
   return url.toString();
 }

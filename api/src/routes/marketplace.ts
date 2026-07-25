@@ -139,11 +139,9 @@ marketplaceRouter.post('/marketplace/mocks/:listingId/checkout', requireRole('st
   }).select().single()
   if (orderError || !order) return c.json({ error: 'Could not start checkout', code: 'CHECKOUT_CREATE_FAILED' }, 500)
   try {
-    const callback = new URL('/payment/return', frontendUrl)
-    callback.searchParams.set('reference', reference)
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST', headers: { Authorization: `Bearer ${paystackSecret}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15_000),
-      body: JSON.stringify({ email: studentEmail, amount: breakdown.total, currency: 'NGN', reference, callback_url: callback.toString(),
+      body: JSON.stringify({ email: studentEmail, amount: breakdown.total, currency: 'NGN', reference, callback_url: new URL('/payment/return', frontendUrl).toString(),
         subaccount: subaccount.subaccount_code, transaction_charge: breakdown.processingFee + breakdown.platformFee,
         metadata: JSON.stringify({ marketplace_order_id: order.id, listing_id: listing.id, student_id: user.id }), }),
     })

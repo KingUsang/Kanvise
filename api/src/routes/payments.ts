@@ -74,22 +74,14 @@ paymentsRouter.post("/checkout", async (c) => {
       return c.json({ error: "Your account needs an email address before checkout", code: "EMAIL_REQUIRED" }, 400);
     }
 
-    const existingCheckoutQuery = () => {
-      let query = supabase
-        .from("payments")
-        .select("id, paystack_reference, paystack_authorization_url, amount, status, programme_id, sub_programme_id, course_id, kanvise_fee")
-        .eq("student_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
+    const existingCheckoutQuery = () => supabase
+      .from("payments")
+      .select("id, paystack_reference, paystack_authorization_url, amount, status, programme_id, sub_programme_id, course_id, kanvise_fee")
+      .eq("student_id", user.id)
+      .eq("checkout_idempotency_key", idempotencyKey)
+      .maybeSingle();
 
-      if (checkoutTarget.column === "programme_id") query = query.eq("programme_id", checkoutTarget.id);
-      if (checkoutTarget.column === "sub_programme_id") query = query.eq("sub_programme_id", checkoutTarget.id);
-      if (checkoutTarget.column === "course_id") query = query.eq("course_id", checkoutTarget.id);
-      return query;
-    };
-
-    const { data: existingCheckoutRows } = await existingCheckoutQuery();
-    const existingCheckout = (existingCheckoutRows || []).find((row: any) => row.status === "pending") || null;
+    const { data: existingCheckout } = await existingCheckoutQuery();
     if (existingCheckout) {
       if (existingCheckout.paystack_authorization_url && existingCheckout.status === "pending") {
         return c.json({ data: {
@@ -178,6 +170,7 @@ paymentsRouter.post("/checkout", async (c) => {
         student_id: user.id,
         amount: Number(target.price),
         paystack_reference: reference,
+        checkout_idempotency_key: idempotencyKey,
         status: "pending",
         ...targetColumns,
         kanvise_fee: breakdown.kanviseFee,
@@ -205,7 +198,7 @@ paymentsRouter.post("/checkout", async (c) => {
           amount: breakdown.amountInKobo,
           currency: "NGN",
           reference,
-          callback_url: checkoutCallbackUrl(frontendUrl, reference),
+          callback_url: checkoutCallbackUrl(frontendUrl),
           subaccount: subaccount.subaccount_code,
           transaction_charge: Math.round(breakdown.kanviseFee * 100),
           metadata: JSON.stringify({ student_id: user.id, school_id: target.school_id, ...targetColumns }),
@@ -224,10 +217,11 @@ paymentsRouter.post("/checkout", async (c) => {
       .from("payments")
       .update({
         paystack_authorization_url: paystackData.data.authorization_url,
+        paystack_access_code: paystackData.data.access_code,
       })
       .eq("id", payment.id);
     if (updateError) {
-      console.warn("[payments/checkout] Checkout was created but could not be finalized:", updateError);
+      return c.json({ error: "Checkout was created but could not be finalized", code: "CHECKOUT_RECORD_UPDATE_FAILED" }, 500);
     }
 
     return c.json({
