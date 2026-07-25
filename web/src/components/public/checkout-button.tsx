@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { toast } from "sonner";
 
@@ -16,8 +16,11 @@ interface CheckoutButtonProps {
 export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseId, price }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shouldAutoStartCheckout = searchParams.get("checkout") === "true";
   const supabase = createClient();
   const idempotencyKeyRef = useRef<string | null>(null);
+  const autoStartTriggeredRef = useRef(false);
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -88,6 +91,13 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (autoStartTriggeredRef.current) return;
+    if (!shouldAutoStartCheckout) return;
+    autoStartTriggeredRef.current = true;
+    void handleCheckout();
+  }, [shouldAutoStartCheckout]);
 
   return (
     <button

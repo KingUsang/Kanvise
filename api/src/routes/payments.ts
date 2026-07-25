@@ -74,18 +74,23 @@ paymentsRouter.post("/checkout", async (c) => {
       return c.json({ error: "Your account needs an email address before checkout", code: "EMAIL_REQUIRED" }, 400);
     }
 
-    const existingCheckoutQuery = () => supabase
-      .from("payments")
-      .select("id, paystack_reference, paystack_authorization_url, amount, status, programme_id, sub_programme_id, course_id, kanvise_fee")
-      .eq("student_id", user.id)
-      .eq("checkout_idempotency_key", idempotencyKey)
-      .maybeSingle();
+    const existingCheckoutQuery = () => {
+      let query = supabase
+        .from("payments")
+        .select("id, paystack_reference, paystack_authorization_url, amount, status, programme_id, sub_programme_id, course_id, kanvise_fee")
+        .eq("student_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-    const { data: existingCheckout } = await existingCheckoutQuery();
+      if (checkoutTarget.column === "programme_id") query = query.eq("programme_id", checkoutTarget.id);
+      if (checkoutTarget.column === "sub_programme_id") query = query.eq("sub_programme_id", checkoutTarget.id);
+      if (checkoutTarget.column === "course_id") query = query.eq("course_id", checkoutTarget.id);
+      return query;
+    };
+
+    const { data: existingCheckoutRows } = await existingCheckoutQuery();
+    const existingCheckout = (existingCheckoutRows || []).find((row: any) => row.status === "pending") || null;
     if (existingCheckout) {
-      if (existingCheckout[checkoutTarget.column] !== checkoutTarget.id) {
-        return c.json({ error: "Idempotency key was already used for another checkout", code: "IDEMPOTENCY_KEY_REUSED" }, 409);
-      }
       if (existingCheckout.paystack_authorization_url && existingCheckout.status === "pending") {
         return c.json({ data: {
           payment_id: existingCheckout.id,
@@ -96,8 +101,8 @@ paymentsRouter.post("/checkout", async (c) => {
         } });
       }
       return c.json({
-        error: existingCheckout.status === "successful" ? "Payment already completed" : "Checkout is still being initialized",
-        code: existingCheckout.status === "successful" ? "PAYMENT_COMPLETED" : "PAYMENT_INITIALIZING",
+        error: "Checkout is still being initialized",
+        code: "PAYMENT_INITIALIZING",
         data: { paystack_reference: existingCheckout.paystack_reference, status: existingCheckout.status },
       }, 409);
     }
@@ -173,7 +178,6 @@ paymentsRouter.post("/checkout", async (c) => {
         student_id: user.id,
         amount: Number(target.price),
         paystack_reference: reference,
-        checkout_idempotency_key: idempotencyKey,
         status: "pending",
         ...targetColumns,
         kanvise_fee: breakdown.kanviseFee,
