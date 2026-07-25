@@ -33,6 +33,19 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
         return;
       }
 
+      // A valid Supabase session is not enough: admins and tutors can also be
+      // signed in, but only students may purchase a programme.
+      const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        headers: { "Authorization": `Bearer ${session.access_token}` },
+      });
+      const profileBody = await profileRes.json().catch(() => null);
+      if (!profileRes.ok) {
+        throw new Error(profileBody?.error || "Could not verify your account");
+      }
+      if (profileBody?.user?.role !== "student") {
+        throw new Error("Please use a student account to enrol in this programme.");
+      }
+
       // Check role - only students can enrol
       // The backend will enforce this, but let's assume it's valid for now.
       

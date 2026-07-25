@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
+import { publicFileUrl } from '../storage/r2'
 
 export const publicRouter = new Hono()
 
@@ -75,7 +76,7 @@ publicRouter.get('/programmes/:slug', async (c) => {
     // 1. Fetch programme details
     const { data: programme, error: progError } = await supabase
       .from('programmes')
-      .select('id, name, slug, description, price, school_id')
+      .select('id, created_at, updated_at, name, slug, description, price, currency, thumbnail_url, is_published, school_id')
       .eq('slug', slug)
       .eq('is_published', true)
       .single()
@@ -88,7 +89,7 @@ publicRouter.get('/programmes/:slug', async (c) => {
     // 2. Resolve school details
     const { data: school, error: schoolError } = await supabase
       .from('schools')
-      .select('id, name, slug')
+      .select('id, name, slug, logo_url')
       .eq('id', programme.school_id)
       .eq('is_active', true)
       .single()
@@ -98,23 +99,103 @@ publicRouter.get('/programmes/:slug', async (c) => {
     // 3. Fetch sub-programmes under this programme
     const { data: subProgrammes, error: subProgError } = await supabase
       .from('sub_programmes')
-      .select('id, name, slug, description, price')
+      .select('id, created_at, updated_at, name, slug, description, price, currency, is_available_separately, is_published')
       .eq('programme_id', programme.id)
       .eq('is_published', true)
 
-    // 4. Fetch courses under this programme (both direct and via sub-programmes)
-    const { data: courses, error: courseError } = await supabase
-      .from('courses')
-      .select('id, name, slug, description, price, sub_programme_id')
-      .eq('programme_id', programme.id)
-      .eq('is_published', true)
+    // 4. Fetch courses directly under this programme and courses inside its sub-programmes.
+    const subProgrammeIds = (subProgrammes || []).map((subProgramme) => subProgramme.id)
+    const [directCoursesResult, nestedCoursesResult] = await Promise.all([
+      supabase
+        .from('courses')
+        .select('id, created_at, updated_at, name, slug, description, price, currency, is_available_separately, is_published, programme_id, sub_programme_id')
+        .eq('programme_id', programme.id)
+        .eq('is_published', true),
+      subProgrammeIds.length
+        ? supabase
+            .from('courses')
+            .select('id, created_at, updated_at, name, slug, description, price, currency, is_available_separately, is_published, programme_id, sub_programme_id')
+            .in('sub_programme_id', subProgrammeIds)
+            .eq('is_published', true)
+        : Promise.resolve({ data: [], error: null }),
+    ])
+
+    const directCourses = directCoursesResult.data || []
+    const nestedCourses = nestedCoursesResult.data || []
+    const courses = [...directCourses, ...nestedCourses]
+    const courseError = directCoursesResult.error || nestedCoursesResult.error
+
+    // 5. Return tutors assigned to any course in the programme.
+    const courseIds = courses.map((course) => course.id)
+    let tutors: any[] = []
+    let tutorError: any = null
+    if (courseIds.length) {
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('tutor_course_assignments')
+        .select('tutor_id')
+        .in('course_id', courseIds)
+
+      if (assignmentsError) {
+        tutorError = assignmentsError
+      } else {
+        const tutorIds = [...new Set((assignments || []).map((assignment) => assignment.tutor_id))]
+        if (tutorIds.length) {
+          const { data: tutorProfiles, error: profilesError } = await supabase
+            .from('user_profiles')
+            .select('id, first_name, last_name, bio, profile_photo_key')
+            .in('id', tutorIds)
+            .eq('role', 'tutor')
+            .eq('is_active', true)
+
+          tutors = (tutorProfiles || []).map((tutor) => ({
+            id: tutor.id,
+            first_name: tutor.first_name,
+            last_name: tutor.last_name,
+            bio: tutor.bio,
+            profile_photo_url: tutor.profile_photo_key && process.env.R2_PUBLIC_BASE_URL
+              ? publicFileUrl(tutor.profile_photo_key)
+              : null,
+          }))
+          tutorError = profilesError
+        }
+      }
+    }
+
+    if (subProgError) console.error('Error fetching programme sections:', subProgError)
+    if (courseError) console.error('Error fetching programme courses:', courseError)
+    if (tutorError) console.error('Error fetching programme tutors:', tutorError)
+
+    // 6. Keep a flat course list for consumers while also exposing the hierarchy.
+    const programmeSections = (subProgrammes || []).map((subProgramme) => ({
+      ...subProgramme,
+      courses: nestedCourses.filter((course) => course.sub_programme_id === subProgramme.id),
+    }))
+
+    /*
+     * Do not expose internal ownership fields such as created_by or school_id
+     * in the public representation. The fields below are the public product
+     * information a student needs to decide whether to enrol.
+     */
+    const publicProgramme = {
+      id: programme.id,
+      created_at: programme.created_at,
+      updated_at: programme.updated_at,
+      name: programme.name,
+      slug: programme.slug,
+      description: programme.description,
+      price: programme.price,
+      currency: programme.currency,
+      thumbnail_url: programme.thumbnail_url,
+      is_published: programme.is_published,
+    }
 
     return c.json({
       data: {
-        programme,
+        programme: publicProgramme,
         school,
-        sub_programmes: subProgrammes || [],
-        courses: courses || []
+        sub_programmes: programmeSections,
+        courses,
+        tutors,
       }
     })
   } catch (err: any) {

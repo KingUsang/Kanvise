@@ -186,7 +186,8 @@ paymentsRouter.post("/checkout", async (c) => {
       if (paymentError.code === "23505") {
         return c.json({ error: "Checkout is already being initialized", code: "PAYMENT_INITIALIZING" }, 409);
       }
-      return c.json({ error: "Failed to record payment" }, 500);
+      console.error("[payments/checkout] Failed to record payment:", paymentError);
+      return c.json({ error: "Failed to record payment", code: "PAYMENT_RECORD_FAILED" }, 500);
     }
 
     let paystackData: any;
