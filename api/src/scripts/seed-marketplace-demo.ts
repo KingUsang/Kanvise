@@ -8,7 +8,7 @@ const password = process.env.MARKETPLACE_TEST_PASSWORD || "KanviseTest!2026";
 const users = {
   admin: { email: "marketplace.admin@seed.kanvise.test", first_name: "Marketplace", last_name: "Admin", role: "admin", kanvise_user_id: "ACA-ADM-MARKETPLACE" },
   tutor: { email: "marketplace.tutor@seed.kanvise.test", first_name: "Marketplace", last_name: "Tutor", role: "tutor", kanvise_user_id: "ACA-TUT-MARKETPLACE" },
-  student: { email: "marketplace.student@seed.kanvise.test", first_name: "Marketplace", last_name: "Student", role: "student", kanvise_user_id: "ACA-STU-MARKETPLACE" },
+  student: { email: "marketplace.student@seed.kanvise.com", first_name: "Marketplace", last_name: "Student", role: "student", kanvise_user_id: "ACA-STU-MARKETPLACE" },
 } as const;
 
 async function ensureUser(input: typeof users[keyof typeof users]) {
