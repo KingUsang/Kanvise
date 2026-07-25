@@ -93,16 +93,16 @@ authRouter.post('/profile/init', async (c) => {
     }
   }
 
-  // Generate Kanvise User ID
-  const { data: seqData, error: seqError } = await supabase.rpc('increment_user_sequence', { p_role: role })
+  // Generate the canonical Kanvise User ID. The database function accepts the
+  // full sequence prefix and returns the already-formatted ID (for example,
+  // ACA-STU-00004). Do not add another role prefix in the API.
+  const rolePrefix = { admin: 'ACA-ADM', tutor: 'ACA-TUT', student: 'ACA-STU' }[role]
+  const { data: seqData, error: seqError } = await supabase.rpc('increment_user_sequence', { p_prefix: rolePrefix })
   if (seqError || !seqData) {
     console.error('[auth/profile/init] Could not allocate user ID:', seqError)
     return c.json({ error: 'Account setup is temporarily unavailable. Please try again.' }, 503)
   }
-  const number = seqData.toString().padStart(5, '0')
-  
-  const roleCode = { admin: 'ADM', tutor: 'TUT', student: 'STU' }[role as string]
-  const kanviseUserId = `KNV-${roleCode}-${number}`
+  const kanviseUserId = String(seqData)
 
   let { data: profile, error } = await supabase.from('user_profiles').insert({
     supabase_auth_id: supabaseAuthId,
