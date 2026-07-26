@@ -82,6 +82,11 @@ type R2Config = {
   publicBucketName?: string
 }
 
+// NOTE (2026-07-26): Production currently REUSES the dev R2 credentials and the
+// shared private bucket `kanvise` (same Cloudflare account). Public bucket is
+// `kanvise-public-dev` served via the rate-limited r2.dev URL. Before real
+// launch, swap in prod-dedicated access keys/buckets and a custom CDN domain.
+// Actual values live in each server's api/.env (not version-controlled).
 function readConfig(): R2Config | null {
   const accountId = process.env.R2_ACCOUNT_ID
   const accessKeyId = process.env.R2_ACCESS_KEY_ID
