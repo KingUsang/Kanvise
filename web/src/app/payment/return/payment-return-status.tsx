@@ -41,6 +41,10 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
         if (cancelled) return;
 
         if (body.data.status === "successful" || body.data.status === "paid") {
+          // A first centre enrolment updates the school_id JWT claim server-side;
+          // refresh so the dashboard renders the centre view immediately.
+          await supabase.auth.refreshSession().catch(() => undefined);
+          if (cancelled) return;
           setState("success");
           setMessage("Payment confirmed. Your access is ready.");
           return;
