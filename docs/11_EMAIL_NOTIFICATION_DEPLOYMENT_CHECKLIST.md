@@ -41,6 +41,28 @@ the hosted Auth project's Site URL or template is still using `{{ .SiteURL }}`.
 Update the hosted project in the Supabase Dashboard; changing a local `.env` file
 does not change Supabase's hosted email templates.
 
+### Runbook: reset email links to localhost
+
+Symptom: password reset (or confirmation) emails link to `http://localhost:3000/...`
+even though the app passes a correct `redirectTo`.
+
+Cause: Supabase silently ignores a `redirectTo` that is not on the Redirect URLs
+allowlist and falls back to the project Site URL. The application code
+(`web/src/app/auth/forgot-password/page.tsx`, `web/src/config/app.ts`) is not the
+problem.
+
+Fix, in the Supabase Dashboard for the affected environment's project:
+
+1. Open the project → **Authentication** → **URL Configuration**.
+2. Set **Site URL** to the environment URL from the table above (never localhost).
+3. Under **Redirect URLs**, add both entries from the table above.
+4. Save. Takes effect immediately for new emails — no redeploy required.
+5. **Authentication** → **Email Templates** → *Reset Password*: the link must use
+   `{{ .ConfirmationURL }}`, not `{{ .SiteURL }}/...`.
+6. Confirm the frontend deployment sets `NEXT_PUBLIC_SITE_URL` for that environment.
+7. Request a fresh reset email to verify — links sent before the change still point
+   to localhost.
+
 ## 3. Resend
 
 - Verify the sending domain separately for staging and production.

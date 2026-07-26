@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=web\" \"npm run dev --workspace=api\"",
     "build": "npm run build --workspaces",
+    "db:types": "supabase gen types typescript --linked --schema public > api/src/lib/database.types.ts",
     "install:all": "npm install"
   },
   "devDependencies": {
