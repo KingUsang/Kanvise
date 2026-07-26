@@ -63,7 +63,7 @@ export default function LandingPage() {
     if (!suggestionText.trim()) return;
     setSuggestionStatus("loading");
     try {
-      const res = await fetch("http://localhost:3001/suggestions", {
+      const res = await fetch("/api/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ suggestion: suggestionText }),
@@ -81,7 +81,7 @@ export default function LandingPage() {
     // Fetch live waitlist count
     const fetchWaitlistCount = async () => {
       try {
-        const res = await fetch("http://localhost:3001/waitlist/count");
+        const res = await fetch("/api/waitlist/count");
         if (res.ok) {
           const data = await res.json();
           setWaitlistCount(data.count);
