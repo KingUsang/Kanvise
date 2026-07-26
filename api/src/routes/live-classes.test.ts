@@ -250,7 +250,7 @@ describe('live classes API - host permissions', () => {
 
   it('does not let an unassigned admin join a tutor classroom', async () => {
     mocks.from.mockReturnValue(builder({
-      data: { id: 'class-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live' },
+      data: { id: 'class-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
       error: null,
     }))
 

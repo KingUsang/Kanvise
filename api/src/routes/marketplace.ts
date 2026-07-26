@@ -95,7 +95,7 @@ marketplaceRouter.use('/students/me/purchases', jwtVerificationMiddleware, profi
 marketplaceRouter.post('/marketplace/mocks/:listingId/claim', requireRole('student'), async c => {
   const user = c.get('user')
   const { data, error } = await supabase.rpc('claim_free_marketplace_mock', {
-    p_listing_id: c.req.param('listingId'), p_student_id: user.id, p_now: new Date().toISOString(),
+    p_listing_id: c.req.param('listingId')!, p_student_id: user.id, p_now: new Date().toISOString(),
   })
   if (error) {
     const unavailable = String(error.message).includes('MARKETPLACE_LISTING_NOT_AVAILABLE')
@@ -111,7 +111,7 @@ marketplaceRouter.post('/marketplace/mocks/:listingId/checkout', requireRole('st
   if (!isUuid(idempotencyKey)) return c.json({ error: 'A valid Idempotency-Key header is required', code: 'INVALID_IDEMPOTENCY_KEY' }, 400)
   const studentEmail = (user as any).email as string | null | undefined
   if (!studentEmail) return c.json({ error: 'Your account needs an email address before checkout', code: 'EMAIL_REQUIRED' }, 400)
-  const { data: listing, error: listingError } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')).maybeSingle()
+  const { data: listing, error: listingError } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')!).maybeSingle()
   if (listingError || !listing || !listingAvailable(listing) || listing.pricing_type !== 'paid') return c.json({ error: 'This paid mock is not available', code: 'LISTING_NOT_AVAILABLE' }, 409)
   const { data: existingEntitlement } = await supabase.from('mock_marketplace_entitlements').select('id').eq('student_id', user.id)
     .eq('mock_version_id', listing.mock_version_id).is('revoked_at', null).maybeSingle()
@@ -160,7 +160,7 @@ marketplaceRouter.get('/marketplace/mocks/:listingId/preflight', requireRole('st
   const { data: entitlement, error } = await supabase.from('mock_marketplace_entitlements').select(`
       id, attempts_granted, attempts_consumed,
       listing:mock_marketplace_listings(${publicListingFields}, source_mock_id, mock_version_id)
-    `).eq('student_id', user.id).eq('listing_id', c.req.param('listingId')).is('revoked_at', null).maybeSingle()
+    `).eq('student_id', user.id).eq('listing_id', c.req.param('listingId')!).is('revoked_at', null).maybeSingle()
   if (error) return c.json({ error: 'Could not load mock instructions' }, 500)
   const listing: any = (entitlement as any)?.listing
   if (!entitlement || !listing || !listingAvailable(listing)) return c.json({ error: 'Mock not found', code: 'MOCK_NOT_FOUND' }, 404)
@@ -180,7 +180,7 @@ marketplaceRouter.get('/marketplace/mocks/:listingId/preflight', requireRole('st
 marketplaceRouter.post('/marketplace/mocks/:listingId/attempts', requireRole('student'), async c => {
   const user = c.get('user')
   const { data, error } = await supabase.rpc('start_or_resume_marketplace_mock_attempt', {
-    p_listing_id: c.req.param('listingId'), p_student_id: user.id, p_now: new Date().toISOString(),
+    p_listing_id: c.req.param('listingId')!, p_student_id: user.id, p_now: new Date().toISOString(),
   })
   if (error) {
     const message = String(error.message || '')
@@ -218,7 +218,7 @@ marketplaceRouter.get('/marketplace/orders/:reference', requireRole('student'), 
   const user = c.get('user')
   const { data, error } = await supabase.from('mock_marketplace_orders')
     .select('paystack_reference, status, total_charged_kobo, paid_at, listing:mock_marketplace_listings(title)')
-    .eq('paystack_reference', c.req.param('reference')).eq('student_id', user.id).maybeSingle()
+    .eq('paystack_reference', c.req.param('reference')!).eq('student_id', user.id).maybeSingle()
   if (error) return c.json({ error: 'Could not load order status' }, 500)
   if (!data) return c.json({ error: 'Marketplace order not found', code: 'ORDER_NOT_FOUND' }, 404)
   return c.json({ data })
@@ -272,7 +272,7 @@ marketplaceRouter.post('/marketplace/creator/listings', requireRole('admin', 'tu
 
 marketplaceRouter.post('/marketplace/creator/listings/:listingId/submit', requireRole('admin', 'tutor'), async c => {
   const user = c.get('user')
-  const { data: listing } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')).maybeSingle()
+  const { data: listing } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')!).maybeSingle()
   if (!listing || !creatorCanManage(user, listing)) return c.json({ error: 'Listing not found' }, 404)
   if (!listing.rights_confirmed_at) return c.json({ error: 'Confirm you have the right to publish this content first' }, 400)
   const isAdmin = user.role === 'admin'
@@ -287,7 +287,7 @@ marketplaceRouter.post('/marketplace/creator/listings/:listingId/submit', requir
 
 marketplaceRouter.post('/marketplace/creator/listings/:listingId/approve', requireRole('admin'), async c => {
   const user = c.get('user')
-  const { data: listing } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')).maybeSingle()
+  const { data: listing } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')!).maybeSingle()
   if (!listing || listing.creator_school_id !== user.school_id) return c.json({ error: 'Listing not found' }, 404)
   if (listing.approval_status !== 'submitted') return c.json({ error: 'Only submitted listings can be approved' }, 409)
   const now = new Date().toISOString()
@@ -299,7 +299,7 @@ marketplaceRouter.post('/marketplace/creator/listings/:listingId/approve', requi
 
 marketplaceRouter.post('/marketplace/creator/listings/:listingId/withdraw', requireRole('admin', 'tutor'), async c => {
   const user = c.get('user')
-  const { data: listing } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')).maybeSingle()
+  const { data: listing } = await supabase.from('mock_marketplace_listings').select('*').eq('id', c.req.param('listingId')!).maybeSingle()
   if (!listing || !creatorCanManage(user, listing)) return c.json({ error: 'Listing not found' }, 404)
   const { data, error } = await supabase.from('mock_marketplace_listings').update({ publication_status: 'withdrawn', withdrawn_at: new Date().toISOString() }).eq('id', listing.id).select().single()
   if (error) return c.json({ error: 'Could not withdraw this listing' }, 500)

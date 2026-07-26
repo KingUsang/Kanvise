@@ -15,12 +15,14 @@ import {
   verifyPublicUpload,
 } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
+import type { TablesUpdate } from '../lib/database.types'
 
 export const storageRouter = new Hono<{ Variables: AppVariables }>()
 
 storageRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware)
 
 async function canUploadToCourse(user: AppVariables['user'], courseId: string) {
+  if (!user.school_id) return false
   const { data: course } = await supabase.from('courses')
     .select('id')
     .eq('id', courseId)
@@ -229,7 +231,7 @@ async function confirmPublicUpload(c: any) {
       const { data: old } = await supabase.from('schools').select(column).eq('id', user.school_id).single()
       const oldMedia = old as Partial<Record<typeof column, string | null>> | null
       oldKey = publicFileKeyFromUrl(oldMedia?.[column])
-      const result = await supabase.from('schools').update({ [column]: publicFileUrl(file_key) })
+      const result = await supabase.from('schools').update({ [column]: publicFileUrl(file_key) } as TablesUpdate<'schools'>)
         .eq('id', user.school_id).select().single()
       if (result.error) throw result.error
       data = result.data

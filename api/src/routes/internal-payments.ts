@@ -70,21 +70,53 @@ internalPaymentsRouter.post('/confirm', async (c) => {
     return c.json({ error: 'Payment confirmation failed' }, 500)
   }
 
+  const result = data as unknown as {
+    payment_id: string
+    enrolment_id: string | null
+    already_processed: boolean
+    school_id: string
+    student_auth_id: string | null
+    student_school_id: string | null
+    currency: string | null
+    amount: number | string
+    student_email: string
+    student_first_name: string
+    school_name: string
+    target_name: string
+    paystack_reference: string
+    paid_at: string
+  } | null
+  if (!result) return c.json({ error: 'Payment confirmation failed' }, 500)
+
+  // Keep the JWT fast-path claims in sync: the student's first centre enrolment
+  // sets user_profiles.school_id, so app_metadata must carry the same school or
+  // the API keeps treating them as marketplace-only until token refresh.
+  if (result.student_auth_id && result.student_school_id) {
+    const { error: metadataError } = await supabase.auth.admin.updateUserById(result.student_auth_id, {
+      app_metadata: { school_id: result.student_school_id },
+    })
+    if (metadataError) {
+      console.error('[internal-payments] Failed to sync school_id claim:', metadataError)
+      // Retryable: the RPC is idempotent, so Paystack redelivery re-runs this sync.
+      return c.json({ error: 'Payment confirmed, but account update failed', retryable: true }, 503)
+    }
+  }
+
   const frontendUrl = process.env.FRONTEND_URL
   if (!frontendUrl) return c.json({ error: 'Payment confirmed, but email configuration is incomplete' }, 503)
 
   const amount = new Intl.NumberFormat('en-NG', {
-    style: 'currency', currency: data.currency || 'NGN', currencyDisplay: 'symbol',
-  }).format(Number(data.amount))
+    style: 'currency', currency: result.currency || 'NGN', currencyDisplay: 'symbol',
+  }).format(Number(result.amount))
   const email = await ensurePaymentConfirmationEmail({
-    paymentId: data.payment_id,
-    recipientEmail: data.student_email,
-    firstName: data.student_first_name,
-    schoolName: data.school_name,
-    targetName: data.target_name,
+    paymentId: result.payment_id,
+    recipientEmail: result.student_email,
+    firstName: result.student_first_name,
+    schoolName: result.school_name,
+    targetName: result.target_name,
     amount,
-    paymentReference: data.paystack_reference,
-    paidAt: data.paid_at,
+    paymentReference: result.paystack_reference,
+    paidAt: result.paid_at,
     dashboardUrl: `${frontendUrl.replace(/\/$/, '')}/dashboard`,
   })
 
@@ -96,9 +128,9 @@ internalPaymentsRouter.post('/confirm', async (c) => {
   return c.json({
     message: 'Enrolment created and access granted',
     data: {
-      payment_id: data.payment_id,
-      enrolment_id: data.enrolment_id,
-      already_processed: data.already_processed,
+      payment_id: result.payment_id,
+      enrolment_id: result.enrolment_id,
+      already_processed: result.already_processed,
       email_sent: true,
       email_id: email.id,
       email_already_sent: email.alreadySent,

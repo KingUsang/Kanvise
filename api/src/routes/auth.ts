@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, Variables } from '../middleware/auth'
 import { validateInviteToken } from '../lib/invites'
 import { ensureWelcomeEmail } from '../emails/ensure-welcome-email'
+import type { TablesUpdate } from '../lib/database.types'
 
 export const authRouter = new Hono<{ Variables: Variables }>()
 
@@ -96,7 +97,7 @@ authRouter.post('/profile/init', async (c) => {
   // Staging's deployed RPC accepts p_role and returns the next numeric value.
   // Retry a few times when the sequence is behind existing seeded profiles;
   // this lets the allocator catch up without making signup fail.
-  const roleCode = { admin: 'ADM', tutor: 'TUT', student: 'STU' }[role]
+  const roleCode = { admin: 'ADM', tutor: 'TUT', student: 'STU' }[role as 'admin' | 'tutor' | 'student']
   let kanviseUserId = ''
   let profile: any = null
   let error: any = null
@@ -194,7 +195,7 @@ authRouter.patch('/me', async (c) => {
   }
   
   const { data, error } = await supabase.from('user_profiles')
-    .update(updates)
+    .update(updates as TablesUpdate<'user_profiles'>)
     .eq('id', user.id)
     .select()
     .single()

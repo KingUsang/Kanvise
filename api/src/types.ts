@@ -8,6 +8,9 @@ export type KanviseUser = {
   last_name?: string
 }
 
+// For routers behind tenantMiddleware, which rejects requests without a school.
+export type TenantUser = KanviseUser & { school_id: string }
+
 export type AppVariables = {
   user: KanviseUser
   jwt_payload: any
@@ -16,3 +19,5 @@ export type AppVariables = {
     // other tenant fields if needed
   }
 }
+
+export type TenantVariables = AppVariables & { user: TenantUser }

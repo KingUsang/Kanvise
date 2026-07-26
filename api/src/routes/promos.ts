@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole } from "../middleware/auth";
 import { supabase } from "../lib/supabase";
 import { deleteStoredObject, StorageError, verifyPublicUpload } from "../storage/r2";
+import type { TablesUpdate } from '../lib/database.types'
 
 export const promosRouter = new Hono<{ Variables: { user: any; jwt_payload?: any } }>();
 
@@ -138,7 +139,7 @@ promosRouter.patch("/:id", async (c) => {
   const updates = Object.fromEntries(Object.entries(body).filter(([key]) => allowed.includes(key)));
   const { data: updated, error } = await supabase
     .from("school_promos")
-    .update(updates)
+    .update(updates as TablesUpdate<'school_promos'>)
     .eq("id", id)
     .eq("school_id", user.school_id)
     .select()

@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import { publicFileUrl } from '../storage/r2'
 import { validateStudentProfileUpdate } from '../domain/student-settings'
-import type { AppVariables } from '../types'
+import type { TenantVariables } from '../types'
+import type { TablesUpdate } from '../lib/database.types'
 
-export const studentSettingsRouter = new Hono<{ Variables: AppVariables }>()
+export const studentSettingsRouter = new Hono<{ Variables: TenantVariables }>()
 studentSettingsRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
 studentSettingsRouter.use('/*', requireRole('student'))
 
@@ -31,7 +32,7 @@ studentSettingsRouter.patch('/students/me/settings', async c => {
   const { errors, updates } = validateStudentProfileUpdate(body)
   if (errors.length) return c.json({ error: 'Check your profile details', code: 'VALIDATION_ERROR', details: errors }, 400)
   if (!Object.keys(updates).length) return c.json({ error: 'No supported changes provided', code: 'NO_CHANGES' }, 400)
-  const { data, error } = await supabase.from('user_profiles').update(updates)
+  const { data, error } = await supabase.from('user_profiles').update(updates as TablesUpdate<'user_profiles'>)
     .eq('id', user.id).eq('school_id', user.school_id).eq('role', 'student')
     .select('id, kanvise_user_id, first_name, last_name, email, bio, profile_photo_key').maybeSingle()
   if (error) return c.json({ error: 'Could not update your profile', code: 'SETTINGS_UPDATE_FAILED' }, 500)

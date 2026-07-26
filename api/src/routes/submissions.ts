@@ -2,9 +2,9 @@ import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import { notifySubmissionGraded } from '../notifications/triggers'
-import type { AppVariables } from '../types'
+import type { TenantVariables } from '../types'
 
-export const submissionsRouter = new Hono<{ Variables: AppVariables }>()
+export const submissionsRouter = new Hono<{ Variables: TenantVariables }>()
 
 submissionsRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
 

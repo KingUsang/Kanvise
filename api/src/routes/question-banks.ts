@@ -1,8 +1,9 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
-import type { AppVariables, KanviseUser } from '../types'
+import type { TenantVariables, TenantUser } from '../types'
 import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
+import type { TablesUpdate } from '../lib/database.types'
 import {
   BANK_VISIBILITIES,
   canEditQuestionBank,
@@ -11,7 +12,7 @@ import {
   validateQuestionInput,
 } from '../domain/question-bank'
 
-export const questionBanksRouter = new Hono<{ Variables: AppVariables }>()
+export const questionBanksRouter = new Hono<{ Variables: TenantVariables }>()
 
 questionBanksRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
 questionBanksRouter.use('/*', requireRole('tutor', 'admin'))
@@ -36,7 +37,7 @@ async function loadBank(bankId: string, schoolId: string) {
   return data
 }
 
-function canContributeToBank(user: KanviseUser, bank: any) {
+function canContributeToBank(user: TenantUser, bank: any) {
   return canReadQuestionBank(user, bank)
     && (canEditQuestionBank(user, bank) || bank.visibility === 'centre')
 }
@@ -83,7 +84,7 @@ async function addSignedMediaUrls(rows: any[], schoolId: string) {
   }))
 }
 
-async function tutorCanUseCourse(user: KanviseUser, courseId: string | null) {
+async function tutorCanUseCourse(user: TenantUser, courseId: string | null) {
   if (!courseId || user.role === 'admin') return true
   const { data } = await supabase.from('tutor_course_assignments').select('id')
     .eq('school_id', user.school_id).eq('tutor_id', user.id).eq('course_id', courseId)
@@ -204,7 +205,7 @@ questionBanksRouter.patch('/:bankId{[0-9a-fA-F-]{36}}', async c => {
     if (body.archived === true) updates.archived_at = new Date().toISOString()
     if (!Object.keys(updates).length) return c.json({ error: 'No supported changes provided', code: 'BAD_REQUEST' }, 400)
 
-    const { data, error } = await supabase.from('question_banks').update(updates)
+    const { data, error } = await supabase.from('question_banks').update(updates as TablesUpdate<'question_banks'>)
       .eq('id', bankId).eq('school_id', user.school_id).select(bankSelect).single()
     if (error) return databaseError(c, error, 'Could not update question bank')
     return c.json({ data: { ...data, can_edit: !data.archived_at } })
@@ -388,7 +389,7 @@ questionBanksRouter.patch('/questions/:questionId{[0-9a-fA-F-]{36}}', async c =>
   }
 
   const body = await c.req.json()
-  const errors = validateQuestionInput(body, question.question_type)
+  const errors = validateQuestionInput(body, question.question_type as 'mcq' | 'theory')
   if (errors.length) return c.json({ error: 'Check the question details', code: 'VALIDATION_ERROR', details: errors }, 400)
   const courseId = body.course_id || null
   if (!(await tutorCanUseCourse(user, courseId))) {

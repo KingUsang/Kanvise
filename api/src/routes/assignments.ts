@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
-import type { AppVariables, KanviseUser } from '../types'
+import type { TenantVariables, TenantUser } from '../types'
 import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 
-export const courseAssignmentsRouter = new Hono<{ Variables: AppVariables }>()
-export const assignmentsRouter = new Hono<{ Variables: AppVariables }>()
+export const courseAssignmentsRouter = new Hono<{ Variables: TenantVariables }>()
+export const assignmentsRouter = new Hono<{ Variables: TenantVariables }>()
 
 for (const router of [courseAssignmentsRouter, assignmentsRouter]) {
   router.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
@@ -21,7 +21,7 @@ async function courseForSchool(courseId: string, schoolId: string) {
   return data
 }
 
-async function tutorCanManageCourse(user: KanviseUser, courseId: string) {
+async function tutorCanManageCourse(user: TenantUser, courseId: string) {
   if (!user.school_id || !(await courseForSchool(courseId, user.school_id))) return false
   if (user.role === 'admin') return true
   if (user.role !== 'tutor') return false
@@ -34,7 +34,7 @@ async function tutorCanManageCourse(user: KanviseUser, courseId: string) {
   return Boolean(data)
 }
 
-async function studentCanAccessCourse(user: KanviseUser, courseId: string) {
+async function studentCanAccessCourse(user: TenantUser, courseId: string) {
   if (!user.school_id) return false
   return (await loadStudentCourseIds(user.id, user.school_id)).includes(courseId)
 }

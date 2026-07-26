@@ -315,7 +315,7 @@ schoolsRouter.get('/me/invites', requireRole('admin'), async (c) => {
 // POST /schools/me/invites/:id/revoke — Revoke a pending invite
 schoolsRouter.post('/me/invites/:id/revoke', requireRole('admin'), async (c) => {
   const user = c.get('user')
-  const id = c.req.param('id')
+  const id = c.req.param('id')!
 
   // Fetch the invite — must belong to this school and be pending
   const { data: invite, error: fetchError } = await supabase

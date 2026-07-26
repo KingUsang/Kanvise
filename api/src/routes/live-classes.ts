@@ -7,11 +7,11 @@ import {
   tenantMiddleware,
   requireRole,
 } from '../middleware/auth'
-import type { AppVariables } from '../types'
+import type { TenantVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 
-export const liveClassesRouter = new Hono<{ Variables: AppVariables }>()
+export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -413,7 +413,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
     return c.json({ error: 'You are not enrolled in this class', code: 'NOT_ENROLLED' }, 403)
   }
 
-  if (liveClass.status !== 'live') {
+  if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
   }
 
@@ -461,7 +461,7 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
     return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
   }
 
-  if (liveClass.status !== 'live') {
+  if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
   }
   if (liveClass.tutor_id !== user.id) {
@@ -510,7 +510,7 @@ liveClassesRouter.post('/:id/host-action', requireRole('tutor', 'admin'), async 
     return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
   }
 
-  if (liveClass.status !== 'live') {
+  if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live' }, 400)
   }
 

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole } from "../middleware/auth";
-import { AppVariables } from "../types";
+import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from "../middleware/auth";
+import { TenantVariables } from "../types";
 import { notifyMockPublished } from "../notifications/triggers";
 import {
   normalizeMockSettings,
@@ -24,9 +24,9 @@ import {
   MAX_MOCK_PDF_SIZE_BYTES,
 } from "../domain/mock-pdf-import";
 
-export const mocksRouter = new Hono<{ Variables: AppVariables }>();
+export const mocksRouter = new Hono<{ Variables: TenantVariables }>();
 
-mocksRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
+mocksRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware);
 
 const requireTutorOrAdmin = requireRole("tutor", "admin");
 
@@ -272,7 +272,7 @@ mocksRouter.post("/import/document-text", requireTutorOrAdmin, async (c) => {
 // GET /mocks/:id/results — tutor/admin review workspace data.
 mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
     .select("id, title, status, course_id, tutor_id, distribution_mode, course:courses(name)")
@@ -353,7 +353,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
 // changing the mock-wide attempt limit for everyone else.
 mocksRouter.post("/:id/attempt-grants", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const body = await c.req.json();
   const attemptId = typeof body.attempt_id === "string" ? body.attempt_id : "";
   const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : null;
@@ -389,7 +389,7 @@ mocksRouter.post("/:id/attempt-grants", requireTutorOrAdmin, async (c) => {
 mocksRouter.get("/:id", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
 
   const { data, error } = await supabase
     .from("mock_exams")
@@ -408,7 +408,7 @@ mocksRouter.get("/:id", requireTutorOrAdmin, async (c) => {
 mocksRouter.get("/:id/questions", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
 
   const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
@@ -463,7 +463,7 @@ mocksRouter.get("/:id/questions", requireTutorOrAdmin, async (c) => {
 // GET /mocks/:id/assembly — versioned draft sections, fixed questions and random pools.
 mocksRouter.get("/:id/assembly", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
     .select("id, status, course_id, tutor_id, distribution_mode").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError) return mockDatabaseError(c, mockError, "Could not load mock assembly");
@@ -507,7 +507,7 @@ mocksRouter.get("/:id/assembly", requireTutorOrAdmin, async (c) => {
 // PUT /mocks/:id/assembly — atomically replace a draft's versioned assembly.
 mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const body = await c.req.json();
   const errors = validateMockAssembly(body.sections);
   if (errors.length) return c.json({ error: "Check the mock sections", code: "VALIDATION_ERROR", details: errors }, 400);
@@ -537,7 +537,7 @@ mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
 // POST /mocks/:id/random-pool/preview — show availability without exposing answer keys.
 mocksRouter.post("/:id/random-pool/preview", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const body = await c.req.json();
   const bankId = typeof body.bank_id === "string" ? body.bank_id : "";
   if (!bankId) return c.json({ error: "Choose a question bank", code: "VALIDATION_ERROR" }, 400);
@@ -570,7 +570,7 @@ mocksRouter.post("/:id/archive", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found" }, 404);
@@ -642,7 +642,7 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const body = await c.req.json();
   const { title, description, publish_at, time_limit_minutes } = body;
 
@@ -712,7 +712,7 @@ mocksRouter.post("/:id/questions", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const body = await c.req.json();
   const { question_type, question_text, marks, order_index, options, grading_rubric } = body;
 
@@ -796,7 +796,7 @@ mocksRouter.put("/:id/questions", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
   const body = await c.req.json();
   const { questions } = body; // Array of question objects
 
@@ -839,7 +839,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
-  const mockId = c.req.param("id");
+  const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
     .select("id, status, course_id, tutor_id, distribution_mode, time_limit_minutes")
@@ -929,7 +929,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     if (approvalError) return mockDatabaseError(c, approvalError, "Mock was published but marketplace approval could not be recorded");
   }
 
-  const notification = distributionMode === "marketplace"
+  const notification = distributionMode === "marketplace" || !data.course_id
     ? { failures: [] }
     : await notifyMockPublished({
       id: data.id,

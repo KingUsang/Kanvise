@@ -191,7 +191,7 @@ dashboardRouter.get('/student', async (c) => {
   const recentUpdates = [
     ...(assignments || []).map((item) => ({ id: item.id, type: 'assignment', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.created_at, href: `/dashboard/student/assignments` })),
     ...(notes || []).map((item) => ({ id: item.id, type: 'material', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.created_at, href: `/dashboard/student/materials` })),
-    ...(mocks || []).filter((item) => !attemptedMockIds.has(item.id)).map((item) => ({ id: item.id, type: 'mock', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.publish_at || item.created_at, href: `/dashboard/student/mocks` })),
+    ...(mocks || []).filter((item) => !attemptedMockIds.has(item.id)).map((item) => ({ id: item.id, type: 'mock', title: item.title, course_name: courseNames.get(item.course_id!) || 'Course', occurred_at: item.publish_at || item.created_at, href: `/dashboard/student/mocks` })),
   ].sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()).slice(0, 5)
 
   return c.json({ data: {

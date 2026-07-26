@@ -2,10 +2,10 @@ import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import { notifyMockFullyGraded } from '../notifications/triggers'
-import type { AppVariables } from '../types'
+import type { TenantVariables } from '../types'
 import { isReviewableAttemptStatus } from '../domain/mock-results'
 
-export const mockAnswersRouter = new Hono<{ Variables: AppVariables }>()
+export const mockAnswersRouter = new Hono<{ Variables: TenantVariables }>()
 
 mockAnswersRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
 
