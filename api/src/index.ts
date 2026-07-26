@@ -147,6 +147,40 @@ app.post("/waitlist", async (c) => {
   }
 });
 
+app.post("/suggestions", async (c) => {
+  try {
+    const body = await c.req.json();
+    const suggestion = typeof body.suggestion === "string" ? body.suggestion.trim() : "";
+    const email = typeof body.email === "string" ? body.email.trim() : null;
+
+    if (!suggestion) {
+      return c.json({ error: "Suggestion text is required" }, 400);
+    }
+
+    if (suggestion.length > 2000) {
+      return c.json({ error: "Suggestion is too long (max 2000 characters)" }, 400);
+    }
+
+    const { error: insertError } = await supabase.from("feature_suggestions").insert([
+      {
+        suggestion,
+        email: email || null,
+        status: "pending",
+      },
+    ]);
+
+    if (insertError) {
+      console.error("Error inserting suggestion:", insertError);
+      return c.json({ error: "Failed to submit suggestion. Please try again." }, 500);
+    }
+
+    return c.json({ message: "Thank you! We've added this to our roadmap." }, 201);
+  } catch (error) {
+    console.error("Suggestion endpoint error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
 // These student routers contain several top-level paths (/students, /mocks and
 // /attempts). Register them last so their router-wide student middleware cannot
 // intercept unrelated endpoints such as /payments/summary or /waitlist.
