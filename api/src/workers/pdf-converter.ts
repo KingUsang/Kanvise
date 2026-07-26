@@ -1,7 +1,12 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import path from 'node:path';
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, DOMMatrix, Path2D } from '@napi-rs/canvas';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+
+// pdfjs expects browser globals and falls back to require("canvas") — a
+// package we don't ship — when they're missing. Provide them from @napi-rs.
+(globalThis as any).DOMMatrix ??= DOMMatrix;
+(globalThis as any).Path2D ??= Path2D;
 
 // Define a custom canvas factory for pdfjs in Node
 class NodeCanvasFactory {
@@ -37,17 +42,20 @@ export async function convertPdfToImages(
   emit: (message: PdfConversionMessage) => void,
 ): Promise<void> {
   const standardFontDataUrl = path.join(process.cwd(), 'node_modules/pdfjs-dist/standard_fonts/');
+  const canvasFactory = new NodeCanvasFactory();
 
   const loadingTask = pdfjsLib.getDocument({
     data: pdfBuffer,
     // Disable font face because we don't have DOM
     disableFontFace: true,
     standardFontDataUrl: standardFontDataUrl,
+    // pdfjs only honors the canvasFactory passed here; the one given to
+    // page.render() is ignored, and the default requires the "canvas" package.
+    canvasFactory,
   });
 
   const pdfDocument = await loadingTask.promise;
   const numPages = pdfDocument.numPages;
-  const canvasFactory = new NodeCanvasFactory();
 
   emit({ type: 'start', numPages });
 
