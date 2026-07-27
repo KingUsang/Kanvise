@@ -61,9 +61,19 @@ function RegisterContent() {
       throw new Error(body?.error || "Your email was verified, but account setup could not be completed");
     }
 
-    if (role === "admin") router.push("/dashboard/school-setup");
-    else if (redirectParam) router.push(redirectParam);
-    else router.push("/dashboard/student");
+    // profile/init updates the trusted role claims server-side. Refresh before
+    // navigating so middleware and server layouts do not evaluate the new user
+    // with the pre-initialisation JWT (or a stale session from another account
+    // previously used in this browser).
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session) {
+      throw new Error("Your account was created, but the dashboard session could not be refreshed. Please sign in again.");
+    }
+
+    const destination = role === "admin"
+      ? "/dashboard/school-setup"
+      : redirectParam || "/dashboard/student";
+    window.location.assign(destination);
   };
 
   const handleVerifyCode = async (event: FormEvent) => {

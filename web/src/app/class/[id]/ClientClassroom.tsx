@@ -1,7 +1,7 @@
 "use client";
 
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import { useRouter } from "next/navigation";
+import { useRef } from "react";
 import ClassroomLayout from "@/components/classroom/ClassroomLayout";
 
 interface ClientClassroomProps {
@@ -23,7 +23,17 @@ export default function ClientClassroom({
   classTitle,
   courseName,
 }: ClientClassroomProps) {
-  const router = useRouter();
+  const isLeavingClassroom = useRef(false);
+  const dashboardPath = isHost ? "/dashboard" : "/dashboard/student/classes";
+
+  const leaveClassroom = () => {
+    if (isLeavingClassroom.current) return;
+    isLeavingClassroom.current = true;
+    // LiveKit disconnects after the room closes. A document navigation ensures
+    // the dashboard shell is rebuilt instead of retaining the classroom's
+    // client-side navigation state.
+    window.location.assign(dashboardPath);
+  };
 
   return (
     <LiveKitRoom
@@ -34,7 +44,7 @@ export default function ClientClassroom({
       connect={true}
       data-lk-theme="default"
       className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden"
-      onDisconnected={() => router.push(isHost ? "/dashboard" : "/dashboard/student/classes")}
+      onDisconnected={leaveClassroom}
     >
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />

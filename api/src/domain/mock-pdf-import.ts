@@ -25,7 +25,6 @@ export type MockPdfImportResult = {
 
 const questionSchema = {
   type: "object",
-  additionalProperties: false,
   properties: {
     question_type: { type: "string", enum: ["mcq", "theory"] },
     question_text: { type: "string" },
@@ -34,7 +33,6 @@ const questionSchema = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         properties: {
           label: { type: "string" },
           option_text: { type: "string" },
@@ -56,7 +54,6 @@ const questionSchema = {
 
 const responseSchema = {
   type: "object",
-  additionalProperties: false,
   properties: {
     page_count: { type: "integer" },
     warnings: { type: "array", items: { type: "string" } },
