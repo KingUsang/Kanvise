@@ -167,7 +167,7 @@ function ParticipantRow({
       </div>
 
       {isHost && !isMe && !isParticipantHost && (
-        <div className="hidden group-hover:flex items-center gap-1">
+        <div className="flex items-center gap-1">
           {audioTrack && !audioTrack.isMuted && (
             <button
               onClick={() => onAction("mute", participant.identity, audioTrack.trackSid)}

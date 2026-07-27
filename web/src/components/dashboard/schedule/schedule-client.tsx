@@ -630,7 +630,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         </td>
                         <td className="py-4 px-6 text-[#474551]">{cls.tutor?.first_name || 'Tutor'}</td>
                         <td className="py-4 px-6 text-right">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex justify-end gap-2">
                             {cls.tutor_id === user.id && (
                               <button 
                                 onClick={() => handleStartClass(cls.id)}

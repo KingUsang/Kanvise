@@ -499,7 +499,7 @@ export function NotesClient({ session }: NotesClientProps) {
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{new Date(note.created_at).toLocaleDateString()}</td>
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{formatFileSize(note.file_size_bytes)}</td>
                             <td className="py-4 px-6 text-right">
-                              <div className="flex justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                              <div className="flex justify-end gap-2">
                                 <button onClick={() => handleDownload(note.download_url, note.file_name)} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors" title="Download">
                                   <span className="material-symbols-outlined text-sm">download</span>
                                 </button>

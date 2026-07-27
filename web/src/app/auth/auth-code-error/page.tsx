@@ -34,7 +34,7 @@ export default function AuthCodeError() {
           <ShieldAlert className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" strokeWidth={2} />
           <div className="flex-1">
             <p className="text-xs font-bold text-kv-dark uppercase tracking-wider mb-1">What happened?</p>
-            <p className="text-xs text-kv-dark/70">Ensure <b>PKCE Auth Flow</b> is turned on in your Supabase project settings, and you haven&apos;t clicked the link twice.</p>
+            <p className="text-xs text-kv-dark/70">The verification link may have expired, already been used, or been opened on another device. Request a new one and try again.</p>
           </div>
         </div>
         

@@ -1,144 +1,81 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import Link from "next/link";
-import { Loader2 } from "lucide-react";
-import { AuthLogo } from "@/components/auth/auth-logo";
-import { getBrowserAppUrl } from "@/config/app";
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { AuthLogo } from "@/components/auth/auth-logo"
+
+type Step = "email" | "code"
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
+  const [step, setStep] = useState<Step>("email")
+  const [email, setEmail] = useState("")
+  const [code, setCode] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [resendIn, setResendIn] = useState(0)
 
-  const supabase = createClient();
+  useEffect(() => {
+    if (!resendIn) return
+    const interval = window.setInterval(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1000)
+    return () => window.clearInterval(interval)
+  }, [resendIn])
 
-  const handleReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  async function sendCode(event?: React.FormEvent) {
+    event?.preventDefault()
+    setLoading(true)
+    setError(null)
+    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email)
+    setLoading(false)
+    if (recoveryError) return setError(recoveryError.message)
+    setCode("")
+    setResendIn(60)
+    setStep("code")
+  }
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${getBrowserAppUrl()}/api/auth/callback?next=/auth/reset-password`,
-    });
+  async function verifyCode(event: React.FormEvent) {
+    event.preventDefault()
+    if (!/^\d{6}$/.test(code)) return setError("Enter the six-digit code from your email.")
+    setLoading(true)
+    setError(null)
+    const { data, error: verificationError } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "recovery",
+    })
+    setLoading(false)
+    if (verificationError || !data.session) return setError(verificationError?.message || "That code is invalid or has expired.")
+    router.push("/auth/reset-password")
+    router.refresh()
+  }
 
-    if (resetError) {
-      setError(resetError.message);
-      setLoading(false);
-      return;
-    }
-
-    setSuccess(true);
-    setLoading(false);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-surface-container-low font-body-md text-on-surface">
-      {/* Background Decorative Element (Subtle Abstract) */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary-container opacity-5 blur-[120px]"></div>
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-secondary opacity-5 blur-[120px]"></div>
-      </div>
-
-      {/* Main Recovery Card */}
-      <main className="relative z-10 w-full max-w-[480px]">
-        <AuthLogo className="mb-stack-lg" />
-
-        {/* Focused Recovery Surface */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-10 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
-          {success ? (
-            <div className="text-center py-stack-lg animate-in fade-in zoom-in duration-500">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-stack-lg">
-                <span className="material-symbols-outlined text-green-600 text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-              </div>
-              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-sm font-semibold">Email sent</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant mb-stack-lg">
-                We've sent a password reset link to <br />
-                <span className="font-bold text-primary">{email}</span>
-              </p>
-              <Link href="/auth/login" className="w-full flex items-center justify-center bg-primary-container text-on-primary font-headline-sm text-headline-sm py-4 rounded-lg transition-all">
-                Return to Login
-              </Link>
-              <button onClick={() => setSuccess(false)} className="mt-4 text-on-surface-variant font-label-md text-label-md hover:text-primary transition-colors uppercase tracking-wider font-semibold">
-                Did not receive email? Try again.
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Header Section */}
-              <header className="mb-stack-lg">
-                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-stack-sm font-bold tracking-tight">Reset Your Password</h1>
-                <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                  Enter your email address and we'll send you a link to reset your password.
-                </p>
-              </header>
-
-              {error && (
-                <div className="mb-6 p-4 bg-error-container text-on-error-container rounded-lg text-sm border border-error/20 animate-in fade-in">
-                  {error}
-                </div>
-              )}
-
-              {/* Recovery Form */}
-              <form className="space-y-stack-lg" onSubmit={handleReset}>
-                {/* Email Input Group */}
-                <div className="space-y-stack-sm">
-                  <label className="block font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold" htmlFor="email">
-                    Email Address
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <span className="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">mail</span>
-                    </div>
-                    <input 
-                      className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:ring-0 focus:border-primary focus:outline-none transition-all placeholder:text-outline-variant" 
-                      id="email" 
-                      name="email" 
-                      placeholder="tutor@institution.edu" 
-                      required 
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* CTA Button */}
-                <button 
-                  disabled={loading}
-                  className="w-full bg-secondary hover:bg-secondary-container text-on-secondary font-headline-sm text-headline-sm font-semibold py-4 rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 group shadow-lg shadow-secondary/10 disabled:opacity-70 disabled:cursor-not-allowed" 
-                  type="submit"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="animate-spin w-5 h-5" />
-                      <span>Sending...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Send Reset Link</span>
-                      <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                    </>
-                  )}
-                </button>
-              </form>
-
-              {/* Footer Links */}
-              <footer className="mt-stack-lg pt-stack-lg border-t border-outline-variant flex flex-col items-center gap-4">
-                <Link className="inline-flex items-center gap-2 font-body-md text-body-md text-primary font-semibold hover:text-primary-container transition-colors group" href="/auth/login">
-                  <span className="material-symbols-outlined text-lg group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                  Back to Login
-                </Link>
-                <p className="font-body-sm text-body-sm text-on-surface-variant text-center max-w-[280px]">
-                    If you do not receive an email within 5 minutes, please check your spam folder.
-                </p>
-              </footer>
-            </>
-          )}
-        </div>
-      </main>
-    </div>
-  );
+  return <div className="min-h-screen bg-surface-container-low p-6 font-body-md text-on-surface sm:flex sm:items-center sm:justify-center">
+    <main className="w-full max-w-[480px]">
+      <AuthLogo className="mb-stack-lg" />
+      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-8 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-10">
+        {step === "email" ? <>
+          <header className="mb-stack-lg"><h1 className="font-headline-lg text-headline-lg font-bold tracking-tight">Reset your password</h1><p className="mt-2 text-sm leading-6 text-on-surface-variant">Enter your email address and we’ll send a six-digit reset code.</p></header>
+          <form className="space-y-6" onSubmit={sendCode}>
+            <label className="block text-sm font-semibold" htmlFor="email">Email address<input id="email" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-lg border border-outline-variant bg-surface px-4 py-3 outline-none focus:border-primary" /></label>
+            {error && <p role="alert" className="rounded-lg border border-error/20 bg-error-container p-3 text-sm text-on-error-container">{error}</p>}
+            <button disabled={loading} type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-6 py-4 font-semibold text-on-secondary disabled:opacity-70">{loading ? <><Loader2 className="h-5 w-5 animate-spin" />Sending code…</> : "Send reset code"}</button>
+          </form>
+        </> : <>
+          <header className="mb-stack-lg"><h1 className="font-headline-lg text-headline-lg font-bold tracking-tight">Check your email</h1><p className="mt-2 text-sm leading-6 text-on-surface-variant">Enter the six-digit code sent to <strong>{email}</strong>. It expires in one hour.</p></header>
+          <form className="space-y-6" onSubmit={verifyCode}>
+            <label className="block text-sm font-semibold" htmlFor="recovery-code">Reset code<input id="recovery-code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} placeholder="123456" className="mt-2 w-full rounded-lg border border-outline-variant bg-surface px-4 py-3 text-center text-2xl font-semibold tracking-[0.45em] outline-none focus:border-primary" /></label>
+            {error && <p role="alert" className="rounded-lg border border-error/20 bg-error-container p-3 text-sm text-on-error-container">{error}</p>}
+            <button disabled={loading || code.length !== 6} type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-6 py-4 font-semibold text-on-secondary disabled:opacity-70">{loading ? <><Loader2 className="h-5 w-5 animate-spin" />Verifying…</> : "Continue"}</button>
+          </form>
+          <div className="mt-6 text-center text-sm text-on-surface-variant">Didn’t receive it? {resendIn ? <span>Resend available in {resendIn}s</span> : <button type="button" onClick={() => void sendCode()} className="font-semibold text-primary hover:underline">Resend code</button>}</div>
+          <button type="button" onClick={() => { setStep("email"); setError(null); setCode("") }} className="mt-4 w-full text-sm font-medium text-on-surface-variant hover:text-primary">Use a different email address</button>
+        </>}
+        <footer className="mt-8 border-t border-outline-variant pt-6 text-center"><Link href="/auth/login" className="text-sm font-semibold text-primary hover:underline">Back to login</Link></footer>
+      </section>
+    </main>
+  </div>
 }

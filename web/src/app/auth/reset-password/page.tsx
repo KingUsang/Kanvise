@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -14,8 +15,28 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [checkingRecovery, setCheckingRecovery] = useState(true);
+  const [recoveryVerified, setRecoveryVerified] = useState(false);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    let active = true;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!active) return;
+      if (!user) {
+        setError("Enter the reset code from your email before choosing a new password.");
+      } else {
+        setRecoveryVerified(true);
+      }
+      setCheckingRecovery(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
   // Password validation checks
   const hasMinLength = password.length >= 12;
@@ -26,7 +47,7 @@ export default function ResetPasswordPage() {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid) return;
+    if (!recoveryVerified || !isValid) return;
 
     setLoading(true);
     setError(null);
@@ -104,6 +125,7 @@ export default function ResetPasswordPage() {
             {error && (
               <div className="mb-6 p-4 bg-error-container text-on-error-container rounded-lg text-sm border border-error/20 animate-in fade-in">
                 {error}
+                {!recoveryVerified && !checkingRecovery && <Link href="/auth/forgot-password" className="mt-2 block font-semibold underline">Request a reset code</Link>}
               </div>
             )}
 
@@ -192,7 +214,7 @@ export default function ResetPasswordPage() {
               {/* Actions */}
               <div className="pt-4">
                 <button 
-                  disabled={loading || !isValid}
+                  disabled={!recoveryVerified || checkingRecovery || loading || !isValid}
                   className="w-full flex items-center justify-center gap-2 bg-secondary text-on-secondary font-label-md text-label-md uppercase tracking-wider font-semibold py-4 px-6 rounded hover:bg-on-secondary-fixed-variant transition-colors group disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-secondary/10" 
                   type="submit"
                 >
