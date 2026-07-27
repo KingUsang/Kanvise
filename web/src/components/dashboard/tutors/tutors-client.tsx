@@ -46,6 +46,7 @@ export function TutorsClient() {
   const [invites, setInvites] = useState<Invite[]>([])
   const [assignmentPeople, setAssignmentPeople] = useState<AssignmentPerson[]>([])
   const [courseAssignments, setCourseAssignments] = useState<CourseAssignmentOverview[]>([])
+  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null)
   const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -72,6 +73,7 @@ export function TutorsClient() {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
       if (!token) return
+      setCurrentProfileId(typeof session.user.app_metadata?.profile_id === 'string' ? session.user.app_metadata.profile_id : null)
 
       const headers = { 'Authorization': `Bearer ${token}` }
 
@@ -234,7 +236,7 @@ export function TutorsClient() {
             Authorization: `Bearer ${session?.access_token}`,
             ...(isAssigned ? {} : { 'Content-Type': 'application/json' }),
           },
-          ...(isAssigned ? {} : { body: JSON.stringify({ tutor_id: person.kanvise_user_id }) }),
+          ...(isAssigned ? {} : { body: JSON.stringify({ tutor_id: person.id }) }),
         }
       )
       const body = await response.json()
@@ -393,7 +395,7 @@ export function TutorsClient() {
                           <div className="mt-2 flex flex-wrap gap-2">
                             {course.tutors.map((person) => (
                               <span key={person.id} className="inline-flex items-center gap-1 rounded-full border border-[#c8c5d2] bg-[#f5f3f2] py-1 pl-3 pr-1 text-xs text-[#474551]">
-                                {person.first_name} {person.last_name}{person.role === 'admin' ? ' (you)' : ''}
+                                {person.first_name} {person.last_name}{person.id === currentProfileId ? ' (you)' : ''}
                                 <button type="button" disabled={updatingCourseId === course.id} onClick={() => void updateCourseAssignment(course.id, person, true)} className="rounded-full p-1 hover:bg-[#ffdad6] hover:text-[#ba1a1a]" aria-label={`Remove ${person.first_name} from ${course.name}`}>
                                   <span className="material-symbols-outlined text-[15px]">close</span>
                                 </button>
@@ -409,7 +411,7 @@ export function TutorsClient() {
                           className="min-w-48 rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm text-[#474551] outline-none focus:border-[#2e2877] disabled:bg-[#f0eded]"
                         >
                           <option value="">{availablePeople.length === 0 ? 'Everyone assigned' : 'Add a tutor…'}</option>
-                          {availablePeople.map((person) => <option key={person.id} value={person.id}>{person.first_name} {person.last_name}{person.role === 'admin' ? ' (you)' : ''}</option>)}
+                          {availablePeople.map((person) => <option key={person.id} value={person.id}>{person.first_name} {person.last_name}{person.id === currentProfileId ? ' (you)' : ''}</option>)}
                         </select>
                       </div>
                     </div>

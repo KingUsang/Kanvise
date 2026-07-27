@@ -391,17 +391,19 @@ coursesRouter.post("/:id/tutors", enforceAdmin, async (c) => {
       .single();
     if (!course) return c.json({ error: "Course not found in this school", code: "COURSE_NOT_FOUND" }, 404);
 
-    let tutorQueryId = tutor_id;
-    if (tutor_id === 'self') {
-      tutorQueryId = profile.id;
-    }
-
-    const { data: tutor } = await supabase
+    // Course assignments store user_profiles.id. The dashboard sends that UUID
+    // directly; retain Kanvise-ID support for older clients without trying to
+    // compare a non-UUID value to the UUID primary-key column.
+    const tutorIdentifier = tutor_id === 'self' ? profile.id : tutor_id;
+    const isProfileId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tutorIdentifier);
+    let tutorQuery = supabase
       .from("user_profiles")
       .select("id, role")
-      .or(`id.eq.${tutorQueryId},kanvise_user_id.eq.${tutorQueryId}`)
-      .eq("school_id", profile.school_id)
-      .single();
+      .eq("school_id", profile.school_id);
+    tutorQuery = isProfileId
+      ? tutorQuery.eq("id", tutorIdentifier)
+      : tutorQuery.eq("kanvise_user_id", tutorIdentifier);
+    const { data: tutor } = await tutorQuery.single();
 
     if (!tutor) return c.json({ error: "Tutor not found in this school", code: "TUTOR_NOT_FOUND" }, 404);
     if (tutor.role !== "tutor" && tutor.role !== "admin") {
