@@ -175,6 +175,16 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
     expect(screen.getByRole('option', { name: 'Admin User (you)' })).toBeInTheDocument()
   })
 
+  it('automatically selects the sole tutor assigned to a course', async () => {
+    const user = userEvent.setup()
+    render(<ScheduleClient {...defaultAdminProps} />)
+
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Intro to Math' })).toBeInTheDocument())
+    await user.selectOptions(document.querySelectorAll('select')[0], 'course-1')
+
+    await waitFor(() => expect(document.querySelectorAll('select')[1]).toHaveValue('tutor-2'))
+  })
+
   it('displays useful server validation errors and does not clear the form', async () => {
     const user = userEvent.setup()
     render(<ScheduleClient {...defaultTutorProps} />)

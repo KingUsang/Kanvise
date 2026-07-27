@@ -127,9 +127,10 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           const { data } = await res.json()
           const tutorIds = data.map((assignment: { tutor_id: string }) => assignment.tutor_id)
           setAssignedTutorIds(tutorIds)
-          // A tutor assigned to the selected course is the sensible default.
-          // Admins may still choose another tutor assigned to that course.
-          if (tutorIds.includes(user.id)) setTutorId(user.id)
+          // A sole assignment makes the choice unambiguous. If several
+          // people teach the course, prefer the signed-in admin when assigned.
+          if (tutorIds.length === 1) setTutorId(tutorIds[0])
+          else if (tutorIds.includes(user.id)) setTutorId(user.id)
         }
       } catch (err) {
         console.error('Failed to fetch assigned tutors:', err)
