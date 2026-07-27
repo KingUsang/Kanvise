@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Upload, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { toast } from "sonner";
 import {
@@ -148,7 +148,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
   };
 
   return (
-    <div className="flex items-center gap-4 ml-4">
+    <div className="flex items-center gap-2 md:gap-4 md:ml-4 min-w-0">
       <input 
         type="file" 
         accept="application/pdf" 
@@ -163,7 +163,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
           className="flex items-center gap-2 px-3 py-1.5 bg-[#994704]/10 hover:bg-[#994704]/20 text-[#994704] text-sm font-semibold rounded-lg transition-colors"
         >
           <Upload size={16} />
-          Add material
+          <span className="hidden sm:inline">Add material</span>
         </button>
       )}
 
@@ -186,7 +186,7 @@ export default function PresentationControls({ classId, onSlideChange }: Present
             <span className="hidden lg:inline">Previous</span>
           </button>
           
-          <span className="min-w-14 rounded-md bg-white px-2 py-1.5 text-center text-[12px] font-bold text-[#180d62] shadow-sm">
+          <span className="min-w-10 md:min-w-14 rounded-md bg-white px-1.5 md:px-2 py-1.5 text-center text-[12px] font-bold text-[#180d62] shadow-sm">
             {currentIndex + 1} / {slides.length}
           </span>
           
@@ -207,9 +207,11 @@ export default function PresentationControls({ classId, onSlideChange }: Present
               setSlides([]);
               onSlideChange(""); // This clears the whiteboard and broadcasts to all students
             }}
-            className="p-1 rounded text-[#787582] hover:bg-white hover:text-[#ba1a1a] text-xs font-semibold px-2"
+            title="Close material"
+            className="flex items-center gap-1 p-1.5 rounded text-[#787582] hover:bg-white hover:text-[#ba1a1a] text-xs font-semibold lg:px-2"
           >
-            Close material
+            <X size={14} />
+            <span className="hidden lg:inline">Close material</span>
           </button>
         </div>
       )}

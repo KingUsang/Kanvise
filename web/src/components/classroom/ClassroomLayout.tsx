@@ -37,7 +37,9 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
-  const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(isHost ? "participants" : null);
+  const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(
+    () => (isHost && typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches ? "participants" : null)
+  );
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
@@ -154,17 +156,17 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
   };
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-[#fbf9f8] font-sans">
+    <div className="flex flex-col h-screen h-dvh w-full overflow-hidden bg-[#fbf9f8] font-sans pb-[env(safe-area-inset-bottom)]">
       {/* ── TOP BAR (Solid, Pinned) ─────── */}
-      <header className="flex-shrink-0 h-16 bg-white border-b border-[#e4e2e1] flex items-center justify-between px-4 md:px-6 z-20">
+      <header className="flex-shrink-0 h-14 md:h-16 bg-white border-b border-[#e4e2e1] flex items-center justify-between px-3 sm:px-4 md:px-6 z-20">
         {/* Left: session info */}
-        <div className="flex items-center gap-4 flex-1">
+        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-[#2e2877] flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-lg">K</span>
           </div>
-          <div className="hidden sm:block">
-            <h1 className="text-[#180d62] font-bold text-[15px] leading-tight">{classTitle || "Kanvise Live Class"}</h1>
-            <p className="text-[#787582] text-[11px] font-medium uppercase tracking-wider flex items-center gap-2 mt-0.5">
+          <div className="block min-w-0">
+            <h1 className="text-[#180d62] font-bold text-[15px] leading-tight truncate">{classTitle || "Kanvise Live Class"}</h1>
+            <p className="text-[#787582] text-[11px] font-medium uppercase tracking-wider flex items-center gap-2 mt-0.5 overflow-hidden whitespace-nowrap">
               <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-yellow-500"}`} />
               {isConnected ? "Live" : "Connecting"}
               {courseName ? ` · ${courseName}` : ''}
@@ -175,7 +177,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
 
 
         {/* Right: timer + role + leave */}
-        <div className="flex items-center gap-4 flex-1 justify-end">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 justify-end">
           <span className={`hidden lg:inline text-[11px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded
             ${isHost ? "bg-[#994704] text-white" : "bg-[#2e2877]/10 text-[#2e2877]"}`}>
             {isHost ? "Tutor" : "Student"}
@@ -188,7 +190,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
 
           <button
             onClick={handleLeaveBtnClick}
-            className="flex items-center gap-1.5 bg-[#ba1a1a]/10 hover:bg-[#ba1a1a]/20 text-[#ba1a1a] px-4 py-2 rounded-lg text-[13px] font-bold transition-all ml-2"
+            className="flex items-center gap-1.5 bg-[#ba1a1a]/10 hover:bg-[#ba1a1a]/20 text-[#ba1a1a] px-3 md:px-4 py-2 rounded-lg text-[13px] font-bold transition-all ml-2"
           >
             <LogOut size={15} />
             <span className="hidden md:inline">Leave</span>
@@ -223,9 +225,19 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
           </div>
         </div>
 
-        {/* ── SIDEBAR PANEL (Pushes content, always mounted to preserve state) ────── */}
-        <div className={`flex-shrink-0 flex flex-col bg-white z-20 transition-all duration-300 overflow-hidden
-          ${openSidebar ? "w-[320px] border-l border-[#e4e2e1]" : "w-0 border-none"}`}
+        {/* ── SIDEBAR PANEL (Overlay drawer on mobile, pushes content on md+, always mounted to preserve state) ────── */}
+        {openSidebar && (
+          <div
+            className="absolute inset-0 z-40 bg-black/40 md:hidden"
+            onClick={() => setOpenSidebar(null)}
+            aria-hidden
+          />
+        )}
+        <div className={`absolute inset-y-0 right-0 z-50 w-full sm:w-[360px] md:static md:z-20 md:w-auto
+          flex-shrink-0 flex flex-col bg-white transition-transform md:transition-all duration-300 overflow-hidden
+          ${openSidebar
+            ? "translate-x-0 md:w-[320px] border-l border-[#e4e2e1] shadow-2xl md:shadow-none"
+            : "translate-x-full md:translate-x-0 md:w-0 border-none"}`}
         >
           {/* Panel Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#e4e2e1] bg-[#fbf9f8] min-w-[320px]">
@@ -269,18 +281,17 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
       </div>
 
       {/* ── BOTTOM TOOLBAR (Solid, Pinned) ─────────── */}
-      <footer className="flex-shrink-0 h-[80px] bg-white border-t border-[#e4e2e1] flex items-center justify-between px-4 md:px-6 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
+      <footer className="flex-shrink-0 h-16 md:h-[80px] bg-white border-t border-[#e4e2e1] flex items-center justify-between px-2 sm:px-4 md:px-6 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
         {/* Left: Participant count */}
         <div className="flex items-center gap-3 flex-1">
-          <div className="flex items-center gap-1.5 text-[#787582] text-[13px] font-medium bg-[#f5f3f2] px-3 py-2 rounded-lg border border-[#e4e2e1]">
+          <div className="hidden md:flex items-center gap-1.5 text-[#787582] text-[13px] font-medium bg-[#f5f3f2] px-3 py-2 rounded-lg border border-[#e4e2e1]">
             <Users size={15} />
-            <span className="hidden sm:inline">{participants.length} Participants</span>
-            <span className="sm:hidden">{participants.length}</span>
+            <span>{participants.length} Participants</span>
           </div>
         </div>
 
         {/* Centre: Media Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           {isHost && (
             <PresentationControls
               classId={classId}
@@ -295,7 +306,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
           {!isHost && (
             <button
               onClick={toggleHandRaise}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all border
+              className={`flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-[13px] font-semibold transition-all border
                 ${isHandRaised
                   ? "bg-[#994704] text-white border-[#994704] shadow-md"
                   : "bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] border-[#e4e2e1]"
@@ -308,10 +319,10 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
         </div>
 
         {/* Right: Sidebar Toggles */}
-        <div className="flex items-center gap-2 flex-1 justify-end">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 justify-end">
           <button
             onClick={() => toggleSidebar("chat")}
-            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-all border
+            className={`flex items-center gap-1.5 px-2.5 py-2 sm:px-3 sm:py-2.5 rounded-lg text-[13px] font-semibold transition-all border
               ${openSidebar === "chat"
                 ? "bg-[#180d62] text-white border-[#180d62]"
                 : "bg-white hover:bg-[#f5f3f2] text-[#787582] hover:text-[#180d62] border-[#e4e2e1]"
@@ -322,7 +333,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
           </button>
           <button
             onClick={() => toggleSidebar("participants")}
-            className={`relative flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-all border
+            className={`relative flex items-center gap-1.5 px-2.5 py-2 sm:px-3 sm:py-2.5 rounded-lg text-[13px] font-semibold transition-all border
               ${openSidebar === "participants"
                 ? "bg-[#180d62] text-white border-[#180d62]"
                 : "bg-white hover:bg-[#f5f3f2] text-[#787582] hover:text-[#180d62] border-[#e4e2e1]"

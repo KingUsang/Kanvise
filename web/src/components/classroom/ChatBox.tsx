@@ -76,7 +76,7 @@ export default function ChatBox() {
           className="flex items-center gap-2 bg-[#fbf9f8] border border-[#e4e2e1] rounded-xl px-3 py-2.5 focus-within:border-[#180d62] focus-within:ring-1 focus-within:ring-[#180d62]/20 transition-all"
         >
           <input
-            className="flex-1 text-[13px] text-[#1b1c1c] placeholder:text-[#787582] outline-none bg-transparent"
+            className="flex-1 text-base md:text-[13px] text-[#1b1c1c] placeholder:text-[#787582] outline-none bg-transparent"
             placeholder="Send a message..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}

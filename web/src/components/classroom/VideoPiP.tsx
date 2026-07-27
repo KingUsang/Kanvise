@@ -38,18 +38,31 @@ export default function VideoPiP() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
+  const boundsRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
 
   const handlePointerDown = (e: React.PointerEvent) => {
     isDragging.current = true;
     dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    const el = e.currentTarget as HTMLElement;
+    const parent = el.parentElement?.getBoundingClientRect();
+    const self = el.getBoundingClientRect();
+    if (parent) {
+      boundsRef.current = {
+        minX: position.x - (self.left - parent.left),
+        maxX: position.x + (parent.right - self.right),
+        minY: position.y - (self.top - parent.top),
+        maxY: position.y + (parent.bottom - self.bottom),
+      };
+    }
+    el.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
+    const { minX, maxX, minY, maxY } = boundsRef.current;
     setPosition({
-      x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y
+      x: Math.min(Math.max(e.clientX - dragStart.current.x, minX), maxX),
+      y: Math.min(Math.max(e.clientY - dragStart.current.y, minY), maxY)
     });
   };
 
@@ -63,7 +76,7 @@ export default function VideoPiP() {
 
   return (
     <div
-      className="absolute top-5 right-5 z-30 flex items-start gap-3 cursor-grab active:cursor-grabbing"
+      className="absolute top-3 right-3 md:top-5 md:right-5 z-30 flex items-start gap-2 md:gap-3 cursor-grab active:cursor-grabbing touch-none select-none"
       style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -72,18 +85,18 @@ export default function VideoPiP() {
     >
       {/* Secondary PiP: Active Student or Local Preview */}
       {displayStudentTrack && displayStudent && (
-        <div className="w-20 h-20 rounded-full overflow-hidden border-[3px] border-[#994704] shadow-lg shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto transition-all animate-in fade-in slide-in-from-right-4">
+        <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden border-[3px] border-[#994704] shadow-lg shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto transition-all animate-in fade-in slide-in-from-right-4">
           <VideoTrack trackRef={displayStudentTrack} className="w-full h-full object-cover" />
           {displayStudent.isSpeaking && <div className="absolute inset-0 rounded-full ring-4 ring-green-400/80" />}
         </div>
       )}
 
       {/* Primary PiP: Permanent Pinned Tutor */}
-      <div className={`w-28 h-28 rounded-full overflow-hidden border-[3px] shadow-xl shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto flex items-center justify-center ${tutor.isSpeaking ? "border-green-400 ring-4 ring-green-400/30" : "border-white"}`}>
+      <div className={`w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden border-[3px] shadow-xl shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto flex items-center justify-center ${tutor.isSpeaking ? "border-green-400 ring-4 ring-green-400/30" : "border-white"}`}>
         {tutor.isCameraEnabled && tutorTrack ? (
           <VideoTrack trackRef={tutorTrack} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-[#2e2877] flex items-center justify-center text-white text-2xl font-bold shadow-inner">
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#2e2877] flex items-center justify-center text-white text-xl md:text-2xl font-bold shadow-inner">
             {(tutor.name || tutor.identity).slice(0, 2).toUpperCase()}
           </div>
         )}

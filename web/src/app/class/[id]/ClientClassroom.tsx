@@ -43,7 +43,7 @@ export default function ClientClassroom({
       serverUrl={serverUrl}
       connect={true}
       data-lk-theme="default"
-      className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden"
+      className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
       onDisconnected={leaveClassroom}
     >
       {/* Renders audio tracks of other participants */}

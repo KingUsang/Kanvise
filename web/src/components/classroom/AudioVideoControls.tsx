@@ -28,11 +28,11 @@ export default function AudioVideoControls() {
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 md:gap-3">
       <button
         onClick={toggleMic}
         aria-label={isMicEnabled ? "Turn off microphone" : "Turn on microphone"}
-        className={`flex items-center justify-center w-11 h-11 rounded-full transition-all border ${
+        className={`flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-full transition-all border ${
           isMicEnabled
             ? "bg-[#180d62] text-white border-[#180d62] shadow-md hover:bg-[#180d62]/90"
             : "bg-[#ba1a1a]/10 text-[#ba1a1a] border-[#ba1a1a]/20 hover:bg-[#ba1a1a]/20"
@@ -44,7 +44,7 @@ export default function AudioVideoControls() {
       <button
         onClick={toggleCam}
         aria-label={isCamEnabled ? "Turn off camera" : "Turn on camera"}
-        className={`flex items-center justify-center w-11 h-11 rounded-full transition-all border ${
+        className={`flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-full transition-all border ${
           isCamEnabled
             ? "bg-[#180d62] text-white border-[#180d62] shadow-md hover:bg-[#180d62]/90"
             : "bg-[#ba1a1a]/10 text-[#ba1a1a] border-[#ba1a1a]/20 hover:bg-[#ba1a1a]/20"
