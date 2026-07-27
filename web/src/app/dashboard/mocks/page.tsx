@@ -58,7 +58,7 @@ export default async function MocksPage() {
   }
 
   const userInfo = {
-    id: user.id,
+    id: typeof user.app_metadata?.profile_id === 'string' ? user.app_metadata.profile_id : user.id,
     first_name: user.user_metadata?.first_name || '',
     last_name: user.user_metadata?.last_name || '',
   }

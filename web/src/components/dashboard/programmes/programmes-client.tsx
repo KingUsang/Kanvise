@@ -24,6 +24,7 @@ export function ProgrammesClient() {
   const [subProgrammes, setSubProgrammes] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [tutors, setTutors] = useState<any[]>([])
+  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [activeCoursesCount, setActiveCoursesCount] = useState(0)
   const [draftCoursesCount, setDraftCoursesCount] = useState(0)
@@ -58,6 +59,7 @@ export function ProgrammesClient() {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
       if (!token) return
+      setCurrentProfileId(typeof session.user.app_metadata?.profile_id === 'string' ? session.user.app_metadata.profile_id : null)
 
       const headers = { 'Authorization': `Bearer ${token}` }
       const baseUrl = process.env.NEXT_PUBLIC_API_URL
@@ -869,20 +871,19 @@ export function ProgrammesClient() {
                           >
                             <option value="" disabled>Select a Tutor...</option>
                             {tutors.map(t => (
-                              <option key={t.id} value={t.kanvise_user_id}>
-                                {t.first_name} {t.last_name} {t.role === 'admin' ? '(Admin)' : ''}
+                              <option key={t.id} value={t.id}>
+                                {t.first_name} {t.last_name}{t.id === currentProfileId ? ' (you)' : t.role === 'admin' ? ' (Admin)' : ''}
                               </option>
                             ))}
                           </select>
                           
-                          {tutors.some(t => t.role === 'admin') && (
+                          {currentProfileId && tutors.some(t => t.id === currentProfileId) && (
                             <label className="flex items-center gap-2 cursor-pointer mt-2">
                               <input 
                                 type="checkbox" 
-                                checked={formData.tutor_id === tutors.find(t => t.role === 'admin')?.kanvise_user_id}
+                                checked={formData.tutor_id === currentProfileId}
                                 onChange={e => {
-                                  const adminId = tutors.find(t => t.role === 'admin')?.kanvise_user_id || '';
-                                  setFormData(p => ({ ...p, tutor_id: e.target.checked ? adminId : '' }))
+                                  setFormData(p => ({ ...p, tutor_id: e.target.checked ? currentProfileId : '' }))
                                 }}
                                 className="text-[#2e2877] focus:ring-[#2e2877] rounded"
                               />

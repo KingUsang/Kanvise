@@ -50,7 +50,10 @@ export default async function SchedulePage() {
   }
 
   const userInfo = {
-    id: user.id,
+    // Course assignments reference user_profiles.id, not auth.users.id. Keep
+    // the scheduler on the same identifier so an assigned admin can be
+    // selected as the class tutor.
+    id: typeof user.app_metadata?.profile_id === 'string' ? user.app_metadata.profile_id : user.id,
     first_name: user.user_metadata?.first_name || '',
     last_name: user.user_metadata?.last_name || '',
   }

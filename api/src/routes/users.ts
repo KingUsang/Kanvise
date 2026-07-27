@@ -26,20 +26,22 @@ usersRouter.get("/tutors", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
 
-    // 1. Fetch all tutors in this school
-    const { data: tutors, error: tutorsError } = await supabase
+    // 1. Fetch everyone who can teach. An admin becomes a solo tutor only
+    // when they have a course assignment, so include them for the assignment
+    // join below and filter unassigned admins out of the teaching-team list.
+    const { data: teachingPeople, error: tutorsError } = await supabase
       .from("user_profiles")
       .select("id, kanvise_user_id, first_name, last_name, email, bio, profile_photo_key, role")
       .eq("school_id", profile.school_id)
-      .eq("role", "tutor")
+      .in("role", ["tutor", "admin"])
       .order("created_at", { ascending: false });
 
     if (tutorsError) throw tutorsError;
-    if (!tutors || tutors.length === 0) return c.json({ data: [] });
+    if (!teachingPeople || teachingPeople.length === 0) return c.json({ data: [] });
 
     // 2. Fetch tutor_course_assignments for all these tutors
     // tutor_id in assignments is user_profiles.id (UUID)
-    const tutorIds = tutors.map((t) => t.id);
+    const tutorIds = teachingPeople.map((t) => t.id);
     const { data: assignments, error: assignError } = await supabase
       .from("tutor_course_assignments")
       .select("tutor_id, course_id")
@@ -64,13 +66,13 @@ usersRouter.get("/tutors", enforceAdmin, async (c) => {
     }
 
     // 4. Join in JS
-    const tutorsWithCourses = tutors.map((tutor) => {
+    const tutorsWithCourses = teachingPeople.map((tutor) => {
       const tutorAssignments = (assignments || []).filter((a) => a.tutor_id === tutor.id);
       const tutorCourses = tutorAssignments
         .map((a) => courses.find((c) => c.id === a.course_id))
         .filter((c): c is { id: string; name: string } => Boolean(c));
       return { ...tutor, courses: tutorCourses };
-    });
+    }).filter((person) => person.role === "tutor" || person.courses.length > 0);
 
     return c.json({ data: tutorsWithCourses });
   } catch (error: any) {

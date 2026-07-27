@@ -16,7 +16,7 @@ import { coursesRouter } from './courses'
 function query(result: any) {
   const builder: any = {
     select: () => builder,
-    eq: () => builder,
+    eq: vi.fn(() => builder),
     or: () => builder,
     in: () => builder,
     order: () => builder,
@@ -27,7 +27,26 @@ function query(result: any) {
 }
 
 describe('course tutor management', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+  })
+
+  it('uses the profile UUID when loading courses for a tutor', async () => {
+    mocks.user = { id: 'profile-tutor-1', school_id: 'school-1', role: 'tutor', kanvise_user_id: 'KNV-TUT-1' }
+    const assignmentQuery = query({ data: [{ course_id: 'course-1' }], error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'tutor_course_assignments') return assignmentQuery
+      if (table === 'courses') return query({ data: [{ id: 'course-1', name: 'Chemistry' }], error: null })
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const response = await coursesRouter.request('/')
+
+    expect(response.status).toBe(200)
+    expect(assignmentQuery.eq).toHaveBeenCalledWith('tutor_id', 'profile-tutor-1')
+    expect(assignmentQuery.eq).not.toHaveBeenCalledWith('tutor_id', 'KNV-TUT-1')
+  })
 
   it('returns a school-wide assignment overview without per-course queries', async () => {
     mocks.from.mockImplementation((table: string) => {

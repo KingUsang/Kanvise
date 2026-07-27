@@ -87,7 +87,9 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
         let tutorsData = { data: [] }
         if (capabilities.isAdmin) {
-          const tutorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/tutors`, {
+          // Admins can teach too. This list must use profile IDs because that
+          // is what tutor_course_assignments and live_classes store.
+          const tutorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?roles=admin,tutor`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           if (tutorsRes.ok) {
@@ -116,19 +118,25 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     if (!capabilities.isAdmin || !courseId) return
     const fetchCourseTutors = async () => {
       try {
+        setAssignedTutorIds([])
+        setTutorId('')
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/tutors`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (res.ok) {
           const { data } = await res.json()
-          setAssignedTutorIds(data.map((a: any) => a.tutor_id))
+          const tutorIds = data.map((assignment: { tutor_id: string }) => assignment.tutor_id)
+          setAssignedTutorIds(tutorIds)
+          // A tutor assigned to the selected course is the sensible default.
+          // Admins may still choose another tutor assigned to that course.
+          if (tutorIds.includes(user.id)) setTutorId(user.id)
         }
       } catch (err) {
         console.error('Failed to fetch assigned tutors:', err)
       }
     }
     fetchCourseTutors()
-  }, [courseId, token, capabilities.isAdmin])
+  }, [courseId, token, capabilities.isAdmin, user.id])
 
   const handleScheduleClass = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -343,13 +351,12 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                       className="w-full h-10 px-3 pr-10 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] appearance-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer"
                     >
                       <option value="" disabled>Select tutor...</option>
-                      {(!courseId || assignedTutorIds.includes(user.id)) && (
-                        <option value={user.id}>Assign to Self ({user.first_name} {user.last_name})</option>
-                      )}
-                      {tutors.filter(t => t.id !== user.id && (!courseId || assignedTutorIds.includes(t.id))).map(tutor => (
-                        <option key={tutor.id} value={tutor.id}>{tutor.first_name} {tutor.last_name}</option>
+                      {tutors.filter(t => !courseId || assignedTutorIds.includes(t.id)).map(tutor => (
+                        <option key={tutor.id} value={tutor.id}>
+                          {tutor.first_name} {tutor.last_name}{tutor.id === user.id ? ' (you)' : ''}
+                        </option>
                       ))}
-                      {courseId && assignedTutorIds.length === 0 && !assignedTutorIds.includes(user.id) && (
+                      {courseId && assignedTutorIds.length === 0 && (
                         <option value="" disabled>No tutors are assigned to this course yet.</option>
                       )}
                     </select>

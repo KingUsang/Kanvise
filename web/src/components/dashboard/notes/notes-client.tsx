@@ -76,6 +76,11 @@ export function NotesClient({ session }: NotesClientProps) {
 
   const token = session.access_token
   const role = session.user.app_metadata?.kanvise_role || session.user.app_metadata?.role
+  // Content rows use user_profiles.id. Auth IDs and human-readable Kanvise
+  // IDs are deliberately not interchangeable with that UUID.
+  const currentProfileId = typeof session.user.app_metadata?.profile_id === 'string'
+    ? session.user.app_metadata.profile_id
+    : null
 
   useEffect(() => {
     fetchCourses()
@@ -498,7 +503,7 @@ export function NotesClient({ session }: NotesClientProps) {
                                 <button onClick={() => handleDownload(note.download_url, note.file_name)} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors" title="Download">
                                   <span className="material-symbols-outlined text-sm">download</span>
                                 </button>
-                                {(role === "admin" || (session.user.user_metadata?.kanvise_user_id || session.user.id) === note.tutor_id) && (
+                                {(role === "admin" || currentProfileId === note.tutor_id) && (
                                   <button onClick={() => setNoteToDelete(note)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors" title="Delete">
                                     <span className="material-symbols-outlined text-sm">delete</span>
                                   </button>

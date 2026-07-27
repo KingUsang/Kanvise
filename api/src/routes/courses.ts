@@ -148,7 +148,7 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
       const { data: assignments } = await supabase
         .from("tutor_course_assignments")
         .select("course_id")
-        .eq("tutor_id", profile.kanvise_user_id || profile.id)
+        .eq("tutor_id", profile.id)
         .eq("school_id", profile.school_id);
 
       const courseIds = assignments?.map(a => a.course_id) || [];
@@ -230,7 +230,7 @@ coursesRouter.get("/:id", async (c) => {
         .from("tutor_course_assignments")
         .select("id")
         .eq("course_id", id)
-        .eq("tutor_id", profile.kanvise_user_id || profile.id)
+        .eq("tutor_id", profile.id)
         .eq("school_id", profile.school_id)
         .single();
 

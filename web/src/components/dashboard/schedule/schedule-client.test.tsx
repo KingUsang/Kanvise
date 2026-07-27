@@ -52,7 +52,7 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
         }
         return { ok: true, json: async () => ({ data: mockCourses }) }
       }
-      if (url.includes('/tutors')) {
+      if (url.includes('/users?roles=admin,tutor')) {
         return { ok: true, json: async () => ({ data: mockTutors }) }
       }
       return { ok: true, json: async () => ({ data: [] }) }
@@ -155,6 +155,24 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
       // Used their own tutor ID implicitly!
       expect(reqBody.tutor_id).toBe('tutor-1')
     })
+  })
+
+  it('automatically assigns an admin to a course they teach', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation(async (url) => {
+      if (url.includes('/live-classes')) return { ok: true, json: async () => ({ data: [] }) }
+      if (url.includes('/courses/course-1/tutors')) return { ok: true, json: async () => ({ data: [{ tutor_id: 'admin-1' }] }) }
+      if (url.includes('/courses')) return { ok: true, json: async () => ({ data: mockCourses }) }
+      if (url.includes('/users?roles=admin,tutor')) return { ok: true, json: async () => ({ data: [{ id: 'admin-1', first_name: 'Admin', last_name: 'User' }] }) }
+      return { ok: true, json: async () => ({ data: [] }) }
+    })
+
+    render(<ScheduleClient {...defaultAdminProps} />)
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Intro to Math' })).toBeInTheDocument())
+    await user.selectOptions(document.querySelectorAll('select')[0], 'course-1')
+
+    await waitFor(() => expect(document.querySelectorAll('select')[1]).toHaveValue('admin-1'))
+    expect(screen.getByRole('option', { name: 'Admin User (you)' })).toBeInTheDocument()
   })
 
   it('displays useful server validation errors and does not clear the form', async () => {
