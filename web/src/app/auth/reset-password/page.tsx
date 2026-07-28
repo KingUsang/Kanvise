@@ -62,6 +62,21 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    // Imported students already have a roster profile and programme enrolment.
+    // Their invitation only creates a login, so record that this profile is now
+    // active once they have chosen a password.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile/activate`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+      }
+    } catch (activationError) {
+      console.error('Could not mark student profile active:', activationError);
+    }
+
     setSuccess(true);
     setLoading(false);
     

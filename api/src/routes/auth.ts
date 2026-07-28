@@ -180,6 +180,24 @@ authRouter.get('/me', async (c) => {
   return c.json({ user })
 })
 
+// A roster-imported student receives an Auth account only when their invitation
+// is sent. Mark the already-existing roster profile active after they set their
+// own password; this never creates a second profile or enrolment.
+authRouter.post('/profile/activate', async (c) => {
+  const user = c.get('user')
+  if (user.role !== 'student' || !user.id) {
+    return c.json({ error: 'Only student profiles can be activated', code: 'FORBIDDEN' }, 403)
+  }
+
+  const { error } = await supabase.from('user_profiles')
+    .update({ onboarding_status: 'active', activated_at: new Date().toISOString() } as any)
+    .eq('id', user.id)
+    .eq('role', 'student')
+
+  if (error) return c.json({ error: error.message }, 500)
+  return c.json({ message: 'Student profile activated' })
+})
+
 authRouter.patch('/me', async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
