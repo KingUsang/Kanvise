@@ -47,7 +47,10 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
+    bio TEXT,
+    phone TEXT,
     profile_photo_url TEXT,
+    profile_photo_key TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true
 );
 
@@ -104,7 +107,7 @@ CREATE TABLE IF NOT EXISTS avatar_configs (
     face_shape TEXT NOT NULL,
     hair_style TEXT NOT NULL,
     hair_colour TEXT NOT NULL,
-    outfit_colour TEXT NOT NULL,
+    outfit_colour TEXT NOT NULL DEFAULT '#2563EB',
     accessory TEXT,
     headwear TEXT
 );

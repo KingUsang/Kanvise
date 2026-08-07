@@ -24,7 +24,8 @@ export default function AccountSetupPage() {
     skin_tone: "#FAD6B1",
     hair_style: "Short",
     hair_colour: "#2b2b2b",
-    face_shape: "Oval"
+    face_shape: "Oval",
+    outfit_colour: "#2563EB"
   });
 
   useEffect(() => {
@@ -94,7 +95,7 @@ export default function AccountSetupPage() {
       }
 
       // Save avatar via PUT /avatars/me
-      await fetch(`${honoApiUrl}/avatars/me`, {
+      const avatarSaveRes = await fetch(`${honoApiUrl}/avatars/me`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${sessionToken}`,
@@ -102,6 +103,9 @@ export default function AccountSetupPage() {
         },
         body: JSON.stringify(avatarConfig)
       });
+      if (!avatarSaveRes.ok) {
+        throw new Error("Failed to save avatar");
+      }
 
       // Redirect to correct dashboard based on role
       if (profile?.role === "admin" || profile?.role === "tutor") router.push("/dashboard");
