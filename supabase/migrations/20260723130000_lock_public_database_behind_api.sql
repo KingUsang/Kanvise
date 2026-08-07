@@ -46,5 +46,5 @@ alter default privileges in schema public
 
 -- These older trigger/helper functions predate the fixed-search-path rule.
 -- Pinning the path prevents callers from shadowing referenced objects.
-alter function public.set_updated_at() set search_path = pg_catalog, public;
+alter function public.update_modified_column() set search_path = pg_catalog, public;
 alter function public.increment_user_sequence(text) set search_path = pg_catalog, public;

@@ -1,3 +1,30 @@
+-- The production database originally received this table outside the checked-in
+-- migration history. Define it here so a clean environment can reproduce the
+-- schema before installing the atomic invite-consumption function below.
+CREATE TABLE IF NOT EXISTS public.tutor_invites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    school_id UUID NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    invited_by UUID NOT NULL REFERENCES public.user_profiles(id),
+    supabase_auth_id UUID,
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')),
+    expires_at TIMESTAMPTZ NOT NULL,
+    accepted_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_tutor_invites_email
+    ON public.tutor_invites(email);
+CREATE INDEX IF NOT EXISTS idx_tutor_invites_school_id
+    ON public.tutor_invites(school_id);
+CREATE INDEX IF NOT EXISTS idx_tutor_invites_status
+    ON public.tutor_invites(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tutor_invites_pending_unique
+    ON public.tutor_invites(school_id, email)
+    WHERE status = 'pending';
+
 CREATE OR REPLACE FUNCTION consume_tutor_invite(
     p_invite_id UUID,
     p_email TEXT,

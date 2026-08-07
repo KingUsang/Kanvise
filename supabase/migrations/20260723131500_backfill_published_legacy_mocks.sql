@@ -1,6 +1,11 @@
 -- Move valid mocks published before the versioned CBT engine into immutable
 -- snapshots. Empty legacy mocks cannot become valid exam versions, so return
 -- them to draft instead of exposing an exam that students cannot take.
+-- The legacy builder and generated database types both use this field, but its
+-- original production ALTER TABLE was missing from the repository history.
+ALTER TABLE public.mock_questions
+  ADD COLUMN IF NOT EXISTS grading_rubric TEXT;
+
 do $$
 declare
   legacy_mock record;
