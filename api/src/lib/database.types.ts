@@ -584,10 +584,13 @@ export type Database = {
           course_id: string | null
           created_at: string
           enrolled_at: string
+          granted_by: string | null
           id: string
-          payment_id: string
+          imported_at: string | null
+          payment_id: string | null
           programme_id: string | null
           school_id: string
+          source: string
           student_id: string
           sub_programme_id: string | null
         }
@@ -595,10 +598,13 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           enrolled_at?: string
+          granted_by?: string | null
           id?: string
-          payment_id: string
+          imported_at?: string | null
+          payment_id?: string | null
           programme_id?: string | null
           school_id: string
+          source?: string
           student_id: string
           sub_programme_id?: string | null
         }
@@ -606,10 +612,13 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           enrolled_at?: string
+          granted_by?: string | null
           id?: string
-          payment_id?: string
+          imported_at?: string | null
+          payment_id?: string | null
           programme_id?: string | null
           school_id?: string
+          source?: string
           student_id?: string
           sub_programme_id?: string | null
         }
@@ -619,6 +628,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -3162,6 +3178,8 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          activated_at: string | null
+          added_by: string | null
           bio: string | null
           created_at: string
           email: string | null
@@ -3170,13 +3188,18 @@ export type Database = {
           is_active: boolean
           kanvise_user_id: string
           last_name: string
+          onboarding_source: string
+          onboarding_status: string
+          phone: string | null
           profile_photo_key: string | null
           role: string
           school_id: string | null
-          supabase_auth_id: string
+          supabase_auth_id: string | null
           updated_at: string
         }
         Insert: {
+          activated_at?: string | null
+          added_by?: string | null
           bio?: string | null
           created_at?: string
           email?: string | null
@@ -3185,13 +3208,18 @@ export type Database = {
           is_active?: boolean
           kanvise_user_id: string
           last_name: string
+          onboarding_source?: string
+          onboarding_status?: string
+          phone?: string | null
           profile_photo_key?: string | null
           role: string
           school_id?: string | null
-          supabase_auth_id: string
+          supabase_auth_id?: string | null
           updated_at?: string
         }
         Update: {
+          activated_at?: string | null
+          added_by?: string | null
           bio?: string | null
           created_at?: string
           email?: string | null
@@ -3200,13 +3228,23 @@ export type Database = {
           is_active?: boolean
           kanvise_user_id?: string
           last_name?: string
+          onboarding_source?: string
+          onboarding_status?: string
+          phone?: string | null
           profile_photo_key?: string | null
           role?: string
           school_id?: string | null
-          supabase_auth_id?: string
+          supabase_auth_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_profiles_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_profiles_school_id_fkey"
             columns: ["school_id"]

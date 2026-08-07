@@ -1,5 +1,6 @@
 import { sendNotificationEmail } from '../emails/send-notification'
 import { notificationRepository, type NotificationRepository } from './repository'
+import { deliverTelegramToStudent } from '../telegram/delivery'
 import {
   notificationEmailEvents,
   type NotificationEvent,
@@ -37,6 +38,9 @@ export async function deliverNotification<K extends NotificationEvent>(
     emailsSent: 0,
     emailsAlreadySent: 0,
     skippedNoEmail: 0,
+    telegramSent: 0,
+    telegramAlreadySent: 0,
+    telegramSkipped: 0,
     failures: [],
   }
 
@@ -80,6 +84,23 @@ export async function deliverNotification<K extends NotificationEvent>(
         if (created) result.inAppCreated += 1
       } catch (error) {
         result.failures.push({ recipientId: recipient.id, channel: 'in_app', error: errorMessage(error) })
+      }
+
+      try {
+        const telegram = await deliverTelegramToStudent({
+          schoolId: request.schoolId,
+          userId: recipient.id,
+          eventType: request.event,
+          relatedEntityId: request.relatedEntityId,
+          text: `${request.title}\n\n${request.body}`,
+          button: request.telegramAction ? { text: request.telegramAction.text, url: request.telegramAction.url } : undefined,
+        })
+        if (telegram === 'sent') result.telegramSent += 1
+        else if (telegram === 'already_sent') result.telegramAlreadySent += 1
+        else if (telegram === 'skipped') result.telegramSkipped += 1
+        else result.failures.push({ recipientId: recipient.id, channel: 'telegram', error: 'Telegram delivery failed' })
+      } catch (error) {
+        result.failures.push({ recipientId: recipient.id, channel: 'telegram', error: errorMessage(error) })
       }
 
       if (!recipient.email) {

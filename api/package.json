@@ -16,17 +16,17 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",
     "@aws-sdk/s3-request-presigner": "^3.1087.0",
-    "@hono/node-server": "^1.13.7",
+    "@hono/node-server": "^2.1.0",
     "@napi-rs/canvas": "^1.0.2",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "@supabase/supabase-js": "^2.47.11",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "hono": "^4.6.14",
+    "hono": "^4.13.0",
     "livekit-server-sdk": "^2.17.0",
     "node-cron": "^4.2.1",
-    "pdfjs-dist": "^3.11.174",
+    "pdfjs-dist": "^6.2.108",
     "resend": "^6.17.2"
   },
   "devDependencies": {

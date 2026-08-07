@@ -49,8 +49,8 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
     }
     const isStandalone = !programme_id && !sub_programme_id;
     const availableSeparately = isStandalone || Boolean(is_available_separately);
-    if (availableSeparately && !(parseFloat(price) > 0)) {
-      return c.json({ error: "Enter a price before allowing separate purchase", code: "PRICE_REQUIRED" }, 400);
+    if (availableSeparately && (price === '' || !Number.isFinite(parseFloat(price)) || parseFloat(price) < 0)) {
+      return c.json({ error: "Choose a free option or enter a valid price", code: "PRICE_REQUIRED" }, 400);
     }
 
     // Verify parent belongs to school if provided
@@ -298,8 +298,8 @@ coursesRouter.patch("/:id", enforceAdmin, async (c) => {
     delete updates.school_id;
     delete updates.id;
     if (updates.is_available_separately === false) updates.price = 0;
-    if (updates.is_available_separately === true && !(parseFloat(updates.price) > 0)) {
-      return c.json({ error: "Enter a price before allowing separate purchase", code: "PRICE_REQUIRED" }, 400);
+    if (updates.is_available_separately === true && (updates.price === '' || !Number.isFinite(parseFloat(updates.price)) || parseFloat(updates.price) < 0)) {
+      return c.json({ error: "Choose a free option or enter a valid price", code: "PRICE_REQUIRED" }, 400);
     }
 
     const { data, error } = await supabase

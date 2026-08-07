@@ -45,22 +45,25 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
     return c.json({ error: 'Set up your centre before adding students', code: 'NO_SCHOOL' }, 400);
   }
 
-  const body = await c.req.json();
-  const rows = Array.isArray(body.students) ? body.students : [];
+  const body: { students?: unknown; send_invitations?: boolean } = await c.req.json();
+  const rows: unknown[] = Array.isArray(body.students) ? body.students : [];
   const sendInvitations = body.send_invitations !== false;
 
   if (!rows.length || rows.length > MAX_IMPORT_SIZE) {
     return c.json({ error: `Upload between 1 and ${MAX_IMPORT_SIZE} students at a time`, code: 'VALIDATION_ERROR' }, 400);
   }
 
-  const normalizedRows = rows.map((row: any, index: number) => ({
-    row: index + 1,
-    first_name: String(row.first_name || '').trim(),
-    last_name: String(row.last_name || '').trim(),
-    email: String(row.email || '').trim().toLowerCase() || null,
-    phone: String(row.phone || '').trim() || null,
-    programme_id: String(row.programme_id || '').trim(),
-  }));
+  const normalizedRows = rows.map((row, index) => {
+    const input = row && typeof row === 'object' ? row as Record<string, unknown> : {};
+    return {
+      row: index + 1,
+      first_name: String(input.first_name || '').trim(),
+      last_name: String(input.last_name || '').trim(),
+      email: String(input.email || '').trim().toLowerCase() || null,
+      phone: String(input.phone || '').trim() || null,
+      programme_id: String(input.programme_id || '').trim(),
+    };
+  });
   const validationErrors = normalizedRows.flatMap((row) => {
     const errors: string[] = [];
     if (!row.first_name || !row.last_name) errors.push('First name and last name are required');

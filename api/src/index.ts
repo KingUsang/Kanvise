@@ -6,8 +6,10 @@ import { supabase } from "./lib/supabase";
 import { validateProductionPaymentSecrets } from "./config/payment-secrets";
 import { resolveCorsOrigin } from "./config/cors";
 import { startScheduledJobs } from "./jobs/scheduler";
+import { isTelegramEnabled, validateProductionEnvironment } from "./config/runtime-env";
 
 validateProductionPaymentSecrets();
+validateProductionEnvironment();
 
 const app = new Hono();
 
@@ -45,6 +47,7 @@ import { questionBanksRouter } from "./routes/question-banks";
 import { studentMocksRouter } from "./routes/student-mocks";
 import { studentSettingsRouter } from "./routes/student-settings";
 import { marketplaceRouter } from "./routes/marketplace";
+import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -71,6 +74,10 @@ app.route("/internal/payments", internalPaymentsRouter);
 app.route("/submissions", submissionsRouter);
 app.route("/mock-answers", mockAnswersRouter);
 app.route("/health", healthRouter);
+if (isTelegramEnabled()) {
+  app.route('/telegram', telegramRouter);
+  app.route('/telegram', telegramWebhookRouter);
+}
 // Promo routes are intentionally confined to this prefix. Mounting this router at
 // `/` caused its router-wide admin middleware to run for unrelated routes such as
 // `/students/me/settings`.

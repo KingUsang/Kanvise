@@ -212,20 +212,67 @@ subProgrammesRouter.post("/:id/publish", enforceAdmin, async (c) => {
   }
 });
 
-// Soft-delete sub-programme
+// Delete a sub-programme only when doing so cannot remove enrolled content.
 subProgrammesRouter.delete("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
-    
-    // TODO: Add check for active enrolments as per spec, once enrolments table is mapped
-    const { error } = await supabase
+
+    const { data: subProgramme, error: subProgrammeError } = await supabase
+      .from("sub_programmes")
+      .select("id, programme_id")
+      .eq("id", id)
+      .eq("school_id", profile.school_id)
+      .maybeSingle();
+
+    if (subProgrammeError) throw subProgrammeError;
+    if (!subProgramme) {
+      return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
+    }
+
+    const { data: childCourses, error: childCoursesError } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("sub_programme_id", id)
+      .eq("school_id", profile.school_id);
+
+    if (childCoursesError) throw childCoursesError;
+
+    const enrolmentScopes = [
+      `sub_programme_id.eq.${id}`,
+      ...(subProgramme.programme_id ? [`programme_id.eq.${subProgramme.programme_id}`] : []),
+      ...((childCourses || []).length > 0
+        ? [`course_id.in.(${(childCourses || []).map((course) => course.id).join(",")})`]
+        : []),
+    ];
+    const { data: activeEnrolment, error: enrolmentError } = await supabase
+      .from("enrolments")
+      .select("id")
+      .eq("school_id", profile.school_id)
+      .or(enrolmentScopes.join(","))
+      .limit(1)
+      .maybeSingle();
+
+    if (enrolmentError) throw enrolmentError;
+    if (activeEnrolment) {
+      return c.json({
+        error: "Sub-programme cannot be deleted while students are enrolled",
+        code: "ACTIVE_ENROLMENTS",
+      }, 409);
+    }
+
+    const { data: deleted, error } = await supabase
       .from("sub_programmes")
       .delete()
       .eq("id", id)
-      .eq("school_id", profile.school_id);
+      .eq("school_id", profile.school_id)
+      .select("id")
+      .maybeSingle();
       
     if (error) throw error;
+    if (!deleted) {
+      return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
+    }
     
     return c.json({ message: "Sub-programme deleted" });
   } catch (error: any) {

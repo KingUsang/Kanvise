@@ -252,14 +252,17 @@ paymentsRouter.get("/status/:reference", async (c) => {
   const reference = c.req.param("reference");
   const { data, error } = await supabase
     .from("payments")
-    .select("paystack_reference, status, amount, paid_at")
+    .select("paystack_reference, status, amount, paid_at, school_id")
     .eq("paystack_reference", reference)
     .eq("student_id", user.id)
     .maybeSingle();
 
   if (error) return c.json({ error: "Could not load payment status" }, 500);
   if (!data) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
-  return c.json({ data });
+  const { data: paidTelegramChat, error: telegramError } = await (supabase as any).from('telegram_chats')
+    .select('id').eq('school_id', data.school_id).eq('purpose', 'paid_teaching').eq('status', 'active').maybeSingle()
+  if (telegramError) return c.json({ error: 'Could not load payment status' }, 500)
+  return c.json({ data: { ...data, telegram_paid_access_available: Boolean(paidTelegramChat) } });
 });
 
 // GET /payments — List all transactions for the school

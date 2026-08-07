@@ -15,7 +15,8 @@
   "devDependencies": {
     "concurrently": "^9.1.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "wrangler": "^4.119.0"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

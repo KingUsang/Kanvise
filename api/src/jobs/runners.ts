@@ -1,5 +1,6 @@
 import { notifyAssignmentDeadline, notifyLiveClassReminder, notifyMockPublished } from '../notifications/triggers'
 import { jobsRepository, type JobsRepository } from './repository'
+import { closeDueTelegramAttendanceWindows } from '../telegram/attendance'
 
 type Logger = Pick<Console, 'info' | 'error' | 'warn'>
 type Delivery = { failures: unknown[] }
@@ -99,5 +100,16 @@ export function createGuardedJob(name: string, job: () => Promise<unknown>, logg
       return active
     },
     async waitForIdle() { await active },
+  }
+}
+
+export async function runTelegramAttendanceCloseJob(now = new Date(), close = closeDueTelegramAttendanceWindows, logger: Logger = console) {
+  try {
+    const result = await close(now)
+    logger.info('job.telegram_attendance_close.complete', result)
+    return result
+  } catch (error) {
+    logger.error('job.telegram_attendance_close.failed', { error })
+    throw error
   }
 }

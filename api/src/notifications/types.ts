@@ -32,12 +32,13 @@ export type NotificationRequest<K extends NotificationEvent> = {
   relatedEntityType: string
   relatedEntityId: string
   emailInput: (recipient: NotificationRecipient) => EmailTemplateInputs[NotificationEmailEvent<K>]
+  telegramAction?: { text: string; url: string }
   batchSize?: number
 }
 
 export type NotificationFailure = {
   recipientId: string
-  channel: 'in_app' | 'email' | 'recipient'
+  channel: 'in_app' | 'email' | 'telegram' | 'recipient'
   error: string
 }
 
@@ -48,5 +49,8 @@ export type NotificationResult = {
   emailsSent: number
   emailsAlreadySent: number
   skippedNoEmail: number
+  telegramSent: number
+  telegramAlreadySent: number
+  telegramSkipped: number
   failures: NotificationFailure[]
 }

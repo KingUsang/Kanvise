@@ -24,6 +24,7 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { label: 'Tutors', href: '/dashboard/tutors', icon: 'groups_3', area: 'administration', access: 'admin', keywords: ['tutors', 'teachers', 'invites', 'directory'] },
   { label: 'Students', href: '/dashboard/students', icon: 'face', area: 'administration', access: 'admin', keywords: ['students', 'learners', 'roster', 'enrolments'] },
   { label: 'Payments', href: '/dashboard/payments', icon: 'payments', area: 'administration', access: 'admin', keywords: ['payments', 'revenue', 'payouts', 'financials'] },
+  { label: 'Telegram', href: '/dashboard/telegram', icon: 'send', area: 'administration', access: 'admin', keywords: ['telegram', 'reminders', 'group', 'bot'] },
   { label: 'Schedule', href: '/dashboard/schedule', icon: 'calendar_month', area: 'shared', access: 'shared', keywords: ['schedule', 'calendar', 'classes', 'sessions'] },
   { label: 'Attendance', href: '/dashboard/attendance', icon: 'fact_check', area: 'shared', access: 'shared', keywords: ['attendance', 'participation', 'sessions'] },
   { label: 'Mocks', href: '/dashboard/mocks', icon: 'quiz', area: 'shared', access: 'shared', keywords: ['mocks', 'exams', 'tests', 'grading'], badge: 'ungradedMocks' },

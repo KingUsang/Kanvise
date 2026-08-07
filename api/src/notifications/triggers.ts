@@ -1,5 +1,6 @@
 import { deliverNotification } from './service'
 import type { NotificationRecipient, NotificationResult } from './types'
+import { announceTelegramClassReminder } from '../telegram/delivery'
 
 type Deliver = typeof deliverNotification
 
@@ -27,6 +28,7 @@ export function notifyMockPublished(input: {
       closesAt: input.closesAt || undefined,
       mockUrl: `${frontendUrl()}/dashboard/mocks/${input.id}`,
     }),
+    telegramAction: { text: 'Open mock', url: `${frontendUrl()}/dashboard/mocks/${input.id}` },
   })
 }
 
@@ -49,6 +51,7 @@ export function notifySubmissionGraded(input: {
       feedback: input.feedback || undefined,
       submissionUrl: `${frontendUrl()}/dashboard/submissions/${input.id}`,
     }),
+    telegramAction: { text: 'View feedback', url: `${frontendUrl()}/dashboard/submissions/${input.id}` },
   })
 }
 
@@ -69,6 +72,7 @@ export function notifyMockFullyGraded(input: {
       score: input.score,
       resultsUrl: `${frontendUrl()}/dashboard/mocks/${input.mockId}/results/${input.attemptId}`,
     }),
+    telegramAction: { text: 'View results', url: `${frontendUrl()}/dashboard/mocks/${input.mockId}/results/${input.attemptId}` },
   })
 }
 
@@ -91,13 +95,14 @@ export function notifyClassCancelled(input: {
       dashboardUrl: `${frontendUrl()}/dashboard/schedule`,
       reason: input.reason,
     }),
+    telegramAction: { text: 'View schedule', url: `${frontendUrl()}/dashboard/schedule` },
   })
 }
 
-export function notifyLiveClassReminder(input: {
+export async function notifyLiveClassReminder(input: {
   id: string; schoolId: string; courseId: string; title: string; courseName: string; startsAt: string
 }, deliver: Deliver = deliverNotification): Promise<NotificationResult> {
-  return deliver({
+  const result = await deliver({
     schoolId: input.schoolId,
     event: 'live_class_reminder',
     recipients: { enrolment: { type: 'course', id: input.courseId } },
@@ -112,7 +117,10 @@ export function notifyLiveClassReminder(input: {
       startsAt: input.startsAt,
       joinUrl: `${frontendUrl()}/class/${input.id}`,
     }),
+    telegramAction: { text: 'View schedule', url: `${frontendUrl()}/dashboard/student/classes` },
   })
+  await announceTelegramClassReminder({ schoolId: input.schoolId, liveClassId: input.id, title: input.title, startsAt: input.startsAt })
+  return result
 }
 
 export function notifyAssignmentDeadline(input: {
@@ -133,5 +141,6 @@ export function notifyAssignmentDeadline(input: {
       deadlineAt: input.deadlineAt,
       assignmentUrl: `${frontendUrl()}/dashboard/assignments/${input.id}`,
     }),
+    telegramAction: { text: 'Open assignment', url: `${frontendUrl()}/dashboard/student/assignments` },
   })
 }

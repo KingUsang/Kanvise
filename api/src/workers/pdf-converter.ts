@@ -1,36 +1,20 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import path from 'node:path';
 import { createCanvas, DOMMatrix, Path2D } from '@napi-rs/canvas';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+
+type PdfJs = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
+
+// The API compiles to CommonJS, while maintained PDF.js releases are ESM-only.
+// Constructing the import at runtime preserves native import() instead of
+// letting TypeScript rewrite it to require(), which cannot load the ESM build.
+const loadPdfJs = new Function(
+  'return import("pdfjs-dist/legacy/build/pdf.mjs")',
+) as () => Promise<PdfJs>;
 
 // pdfjs expects browser globals and falls back to require("canvas") — a
 // package we don't ship — when they're missing. Provide them from @napi-rs.
 (globalThis as any).DOMMatrix ??= DOMMatrix;
 (globalThis as any).Path2D ??= Path2D;
-
-// Define a custom canvas factory for pdfjs in Node
-class NodeCanvasFactory {
-  create(width: number, height: number) {
-    const canvas = createCanvas(width, height);
-    const context = canvas.getContext('2d');
-    return {
-      canvas,
-      context,
-    };
-  }
-
-  reset(canvasAndContext: any, width: number, height: number) {
-    canvasAndContext.canvas.width = width;
-    canvasAndContext.canvas.height = height;
-  }
-
-  destroy(canvasAndContext: any) {
-    canvasAndContext.canvas.width = 0;
-    canvasAndContext.canvas.height = 0;
-    canvasAndContext.canvas = null;
-    canvasAndContext.context = null;
-  }
-}
 
 export type PdfConversionMessage =
   | { type: 'start', numPages: number }
@@ -40,18 +24,17 @@ export type PdfConversionMessage =
 export async function convertPdfToImages(
   pdfBuffer: Uint8Array,
   emit: (message: PdfConversionMessage) => void,
+  pdfJsLoader: () => Promise<PdfJs> = loadPdfJs,
 ): Promise<void> {
-  const standardFontDataUrl = path.join(process.cwd(), 'node_modules/pdfjs-dist/standard_fonts/');
-  const canvasFactory = new NodeCanvasFactory();
+  const pdfjsLib = await pdfJsLoader();
+  const pdfjsRoot = path.dirname(require.resolve('pdfjs-dist/package.json'));
+  const standardFontDataUrl = path.join(pdfjsRoot, 'standard_fonts/');
 
   const loadingTask = pdfjsLib.getDocument({
     data: pdfBuffer,
     // Disable font face because we don't have DOM
     disableFontFace: true,
     standardFontDataUrl: standardFontDataUrl,
-    // pdfjs only honors the canvasFactory passed here; the one given to
-    // page.render() is ignored, and the default requires the "canvas" package.
-    canvasFactory,
   });
 
   const pdfDocument = await loadingTask.promise;
@@ -66,28 +49,25 @@ export async function convertPdfToImages(
     // 150 / 72 = ~2.08 scale
     const viewport = page.getViewport({ scale: 2.08 });
     
-    const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
+    const canvas = createCanvas(viewport.width, viewport.height);
     
     const renderContext = {
-      canvasContext: canvasAndContext.context as any,
+      canvas: canvas as any,
       viewport,
-      canvasFactory,
     };
 
     await page.render(renderContext).promise;
     
     // Encode as JPEG (85% quality by default in napi-rs/canvas if we don't specify, or we can just use 'jpeg')
-    const jpegBuffer = await canvasAndContext.canvas.encode('jpeg');
+    const jpegBuffer = await canvas.encode('jpeg');
     emit({ type: 'page', pageNumber: i, buffer: jpegBuffer });
-    
-    canvasFactory.destroy(canvasAndContext);
     
     // Clean up page resources
     page.cleanup();
   }
 
   // Clean up document resources
-  await pdfDocument.destroy();
+  await loadingTask.destroy();
   
   emit({ type: 'complete' });
 }

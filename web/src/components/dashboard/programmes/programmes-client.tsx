@@ -143,8 +143,8 @@ export function ProgrammesClient() {
         is_available_separately: entityType === 'programme' || (entityType === 'course' && formData.course_placement === 'standalone') || formData.is_available_separately
       }
 
-      if (payload.is_available_separately && !(Number(formData.price) > 0)) {
-        throw new Error('Enter a price greater than zero for an item students can buy')
+      if (payload.is_available_separately && (formData.price === '' || Number(formData.price) < 0)) {
+        throw new Error('Choose Free or enter a valid price')
       }
       
       // Only programmes support thumbnails in the database currently
@@ -811,7 +811,13 @@ export function ProgrammesClient() {
                   )}
 
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Price students will pay (NGN) <span className="text-[#ba1a1a]">*</span></label>
+                    <label className="block text-xs font-semibold text-[#1b1c1c] mb-1">Student price (NGN) <span className="text-[#ba1a1a]">*</span></label>
+                    {(entityType === 'programme' || (entityType === 'course' && formData.course_placement === 'standalone') || formData.is_available_separately) && (
+                      <div className="mb-2 flex rounded border border-[#c8c5d2] bg-white p-1">
+                        <button type="button" onClick={() => setFormData(p => ({ ...p, price: '0' }))} className={`flex-1 rounded px-3 py-1.5 text-xs font-semibold ${formData.price === '0' ? 'bg-[#2e2877] text-white' : 'text-[#474551] hover:bg-[#f5f3ff]'}`}>Free</button>
+                        <button type="button" onClick={() => setFormData(p => ({ ...p, price: p.price === '0' ? '' : p.price }))} className={`flex-1 rounded px-3 py-1.5 text-xs font-semibold ${formData.price !== '0' ? 'bg-[#2e2877] text-white' : 'text-[#474551] hover:bg-[#f5f3ff]'}`}>Paid</button>
+                      </div>
+                    )}
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#474551] font-semibold">₦</span>
                       <input 
@@ -822,14 +828,14 @@ export function ProgrammesClient() {
                         value={formData.price}
                         onChange={e => setFormData(p => ({ ...p, price: e.target.value }))}
                         className="w-full bg-white border border-[#c8c5d2] rounded pl-8 pr-3 py-2 text-sm focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none disabled:cursor-not-allowed disabled:bg-[#f0eded] disabled:text-[#787582]"
-                        placeholder="0.00"
+                        placeholder={formData.price === '0' ? 'Free' : '0.00'}
                       />
                     </div>
                     <p className="mt-1.5 text-xs leading-5 text-[#474551]">
-                      {entityType === 'programme' && 'One payment for every Course in this Programme, including Courses in its Sub-programmes.'}
+                      {entityType === 'programme' && (formData.price === '0' ? 'Free — students can be enrolled without a payment.' : 'One payment for every Course in this Programme, including Courses in its Sub-programmes.')}
                       {entityType === 'sub_programme' && !formData.is_available_separately && 'No separate price is needed. Access is included with the parent Programme.'}
                       {entityType === 'sub_programme' && formData.is_available_separately && 'One payment for every Course inside this Sub-programme. The full Programme keeps its own price.'}
-                      {entityType === 'course' && formData.course_placement === 'standalone' && 'The price for enrolling in this Course on its own.'}
+                      {entityType === 'course' && formData.course_placement === 'standalone' && (formData.price === '0' ? 'Free — students can enrol in this Course without a payment.' : 'The price for enrolling in this Course on its own.')}
                       {entityType === 'course' && formData.course_placement !== 'standalone' && !formData.is_available_separately && 'No separate price is needed. Students receive access through its parent.'}
                       {entityType === 'course' && formData.course_placement !== 'standalone' && formData.is_available_separately && 'The price for students who buy this Course without buying its parent.'}
                     </p>

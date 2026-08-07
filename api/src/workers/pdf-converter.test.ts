@@ -25,7 +25,8 @@ function createOnePagePdf() {
 describe('PDF converter worker', () => {
   it('renders every PDF page to a JPEG and completes', async () => {
     const messages: PdfConversionMessage[] = []
-    await convertPdfToImages(createOnePagePdf(), message => messages.push(message))
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    await convertPdfToImages(createOnePagePdf(), message => messages.push(message), async () => pdfjs)
 
     expect(messages[0]).toEqual({ type: 'start', numPages: 1 })
     expect(messages.at(-1)).toEqual({ type: 'complete' })
@@ -37,6 +38,7 @@ describe('PDF converter worker', () => {
   })
 
   it('rejects malformed PDF bytes', async () => {
-    await expect(convertPdfToImages(new Uint8Array([1, 2, 3]), () => {})).rejects.toThrow()
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    await expect(convertPdfToImages(new Uint8Array([1, 2, 3]), () => {}, async () => pdfjs)).rejects.toThrow()
   })
 })

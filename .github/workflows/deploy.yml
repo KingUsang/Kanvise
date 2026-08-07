@@ -19,19 +19,16 @@ jobs:
   verify:
     name: Test and build API
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: api/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm test
-      - run: npm run build
+      - run: npm test --workspace=api
+      - run: npm run build --workspace=api
 
   deploy:
     name: Deploy ${{ github.ref_name }}
@@ -43,6 +40,12 @@ jobs:
         uses: appleboy/ssh-action@v1.2.5
         env:
           DEPLOY_BRANCH: ${{ github.ref_name }}
+          DEPLOY_DIRECTORY: ${{ vars.DEPLOY_DIRECTORY }}
+          PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
+          APP_PORT: ${{ vars.APP_PORT }}
+          NODE_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+          SCHEDULED_JOBS_ENABLED: ${{ vars.SCHEDULED_JOBS_ENABLED }}
+          TELEGRAM_ENABLED: ${{ vars.TELEGRAM_ENABLED }}
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
           CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
         with:
@@ -50,35 +53,52 @@ jobs:
           username: ${{ secrets.SCALEWAY_USER }}
           key: ${{ secrets.SCALEWAY_SSH_KEY }}
           port: ${{ secrets.SCALEWAY_PORT || 22 }}
-          envs: DEPLOY_BRANCH,FRONTEND_URL,CORS_ALLOWED_ORIGINS
+          envs: DEPLOY_BRANCH,DEPLOY_DIRECTORY,PM2_APP_NAME,APP_PORT,NODE_ENV,SCHEDULED_JOBS_ENABLED,TELEGRAM_ENABLED,FRONTEND_URL,CORS_ALLOWED_ORIGINS
           script: |
             set -eu
+            test -n "$DEPLOY_DIRECTORY"
+            test -n "$PM2_APP_NAME"
+            test -n "$APP_PORT"
+            test -n "$SCHEDULED_JOBS_ENABLED"
+            test -n "$TELEGRAM_ENABLED"
             test -n "$FRONTEND_URL"
             test -n "$CORS_ALLOWED_ORIGINS"
-            cd ~/Kanvise
-            git fetch origin "$DEPLOY_BRANCH"
-            if ! git diff --quiet || ! git diff --cached --quiet; then
-              git stash push -m "ci-pre-deploy-$DEPLOY_BRANCH"
+            case "$APP_PORT" in
+              *[!0-9]*|'') echo "APP_PORT must be numeric" >&2; exit 1 ;;
+            esac
+            case "$DEPLOY_DIRECTORY" in
+              /root/Kanvise-*) ;;
+              *) echo "DEPLOY_DIRECTORY must be an isolated /root/Kanvise-* directory" >&2; exit 1 ;;
+            esac
+            cd "$DEPLOY_DIRECTORY"
+            git rev-parse --is-inside-work-tree >/dev/null
+            if test -n "$(git status --porcelain)"; then
+              echo "Refusing to deploy over a dirty checkout: $DEPLOY_DIRECTORY" >&2
+              exit 1
             fi
+            git fetch origin "$DEPLOY_BRANCH"
             git checkout "$DEPLOY_BRANCH"
             git pull --ff-only origin "$DEPLOY_BRANCH"
+            npm ci
+            npm run build --workspace=api
             cd api
             node -e "if (Number(process.versions.node.split('.')[0]) < 22) { throw new Error('Scaleway must run Node.js 22 or newer') }"
-            npm ci
-            npm run build
-            if pm2 describe kanvise-backend >/dev/null 2>&1; then
-              pm2 delete kanvise-api >/dev/null 2>&1 || true
-              pm2 delete kanvise-api-canary >/dev/null 2>&1 || true
-              PORT=3002 SCHEDULED_JOBS_ENABLED=false pm2 start dist/index.js --name kanvise-api-canary --update-env
-              curl --fail --show-error --silent --retry 5 --retry-connrefused --retry-delay 2 http://127.0.0.1:3002/health
-              pm2 delete kanvise-api-canary
-              pm2 delete kanvise-backend
-              pm2 start dist/index.js --name kanvise-api
-            elif pm2 describe kanvise-api >/dev/null 2>&1; then
-              pm2 restart kanvise-api --update-env
+            CANARY_NAME="${PM2_APP_NAME}-canary"
+            CANARY_PORT=$((APP_PORT + 1000))
+            cleanup_canary() {
+              pm2 delete "$CANARY_NAME" >/dev/null 2>&1 || true
+            }
+            trap cleanup_canary EXIT
+            cleanup_canary
+            PORT="$CANARY_PORT" NODE_ENV="$NODE_ENV" SCHEDULED_JOBS_ENABLED=false TELEGRAM_ENABLED="$TELEGRAM_ENABLED" FRONTEND_URL="$FRONTEND_URL" CORS_ALLOWED_ORIGINS="$CORS_ALLOWED_ORIGINS" pm2 start dist/index.js --name "$CANARY_NAME" --update-env
+            curl --fail --show-error --silent --retry 5 --retry-connrefused --retry-delay 2 "http://127.0.0.1:${CANARY_PORT}/health"
+            cleanup_canary
+            if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
+              PORT="$APP_PORT" NODE_ENV="$NODE_ENV" SCHEDULED_JOBS_ENABLED="$SCHEDULED_JOBS_ENABLED" TELEGRAM_ENABLED="$TELEGRAM_ENABLED" FRONTEND_URL="$FRONTEND_URL" CORS_ALLOWED_ORIGINS="$CORS_ALLOWED_ORIGINS" pm2 restart "$PM2_APP_NAME" --update-env
             else
-              pm2 start dist/index.js --name kanvise-api
+              PORT="$APP_PORT" NODE_ENV="$NODE_ENV" SCHEDULED_JOBS_ENABLED="$SCHEDULED_JOBS_ENABLED" TELEGRAM_ENABLED="$TELEGRAM_ENABLED" FRONTEND_URL="$FRONTEND_URL" CORS_ALLOWED_ORIGINS="$CORS_ALLOWED_ORIGINS" pm2 start dist/index.js --name "$PM2_APP_NAME" --update-env
             fi
+            curl --fail --show-error --silent --retry 5 --retry-connrefused --retry-delay 2 "http://127.0.0.1:${APP_PORT}/health"
             pm2 save
 
       - name: Verify deployed API health
