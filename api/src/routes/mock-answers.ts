@@ -4,6 +4,7 @@ import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, te
 import { notifyMockFullyGraded } from '../notifications/triggers'
 import type { TenantVariables } from '../types'
 import { isReviewableAttemptStatus } from '../domain/mock-results'
+import { BANK_QUESTION_TYPE_RELATION } from '../lib/postgrest-selects'
 
 export const mockAnswersRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -21,7 +22,7 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
   const { data: answer, error: fetchError } = await supabase.from('mock_answers')
     .select(`*,
       question:mock_version_questions(id, marks,
-        version:bank_question_versions(question:bank_questions(question_type))
+        version:bank_question_versions(${BANK_QUESTION_TYPE_RELATION})
       ),
       attempt:mock_attempts(id, student_id, status, mcq_score, mock_exam_id, mock_exam_version_id,
         mock_exam:mock_exams(id, title, tutor_id, course_id)
@@ -61,7 +62,7 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
   if (error || !data) return c.json({ error: 'Failed to grade mock answer' }, 500)
 
   const { data: versionQuestions, error: questionError } = await supabase.from('mock_version_questions')
-    .select('id, version:bank_question_versions(question:bank_questions(question_type))')
+    .select(`id, version:bank_question_versions(${BANK_QUESTION_TYPE_RELATION})`)
     .eq('mock_exam_version_id', attempt.mock_exam_version_id)
     .eq('school_id', user.school_id)
   if (questionError) return c.json({ error: 'Answer graded but completion check failed' }, 500)

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
+import { BANK_QUESTION_TYPE_RELATION } from "../lib/postgrest-selects";
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from "../middleware/auth";
 import { TenantVariables } from "../types";
 import { notifyMockPublished } from "../notifications/triggers";
@@ -293,7 +294,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
       .select(`id, attempt_id, theory_answer_text, is_correct, tutor_score, tutor_feedback,
         question:mock_version_questions(id, marks, order_index,
           version:bank_question_versions(plain_text, content_blocks,
-            question:bank_questions(question_type)
+          ${BANK_QUESTION_TYPE_RELATION}
           )
         )`)
       .eq("school_id", user.school_id).in("attempt_id", attemptIds)
