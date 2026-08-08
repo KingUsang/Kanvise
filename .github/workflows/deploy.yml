@@ -46,6 +46,9 @@ jobs:
           NODE_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
           SCHEDULED_JOBS_ENABLED: ${{ vars.SCHEDULED_JOBS_ENABLED }}
           TELEGRAM_ENABLED: ${{ vars.TELEGRAM_ENABLED }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
           CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
         with:
@@ -53,7 +56,7 @@ jobs:
           username: ${{ secrets.SCALEWAY_USER }}
           key: ${{ secrets.SCALEWAY_SSH_KEY }}
           port: ${{ secrets.SCALEWAY_PORT || 22 }}
-          envs: DEPLOY_BRANCH,DEPLOY_DIRECTORY,PM2_APP_NAME,APP_PORT,NODE_ENV,SCHEDULED_JOBS_ENABLED,TELEGRAM_ENABLED,FRONTEND_URL,CORS_ALLOWED_ORIGINS
+          envs: DEPLOY_BRANCH,DEPLOY_DIRECTORY,PM2_APP_NAME,APP_PORT,NODE_ENV,SCHEDULED_JOBS_ENABLED,TELEGRAM_ENABLED,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_WEBHOOK_SECRET,FRONTEND_URL,CORS_ALLOWED_ORIGINS
           script: |
             set -eu
             test -n "$DEPLOY_DIRECTORY"
@@ -61,6 +64,11 @@ jobs:
             test -n "$APP_PORT"
             test -n "$SCHEDULED_JOBS_ENABLED"
             test -n "$TELEGRAM_ENABLED"
+            if test "$TELEGRAM_ENABLED" = "true"; then
+              test -n "$TELEGRAM_BOT_TOKEN"
+              test -n "$TELEGRAM_BOT_USERNAME"
+              test -n "$TELEGRAM_WEBHOOK_SECRET"
+            fi
             test -n "$FRONTEND_URL"
             test -n "$CORS_ALLOWED_ORIGINS"
             case "$APP_PORT" in
