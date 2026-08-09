@@ -29,6 +29,10 @@ type AttemptData = {
   answers: Array<{ mock_version_question_id: string; selected_option_version_id: string | null; theory_answer_text: string | null; is_flagged: boolean }>
 }
 
+function queuedAnswerKey(attemptId: string, questionId: string) {
+  return `kanvise-attempt-${attemptId}-${questionId}`
+}
+
 function formatRemaining(seconds: number) {
   const safe = Math.max(0, seconds)
   const hours = Math.floor(safe / 3600)
@@ -65,7 +69,12 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
   }).length
   const unanswered = questions.length - answeredCount
 
-  const save = useCallback(async (questionId: string, answer: SavedAnswer) => {
+  const save = useCallback(async (questionId: string, answer: SavedAnswer): Promise<boolean> => {
+    if (!navigator.onLine) {
+      localStorage.setItem(queuedAnswerKey(data.attempt.id, questionId), JSON.stringify(answer))
+      setSaveStates(states => new Map(states).set(questionId, 'offline'))
+      return false
+    }
     setSaveStates(states => new Map(states).set(questionId, 'saving'))
     try {
       const response = await fetch(`${getApiUrl()}/attempts/${data.attempt.id}/answers/${questionId}`, {
@@ -74,19 +83,24 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not save answer')
-      localStorage.removeItem(`kanvise-attempt-${data.attempt.id}-${questionId}`)
+      localStorage.removeItem(queuedAnswerKey(data.attempt.id, questionId))
       setSaveStates(states => new Map(states).set(questionId, 'saved'))
+      return true
     } catch (error) {
-      localStorage.setItem(`kanvise-attempt-${data.attempt.id}-${questionId}`, JSON.stringify(answer))
+      localStorage.setItem(queuedAnswerKey(data.attempt.id, questionId), JSON.stringify(answer))
       const offline = !navigator.onLine
       setSaveStates(states => new Map(states).set(questionId, offline ? 'offline' : 'error'))
       if (!offline) toast.error(error instanceof Error ? error.message : 'Could not save answer')
+      return false
     }
   }, [data.attempt.id, token])
 
   const changeAnswer = useCallback((questionId: string, patch: Partial<SavedAnswer>, delayed = false) => {
     const next = { selected_option_version_id: null, theory_answer_text: null, is_flagged: false, ...answers.get(questionId), ...patch }
     setAnswers(values => new Map(values).set(questionId, next))
+    // Persist first so an app reload, browser crash, or sudden network loss
+    // cannot discard the newest edit while the request is still in flight.
+    localStorage.setItem(queuedAnswerKey(data.attempt.id, questionId), JSON.stringify(next))
     const pending = debounce.current.get(questionId)
     if (pending) clearTimeout(pending)
     if (delayed) debounce.current.set(questionId, setTimeout(() => void save(questionId, next), 700))
@@ -97,7 +111,10 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
     setSubmitting(true)
     try {
       for (const timer of debounce.current.values()) clearTimeout(timer)
-      await Promise.all([...answers.entries()].map(([questionId, answer]) => save(questionId, answer)))
+      const persisted = await Promise.all([...answers.entries()].map(([questionId, answer]) => save(questionId, answer)))
+      if (persisted.some((saved) => !saved)) {
+        throw new Error('Your answers are safely queued on this device, but reconnect before submitting so they can reach the exam server.')
+      }
       const response = await fetch(`${getApiUrl()}/attempts/${data.attempt.id}/submit`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not submit mock')
@@ -133,13 +150,13 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
   useEffect(() => {
     async function retryQueued() {
       for (const question of questions) {
-        const raw = localStorage.getItem(`kanvise-attempt-${data.attempt.id}-${question.id}`)
+        const raw = localStorage.getItem(queuedAnswerKey(data.attempt.id, question.id))
         if (raw) {
           try {
             const answer = JSON.parse(raw) as SavedAnswer
             setAnswers(values => new Map(values).set(question.id, answer))
             await save(question.id, answer)
-          } catch { localStorage.removeItem(`kanvise-attempt-${data.attempt.id}-${question.id}`) }
+          } catch { localStorage.removeItem(queuedAnswerKey(data.attempt.id, question.id)) }
         }
       }
     }
