@@ -47,12 +47,13 @@ describe('student progress route security', () => {
     expect(mocks.from).not.toHaveBeenCalled()
   })
 
-  it('returns an empty recorded-data summary when the student has no enrolled courses', async () => {
+  it('returns an empty recorded-data summary when the student has no enrolled courses or centre-wide mocks', async () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'enrolments') return query({ data: [], error: null })
       if (table === 'courses' || table === 'sub_programmes') return query({ data: [], error: null })
+      if (table === 'submissions' || table === 'mock_exams' || table === 'mock_attempts') return query({ data: [], error: null })
       if (table === 'mock_marketplace_entitlements') return query({ data: [], error: null })
-      throw new Error(`Progress must not query ${table} without an entitled course`)
+      throw new Error(`Unexpected progress query: ${table}`)
     })
 
     const response = await dashboardRouter.request('/student/progress')
@@ -60,7 +61,7 @@ describe('student progress route security', () => {
     const body = await response.json() as any
     expect(body.data.courses).toEqual([])
     expect(body.data.overall.attendance_percentage).toBeNull()
-    expect(mocks.from).toHaveBeenCalledTimes(4)
+    expect(mocks.from).toHaveBeenCalledWith('mock_exams')
   })
 
   it('includes marketplace results for a centreless student without querying centre data', async () => {
