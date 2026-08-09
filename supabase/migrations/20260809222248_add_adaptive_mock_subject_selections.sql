@@ -77,12 +77,12 @@ CREATE TRIGGER trg_mock_version_questions_section_course
 
 UPDATE public.mock_version_questions question
 SET section_course_id = section.course_id
-FROM public.mock_exam_versions version
-JOIN public.mock_sections section ON section.mock_exam_id = version.mock_exam_id
-  AND section.school_id = version.school_id
-  AND section.order_index = question.section_order_index
+FROM public.mock_exam_versions version, public.mock_sections section
 WHERE question.mock_exam_version_id = version.id
-  AND question.school_id = version.school_id;
+  AND question.school_id = version.school_id
+  AND section.mock_exam_id = version.mock_exam_id
+  AND section.school_id = version.school_id
+  AND section.order_index = question.section_order_index;
 
 -- Every attempt has an immutable list of questions. Fixed mocks include their
 -- full version; adaptive JAMB mocks include only sections matching the
