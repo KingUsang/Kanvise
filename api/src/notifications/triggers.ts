@@ -11,12 +11,19 @@ function frontendUrl(): string {
 }
 
 export function notifyMockPublished(input: {
-  id: string; schoolId: string; courseId: string; title: string; courseName: string; closesAt?: string | null
+  id: string; schoolId: string; courseId?: string | null; programmeId?: string | null;
+  audienceScope?: 'course' | 'programme' | 'school'; title: string; courseName: string; closesAt?: string | null
 }, deliver: Deliver = deliverNotification): Promise<NotificationResult> {
+  const audience = input.audienceScope || 'course'
+  const recipients = audience === 'school'
+    ? { school: true } as const
+    : audience === 'programme'
+      ? { enrolment: { type: 'programme' as const, id: input.programmeId || '' } }
+      : { enrolment: { type: 'course' as const, id: input.courseId || '' } }
   return deliver({
     schoolId: input.schoolId,
     event: 'mock_published',
-    recipients: { enrolment: { type: 'course', id: input.courseId } },
+    recipients,
     title: 'New mock available',
     body: `${input.title} is now available.`,
     relatedEntityType: 'mock_exam',

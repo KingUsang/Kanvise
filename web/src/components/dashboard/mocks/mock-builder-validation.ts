@@ -15,6 +15,8 @@ type ReviewInput = {
   title: string;
   distributionMode: "centre" | "marketplace" | "both";
   courseId: string;
+  programmeId?: string;
+  audienceScope?: "course" | "programme" | "school";
   questions: DraftQuestionForReview[];
   selectedBankQuestions: Array<{ questionText: string; questionType: "mcq" | "theory"; marks: number }>;
   isUntimed: boolean;
@@ -34,10 +36,12 @@ type ReviewInput = {
 export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const audienceScope = input.audienceScope || "course";
   const totalQuestions = input.questions.length + input.selectedBankQuestions.length;
   if (!input.title.trim()) errors.push("Add a title for the mock.");
-  if ((input.distributionMode === "centre" || input.distributionMode === "both") && !input.courseId) {
-    errors.push("Choose the course this mock belongs to.");
+  if (input.distributionMode === "centre" || input.distributionMode === "both") {
+    if (audienceScope === "course" && !input.courseId) errors.push("Choose the course this mock is for.");
+    if (audienceScope === "programme" && !input.programmeId) errors.push("Choose the programme this mock is for.");
   }
   if (totalQuestions === 0) errors.push("Add at least one question.");
 

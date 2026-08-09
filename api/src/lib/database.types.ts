@@ -1189,12 +1189,14 @@ export type Database = {
       }
       mock_exams: {
         Row: {
+          audience_scope: string
           available_from: string | null
           calculator_mode: string
           closes_at: string | null
           course_id: string | null
           created_at: string
           description: string | null
+          delivery_mode: string
           distribution_mode: string
           id: string
           marketplace_approval_status: string
@@ -1205,6 +1207,7 @@ export type Database = {
           max_attempts: number
           notification_sent: boolean
           pass_mark: number | null
+          programme_id: string | null
           publish_at: string | null
           result_release_mode: string
           school_id: string
@@ -1219,12 +1222,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audience_scope?: string
           available_from?: string | null
           calculator_mode?: string
           closes_at?: string | null
           course_id?: string | null
           created_at?: string
           description?: string | null
+          delivery_mode?: string
           distribution_mode?: string
           id?: string
           marketplace_approval_status?: string
@@ -1235,6 +1240,7 @@ export type Database = {
           max_attempts?: number
           notification_sent?: boolean
           pass_mark?: number | null
+          programme_id?: string | null
           publish_at?: string | null
           result_release_mode?: string
           school_id: string
@@ -1249,12 +1255,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audience_scope?: string
           available_from?: string | null
           calculator_mode?: string
           closes_at?: string | null
           course_id?: string | null
           created_at?: string
           description?: string | null
+          delivery_mode?: string
           distribution_mode?: string
           id?: string
           marketplace_approval_status?: string
@@ -1265,6 +1273,7 @@ export type Database = {
           max_attempts?: number
           notification_sent?: boolean
           pass_mark?: number | null
+          programme_id?: string | null
           publish_at?: string | null
           result_release_mode?: string
           school_id?: string
@@ -1291,6 +1300,13 @@ export type Database = {
             columns: ["marketplace_approved_by"]
             isOneToOne: false
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_exams_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
             referencedColumns: ["id"]
           },
           {

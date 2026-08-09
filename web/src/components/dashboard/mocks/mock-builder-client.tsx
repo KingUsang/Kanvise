@@ -12,7 +12,10 @@ type Course = {
   id: string;
   name: string;
 };
+type Programme = { id: string; name: string };
 type DistributionMode = "centre" | "marketplace" | "both";
+type CentreAudienceScope = "course" | "programme" | "school";
+type DeliveryMode = "fixed" | "subject_combination";
 
 type OptionState = {
   id: string; // local id
@@ -36,6 +39,7 @@ type QuestionState = {
 type Bank = { id: string; name: string; question_count: number };
 type BankQuestion = {
   id: string;
+  course_id: string | null;
   question_type: "mcq" | "theory";
   current_version: {
     id: string;
@@ -50,6 +54,7 @@ type SelectedBankQuestion = {
   questionType: "mcq" | "theory";
   marks: number;
   bankName: string;
+  courseId: string | null;
 };
 
 export function MockBuilderClient({ token }: { token: string }) {
@@ -59,6 +64,8 @@ export function MockBuilderClient({ token }: { token: string }) {
   const isEditMode = !!editMockId;
   
   const [courses, setCourses] = useState<Course[]>([]);
+  const [programmes, setProgrammes] = useState<Programme[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isReadOnly, setIsReadOnly] = useState(false);
 
@@ -66,6 +73,9 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [programmeId, setProgrammeId] = useState("");
+  const [audienceScope, setAudienceScope] = useState<CentreAudienceScope>("course");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("fixed");
   const [distributionMode, setDistributionMode] = useState<DistributionMode>("centre");
   // These fields are only relevant when the public marketplace audience is on.
   // They deliberately live in this builder instead of a second creation flow.
@@ -114,9 +124,11 @@ export function MockBuilderClient({ token }: { token: string }) {
     const fetchCourses = async () => {
       try {
         const headers = { "Authorization": `Bearer ${token}` };
-        const [res, banksRes] = await Promise.all([
+        const [res, banksRes, profileRes, programmesRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, { headers }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, { headers }),
         ]);
         if (!res.ok) {
           const body = await res.json().catch(() => null);
@@ -133,6 +145,14 @@ export function MockBuilderClient({ token }: { token: string }) {
           setSelectedBankId(data?.[0]?.id || "");
         } else {
           toast.error("Could not load question banks", { description: "You can still type questions manually." });
+        }
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          setIsAdmin(profile?.user?.role === "admin");
+        }
+        if (programmesRes.ok) {
+          const { data } = await programmesRes.json();
+          setProgrammes(data || []);
         }
       } catch (err) {
         console.error("Failed to fetch courses", err);
@@ -167,6 +187,9 @@ export function MockBuilderClient({ token }: { token: string }) {
           setTitle(mockData.title || "");
           setDescription(mockData.description || "");
           setCourseId(mockData.course_id || "");
+          setProgrammeId(mockData.programme_id || "");
+          setAudienceScope(mockData.audience_scope || "course");
+          setDeliveryMode(mockData.delivery_mode || "fixed");
           setDistributionMode(mockData.distribution_mode || "centre");
           setCalculatorMode(mockData.calculator_mode || "none");
           setShuffleQuestions(!!mockData.shuffle_questions);
@@ -219,7 +242,8 @@ export function MockBuilderClient({ token }: { token: string }) {
             questionText: item.question.current_version?.plain_text || "",
             questionType: item.question.question_type,
             marks: item.marks_override || item.question.current_version?.marks,
-            bankName: item.question.bank?.name || "Question bank",
+              bankName: item.question.bank?.name || "Question bank",
+              courseId: item.question.course_id || null,
           })));
         } else {
           toast.error("Could not open this mock", { description: "It may no longer exist or you may not have access." });
@@ -258,6 +282,10 @@ export function MockBuilderClient({ token }: { token: string }) {
     };
     void load();
   }, [selectedBankId, showBankPicker, token]);
+
+  useEffect(() => {
+    if (audienceScope !== "programme" || distributionMode !== "centre") setDeliveryMode("fixed");
+  }, [audienceScope, distributionMode]);
 
   const handleAddMCQ = () => {
     setQuestions([
@@ -498,6 +526,8 @@ export function MockBuilderClient({ token }: { token: string }) {
     title,
     distributionMode,
     courseId,
+    programmeId,
+    audienceScope,
     questions,
     selectedBankQuestions,
     isUntimed,
@@ -521,8 +551,17 @@ export function MockBuilderClient({ token }: { token: string }) {
   };
 
   const handleSave = async (shouldPublish: boolean) => {
-    if (!title || ((distributionMode === "centre" || distributionMode === "both") && !courseId)) {
-      toast.error(distributionMode === "marketplace" ? "Add a mock title" : "Add a mock title and choose a course");
+    const hasCentreTarget = audienceScope === "school" || (audienceScope === "course" ? Boolean(courseId) : Boolean(programmeId));
+    if (!title || ((distributionMode === "centre" || distributionMode === "both") && !hasCentreTarget)) {
+      toast.error(distributionMode === "marketplace" ? "Add a mock title" : "Add a mock title and choose who should receive it");
+      return;
+    }
+    if (deliveryMode === "subject_combination" && questions.length > 0) {
+      toast.error("Use course-tagged question-bank questions for an adaptive JAMB mock");
+      return;
+    }
+    if (deliveryMode === "subject_combination" && selectedBankQuestions.some((question) => !question.courseId)) {
+      toast.error("Every adaptive mock question must be linked to one programme course");
       return;
     }
 
@@ -544,7 +583,10 @@ export function MockBuilderClient({ token }: { token: string }) {
       const payload = {
         title,
         description,
-        course_id: courseId || null,
+        course_id: audienceScope === "course" ? courseId || null : null,
+        programme_id: audienceScope === "programme" ? programmeId || null : null,
+        audience_scope: distributionMode === "marketplace" ? "marketplace" : audienceScope,
+        delivery_mode: deliveryMode,
         distribution_mode: distributionMode,
         publish_at: finalPublishAt,
         time_limit_minutes: isUntimed ? 0 : timeLimit,
@@ -618,17 +660,21 @@ export function MockBuilderClient({ token }: { token: string }) {
             marks_override: null,
           })),
         ];
+        const sections = deliveryMode === "subject_combination"
+          ? courses.filter((course) => combined.some((item: any) => selectedBankQuestions.some((question) => question.questionId === item.question_id && question.courseId === course.id))).map((course) => ({
+              title: course.name,
+              course_id: course.id,
+              subject_name: course.name,
+              instructions: null,
+              questions: combined.filter((item: any) => selectedBankQuestions.some((question) => question.questionId === item.question_id && question.courseId === course.id)),
+              rules: [],
+            }))
+          : [{ title: "Questions", course_id: audienceScope === "course" ? courseId || null : null, instructions: null, questions: combined, rules: [] }];
         const replaceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify({
-            sections: [{
-              title: "Questions",
-              course_id: courseId || null,
-              instructions: null,
-              questions: combined,
-              rules: [],
-            }],
+            sections,
           }),
         });
         const replaceBody = await replaceResponse.json().catch(() => null);
@@ -844,7 +890,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                   <div>
                     <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#2e2877]">
                       <span className="material-symbols-outlined text-base">inventory_2</span>
-                      {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks
+                      {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks{deliveryMode === "subject_combination" ? ` · ${courses.find((course) => course.id === question.courseId)?.name || "No course"}` : ""}
                     </div>
                     <p className="text-[15px] leading-6 text-[#1b1c1c]">{question.questionText}</p>
                   </div>
@@ -1070,7 +1116,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                             return <label key={question.id} className="flex cursor-pointer items-start gap-3 rounded border border-[#e4e2e1] p-3 hover:bg-[#f8f6ff]">
                               <input type="checkbox" checked={selected} onChange={() => setSelectedBankQuestions((current) => selected
                                 ? current.filter((item) => item.questionId !== question.id)
-                                : [...current, { questionId: question.id, questionVersionId: question.current_version.id, questionText: question.current_version.plain_text, questionType: question.question_type, marks: question.current_version.marks, bankName }])} className="mt-1" />
+                                : question.course_id || deliveryMode !== "subject_combination"
+                                  ? [...current, { questionId: question.id, questionVersionId: question.current_version.id, questionText: question.current_version.plain_text, questionType: question.question_type, marks: question.current_version.marks, bankName, courseId: question.course_id || null }]
+                                  : (toast.error("Link this question to a programme course before using it in an adaptive mock"), current))} className="mt-1" />
                               <span><span className="block text-sm text-[#1b1c1c]">{question.current_version.plain_text}</span><span className="mt-1 block text-xs text-[#787582]">{question.question_type === "mcq" ? "Multiple choice" : "Theory"} · {question.current_version.marks} marks</span></span>
                             </label>;
                           })}
@@ -1153,7 +1201,18 @@ export function MockBuilderClient({ token }: { token: string }) {
                 </div>
               </div>
 
-              <div>
+              {distributionMode !== "marketplace" && (
+                <div className="rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+                  <p className="text-[13px] font-semibold text-[#1b1c1c]">Centre audience</p>
+                  <p className="mt-1 text-xs leading-5 text-[#787582]">Choose exactly who should receive this mock. Tutors can only create mocks for a course they teach.</p>
+                  <div className="mt-3 space-y-2">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "course"} disabled={isReadOnly} onChange={() => setAudienceScope("course")} className="text-[#2e2877]" />One course</label>
+                    {isAdmin && <><label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "programme"} disabled={isReadOnly} onChange={() => setAudienceScope("programme")} className="text-[#2e2877]" />One programme</label><label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "school"} disabled={isReadOnly} onChange={() => setAudienceScope("school")} className="text-[#2e2877]" />Every active student in this centre</label></>}
+                  </div>
+                </div>
+              )}
+
+              {(distributionMode === "marketplace" || audienceScope === "course") && <div>
                 <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Course {distributionMode === "marketplace" ? "(optional)" : ""}</label>
                 <select 
                   value={courseId}
@@ -1175,7 +1234,21 @@ export function MockBuilderClient({ token }: { token: string }) {
                 {courses.length === 0 && distributionMode !== "marketplace" && (
                   <p className="mt-2 text-xs leading-5 text-[#994704]">No Courses are available. Ask the centre admin to create a Course or assign one to you.</p>
                 )}
-              </div>
+              </div>}
+
+              {distributionMode !== "marketplace" && audienceScope === "programme" && <div>
+                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Programme</label>
+                <select value={programmeId} disabled={isReadOnly} onChange={(e) => setProgrammeId(e.target.value)} className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]">
+                  <option value="">Select a programme</option>
+                  {programmes.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}
+                </select>
+              </div>}
+
+              {isAdmin && distributionMode === "centre" && audienceScope === "programme" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">
+                <p className="text-[13px] font-semibold text-[#1b1c1c]">Mock format</p>
+                <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-[#474551]"><input type="radio" checked={deliveryMode === "fixed"} disabled={isReadOnly} onChange={() => setDeliveryMode("fixed")} className="mt-0.5 text-[#2e2877]" /><span><strong>One fixed mock</strong><br /><span className="text-xs text-[#787582]">Every programme student receives the same questions.</span></span></label>
+                <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-[#474551]"><input type="radio" checked={deliveryMode === "subject_combination"} disabled={isReadOnly} onChange={() => setDeliveryMode("subject_combination")} className="mt-0.5 text-[#2e2877]" /><span><strong>Adaptive JAMB mock</strong><br /><span className="text-xs text-[#787582]">Build subject sections. Each student receives only their saved four subjects.</span></span></label>
+              </div>}
 
               {(distributionMode === "marketplace" || distributionMode === "both") && (
                 <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">

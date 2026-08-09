@@ -1,8 +1,11 @@
 import { supabase } from '../lib/supabase'
 
-export type DueMock = { id: string; schoolId: string; courseId: string | null; title: string; courseName: string }
-export type DueLiveClass = Omit<DueMock, 'courseId'> & { courseId: string; startsAt: string }
-export type DueAssignment = Omit<DueMock, 'courseId'> & { courseId: string; deadlineAt: string; recipientIds: string[] }
+export type DueMock = {
+  id: string; schoolId: string; courseId: string | null; programmeId: string | null
+  audienceScope: 'course' | 'programme' | 'school' | 'marketplace'; title: string; courseName: string
+}
+export type DueLiveClass = { id: string; schoolId: string; courseId: string; title: string; courseName: string; startsAt: string }
+export type DueAssignment = { id: string; schoolId: string; courseId: string; title: string; courseName: string; deadlineAt: string; recipientIds: string[] }
 
 export type JobsRepository = {
   claimDueMocks(now: Date, limit: number): Promise<DueMock[]>
@@ -15,7 +18,7 @@ export type JobsRepository = {
 export const jobsRepository: JobsRepository = {
   async claimDueMocks(now, limit) {
     const { data: candidates, error } = await supabase.from('mock_exams')
-      .select('id, status, school_id, course_id, tutor_id, title, course:courses(name)')
+      .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, course:courses(name), programme:programmes(name)')
       .in('status', ['draft', 'published'])
       .eq('notification_sent', false)
       .not('publish_at', 'is', null)
@@ -27,10 +30,7 @@ export const jobsRepository: JobsRepository = {
     const claimed: DueMock[] = []
     for (const candidate of candidates || []) {
       if (candidate.status === 'published') {
-        claimed.push({
-          id: candidate.id, schoolId: candidate.school_id, courseId: candidate.course_id,
-          title: candidate.title, courseName: (candidate.course as any)?.name || 'Your course',
-        })
+        claimed.push(toDueMock(candidate))
         continue
       }
       const { count: sectionCount, error: sectionError } = await supabase.from('mock_sections')
@@ -45,10 +45,7 @@ export const jobsRepository: JobsRepository = {
           p_published_at: now.toISOString(),
         })
         if (publishError) throw publishError
-        claimed.push({
-          id: candidate.id, schoolId: candidate.school_id, courseId: candidate.course_id,
-          title: candidate.title, courseName: (candidate.course as any)?.name || 'Your course',
-        })
+        claimed.push(toDueMock(candidate))
         continue
       }
       // Compatibility for scheduled drafts created before versioned question banks.
@@ -56,13 +53,10 @@ export const jobsRepository: JobsRepository = {
         .update({ status: 'published', updated_at: now.toISOString() })
         .eq('id', candidate.id)
         .eq('status', 'draft')
-        .select('id, school_id, course_id, title, course:courses(name)')
+        .select('id, school_id, course_id, programme_id, audience_scope, title, course:courses(name), programme:programmes(name)')
         .maybeSingle()
       if (claimError) throw claimError
-      if (data) claimed.push({
-        id: data.id, schoolId: data.school_id, courseId: data.course_id,
-        title: data.title, courseName: (data.course as any)?.name || 'Your course',
-      })
+      if (data) claimed.push(toDueMock(data))
     }
     return claimed
   },
@@ -121,4 +115,21 @@ export const jobsRepository: JobsRepository = {
     }
     return results
   },
+}
+
+function toDueMock(mock: any): DueMock {
+  const audienceScope = ['course', 'programme', 'school', 'marketplace'].includes(mock.audience_scope)
+    ? mock.audience_scope as DueMock['audienceScope']
+    : 'course'
+  return {
+    id: mock.id,
+    schoolId: mock.school_id,
+    courseId: mock.course_id,
+    programmeId: mock.programme_id,
+    audienceScope,
+    title: mock.title,
+    courseName: audienceScope === 'programme'
+      ? (mock.programme as any)?.name || 'Your programme'
+      : (mock.course as any)?.name || 'Your tutorial centre',
+  }
 }

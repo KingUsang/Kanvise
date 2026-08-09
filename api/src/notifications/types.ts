@@ -21,6 +21,7 @@ export type NotificationRecipient = {
 
 export type RecipientSelector =
   | { recipientIds: string[] }
+  | { school: true }
   | { enrolment: { type: 'programme' | 'sub_programme' | 'course'; id: string } }
 
 export type NotificationRequest<K extends NotificationEvent> = {

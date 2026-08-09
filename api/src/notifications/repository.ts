@@ -35,6 +35,11 @@ export const notificationRepository: NotificationRepository = {
 
     if ('recipientIds' in selector) {
       recipientIds = [...new Set(selector.recipientIds)]
+    } else if ('school' in selector) {
+      const { data, error } = await supabase.from('user_profiles').select('id')
+        .eq('school_id', schoolId).eq('role', 'student').eq('is_active', true)
+      if (error) throw error
+      recipientIds = (data || []).map((row) => row.id as string)
     } else if (!selector.enrolment.id) {
       return []
     } else {

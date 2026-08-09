@@ -34,7 +34,7 @@ describe('scheduled notification jobs', () => {
     const deps = dependencies({
       async claimDueMocks(_now, limit) {
         expect(limit).toBe(50)
-        return [{ id: 'mock-1', schoolId: 'school-1', courseId: 'course-1', title: 'Mock', courseName: 'Physics' }]
+        return [{ id: 'mock-1', schoolId: 'school-1', courseId: 'course-1', programmeId: null, audienceScope: 'course', title: 'Mock', courseName: 'Physics' }]
       },
       markMockPublicationNotified: mark,
     })

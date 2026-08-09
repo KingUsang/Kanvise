@@ -22,6 +22,14 @@ describe('route notification triggers', () => {
     }))
   })
 
+  it('targets programme enrolments and all active centre students for wider mocks', async () => {
+    const deliver = vi.fn(async () => result)
+    await notifyMockPublished({ id: 'mock-programme', schoolId: 'school-1', programmeId: 'programme-1', audienceScope: 'programme', title: 'UTME Mock', courseName: 'Science' }, deliver as any)
+    await notifyMockPublished({ id: 'mock-school', schoolId: 'school-1', audienceScope: 'school', title: 'Orientation', courseName: 'Centre' }, deliver as any)
+    expect(deliver).toHaveBeenNthCalledWith(1, expect.objectContaining({ recipients: { enrolment: { type: 'programme', id: 'programme-1' } } }))
+    expect(deliver).toHaveBeenNthCalledWith(2, expect.objectContaining({ recipients: { school: true } }))
+  })
+
   it('targets only the submission owner after grading', async () => {
     const deliver = vi.fn(async () => ({ ...result, event: 'submission_graded' as const }))
     await notifySubmissionGraded({ id: 'submission-1', assignmentId: 'assignment-1', schoolId: 'school-1', studentId: 'student-1', assignmentTitle: 'Essay', score: '85', feedback: null }, deliver as any)

@@ -30,12 +30,20 @@ export async function runMockPublicationJob(now = new Date(), dependencies = def
   let failures = 0
   for (const mock of mocks) {
     try {
-      // Marketplace mocks have no course, so there are no course enrolments to notify.
-      if (!mock.courseId) {
+      // Public marketplace mocks do not have a centre audience.
+      if (mock.audienceScope === 'marketplace') {
         await dependencies.repository.markMockPublicationNotified(mock.id)
         continue
       }
-      const delivery = await dependencies.notifyMock({ ...mock, courseId: mock.courseId })
+      const delivery = await dependencies.notifyMock({
+        id: mock.id,
+        schoolId: mock.schoolId,
+        courseId: mock.courseId,
+        programmeId: mock.programmeId,
+        audienceScope: mock.audienceScope,
+        title: mock.title,
+        courseName: mock.courseName,
+      })
       failures += delivery.failures.length
       if (delivery.failures.length === 0) await dependencies.repository.markMockPublicationNotified(mock.id)
     } catch (error) {

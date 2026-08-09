@@ -61,10 +61,16 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
   }).eq('id', answerId).eq('school_id', user.school_id).select().single()
   if (error || !data) return c.json({ error: 'Failed to grade mock answer' }, 500)
 
+  const client = supabase as any
+  const { data: snapshotRows, error: snapshotError } = await client.from('mock_attempt_questions')
+    .select('mock_version_question_id').eq('attempt_id', attempt.id).eq('school_id', user.school_id)
+  if (snapshotError) return c.json({ error: 'Answer graded but completion check failed' }, 500)
+  const snapshotQuestionIds = (snapshotRows || []).map((row: any) => row.mock_version_question_id)
   const { data: versionQuestions, error: questionError } = await supabase.from('mock_version_questions')
     .select(`id, version:bank_question_versions(${BANK_QUESTION_TYPE_RELATION})`)
     .eq('mock_exam_version_id', attempt.mock_exam_version_id)
     .eq('school_id', user.school_id)
+    .in('id', snapshotQuestionIds)
   if (questionError) return c.json({ error: 'Answer graded but completion check failed' }, 500)
 
   const theoryIds = (versionQuestions || [])

@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, Variables } from '../middleware/auth'
-import { loadStudentCourseIds, resolveStudentCourses } from '../lib/student-course-access'
+import { resolveStudentCourses } from '../lib/student-course-access'
+import { loadStudentMockAudience, studentCanAccessCentreMock, type StudentMockAudience } from '../lib/student-mock-audience'
 import { buildStudentProgress } from '../domain/student-progress'
 
 export const dashboardRouter = new Hono<{ Variables: Variables }>()
@@ -145,33 +146,25 @@ dashboardRouter.get('/student', async (c) => {
   const courseIds = accessibleCourses.map((course) => course.id)
   const courseNames = new Map(accessibleCourses.map((course) => [course.id, course.name]))
 
-  if (!courseIds.length) {
-    return c.json({ data: {
-      student: { first_name: profile?.first_name || '', last_name: profile?.last_name || '' },
-      school: { name: school?.name || 'Your school' },
-      course_count: 0,
-      next_class: null,
-      upcoming_classes: [],
-      assignments_due: [],
-      recent_updates: [],
-      capabilities: { hasCentreLearning: true, hasMarketplaceAccess: false },
-    } })
-  }
-
   const now = new Date().toISOString()
+  const mockAudience: StudentMockAudience = {
+    courseIds,
+    programmeIds: [...new Set((enrolments || []).flatMap((item) => item.programme_id ? [item.programme_id] : []))],
+  }
+  const empty = Promise.resolve({ data: [], error: null })
   const [{ data: classes, error: classesError }, { data: assignments, error: assignmentsError }, { data: submissions, error: submissionsError }, { data: notes, error: notesError }, { data: mocks, error: mocksError }, { data: attempts, error: attemptsError }] = await Promise.all([
-    supabase.from('live_classes').select('id, course_id, title, scheduled_at, duration_minutes, status')
+    courseIds.length ? supabase.from('live_classes').select('id, course_id, title, scheduled_at, duration_minutes, status')
       .eq('school_id', schoolId).in('course_id', courseIds).in('status', ['scheduled', 'live'])
-      .order('scheduled_at', { ascending: true }).limit(12),
-    supabase.from('assignments').select('id, course_id, title, deadline_at, created_at')
+      .order('scheduled_at', { ascending: true }).limit(12) : empty,
+    courseIds.length ? supabase.from('assignments').select('id, course_id, title, deadline_at, created_at')
       .eq('school_id', schoolId).in('course_id', courseIds).eq('is_published', true)
-      .gte('deadline_at', now).order('deadline_at', { ascending: true }).limit(8),
+      .gte('deadline_at', now).order('deadline_at', { ascending: true }).limit(8) : empty,
     supabase.from('submissions').select('assignment_id, submitted_at, score')
       .eq('school_id', schoolId).eq('student_id', user.id),
-    supabase.from('notes').select('id, course_id, title, file_type, created_at')
-      .eq('school_id', schoolId).in('course_id', courseIds).order('created_at', { ascending: false }).limit(6),
-    supabase.from('mock_exams').select('id, course_id, title, publish_at, created_at, time_limit_minutes')
-      .eq('school_id', schoolId).in('course_id', courseIds).eq('status', 'published')
+    courseIds.length ? supabase.from('notes').select('id, course_id, title, file_type, created_at')
+      .eq('school_id', schoolId).in('course_id', courseIds).order('created_at', { ascending: false }).limit(6) : empty,
+    supabase.from('mock_exams').select('id, course_id, programme_id, audience_scope, title, publish_at, created_at, time_limit_minutes, course:courses(name), programme:programmes(name)')
+      .eq('school_id', schoolId).eq('status', 'published')
       .order('created_at', { ascending: false }).limit(6),
     supabase.from('mock_attempts').select('mock_exam_id, status, submitted_at, mcq_score')
       .eq('school_id', schoolId).eq('student_id', user.id),
@@ -184,6 +177,7 @@ dashboardRouter.get('/student', async (c) => {
 
   const submittedAssignmentIds = new Set((submissions || []).map((item) => item.assignment_id))
   const attemptedMockIds = new Set((attempts || []).map((item) => item.mock_exam_id))
+  const visibleMocks = (mocks || []).filter((item) => studentCanAccessCentreMock(item, mockAudience))
   const upcomingClasses = (classes || []).filter((item) => item.status === 'live' || item.scheduled_at >= now).slice(0, 6)
     .map((item) => ({ ...item, course_name: courseNames.get(item.course_id) || 'Course' }))
   const assignmentsDue = (assignments || []).filter((item) => !submittedAssignmentIds.has(item.id)).slice(0, 4)
@@ -191,7 +185,13 @@ dashboardRouter.get('/student', async (c) => {
   const recentUpdates = [
     ...(assignments || []).map((item) => ({ id: item.id, type: 'assignment', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.created_at, href: `/dashboard/student/assignments` })),
     ...(notes || []).map((item) => ({ id: item.id, type: 'material', title: item.title, course_name: courseNames.get(item.course_id) || 'Course', occurred_at: item.created_at, href: `/dashboard/student/materials` })),
-    ...(mocks || []).filter((item) => !attemptedMockIds.has(item.id)).map((item) => ({ id: item.id, type: 'mock', title: item.title, course_name: courseNames.get(item.course_id!) || 'Course', occurred_at: item.publish_at || item.created_at, href: `/dashboard/student/mocks` })),
+    ...visibleMocks.filter((item) => !attemptedMockIds.has(item.id)).map((item) => ({
+      id: item.id, type: 'mock', title: item.title,
+      course_name: item.audience_scope === 'programme' ? (item.programme as any)?.name || 'Programme'
+        : item.audience_scope === 'school' ? 'Entire centre'
+          : (item.course as any)?.name || courseNames.get(item.course_id!) || 'Course',
+      occurred_at: item.publish_at || item.created_at, href: `/dashboard/student/mocks`,
+    })),
   ].sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()).slice(0, 5)
 
   return c.json({ data: {
@@ -228,21 +228,19 @@ dashboardRouter.get('/student/progress', async c => {
       const marketplace = await loadMarketplaceProgress()
       return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], ...marketplace }) })
     }
-    const courseIds = await loadStudentCourseIds(user.id, user.school_id)
-    if (!courseIds.length) {
-      const marketplace = await loadMarketplaceProgress()
-      return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], ...marketplace }) })
-    }
+    const mockAudience = await loadStudentMockAudience(user)
+    const courseIds = mockAudience.courseIds
+    const empty = Promise.resolve({ data: [], error: null })
     const [
       { data: courses, error: courseError }, { data: classes, error: classError },
       { data: assignments, error: assignmentError }, { data: submissions, error: submissionError },
       { data: mocks, error: mockError }, { data: attempts, error: attemptError },
     ] = await Promise.all([
-      supabase.from('courses').select('id, name').eq('school_id', user.school_id).in('id', courseIds),
-      supabase.from('live_classes').select('id, course_id').eq('school_id', user.school_id).in('course_id', courseIds).eq('status', 'completed'),
-      supabase.from('assignments').select('id, course_id').eq('school_id', user.school_id).in('course_id', courseIds).eq('is_published', true),
+      courseIds.length ? supabase.from('courses').select('id, name').eq('school_id', user.school_id).in('id', courseIds) : empty,
+      courseIds.length ? supabase.from('live_classes').select('id, course_id').eq('school_id', user.school_id).in('course_id', courseIds).eq('status', 'completed') : empty,
+      courseIds.length ? supabase.from('assignments').select('id, course_id').eq('school_id', user.school_id).in('course_id', courseIds).eq('is_published', true) : empty,
       supabase.from('submissions').select('assignment_id').eq('school_id', user.school_id).eq('student_id', user.id),
-      supabase.from('mock_exams').select('id, course_id, title').eq('school_id', user.school_id).in('course_id', courseIds),
+      supabase.from('mock_exams').select('id, course_id, programme_id, audience_scope, title').eq('school_id', user.school_id),
       supabase.from('mock_attempts').select('id, mock_exam_id, status, submitted_at, total_score, total_marks, correct_mcq_answers, total_mcq_questions')
         .eq('school_id', user.school_id).eq('student_id', user.id),
     ])
@@ -257,7 +255,9 @@ dashboardRouter.get('/student/progress', async c => {
     if (attendanceError) throw attendanceError
     return c.json({ data: buildStudentProgress({
       courses: courses || [], classes: classes || [], attendance: attendance || [],
-      assignments: assignments || [], submissions: submissions || [], mocks: [...(mocks || []), ...marketplace.mocks], attempts: [...(attempts || []), ...marketplace.attempts],
+      assignments: assignments || [], submissions: submissions || [],
+      mocks: [...(mocks || []).filter((mock) => studentCanAccessCentreMock(mock, mockAudience)), ...marketplace.mocks],
+      attempts: [...(attempts || []), ...marketplace.attempts],
     }) })
   } catch (error) {
     console.error('student_progress.load_failed', { studentId: user.id, error })

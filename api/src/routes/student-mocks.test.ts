@@ -67,7 +67,6 @@ describe('student mock security', () => {
     const response = await studentMocksRouter.request('/mocks/mock-1/preflight')
     expect(response.status).toBe(404)
     expect((await response.json() as any).code).toBe('MOCK_NOT_FOUND')
-    expect(mocks.from).not.toHaveBeenCalledWith('mock_exams')
   })
 
   it('uses the authenticated student and school when starting an attempt', async () => {
