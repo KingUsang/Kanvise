@@ -248,7 +248,26 @@ describe('live classes API - host permissions', () => {
     mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
   })
 
-  it('does not let an unassigned admin join a tutor classroom', async () => {
+  it('lets an unassigned admin join as a non-host observer', async () => {
+    process.env.LIVEKIT_URL = 'wss://livekit.example.com'
+    process.env.LIVEKIT_API_KEY = 'test-key'
+    process.env.LIVEKIT_API_SECRET = 'test-secret-with-enough-entropy-for-signing'
+    mocks.from.mockReturnValue(builder({
+      data: { id: 'class-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
+      error: null,
+    }))
+
+    const response = await liveClassesRouter.request('/class-1/join', { method: 'POST' })
+
+    expect(response.status).toBe(200)
+    expect((await response.json() as any).data).toMatchObject({
+      livekit_room_name: 'room-1',
+      is_host: false,
+    })
+  })
+
+  it('still blocks an unassigned tutor from joining another tutor classroom', async () => {
+    mocks.user = { id: 'tutor-2', school_id: 'school-1', role: 'tutor' }
     mocks.from.mockReturnValue(builder({
       data: { id: 'class-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
       error: null,

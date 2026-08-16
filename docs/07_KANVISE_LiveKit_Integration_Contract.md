@@ -676,6 +676,31 @@ Because the Scaleway server is not in Nigeria, the `use_external_ip: true` setti
 
 Additionally, the LiveKit developer should configure a **TURN server** to ensure connectivity for students on restricted networks (common in Nigerian institutional networks). Recommended: use Cloudflare's TURN service or a self-hosted Coturn instance.
 
+### 7.5 Classroom Camera Bandwidth Profile
+
+The classroom client caps camera capture and publishing at 640×360 (360p,
+20 fps, up to 450 Kbps) and publishes a 320×180 layer (180p, 20 fps, up to
+160 Kbps) for the small tutor and active-student PiP circles. Adaptive stream
+selects the appropriate layer for the rendered element, while dynacast stops a
+layer when no subscriber requests it.
+
+Tutors join with their microphone enabled. Students join muted by default and
+may deliberately unmute with the classroom media control. Clients subscribe to
+every published microphone, but only subscribe to remote camera video for the
+tutor and the currently displayed active student. Other participant camera
+publications remain unsubscribed. Screen sharing remains disabled at both the
+UI and token-permission layers.
+
+An administrator from the same school may join a live classroom as a non-host
+observer. Administrators join muted by default and receive no room-admin grant;
+only the tutor assigned to the class is treated as host. An unassigned tutor
+cannot join another tutor's classroom.
+
+For capacity planning, one continuously received 180p camera has a maximum
+encoded payload of about 72 MB/hour; 360p has a maximum of about 203 MB/hour.
+Allow additional headroom for audio, RTP/UDP overhead, retransmission, TURN,
+and packet loss. These are bitrate ceilings rather than guaranteed usage.
+
 ---
 
 ## 8. Environment Variables

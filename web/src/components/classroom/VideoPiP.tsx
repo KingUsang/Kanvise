@@ -1,10 +1,12 @@
 "use client";
 
-import { useParticipants, useTracks, VideoTrack, useSpeakingParticipants, useLocalParticipant } from "@livekit/components-react";
+import { useParticipants, useTracks, VideoTrack, useSpeakingParticipants, useLocalParticipant, useRoomContext } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+import { syncCameraSubscriptions } from "./camera-subscriptions";
 
 export default function VideoPiP() {
+  const room = useRoomContext();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const cameraTracks = useTracks([Track.Source.Camera]);
@@ -25,6 +27,16 @@ export default function VideoPiP() {
   const activeStudent = activeSpeakers.find(
     (p) => p.identity !== tutor?.identity && p.isCameraEnabled
   );
+
+  // Auto-subscribe remains enabled for classroom audio. Explicitly limit
+  // camera subscriptions to the two participants this PiP can render.
+  useEffect(() => {
+    syncCameraSubscriptions(
+      room.remoteParticipants.values(),
+      tutor?.identity,
+      activeStudent?.identity,
+    );
+  }, [room, participants, cameraTracks, tutor?.identity, activeStudent?.identity]);
 
   const tutorTrack = cameraTracks.find((t) => t.participant.identity === tutor?.identity);
 

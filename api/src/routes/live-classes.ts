@@ -417,9 +417,10 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
   }
 
-  // The assigned tutor (whether admin or tutor role) gets host permissions
+  // Only the assigned tutor gets host permissions. School admins may join as
+  // non-host observers; unassigned tutors cannot enter another tutor's class.
   const isHost = liveClass.tutor_id === user.id
-  if (user.role !== 'student' && !isHost) {
+  if (user.role === 'tutor' && !isHost) {
     return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
   }
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Participant'

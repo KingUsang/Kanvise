@@ -3,6 +3,7 @@
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { useRef } from "react";
 import ClassroomLayout from "@/components/classroom/ClassroomLayout";
+import { CLASSROOM_ROOM_OPTIONS } from "@/components/classroom/livekit-room-options";
 
 interface ClientClassroomProps {
   token: string;
@@ -38,10 +39,11 @@ export default function ClientClassroom({
   return (
     <LiveKitRoom
       video={false}
-      audio={true}
+      audio={isHost}
       token={token}
       serverUrl={serverUrl}
       connect={true}
+      options={CLASSROOM_ROOM_OPTIONS}
       data-lk-theme="default"
       className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
       onDisconnected={leaveClassroom}
