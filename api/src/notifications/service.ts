@@ -8,6 +8,7 @@ import {
   type NotificationRequest,
   type NotificationResult,
 } from './types'
+import { sendWebPushNotification } from '../push/service'
 
 type Logger = Pick<Console, 'info' | 'error'>
 
@@ -15,12 +16,14 @@ export type NotificationDependencies = {
   repository: NotificationRepository
   sendEmail: typeof sendNotificationEmail
   logger: Logger
+  sendPush?: typeof sendWebPushNotification
 }
 
 const defaultDependencies: NotificationDependencies = {
   repository: notificationRepository,
   sendEmail: sendNotificationEmail,
   logger: console,
+  sendPush: sendWebPushNotification,
 }
 
 function errorMessage(error: unknown): string {
@@ -41,6 +44,9 @@ export async function deliverNotification<K extends NotificationEvent>(
     telegramSent: 0,
     telegramAlreadySent: 0,
     telegramSkipped: 0,
+    pushSent: 0,
+    pushAlreadySent: 0,
+    pushSkipped: 0,
     failures: [],
   }
 
@@ -84,6 +90,29 @@ export async function deliverNotification<K extends NotificationEvent>(
         if (created) result.inAppCreated += 1
       } catch (error) {
         result.failures.push({ recipientId: recipient.id, channel: 'in_app', error: errorMessage(error) })
+      }
+
+      try {
+        const push = await (dependencies.sendPush || sendWebPushNotification)({
+          userId: recipient.id,
+          schoolId: request.schoolId,
+          event: request.event,
+          relatedEntityId: request.relatedEntityId,
+          payload: {
+            title: request.title,
+            body: request.push.body,
+            url: request.push.url,
+            tag: `${request.event}:${request.relatedEntityId}`,
+          },
+        })
+        result.pushSent += push.sent
+        result.pushAlreadySent += push.alreadySent
+        result.pushSkipped += push.skipped
+        for (const failure of push.failures) {
+          result.failures.push({ recipientId: recipient.id, channel: 'push', error: failure.error })
+        }
+      } catch (error) {
+        result.failures.push({ recipientId: recipient.id, channel: 'push', error: errorMessage(error) })
       }
 
       try {

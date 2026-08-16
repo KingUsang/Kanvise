@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isTelegramEnabled, validateProductionEnvironment } from './runtime-env'
+import { isTelegramEnabled, isWebPushEnabled, validateProductionEnvironment } from './runtime-env'
 
 const validProductionEnv = {
   NODE_ENV: 'production',
@@ -55,5 +55,24 @@ describe('isTelegramEnabled', () => {
   it('is opt-in', () => {
     expect(isTelegramEnabled({} as NodeJS.ProcessEnv)).toBe(false)
     expect(isTelegramEnabled({ TELEGRAM_ENABLED: 'true' } as NodeJS.ProcessEnv)).toBe(true)
+  })
+})
+
+describe('web push production configuration', () => {
+  it('is opt-in', () => {
+    expect(isWebPushEnabled({} as NodeJS.ProcessEnv)).toBe(false)
+    expect(isWebPushEnabled({ WEB_PUSH_ENABLED: 'true' } as NodeJS.ProcessEnv)).toBe(true)
+  })
+
+  it('requires VAPID settings only when enabled', () => {
+    expect(() => validateProductionEnvironment({ ...validProductionEnv, WEB_PUSH_ENABLED: 'true' }))
+      .toThrow('WEB_PUSH_SUBJECT')
+    expect(() => validateProductionEnvironment({
+      ...validProductionEnv,
+      WEB_PUSH_ENABLED: 'true',
+      WEB_PUSH_VAPID_PUBLIC_KEY: 'public',
+      WEB_PUSH_VAPID_PRIVATE_KEY: 'private',
+      WEB_PUSH_SUBJECT: 'mailto:notifications@kanvise.com',
+    })).not.toThrow()
   })
 })

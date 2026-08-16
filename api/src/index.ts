@@ -48,6 +48,7 @@ import { studentMocksRouter } from "./routes/student-mocks";
 import { studentSettingsRouter } from "./routes/student-settings";
 import { marketplaceRouter } from "./routes/marketplace";
 import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
+import { pushRouter } from './routes/push';
 
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
@@ -74,6 +75,7 @@ app.route("/internal/payments", internalPaymentsRouter);
 app.route("/submissions", submissionsRouter);
 app.route("/mock-answers", mockAnswersRouter);
 app.route("/health", healthRouter);
+app.route("/users/me/push", pushRouter);
 if (isTelegramEnabled()) {
   app.route('/telegram', telegramRouter);
   app.route('/telegram', telegramWebhookRouter);

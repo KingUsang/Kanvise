@@ -42,6 +42,7 @@ const request = {
   body: 'Physics starts in 15 minutes.',
   relatedEntityType: 'live_class',
   relatedEntityId: 'class-1',
+  push: { body: 'Physics starts soon.', url: '/class/class-1' },
   emailInput: (recipient: NotificationRecipient) => ({
     firstName: recipient.firstName,
     classTitle: 'Physics revision',
@@ -120,5 +121,24 @@ describe('deliverNotification', () => {
 
     await deliverNotification({ ...request, batchSize: 2 }, { repository, sendEmail, logger: quietLogger })
     expect(maximum).toBeLessThanOrEqual(2)
+  })
+
+  it('counts push delivery independently from email and in-app channels', async () => {
+    const repository = fakeRepository([{ id: 'student-1', schoolId: 'school-1', email: null, firstName: 'Ada' }])
+    const sendPush = vi.fn(async () => ({ sent: 1, alreadySent: 0, skipped: 0, failures: [] }))
+    const result = await deliverNotification(request, { repository, sendEmail: vi.fn(), sendPush, logger: quietLogger })
+    expect(result).toMatchObject({ inAppCreated: 1, pushSent: 1, skippedNoEmail: 1 })
+    expect(sendPush).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'student-1', schoolId: 'school-1', payload: expect.objectContaining({ url: '/class/class-1' }),
+    }))
+  })
+
+  it('continues email and in-app delivery when push fails', async () => {
+    const repository = fakeRepository([{ id: 'student-1', schoolId: 'school-1', email: 'ada@example.com', firstName: 'Ada' }])
+    const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+    const sendPush = vi.fn(async () => { throw new Error('push unavailable') })
+    const result = await deliverNotification(request, { repository, sendEmail, sendPush, logger: quietLogger })
+    expect(result).toMatchObject({ inAppCreated: 1, emailsSent: 1, pushSent: 0 })
+    expect(result.failures).toContainEqual(expect.objectContaining({ channel: 'push', error: 'push unavailable' }))
   })
 })

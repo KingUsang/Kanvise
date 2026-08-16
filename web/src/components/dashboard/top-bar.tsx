@@ -6,6 +6,7 @@ import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashb
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { detachBrowserPushOnLogout } from '@/lib/push-notifications'
 
 interface TopBarProps {
   user: {
@@ -51,6 +52,8 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
     setIsSigningOut(true)
     try {
       const supabase = createClient()
+      const { data: sessionData } = await supabase.auth.getSession()
+      await detachBrowserPushOnLogout(sessionData.session?.access_token)
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       window.location.href = '/auth/login'

@@ -7,6 +7,8 @@ import { Toaster } from "sonner";
 import "katex/dist/katex.min.css";
 import { Suspense } from "react";
 import NavigationProgress from "@/components/navigation/NavigationProgress";
+import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -18,14 +20,19 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#2e2877",
 };
 
 export const metadata: Metadata = {
+  applicationName: "Kanvise",
   title: "Kanvise — Run your school. We handle the engine.",
   description: "Kanvise is the private operating system for serious Nigerian tutors — giving you the tools to run classes, track performance, collect payments, and manage your students like a real school. Invite-only. Built for you.",
   icons: {
     icon: "/kanvise_logo_small_blue.png",
+    apple: "/icons/apple-touch-icon.png",
   },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Kanvise", statusBarStyle: "black-translucent" },
 };
 
 export default function RootLayout({
@@ -43,6 +50,8 @@ export default function RootLayout({
           <NavigationProgress />
         </Suspense>
         {children}
+        <ServiceWorkerRegistration />
+        <InstallPrompt />
         <Toaster position="bottom-right" richColors />
       </body>
     </html>

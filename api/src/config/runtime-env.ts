@@ -28,6 +28,12 @@ const TELEGRAM_VARIABLES = [
   'TELEGRAM_WEBHOOK_SECRET',
 ] as const
 
+const WEB_PUSH_VARIABLES = [
+  'WEB_PUSH_VAPID_PUBLIC_KEY',
+  'WEB_PUSH_VAPID_PRIVATE_KEY',
+  'WEB_PUSH_SUBJECT',
+] as const
+
 function missingVariables(names: readonly string[], env: NodeJS.ProcessEnv) {
   return names.filter((name) => !env[name]?.trim())
 }
@@ -46,11 +52,16 @@ export function isTelegramEnabled(env: NodeJS.ProcessEnv = process.env) {
   return env.TELEGRAM_ENABLED === 'true'
 }
 
+export function isWebPushEnabled(env: NodeJS.ProcessEnv = process.env) {
+  return env.WEB_PUSH_ENABLED === 'true'
+}
+
 export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.env): void {
   if (env.NODE_ENV !== 'production') return
 
   const missing = missingVariables(CORE_PRODUCTION_VARIABLES, env)
   if (isTelegramEnabled(env)) missing.push(...missingVariables(TELEGRAM_VARIABLES, env))
+  if (isWebPushEnabled(env)) missing.push(...missingVariables(WEB_PUSH_VARIABLES, env))
   if (missing.length > 0) {
     throw new Error(`Missing production environment variables: ${[...new Set(missing)].sort().join(', ')}`)
   }
@@ -64,6 +75,9 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
   requireHttpsUrl('R2_PUBLIC_BASE_URL', env.R2_PUBLIC_BASE_URL)
   requireHttpsUrl('FRONTEND_URL', env.FRONTEND_URL)
   requireHttpsUrl('LIVEKIT_URL', env.LIVEKIT_URL?.replace(/^wss:/, 'https:'))
+  if (isWebPushEnabled(env) && !/^(mailto:|https:\/\/)/.test(env.WEB_PUSH_SUBJECT || '')) {
+    throw new Error('WEB_PUSH_SUBJECT must be a mailto: or https: URI')
+  }
   for (const origin of (env.CORS_ALLOWED_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean)) {
     requireHttpsUrl('CORS_ALLOWED_ORIGINS', origin)
   }

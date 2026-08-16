@@ -6,11 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
 import { AuthLogo } from "@/components/auth/auth-logo";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectParams = searchParams.get("redirect");
+  const redirectParams = safeRedirectPath(searchParams.get("redirect"));
   const reason = searchParams.get("reason");
   const registerHref = redirectParams
     ? `/auth/register?redirect=${encodeURIComponent(redirectParams)}`
