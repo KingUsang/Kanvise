@@ -4,6 +4,7 @@ import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddlewar
 import { validateInviteToken } from '../lib/invites'
 import { ensureWelcomeEmail } from '../emails/ensure-welcome-email'
 import type { TablesUpdate } from '../lib/database.types'
+import { createHash } from 'node:crypto'
 
 export const authRouter = new Hono<{ Variables: Variables }>()
 
@@ -25,15 +26,13 @@ async function deliverWelcome(profile: any, email: string) {
   }
 }
 
-const ALLOWED_ROLES = ['admin', 'tutor', 'student'] as const
-
 authRouter.use('*', jwtVerificationMiddleware)
 authRouter.use('*', profileResolutionMiddleware)
 authRouter.use('*', tenantMiddleware)
 
 authRouter.post('/profile/init', async (c) => {
   const body = await c.req.json()
-  const { role, first_name, last_name, invite_token } = body
+  const { flow, first_name, last_name, invite_token, student_registration_token } = body
   const user = c.get('user')
   const jwtPayload = c.get('jwt_payload')
   const supabaseAuthId = user.supabase_auth_id
@@ -43,9 +42,18 @@ authRouter.post('/profile/init', async (c) => {
     return c.json({ error: 'Authenticated user has no email address' }, 400)
   }
 
-  if (!ALLOWED_ROLES.includes(role)) {
-    return c.json({ error: 'Invalid role' }, 400)
-  }
+  let role: 'admin' | 'tutor' | 'student'
+  if (flow === 'centre') role = 'admin'
+  else if (flow === 'tutor') role = 'tutor'
+  else if (flow === 'student' && typeof student_registration_token === 'string') {
+    const tokenHash = createHash('sha256').update(student_registration_token).digest('hex')
+    const intents = (supabase as any).from('registration_intents')
+    const { data: intent, error: intentError } = await intents.select('*').eq('token_hash', tokenHash).eq('kind', 'student').is('consumed_at', null).gt('expires_at', new Date().toISOString()).maybeSingle()
+    if (intentError || !intent) return c.json({ error: 'Student registration has expired. Return to the programme and try again.' }, 400)
+    const { error: consumeError } = await (supabase as any).from('registration_intents').update({ consumed_at: new Date().toISOString(), consumed_by: supabaseAuthId }).eq('id', intent.id).is('consumed_at', null)
+    if (consumeError) return c.json({ error: 'Student registration could not be completed' }, 409)
+    role = 'student'
+  } else return c.json({ error: 'A valid registration flow is required' }, 400)
 
   if (!String(first_name || '').trim() || !String(last_name || '').trim()) {
     return c.json({ error: 'First name and last name are required' }, 400)

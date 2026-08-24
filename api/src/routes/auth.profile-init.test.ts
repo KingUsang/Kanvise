@@ -57,34 +57,34 @@ async function initProfile(body: Record<string, unknown>) {
   })
 }
 
-describe('POST /auth/profile/init role hardening', () => {
+describe('POST /auth/profile/init registration flow hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv('FRONTEND_URL', 'https://kanvise.com')
   })
 
-  it('rejects a role outside the allowlist', async () => {
+  it('rejects a client-supplied role without a registration flow', async () => {
     const response = await initProfile({ role: 'superadmin', first_name: 'Mal', last_name: 'Actor' })
     const body = await response.json() as any
 
     expect(response.status).toBe(400)
-    expect(body.error).toBe('Invalid role')
+    expect(body.error).toBe('A valid registration flow is required')
     expect(mocks.from).not.toHaveBeenCalled()
   })
 
-  it('rejects a missing role', async () => {
+  it('rejects a missing registration flow', async () => {
     const response = await initProfile({ first_name: 'No', last_name: 'Role' })
     const body = await response.json() as any
 
     expect(response.status).toBe(400)
-    expect(body.error).toBe('Invalid role')
+    expect(body.error).toBe('A valid registration flow is required')
   })
 
   it('rejects a new tutor without an invite token', async () => {
     // No existing profile, so the handler proceeds to the tutor invite check.
     mocks.from.mockReturnValue(profileLookup({ data: null, error: null }))
 
-    const response = await initProfile({ role: 'tutor', first_name: 'Tu', last_name: 'Tor' })
+    const response = await initProfile({ flow: 'tutor', first_name: 'Tu', last_name: 'Tor' })
     const body = await response.json() as any
 
     expect(response.status).toBe(400)

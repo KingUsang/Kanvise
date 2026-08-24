@@ -30,9 +30,14 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // New students should create a student profile, then return here to pay.
+        // The API issues a one-time student intent; redirect paths never assign roles.
         const redirectUrl = `/${schoolSlug}/${programmeSlug}?checkout=true`;
-        router.push(`/auth/register?redirect=${encodeURIComponent(redirectUrl)}`);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        if (!apiUrl) throw new Error("Registration is temporarily unavailable");
+        const intentResponse = await fetch(`${apiUrl}/auth/registration-intents/student`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ return_to: redirectUrl }) });
+        const intent = await intentResponse.json().catch(() => null);
+        if (!intentResponse.ok || !intent?.token) throw new Error(intent?.error || 'Could not start student registration');
+        router.push(`/auth/register/student?intent=${encodeURIComponent(intent.token)}&return_to=${encodeURIComponent(redirectUrl)}`);
         return;
       }
 

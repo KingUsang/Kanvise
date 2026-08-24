@@ -1,17 +1,20 @@
 "use client";
 
 import { Suspense, useState, type FormEvent, type ReactNode } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { safeRedirectPath } from '@/lib/safe-redirect'
 
 function RegisterContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const redirectParam = searchParams.get("redirect");
-  const isStudentFlow = Boolean(redirectParam);
-  const role = isStudentFlow ? "student" : "admin";
+  const redirectParam = safeRedirectPath(searchParams.get("return_to"));
+  const isStudentFlow = pathname.endsWith('/student');
+  const flow = isStudentFlow ? 'student' : 'centre';
+  const studentRegistrationToken = searchParams.get('intent');
   const supabase = createClient();
 
   const [firstName, setFirstName] = useState("");
@@ -53,7 +56,7 @@ function RegisterContent() {
     const response = await fetch(`${apiUrl}/auth/profile/init`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ role, first_name: firstName, last_name: lastName, email: userEmail }),
+      body: JSON.stringify({ flow, student_registration_token: studentRegistrationToken, first_name: firstName, last_name: lastName, email: userEmail }),
     });
 
     if (!response.ok) {
@@ -70,7 +73,7 @@ function RegisterContent() {
       throw new Error("Your account was created, but the dashboard session could not be refreshed. Please sign in again.");
     }
 
-    const destination = role === "admin"
+    const destination = flow === "centre"
       ? "/dashboard/school-setup"
       : redirectParam || "/dashboard/student";
     window.location.assign(destination);

@@ -20,6 +20,7 @@ app.use("/*", cors({
 }));
 
 import { authRouter } from "./routes/auth";
+import { publicRegistrationRouter } from './routes/public-registration';
 import { avatarsRouter } from "./routes/avatars";
 import { schoolsRouter } from "./routes/schools";
 import { liveClassesRouter } from "./routes/live-classes";
@@ -50,6 +51,7 @@ import { marketplaceRouter } from "./routes/marketplace";
 import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
 
+app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
 app.route("/schools", schoolsRouter);
