@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export function SchoolSetupForm({ initialData, token }: { initialData: any, token: string }) {
   const isFirstSetup = !initialData?.id
+  const canUploadMedia = Boolean(initialData?.id)
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     slug: initialData?.slug || '',
@@ -46,7 +47,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
     setSaveStatus('idle')
     try {
       const apiUrl = getApiUrl()
-      if (!initialData?.id) throw new Error('School media upload is not configured')
+      if (!initialData?.id) throw new Error('Save your centre details before uploading media')
       const metadata = {
         file_name: file.name,
         content_type: file.type,
@@ -304,6 +305,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
                 Photos and Welcome Video <span className="text-sm font-normal text-[#787582]">(optional)</span>
               </h3>
               <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so students know they are enrolling with the right tutorial centre.</p>
+              {!canUploadMedia && <p className="mt-2 text-xs font-medium text-[#994704]">Save your centre details first, then you can add photos and a welcome video.</p>}
             </div>
             
             <div className="flex flex-col gap-8">
@@ -316,8 +318,8 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
                       <div className="absolute inset-0 bg-[#180d62] flex items-center justify-center text-white text-3xl font-bold">{initials}</div>
                     )}
                   </div>
-                  <label className="flex-1 w-full border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-[#f5f3f2] transition-colors cursor-pointer group">
-                    <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploadingMedia !== null} onChange={(event) => void uploadMedia('logo', event.target.files?.[0])} />
+                  <label className={`flex-1 w-full border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center transition-colors group ${canUploadMedia ? 'hover:bg-[#f5f3f2] cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('logo', event.target.files?.[0])} />
                     <span className="material-symbols-outlined text-[#787582] group-hover:text-[#180d62] mb-2 text-3xl transition-colors">cloud_upload</span>
                     <p className="font-semibold text-xs text-[#180d62] mb-1">{uploadingMedia === 'logo' ? 'Uploading logo…' : 'Click to upload a logo'}</p>
                     <p className="text-sm text-[#474551]">PNG, JPG or WebP (max. 10MB)</p>
@@ -328,8 +330,8 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Cover Image <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
                 <p className="mb-3 text-xs leading-5 text-[#787582]">A wide image at the top of your student enrolment page. A classroom or teaching photo works well.</p>
-                <label className="w-full h-32 border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-[#f5f3f2] transition-colors cursor-pointer group relative overflow-hidden">
-                  <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploadingMedia !== null} onChange={(event) => void uploadMedia('banner', event.target.files?.[0])} />
+                <label className={`w-full h-32 border-2 border-dashed border-[#c8c5d2] rounded-lg p-6 flex flex-col items-center justify-center text-center transition-colors group relative overflow-hidden ${canUploadMedia ? 'hover:bg-[#f5f3f2] cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('banner', event.target.files?.[0])} />
                   {mediaUrls.banner ? <img src={mediaUrls.banner} alt="Dashboard banner" className="absolute inset-0 h-full w-full object-cover opacity-30" /> : (
                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#180d62_1px,transparent_1px)] [background-size:16px_16px]"></div>
                   )}
@@ -342,8 +344,8 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Welcome Video <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
                 <p className="mb-3 text-xs leading-5 text-[#787582]">A short message introducing your centre, teaching approach, or exam-preparation programme.</p>
-                <label className="flex w-full cursor-pointer items-center justify-between gap-4 rounded border border-[#c8c5d2] bg-[#fbf9f8] px-4 py-3 transition-colors hover:bg-[#f5f3f2]">
-                  <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" disabled={uploadingMedia !== null} onChange={(event) => void uploadMedia('video_intro', event.target.files?.[0])} />
+                <label className={`flex w-full items-center justify-between gap-4 rounded border border-[#c8c5d2] bg-[#fbf9f8] px-4 py-3 transition-colors ${canUploadMedia ? 'hover:bg-[#f5f3f2] cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
+                  <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('video_intro', event.target.files?.[0])} />
                   <span className="min-w-0 truncate text-sm text-[#474551]">{uploadingMedia === 'video_intro' ? 'Uploading introduction video…' : mediaUrls.video_intro ? 'Replace introduction video' : 'Upload an MP4, MOV, or WebM video'}</span>
                   <span className="inline-flex shrink-0 items-center gap-2 rounded border border-[#2e2877] bg-white px-3 py-2 text-xs font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-base">upload</span>Upload File</span>
                 </label>
