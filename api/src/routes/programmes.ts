@@ -42,6 +42,21 @@ function normaliseSubjects(subjects: SubjectInput[]) {
   }))
 }
 
+async function hasPayoutAccount(schoolId: string) {
+  const { data, error } = await supabase.from('paystack_subaccounts')
+    .select('subaccount_code').eq('school_id', schoolId).maybeSingle()
+  if (error) throw error
+  return Boolean(data?.subaccount_code)
+}
+
+async function requirePayoutAccount(c: any, schoolId: string) {
+  if (await hasPayoutAccount(schoolId)) return null
+  return c.json({
+    error: 'Add a bank account for payouts before creating a paid programme.',
+    code: 'PAYOUT_NOT_CONFIGURED',
+  }, 409)
+}
+
 async function loadProgrammeSubjects(schoolId: string, programmeId: string) {
   const [{ data: subProgrammes, error: subError }, { data: allCourses, error: courseError }] = await Promise.all([
     supabase.from('sub_programmes').select('id').eq('school_id', schoolId).eq('programme_id', programmeId),
@@ -65,12 +80,18 @@ programmesRouter.post('/', enforceAdmin, async (c) => {
     const slug = slugify(typeof body.slug === 'string' ? body.slug : name)
     if (!name || !slug) return c.json({ error: 'Missing required fields', code: 'BAD_REQUEST' }, 400)
 
+    const price = Number.isFinite(Number(body.price)) ? Math.max(Number(body.price), 0) : 0
+    if (price > 0) {
+      const payoutError = await requirePayoutAccount(c, profile.school_id)
+      if (payoutError) return payoutError
+    }
+
     const { data, error } = await supabase.from('programmes').insert({
       school_id: profile.school_id,
       name,
       slug,
       description: typeof body.description === 'string' ? body.description.trim() || null : null,
-      price: Number.isFinite(Number(body.price)) ? Math.max(Number(body.price), 0) : 0,
+      price,
       currency: body.currency || 'NGN',
       thumbnail_url: null,
       is_published: false,
@@ -107,6 +128,10 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
     const price = Number(body.price)
     if (!Number.isFinite(price) || price < 0) {
       return c.json({ error: 'Enter a valid programme fee', code: 'INVALID_PRICE' }, 400)
+    }
+    if (price > 0) {
+      const payoutError = await requirePayoutAccount(c, profile.school_id)
+      if (payoutError) return payoutError
     }
 
     const { data, error } = await (supabase as any).rpc('setup_programme', {
@@ -214,7 +239,14 @@ programmesRouter.patch('/:id', enforceAdmin, async (c) => {
       updates.slug = slugify(body.name)
     }
     if (typeof body.description === 'string') updates.description = body.description.trim() || null
-    if (body.price !== undefined && Number.isFinite(Number(body.price)) && Number(body.price) >= 0) updates.price = Number(body.price)
+    if (body.price !== undefined && Number.isFinite(Number(body.price)) && Number(body.price) >= 0) {
+      const price = Number(body.price)
+      if (price > 0) {
+        const payoutError = await requirePayoutAccount(c, profile.school_id)
+        if (payoutError) return payoutError
+      }
+      updates.price = price
+    }
     const { data, error } = await supabase.from('programmes').update(updates)
       .eq('id', c.req.param('id')).eq('school_id', profile.school_id).select().single()
     if (error) throw error
@@ -229,8 +261,12 @@ programmesRouter.post('/:id/publish', enforceAdmin, async (c) => {
   try {
     const profile = c.get('user')
     const id = c.req.param('id')
-    const { data: programme } = await supabase.from('programmes').select('id').eq('id', id).eq('school_id', profile.school_id).maybeSingle()
+    const { data: programme } = await supabase.from('programmes').select('id, price').eq('id', id).eq('school_id', profile.school_id).maybeSingle()
     if (!programme) return c.json({ error: 'Programme not found', code: 'NOT_FOUND' }, 404)
+    if (Number(programme.price) > 0) {
+      const payoutError = await requirePayoutAccount(c, profile.school_id)
+      if (payoutError) return payoutError
+    }
     const subjects = await loadProgrammeSubjects(profile.school_id, id)
     if (subjects.length === 0) {
       return c.json({ error: 'A programme must have at least one subject before it can be published.', code: 'NO_SUBJECTS_IN_PROGRAMME', readiness: { subject_count: 0, missing_tutors: [] } }, 400)

@@ -41,6 +41,10 @@ describe('programme setup', () => {
     vi.clearAllMocks()
     mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
     mocks.rpc.mockResolvedValue({ data: { programme: { id: 'programme-1', is_published: false }, courses: [{ id: 'course-1', is_published: false }] }, error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'paystack_subaccounts') return query({ data: { subaccount_code: 'ACCT_TEST' }, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
   })
 
   it('is admin-only', async () => {
@@ -78,6 +82,17 @@ describe('programme setup', () => {
     const response = await post('/setup', { name: 'JAMB', price: 0, subjects: [{ name: 'Chemistry', tutor_ids: ['other-tutor'] }] })
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({ code: 'INVALID_TUTOR' })
+  })
+
+  it('requires a payout account before creating a paid programme', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'paystack_subaccounts') return query({ data: null, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    const response = await post('/setup', { name: 'JAMB', price: 1000, subjects: [{ name: 'Chemistry' }] })
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ code: 'PAYOUT_NOT_CONFIGURED' })
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 })
 
@@ -124,6 +139,17 @@ describe('programme publishing', () => {
     const response = await post('/programme-1/publish', {})
     expect(response.status).toBe(200)
     expect(updateOrder).toEqual(['subjects', 'programme'])
+  })
+
+  it('requires a payout account before publishing a paid programme', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'programmes') return query({ data: { id: 'programme-1', price: 1000 }, error: null })
+      if (table === 'paystack_subaccounts') return query({ data: null, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    const response = await post('/programme-1/publish', {})
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ code: 'PAYOUT_NOT_CONFIGURED' })
   })
 
   it('does not allow ordinary PATCH to bypass publishing readiness', async () => {

@@ -43,6 +43,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const [databaseSaved, setDatabaseSaved] = useState(false)
   const [coverUploadError, setCoverUploadError] = useState('')
   const [schoolSlug, setSchoolSlug] = useState('')
+  const [payoutReady, setPayoutReady] = useState<boolean | null>(null)
   const initialSubjects = useRef<Map<string, string[]>>(new Map())
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
@@ -56,6 +57,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         if (!session) return router.replace('/')
         const headers = { Authorization: `Bearer ${session.access_token}` }
         const requests = [fetch(`${apiUrl}/auth/me`, { headers }), fetch(`${apiUrl}/users?roles=admin,tutor`, { headers }), fetch(`${apiUrl}/schools/me`, { headers })]
+        const payoutRequest = fetch(`${apiUrl}/payments/summary`, { headers })
         if (programmeId) requests.push(fetch(`${apiUrl}/programmes/${programmeId}`, { headers }))
         const responses = await Promise.all(requests)
         if (responses.some(response => !response.ok)) throw new Error('Could not load programme setup')
@@ -65,6 +67,13 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         setIdentity(currentIdentity)
         setTutors((tutorBody.data || []).filter((person: Tutor) => ['admin', 'tutor'].includes(person.role)))
         setSchoolSlug(schoolBody.data?.slug || '')
+        const payoutResponse = await payoutRequest
+        if (active) {
+          if (payoutResponse.ok) {
+            const payoutBody = await payoutResponse.json()
+            setPayoutReady(Boolean(payoutBody.data?.subaccount?.subaccount_code))
+          } else setPayoutReady(false)
+        }
         const local = loadProgrammeDraft(currentIdentity.school_id, currentIdentity.id, programmeId || 'new')
         if (local) {
           setDraft(local.data)
@@ -131,6 +140,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const subjectNames = draft.subjects.map(subject => subject.name.trim().toLowerCase()).filter(Boolean)
   const subjectsReady = draft.subjects.length > 0 && draft.subjects.every(subject => subject.name.trim()) && new Set(subjectNames).size === subjectNames.length
   const tutorsReady = draft.subjects.length > 0 && draft.subjects.every(subject => subject.tutorIds.length > 0)
+  const isPaid = Number(draft.price) > 0
 
   const nextStep = () => {
     if (step === 0 && !detailsReady) return toast.error('Add a programme name and valid fee')
@@ -217,6 +227,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
 
   async function persist(publish: boolean) {
     if (!detailsReady || !subjectsReady) return toast.error('Complete the programme details and subjects first')
+    if (isPaid && !payoutReady) return toast.error('Add a bank account before saving a paid programme', { description: 'Set up where your centre receives payments, then return here.' })
     if (publish && !tutorsReady) return toast.error('Assign at least one tutor to every subject before publishing')
     setSaving(true)
     try {
@@ -291,7 +302,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
           <section className="rounded-lg border border-[#c2b59b] bg-white shadow-sm">
             <header className="border-b border-[#e4e2e1] px-5 py-4 sm:px-7"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#994704]">Step {step + 1}</p><h2 className="mt-1 text-xl font-bold text-[#1b1c1c]">{steps[step].title}</h2></header>
             <div className="p-5 sm:p-7">
-              {step === 0 && <DetailsStep draft={draft} coverFile={coverFile} updateDraft={updateDraft} setCoverFile={file => { setCoverFile(file); updateDraft('coverFileName', file?.name) }} />}
+              {step === 0 && <DetailsStep draft={draft} coverFile={coverFile} payoutReady={payoutReady} updateDraft={updateDraft} setCoverFile={file => { setCoverFile(file); updateDraft('coverFileName', file?.name) }} />}
               {step === 1 && <SubjectsStep subjects={draft.subjects} onChange={subjects => updateDraft('subjects', subjects)} updateSubject={updateSubject} moveSubject={moveSubject} />}
               {step === 2 && <TutorsStep subjects={draft.subjects} tutors={tutors} selfId={identity?.id || ''} updateSubject={updateSubject} />}
               {step === 3 && <ReviewStep draft={draft} tutors={tutors} detailsReady={detailsReady} subjectsReady={subjectsReady} tutorsReady={tutorsReady} />}
@@ -314,11 +325,11 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
 
 function FieldLabel({ children }: { children: React.ReactNode }) { return <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.1em] text-[#474551]">{children}</label> }
 
-function DetailsStep({ draft, coverFile, updateDraft, setCoverFile }: { draft: ProgrammeDraftData; coverFile: File | null; updateDraft: <K extends keyof ProgrammeDraftData>(key: K, value: ProgrammeDraftData[K]) => void; setCoverFile: (file: File | null) => void }) {
+function DetailsStep({ draft, coverFile, payoutReady, updateDraft, setCoverFile }: { draft: ProgrammeDraftData; coverFile: File | null; payoutReady: boolean | null; updateDraft: <K extends keyof ProgrammeDraftData>(key: K, value: ProgrammeDraftData[K]) => void; setCoverFile: (file: File | null) => void }) {
   return <div className="grid grid-cols-12 gap-5">
     <div className="col-span-12"><FieldLabel>Programme name</FieldLabel><input value={draft.name} onChange={event => updateDraft('name', event.target.value)} placeholder="e.g. JAMB Chemistry" className="w-full rounded border border-[#c8c5d2] px-3.5 py-3 text-sm outline-none focus:border-[#2e2877]" /></div>
     <div className="col-span-12"><FieldLabel>Description</FieldLabel><textarea value={draft.description} onChange={event => updateDraft('description', event.target.value)} rows={4} placeholder="Tell students what they will learn and who this programme is for." className="w-full rounded border border-[#c8c5d2] px-3.5 py-3 text-sm outline-none focus:border-[#2e2877]" /></div>
-    <div className="col-span-12 md:col-span-5"><FieldLabel>Programme fee (NGN)</FieldLabel><div className="flex rounded border border-[#c8c5d2] focus-within:border-[#2e2877]"><span className="border-r border-[#c8c5d2] bg-[#f5f3f2] px-3 py-3 text-sm">₦</span><input type="number" min="0" disabled={draft.price.trim() === '0'} value={draft.price} onChange={event => updateDraft('price', event.target.value)} className="min-w-0 flex-1 rounded-r px-3 py-3 text-sm outline-none disabled:bg-[#f5f3f2]" /></div><label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="checkbox" checked={draft.price.trim() === '0'} onChange={event => updateDraft('price', event.target.checked ? '0' : '')} className="h-4 w-4 accent-[#2e2877]" />Offer this programme for free</label><p className="mt-1 text-xs leading-5 text-[#787582]">Free programmes show “Enrol for free” to students and do not open payment checkout.</p></div>
+    <div className="col-span-12 md:col-span-5"><FieldLabel>Programme fee (NGN)</FieldLabel><div className="flex rounded border border-[#c8c5d2] focus-within:border-[#2e2877]"><span className="border-r border-[#c8c5d2] bg-[#f5f3f2] px-3 py-3 text-sm">₦</span><input type="number" min="0" disabled={draft.price.trim() === '0'} value={draft.price} onChange={event => updateDraft('price', event.target.value)} className="min-w-0 flex-1 rounded-r px-3 py-3 text-sm outline-none disabled:bg-[#f5f3f2]" /></div><label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="checkbox" checked={draft.price.trim() === '0'} onChange={event => updateDraft('price', event.target.checked ? '0' : '')} className="h-4 w-4 accent-[#2e2877]" />Offer this programme for free</label><p className="mt-1 text-xs leading-5 text-[#787582]">Free programmes show “Enrol for free” to students and do not open payment checkout.</p>{Number(draft.price) > 0 && <p className={`mt-3 text-xs leading-5 ${payoutReady ? 'text-green-700' : 'text-amber-800'}`}>{payoutReady ? 'Your payout bank account is ready.' : <>Add your payout bank account before you can save this paid programme. <Link href="/dashboard/payments" className="font-semibold underline">Set up bank account</Link></>}</p>}</div>
     <div className="col-span-12 md:col-span-7"><FieldLabel>Cover image (optional)</FieldLabel><label className="flex cursor-pointer items-center gap-3 rounded border border-dashed border-[#c2b59b] bg-[#fbf9f8] p-3 text-sm text-[#474551]"><span className="material-symbols-outlined text-[#2e2877]">add_photo_alternate</span><span>{coverFile?.name || draft.coverFileName || 'Choose a JPG, PNG or WebP image'}</span><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event => setCoverFile(event.target.files?.[0] || null)} /></label>{draft.coverFileName && !coverFile && <p className="mt-2 text-xs text-amber-700">Select this image again before saving; files are kept only for this browser session.</p>}</div>
   </div>
 }
