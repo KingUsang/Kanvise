@@ -25,7 +25,7 @@ publicRouter.get('/schools/:slug', async (c) => {
     // 2. Fetch published programmes
     const { data: programmes, error: progError } = await supabase
       .from('programmes')
-      .select('id, name, slug, description, price, is_published') // Add thumbnail_url/key if they exist in schema
+      .select('id, name, slug, description, price, currency, thumbnail_url, is_published')
       .eq('school_id', school.id)
       .eq('is_published', true)
 

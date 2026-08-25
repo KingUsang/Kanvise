@@ -130,6 +130,53 @@ paymentsRouter.post("/checkout", async (c) => {
       return c.json({ error: "Already enrolled", code: "ALREADY_ENROLLED" }, 409);
     }
 
+    // Free programmes grant access immediately. They must not be sent to
+    // Paystack with a zero-value transaction (Paystack rejects those), but we
+    // still create a successful payment record so the existing atomic
+    // confirmation function creates the enrolment, student membership and
+    // notifications consistently.
+    if (Number(target.price) === 0) {
+      const reference = `FREE-${crypto.randomUUID()}`;
+      const targetColumns = {
+        programme_id: checkoutTarget.column === "programme_id" ? checkoutTarget.id : null,
+        sub_programme_id: checkoutTarget.column === "sub_programme_id" ? checkoutTarget.id : null,
+        course_id: checkoutTarget.column === "course_id" ? checkoutTarget.id : null,
+      };
+      const { data: payment, error: paymentError } = await supabase
+        .from("payments")
+        .insert({
+          school_id: target.school_id,
+          student_id: user.id,
+          amount: 0,
+          paystack_reference: reference,
+          checkout_idempotency_key: idempotencyKey,
+          status: "pending",
+          kanvise_fee: 0,
+          centre_amount: 0,
+          ...targetColumns,
+        })
+        .select()
+        .single();
+
+      if (paymentError || !payment) {
+        if (paymentError?.code === "23505") return c.json({ error: "Enrolment is already being initialized", code: "PAYMENT_INITIALIZING" }, 409);
+        console.error("[payments/checkout] Failed to create free enrolment:", paymentError);
+        return c.json({ error: "Could not enrol you right now", code: "FREE_ENROLMENT_FAILED" }, 500);
+      }
+
+      const { data: confirmation, error: confirmationError } = await supabase.rpc("confirm_student_payment", {
+        p_paystack_reference: reference,
+        p_paystack_transaction_id: `free-${payment.id}`,
+        p_amount_kobo: 0,
+      });
+      if (confirmationError) {
+        console.error("[payments/checkout] Failed to confirm free enrolment:", confirmationError);
+        return c.json({ error: "Could not enrol you right now", code: "FREE_ENROLMENT_FAILED" }, 500);
+      }
+
+      return c.json({ data: { free: true, enrolment_id: confirmation?.enrolment_id, amount: 0 } }, 201);
+    }
+
     // 2. Resolve subaccount for the school
     const { data: subaccount } = await supabase
       .from("paystack_subaccounts")

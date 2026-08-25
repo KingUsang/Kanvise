@@ -32,7 +32,8 @@ export default async function ProgrammePage({
   const price = Number(programme.price || 0);
   const itemCount = courses.length;
   const currency = programme.currency || "NGN";
-  const formatPrice = (value: number) => new Intl.NumberFormat("en-NG", {
+  const isFree = price === 0;
+  const formatPrice = (value: number) => value === 0 ? "Free" : new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
@@ -54,7 +55,7 @@ export default async function ProgrammePage({
             <span>{school?.name || "All programmes"}</span>
           </Link>
           <Link href="#enrol" className="rounded-lg bg-[#994704] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#753400]">
-            Enrol
+            {isFree ? "Enrol for free" : "Enrol now"}
           </Link>
         </div>
       </header>
@@ -94,7 +95,7 @@ export default async function ProgrammePage({
             </div>
 
             <aside id="enrol" className="h-fit rounded-xl border border-[#c8c5d2] bg-[#fbf9f8] p-6 shadow-sm lg:sticky lg:top-24">
-              <p className="text-sm font-medium text-[#474551]">Programme fee</p>
+              <p className="text-sm font-medium text-[#474551]">{isFree ? "Free programme" : "Programme fee"}</p>
               <p className="mt-2 text-3xl font-bold text-[#2e2877]">{formatPrice(price)}</p>
               <div className="my-6 border-t border-[#e4e2e1]" />
               <CheckoutButton
@@ -104,7 +105,7 @@ export default async function ProgrammePage({
                 programmeSlug={programmeSlug}
               />
               <p className="mt-3 text-center text-xs leading-5 text-[#6a6874]">
-                You’ll be asked to sign in or create a student account before payment.
+                {isFree ? "Create a student account or sign in to start learning." : "You’ll be asked to sign in or create a student account before payment."}
               </p>
             </aside>
           </div>
@@ -172,7 +173,7 @@ export default async function ProgrammePage({
               <nav className="mt-4 space-y-3 text-sm">
                 {itemCount > 0 && <a href="#curriculum" className="block text-[#474551] hover:text-[#2e2877]">Subjects included</a>}
                 {tutors.length > 0 && <a href="#tutor" className="block text-[#474551] hover:text-[#2e2877]">Instructor</a>}
-                <a href="#enrol" className="block font-semibold text-[#994704]">Enrol</a>
+                <a href="#enrol" className="block font-semibold text-[#994704]">{isFree ? "Enrol for free" : "Enrol now"}</a>
               </nav>
             </div>
           </aside>

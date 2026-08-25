@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 
 async function getSchool(slug: string) {
@@ -35,25 +34,17 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
       {/* TopNavBar */}
       <header className="fixed top-0 left-0 w-full z-50 bg-surface/95 backdrop-blur-sm flex justify-between items-center px-6 md:px-margin-desktop py-4 border-b border-outline-variant transition-all duration-200 ease-in-out font-body-md text-body-md text-primary h-[72px]">
         <div className="flex items-center gap-8">
-          <div className="font-headline-md text-headline-md font-bold text-primary">Kanvise</div>
-          <nav className="hidden md:flex gap-6">
-            <a className="text-primary font-bold border-b-2 border-secondary pb-1 hover:text-secondary transition-colors" href="#">Home</a>
-            <a className="text-on-surface-variant hover:text-secondary transition-colors" href="#">Benefits</a>
-            <a className="text-on-surface-variant hover:text-secondary transition-colors" href="#">Pricing</a>
-            <a className="text-on-surface-variant hover:text-secondary transition-colors" href="#">Programmes</a>
-          </nav>
+          <div className="font-headline-md text-headline-md font-bold text-primary">{school.name}</div>
         </div>
         <div className="hidden md:flex items-center gap-4">
           <Link href="/auth/login" className="font-label-md text-label-md text-on-surface-variant hover:text-secondary transition-colors px-4 py-2">
             Login
           </Link>
-          <Link href="/auth/login" className="bg-secondary text-on-secondary px-6 py-2 rounded font-label-md text-label-md hover:opacity-90 transition-opacity">
-            Get Started
+          <Link href="#programmes" className="bg-secondary text-on-secondary px-6 py-2 rounded font-label-md text-label-md hover:opacity-90 transition-opacity">
+            Explore programmes
           </Link>
         </div>
-        <button className="md:hidden text-primary">
-          <span className="material-symbols-outlined">menu</span>
-        </button>
+        <a href="#programmes" className="md:hidden text-sm font-semibold text-[#994704]">Programmes</a>
       </header>
 
       {/* Main Content */}
@@ -75,12 +66,8 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
             <div className="text-white pb-2 flex-grow">
               <h1 className="font-display-lg text-headline-lg-mobile md:text-display-lg mb-2">{school.name}</h1>
               <p className="font-body-lg text-body-md md:text-body-lg opacity-90 max-w-2xl mb-4">
-                {school.description || "Empowering the next generation of leaders through rigorous academic training, expert mentorship, and comprehensive examination preparation."}
+                {school.description || "Explore the programmes currently available from this tutorial centre."}
               </p>
-              <div className="flex items-center gap-2 bg-surface/10 backdrop-blur-md px-4 py-2 rounded-full w-fit border border-white/20">
-                <span className="material-symbols-outlined text-secondary-fixed icon-fill text-sm">groups</span>
-                <span className="font-label-md text-label-md text-white">Active learning community</span>
-              </div>
             </div>
           </div>
         </section>
@@ -127,35 +114,11 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col gap-stack-lg">
             
-            {/* Promotional Banners Section (Bento style) */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-              <div className="relative h-48 md:h-64 rounded overflow-hidden group cursor-pointer border border-[#C2B59B]">
-                <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAzW3ImkcKaLJyR57pR-7CibAWhdOKQ_0a3cYZDbgTk4b9STnbszZllbtRYMwRba0iQdj9tIEO3g7zMIU9DQlrmlCFM0FWOfMpRhoupOwAbztgLwUVS7c7Emi3Jt4OAMzTMf0yzeH-LbsLJ-4udKSolWOrQ7WORJP4KZDUm8yTjN51rhTemBJnrRYM7yyhG-nZJmaqu1ncM9fu2xNXr4yXsJMNgEq2ajfsUjvFYIYf0fN1tG7ORzgTiP6j9myUfv5uafb8VU8KLr0M')" }}></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40"></div>
-                <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                  <span className="bg-secondary text-white font-label-md text-label-md px-2 py-1 rounded w-fit mb-2 uppercase tracking-wider">Featured</span>
-                  <h3 className="font-headline-lg text-headline-lg-mobile md:text-headline-sm text-white font-bold leading-tight">Masterclass Series</h3>
-                  <p className="font-body-sm text-body-sm text-white/80 mt-2">Intensive preparation programmes designed for excellence.</p>
-                </div>
-              </div>
-              <div className="relative h-48 md:h-64 rounded overflow-hidden group cursor-pointer border border-[#C2B59B]">
-                <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuB44Odx4hkiIhK5ebyK5apq_MsN1YSgrK_oOwQ_2PM3MwzfCXM5swhzDZODOhUhKL8sz4WezH-C2KjUOAgywWz3zzgNZX1S2q5TBf9bzmU4q8Ix6Gh__-JWOvW5AXYvrLfXgbihvL0fPt1JWcnuflmyWqXANAzowJXA8aUnUbdggWpZWhMtu9BWrxA01PCK8SYJtysrx1Vq8AMrlEg7TS6sNou8jIn0OsQdbJaNszSdc7NVQJkeVx8xwjeFHvV3lAKsLwE7OSfwWg4')" }}></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40"></div>
-                <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                  <span className="bg-secondary text-white font-label-md text-label-md px-2 py-1 rounded w-fit mb-2 uppercase tracking-wider">Combo Deals</span>
-                  <h3 className="font-headline-lg text-headline-lg-mobile md:text-headline-sm text-white font-bold leading-tight">Exam Prep Combo</h3>
-                  <p className="font-body-sm text-body-sm text-white/80 mt-2">Comprehensive coverage of core sciences and arts.</p>
-                </div>
-              </div>
-            </section>
-
             {/* Product Catalog (Programmes) */}
-            <section>
+            <section id="programmes">
               <div className="flex justify-between items-end mb-6 border-b border-[#C2B59B] pb-2">
                 <h2 className="font-headline-md text-headline-md text-primary">Our Programmes</h2>
-                <button className="font-label-md text-label-md text-secondary hover:text-primary transition-colors flex items-center gap-1">
-                    View All <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </button>
+                <span className="font-label-md text-label-md text-on-surface-variant">{programmes.length} available</span>
               </div>
 
               {programmes.length === 0 && (
@@ -167,21 +130,14 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-gutter">
                 {programmes.map((prog: any) => (
                     <Link key={prog.id} href={`/${school.slug}/${prog.slug}`} className="bg-white border border-[#C2B59B] rounded shadow-industrial-sm flex flex-col group hover:shadow-industrial-md transition-shadow">
-                        <div className="h-40 w-full relative overflow-hidden bg-surface-container-high border-b border-[#C2B59B] bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDQO-17lfmzS1zK5WWuuv4AxhQskhptfU6zjXbOUu8PEEyyJpdcp9H4O5KaP02h_IfKtW9ssQtHG6LazeDjBt-3fTfEgm695LHD_VjSUas7uYzicew6RHMrCqSReaKLwp6jLsocaBTZ83w3rrNKINsaaJ27AyK45mwJbKORY9oFwuEnhzQ0-r91qpnt7uVc0HMEXoeNQAu0rlJS-mAXR5utJuAKppn97t1FyECEHVwBrauQ82X1DR2wchYj-htPiHEU3HBI2fPSBKk')" }}>
-                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded border border-[#C2B59B] flex items-center gap-1">
-                                <span className="material-symbols-outlined text-secondary text-sm icon-fill">star</span>
-                                <span className="font-label-md text-label-md text-primary">5.0/5.0</span>
-                            </div>
-                        </div>
+                        {prog.thumbnail_url ? <img src={prog.thumbnail_url} alt="" className="h-40 w-full border-b border-[#C2B59B] object-cover" /> : <div className="flex h-40 w-full items-end border-b border-[#C2B59B] bg-gradient-to-br from-[#2e2877] to-[#5d569d] p-4 text-white"><span className="font-headline-sm text-xl font-bold">{prog.name}</span></div>}
                         <div className="p-4 flex flex-col flex-grow">
                             <div className="text-[10px] text-white bg-secondary px-2 py-1 rounded w-fit mb-2 font-bold tracking-wider">PROGRAMME</div>
                             <h4 className="font-headline-sm text-headline-sm text-primary mb-1 line-clamp-1">{prog.name}</h4>
                             <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mb-4">{prog.description}</p>
                             <div className="mt-auto flex items-center justify-between border-t border-[#C2B59B] pt-4">
-                                <div className="font-headline-sm text-headline-sm text-secondary font-bold">₦{prog.price.toLocaleString()}</div>
-                                <div className="flex items-center gap-1 text-on-surface-variant font-label-md text-label-md">
-                                    <span className="material-symbols-outlined text-[16px]">group</span> Active
-                                </div>
+                                <div className="font-headline-sm text-headline-sm text-secondary font-bold">{Number(prog.price) === 0 ? 'Free' : new Intl.NumberFormat('en-NG', { style: 'currency', currency: prog.currency || 'NGN', maximumFractionDigits: 0 }).format(Number(prog.price))}</div>
+                                <span className="font-label-md text-label-md text-primary">View programme →</span>
                             </div>
                         </div>
                     </Link>
@@ -216,17 +172,12 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-stack-lg px-6 md:px-margin-desktop flex flex-col md:flex-row justify-between items-start gap-gutter bg-primary text-on-primary font-body-sm text-body-sm mt-stack-lg border-t-4 border-secondary">
-        <div className="flex flex-col gap-4">
-          <div className="font-headline-sm text-headline-sm font-black text-on-primary">Kanvise</div>
-          <p className="text-primary-fixed-dim/80">© {new Date().getFullYear()} Kanvise. Empowering the next generation of African educators.</p>
+      <footer className="w-full py-10 px-6 md:px-margin-desktop flex flex-col md:flex-row justify-between items-start gap-gutter bg-primary text-on-primary font-body-sm text-body-sm mt-stack-lg border-t-4 border-secondary">
+        <div>
+          <div className="font-headline-sm text-headline-sm font-black text-on-primary">{school.name}</div>
+          <p className="mt-2 text-primary-fixed-dim/80">Programmes and student learning are powered by Kanvise.</p>
         </div>
-        <nav className="flex flex-wrap gap-6">
-          <a className="text-primary-fixed-dim/80 hover:text-secondary-fixed transition-colors opacity-90 hover:opacity-100" href="#">About Us</a>
-          <a className="text-primary-fixed-dim/80 hover:text-secondary-fixed transition-colors opacity-90 hover:opacity-100" href="#">Privacy Policy</a>
-          <a className="text-primary-fixed-dim/80 hover:text-secondary-fixed transition-colors opacity-90 hover:opacity-100" href="#">Terms of Service</a>
-          <a className="text-primary-fixed-dim/80 hover:text-secondary-fixed transition-colors opacity-90 hover:opacity-100" href="#">Contact Support</a>
-        </nav>
+        {school.contact_email && <a className="text-primary-fixed-dim/80 hover:text-secondary-fixed" href={`mailto:${school.contact_email}`}>Contact {school.name}</a>}
       </footer>
     </div>
   );

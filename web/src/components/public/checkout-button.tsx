@@ -21,6 +21,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
   const supabase = createClient();
   const idempotencyKeyRef = useRef<string | null>(null);
   const autoStartTriggeredRef = useRef(false);
+  const isFree = Number(price) === 0;
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -82,7 +83,9 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
         throw new Error(data.error || "Checkout failed");
       }
 
-      if (data.data && data.data.payment_url) {
+      if (data.data?.free) {
+        router.push("/dashboard/student");
+      } else if (data.data && data.data.payment_url) {
         // Redirect to Paystack
         window.location.href = data.data.payment_url;
       } else {
@@ -110,8 +113,8 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       disabled={loading}
       className="w-full bg-secondary text-white py-5 rounded-xl font-bold text-lg hover:opacity-90 transform active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {loading ? "Processing..." : `Enrol Now • ₦${price.toLocaleString()}`}
-      {!loading && <span className="material-symbols-outlined">payments</span>}
+      {loading ? (isFree ? "Enrolling..." : "Opening secure checkout...") : (isFree ? "Enrol for free" : `Enrol now · ₦${price.toLocaleString()}`)}
+      {!loading && <span className="material-symbols-outlined">{isFree ? "school" : "payments"}</span>}
     </button>
   );
 }
