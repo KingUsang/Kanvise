@@ -29,11 +29,14 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         if (!apiUrl) throw new Error("Payment status is unavailable");
-        let response = await fetch(`${apiUrl}/marketplace/orders/${encodeURIComponent(reference)}`, {
+        let response = await fetch(`${apiUrl}/payments/status/${encodeURIComponent(reference)}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
           cache: "no-store",
         });
-        if (response.status === 404) response = await fetch(`${apiUrl}/payments/status/${encodeURIComponent(reference)}`, {
+        // Marketplace orders are a legacy fallback only. Centre programme
+        // payments are the normal Kanvise enrolment flow and must never be
+        // sent to marketplace purchases.
+        if (response.status === 404) response = await fetch(`${apiUrl}/marketplace/orders/${encodeURIComponent(reference)}`, {
           headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store",
         });
         const body = await response.json();
@@ -85,8 +88,8 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
         </h1>
         <p className="mt-3 text-on-surface-variant">{message}</p>
         {reference && <p className="mt-5 break-all text-xs text-outline">Reference: {reference}</p>}
-        <Link href="/dashboard/student/purchases" className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90">
-          View purchases
+        <Link href="/dashboard/student" className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90">
+          Go to my learning
         </Link>
       </section>
     </main>
