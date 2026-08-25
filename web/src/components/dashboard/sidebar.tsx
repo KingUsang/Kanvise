@@ -84,11 +84,16 @@ export function Sidebar({ capabilities, isMobileOpen, onCloseMobile }: SidebarPr
                   href={isLocked ? '/dashboard/school-setup' : item.href}
                   aria-disabled={isLocked}
                   onClick={(event) => {
-                    if (!isLocked) return
-                    event.preventDefault()
-                    toast.info('Create your centre first', {
-                      description: `${item.label} will unlock as soon as you complete the required setup.`,
-                    })
+                    if (isLocked) {
+                      event.preventDefault()
+                      toast.info('Create your centre first', {
+                        description: `${item.label} will unlock as soon as you complete the required setup.`,
+                      })
+                      return
+                    }
+                    // Close immediately so the selected page can start loading
+                    // unobstructed on small screens.
+                    onCloseMobile?.()
                   }}
                   className={`
                     flex items-center px-6 py-3 text-sm font-medium transition-colors relative
