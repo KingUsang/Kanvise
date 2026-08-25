@@ -1,7 +1,7 @@
 "use client";
 
-import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import { useRef } from "react";
+import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant } from "@livekit/components-react";
+import { useEffect, useRef } from "react";
 import ClassroomLayout from "@/components/classroom/ClassroomLayout";
 import { CLASSROOM_ROOM_OPTIONS } from "@/components/classroom/livekit-room-options";
 
@@ -13,6 +13,22 @@ interface ClientClassroomProps {
   isHost: boolean;
   classTitle: string;
   courseName: string | null;
+}
+
+function MuteStudentOnJoin({ isHost }: { isHost: boolean }) {
+  const { localParticipant } = useLocalParticipant();
+  const hasAppliedInitialMute = useRef(false);
+
+  useEffect(() => {
+    if (isHost || !localParticipant || hasAppliedInitialMute.current) return;
+    hasAppliedInitialMute.current = true;
+    // LiveKitRoom's audio={false} is the intended initial setting. Apply an
+    // explicit post-connect mute as well because browsers may restore a local
+    // input device during reconnects.
+    void localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
+  }, [isHost, localParticipant]);
+
+  return null;
 }
 
 export default function ClientClassroom({
@@ -48,6 +64,7 @@ export default function ClientClassroom({
       className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
       onDisconnected={leaveClassroom}
     >
+      <MuteStudentOnJoin isHost={isHost} />
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
 

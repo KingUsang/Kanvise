@@ -8,6 +8,7 @@ const liveKitRoom = vi.fn(({ children }: { children: React.ReactNode }) => <div>
 vi.mock("@livekit/components-react", () => ({
   LiveKitRoom: (props: { children: React.ReactNode }) => liveKitRoom(props),
   RoomAudioRenderer: () => <div data-testid="room-audio" />,
+  useLocalParticipant: () => ({ localParticipant: null }),
 }));
 
 vi.mock("@/components/classroom/ClassroomLayout", () => ({
