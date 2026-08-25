@@ -50,7 +50,7 @@ export default async function DashboardHomePage() {
     ? 'See what needs your attention across teaching, assessments, students and payments.'
     : isAdmin
       ? 'Keep classes, assessments, students and payments moving.'
-      : 'See your classes, courses and assessment work in one place.'
+      : 'See your classes, subjects and assessment work in one place.'
 
   return (
     <div className="animate-in fade-in space-y-8 duration-500">
@@ -91,7 +91,7 @@ export default async function DashboardHomePage() {
             <StatCard title="My Classes Today" value={tutor.classes_today} icon="laptop_chromebook" subtitle="Sessions assigned to you" />
             <StatCard title="Assignment Submissions to Grade" value={tutor.pending_submissions} icon="assignment_late" subtitle="Waiting for your review" />
             <StatCard title="Mock Answers to Grade" value={tutor.mocks?.pending_count || 0} icon="quiz" subtitle={`${tutor.mocks?.active_count || 0} active mocks`} />
-            <StatCard title="My Courses" value={tutor.my_courses} icon="library_books" subtitle="Courses you teach" />
+            <StatCard title="My Subjects" value={tutor.my_courses} icon="library_books" subtitle="Subjects you teach" />
           </div>
         </section>
       )}

@@ -25,7 +25,7 @@ function Card({ item, state }: { item: StudentMockCard; state: Tab }) {
   const action = state === 'available' ? 'View instructions' : state === 'in_progress' ? 'Continue mock'
     : state === 'completed' ? 'View result' : 'View details'
   return <article className="flex h-full flex-col rounded-2xl border border-[#e4dfda] bg-white p-5 shadow-[0_1px_2px_rgba(35,31,38,0.04)]">
-    <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-[#f0edff] px-3 py-1 text-[11px] font-semibold text-[#2e2877]">{item.source === 'marketplace' ? 'Marketplace mock' : item.course?.name || 'Course'}</span>{state === 'completed' && <CheckCircle2 size={19} className="text-[#29724b]" />}</div>
+    <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-[#f0edff] px-3 py-1 text-[11px] font-semibold text-[#2e2877]">{item.source === 'marketplace' ? 'Marketplace mock' : item.course?.name || 'Subject'}</span>{state === 'completed' && <CheckCircle2 size={19} className="text-[#29724b]" />}</div>
     <h2 className="mt-4 text-lg font-semibold leading-6 text-[#29262f]">{item.title}</h2>
     {item.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#716c76]">{item.description}</p>}
     <div className="mt-5 grid grid-cols-2 gap-3 text-xs text-[#716c76]">
@@ -54,7 +54,7 @@ export function StudentMocksClient({ groups }: { groups: StudentMockGroups }) {
     <header><p className="text-sm font-medium text-[#994704]">Practice and assessment</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Mock exams</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Take mocks shared by your tutors, continue where you stopped, and review released results.</p></header>
     <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex overflow-x-auto rounded-xl bg-[#eeeae6] p-1">{tabs.map(item => <button key={item.key} onClick={() => setTab(item.key)} className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium ${tab === item.key ? 'bg-white text-[#2e2877] shadow-sm' : 'text-[#716c76]'}`}>{item.label}<span className="ml-2 rounded-full bg-black/5 px-1.5 py-0.5 text-[10px]">{groups[item.key].length}</span></button>)}</div>
-      <label className="relative block lg:w-80"><Search className="absolute left-3 top-3 text-[#8b858f]" size={17} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search mocks or courses" className="w-full rounded-xl border border-[#ddd7d2] bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#2e2877]" /></label>
+      <label className="relative block lg:w-80"><Search className="absolute left-3 top-3 text-[#8b858f]" size={17} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search mocks or subjects" className="w-full rounded-xl border border-[#ddd7d2] bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#2e2877]" /></label>
     </div>
     {items.length ? <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map(item => <Card key={`${tab}-${item.id}`} item={item} state={tab} />)}</section>
       : <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white px-5 py-14 text-center"><BookOpen className="mx-auto text-[#aaa4ad]" /><h2 className="mt-4 text-lg font-semibold">No {tabs.find(item => item.key === tab)?.label.toLowerCase()} mocks</h2><p className="mt-1 text-sm text-[#716c76]">Mocks will appear here when they match this stage.</p></section>}

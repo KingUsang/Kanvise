@@ -38,7 +38,7 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
     }
 
     const body = await c.req.json();
-    const { name, slug, description, price, currency, programme_id, sub_programme_id, is_available_separately } = body;
+    const { name, slug, description, price, currency, programme_id, sub_programme_id, is_available_separately, sort_order } = body;
 
     if (!name || !slug) {
       return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
@@ -101,6 +101,7 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
         price: availableSeparately ? parseFloat(price) : 0,
         is_available_separately: availableSeparately,
         currency: currency || "NGN",
+        sort_order: Number.isInteger(sort_order) && sort_order >= 0 ? sort_order : 0,
         is_published: false,
         created_by: profile.id
       })
@@ -109,7 +110,7 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
 
     if (error) throw error;
 
-    return c.json({ data, message: "Course created successfully" }, 201);
+    return c.json({ data, message: "Subject created successfully" }, 201);
   } catch (error: any) {
     console.error("POST /courses error:", error);
     return c.json({ error: error.message || "Internal server error" }, 500);
@@ -221,7 +222,7 @@ coursesRouter.get("/:id", async (c) => {
       .single();
 
     if (error || !course) {
-      return c.json({ error: "Course not found", code: "NOT_FOUND" }, 404);
+      return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
     }
 
     // Access control checks
@@ -235,7 +236,7 @@ coursesRouter.get("/:id", async (c) => {
         .single();
 
       if (!assignment) {
-        return c.json({ error: "Not assigned to this course", code: "FORBIDDEN" }, 403);
+        return c.json({ error: "Not assigned to this subject", code: "FORBIDDEN" }, 403);
       }
     } else if (profile.role === "student") {
       let parentProgrammeId = course.programme_id;
@@ -261,7 +262,7 @@ coursesRouter.get("/:id", async (c) => {
         .limit(1)
         .maybeSingle();
 
-      if (!enrolment) return c.json({ error: "Not enrolled in this course", code: "NOT_ENROLLED" }, 403);
+      if (!enrolment) return c.json({ error: "Not enrolled in this subject", code: "NOT_ENROLLED" }, 403);
     }
 
     const [notes, assignments, mocks, liveClasses] = await Promise.all([
@@ -297,6 +298,8 @@ coursesRouter.patch("/:id", enforceAdmin, async (c) => {
     // Prevent spoofing
     delete updates.school_id;
     delete updates.id;
+    delete updates.is_published;
+    delete updates.created_by;
     if (updates.is_available_separately === false) updates.price = 0;
     if (updates.is_available_separately === true && (updates.price === '' || !Number.isFinite(parseFloat(updates.price)) || parseFloat(updates.price) < 0)) {
       return c.json({ error: "Choose a free option or enter a valid price", code: "PRICE_REQUIRED" }, 400);
@@ -311,9 +314,9 @@ coursesRouter.patch("/:id", enforceAdmin, async (c) => {
       .single();
 
     if (error) throw error;
-    if (!data) return c.json({ error: "Course not found", code: "NOT_FOUND" }, 404);
+    if (!data) return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
 
-    return c.json({ data, message: "Course updated" });
+    return c.json({ data, message: "Subject updated" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
@@ -334,7 +337,7 @@ coursesRouter.post("/:id/publish", enforceAdmin, async (c) => {
 
     if (countError) throw countError;
     if (count === 0) {
-      return c.json({ error: "Cannot publish a course without an assigned tutor", code: "BAD_REQUEST" }, 400);
+      return c.json({ error: "Cannot publish a subject without an assigned tutor", code: "BAD_REQUEST" }, 400);
     }
 
     const { data, error } = await supabase
@@ -346,9 +349,9 @@ coursesRouter.post("/:id/publish", enforceAdmin, async (c) => {
       .single();
 
     if (error) throw error;
-    if (!data) return c.json({ error: "Course not found", code: "NOT_FOUND" }, 404);
+    if (!data) return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
 
-    return c.json({ message: "Course published" });
+    return c.json({ message: "Subject published" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
@@ -368,7 +371,7 @@ coursesRouter.delete("/:id", enforceAdmin, async (c) => {
 
     if (error) throw error;
 
-    return c.json({ message: "Course deleted" });
+    return c.json({ message: "Subject deleted" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
@@ -389,7 +392,7 @@ coursesRouter.post("/:id/tutors", enforceAdmin, async (c) => {
       .eq("id", id)
       .eq("school_id", profile.school_id)
       .single();
-    if (!course) return c.json({ error: "Course not found in this school", code: "COURSE_NOT_FOUND" }, 404);
+    if (!course) return c.json({ error: "Subject not found in this school", code: "COURSE_NOT_FOUND" }, 404);
 
     // Course assignments store user_profiles.id. The dashboard sends that UUID
     // directly; retain Kanvise-ID support for older clients without trying to
@@ -421,12 +424,12 @@ coursesRouter.post("/:id/tutors", enforceAdmin, async (c) => {
 
     if (error) {
       if (error.code === '23505') { // Unique violation
-        return c.json({ error: "Tutor already assigned to this course", code: "ALREADY_ASSIGNED" }, 409);
+        return c.json({ error: "Tutor already assigned to this subject", code: "ALREADY_ASSIGNED" }, 409);
       }
       throw error;
     }
 
-    return c.json({ message: "Tutor assigned to course" }, 201);
+    return c.json({ message: "Tutor assigned to subject" }, 201);
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
@@ -471,7 +474,7 @@ coursesRouter.delete("/:id/tutors/:tutorId", enforceAdmin, async (c) => {
 
     if (error) throw error;
 
-    return c.json({ message: "Tutor removed from course" });
+    return c.json({ message: "Tutor removed from subject" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }

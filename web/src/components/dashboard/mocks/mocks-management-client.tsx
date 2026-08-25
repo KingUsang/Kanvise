@@ -205,14 +205,14 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
 
         {/* Course Dropdown */}
         <div className="flex items-center gap-3">
-          <span className="text-[12px] font-semibold text-[#474551] uppercase tracking-widest">Filter by Course:</span>
+          <span className="text-[12px] font-semibold text-[#474551] uppercase tracking-widest">Filter by Subject:</span>
           <div className="relative">
             <select 
               value={filterCourse}
               onChange={(e) => setFilterCourse(e.target.value)}
               className="appearance-none bg-white border border-[#c8c5d2] text-[#1b1c1c] text-[14px] py-2 pl-4 pr-10 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded-md shadow-sm min-w-[220px]"
             >
-              <option value="all">All Active Courses</option>
+              <option value="all">All Active Subjects</option>
               {uniqueCourses.map(courseName => (
                 <option key={courseName} value={courseName}>{courseName}</option>
               ))}
@@ -296,7 +296,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                             {mock.title}
                           </span>
                           <span className={`text-[14px] ${mock.status === 'archived' ? 'text-[#787582]' : 'text-[#474551]'}`}>
-                            {mock.course?.name || (mock.distribution_mode === 'marketplace' ? 'Public marketplace' : 'Course unavailable')} • {mock.status === 'draft' ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago` : mock.status === 'archived' ? `Archived ${formatMMMdd(new Date(mock.updated_at))}` : `Created ${formatMMMdd(new Date(mock.created_at))}`}
+                            {mock.course?.name || (mock.distribution_mode === 'marketplace' ? 'Public marketplace' : 'Subject unavailable')} • {mock.status === 'draft' ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago` : mock.status === 'archived' ? `Archived ${formatMMMdd(new Date(mock.updated_at))}` : `Created ${formatMMMdd(new Date(mock.created_at))}`}
                           </span>
                         </div>
                       </td>

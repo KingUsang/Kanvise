@@ -130,7 +130,6 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
               {availableProgrammes?.map(p => (
                  <option key={p.id} value={p.id}>{p.name}</option>
               ))}
-              <option value="standalone">Standalone Courses</option>
             </select>
           </div>
           <div className="flex flex-col">

@@ -23,7 +23,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
     notFound();
   }
 
-  const { school, programmes, standalone_courses, tutors } = data;
+  const { school, programmes, tutors } = data;
 
   return (
     <div className="font-body-md bg-surface antialiased overflow-x-hidden min-h-screen text-on-surface">
@@ -135,7 +135,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
                 <div className="absolute inset-0 p-6 flex flex-col justify-end">
                   <span className="bg-secondary text-white font-label-md text-label-md px-2 py-1 rounded w-fit mb-2 uppercase tracking-wider">Featured</span>
                   <h3 className="font-headline-lg text-headline-lg-mobile md:text-headline-sm text-white font-bold leading-tight">Masterclass Series</h3>
-                  <p className="font-body-sm text-body-sm text-white/80 mt-2">Intensive preparation courses designed for excellence.</p>
+                  <p className="font-body-sm text-body-sm text-white/80 mt-2">Intensive preparation programmes designed for excellence.</p>
                 </div>
               </div>
               <div className="relative h-48 md:h-64 rounded overflow-hidden group cursor-pointer border border-[#C2B59B]">
@@ -158,7 +158,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
                 </button>
               </div>
 
-              {programmes.length === 0 && standalone_courses.length === 0 && (
+              {programmes.length === 0 && (
                 <div className="text-center p-12 border border-outline-variant rounded bg-surface-container-low">
                     <p className="text-on-surface-variant font-medium">No published programmes available right now.</p>
                 </div>
@@ -181,28 +181,6 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
                                 <div className="font-headline-sm text-headline-sm text-secondary font-bold">₦{prog.price.toLocaleString()}</div>
                                 <div className="flex items-center gap-1 text-on-surface-variant font-label-md text-label-md">
                                     <span className="material-symbols-outlined text-[16px]">group</span> Active
-                                </div>
-                            </div>
-                        </div>
-                    </Link>
-                ))}
-
-                {standalone_courses.map((course: any) => (
-                    <Link key={course.id} href={`/${school.slug}/course/${course.slug}`} className="bg-white border border-[#C2B59B] rounded shadow-industrial-sm flex flex-col group hover:shadow-industrial-md transition-shadow">
-                        <div className="h-40 w-full relative overflow-hidden bg-surface-container-high border-b border-[#C2B59B] bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAykB7jIBayr9lKxIgEKA5ogbdY7ETcqcvutz8j03NHVJ5vFPGvrhaTUuNv3DkEvkqrdFFwQAzKy5uqhOwQiKmPzewXNblaqlea2QlPZUC5sf-ALESxKqpJeobtHUodzE7yvKhcOONzNklqhleVZz8qlxElMocYXzLUBsm05s9outjtRN-2YAGNLBSMNFdhLVNKI1OChtiImwAYm-IZ6zdk3lp55kZV9qRF2HXQGwoypj8o2gnZ5hDxcCawD4wNp-HssJeD749eXew')" }}>
-                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded border border-[#C2B59B] flex items-center gap-1">
-                                <span className="material-symbols-outlined text-secondary text-sm icon-fill">star</span>
-                                <span className="font-label-md text-label-md text-primary">5.0/5.0</span>
-                            </div>
-                        </div>
-                        <div className="p-4 flex flex-col flex-grow">
-                            <div className="text-[10px] text-white bg-primary px-2 py-1 rounded w-fit mb-2 font-bold tracking-wider">STANDALONE</div>
-                            <h4 className="font-headline-sm text-headline-sm text-primary mb-1 line-clamp-1">{course.name}</h4>
-                            <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mb-4">{course.description}</p>
-                            <div className="mt-auto flex items-center justify-between border-t border-[#C2B59B] pt-4">
-                                <div className="font-headline-sm text-headline-sm text-secondary font-bold">₦{course.price.toLocaleString()}</div>
-                                <div className="flex items-center gap-1 text-on-surface-variant font-label-md text-label-md">
-                                    <span className="material-symbols-outlined text-[16px]">play_lesson</span> Course
                                 </div>
                             </div>
                         </div>

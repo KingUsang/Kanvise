@@ -352,7 +352,7 @@ export default function LandingPage() {
             <div className="w-full md:w-1/2">
               <h4 className="font-semibold text-primary mb-2">Payments & Access</h4>
               <h3 className="text-[24px] font-semibold mb-3">Frictionless onboarding</h3>
-              <p className="text-on-surface-variant">Money flows directly to the tutor, unlocking course access instantly without manual DMs or requesting bank transfer screenshots.</p>
+              <p className="text-on-surface-variant">Money flows directly to the tutor, unlocking subject access instantly without manual DMs or requesting bank transfer screenshots.</p>
             </div>
           </AnimatedSection>
 

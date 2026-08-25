@@ -82,7 +82,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         const coursesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        if (!coursesRes.ok) throw new Error('Could not load courses')
+        if (!coursesRes.ok) throw new Error('Could not load subjects')
         const coursesData = await coursesRes.json()
 
         let tutorsData = { data: [] }
@@ -223,7 +223,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
       item.status,
     ])
     const csv = [
-      ['Class', 'Course', 'Tutor', 'Date and time', 'Duration (minutes)', 'Status'],
+      ['Class', 'Subject', 'Tutor', 'Date and time', 'Duration (minutes)', 'Status'],
       ...rows,
     ].map((row) => row.map(escapeCsvCell).join(',')).join('\n')
 
@@ -324,7 +324,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Programme / Course</label>
+                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Programme subject</label>
                 <div className="relative">
                   <select 
                     value={courseId}
@@ -332,7 +332,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                     required
                     className="w-full h-10 px-3 pr-10 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] appearance-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer"
                   >
-                    <option value="" disabled>Select active course...</option>
+                    <option value="" disabled>Select active subject...</option>
                     {courses.map(course => (
                       <option key={course.id} value={course.id}>{course.name}</option>
                     ))}
@@ -358,7 +358,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         </option>
                       ))}
                       {courseId && assignedTutorIds.length === 0 && (
-                        <option value="" disabled>No tutors are assigned to this course yet.</option>
+                        <option value="" disabled>No tutors are assigned to this subject yet.</option>
                       )}
                     </select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#474551] pointer-events-none">arrow_drop_down</span>
@@ -507,7 +507,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                     <div className="flex-1 pl-2">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[10px] leading-[16px] tracking-[0.05em] font-semibold uppercase text-[#474551] bg-[#f0eded] px-2 py-0.5 rounded">
-                          {cls.course?.name || 'Course'}
+                          {cls.course?.name || 'Subject'}
                         </span>
                         <span className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#994704]">
                           {new Date(cls.scheduled_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -551,7 +551,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </div>
               <h3 className="mt-5 text-2xl font-bold text-[#180d62]">No classes scheduled yet</h3>
               <p className="mt-3 max-w-md text-sm leading-6 text-[#474551]">
-                Use the form beside this message to choose a Course, tutor, date, and time. The class will then appear here for everyone who needs it.
+                Use the form beside this message to choose a Subject, tutor, date, and time. The class will then appear here for everyone who needs it.
               </p>
               <button
                 type="button"
@@ -563,7 +563,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </button>
               <div className="mt-8 grid w-full max-w-xl grid-cols-1 gap-3 border-t border-[#e4e2e1] pt-6 text-left sm:grid-cols-3">
                 {[
-                  ['1', 'Choose the Course'],
+                  ['1', 'Choose the Subject'],
                   ['2', 'Set the date and time'],
                   ['3', 'Students see the class'],
                 ].map(([step, label]) => (
@@ -604,7 +604,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                 <thead>
                   <tr className="bg-[#C2B59B]/10 text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] border-b border-[#C2B59B]">
                     <th className="py-3 px-6 font-bold w-[120px]">Time</th>
-                    <th className="py-3 px-6 font-bold">Course / Title</th>
+                    <th className="py-3 px-6 font-bold">Subject / Title</th>
                     <th className="py-3 px-6 font-bold w-[150px]">Tutor</th>
                     <th className="py-3 px-6 font-bold text-right w-[200px]">Actions</th>
                   </tr>
@@ -624,7 +624,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex flex-col">
-                            <span className="text-[10px] leading-[16px] tracking-[0.05em] font-bold uppercase text-[#994704]">{cls.course?.name || 'Course'}</span>
+                            <span className="text-[10px] leading-[16px] tracking-[0.05em] font-bold uppercase text-[#994704]">{cls.course?.name || 'Subject'}</span>
                             <span className="font-bold text-[#1b1c1c] truncate max-w-[250px]">{cls.title}</span>
                           </div>
                         </td>
@@ -675,7 +675,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                       <div className="flex-1 pl-2">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] leading-[16px] tracking-[0.05em] font-semibold uppercase text-[#474551] bg-[#f0eded] px-2 py-0.5 rounded">
-                            {cls.course?.name || 'Course'}
+                            {cls.course?.name || 'Subject'}
                           </span>
                           <span className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#474551]">
                             {new Date(cls.scheduled_at).toLocaleDateString()} at {new Date(cls.scheduled_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}

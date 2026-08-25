@@ -10,7 +10,7 @@ async function getCourse(slug: string) {
   });
   if (!res.ok) {
     if (res.status === 404) return null;
-    throw new Error("Failed to fetch course");
+    throw new Error("Failed to fetch subject");
   }
   const json = await res.json();
   return json.data;
@@ -109,7 +109,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
                   <ul className="space-y-4">
                     <li className="flex gap-3">
                       <span className="material-symbols-outlined text-secondary">check_circle</span>
-                      <span className="text-on-surface">Full access to course materials</span>
+                      <span className="text-on-surface">Full access to subject materials</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="material-symbols-outlined text-secondary">check_circle</span>
@@ -178,7 +178,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
                       </div>
                       <div>
                         <p className="font-bold text-primary">Instructor</p>
-                        <p className="text-xs text-on-surface-variant">Course Lead</p>
+                        <p className="text-xs text-on-surface-variant">Subject tutor</p>
                       </div>
                     </div>
                   </div>
@@ -226,7 +226,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
                       </div>
                       <div>
                         <p className="font-bold">Instant Access</p>
-                        <p className="text-sm text-primary-fixed/60">You will be granted immediate access to the course after payment.</p>
+                        <p className="text-sm text-primary-fixed/60">You will be granted immediate access to the subject after payment.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
@@ -250,7 +250,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
                 <div className="space-y-6">
                   <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-on-surface-variant font-medium">Course Fee:</span>
+                      <span className="text-on-surface-variant font-medium">Subject fee:</span>
                       <span className="text-on-surface font-bold text-sm">Base Price</span>
                     </div>
                     <div className="flex justify-between items-center">

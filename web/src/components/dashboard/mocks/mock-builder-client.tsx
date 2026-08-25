@@ -132,7 +132,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         ]);
         if (!res.ok) {
           const body = await res.json().catch(() => null);
-          throw new Error(body?.error || "Could not load Courses");
+          throw new Error(body?.error || "Could not load Subjects");
         }
         const { data } = await res.json();
         setCourses(data || []);
@@ -557,11 +557,11 @@ export function MockBuilderClient({ token }: { token: string }) {
       return;
     }
     if (deliveryMode === "subject_combination" && questions.length > 0) {
-      toast.error("Use course-tagged question-bank questions for an adaptive JAMB mock");
+      toast.error("Use programme-subject-tagged question-bank questions for an adaptive JAMB mock");
       return;
     }
     if (deliveryMode === "subject_combination" && selectedBankQuestions.some((question) => !question.courseId)) {
-      toast.error("Every adaptive mock question must be linked to one programme course");
+      toast.error("Every adaptive mock question must be linked to one programme subject");
       return;
     }
 
@@ -890,7 +890,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                   <div>
                     <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#2e2877]">
                       <span className="material-symbols-outlined text-base">inventory_2</span>
-                      {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks{deliveryMode === "subject_combination" ? ` · ${courses.find((course) => course.id === question.courseId)?.name || "No course"}` : ""}
+                      {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks{deliveryMode === "subject_combination" ? ` · ${courses.find((course) => course.id === question.courseId)?.name || "No subject"}` : ""}
                     </div>
                     <p className="text-[15px] leading-6 text-[#1b1c1c]">{question.questionText}</p>
                   </div>
@@ -1118,7 +1118,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                                 ? current.filter((item) => item.questionId !== question.id)
                                 : question.course_id || deliveryMode !== "subject_combination"
                                   ? [...current, { questionId: question.id, questionVersionId: question.current_version.id, questionText: question.current_version.plain_text, questionType: question.question_type, marks: question.current_version.marks, bankName, courseId: question.course_id || null }]
-                                  : (toast.error("Link this question to a programme course before using it in an adaptive mock"), current))} className="mt-1" />
+                                  : (toast.error("Link this question to a programme subject before using it in an adaptive mock"), current))} className="mt-1" />
                               <span><span className="block text-sm text-[#1b1c1c]">{question.current_version.plain_text}</span><span className="mt-1 block text-xs text-[#787582]">{question.question_type === "mcq" ? "Multiple choice" : "Theory"} · {question.current_version.marks} marks</span></span>
                             </label>;
                           })}
@@ -1185,7 +1185,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
               <div className="rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
                 <p className="text-[13px] font-semibold text-[#1b1c1c]">Who is this mock for?</p>
-                <p className="mt-1 text-xs leading-5 text-[#787582]">Marketplace mocks can be claimed or bought by any student. Centre mocks stay with students enrolled in the chosen course.</p>
+                <p className="mt-1 text-xs leading-5 text-[#787582]">Marketplace mocks can be claimed or bought by any student. Centre mocks stay with students enrolled in the chosen subject.</p>
                 <div className="mt-3 space-y-2">
                   {([
                     ["centre", "My centre students"],
@@ -1204,16 +1204,16 @@ export function MockBuilderClient({ token }: { token: string }) {
               {distributionMode !== "marketplace" && (
                 <div className="rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
                   <p className="text-[13px] font-semibold text-[#1b1c1c]">Centre audience</p>
-                  <p className="mt-1 text-xs leading-5 text-[#787582]">Choose exactly who should receive this mock. Tutors can only create mocks for a course they teach.</p>
+                  <p className="mt-1 text-xs leading-5 text-[#787582]">Choose exactly who should receive this mock. Tutors can only create mocks for a subject they teach.</p>
                   <div className="mt-3 space-y-2">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "course"} disabled={isReadOnly} onChange={() => setAudienceScope("course")} className="text-[#2e2877]" />One course</label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "course"} disabled={isReadOnly} onChange={() => setAudienceScope("course")} className="text-[#2e2877]" />One subject</label>
                     {isAdmin && <><label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "programme"} disabled={isReadOnly} onChange={() => setAudienceScope("programme")} className="text-[#2e2877]" />One programme</label><label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "school"} disabled={isReadOnly} onChange={() => setAudienceScope("school")} className="text-[#2e2877]" />Every active student in this centre</label></>}
                   </div>
                 </div>
               )}
 
               {(distributionMode === "marketplace" || audienceScope === "course") && <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Course {distributionMode === "marketplace" ? "(optional)" : ""}</label>
+                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Programme subject {distributionMode === "marketplace" ? "(optional)" : ""}</label>
                 <select 
                   value={courseId}
                   disabled={isReadOnly}
@@ -1226,13 +1226,13 @@ export function MockBuilderClient({ token }: { token: string }) {
                     backgroundSize: '1.5em 1.5em',
                   }}
                 >
-                  <option value="">{distributionMode === "marketplace" ? "No course — public marketplace only" : "Select a course"}</option>
+                  <option value="">{distributionMode === "marketplace" ? "No subject — public marketplace only" : "Select a programme subject"}</option>
                   {courses.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
                 {courses.length === 0 && distributionMode !== "marketplace" && (
-                  <p className="mt-2 text-xs leading-5 text-[#994704]">No Courses are available. Ask the centre admin to create a Course or assign one to you.</p>
+                  <p className="mt-2 text-xs leading-5 text-[#994704]">No Subjects are available. Ask the centre admin to create a Subject or assign one to you.</p>
                 )}
               </div>}
 

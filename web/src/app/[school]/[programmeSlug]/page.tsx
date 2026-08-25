@@ -30,7 +30,7 @@ export default async function ProgrammePage({
   const { programme, school, sub_programmes = [], courses = [], tutors = [] } = data;
   const directCourses = courses.filter((course: any) => !course.sub_programme_id);
   const price = Number(programme.price || 0);
-  const itemCount = sub_programmes.length + courses.length;
+  const itemCount = courses.length;
   const currency = programme.currency || "NGN";
   const formatPrice = (value: number) => new Intl.NumberFormat("en-NG", {
     style: "currency",
@@ -81,7 +81,7 @@ export default async function ProgrammePage({
                 {itemCount > 0 && (
                   <span className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[19px] text-[#994704]">menu_book</span>
-                    {itemCount} {itemCount === 1 ? "item" : "items"}
+                    {itemCount} {itemCount === 1 ? "subject" : "subjects"}
                   </span>
                 )}
                 {tutors.length > 0 && (
@@ -117,21 +117,12 @@ export default async function ProgrammePage({
                 <div className="mb-6 flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Curriculum</p>
-                    <h2 className="mt-2 text-2xl font-bold text-[#2e2877]">What’s included</h2>
+                    <h2 className="mt-2 text-2xl font-bold text-[#2e2877]">Subjects included</h2>
                   </div>
-                  <span className="text-sm text-[#6a6874]">{itemCount} {itemCount === 1 ? "item" : "items"}</span>
+                  <span className="text-sm text-[#6a6874]">{itemCount} {itemCount === 1 ? "subject" : "subjects"}</span>
                 </div>
 
                 <div className="divide-y divide-[#e4e2e1] rounded-xl border border-[#e4e2e1] bg-white">
-                  {sub_programmes.map((sub: any) => (
-                    <div key={`sub-${sub.id}`} className="flex gap-4 p-5">
-                      <span className="material-symbols-outlined mt-0.5 text-[#994704]">folder_open</span>
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-[#1b1c1c]">{sub.name}</h3>
-                        {sub.description && <p className="mt-1 text-sm leading-6 text-[#6a6874]">{sub.description}</p>}
-                      </div>
-                    </div>
-                  ))}
                   {directCourses.map((course: any) => (
                     <div key={`course-${course.id}`} className="flex gap-4 p-5">
                       <span className="material-symbols-outlined mt-0.5 text-[#994704]">play_lesson</span>
@@ -179,7 +170,7 @@ export default async function ProgrammePage({
             <div className="sticky top-24 border-l border-[#e4e2e1] pl-6">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6a6874]">On this page</p>
               <nav className="mt-4 space-y-3 text-sm">
-                {itemCount > 0 && <a href="#curriculum" className="block text-[#474551] hover:text-[#2e2877]">What’s included</a>}
+                {itemCount > 0 && <a href="#curriculum" className="block text-[#474551] hover:text-[#2e2877]">Subjects included</a>}
                 {tutors.length > 0 && <a href="#tutor" className="block text-[#474551] hover:text-[#2e2877]">Instructor</a>}
                 <a href="#enrol" className="block font-semibold text-[#994704]">Enrol</a>
               </nav>

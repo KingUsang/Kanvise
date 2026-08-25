@@ -471,6 +471,7 @@ export type Database = {
           programme_id: string | null
           school_id: string
           slug: string
+          sort_order: number
           sub_programme_id: string | null
           updated_at: string
         }
@@ -487,6 +488,7 @@ export type Database = {
           programme_id?: string | null
           school_id: string
           slug: string
+          sort_order?: number
           sub_programme_id?: string | null
           updated_at?: string
         }
@@ -503,6 +505,7 @@ export type Database = {
           programme_id?: string | null
           school_id?: string
           slug?: string
+          sort_order?: number
           sub_programme_id?: string | null
           updated_at?: string
         }
@@ -3461,6 +3464,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      setup_programme: {
+        Args: {
+          p_created_by: string
+          p_currency: string
+          p_description: string
+          p_name: string
+          p_price: number
+          p_school_id: string
+          p_slug: string
+          p_subjects: Json
+        }
+        Returns: Json
+      }
       bind_question_block_media: {
         Args: {
           p_blocks: Json

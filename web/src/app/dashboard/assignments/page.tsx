@@ -38,7 +38,7 @@ export default function AssignmentsPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const courseBody = await resCourses.json().catch(() => null);
-      if (!resCourses.ok) throw new Error(courseBody?.error || "Could not load Courses");
+      if (!resCourses.ok) throw new Error(courseBody?.error || "Could not load Subjects");
       setCourses(courseBody.data || []);
 
       // Fetch assignments using the new aggregated backend endpoint
@@ -198,7 +198,7 @@ export default function AssignmentsPage() {
                     onChange={(e) => setCourseId(e.target.value)}
                     className="w-full appearance-none bg-surface border border-outline-variant rounded px-3 py-2.5 text-base text-on-background focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
                   >
-                    <option disabled value="">Select a Course...</option>
+                    <option disabled value="">Select a Subject...</option>
                     {courses.map(c => (
                       <option key={c.id} value={c.id}>{c.title || c.name}</option>
                     ))}
@@ -206,7 +206,7 @@ export default function AssignmentsPage() {
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
                 </div>
                 {courses.length === 0 && !isFetching && (
-                  <p className="text-xs leading-5 text-secondary">No Courses are available. Ask the centre admin to create a Course or assign one to you.</p>
+                  <p className="text-xs leading-5 text-secondary">No Subjects are available. Ask the centre admin to create a Subject or assign one to you.</p>
                 )}
               </div>
 
@@ -390,7 +390,7 @@ export default function AssignmentsPage() {
                         {assignment.title}
                       </span>
                       <span className={`text-xs font-semibold tracking-wider truncate ${isDraft ? 'text-outline' : 'text-on-surface-variant'}`}>
-                        {assignment.course?.title || assignment.course?.name || "Course unavailable"}
+                        {assignment.course?.title || assignment.course?.name || "Subject unavailable"}
                       </span>
                     </div>
                     <div className="col-span-3 flex flex-col gap-1 items-end">

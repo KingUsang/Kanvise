@@ -42,11 +42,11 @@ export default async function StudentDashboardPage() {
       <p className="text-sm text-white/70">{data.school?.name || "Kanvise Marketplace"}</p>
       <div className="mt-2 flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Welcome back, {firstName}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-white/72">Here’s what needs your attention today. Keep learning at your own pace.</p></div>
-        <div className="rounded-2xl bg-white/10 px-5 py-3"><p className="text-xs uppercase tracking-wider text-white/60">Courses you can access</p><p className="mt-1 text-2xl font-semibold">{data.course_count}</p></div>
+        <div className="rounded-2xl bg-white/10 px-5 py-3"><p className="text-xs uppercase tracking-wider text-white/60">Subjects you can access</p><p className="mt-1 text-2xl font-semibold">{data.course_count}</p></div>
       </div>
     </section>
 
-    {data.course_count === 0 ? <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white p-8 text-center"><BookOpen className="mx-auto text-[#2e2877]" /><h2 className="mt-4 text-xl font-semibold">Your learning space is ready</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Once you enrol in a programme, sub-programme, or course, your classes and learning materials will appear here.</p></section> :
+    {data.course_count === 0 ? <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white p-8 text-center"><BookOpen className="mx-auto text-[#2e2877]" /><h2 className="mt-4 text-xl font-semibold">Your learning space is ready</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Once you enrol in a programme, your classes and learning materials will appear here.</p></section> :
     <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-6">
         <section className="rounded-2xl border border-[#e5e1dd] bg-white p-5 sm:p-6">

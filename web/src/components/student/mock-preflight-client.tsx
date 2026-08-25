@@ -53,7 +53,7 @@ export function MockPreflightClient({ data, token, startPath, backHref = '/dashb
   return <main className="mx-auto max-w-4xl px-4 py-7 pb-24 sm:px-6 lg:py-10">
     <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2e2877]"><ChevronLeft size={17} />Back to mocks</Link>
     <section className="mt-5 overflow-hidden rounded-3xl border border-[#e3ded9] bg-white">
-      <header className="bg-[#2e2877] px-6 py-7 text-white sm:px-9 sm:py-9"><p className="text-sm text-white/70">{mock.course?.name || 'Course'}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">{mock.title}</h1>{mock.description && <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-white/75">{mock.description}</p>}</header>
+      <header className="bg-[#2e2877] px-6 py-7 text-white sm:px-9 sm:py-9"><p className="text-sm text-white/70">{mock.course?.name || 'Subject'}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">{mock.title}</h1>{mock.description && <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-white/75">{mock.description}</p>}</header>
       <div className="grid gap-8 p-6 sm:p-9 lg:grid-cols-[1fr_280px]">
         <div><h2 className="text-xl font-semibold">Before you begin</h2><div className="mt-5 space-y-4 text-sm leading-6 text-[#5f5964]">
           <p className="flex gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-[#29724b]" size={20} /><span>Your timer is controlled by the server. Closing or refreshing the page will not pause it.</span></p>

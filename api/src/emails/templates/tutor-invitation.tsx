@@ -32,7 +32,7 @@ export function TutorInvitationEmail({
         {invitedByName} has invited you to join <strong>{schoolName}</strong> as a tutor on Kanvise.
       </Text>
       <Text style={styles.copy}>
-        Set up your account to access your courses, students, classes, and teaching tools.
+        Set up your account to access your subjects, students, classes, and teaching tools.
       </Text>
       <Button href={inviteUrl} style={styles.button}>Accept invitation</Button>
       <Text style={styles.expiry}>This invitation expires on {expiry}.</Text>

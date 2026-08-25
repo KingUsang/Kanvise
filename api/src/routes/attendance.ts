@@ -286,7 +286,7 @@ attendanceRouter.get('/records', async (c) => {
       const uniqueStudentIds = new Set()
       
       const courseObj = lc.courses as any
-      const courseName = courseObj?.name || 'Unknown Course'
+      const courseName = courseObj?.name || 'Unknown Subject'
       const programmeName = courseObj?.programmes?.name || ''
       
       for (const enr of classEnrolments) {

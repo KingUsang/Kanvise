@@ -193,7 +193,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
         <div>
           <p className="text-xs text-on-surface-variant"><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</p>
           <h1 className="mt-2 text-3xl font-bold text-on-surface">Mock results</h1>
-          <p className="mt-1 text-sm text-on-surface-variant">Review scores and mark written answers for {data.mock.course?.name || 'this course'}.</p>
+          <p className="mt-1 text-sm text-on-surface-variant">Review scores and mark written answers for {data.mock.course?.name || 'this subject'}.</p>
         </div>
         <button type="button" onClick={exportCsv} disabled={data.attempts.length === 0} className="inline-flex items-center justify-center gap-2 rounded-md border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-50">
           <span className="material-symbols-outlined text-lg">download</span> Export CSV

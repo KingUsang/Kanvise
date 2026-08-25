@@ -113,7 +113,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
               </div>
             ) : enrolments.length === 0 ? (
               <div className="text-center p-6 border border-dashed border-kv-dust rounded-lg text-gray-500 text-sm">
-                This student is not currently enrolled in any programmes or courses.
+                This student is not currently enrolled in any programmes or subjects.
               </div>
             ) : (
               <div className="space-y-3">

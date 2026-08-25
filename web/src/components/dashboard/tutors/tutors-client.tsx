@@ -240,11 +240,11 @@ export function TutorsClient() {
         }
       )
       const body = await response.json()
-      if (!response.ok) throw new Error(body.error || 'Could not update the Course assignment')
+      if (!response.ok) throw new Error(body.error || 'Could not update the Subject assignment')
       await fetchData()
-      toast.success(isAssigned ? 'Tutor removed from Course' : 'Tutor assigned to Course')
+      toast.success(isAssigned ? 'Tutor removed from Subject' : 'Tutor assigned to Subject')
     } catch (error) {
-      toast.error('Could not update the Course assignment', { description: error instanceof Error ? error.message : 'Please try again.' })
+      toast.error('Could not update the Subject assignment', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setUpdatingCourseId(null)
     }
@@ -269,7 +269,7 @@ export function TutorsClient() {
           <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your teaching team</span>
           <h2 className="mt-2 text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Tutors</h2>
           <p className="text-[16px] text-[#474551] mt-1">
-            Invite tutors to your centre and see the Courses assigned to each person. If you teach alone, you do not need to invite yourself.
+            Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself.
           </p>
         </div>
       </div>
@@ -294,7 +294,7 @@ export function TutorsClient() {
                 <thead>
                   <tr className="bg-[#f5f3f2] text-[#474551] border-b border-[#c2b59b]">
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Tutor</th>
-                    <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Assigned Courses</th>
+                    <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Assigned Subjects</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
@@ -315,7 +315,7 @@ export function TutorsClient() {
                       <td colSpan={3} className="py-12 text-center text-[#474551]">
                         <span className="material-symbols-outlined text-[48px] text-[#c8c5d2] mb-2">group_off</span>
                         <p className="font-medium">No tutors yet</p>
-                        <p className="text-sm mt-1 max-w-sm mx-auto">You are currently teaching on your own. Invite someone only when another tutor needs access to teach Courses in your centre.</p>
+                        <p className="text-sm mt-1 max-w-sm mx-auto">You are currently teaching on your own. Invite someone only when another tutor needs access to teach Subjects in your centre.</p>
                       </td>
                     </tr>
                   ) : (
@@ -346,7 +346,7 @@ export function TutorsClient() {
                                 {tutor.courses.map(c => c.name).join(', ')}
                               </p>
                             ) : (
-                              <p className="text-xs text-[#c8c5d2] italic">No active courses</p>
+                              <p className="text-xs text-[#c8c5d2] italic">No active subjects</p>
                             )}
                           </td>
                           <td className="py-4 px-6 text-right">
@@ -375,11 +375,11 @@ export function TutorsClient() {
 
           <div className="overflow-hidden rounded-lg border border-[#c2b59b] bg-white shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
             <div className="border-b border-[#c2b59b] bg-[#fbf9f8] p-6">
-              <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Course assignments</h3>
-              <p className="mt-1 text-sm text-[#474551]">Choose who teaches each Course. A published Course must always have at least one tutor.</p>
+              <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Teaching assignments</h3>
+              <p className="mt-1 text-sm text-[#474551]">Choose who teaches each Subject. A published Subject must always have at least one tutor.</p>
             </div>
             {courseAssignments.length === 0 ? (
-              <div className="p-8 text-center text-sm text-[#474551]">Create a Course before assigning tutors.</div>
+              <div className="p-8 text-center text-sm text-[#474551]">Create a Subject before assigning tutors.</div>
             ) : (
               <div className="divide-y divide-[#e4e2e1]">
                 {courseAssignments.map((course) => {

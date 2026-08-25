@@ -19,7 +19,7 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
       (student.enrolments || []).forEach((enr: any) => {
         if (enr.programmes?.id) progs.set(`programme:${enr.programmes.id}`, `Programme — ${enr.programmes.name}`);
         if (enr.sub_programmes?.id) progs.set(`sub_programme:${enr.sub_programmes.id}`, `Sub-programme — ${enr.sub_programmes.name}`);
-        if (enr.courses?.id) progs.set(`course:${enr.courses.id}`, `Course — ${enr.courses.name}`);
+        if (enr.courses?.id) progs.set(`course:${enr.courses.id}`, `Subject — ${enr.courses.name}`);
       });
     });
     return Array.from(progs.entries()).map(([id, name]) => ({ id, name }));

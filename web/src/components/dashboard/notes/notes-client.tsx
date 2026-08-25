@@ -102,12 +102,12 @@ export function NotesClient({ session }: NotesClientProps) {
         }
       })
       
-      if (!res.ok) throw new Error("We could not load your courses. Please try again.")
+      if (!res.ok) throw new Error("We could not load your subjects. Please try again.")
       const json = await res.json()
       setCourses(normalizeCourses(json.data || []))
     } catch (error: any) {
       console.error("Failed to fetch courses:", error?.message || error)
-      const message = errorMessage(error, "We could not load your courses. Please try again.")
+      const message = errorMessage(error, "We could not load your subjects. Please try again.")
       setLoadError(message)
       toast.error(message)
     }
@@ -198,7 +198,7 @@ export function NotesClient({ session }: NotesClientProps) {
   }
 
   const handleUpload = async () => {
-    if (!selectedCourse) return toast.error("Choose the course that should receive this material.")
+    if (!selectedCourse) return toast.error("Choose the subject that should receive this material.")
     if (!title.trim()) return toast.error("Enter a title students will recognise.")
     if (!file) return toast.error("Choose a file to upload.")
 
@@ -321,7 +321,7 @@ export function NotesClient({ session }: NotesClientProps) {
       <div className="max-w-[1440px] mx-auto">
         <div className="mb-8">
           <h2 className="text-headline-lg font-headline-lg text-primary mb-2">Learning materials</h2>
-          <p className="text-body-md font-body-md text-on-surface-variant">Share notes, slides, and helpful documents with students in a course.</p>
+          <p className="text-body-md font-body-md text-on-surface-variant">Share notes, slides, and helpful documents with students in a subject.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
@@ -333,13 +333,13 @@ export function NotesClient({ session }: NotesClientProps) {
               
               <div className="space-y-5">
                 <div>
-                  <label className="block text-label-md font-label-md text-on-surface mb-2">Course *</label>
+                  <label className="block text-label-md font-label-md text-on-surface mb-2">Subject *</label>
                   <select 
                     value={selectedCourse}
                     onChange={(e) => setSelectedCourse(e.target.value)}
                     className="w-full border border-outline-variant rounded bg-surface py-2.5 px-3 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container"
                   >
-                    <option disabled value="">Choose a course</option>
+                    <option disabled value="">Choose a subject</option>
                     {courses.map(course => (
                       <option key={course.id} value={course.id}>
                         {course.name} {course.programme?.name ? `(${course.programme.name})` : ''}
@@ -347,7 +347,7 @@ export function NotesClient({ session }: NotesClientProps) {
                     ))}
                   </select>
                   {courses.length === 0 && !loadError && (
-                    <p className="mt-2 text-label-md text-on-surface-variant">Create a course or ask your centre admin to assign you to one first.</p>
+                    <p className="mt-2 text-label-md text-on-surface-variant">Create a subject or ask your centre admin to assign you to one first.</p>
                   )}
                 </div>
                 
@@ -434,7 +434,7 @@ export function NotesClient({ session }: NotesClientProps) {
                     onChange={(e) => setFilterCourse(e.target.value)}
                     className="border border-outline-variant rounded bg-surface py-1.5 px-3 text-body-sm font-body-sm focus:border-primary-container"
                   >
-                    <option value="">All Courses</option>
+                    <option value="">All Subjects</option>
                     {courses.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -447,7 +447,7 @@ export function NotesClient({ session }: NotesClientProps) {
                   <thead className="bg-tertiary-fixed-dim/20 border-b border-outline-variant sticky top-0 z-10">
                     <tr>
                       <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Document</th>
-                      <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Course</th>
+                      <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Subject</th>
                       <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Date</th>
                       <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Size</th>
                       <th className="py-3 px-6 text-right text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Actions</th>
@@ -474,8 +474,8 @@ export function NotesClient({ session }: NotesClientProps) {
                        <tr>
                          <td colSpan={5} className="py-14 px-6 text-center text-on-surface-variant">
                             <span className="material-symbols-outlined text-4xl mb-2 text-outline-variant">menu_book</span>
-                            <p className="font-semibold text-on-surface">{filterCourse ? "No materials in this course yet" : "Share your first learning material"}</p>
-                            <p className="mt-1 text-body-sm">{filterCourse ? "Choose another course or use the form to add one." : "Choose a course and upload notes, slides, or a document for your students."}</p>
+                            <p className="font-semibold text-on-surface">{filterCourse ? "No materials in this subject yet" : "Share your first learning material"}</p>
+                            <p className="mt-1 text-body-sm">{filterCourse ? "Choose another subject or use the form to add one." : "Choose a subject and upload notes, slides, or a document for your students."}</p>
                          </td>
                        </tr>
                     ) : (
@@ -495,7 +495,7 @@ export function NotesClient({ session }: NotesClientProps) {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface">{course ? course.name : "Unknown Course"}</td>
+                            <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface">{course ? course.name : "Unknown Subject"}</td>
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{new Date(note.created_at).toLocaleDateString()}</td>
                             <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{formatFileSize(note.file_size_bytes)}</td>
                             <td className="py-4 px-6 text-right">
