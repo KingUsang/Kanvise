@@ -62,6 +62,13 @@ describe('student mock security', () => {
     expect(mocks.from).not.toHaveBeenCalled()
   })
 
+  it('does not apply student middleware to an unrelated programme route', async () => {
+    mocks.user.role = 'admin'
+    const response = await studentMocksRouter.request('/programmes/setup', { method: 'POST' })
+    expect(response.status).toBe(404)
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
   it('hides preflight data from an unenrolled student', async () => {
     enrolmentTables(false)
     const response = await studentMocksRouter.request('/mocks/mock-1/preflight')

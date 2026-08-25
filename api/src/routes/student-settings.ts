@@ -8,8 +8,10 @@ import type { TenantVariables } from '../types'
 import type { TablesUpdate } from '../lib/database.types'
 
 export const studentSettingsRouter = new Hono<{ Variables: TenantVariables }>()
-studentSettingsRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
-studentSettingsRouter.use('/*', requireRole('student'))
+// The router is mounted at `/`, so its middleware must be limited to the
+// student namespace. A root wildcard would reject unrelated admin endpoints.
+studentSettingsRouter.use('/students/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
+studentSettingsRouter.use('/students/*', requireRole('student'))
 
 studentSettingsRouter.get('/students/me/settings', async c => {
   const user = c.get('user')

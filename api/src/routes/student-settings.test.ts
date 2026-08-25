@@ -42,6 +42,13 @@ describe('student settings security', () => {
     expect(mocks.from).not.toHaveBeenCalled()
   })
 
+  it('does not apply student middleware to unrelated routes', async () => {
+    mocks.user.role = 'admin'
+    const response = await studentSettingsRouter.request('/programmes/setup', { method: 'POST' })
+    expect(response.status).toBe(404)
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
   it('ignores role, school and email supplied by the browser', async () => {
     const eqSpy = vi.fn()
     const builder = updateQuery({ data: {

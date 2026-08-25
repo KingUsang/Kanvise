@@ -16,8 +16,13 @@ export const studentQuestionVersionSelect = 'question:bank_questions!bank_questi
 // A marketplace learner has no centre, but can still own a valid attempt. Each
 // route below performs its own course/entitlement check; do not put the generic
 // school-required middleware back on this router.
-studentMocksRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware)
-studentMocksRouter.use('/*', requireRole('student'))
+// This router is mounted at `/` because it owns more than one public prefix.
+// Never use `/*` here: Hono applies that middleware to every application route,
+// including admin programme setup. Keep the student guard on only its paths.
+for (const path of ['/students/*', '/mocks/*', '/attempts/*']) {
+  studentMocksRouter.use(path, jwtVerificationMiddleware, profileResolutionMiddleware)
+  studentMocksRouter.use(path, requireRole('student'))
+}
 
 const attemptErrors = [
   'MOCK_NOT_AVAILABLE', 'MOCK_NOT_OPEN', 'MOCK_CLOSED', 'MOCK_VERSION_NOT_FOUND',
