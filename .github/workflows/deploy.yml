@@ -59,7 +59,7 @@ jobs:
           timeout: 30s
           command_timeout: 10m
           source: api/dist/*
-          target: ${{ vars.DEPLOY_DIRECTORY }}/api
+          target: ${{ vars.DEPLOY_DIRECTORY }}/api/dist
           strip_components: 2
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.5
