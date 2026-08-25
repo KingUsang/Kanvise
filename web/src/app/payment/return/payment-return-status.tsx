@@ -14,6 +14,7 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
     if (!reference) return;
     let cancelled = false;
     let attempts = 0;
+    let recoveryAttempted = false;
     const supabase = createClient();
 
     const check = async () => {
@@ -39,9 +40,17 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
         if (response.status === 404) response = await fetch(`${apiUrl}/marketplace/orders/${encodeURIComponent(reference)}`, {
           headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store",
         });
-        const body = await response.json();
+        let body = await response.json();
         if (!response.ok) throw new Error(body.error || "Could not check payment status");
         if (cancelled) return;
+
+        if (body.data.status === "pending" && !recoveryAttempted) {
+          recoveryAttempted = true;
+          const fallback = await fetch(`${apiUrl}/payments/status/${encodeURIComponent(reference)}/confirm`, {
+            method: "POST", headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store",
+          });
+          if (fallback.ok) body = await fallback.json();
+        }
 
         if (body.data.status === "successful" || body.data.status === "paid") {
           // A first centre enrolment updates the school_id JWT claim server-side;

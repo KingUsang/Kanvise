@@ -315,6 +315,62 @@ paymentsRouter.get("/status/:reference", async (c) => {
   return c.json({ data: { ...data, telegram_paid_access_available: Boolean(paidTelegramChat) } });
 });
 
+// POST /payments/status/:reference/confirm — authenticated return-page fallback.
+// Webhooks remain the primary confirmation path, but a successful Paystack
+// callback must not leave a student without access when a webhook is delayed
+// or a staging environment cannot receive the account-level webhook.
+paymentsRouter.post("/status/:reference/confirm", async (c) => {
+  const user = c.get("user");
+  if (user.role !== "student") return c.json({ error: "Only students can confirm checkout status", code: "FORBIDDEN" }, 403);
+
+  const reference = c.req.param("reference");
+  const { data: payment, error: paymentError } = await supabase
+    .from("payments")
+    .select("paystack_reference, status, amount")
+    .eq("paystack_reference", reference)
+    .eq("student_id", user.id)
+    .maybeSingle();
+  if (paymentError) return c.json({ error: "Could not load payment status" }, 500);
+  if (!payment) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
+  if (payment.status === "successful") return c.json({ data: { status: "successful", already_confirmed: true } });
+
+  const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+  if (!paystackSecret) return c.json({ error: "Payment confirmation is not configured", code: "PAYMENTS_NOT_CONFIGURED" }, 503);
+
+  let verification: any;
+  let verifyResponse: Response;
+  try {
+    verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${paystackSecret}` }, signal: AbortSignal.timeout(15_000),
+    });
+    verification = await verifyResponse.json();
+  } catch {
+    return c.json({ error: "Paystack verification is temporarily unavailable", retryable: true }, 503);
+  }
+  if (!verifyResponse.ok || !verification.status || verification.data?.status !== "success") {
+    return c.json({ data: { status: "pending" } });
+  }
+  if (verification.data.reference !== reference || !Number.isInteger(verification.data.amount)
+    || verification.data.amount !== Math.round(Number(payment.amount) * 100)) {
+    return c.json({ error: "Paystack transaction details do not match this payment", code: "PAYMENT_MISMATCH" }, 409);
+  }
+
+  const { data: confirmation, error: confirmationError } = await supabase.rpc("confirm_student_payment", {
+    p_paystack_reference: reference,
+    p_paystack_transaction_id: String(verification.data.id),
+    p_amount_kobo: verification.data.amount,
+  });
+  if (confirmationError) return c.json({ error: "Payment confirmation failed", code: "PAYMENT_CONFIRMATION_FAILED" }, 500);
+
+  const result = confirmation as { student_auth_id?: string; student_school_id?: string } | null;
+  if (result?.student_auth_id && result.student_school_id) {
+    await (supabase as any).auth?.admin?.updateUserById(result.student_auth_id, {
+      app_metadata: { school_id: result.student_school_id },
+    });
+  }
+  return c.json({ data: { status: "successful", already_confirmed: Boolean((confirmation as any)?.already_processed) } });
+});
+
 // GET /payments — List all transactions for the school
 paymentsRouter.get("/", enforceAdmin, async (c) => {
   try {
