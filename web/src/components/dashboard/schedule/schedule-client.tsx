@@ -40,6 +40,12 @@ interface Course {
   name: string
 }
 
+interface Programme {
+  id: string
+  name: string
+  courses: Course[]
+}
+
 interface Tutor {
   id: string
   first_name: string
@@ -50,11 +56,12 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const router = useRouter()
   
   const [classes, setClasses] = useState<LiveClass[]>([])
-  const [courses, setCourses] = useState<Course[]>([])
+  const [programmes, setProgrammes] = useState<Programme[]>([])
   const [tutors, setTutors] = useState<Tutor[]>([])
   const [assignedTutorIds, setAssignedTutorIds] = useState<string[]>([])
   
   const [title, setTitle] = useState('')
+  const [programmeId, setProgrammeId] = useState('')
   const [courseId, setCourseId] = useState('')
   const [tutorId, setTutorId] = useState(capabilities.isAdmin ? '' : user.id)
   const [date, setDate] = useState('')
@@ -79,11 +86,11 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         if (!classesRes.ok) throw new Error('Could not load scheduled classes')
         const classesData = await classesRes.json()
         
-        const coursesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
+        const programmesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        if (!coursesRes.ok) throw new Error('Could not load subjects')
-        const coursesData = await coursesRes.json()
+        if (!programmesRes.ok) throw new Error('Could not load programmes')
+        const programmesData = await programmesRes.json()
 
         let tutorsData = { data: [] }
         if (capabilities.isAdmin) {
@@ -98,7 +105,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         }
 
         setClasses(classesData.data || [])
-        setCourses(coursesData.data || [])
+        setProgrammes(programmesData.data || [])
         if (capabilities.isAdmin) setTutors(tutorsData.data || [])
 
       } catch (err) {
@@ -113,6 +120,9 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     }
     fetchData()
   }, [token, capabilities.isAdmin])
+
+  const selectedProgramme = programmes.find(programme => programme.id === programmeId)
+  const programmeSubjects = selectedProgramme?.courses || []
 
   useEffect(() => {
     if (!capabilities.isAdmin || !courseId) return
@@ -324,18 +334,35 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Programme subject</label>
+                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Programme</label>
                 <div className="relative">
                   <select 
-                    value={courseId}
-                    onChange={e => setCourseId(e.target.value)}
+                    value={programmeId}
+                    onChange={e => { setProgrammeId(e.target.value); setCourseId(''); setAssignedTutorIds([]); setTutorId(capabilities.isAdmin ? '' : user.id) }}
                     required
                     className="w-full h-10 px-3 pr-10 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] appearance-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer"
                   >
-                    <option value="" disabled>Select active subject...</option>
-                    {courses.map(course => (
-                      <option key={course.id} value={course.id}>{course.name}</option>
+                    <option value="" disabled>Select programme...</option>
+                    {programmes.map(programme => (
+                      <option key={programme.id} value={programme.id}>{programme.name}</option>
                     ))}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#474551] pointer-events-none">arrow_drop_down</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Programme subject</label>
+                <div className="relative">
+                  <select
+                    value={courseId}
+                    onChange={e => setCourseId(e.target.value)}
+                    required
+                    disabled={!programmeId}
+                    className="w-full h-10 px-3 pr-10 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] appearance-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="" disabled>{programmeId ? 'Select subject...' : 'Select a programme first'}</option>
+                    {programmeSubjects.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#474551] pointer-events-none">arrow_drop_down</span>
                 </div>

@@ -22,7 +22,7 @@ const mockFetch = vi.fn()
 global.fetch = mockFetch
 
 // Sample data for rendering
-const mockCourses = [{ id: 'course-1', name: 'Intro to Math', code: 'MATH101' }]
+const mockProgrammes = [{ id: 'programme-1', name: 'JAMB Science', courses: [{ id: 'course-1', name: 'Intro to Math' }] }]
 const mockTutors = [{ id: 'tutor-2', first_name: 'John', last_name: 'Doe' }]
 
 const defaultAdminProps = {
@@ -46,11 +46,12 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
       if (url.includes('/live-classes')) {
         return { ok: true, json: async () => ({ data: [] }) }
       }
+      if (url.includes('/programmes')) return { ok: true, json: async () => ({ data: mockProgrammes }) }
       if (url.includes('/courses')) {
         if (url.includes('/tutors')) {
           return { ok: true, json: async () => ({ data: [{ tutor_id: 'tutor-2' }] }) }
         }
-        return { ok: true, json: async () => ({ data: mockCourses }) }
+        return { ok: true, json: async () => ({ data: [] }) }
       }
       if (url.includes('/users?roles=admin,tutor')) {
         return { ok: true, json: async () => ({ data: mockTutors }) }
@@ -72,18 +73,19 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
     render(<ScheduleClient {...defaultAdminProps} />)
     
     // Wait for initial fetch
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/courses'), expect.any(Object)))
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
     
     // Fill form
     const titleInput = screen.getByPlaceholderText('e.g. Advanced Calculus Rev.')
     await user.type(titleInput, 'New Test Class')
     
     const selects = document.querySelectorAll('select')
-    await user.selectOptions(selects[0], 'course-1')
+    await user.selectOptions(selects[0], 'programme-1')
+    await user.selectOptions(selects[1], 'course-1')
     
     // Need to wait for tutors to load after selecting course
-    await waitFor(() => expect(document.querySelectorAll('select')[1].options.length).toBeGreaterThan(1))
-    await user.selectOptions(document.querySelectorAll('select')[1], 'tutor-2')
+    await waitFor(() => expect(document.querySelectorAll('select')[2].options.length).toBeGreaterThan(1))
+    await user.selectOptions(document.querySelectorAll('select')[2], 'tutor-2')
     
     // Set date and time
     const dateInput = document.querySelector('input[type="date"]')
@@ -127,13 +129,14 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
     const user = userEvent.setup()
     render(<ScheduleClient {...defaultTutorProps} />)
     
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/courses'), expect.any(Object)))
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
     
     await user.type(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.'), 'Tutor Class')
-    await user.selectOptions(document.querySelectorAll('select')[0], 'course-1')
+    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
+    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
     
     // Verify Tutor select doesn't exist for tutors
-    expect(document.querySelectorAll('select').length).toBe(1)
+    expect(document.querySelectorAll('select').length).toBe(2)
     
     const dateInput = document.querySelector('input[type="date"]')
     const timeInput = document.querySelector('input[type="time"]')
@@ -162,16 +165,17 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
     mockFetch.mockImplementation(async (url) => {
       if (url.includes('/live-classes')) return { ok: true, json: async () => ({ data: [] }) }
       if (url.includes('/courses/course-1/tutors')) return { ok: true, json: async () => ({ data: [{ tutor_id: 'admin-1' }] }) }
-      if (url.includes('/courses')) return { ok: true, json: async () => ({ data: mockCourses }) }
+      if (url.includes('/programmes')) return { ok: true, json: async () => ({ data: mockProgrammes }) }
       if (url.includes('/users?roles=admin,tutor')) return { ok: true, json: async () => ({ data: [{ id: 'admin-1', first_name: 'Admin', last_name: 'User' }] }) }
       return { ok: true, json: async () => ({ data: [] }) }
     })
 
     render(<ScheduleClient {...defaultAdminProps} />)
-    await waitFor(() => expect(screen.getByRole('option', { name: 'Intro to Math' })).toBeInTheDocument())
-    await user.selectOptions(document.querySelectorAll('select')[0], 'course-1')
+    await waitFor(() => expect(screen.getByRole('option', { name: 'JAMB Science' })).toBeInTheDocument())
+    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
+    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
 
-    await waitFor(() => expect(document.querySelectorAll('select')[1]).toHaveValue('admin-1'))
+    await waitFor(() => expect(document.querySelectorAll('select')[2]).toHaveValue('admin-1'))
     expect(screen.getByRole('option', { name: 'Admin User (you)' })).toBeInTheDocument()
   })
 
@@ -179,20 +183,22 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
     const user = userEvent.setup()
     render(<ScheduleClient {...defaultAdminProps} />)
 
-    await waitFor(() => expect(screen.getByRole('option', { name: 'Intro to Math' })).toBeInTheDocument())
-    await user.selectOptions(document.querySelectorAll('select')[0], 'course-1')
+    await waitFor(() => expect(screen.getByRole('option', { name: 'JAMB Science' })).toBeInTheDocument())
+    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
+    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
 
-    await waitFor(() => expect(document.querySelectorAll('select')[1]).toHaveValue('tutor-2'))
+    await waitFor(() => expect(document.querySelectorAll('select')[2]).toHaveValue('tutor-2'))
   })
 
   it('displays useful server validation errors and does not clear the form', async () => {
     const user = userEvent.setup()
     render(<ScheduleClient {...defaultTutorProps} />)
     
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/courses'), expect.any(Object)))
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
     
     await user.type(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.'), 'Failed Class')
-    await user.selectOptions(document.querySelectorAll('select')[0], 'course-1')
+    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
+    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
     
     const dateInput = document.querySelector('input[type="date"]')
     const timeInput = document.querySelector('input[type="time"]')
@@ -228,10 +234,11 @@ describe('ScheduleClient (Schedule Button Tests)', () => {
     const user = userEvent.setup()
     render(<ScheduleClient {...defaultTutorProps} />)
     
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/courses'), expect.any(Object)))
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
     
     await user.type(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.'), 'Slow Class')
-    await user.selectOptions(document.querySelectorAll('select')[0], 'course-1')
+    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
+    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
     
     const dateInput = document.querySelector('input[type="date"]')
     const timeInput = document.querySelector('input[type="time"]')
