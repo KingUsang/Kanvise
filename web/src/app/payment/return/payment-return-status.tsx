@@ -61,9 +61,12 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
         attempts += 1;
         setState("pending");
         setMessage(attempts >= 20
-          ? "Paystack is still confirming the payment. You can leave this page and check again later."
+          ? "Paystack is taking longer than usual. We’ll keep checking automatically—do not pay again."
           : "Payment received. We’re waiting for Paystack’s confirmation…");
-        if (attempts < 20) window.setTimeout(check, 3_000);
+        // Keep the student on the result page until the verified webhook has
+        // updated the payment. The old 60-second cap left a stale “Checking”
+        // screen even after the receipt and enrolment had completed.
+        window.setTimeout(check, attempts >= 20 ? 10_000 : 3_000);
       } catch (error) {
         if (!cancelled) {
           setState("error");
