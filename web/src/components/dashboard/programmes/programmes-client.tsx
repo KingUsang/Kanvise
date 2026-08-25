@@ -29,6 +29,7 @@ export function ProgrammesClient() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [publishingId, setPublishingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoadError('')
@@ -89,6 +90,27 @@ export function ProgrammesClient() {
     }
   }
 
+  const deleteProgramme = async (programme: Programme) => {
+    if (!window.confirm(`Delete “${programme.name}”? This removes its subjects and cannot be undone.`)) return
+    setDeletingId(programme.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes/${programme.id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.code === 'ACTIVE_ENROLMENTS_EXIST'
+        ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+        : body?.error || 'Could not delete programme')
+      toast.success('Programme deleted')
+      await load()
+    } catch (error) {
+      toast.error('Could not delete programme', { description: error instanceof Error ? error.message : 'Please try again.' })
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -145,7 +167,7 @@ export function ProgrammesClient() {
                     <h2 className="truncate text-lg font-bold text-[#1b1c1c]">{programme.name}</h2>
                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${programme.is_published ? 'border-[#994704]/20 bg-[#994704]/10 text-[#994704]' : 'border-[#c8c5d2] bg-[#f5f3f2] text-[#474551]'}`}>{programme.is_published ? 'Published' : 'Draft'}</span>
                   </div>
-                  <p className="mt-2 text-xl font-bold text-[#1b1c1c]">₦{Number(programme.price).toLocaleString()}</p>
+                  <p className="mt-2 text-xl font-bold text-[#1b1c1c]">{Number(programme.price) === 0 ? 'Free' : `₦${Number(programme.price).toLocaleString()}`}</p>
                   <p className="mt-1 text-xs text-[#474551]">{programme.courses_count} {programme.courses_count === 1 ? 'subject' : 'subjects'} · {programme.tutors_complete ? 'Tutors assigned' : `${programme.assigned_subjects_count}/${programme.courses_count} with tutors`}</p>
                 </div>
               </div>
@@ -158,6 +180,7 @@ export function ProgrammesClient() {
                 {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}`} target="_blank" rel="noreferrer" className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Preview programme page</a>}
                 {schoolSlug && <button onClick={() => void copyLink(programme)} className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Copy enrolment link</button>}
                 {!programme.is_published && <button disabled={publishingId === programme.id} onClick={() => void publish(programme)} className="ml-auto rounded border border-[#994704] px-3.5 py-2 text-xs font-semibold text-[#994704] disabled:opacity-50">{publishingId === programme.id ? 'Publishing…' : 'Publish'}</button>}
+                <button disabled={deletingId === programme.id} onClick={() => void deleteProgramme(programme)} className={`${programme.is_published ? '' : 'ml-auto'} rounded border border-[#ba1a1a]/40 px-3.5 py-2 text-xs font-semibold text-[#ba1a1a] disabled:opacity-50`}>{deletingId === programme.id ? 'Deleting…' : 'Delete'}</button>
               </div>
             </article>
           ))}
