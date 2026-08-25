@@ -74,13 +74,24 @@ export function NotesClient({ session }: NotesClientProps) {
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const token = session.access_token
   const role = session.user.app_metadata?.kanvise_role || session.user.app_metadata?.role
   // Content rows use user_profiles.id. Auth IDs and human-readable Kanvise
   // IDs are deliberately not interchangeable with that UUID.
   const currentProfileId = typeof session.user.app_metadata?.profile_id === 'string'
     ? session.user.app_metadata.profile_id
     : null
+
+  // Server-rendered session props are a snapshot. Fetch the browser session at
+  // request time so a long-open dashboard never sends an expired JWT to the API.
+  const getAccessToken = async () => {
+    const { data: { session: currentSession }, error } = await supabase.auth.getSession()
+
+    if (error || !currentSession) {
+      throw new Error("Your session has expired. Please sign in again.")
+    }
+
+    return currentSession.access_token
+  }
 
   useEffect(() => {
     fetchCourses()
@@ -96,9 +107,10 @@ export function NotesClient({ session }: NotesClientProps) {
 
   const fetchCourses = async () => {
     try {
+      const accessToken = await getAccessToken()
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${accessToken}`
         }
       })
       
@@ -117,12 +129,13 @@ export function NotesClient({ session }: NotesClientProps) {
     setIsLoadingNotes(true)
     setLoadError("")
     try {
+      const accessToken = await getAccessToken()
       let allNotes: Note[] = []
       
       // For simplicity in UI, we'll fetch notes for all available courses sequentially or in parallel
       const fetchPromises = courses.map(async (course) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${course.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${accessToken}` }
         })
         if (!res.ok) throw new Error(`Could not load materials for ${course.name}`)
         const { data } = await res.json()
@@ -206,11 +219,12 @@ export function NotesClient({ session }: NotesClientProps) {
 
     try {
       // 1. Get presigned URL
+      const presignToken = await getAccessToken()
       const presignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/presign/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${presignToken}`
         },
         body: JSON.stringify({
           file_name: file.name,
@@ -240,11 +254,12 @@ export function NotesClient({ session }: NotesClientProps) {
       if (!uploadRes.ok) throw new Error("Failed to upload file to storage")
 
       // 3. Record note in database
+      const recordToken = await getAccessToken()
       const recordRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${selectedCourse}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${recordToken}`
         },
         body: JSON.stringify({
           title: title.trim(),
@@ -282,9 +297,10 @@ export function NotesClient({ session }: NotesClientProps) {
 
   const handleDelete = async (noteId: string) => {
     try {
+      const accessToken = await getAccessToken()
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${noteId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
 
       if (!res.ok) {
