@@ -174,7 +174,10 @@ paymentsRouter.post("/checkout", async (c) => {
         return c.json({ error: "Could not enrol you right now", code: "FREE_ENROLMENT_FAILED" }, 500);
       }
 
-      return c.json({ data: { free: true, enrolment_id: confirmation?.enrolment_id, amount: 0 } }, 201);
+      const enrolmentId = confirmation && typeof confirmation === "object" && !Array.isArray(confirmation)
+        ? (confirmation as { enrolment_id?: string }).enrolment_id
+        : undefined;
+      return c.json({ data: { free: true, enrolment_id: enrolmentId, amount: 0 } }, 201);
     }
 
     // 2. Resolve subaccount for the school
