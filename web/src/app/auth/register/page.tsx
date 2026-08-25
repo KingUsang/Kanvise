@@ -11,10 +11,16 @@ function RegisterContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const redirectParam = safeRedirectPath(searchParams.get("return_to"));
+  // Public enrolment starts here with `return_to`; Login uses `redirect`.
+  // Accept both so switching between the two forms never loses the programme
+  // page the student intended to return to.
+  const redirectParam = safeRedirectPath(searchParams.get("return_to") || searchParams.get("redirect"));
   const isStudentFlow = pathname.endsWith('/student');
   const flow = isStudentFlow ? 'student' : 'centre';
   const studentRegistrationToken = searchParams.get('intent');
+  const loginHref = redirectParam
+    ? `/auth/login?redirect=${encodeURIComponent(redirectParam)}`
+    : '/auth/login';
   const supabase = createClient();
 
   const [firstName, setFirstName] = useState("");
@@ -162,12 +168,12 @@ function RegisterContent() {
 
             <div className="mt-6 flex flex-col gap-3 text-center text-sm">
               <button type="button" onClick={() => void handleResendCode()} disabled={resendLoading} className="font-semibold text-[#2e2877] hover:text-[#994704] disabled:opacity-50">{resendLoading ? "Sending…" : "Send a new code"}</button>
-              <Link href="/auth/login" className="text-[#6a6874] hover:text-[#2e2877]">Back to login</Link>
+              <Link href={loginHref} className="text-[#6a6874] hover:text-[#2e2877]">Back to login</Link>
             </div>
           </>
         )}
 
-        {!isCodeStep && <p className="mt-8 border-t border-[#e4e2e1] pt-6 text-center text-sm text-[#6a6874]">Already have an account? <Link href="/auth/login" className="font-semibold text-[#2e2877]">Log in</Link></p>}
+        {!isCodeStep && <p className="mt-8 border-t border-[#e4e2e1] pt-6 text-center text-sm text-[#6a6874]">Already have an account? <Link href={loginHref} className="font-semibold text-[#2e2877]">Log in</Link></p>}
       </section>
     </main>
   );
