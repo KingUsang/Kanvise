@@ -8,12 +8,10 @@ import type { TenantVariables } from '../types'
 import type { TablesUpdate } from '../lib/database.types'
 
 export const studentSettingsRouter = new Hono<{ Variables: TenantVariables }>()
-// The router is mounted at `/`, so its middleware must be limited to the
-// student namespace. A root wildcard would reject unrelated admin endpoints.
-studentSettingsRouter.use('/students/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
-studentSettingsRouter.use('/students/*', requireRole('student'))
+// This router is mounted at `/`. Keep student auth on individual endpoints so
+// it cannot run for unrelated centre-admin routes.
 
-studentSettingsRouter.get('/students/me/settings', async c => {
+studentSettingsRouter.get('/students/me/settings', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   const [{ data: profile, error }, { data: school, error: schoolError }] = await Promise.all([
     supabase.from('user_profiles').select('id, kanvise_user_id, first_name, last_name, email, bio, profile_photo_key')
@@ -29,7 +27,7 @@ studentSettingsRouter.get('/students/me/settings', async c => {
   } })
 })
 
-studentSettingsRouter.patch('/students/me/settings', async c => {
+studentSettingsRouter.patch('/students/me/settings', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   const body = await c.req.json()
   const { errors, updates } = validateStudentProfileUpdate(body)
@@ -47,7 +45,7 @@ studentSettingsRouter.patch('/students/me/settings', async c => {
 // A programme student keeps one explicit JAMB subject combination. Adaptive
 // mocks use this record only when an attempt starts, then snapshot its
 // questions so a later change cannot alter a live or submitted attempt.
-studentSettingsRouter.get('/students/me/subject-combination', async c => {
+studentSettingsRouter.get('/students/me/subject-combination', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   const programmeId = c.req.query('programme_id')
   if (!programmeId) return c.json({ error: 'programme_id is required', code: 'VALIDATION_ERROR' }, 400)
@@ -62,7 +60,7 @@ studentSettingsRouter.get('/students/me/subject-combination', async c => {
   return c.json({ data: { programme_id: programmeId, course_ids: (selections || []).map((item: any) => item.course_id), subjects: selections || [] } })
 })
 
-studentSettingsRouter.put('/students/me/subject-combination', async c => {
+studentSettingsRouter.put('/students/me/subject-combination', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   const body = await c.req.json()
   const programmeId = typeof body.programme_id === 'string' && body.programme_id ? body.programme_id : null
