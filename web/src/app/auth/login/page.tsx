@@ -30,7 +30,7 @@ function LoginContent() {
     setLoading(true);
     setError(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -41,12 +41,28 @@ function LoginContent() {
       return;
     }
 
-    // Refresh router to let middleware handle role-based redirection
     if (redirectParams) {
       router.push(redirectParams);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
+      return;
+    }
+
+    try {
+      if (!signInData.session?.access_token) throw new Error('Your session could not be started')
+      // Existing accounts created before trusted role claims were introduced
+      // need one profile resolution before routing. The API backfills the
+      // server-controlled claims from the canonical profile; refreshing here
+      // prevents the web middleware from treating that account as a student.
+      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${signInData.session.access_token}` },
+      })
+      const profileBody = await profileResponse.json()
+      if (!profileResponse.ok || !profileBody.user?.role) throw new Error(profileBody.error || 'Could not load your account')
+      const { error: refreshError } = await supabase.auth.refreshSession()
+      if (refreshError) throw refreshError
+      window.location.assign(['admin', 'tutor'].includes(profileBody.user.role) ? '/dashboard' : '/dashboard/student')
+    } catch (profileError) {
+      setError(profileError instanceof Error ? profileError.message : 'Could not open your account')
+      setLoading(false)
     }
   };
 
