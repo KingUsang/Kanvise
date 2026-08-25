@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -118,7 +118,12 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   const [publishReview, setPublishReview] = useState<PrePublishReview | null>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
-  const [documentImportSummary, setDocumentImportSummary] = useState<{ pageCount: number | null; warnings: string[] } | null>(null);
+  const [documentImportSummary, setDocumentImportSummary] = useState<{ pageCount: number | null; warnings: string[]; questionCount: number } | null>(null);
+  const importedQuestionsRef = useRef<HTMLDivElement>(null);
+
+  const showImportedQuestions = () => {
+    window.requestAnimationFrame(() => importedQuestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -426,11 +431,12 @@ export function MockBuilderClient({ token }: { token: string }) {
       }));
       setQuestions((current) => [...current, ...parsedQuestions]);
       const warnings = imported?.warnings || [];
-      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings });
+      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length });
       if (parsedQuestions.length) {
         toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
           description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
         });
+        showImportedQuestions();
       } else {
         toast.warning("No questions were found in that Word document", { description: warnings[0] || "Try another document." });
       }
@@ -474,11 +480,12 @@ export function MockBuilderClient({ token }: { token: string }) {
       }));
       setQuestions((current) => [...current, ...parsedQuestions]);
       const warnings = imported?.warnings || [];
-      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings });
+      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length });
       if (parsedQuestions.length) {
         toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
           description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
         });
+        showImportedQuestions();
       } else {
         toast.warning("No questions were found in that PDF", { description: warnings[0] || "Try another document." });
       }
@@ -864,6 +871,17 @@ export function MockBuilderClient({ token }: { token: string }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Question Builder (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
+          {documentImportSummary && (
+            <div ref={importedQuestionsRef} tabIndex={-1} className="scroll-mt-6 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 outline-none">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div aria-live="polite">
+                  <p className="font-semibold text-[#166534]">AI import complete · {documentImportSummary.questionCount} question{documentImportSummary.questionCount === 1 ? "" : "s"} ready to review</p>
+                  <p className="mt-1 text-xs leading-5 text-[#35654a]">{documentImportSummary.pageCount ? `${documentImportSummary.pageCount} pages read. ` : ""}{documentImportSummary.warnings.length ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? " needs" : "s need"} attention.` : "Check the imported questions before publishing."}</p>
+                </div>
+                <button type="button" onClick={showImportedQuestions} className="shrink-0 rounded border border-[#8fc7a2] bg-white px-3 py-2 text-xs font-semibold text-[#166534] hover:bg-[#edf8f1]">Review questions</button>
+              </div>
+            </div>
+          )}
           {!isReadOnly && questions.length === 0 && selectedBankQuestions.length === 0 && (
             <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
@@ -1086,7 +1104,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                 {documentImportSummary && (
                   <div className="mt-3 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-3 text-xs leading-5 text-[#474551]">
                     <p className="font-semibold text-[#2e2877]">Document draft imported{documentImportSummary.pageCount ? ` · ${documentImportSummary.pageCount} pages` : ""}</p>
-                    <p className="mt-1">Review the questions below. {documentImportSummary.warnings.length ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? "" : "s"} need attention.` : "No provider warnings were returned."}</p>
+                    <p className="mt-1">{documentImportSummary.questionCount} question{documentImportSummary.questionCount === 1 ? "" : "s"} added above. {documentImportSummary.warnings.length ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? "" : "s"} need attention.` : "No provider warnings were returned."}</p>
                   </div>
                 )}
               </div>
@@ -1154,7 +1172,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         </div>
 
         {/* Right Column: General Settings (4 cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-4 sticky top-6">
+        <div className="lg:col-span-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           <div className="bg-white border border-[#e4e2e1] rounded-lg p-7 shadow-sm">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-6 flex items-center gap-3 border-b border-[#e4e2e1] pb-4">
               <span className="material-symbols-outlined text-[#2e2877]">tune</span>
