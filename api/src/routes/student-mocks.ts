@@ -246,7 +246,7 @@ studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileR
 studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   try {
-    const mock = await accessibleMock(user, c.req.param('mockId'))
+    const mock = await accessibleMock(user, c.req.param('mockId')!)
     if (!mock) return c.json({ error: 'Mock not found', code: 'MOCK_NOT_FOUND' }, 404)
     const version = await latestVersion(mock.id, user.school_id!)
     if (!version) return c.json({ error: 'Mock not found', code: 'MOCK_VERSION_NOT_FOUND' }, 404)
@@ -304,7 +304,7 @@ studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, pr
 studentMocksRouter.post('/mocks/:mockId/attempts', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   try {
-    const mock = await accessibleMock(user, c.req.param('mockId'))
+    const mock = await accessibleMock(user, c.req.param('mockId')!)
     if (!mock) return c.json({ error: 'Mock not found', code: 'MOCK_NOT_FOUND' }, 404)
     let result = await supabase.rpc('start_or_resume_versioned_mock_attempt', {
       p_school_id: user.school_id!, p_mock_exam_id: mock.id, p_student_id: user.id, p_now: new Date().toISOString(),
@@ -331,7 +331,7 @@ studentMocksRouter.post('/mocks/:mockId/attempts', jwtVerificationMiddleware, pr
 studentMocksRouter.get('/attempts/:attemptId', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   try {
-    const attempt = await loadAttempt(user, c.req.param('attemptId'))
+    const attempt = await loadAttempt(user, c.req.param('attemptId')!)
     if (!attempt) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
     if (attempt.status !== 'in_progress') return c.json({ error: 'Attempt has ended', code: 'ATTEMPT_FINALIZED', data: { status: attempt.status } }, 409)
     const questionIds = await loadAttemptQuestionIds(attempt.id, attempt.school_id)
@@ -384,13 +384,13 @@ studentMocksRouter.put('/attempts/:attemptId/answers/:questionId', jwtVerificati
     return c.json({ error: 'Theory answer is too long', code: 'VALIDATION_ERROR' }, 400)
   }
   try {
-    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId'))
+    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId')!)
     if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
     const { data, error } = await supabase.rpc('save_versioned_mock_answer', {
       p_school_id: schoolId,
-      p_attempt_id: c.req.param('attemptId'),
+      p_attempt_id: c.req.param('attemptId')!,
       p_student_id: user.id,
-      p_mock_version_question_id: c.req.param('questionId'),
+      p_mock_version_question_id: c.req.param('questionId')!,
       p_selected_option_version_id: body.selected_option_version_id || null,
       p_theory_answer_text: body.theory_answer_text ?? null,
       p_is_flagged: body.is_flagged === true,
@@ -408,15 +408,15 @@ studentMocksRouter.patch('/attempts/:attemptId/questions/:questionId/flag', jwtV
   const body = await c.req.json()
   if (typeof body.is_flagged !== 'boolean') return c.json({ error: 'is_flagged must be true or false', code: 'VALIDATION_ERROR' }, 400)
   try {
-    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId'))
+    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId')!)
     if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
     const { data: current, error: loadError } = await supabase.from('mock_answers')
       .select('selected_option_version_id, theory_answer_text').eq('school_id', schoolId)
-      .eq('attempt_id', c.req.param('attemptId')).eq('mock_version_question_id', c.req.param('questionId')).maybeSingle()
+      .eq('attempt_id', c.req.param('attemptId')!).eq('mock_version_question_id', c.req.param('questionId')!).maybeSingle()
     if (loadError) throw loadError
     const { data, error } = await supabase.rpc('save_versioned_mock_answer', {
-      p_school_id: schoolId, p_attempt_id: c.req.param('attemptId'), p_student_id: user.id,
-      p_mock_version_question_id: c.req.param('questionId'),
+      p_school_id: schoolId, p_attempt_id: c.req.param('attemptId')!, p_student_id: user.id,
+      p_mock_version_question_id: c.req.param('questionId')!,
       // The SQL function accepts NULL for these args; generated types mark them non-null.
       p_selected_option_version_id: (current?.selected_option_version_id ?? null) as unknown as string,
       p_theory_answer_text: (current?.theory_answer_text ?? null) as unknown as string,
@@ -432,16 +432,16 @@ studentMocksRouter.patch('/attempts/:attemptId/questions/:questionId/flag', jwtV
 studentMocksRouter.post('/attempts/:attemptId/submit', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   try {
-    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId'))
+    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId')!)
     if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
-    const { data, error } = await submitAttempt(user, schoolId, c.req.param('attemptId'), 'student')
+    const { data, error } = await submitAttempt(user, schoolId, c.req.param('attemptId')!, 'student')
     if (error) return attemptDatabaseError(c, error, 'Could not submit your mock')
     // Snapshot-total triggers run after the RPC's UPDATE ... RETURNING, so
     // reload the attempt before responding. This matters for adaptive mocks,
     // where a student's four subjects are a subset of the published version.
     const { data: attempt, error: reloadError } = await supabase.from('mock_attempts')
       .select('status, mcq_score, total_score, total_marks, submitted_at')
-      .eq('id', c.req.param('attemptId')).eq('school_id', schoolId).eq('student_id', user.id).maybeSingle()
+      .eq('id', c.req.param('attemptId')!).eq('school_id', schoolId).eq('student_id', user.id).maybeSingle()
     if (reloadError || !attempt) return c.json({ error: 'Mock was submitted but could not be reloaded', code: 'ATTEMPT_RELOAD_FAILED' }, 500)
     return c.json({ data: attempt || data?.[0] || data })
   } catch (error) {
@@ -452,7 +452,7 @@ studentMocksRouter.post('/attempts/:attemptId/submit', jwtVerificationMiddleware
 studentMocksRouter.get('/attempts/:attemptId/results', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   try {
-    const attempt = await loadAttempt(user, c.req.param('attemptId'))
+    const attempt = await loadAttempt(user, c.req.param('attemptId')!)
     if (!attempt) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
     if (attempt.status === 'in_progress') return c.json({ error: 'Submit the mock before viewing results', code: 'ATTEMPT_IN_PROGRESS' }, 409)
     const mode = attempt.mock_exam?.result_release_mode || 'score_only'
