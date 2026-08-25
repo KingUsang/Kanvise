@@ -56,6 +56,8 @@ jobs:
           username: ${{ secrets.SCALEWAY_USER }}
           key: ${{ secrets.SCALEWAY_SSH_KEY }}
           port: ${{ secrets.SCALEWAY_PORT || 22 }}
+          timeout: 30s
+          command_timeout: 10m
           source: api/dist/*
           target: ${{ vars.DEPLOY_DIRECTORY }}/api
           strip_components: 2
