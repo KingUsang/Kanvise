@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CheckoutButton } from "../../../components/public/checkout-button";
+import { requireServerAccessToken } from "@/lib/server-session";
 
 async function getProgramme(slug: string) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -17,13 +18,37 @@ async function getProgramme(slug: string) {
   return json.data;
 }
 
+async function getDraftPreview(programmeId: string, schoolSlug: string) {
+  const token = await requireServerAccessToken();
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const headers = { Authorization: `Bearer ${token}` };
+  const [programmeResponse, schoolResponse] = await Promise.all([
+    fetch(`${apiUrl}/programmes/${programmeId}`, { headers, cache: "no-store" }),
+    fetch(`${apiUrl}/schools/me`, { headers, cache: "no-store" }),
+  ]);
+  if (!programmeResponse.ok || !schoolResponse.ok) return null;
+  const [programmeBody, schoolBody] = await Promise.all([programmeResponse.json(), schoolResponse.json()]);
+  if (schoolBody.data?.slug !== schoolSlug || programmeBody.data?.is_published) return null;
+  return {
+    programme: programmeBody.data,
+    school: schoolBody.data,
+    sub_programmes: [],
+    courses: programmeBody.data.courses || [],
+    tutors: [],
+  };
+}
+
 export default async function ProgrammePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ school: string; programmeSlug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }) {
   const { school: schoolSlug, programmeSlug } = await params;
-  const data = await getProgramme(programmeSlug);
+  const { preview } = await searchParams;
+  const isDraftPreview = Boolean(preview);
+  const data = isDraftPreview ? await getDraftPreview(preview!, schoolSlug) : await getProgramme(programmeSlug);
 
   if (!data) notFound();
 
@@ -54,9 +79,9 @@ export default async function ProgrammePage({
             )}
             <span>{school?.name || "All programmes"}</span>
           </Link>
-          <Link href="#enrol" className="rounded-lg bg-[#994704] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#753400]">
+          {isDraftPreview ? <span className="rounded-lg bg-[#f0efff] px-4 py-2 text-sm font-semibold text-[#2e2877]">Draft preview</span> : <Link href="#enrol" className="rounded-lg bg-[#994704] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#753400]">
             {isFree ? "Enrol for free" : "Enrol now"}
-          </Link>
+          </Link>}
         </div>
       </header>
 
@@ -65,6 +90,7 @@ export default async function ProgrammePage({
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 lg:grid-cols-[1fr_360px] lg:px-8 lg:py-16">
             <div className="max-w-3xl">
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Programme</p>
+              {isDraftPreview && <p className="mb-4 inline-flex rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-[#2e2877]">Private draft preview — students cannot see this yet</p>}
               <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-[-0.03em] text-[#2e2877] md:text-5xl">
                 {programme.name}
               </h1>
@@ -98,15 +124,14 @@ export default async function ProgrammePage({
               <p className="text-sm font-medium text-[#474551]">{isFree ? "Free programme" : "Programme fee"}</p>
               <p className="mt-2 text-3xl font-bold text-[#2e2877]">{formatPrice(price)}</p>
               <div className="my-6 border-t border-[#e4e2e1]" />
-              <CheckoutButton
+              {isDraftPreview ? <p className="text-sm leading-6 text-[#474551]">This is how the enrolment page will look after you publish. Enrolment is disabled while it remains a draft.</p> : <><CheckoutButton
                 schoolSlug={schoolSlug}
                 programmeId={programme.id}
                 price={price}
                 programmeSlug={programmeSlug}
-              />
-              <p className="mt-3 text-center text-xs leading-5 text-[#6a6874]">
+              /><p className="mt-3 text-center text-xs leading-5 text-[#6a6874]">
                 {isFree ? "Create a student account or sign in to start learning." : "You’ll be asked to sign in or create a student account before payment."}
-              </p>
+              </p></>}
             </aside>
           </div>
         </section>
@@ -173,7 +198,7 @@ export default async function ProgrammePage({
               <nav className="mt-4 space-y-3 text-sm">
                 {itemCount > 0 && <a href="#curriculum" className="block text-[#474551] hover:text-[#2e2877]">Subjects included</a>}
                 {tutors.length > 0 && <a href="#tutor" className="block text-[#474551] hover:text-[#2e2877]">Instructor</a>}
-                <a href="#enrol" className="block font-semibold text-[#994704]">{isFree ? "Enrol for free" : "Enrol now"}</a>
+                {!isDraftPreview && <a href="#enrol" className="block font-semibold text-[#994704]">{isFree ? "Enrol for free" : "Enrol now"}</a>}
               </nav>
             </div>
           </aside>

@@ -305,7 +305,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
               {step < 3 ? <button onClick={nextStep} className="rounded bg-[#2e2877] px-5 py-2 text-sm font-semibold text-white">Continue</button> : <div className="flex flex-wrap gap-2"><button disabled={saving} onClick={() => void persist(false)} className="rounded border border-[#2e2877] bg-white px-4 py-2 text-sm font-semibold text-[#2e2877] disabled:opacity-50">{saving ? 'Saving…' : 'Save as draft'}</button><button disabled={saving || !tutorsReady} onClick={() => void persist(true)} className="rounded bg-[#994704] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Publishing…' : 'Publish programme'}</button></div>}
             </footer>
           </section>
-          {savedProgramme && schoolSlug && <div className="mt-4 text-right"><a href={`/${schoolSlug}/${savedProgramme.slug}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#2e2877] hover:underline">Preview programme page</a></div>}
+          {savedProgramme && schoolSlug && <div className="mt-4 text-right"><a href={`/${schoolSlug}/${savedProgramme.slug}${savedProgramme.is_published ? '' : `?preview=${savedProgramme.id}`}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#2e2877] hover:underline">Preview programme page</a></div>}
         </main>
       </div>
     </div>

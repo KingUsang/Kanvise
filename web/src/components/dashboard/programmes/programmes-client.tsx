@@ -177,7 +177,7 @@ export function ProgrammesClient() {
               </div>
               <div className="flex flex-wrap gap-2 p-4">
                 <Link href={`/dashboard/programmes/${programme.id}`} className="rounded bg-[#2e2877] px-3.5 py-2 text-xs font-semibold text-white">{programme.courses_count ? 'Manage' : 'Continue setup'}</Link>
-                {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}`} target="_blank" rel="noreferrer" className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Preview programme page</a>}
+                {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}${programme.is_published ? '' : `?preview=${programme.id}`}`} target="_blank" rel="noreferrer" className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Preview programme page</a>}
                 {schoolSlug && <button onClick={() => void copyLink(programme)} className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Copy enrolment link</button>}
                 {!programme.is_published && <button disabled={publishingId === programme.id} onClick={() => void publish(programme)} className="ml-auto rounded border border-[#994704] px-3.5 py-2 text-xs font-semibold text-[#994704] disabled:opacity-50">{publishingId === programme.id ? 'Publishing…' : 'Publish'}</button>}
                 <button disabled={deletingId === programme.id} onClick={() => void deleteProgramme(programme)} className={`${programme.is_published ? '' : 'ml-auto'} rounded border border-[#ba1a1a]/40 px-3.5 py-2 text-xs font-semibold text-[#ba1a1a] disabled:opacity-50`}>{deletingId === programme.id ? 'Deleting…' : 'Delete'}</button>
