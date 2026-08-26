@@ -178,7 +178,7 @@ export default function AssignmentsPage() {
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-semibold text-on-background">Create Assignment</h2>
           <p className="text-sm font-light text-on-surface-variant">
-            Set deadlines, add instructions, and attach study materials for your students.
+            Write the question or task, set a deadline, and optionally attach supporting material.
           </p>
         </div>
 
@@ -245,13 +245,13 @@ export default function AssignmentsPage() {
             {/* Description */}
             <div className="flex flex-col gap-2 flex-1 min-h-[160px]">
               <label className="text-xs font-semibold tracking-wider text-on-background" htmlFor="description">
-                Detailed Instructions
+                Assignment Question(s)
               </label>
               <textarea 
                 id="description" 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Explain what students should do, what to submit, and how their work will be marked."
+                placeholder="Paste or write the question(s) students must answer. For example: A ₦140,000 is shared between Abu, Kayode and Uche..."
                 className="w-full h-full resize-none bg-surface border border-outline-variant rounded px-3 py-2.5 text-base text-on-background focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-outline"
               />
             </div>
@@ -259,7 +259,7 @@ export default function AssignmentsPage() {
             {/* Attachment Dropzone */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold tracking-wider text-on-background">
-                Supporting Materials (Optional)
+                Supporting Material (Optional)
               </label>
               <div 
                 onDragOver={(e) => e.preventDefault()}
