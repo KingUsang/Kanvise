@@ -215,8 +215,8 @@ dashboardRouter.get('/student/progress', async c => {
         'mock_exam_version_id, offer:mock_access_offers(mock_exam_id, mock:mock_exams(id, title))'
       ).eq('student_id', user.id).is('revoked_at', null)
       if (entitlementError) throw entitlementError
-      const offers = (entitlements || []).map((item: any) => item.offer).filter(Boolean)
-      const mockIds = [...new Set(offers.map((offer: any) => offer.mock_exam_id).filter((mockId: unknown): mockId is string => typeof mockId === 'string'))]
+      const offers = (entitlements || []).map((item: any) => item.offer).filter(Boolean) as Array<{ mock_exam_id?: unknown; mock?: { title?: string | null } }>
+      const mockIds: string[] = [...new Set(offers.map(offer => offer.mock_exam_id).filter((mockId): mockId is string => typeof mockId === 'string'))]
       if (!mockIds.length) return { mocks: [], attempts: [] }
       const { data: attempts, error: attemptError } = await supabase.from('mock_attempts')
         .select('id, mock_exam_id, status, submitted_at, total_score, total_marks, correct_mcq_answers, total_mcq_questions')
