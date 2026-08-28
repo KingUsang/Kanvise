@@ -13,12 +13,7 @@ import {
 import { canReadQuestionBank } from "../domain/question-bank";
 import { createPresignedDownload } from "../storage/r2";
 import { REVIEWABLE_ATTEMPT_STATUSES } from "../domain/mock-results";
-import {
-  canTutorPublishMarketplace,
-  distributionRequiresCourse,
-  distributionUsesMarketplace,
-  parseMockDistributionMode,
-} from "../domain/mock-distribution";
+import { parseMockDistributionMode } from "../domain/mock-distribution";
 import {
   canCreateMockForAudience,
   parseMockAudienceScope,
@@ -72,13 +67,11 @@ async function tutorCanAccessCourse(user: any, courseId: string | null | undefin
   return !!data;
 }
 
-async function canManageMock(user: any, mock: { tutor_id?: string | null; course_id?: string | null; distribution_mode?: string | null; audience_scope?: string | null }) {
+async function canManageMock(user: any, mock: { tutor_id?: string | null; course_id?: string | null; audience_scope?: string | null }) {
   if (user.role === "admin") return true;
   if (mock.tutor_id !== user.id) return false;
-  const distribution = parseMockDistributionMode(mock.distribution_mode) || "centre";
   const audience = parseMockAudienceScope(mock.audience_scope ?? "course") || "course";
-  return (distribution === "marketplace" && audience === "marketplace")
-    || (audience === "course" && await tutorCanAccessCourse(user, mock.course_id));
+  return audience === "course" && await tutorCanAccessCourse(user, mock.course_id);
 }
 
 async function loadMockMetrics(mockIds: string[], schoolId: string) {
@@ -181,8 +174,7 @@ mocksRouter.get("/", requireTutorOrAdmin, async (c) => {
     const assignedCourseIds = new Set((assignments || []).map((assignment: any) => assignment.course_id));
     visibleMocks = visibleMocks.filter((mock: any) => {
       const audience = parseMockAudienceScope(mock.audience_scope ?? "course") || "course";
-      return (audience === "course" && assignedCourseIds.has(mock.course_id))
-        || (mock.tutor_id === user.id && distributionUsesMarketplace(parseMockDistributionMode(mock.distribution_mode) || "centre"));
+      return audience === "course" && assignedCourseIds.has(mock.course_id);
     });
   }
 
@@ -285,7 +277,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, title, status, course_id, tutor_id, distribution_mode, course:courses(name)")
+    .select("id, title, status, course_id, tutor_id, course:courses(name)")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock" }, 403);
@@ -370,7 +362,7 @@ mocksRouter.post("/:id/attempt-grants", requireTutorOrAdmin, async (c) => {
   if (!attemptId) return c.json({ error: "Choose a student attempt", code: "VALIDATION_ERROR" }, 400);
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, course_id, tutor_id, distribution_mode").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, course_id, tutor_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot manage this mock", code: "MOCK_ACCESS_DENIED" }, 403);
 
@@ -420,7 +412,7 @@ mocksRouter.get("/:id/questions", requireTutorOrAdmin, async (c) => {
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
   const mockId = c.req.param("id")!;
 
-  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
+  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found" }, 404);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock" }, 403);
@@ -475,7 +467,7 @@ mocksRouter.get("/:id/assembly", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   const mockId = c.req.param("id")!;
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, programme_id, delivery_mode, tutor_id, distribution_mode").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, status, course_id, programme_id, delivery_mode, tutor_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError) return mockDatabaseError(c, mockError, "Could not load mock assembly");
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock", code: "MOCK_ACCESS_DENIED" }, 403);
@@ -523,7 +515,7 @@ mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
   if (errors.length) return c.json({ error: "Check the mock sections", code: "VALIDATION_ERROR", details: errors }, 400);
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, programme_id, delivery_mode, tutor_id, distribution_mode").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, status, course_id, programme_id, delivery_mode, tutor_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError) return mockDatabaseError(c, mockError, "Could not check mock");
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited", code: "MOCK_NOT_DRAFT" }, 409);
@@ -565,7 +557,7 @@ mocksRouter.post("/:id/random-pool/preview", requireTutorOrAdmin, async (c) => {
   const bankId = typeof body.bank_id === "string" ? body.bank_id : "";
   if (!bankId) return c.json({ error: "Choose a question bank", code: "VALIDATION_ERROR" }, 400);
 
-  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
+  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock", code: "MOCK_ACCESS_DENIED" }, 403);
@@ -594,7 +586,7 @@ mocksRouter.post("/:id/archive", requireTutorOrAdmin, async (c) => {
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
 
   const mockId = c.req.param("id")!;
-  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id, distribution_mode")
+  const { data: mock } = await supabase.from("mock_exams").select("course_id, tutor_id")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found" }, 404);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot archive this mock" }, 403);
@@ -615,10 +607,7 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
   const { title, description, publish_at, time_limit_minutes } = body;
   const distributionMode = parseMockDistributionMode(body.distribution_mode ?? "centre");
   const deliveryMode = body.delivery_mode ?? "fixed";
-  const marketplaceOnly = distributionMode === "marketplace";
-  const audience = marketplaceOnly
-    ? { scope: "marketplace" as const, courseId: null, programmeId: null }
-    : validateCentreMockAudience(body);
+  const audience = validateCentreMockAudience(body);
   const courseId = "courseId" in audience ? audience.courseId : null;
   const programmeId = "programmeId" in audience ? audience.programmeId : null;
 
@@ -629,10 +618,10 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
     return c.json({ error: "Choose a valid mock delivery mode", code: "VALIDATION_ERROR" }, 400);
   }
   if ("error" in audience) return c.json({ error: audience.error, code: "INVALID_AUDIENCE" }, 400);
-  if (audience.scope !== "marketplace" && !canCreateMockForAudience(user.role, audience.scope)) {
+  if (!canCreateMockForAudience(user.role, audience.scope)) {
     return c.json({ error: "Only an admin can create programme-wide or centre-wide mocks", code: "MOCK_AUDIENCE_FORBIDDEN" }, 403);
   }
-  if (deliveryMode === "subject_combination" && (distributionMode !== "centre" || audience.scope !== "programme")) {
+  if (deliveryMode === "subject_combination" && audience.scope !== "programme") {
     return c.json({ error: "Adaptive JAMB mocks must be programme-wide centre mocks", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
   }
   const duration = Number(time_limit_minutes || 0);
@@ -665,7 +654,6 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
         programme_id: programmeId,
         audience_scope: audience.scope,
         delivery_mode: deliveryMode,
-        distribution_mode: distributionMode,
         title,
         description,
         status: "draft",
@@ -696,7 +684,7 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   // Verify mock exists and is draft
   const { data: existingMock, error: fetchError } = await supabase
     .from("mock_exams")
-    .select("status, tutor_id, course_id, programme_id, audience_scope, delivery_mode, distribution_mode, available_from, closes_at")
+    .select("status, tutor_id, course_id, programme_id, audience_scope, delivery_mode, available_from, closes_at")
     .eq("id", mockId)
     .eq("school_id", user.school_id)
     .single();
@@ -707,12 +695,9 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
     return c.json({ error: "Only draft mocks can be edited" }, 400);
   }
 
-  const distributionMode = parseMockDistributionMode(body.distribution_mode ?? existingMock.distribution_mode ?? "centre");
+  const distributionMode = parseMockDistributionMode(body.distribution_mode ?? "centre");
   const deliveryMode = body.delivery_mode ?? existingMock.delivery_mode ?? "fixed";
-  const marketplaceOnly = distributionMode === "marketplace";
-  const audience = marketplaceOnly
-    ? { scope: "marketplace" as const, courseId: null, programmeId: null }
-    : validateCentreMockAudience({
+  const audience = validateCentreMockAudience({
       audience_scope: body.audience_scope ?? existingMock.audience_scope ?? "course",
       course_id: body.course_id === undefined ? existingMock.course_id : body.course_id,
       programme_id: body.programme_id === undefined ? existingMock.programme_id : body.programme_id,
@@ -721,10 +706,10 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   if (deliveryMode !== "fixed" && deliveryMode !== "subject_combination") return c.json({ error: "Choose a valid mock delivery mode", code: "VALIDATION_ERROR" }, 400);
   if ("error" in audience) return c.json({ error: audience.error, code: "INVALID_AUDIENCE" }, 400);
   if (!(await canManageMock(user, existingMock))) return c.json({ error: "You cannot edit this mock", code: "MOCK_ACCESS_DENIED" }, 403);
-  if (audience.scope !== "marketplace" && !canCreateMockForAudience(user.role, audience.scope)) {
+  if (!canCreateMockForAudience(user.role, audience.scope)) {
     return c.json({ error: "Only an admin can create programme-wide or centre-wide mocks", code: "MOCK_AUDIENCE_FORBIDDEN" }, 403);
   }
-  if (deliveryMode === "subject_combination" && (distributionMode !== "centre" || audience.scope !== "programme")) {
+  if (deliveryMode === "subject_combination" && audience.scope !== "programme") {
     return c.json({ error: "Adaptive JAMB mocks must be programme-wide centre mocks", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
   }
 
@@ -759,7 +744,6 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
       programme_id: audience.programmeId,
       audience_scope: audience.scope,
       delivery_mode: deliveryMode,
-      distribution_mode: distributionMode,
       publish_at,
       time_limit_minutes: duration,
       ...settings.updates,
@@ -787,7 +771,7 @@ mocksRouter.post("/:id/questions", requireTutorOrAdmin, async (c) => {
     return c.json({ error: "Missing required fields" }, 400);
   }
 
-  const { data: mock } = await supabase.from("mock_exams").select("status, course_id, tutor_id, distribution_mode")
+  const { data: mock } = await supabase.from("mock_exams").select("status, course_id, tutor_id")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (!mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited" }, 409);
@@ -874,7 +858,7 @@ mocksRouter.put("/:id/questions", requireTutorOrAdmin, async (c) => {
   // Verify mock exists, is draft, and passes security constraints
   const { data: existingMock } = await supabase
     .from("mock_exams")
-    .select("status, tutor_id, course_id, distribution_mode")
+    .select("status, tutor_id, course_id")
     .eq("id", mockId)
     .eq("school_id", user.school_id)
     .single();
@@ -909,7 +893,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, tutor_id, distribution_mode, time_limit_minutes")
+    .select("id, status, course_id, tutor_id, time_limit_minutes")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be published" }, 409);
@@ -918,7 +902,6 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     return c.json({ error: "Time limit cannot be negative" }, 400);
   }
 
-  const distributionMode = parseMockDistributionMode(mock.distribution_mode) || "centre";
   let { count: sectionCount, error: sectionError } = await supabase.from("mock_sections")
     .select("id", { count: "exact", head: true }).eq("mock_exam_id", mockId).eq("school_id", user.school_id);
   if (sectionError) return mockDatabaseError(c, sectionError, "Failed to validate mock sections");
@@ -943,35 +926,6 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     sectionCount = 1;
   }
 
-  if (distributionUsesMarketplace(distributionMode) && !canTutorPublishMarketplace(user.role)) {
-    // Freeze the exact version the tutor is submitting. It remains unavailable
-    // publicly until a centre admin creates/approves its marketplace listing.
-    const submittedAt = new Date().toISOString();
-    const { data: versionResult, error: versionError } = await supabase.rpc("publish_versioned_mock", {
-      p_school_id: user.school_id,
-      p_mock_exam_id: mockId,
-      p_published_by: user.id,
-      p_published_at: submittedAt,
-    });
-    if (versionError) return mockDatabaseError(c, versionError, "Could not freeze this mock for approval");
-    const { data, error } = await supabase.from("mock_exams")
-      .update({
-        marketplace_approval_status: "pending",
-        marketplace_submitted_at: submittedAt,
-        marketplace_rejection_reason: null,
-        updated_at: submittedAt,
-      })
-      .eq("id", mockId).eq("school_id", user.school_id)
-      .select("id, marketplace_approval_status")
-      .single();
-    if (error) return mockDatabaseError(c, error, "Could not submit this mock for approval");
-    return c.json({
-      message: "Mock submitted for centre-admin approval",
-      data,
-      version: versionResult?.[0] || versionResult,
-    }, 202);
-  }
-
   const publishedAt = new Date().toISOString();
   const { data: versionResult, error: publishError } = await supabase.rpc("publish_versioned_mock", {
     p_school_id: user.school_id,
@@ -984,22 +938,8 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     .select("*, course:courses(name), programme:programmes(name)").eq("id", mockId).eq("school_id", user.school_id).single();
   if (error) return mockDatabaseError(c, error, "Mock was published but could not be reloaded");
 
-  if (distributionUsesMarketplace(distributionMode)) {
-    const { error: approvalError } = await supabase.from("mock_exams")
-      .update({
-        marketplace_approval_status: "approved",
-        marketplace_approved_at: publishedAt,
-        marketplace_approved_by: user.id,
-        marketplace_rejection_reason: null,
-      })
-      .eq("id", mockId).eq("school_id", user.school_id);
-    if (approvalError) return mockDatabaseError(c, approvalError, "Mock was published but marketplace approval could not be recorded");
-  }
-
   const publishedAudience = parseMockAudienceScope(data.audience_scope ?? "course") || "course";
-  const notification = publishedAudience === "marketplace"
-    ? { failures: [] }
-    : await notifyMockPublished({
+  const notification = await notifyMockPublished({
       id: data.id,
       schoolId: data.school_id,
       courseId: data.course_id,

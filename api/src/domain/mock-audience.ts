@@ -1,5 +1,5 @@
 export const CENTRE_MOCK_AUDIENCE_SCOPES = ['course', 'programme', 'school'] as const
-export const MOCK_AUDIENCE_SCOPES = [...CENTRE_MOCK_AUDIENCE_SCOPES, 'marketplace'] as const
+export const MOCK_AUDIENCE_SCOPES = CENTRE_MOCK_AUDIENCE_SCOPES
 
 export type CentreMockAudienceScope = typeof CENTRE_MOCK_AUDIENCE_SCOPES[number]
 export type MockAudienceScope = typeof MOCK_AUDIENCE_SCOPES[number]
@@ -20,7 +20,7 @@ export function validateCentreMockAudience(input: {
   programme_id: unknown
 }) {
   const scope = parseMockAudienceScope(input.audience_scope ?? 'course')
-  if (!scope || scope === 'marketplace') return { error: 'Choose a valid centre mock audience' } as const
+  if (!scope) return { error: 'Choose a valid centre mock audience' } as const
 
   const courseId = typeof input.course_id === 'string' && input.course_id.trim() ? input.course_id : null
   const programmeId = typeof input.programme_id === 'string' && input.programme_id.trim() ? input.programme_id : null

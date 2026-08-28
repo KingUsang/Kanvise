@@ -47,7 +47,8 @@ import { promosRouter } from "./routes/promos";
 import { questionBanksRouter } from "./routes/question-banks";
 import { studentMocksRouter } from "./routes/student-mocks";
 import { studentSettingsRouter } from "./routes/student-settings";
-import { marketplaceRouter } from "./routes/marketplace";
+import { mockAccessRouter, mockOfferAdminRouter } from "./routes/mock-access";
+import { studentMembershipsRouter } from "./routes/student-memberships";
 import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
 
@@ -66,6 +67,7 @@ app.route("/courses", courseAssignmentsRouter);
 app.route("/assignments", assignmentsRouter);
 app.route("/users", usersRouter);
 app.route("/mocks", mocksRouter);
+app.route("/mocks", mockOfferAdminRouter);
 app.route("/question-banks", questionBanksRouter);
 app.route("/enrolments", enrolmentsRouter);
 app.route("/payments", paymentsRouter);
@@ -86,7 +88,8 @@ if (isTelegramEnabled()) {
 // `/` caused its router-wide admin middleware to run for unrelated routes such as
 // `/students/me/settings`.
 app.route("/schools/me/promos", promosRouter);
-app.route("/", marketplaceRouter);
+app.route("/", mockAccessRouter);
+app.route("/", studentMembershipsRouter);
 
 // Waitlist Route
 app.get("/waitlist/count", async (c) => {

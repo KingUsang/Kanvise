@@ -10,7 +10,7 @@ export const dashboardRouter = new Hono<{ Variables: Variables }>()
 dashboardRouter.use('*', jwtVerificationMiddleware)
 dashboardRouter.use('*', profileResolutionMiddleware)
 dashboardRouter.use('*', async (c, next) => {
-  // Marketplace-only students have no school. Keep every staff/centre route
+  // Standalone-mock students have no school. Keep every staff/centre route
   // tenant-protected, but let their capability-aware home load.
   if (c.req.path === '/dashboard/student' || c.req.path === '/dashboard/student/progress') return next()
   return tenantMiddleware(c, next)
@@ -116,15 +116,15 @@ dashboardRouter.get('/student', async (c) => {
   if (!schoolId) {
     const [{ data: profile, error: profileError }, { count: entitlementCount, error: entitlementError }, { count: activeAttempts, error: attemptError }] = await Promise.all([
       supabase.from('user_profiles').select('first_name, last_name').eq('id', user.id).maybeSingle(),
-      supabase.from('mock_marketplace_entitlements').select('id', { count: 'exact', head: true }).eq('student_id', user.id).is('revoked_at', null),
-      supabase.from('mock_attempts').select('id', { count: 'exact', head: true }).eq('student_id', user.id).eq('access_source', 'marketplace_entitlement').eq('status', 'in_progress'),
+      (supabase as any).from('mock_entitlements').select('id', { count: 'exact', head: true }).eq('student_id', user.id).is('revoked_at', null),
+      supabase.from('mock_attempts').select('id', { count: 'exact', head: true }).eq('student_id', user.id).eq('access_source', 'entitlement').eq('status', 'in_progress'),
     ])
     if (profileError || entitlementError || attemptError) return c.json({ error: 'Failed to load student dashboard', code: 'DASHBOARD_LOAD_FAILED' }, 500)
     return c.json({ data: {
       student: { first_name: profile?.first_name || '', last_name: profile?.last_name || '' },
       school: null, course_count: 0, next_class: null, upcoming_classes: [], assignments_due: [], recent_updates: [],
       capabilities: { hasCentreLearning: false, hasMarketplaceAccess: (entitlementCount || 0) > 0 },
-      marketplace: { mocks_owned: entitlementCount || 0, attempts_in_progress: activeAttempts || 0 },
+      standalone_mocks: { mocks_owned: entitlementCount || 0, attempts_in_progress: activeAttempts || 0 },
     } })
   }
 
@@ -210,23 +210,23 @@ dashboardRouter.get('/student/progress', async c => {
   const user = c.get('user')
   if (user.role !== 'student') return c.json({ error: 'Student access only', code: 'INSUFFICIENT_ROLE' }, 403)
   try {
-    const loadMarketplaceProgress = async () => {
-      const { data: entitlements, error: entitlementError } = await supabase.from('mock_marketplace_entitlements').select(
-        'mock_version_id, listing:mock_marketplace_listings(source_mock_id, title)'
+    const loadStandaloneMockProgress = async () => {
+      const { data: entitlements, error: entitlementError } = await (supabase as any).from('mock_entitlements').select(
+        'mock_exam_version_id, offer:mock_access_offers(mock_exam_id, mock:mock_exams(id, title))'
       ).eq('student_id', user.id).is('revoked_at', null)
       if (entitlementError) throw entitlementError
-      const listings = (entitlements || []).map((item: any) => item.listing).filter(Boolean)
-      const mockIds = [...new Set(listings.map((listing: any) => listing.source_mock_id))]
+      const offers = (entitlements || []).map((item: any) => item.offer).filter(Boolean)
+      const mockIds = [...new Set(offers.map((offer: any) => offer.mock_exam_id))]
       if (!mockIds.length) return { mocks: [], attempts: [] }
       const { data: attempts, error: attemptError } = await supabase.from('mock_attempts')
         .select('id, mock_exam_id, status, submitted_at, total_score, total_marks, correct_mcq_answers, total_mcq_questions')
-        .eq('student_id', user.id).eq('access_source', 'marketplace_entitlement').in('mock_exam_id', mockIds)
+        .eq('student_id', user.id).eq('access_source', 'entitlement').in('mock_exam_id', mockIds)
       if (attemptError) throw attemptError
-      return { mocks: listings.map((listing: any) => ({ id: listing.source_mock_id, course_id: null, title: listing.title })), attempts: attempts || [] }
+      return { mocks: offers.map((offer: any) => ({ id: offer.mock_exam_id, course_id: null, title: offer.mock?.title || 'Mock' })), attempts: attempts || [] }
     }
     if (!user.school_id) {
-      const marketplace = await loadMarketplaceProgress()
-      return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], ...marketplace }) })
+      const standaloneMocks = await loadStandaloneMockProgress()
+      return c.json({ data: buildStudentProgress({ courses: [], classes: [], attendance: [], assignments: [], submissions: [], ...standaloneMocks }) })
     }
     const mockAudience = await loadStudentMockAudience(user)
     const courseIds = mockAudience.courseIds
@@ -246,18 +246,18 @@ dashboardRouter.get('/student/progress', async c => {
     ])
     if (courseError || classError || assignmentError || submissionError || mockError || attemptError) throw courseError || classError || assignmentError || submissionError || mockError || attemptError
     const classIds = (classes || []).map(item => item.id)
-    const [{ data: attendance, error: attendanceError }, marketplace] = await Promise.all([
+    const [{ data: attendance, error: attendanceError }, standaloneMocks] = await Promise.all([
       classIds.length
       ? await supabase.from('attendance_records').select('live_class_id').eq('school_id', user.school_id).eq('student_id', user.id).in('live_class_id', classIds)
       : Promise.resolve({ data: [], error: null }),
-      loadMarketplaceProgress(),
+      loadStandaloneMockProgress(),
     ])
     if (attendanceError) throw attendanceError
     return c.json({ data: buildStudentProgress({
       courses: courses || [], classes: classes || [], attendance: attendance || [],
       assignments: assignments || [], submissions: submissions || [],
-      mocks: [...(mocks || []).filter((mock) => studentCanAccessCentreMock(mock, mockAudience)), ...marketplace.mocks],
-      attempts: [...(attempts || []), ...marketplace.attempts],
+      mocks: [...(mocks || []).filter((mock) => studentCanAccessCentreMock(mock, mockAudience)), ...standaloneMocks.mocks],
+      attempts: [...(attempts || []), ...standaloneMocks.attempts],
     }) })
   } catch (error) {
     console.error('student_progress.load_failed', { studentId: user.id, error })

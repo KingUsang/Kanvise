@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 
 export type DueMock = {
   id: string; schoolId: string; courseId: string | null; programmeId: string | null
-  audienceScope: 'course' | 'programme' | 'school' | 'marketplace'; title: string; courseName: string
+  audienceScope: 'course' | 'programme' | 'school'; title: string; courseName: string
 }
 export type DueLiveClass = { id: string; schoolId: string; courseId: string; title: string; courseName: string; startsAt: string }
 export type DueAssignment = { id: string; schoolId: string; courseId: string; title: string; courseName: string; deadlineAt: string; recipientIds: string[] }
@@ -118,7 +118,7 @@ export const jobsRepository: JobsRepository = {
 }
 
 function toDueMock(mock: any): DueMock {
-  const audienceScope = ['course', 'programme', 'school', 'marketplace'].includes(mock.audience_scope)
+  const audienceScope = ['course', 'programme', 'school'].includes(mock.audience_scope)
     ? mock.audience_scope as DueMock['audienceScope']
     : 'course'
   return {

@@ -20,12 +20,11 @@ function dateTime(value: string | null) {
 
 function Card({ item, state }: { item: StudentMockCard; state: Tab }) {
   const href = state === 'in_progress' && item.attempt ? `/dashboard/student/mocks/attempt/${item.attempt.id}`
-    : state === 'completed' && item.attempt ? `/dashboard/student/mocks/result/${item.attempt.id}`
-      : item.source === 'marketplace' && item.marketplace_listing_id ? `/dashboard/student/mocks/marketplace/${item.marketplace_listing_id}` : `/dashboard/student/mocks/${item.id}`
+    : state === 'completed' && item.attempt ? `/dashboard/student/mocks/result/${item.attempt.id}` : `/dashboard/student/mocks/${item.id}`
   const action = state === 'available' ? 'View instructions' : state === 'in_progress' ? 'Continue mock'
     : state === 'completed' ? 'View result' : 'View details'
   return <article className="flex h-full flex-col rounded-2xl border border-[#e4dfda] bg-white p-5 shadow-[0_1px_2px_rgba(35,31,38,0.04)]">
-    <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-[#f0edff] px-3 py-1 text-[11px] font-semibold text-[#2e2877]">{item.source === 'marketplace' ? 'Marketplace mock' : item.course?.name || 'Subject'}</span>{state === 'completed' && <CheckCircle2 size={19} className="text-[#29724b]" />}</div>
+    <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-[#f0edff] px-3 py-1 text-[11px] font-semibold text-[#2e2877]">{item.course?.name || 'Subject'}</span>{state === 'completed' && <CheckCircle2 size={19} className="text-[#29724b]" />}</div>
     <h2 className="mt-4 text-lg font-semibold leading-6 text-[#29262f]">{item.title}</h2>
     {item.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#716c76]">{item.description}</p>}
     <div className="mt-5 grid grid-cols-2 gap-3 text-xs text-[#716c76]">

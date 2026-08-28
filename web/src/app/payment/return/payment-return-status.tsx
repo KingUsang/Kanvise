@@ -34,10 +34,9 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
           headers: { Authorization: `Bearer ${session.access_token}` },
           cache: "no-store",
         });
-        // Marketplace orders are a legacy fallback only. Centre programme
-        // payments are the normal Kanvise enrolment flow and must never be
-        // sent to marketplace purchases.
-        if (response.status === 404) response = await fetch(`${apiUrl}/marketplace/orders/${encodeURIComponent(reference)}`, {
+        // A reference can belong to a normal enrolment checkout or a direct
+        // mock order. Neither path creates the other kind of access.
+        if (response.status === 404) response = await fetch(`${apiUrl}/mock/orders/${encodeURIComponent(reference)}`, {
           headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store",
         });
         let body = await response.json();

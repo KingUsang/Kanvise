@@ -13,5 +13,5 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const data = await getStudentDashboard(session.access_token);
   const name = [data.student.first_name, data.student.last_name].filter(Boolean).join(" ") || "Student";
 
-  return <StudentShell studentName={name} schoolName={data.school?.name || "Kanvise Marketplace"} hasCentreLearning={data.capabilities?.hasCentreLearning !== false}>{children}</StudentShell>;
+  return <StudentShell studentName={name} schoolName={data.school?.name || "Kanvise"} hasCentreLearning={data.capabilities?.hasCentreLearning !== false}>{children}</StudentShell>;
 }

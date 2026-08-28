@@ -55,10 +55,9 @@ export async function POST(req: NextRequest) {
       });
 
       // A reference belongs to either an existing course/programme checkout or
-      // an immutable marketplace order. Both paths re-verify the transaction
-      // server-side; this fallback only chooses the correct entitlement ledger.
+      // a standalone mock order. Both paths re-verify server-side.
       if (confirmRes.status === 404) {
-        confirmRes = await fetch(`${apiUrl}/internal/payments/marketplace-confirm`, {
+        confirmRes = await fetch(`${apiUrl}/internal/payments/mock-confirm`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Backend confirmation failed", details: errText }, { status: 500 });
       }
 
-      console.log(`[Paystack Webhook] Successfully confirmed enrolment for reference: ${reference}`);
+      console.log(`[Paystack Webhook] Successfully confirmed payment for reference: ${reference}`);
     }
 
     // Always return 200 OK immediately to acknowledge receipt to Paystack

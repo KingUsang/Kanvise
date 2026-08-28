@@ -13,8 +13,8 @@ export const studentMocksRouter = new Hono<{ Variables: AppVariables }>()
 // need the question that owns a version, so the foreign-key hint is mandatory.
 export const studentQuestionVersionSelect = 'question:bank_questions!bank_question_versions_question_id_fkey(question_type)'
 
-// A marketplace learner has no centre, but can still own a valid attempt. Each
-// route below performs its own course/entitlement check; do not put the generic
+// A standalone-mock learner has no centre, but can still own a valid attempt.
+// Each route below performs its own course/entitlement check; do not put the generic
 // school-required middleware back on this router.
 // This router is mounted at `/` because it owns more than one public prefix.
 // Auth is attached to each endpoint below rather than router-wide middleware:
@@ -55,46 +55,6 @@ function availability(mock: any, now: Date) {
   if (mock.available_from && now < new Date(mock.available_from)) return 'upcoming'
   if (mock.closes_at && now >= new Date(mock.closes_at)) return 'closed'
   return 'open'
-}
-
-async function marketplaceMockGroups(user: any) {
-  const groups: Record<string, any[]> = { available: [], in_progress: [], upcoming: [], completed: [] }
-  const { data: entitlements, error } = await supabase.from('mock_marketplace_entitlements').select(`
-    id, attempts_granted, attempts_consumed, granted_at, expires_at,
-    listing:mock_marketplace_listings(id, source_mock_id, mock_version_id, title, short_description, available_from, closes_at,
-      duration_minutes, question_count, total_marks, calculator_mode, approval_status, publication_status, creator_school:schools!mock_marketplace_listings_creator_school_id_fkey(name))
-  `).eq('student_id', user.id).is('revoked_at', null).order('granted_at', { ascending: false })
-  if (error) throw error
-  const active = (entitlements || []).filter((item: any) => item.listing && (!item.expires_at || new Date(item.expires_at) > new Date()))
-  if (!active.length) return groups
-  const entitlementIds = active.map((item: any) => item.id)
-  const { data: attempts, error: attemptsError } = await supabase.from('mock_attempts')
-    .select('id, marketplace_entitlement_id, attempt_number, status, started_at, deadline_at, submitted_at, total_score, total_marks')
-    .eq('student_id', user.id).in('marketplace_entitlement_id', entitlementIds)
-  if (attemptsError) throw attemptsError
-  const now = new Date()
-  for (const entitlement of active as any[]) {
-    const listing = entitlement.listing
-    const listingAttempts = (attempts || []).filter((attempt: any) => attempt.marketplace_entitlement_id === entitlement.id)
-    const inProgress = listingAttempts.find((attempt: any) => attempt.status === 'in_progress' && (!attempt.deadline_at || now < new Date(attempt.deadline_at)))
-    const completed = [...listingAttempts].filter((attempt: any) => attempt.status !== 'in_progress').sort((a: any, b: any) => b.attempt_number - a.attempt_number)[0]
-    const item = {
-      id: listing.source_mock_id, marketplace_listing_id: listing.id, source: 'marketplace', title: listing.title,
-      description: listing.short_description, course_id: null, course: listing.creator_school ? { name: (listing.creator_school as any).name } : null,
-      available_from: listing.available_from, closes_at: listing.closes_at, time_limit_minutes: listing.duration_minutes,
-      calculator_mode: listing.calculator_mode, version: { id: listing.mock_version_id, total_questions: listing.question_count, total_marks: listing.total_marks },
-      attempts_used: entitlement.attempts_consumed, attempts_allowed: entitlement.attempts_granted,
-    }
-    if (inProgress) groups.in_progress.push({ ...item, attempt: inProgress })
-    else if (completed && entitlement.attempts_consumed >= entitlement.attempts_granted) groups.completed.push({ ...item, attempt: completed })
-    else if (listing.approval_status === 'approved' && listing.publication_status === 'listed') {
-      const state = availability(listing, now)
-      if (state === 'open') groups.available.push(item)
-      if (state === 'upcoming') groups.upcoming.push(item)
-      if (state === 'closed' && completed) groups.completed.push({ ...item, attempt: completed })
-    } else if (completed) groups.completed.push({ ...item, attempt: completed })
-  }
-  return groups
 }
 
 function seededOrder<T extends { id: string }>(items: T[], seed: string) {
@@ -185,7 +145,7 @@ async function loadAttempt(user: any, attemptId: string, lazyFinalize = true) {
 studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
   try {
-    if (!user.school_id) return c.json({ data: await marketplaceMockGroups(user), server_now: new Date().toISOString() })
+    if (!user.school_id) return c.json({ data: { available: [], in_progress: [], upcoming: [], completed: [] }, server_now: new Date().toISOString() })
     const audience = await loadStudentMockAudience(user)
     const { data: mocks, error } = await supabase.from('mock_exams')
       .select('id, title, description, course_id, programme_id, audience_scope, publish_at, available_from, closes_at, time_limit_minutes, calculator_mode, max_attempts, course:courses(name), programme:programmes(name), versions:mock_exam_versions(id, version_number, total_questions, total_marks)')
@@ -235,8 +195,6 @@ studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileR
         else if (completed) groups.completed.push({ ...item, attempt: completed })
       }
     }
-    const marketplaceGroups = await marketplaceMockGroups(user)
-    for (const key of Object.keys(groups)) groups[key].push(...marketplaceGroups[key])
     return c.json({ data: groups, server_now: now.toISOString() })
   } catch (error) {
     return attemptDatabaseError(c, error, 'Could not load your mocks')

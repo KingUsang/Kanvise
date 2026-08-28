@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, CalendarDays, ClipboardCheck, FileText, Home, LogOut, Menu, Search, Settings, ShoppingBag, UserRound, X } from "lucide-react";
+import { BookOpen, CalendarDays, ClipboardCheck, FileText, Home, LogOut, Menu, Settings, UserRound, X } from "lucide-react";
 import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { detachBrowserPushOnLogout } from "@/lib/push-notifications";
@@ -14,8 +14,7 @@ const navigation = [
   { label: "Mocks", href: "/dashboard/student/mocks", icon: BookOpen },
   { label: "Materials", href: "/dashboard/student/materials", icon: FileText },
   { label: "My progress", href: "/dashboard/student/progress", icon: UserRound },
-  { label: "Explore mocks", href: "/mocks", icon: Search },
-  { label: "Purchases", href: "/dashboard/student/purchases", icon: ShoppingBag },
+  { label: "My mocks", href: "/my-mocks", icon: BookOpen },
 ];
 
 export function StudentShell({ children, studentName, schoolName, hasCentreLearning = true }: { children: React.ReactNode; studentName: string; schoolName: string; hasCentreLearning?: boolean }) {

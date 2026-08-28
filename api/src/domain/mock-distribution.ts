@@ -1,6 +1,6 @@
-export type MockDistributionMode = 'centre' | 'marketplace' | 'both'
+export type MockDistributionMode = 'centre'
 
-const modes = new Set<MockDistributionMode>(['centre', 'marketplace', 'both'])
+const modes = new Set<MockDistributionMode>(['centre'])
 
 export function parseMockDistributionMode(value: unknown): MockDistributionMode | null {
   return typeof value === 'string' && modes.has(value as MockDistributionMode)
@@ -9,13 +9,5 @@ export function parseMockDistributionMode(value: unknown): MockDistributionMode 
 }
 
 export function distributionRequiresCourse(mode: MockDistributionMode) {
-  return mode === 'centre' || mode === 'both'
-}
-
-export function distributionUsesMarketplace(mode: MockDistributionMode) {
-  return mode === 'marketplace' || mode === 'both'
-}
-
-export function canTutorPublishMarketplace(role: string) {
-  return role === 'admin'
+  return mode === 'centre'
 }

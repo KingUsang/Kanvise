@@ -10,8 +10,6 @@ interface MockExam {
   id: string
   title: string
   status: 'draft' | 'published' | 'archived'
-  distribution_mode?: 'centre' | 'marketplace' | 'both'
-  marketplace_approval_status?: 'not_requested' | 'pending' | 'approved' | 'rejected'
   course?: { name: string }
   total_mcq_questions: number
   total_theory_questions: number
@@ -22,13 +20,6 @@ interface MockExam {
     attempts: number
     pending_grading: number
   }
-}
-
-type MarketplaceListing = {
-  id: string
-  source_mock_id: string
-  approval_status: 'draft' | 'submitted' | 'approved' | 'rejected'
-  publication_status: 'unlisted' | 'listed' | 'withdrawn' | 'suspended'
 }
 
 // Native date formatting helpers
@@ -67,8 +58,6 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
   const [apiError, setApiError] = useState<string | null>(null)
   const [mockToArchive, setMockToArchive] = useState<MockExam | null>(null)
   const [isArchiving, setIsArchiving] = useState(false)
-  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>([])
-  const [approvingListingId, setApprovingListingId] = useState<string | null>(null)
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
@@ -76,17 +65,10 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
     setIsLoading(true)
     setApiError(null)
     try {
-      const [res, listingsRes] = await Promise.all([
-        fetch(`${baseUrl}/mocks`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${baseUrl}/marketplace/creator/listings`, { headers: { Authorization: `Bearer ${token}` } }),
-      ])
+      const res = await fetch(`${baseUrl}/mocks`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) {
         const { data } = await res.json()
         setMocks(data || [])
-        if (listingsRes.ok) {
-          const listingsBody = await listingsRes.json()
-          setMarketplaceListings(listingsBody.data || [])
-        }
       } else {
         const errJson = await res.json()
         console.error('API Error:', errJson)
@@ -99,21 +81,6 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       setIsLoading(false)
     }
   }, [baseUrl, token])
-
-  const approveMarketplaceListing = async (listingId: string) => {
-    setApprovingListingId(listingId)
-    try {
-      const response = await fetch(`${baseUrl}/marketplace/creator/listings/${listingId}/approve`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` },
-      })
-      const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.error || 'Could not approve this public listing')
-      toast.success('Mock is now listed publicly')
-      await fetchMocks()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not approve this public listing')
-    } finally { setApprovingListingId(null) }
-  }
 
   useEffect(() => {
     fetchMocks()
@@ -286,7 +253,6 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
               ) : (
                 filteredMocks.map(mock => {
                   const totalQs = mock.total_mcq_questions + mock.total_theory_questions
-                  const marketplaceListing = marketplaceListings.find(listing => listing.source_mock_id === mock.id)
                   
                   return (
                     <tr key={mock.id} className={`hover:bg-[#f3f0f0] transition-colors group ${mock.status === 'archived' ? 'opacity-60' : ''}`}>
@@ -296,7 +262,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                             {mock.title}
                           </span>
                           <span className={`text-[14px] ${mock.status === 'archived' ? 'text-[#787582]' : 'text-[#474551]'}`}>
-                            {mock.course?.name || (mock.distribution_mode === 'marketplace' ? 'Public marketplace' : 'Subject unavailable')} • {mock.status === 'draft' ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago` : mock.status === 'archived' ? `Archived ${formatMMMdd(new Date(mock.updated_at))}` : `Created ${formatMMMdd(new Date(mock.created_at))}`}
+                            {mock.course?.name || 'General mock'} • {mock.status === 'draft' ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago` : mock.status === 'archived' ? `Archived ${formatMMMdd(new Date(mock.updated_at))}` : `Created ${formatMMMdd(new Date(mock.created_at))}`}
                           </span>
                         </div>
                       </td>
@@ -305,18 +271,13 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                         {mock.status === 'published' && (
                           <div className="flex flex-col items-start gap-2"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-[11px] font-semibold border border-[#A5D6A7]">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#4CAF50]"></span> Published
-                          </span>{marketplaceListing?.approval_status === 'submitted' && <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#fff4e5] text-[#8a4b08] text-[11px] font-semibold border border-[#f0c987]">Awaiting your marketplace approval</span>}{marketplaceListing?.publication_status === 'listed' && <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f0edff] text-[#2e2877] text-[11px] font-semibold border border-[#d9d3ef]">Live publicly</span>}</div>
+                          </span></div>
                         )}
                         {mock.status === 'draft' && (
                           <div className="flex flex-col gap-2 items-start">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0eded] text-[#474551] text-[11px] font-semibold border border-[#c8c5d2]">
                               <span className="w-1.5 h-1.5 rounded-full bg-[#787582]"></span> Draft
                             </span>
-                            {mock.marketplace_approval_status === 'pending' && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#fff4e5] text-[#8a4b08] text-[11px] font-semibold border border-[#f0c987]">
-                                <span className="material-symbols-outlined text-[14px]">schedule</span> Awaiting admin approval
-                              </span>
-                            )}
                             {mock.publish_at && new Date(mock.publish_at) > new Date() && (
                               <span className="flex items-center gap-1 text-[#2e2877] text-[11px] font-semibold mt-1">
                                 <span className="material-symbols-outlined text-[14px]">schedule</span> {formatDateTime(new Date(mock.publish_at))}
@@ -351,14 +312,14 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                       <td className="py-5 px-6 text-right align-top pt-6">
                         {mock.status === 'published' && (
                           <div className="flex items-center justify-end gap-3">
-                            {capabilities.isAdmin && marketplaceListing?.approval_status === 'submitted' && <button disabled={approvingListingId === marketplaceListing.id} onClick={() => void approveMarketplaceListing(marketplaceListing.id)} className="text-[#2e2877] text-[12px] font-semibold hover:underline disabled:opacity-50">{approvingListingId === marketplaceListing.id ? 'Publishing…' : 'Approve & list'}</button>}
+                            <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/offers`) }} className="text-[#2e2877] text-[12px] font-semibold hover:underline">Share & sell</button>
                             <button onClick={() => setMockToArchive(mock)} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704]">Archive</button>
                             <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#994704] text-[12px] font-semibold hover:underline">View Results</button>
                           </div>
                         )}
                         {mock.status === 'draft' && (
                           <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/builder?id=${mock.id}`) }} className="text-[#994704] text-[12px] font-semibold hover:underline">
-                            {capabilities.isAdmin && mock.marketplace_approval_status === 'pending' ? 'Review & publish' : 'Edit Mock'}
+                            Edit Mock
                           </button>
                         )}
                         {mock.status === 'archived' && (
