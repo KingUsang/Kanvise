@@ -74,7 +74,9 @@ mockAccessRouter.post('/mock/:offerId/claim', requireRole('student'), async c =>
 mockAccessRouter.post('/mock/:offerId/checkout', requireRole('student'), async c => {
   const user = c.get('user'); const idempotencyKey = c.req.header('Idempotency-Key') || ''
   if (!isUuid(idempotencyKey)) return c.json({ error: 'A valid Idempotency-Key header is required' }, 400)
-  if (!user.email) return c.json({ error: 'Your account needs an email address before checkout' }, 400)
+  const { data: studentProfile, error: profileError } = await supabase.from('user_profiles').select('email').eq('id', user.id).maybeSingle()
+  const studentEmail = studentProfile?.email || null
+  if (profileError || !studentEmail) return c.json({ error: 'Your account needs an email address before checkout' }, 400)
   const offer = await loadOffer(c.req.param('offerId')!)
   if (!offer || offer.access_mode !== 'paid' || !(await canUseOffer(user.id, offer))) return c.json({ error: 'This paid mock is not available to you' }, 409)
   const { data: entitlement } = await db.from('mock_entitlements').select('id').eq('student_id', user.id).eq('offer_id', offer.id).is('revoked_at', null).maybeSingle()
@@ -91,7 +93,7 @@ mockAccessRouter.post('/mock/:offerId/checkout', requireRole('student'), async c
   const { data: order, error } = await db.from('mock_orders').insert({ student_id: user.id, offer_id: offer.id, mock_exam_version_id: offer.mock_exam_version_id, paystack_reference: reference, idempotency_key: idempotencyKey, amount_kobo: offer.price_kobo }).select().single()
   if (error || !order) return c.json({ error: 'Could not start checkout' }, 500)
   try {
-    const response = await fetch('https://api.paystack.co/transaction/initialize', { method: 'POST', headers: { Authorization: `Bearer ${paystackSecret}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15_000), body: JSON.stringify({ email: user.email, amount: offer.price_kobo, currency: 'NGN', reference, callback_url: new URL('/payment/return', frontendUrl).toString(), metadata: JSON.stringify({ mock_order_id: order.id, offer_id: offer.id, student_id: user.id }) }) })
+    const response = await fetch('https://api.paystack.co/transaction/initialize', { method: 'POST', headers: { Authorization: `Bearer ${paystackSecret}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15_000), body: JSON.stringify({ email: studentEmail, amount: offer.price_kobo, currency: 'NGN', reference, callback_url: new URL('/payment/return', frontendUrl).toString(), metadata: JSON.stringify({ mock_order_id: order.id, offer_id: offer.id, student_id: user.id }) }) })
     const payload: any = await response.json(); if (!response.ok || !payload.status || !payload.data?.authorization_url) throw new Error('Invalid Paystack response')
     await db.from('mock_orders').update({ authorization_url: payload.data.authorization_url, updated_at: new Date().toISOString() }).eq('id', order.id)
     return c.json({ data: { order_id: order.id, reference, payment_url: payload.data.authorization_url } }, 201)
@@ -149,6 +151,7 @@ mockOfferAdminRouter.post('/:mockId/offers', async c => {
   const payload = { school_id: user.school_id, created_by: user.id, mock_exam_id: c.req.param('mockId')!, mock_exam_version_id: version.id, slug, audience_scope: body.audience_scope || 'public_link', course_id: body.course_id || null, programme_id: body.programme_id || null, access_mode: body.access_mode || 'free_claim', price_kobo: Number(body.price_kobo || 0), attempts_included: Number(body.attempts_included || 1), available_from: body.available_from || null, closes_at: body.closes_at || null, expires_after_days: body.expires_after_days || null, is_active: body.is_active !== false }
   const { data, error } = await db.from('mock_access_offers').insert(payload).select().single()
   if (error) return c.json({ error: error.code === '23505' ? 'That URL slug is already in use' : 'Could not create mock offer' }, 400)
-  if (payload.audience_scope === 'selected_students' && Array.isArray(body.student_ids) && body.student_ids.length) await db.from('mock_access_offer_students').insert(body.student_ids.map((student_id: string) => ({ offer_id: data.id, student_id })))
+  const studentIds = Array.isArray(body.student_ids) ? body.student_ids.filter((studentId: unknown): studentId is string => typeof studentId === 'string') : []
+  if (payload.audience_scope === 'selected_students' && studentIds.length) await db.from('mock_access_offer_students').insert(studentIds.map(student_id => ({ offer_id: data.id, student_id })))
   return c.json({ data }, 201)
 })
