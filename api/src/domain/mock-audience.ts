@@ -13,7 +13,7 @@ export function parseMockAudienceScope(value: unknown): MockAudienceScope | null
 }
 
 export function canCreateMockForAudience(role: string, scope: CentreMockAudienceScope) {
-  return role === 'admin' || scope === 'course'
+  return role === 'admin' || scope === 'course' || scope === 'direct_link'
 }
 
 export function validateCentreMockAudience(input: {
