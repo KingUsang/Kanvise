@@ -151,7 +151,7 @@ mockOfferAdminRouter.post('/:mockId/offers', async c => {
   const payload = { school_id: user.school_id, created_by: user.id, mock_exam_id: c.req.param('mockId')!, mock_exam_version_id: version.id, slug, audience_scope: body.audience_scope || 'public_link', course_id: body.course_id || null, programme_id: body.programme_id || null, access_mode: body.access_mode || 'free_claim', price_kobo: Number(body.price_kobo || 0), attempts_included: Number(body.attempts_included || 1), available_from: body.available_from || null, closes_at: body.closes_at || null, expires_after_days: body.expires_after_days || null, is_active: body.is_active !== false }
   const { data, error } = await db.from('mock_access_offers').insert(payload).select().single()
   if (error) return c.json({ error: error.code === '23505' ? 'That URL slug is already in use' : 'Could not create mock offer' }, 400)
-  const studentIds = Array.isArray(body.student_ids) ? body.student_ids.filter((studentId: unknown): studentId is string => typeof studentId === 'string') : []
+  const studentIds: string[] = Array.isArray(body.student_ids) ? body.student_ids.filter((studentId: unknown): studentId is string => typeof studentId === 'string') : []
   if (payload.audience_scope === 'selected_students' && studentIds.length) await db.from('mock_access_offer_students').insert(studentIds.map(student_id => ({ offer_id: data.id, student_id })))
   return c.json({ data }, 201)
 })
