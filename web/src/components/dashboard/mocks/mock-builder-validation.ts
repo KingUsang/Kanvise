@@ -4,6 +4,7 @@ export type DraftQuestionForReview = {
   marks: number;
   options: Array<{ option_text: string; is_correct: boolean }>;
   review_reasons?: string[];
+  course_id?: string | null;
 };
 
 export type PrePublishReview = {
@@ -17,8 +18,9 @@ type ReviewInput = {
   courseId: string;
   programmeId?: string;
   audienceScope?: "course" | "programme" | "school";
+  deliveryMode?: "fixed" | "subject_combination";
   questions: DraftQuestionForReview[];
-  selectedBankQuestions: Array<{ questionText: string; questionType: "mcq" | "theory"; marks: number }>;
+  selectedBankQuestions: Array<{ questionText: string; questionType: "mcq" | "theory"; marks: number; courseId?: string | null }>;
   isUntimed: boolean;
   timeLimit: number;
   publishMode: "immediate" | "scheduled";
@@ -44,6 +46,12 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
     if (audienceScope === "programme" && !input.programmeId) errors.push("Choose the programme this mock is for.");
   }
   if (totalQuestions === 0) errors.push("Add at least one question.");
+  if (input.deliveryMode === "subject_combination" && input.questions.some((question) => !question.course_id)) {
+    errors.push("Assign every question to a subject section.");
+  }
+  if (input.deliveryMode === "subject_combination" && input.selectedBankQuestions.some((question) => !question.courseId)) {
+    errors.push("Assign every question-bank item to a subject section.");
+  }
 
   input.questions.forEach((question, index) => {
     const label = `Question ${index + 1}`;

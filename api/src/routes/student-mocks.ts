@@ -458,7 +458,7 @@ studentMocksRouter.get('/attempts/:attemptId/results', jwtVerificationMiddleware
     const mode = attempt.mock_exam?.result_release_mode || 'score_only'
     const questionIds = await loadAttemptQuestionIds(attempt.id, attempt.school_id)
     const { data: questionTypes, error: typeError } = await supabase.from('mock_version_questions')
-      .select(`id, version:bank_question_versions(${studentQuestionVersionSelect})`)
+      .select(`id, section_title, marks, version:bank_question_versions(${studentQuestionVersionSelect})`)
       .eq('school_id', attempt.school_id).eq('mock_exam_version_id', attempt.mock_exam_version_id!).in('id', questionIds)
     if (typeError) throw typeError
     const theoryIds = (questionTypes || []).filter((item: any) => (item.version as any)?.question?.question_type === 'theory').map((item: any) => item.id)
@@ -469,6 +469,24 @@ studentMocksRouter.get('/attempts/:attemptId/results', jwtVerificationMiddleware
     if (theoryError) throw theoryError
     const scoredTheoryIds = new Set((theoryAnswers || []).filter((answer: any) => answer.tutor_score !== null).map((answer: any) => answer.mock_version_question_id))
     const theoryGradingPending = theoryIds.some((id: string) => !scoredTheoryIds.has(id))
+    const { data: scoredAnswers, error: scoredAnswerError } = await supabase.from('mock_answers')
+      .select('mock_version_question_id, selected_option_version_id, theory_answer_text, is_correct, tutor_score')
+      .eq('school_id', attempt.school_id).eq('attempt_id', attempt.id)
+    if (scoredAnswerError) throw scoredAnswerError
+    const scoredAnswerMap = new Map((scoredAnswers || []).map((answer: any) => [answer.mock_version_question_id, answer]))
+    const subjectBreakdownMap = new Map<string, { subject: string; score: number; total_marks: number; answered: number; questions: number }>()
+    for (const question of questionTypes || []) {
+      const subject = (question as any).section_title || 'Questions'
+      const current = subjectBreakdownMap.get(subject) || { subject, score: 0, total_marks: 0, answered: 0, questions: 0 }
+      const marks = Number((question as any).marks || 0)
+      const answer: any = scoredAnswerMap.get((question as any).id)
+      const questionType = ((question as any).version as any)?.question?.question_type
+      current.questions += 1
+      current.total_marks += marks
+      if (answer?.selected_option_version_id || answer?.theory_answer_text?.trim()) current.answered += 1
+      current.score += questionType === 'theory' ? Number(answer?.tutor_score || 0) : answer?.is_correct ? marks : 0
+      subjectBreakdownMap.set(subject, current)
+    }
     const correctionsReleased = mode === 'immediately_with_corrections'
       || (mode === 'after_close' && attempt.mock_exam?.closes_at && new Date() >= new Date(attempt.mock_exam.closes_at))
       || (mode === 'after_theory_grading' && attempt.status === 'fully_graded')
@@ -503,6 +521,7 @@ studentMocksRouter.get('/attempts/:attemptId/results', jwtVerificationMiddleware
       mock: attempt.mock_exam,
       corrections_released: correctionsReleased,
       theory_grading_pending: theoryGradingPending,
+      subject_breakdown: [...subjectBreakdownMap.values()],
       corrections,
     } })
   } catch (error) {

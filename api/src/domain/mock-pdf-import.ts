@@ -4,6 +4,7 @@ export type ImportedMockQuestion = {
   id: string;
   question_type: "mcq" | "theory";
   question_text: string;
+  subject_name?: string;
   marks: number;
   options: Array<{
     id: string;
@@ -28,6 +29,7 @@ const questionSchema = {
   properties: {
     question_type: { type: "string", enum: ["mcq", "theory"] },
     question_text: { type: "string" },
+    subject_name: { type: "string" },
     marks: { type: "number" },
     options: {
       type: "array",
@@ -49,7 +51,7 @@ const questionSchema = {
     equation_latex: { type: "string" },
     chemistry_latex: { type: "string" },
   },
-  required: ["question_type", "question_text", "marks", "options", "grading_rubric", "source_page", "review_reasons", "equation_latex", "chemistry_latex"],
+  required: ["question_type", "question_text", "subject_name", "marks", "options", "grading_rubric", "source_page", "review_reasons", "equation_latex", "chemistry_latex"],
 } as const;
 
 const responseSchema = {
@@ -102,6 +104,7 @@ function normalizeQuestions(value: any): ImportedMockQuestion[] {
       id: `pdf_${Date.now()}_${index}`,
       question_type: type,
       question_text: questionText,
+      subject_name: stringValue(question?.subject_name) || undefined,
       marks: Number.isFinite(Number(question?.marks)) && Number(question.marks) > 0 ? Number(question.marks) : 1,
       options: type === "mcq" ? options : [],
       content_blocks: scientificBlocks(question),
@@ -116,7 +119,7 @@ const extractionPrompt = `You are importing an examination document into Kanvise
 
 Extract every question exactly as it appears. The document may have any layout: scanned pages, columns, tables, diagrams, equations, mixed subjects, separate answer keys, or no answer key. Do not assume a fixed template and do not invent missing answers.
 
-Return one question per object. Use question_type=mcq only when the question has selectable answer options; otherwise use theory. Preserve mathematical and chemical notation in readable text. When a question or option contains a mathematical equation, put its LaTeX in equation_latex; when it contains a chemical formula or reaction, put mhchem/LaTeX in chemistry_latex. Use an empty string for whichever does not apply. If an image, diagram, table, or equation is important but cannot be represented faithfully as text, add a short review_reasons entry. If an answer is missing or uncertain, leave every option is_correct=false and add a review reason. Record the source page when the document makes it possible. Keep mixed subjects together as one mock; do not split or reject them.`;
+Return one question per object. Set subject_name to the document's subject heading for that question (for example Use of English, Physics, Chemistry or Mathematics). Carry the most recent clear subject heading across following pages until another heading begins. Use an empty subject_name and add a review reason when the subject cannot be determined confidently. Use question_type=mcq only when the question has selectable answer options; otherwise use theory. Preserve mathematical and chemical notation in readable text. When a question or option contains a mathematical equation, put its LaTeX in equation_latex; when it contains a chemical formula or reaction, put mhchem/LaTeX in chemistry_latex. Use an empty string for whichever does not apply. If an image, diagram, table, or equation is important but cannot be represented faithfully as text, add a short review_reasons entry. If an answer is missing or uncertain, leave every option is_correct=false and add a review reason. Record the source page when the document makes it possible. Keep mixed subjects together as one mock and label each question with its subject; do not reject mixed-subject documents.`;
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 

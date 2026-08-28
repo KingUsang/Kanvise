@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MockAttemptClient } from './mock-attempt-client'
 
@@ -58,5 +58,23 @@ describe('MockAttemptClient timeout', () => {
       'https://staging-api.kanvise.com/attempts/attempt-1/submit',
       expect.objectContaining({ method: 'POST' }),
     )
+  })
+
+  it('groups a multi-subject mock into subject navigation and local question numbers', () => {
+    render(<MockAttemptClient data={{
+      ...data,
+      attempt: { id: 'attempt-2', deadline_at: null },
+      questions: [
+        { ...data.questions[0], id: 'english-1', section_title: 'Use of English' },
+        { ...data.questions[0], id: 'physics-1', section_title: 'Physics', plain_text: 'What is velocity?' },
+        { ...data.questions[0], id: 'physics-2', section_title: 'Physics', plain_text: 'What is acceleration?' },
+      ],
+    }} token="token" />)
+
+    expect(screen.getByRole('navigation', { name: 'Mock subjects' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Physics/ }))
+    expect(screen.getByText('Physics · Question 1 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Physics question 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Physics question 2' })).toBeInTheDocument()
   })
 })

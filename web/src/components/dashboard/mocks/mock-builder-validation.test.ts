@@ -28,4 +28,29 @@ describe("buildPrePublishReview", () => {
     expect(review.errors).toContain("Question 1 needs at least two options.");
     expect(review.warnings).toContain("Question 1: Check the diagram");
   });
+
+  it("requires every authored multi-subject question to have a subject section", () => {
+    const review = buildPrePublishReview({
+      ...base,
+      audienceScope: "programme",
+      programmeId: "programme-1",
+      courseId: "",
+      deliveryMode: "subject_combination",
+      questions: [{ ...base.questions[0], course_id: null }],
+    });
+    expect(review.errors).toContain("Assign every question to a subject section.");
+  });
+
+  it("requires every reused multi-subject question to have a subject section", () => {
+    const review = buildPrePublishReview({
+      ...base,
+      audienceScope: "programme",
+      programmeId: "programme-1",
+      courseId: "",
+      deliveryMode: "subject_combination",
+      questions: [],
+      selectedBankQuestions: [{ questionText: "What is force?", questionType: "mcq", marks: 1, courseId: null }],
+    });
+    expect(review.errors).toContain("Assign every question-bank item to a subject section.");
+  });
 });
