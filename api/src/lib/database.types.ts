@@ -1200,6 +1200,7 @@ export type Database = {
           created_at: string
           description: string | null
           delivery_mode: string
+          direct_link_enabled: boolean
           distribution_mode: string
           id: string
           marketplace_approval_status: string
@@ -1233,6 +1234,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           delivery_mode?: string
+          direct_link_enabled?: boolean
           distribution_mode?: string
           id?: string
           marketplace_approval_status?: string
@@ -1266,6 +1268,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           delivery_mode?: string
+          direct_link_enabled?: boolean
           distribution_mode?: string
           id?: string
           marketplace_approval_status?: string

@@ -71,7 +71,7 @@ async function canManageMock(user: any, mock: { tutor_id?: string | null; course
   if (user.role === "admin") return true;
   if (mock.tutor_id !== user.id) return false;
   const audience = parseMockAudienceScope(mock.audience_scope ?? "course") || "course";
-  return audience === "course" && await tutorCanAccessCourse(user, mock.course_id);
+  return audience === "direct_link" || (audience === "course" && await tutorCanAccessCourse(user, mock.course_id));
 }
 
 async function loadMockMetrics(mockIds: string[], schoolId: string) {
@@ -523,14 +523,16 @@ mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
   if (mock.delivery_mode === "subject_combination") {
     const sections = body.sections as Array<{ course_id?: string | null }>;
     const courseIds = [...new Set(sections.map((section) => section.course_id).filter((id): id is string => typeof id === "string" && !!id))];
-    if (!mock.programme_id || courseIds.length !== sections.length) {
-      return c.json({ error: "Each adaptive mock section must represent one programme course", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
+    if (courseIds.length !== sections.length) {
+      return c.json({ error: "Each multi-subject section must represent one subject", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
     }
-    const { data: courses, error: courseError } = await supabase.from("courses").select("id")
-      .eq("school_id", user.school_id).eq("programme_id", mock.programme_id).in("id", courseIds);
+    let courseQuery = supabase.from("courses").select("id")
+      .eq("school_id", user.school_id).in("id", courseIds);
+    if (mock.programme_id) courseQuery = courseQuery.eq("programme_id", mock.programme_id);
+    const { data: courses, error: courseError } = await courseQuery;
     if (courseError) return mockDatabaseError(c, courseError, "Could not validate adaptive mock sections");
     if ((courses || []).length !== courseIds.length) {
-      return c.json({ error: "Adaptive mock sections must use courses from the target programme", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
+      return c.json({ error: "Multi-subject sections must use subjects available to this centre", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
     }
   }
 
@@ -621,8 +623,8 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
   if (!canCreateMockForAudience(user.role, audience.scope)) {
     return c.json({ error: "Only an admin can create programme-wide or centre-wide mocks", code: "MOCK_AUDIENCE_FORBIDDEN" }, 403);
   }
-  if (deliveryMode === "subject_combination" && audience.scope !== "programme") {
-    return c.json({ error: "Adaptive JAMB mocks must be programme-wide centre mocks", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
+  if (deliveryMode === "subject_combination" && !["combination", "direct_link"].includes(audience.scope)) {
+    return c.json({ error: "Multi-subject mocks must target matching subject combinations or use a direct link", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
   }
   const duration = Number(time_limit_minutes || 0);
   if (!Number.isInteger(duration) || duration < 0 || duration > 1440) {
@@ -654,6 +656,7 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
         programme_id: programmeId,
         audience_scope: audience.scope,
         delivery_mode: deliveryMode,
+        direct_link_enabled: body.direct_link_enabled === true,
         title,
         description,
         status: "draft",
@@ -709,8 +712,8 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   if (!canCreateMockForAudience(user.role, audience.scope)) {
     return c.json({ error: "Only an admin can create programme-wide or centre-wide mocks", code: "MOCK_AUDIENCE_FORBIDDEN" }, 403);
   }
-  if (deliveryMode === "subject_combination" && audience.scope !== "programme") {
-    return c.json({ error: "Adaptive JAMB mocks must be programme-wide centre mocks", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
+  if (deliveryMode === "subject_combination" && !["combination", "direct_link"].includes(audience.scope)) {
+    return c.json({ error: "Multi-subject mocks must target matching subject combinations or use a direct link", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
   }
 
   const duration = Number(time_limit_minutes || 0);
@@ -744,6 +747,7 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
       programme_id: audience.programmeId,
       audience_scope: audience.scope,
       delivery_mode: deliveryMode,
+      direct_link_enabled: body.direct_link_enabled === true,
       publish_at,
       time_limit_minutes: duration,
       ...settings.updates,
@@ -893,7 +897,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, tutor_id, time_limit_minutes")
+    .select("id, status, course_id, tutor_id, time_limit_minutes, direct_link_enabled")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be published" }, 409);
@@ -938,17 +942,33 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     .select("*, course:courses(name), programme:programmes(name)").eq("id", mockId).eq("school_id", user.school_id).single();
   if (error) return mockDatabaseError(c, error, "Mock was published but could not be reloaded");
 
+  // The access choice is made in the builder. When it includes a direct link,
+  // create a usable free link with the frozen version immediately; Share & sell
+  // can later add paid or additional links.
+  let directOffer: any = null;
+  if (mock.direct_link_enabled) {
+    const versionId = (versionResult as any)?.[0]?.mock_exam_version_id || (versionResult as any)?.mock_exam_version_id;
+    if (versionId) {
+      const slug = `mock-${data.id.slice(0, 8)}`;
+      const { data: offer, error: offerError } = await (supabase as any).from("mock_access_offers")
+        .insert({ school_id: user.school_id, created_by: user.id, mock_exam_id: data.id, mock_exam_version_id: versionId, slug, audience_scope: "public_link", access_mode: "free_claim", price_kobo: 0, attempts_included: data.max_attempts || 1, is_active: true })
+        .select().maybeSingle();
+      if (offerError && offerError.code !== "23505") return mockDatabaseError(c, offerError, "Mock was published but its direct link could not be created");
+      directOffer = offer;
+    }
+  }
+
   const publishedAudience = parseMockAudienceScope(data.audience_scope ?? "course") || "course";
-  const notification = await notifyMockPublished({
+  const notification = ['course', 'programme', 'school'].includes(publishedAudience) ? await notifyMockPublished({
       id: data.id,
       schoolId: data.school_id,
       courseId: data.course_id,
       programmeId: data.programme_id,
-      audienceScope: publishedAudience,
+      audienceScope: publishedAudience as 'course' | 'programme' | 'school',
       title: data.title,
       courseName: (publishedAudience === "programme" ? (data.programme as any)?.name : (data.course as any)?.name) || "Your tutorial centre",
       closesAt: data.closes_at,
-    });
+    }) : { failures: [] };
   if (notification.failures.length === 0) {
     await supabase.from("mock_exams").update({ notification_sent: true }).eq("id", data.id);
   }
@@ -957,6 +977,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     message: "Mock published successfully",
     data,
     version: versionResult?.[0] || versionResult,
+    direct_offer: directOffer,
     notification,
   });
 });

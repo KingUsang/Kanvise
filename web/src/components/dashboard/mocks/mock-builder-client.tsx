@@ -15,10 +15,9 @@ type Course = {
   programme_id?: string | null;
   is_published?: boolean;
 };
-type Programme = { id: string; name: string };
-type DistributionMode = "centre";
-type CentreAudienceScope = "course" | "programme" | "school";
+type CentreAudienceScope = "course" | "combination" | "direct_link" | "programme" | "school";
 type DeliveryMode = "fixed" | "subject_combination";
+type AccessMode = "centre" | "direct" | "both";
 type BuilderStep = "setup" | "subjects" | "questions" | "settings" | "review";
 const UNASSIGNED_SUBJECT_ID = "__unassigned__";
 
@@ -73,7 +72,6 @@ export function MockBuilderClient({ token }: { token: string }) {
   const isEditMode = !!editMockId;
   
   const [courses, setCourses] = useState<Course[]>([]);
-  const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -82,19 +80,11 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [courseId, setCourseId] = useState("");
-  const [programmeId, setProgrammeId] = useState("");
   const [audienceScope, setAudienceScope] = useState<CentreAudienceScope>("course");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("fixed");
+  const [accessMode, setAccessMode] = useState<AccessMode>("centre");
   const [builderStep, setBuilderStep] = useState<BuilderStep>("setup");
   const [activeSubjectCourseId, setActiveSubjectCourseId] = useState("");
-  const [distributionMode, setDistributionMode] = useState<DistributionMode>("centre");
-  // These fields are only relevant when the public marketplace audience is on.
-  // They deliberately live in this builder instead of a second creation flow.
-  const [marketplaceExam, setMarketplaceExam] = useState("");
-  const [marketplaceSubjects, setMarketplaceSubjects] = useState("");
-  const [marketplacePriceType, setMarketplacePriceType] = useState<"free" | "paid">("free");
-  const [marketplacePrice, setMarketplacePrice] = useState("");
-  const [marketplaceRightsConfirmed, setMarketplaceRightsConfirmed] = useState(false);
   
   const [publishMode, setPublishMode] = useState<"immediate" | "scheduled">("immediate");
   const [publishDate, setPublishDate] = useState("");
@@ -141,11 +131,10 @@ export function MockBuilderClient({ token }: { token: string }) {
     const fetchCourses = async () => {
       try {
         const headers = { "Authorization": `Bearer ${token}` };
-        const [res, banksRes, profileRes, programmesRes] = await Promise.all([
+        const [res, banksRes, profileRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, { headers }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`, { headers }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, { headers }),
         ]);
         if (!res.ok) {
           const body = await res.json().catch(() => null);
@@ -166,10 +155,6 @@ export function MockBuilderClient({ token }: { token: string }) {
         if (profileRes.ok) {
           const profile = await profileRes.json();
           setIsAdmin(profile?.user?.role === "admin");
-        }
-        if (programmesRes.ok) {
-          const { data } = await programmesRes.json();
-          setProgrammes(data || []);
         }
       } catch (err) {
         console.error("Failed to fetch courses", err);
@@ -204,10 +189,9 @@ export function MockBuilderClient({ token }: { token: string }) {
           setTitle(mockData.title || "");
           setDescription(mockData.description || "");
           setCourseId(mockData.course_id || "");
-          setProgrammeId(mockData.programme_id || "");
           setAudienceScope(mockData.audience_scope || "course");
           setDeliveryMode(mockData.delivery_mode || "fixed");
-          setDistributionMode(mockData.distribution_mode || "centre");
+          setAccessMode(mockData.audience_scope === "direct_link" ? "direct" : mockData.direct_link_enabled ? "both" : "centre");
           setCalculatorMode(mockData.calculator_mode || "none");
           setShuffleQuestions(!!mockData.shuffle_questions);
           setShuffleOptions(!!mockData.shuffle_options);
@@ -305,17 +289,13 @@ export function MockBuilderClient({ token }: { token: string }) {
     void load();
   }, [selectedBankId, showBankPicker, token]);
 
-  const changeDistributionMode = (value: DistributionMode) => {
-    setDistributionMode(value);
-    if (value !== "centre") setDeliveryMode("fixed");
+  const changeAccessMode = (value: AccessMode) => {
+    setAccessMode(value);
+    const isMulti = deliveryMode === "subject_combination";
+    setAudienceScope(value === "direct" ? "direct_link" : isMulti ? "combination" : "course");
   };
 
-  const changeAudienceScope = (value: CentreAudienceScope) => {
-    setAudienceScope(value);
-    if (value !== "programme") setDeliveryMode("fixed");
-  };
-
-  const programmeCourses = courses.filter((course) => !programmeId || course.programme_id === programmeId);
+  const programmeCourses = courses;
   const resolveImportedCourseId = (subjectName: string | undefined) => {
     const normalized = (subjectName || "").toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "");
     if (!normalized) return null;
@@ -574,10 +554,9 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const getPrePublishReview = () => buildPrePublishReview({
     title,
-    distributionMode,
     courseId,
-    programmeId,
     audienceScope,
+    accessMode,
     deliveryMode,
     questions,
     selectedBankQuestions,
@@ -588,11 +567,6 @@ export function MockBuilderClient({ token }: { token: string }) {
     publishTime,
     availableFrom,
     closesAt,
-    marketplaceExam,
-    marketplaceSubjects,
-    marketplacePriceType,
-    marketplacePrice,
-    marketplaceRightsConfirmed,
   });
 
   const requestPublish = () => {
@@ -602,8 +576,8 @@ export function MockBuilderClient({ token }: { token: string }) {
   };
 
   const handleSave = async (shouldPublish: boolean) => {
-    const hasCentreTarget = audienceScope === "school" || (audienceScope === "course" ? Boolean(courseId) : Boolean(programmeId));
-    if (!title || ((distributionMode === "centre" || distributionMode === "both") && !hasCentreTarget)) {
+    const hasCentreTarget = audienceScope === "combination" || (audienceScope === "course" && Boolean(courseId));
+    if (!title || ((accessMode === "centre" || accessMode === "both") && !hasCentreTarget)) {
       toast.error("Add a mock title and choose who should receive it");
       return;
     }
@@ -635,10 +609,10 @@ export function MockBuilderClient({ token }: { token: string }) {
         title,
         description,
         course_id: audienceScope === "course" ? courseId || null : null,
-        programme_id: audienceScope === "programme" ? programmeId || null : null,
+        programme_id: null,
         audience_scope: audienceScope,
         delivery_mode: deliveryMode,
-        distribution_mode: distributionMode,
+        direct_link_enabled: accessMode === "direct" || accessMode === "both",
         publish_at: finalPublishAt,
         time_limit_minutes: isUntimed ? 0 : timeLimit,
         calculator_mode: calculatorMode,
@@ -722,7 +696,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               questions: combined.filter((item: any) => item.course_id === course.id).map((item: any) => ({ question_id: item.question_id, question_version_id: item.question_version_id, marks_override: item.marks_override })),
               rules: [],
             }))
-          : [{ title: "Questions", course_id: audienceScope === "course" ? courseId || null : null, instructions: null, questions: combined, rules: [] }];
+          : [{ title: "Questions", course_id: courseId || null, instructions: null, questions: combined, rules: [] }];
         const replaceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -762,7 +736,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         : "Draft saved";
       toast.success(publicationMessage);
       startNavigationProgress();
-      router.push("/dashboard/mocks"); 
+      router.push((accessMode === "direct" || accessMode === "both") && shouldPublish && publishMode === "immediate" ? `/dashboard/mocks/${mockId}/offers` : "/dashboard/mocks");
     } catch (err) {
       console.error(err);
       toast.error("Could not save the mock", { description: err instanceof Error ? err.message : "Please try again." });
@@ -1239,9 +1213,8 @@ export function MockBuilderClient({ token }: { token: string }) {
       {builderStep === "subjects" && isMultiSubject && (
         <section className="mx-auto max-w-4xl">
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">These subjects come from the selected programme. Open any subject to add or import its questions separately.</p></div><button type="button" onClick={() => setBuilderStep("setup")} className="text-sm font-semibold text-[#2e2877]">Change programme</button></div>
-            {!programmeId ? <div className="mt-6 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center"><p className="font-semibold">Choose a programme first</p><p className="mt-1 text-sm text-[#716c76]">The programme determines which subject sections are available.</p><button type="button" onClick={() => setBuilderStep("setup")} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2.5 text-sm font-semibold text-white">Go to setup</button></div>
-              : programmeCourses.length === 0 ? <div className="mt-6 rounded-xl border border-[#efd0b8] bg-[#fff8f1] p-5 text-sm text-[#7a431d]">This programme has no subjects yet. Add subjects to the programme before building its mock.</div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Choose the exact subjects for this mock, then add or import each subject’s questions separately.</p></div><button type="button" onClick={() => setBuilderStep("setup")} className="text-sm font-semibold text-[#2e2877]">Change setup</button></div>
+            {programmeCourses.length === 0 ? <div className="mt-6 rounded-xl border border-[#efd0b8] bg-[#fff8f1] p-5 text-sm text-[#7a431d]">No subjects are available yet. Add subjects to the centre before building this mock.</div>
               : <div className="mt-6 grid gap-3 sm:grid-cols-2">{programmeCourses.map((course, index) => { const authoredCount = questions.filter((question) => question.course_id === course.id).length; const bankCount = selectedBankQuestions.filter((question) => question.courseId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="group rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]"><span className="flex items-start justify-between gap-3"><span><span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span><strong className="mt-1 block text-base text-[#1b1c1c]">{course.name}</strong></span><span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} questions</span></span><span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></span></button> })}</div>}
           </div>
         </section>
@@ -1270,10 +1243,10 @@ export function MockBuilderClient({ token }: { token: string }) {
                 <p className="text-sm font-semibold text-[#1b1c1c]">What are you building?</p>
                 <p className="mt-1 text-xs leading-5 text-[#787582]">Choose the structure first. It determines how questions are organised for you and for students.</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <button type="button" disabled={isReadOnly} onClick={() => setDeliveryMode("fixed")} className={`rounded-xl border p-4 text-left transition ${deliveryMode === "fixed" ? "border-[#2e2877] bg-[#f4f1ff] ring-1 ring-[#2e2877]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}>
+                  <button type="button" disabled={isReadOnly} onClick={() => { setDeliveryMode("fixed"); setAudienceScope(accessMode === "direct" ? "direct_link" : "course"); }} className={`rounded-xl border p-4 text-left transition ${deliveryMode === "fixed" ? "border-[#2e2877] bg-[#f4f1ff] ring-1 ring-[#2e2877]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}>
                     <span className="material-symbols-outlined text-2xl text-[#2e2877]">description</span><strong className="mt-2 block text-sm text-[#1b1c1c]">Single-subject mock</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">One continuous question set for a class or subject.</span>
                   </button>
-                  {isAdmin && <button type="button" disabled={isReadOnly} onClick={() => { setDeliveryMode("subject_combination"); setDistributionMode("centre"); setAudienceScope("programme"); }} className={`rounded-xl border p-4 text-left transition ${deliveryMode === "subject_combination" ? "border-[#994704] bg-[#fff7ef] ring-1 ring-[#994704]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}>
+                  {isAdmin && <button type="button" disabled={isReadOnly} onClick={() => { setDeliveryMode("subject_combination"); setAudienceScope(accessMode === "direct" ? "direct_link" : "combination"); }} className={`rounded-xl border p-4 text-left transition ${deliveryMode === "subject_combination" ? "border-[#994704] bg-[#fff7ef] ring-1 ring-[#994704]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}>
                     <span className="material-symbols-outlined text-2xl text-[#994704]">view_column</span><strong className="mt-2 block text-sm text-[#1b1c1c]">Multi-subject / JAMB mock</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Separate subject sections with their own questions and progress.</span>
                   </button>}
                 </div>
@@ -1300,20 +1273,16 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
 
               <div className="rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
-                <p className="text-[13px] font-semibold text-[#1b1c1c]">Who is this mock for?</p>
-                <p className="mt-1 text-xs leading-5 text-[#787582]">This controls access for enrolled centre students. After publishing, use Share & sell to create a separate direct link for anyone else.</p>
-              </div>
-
-              <div className="rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
-                  <p className="text-[13px] font-semibold text-[#1b1c1c]">Centre audience</p>
-                  <p className="mt-1 text-xs leading-5 text-[#787582]">Choose exactly who should receive this mock. Tutors can only create mocks for a subject they teach.</p>
+                  <p className="text-[13px] font-semibold text-[#1b1c1c]">Access</p>
+                  <p className="mt-1 text-xs leading-5 text-[#787582]">Keep it within the centre, create a link anyone can use, or do both. A free share link is created when you publish; you can later add a paid link in Share & sell.</p>
                   <div className="mt-3 space-y-2">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "course"} disabled={isReadOnly} onChange={() => changeAudienceScope("course")} className="text-[#2e2877]" />One subject</label>
-                    {isAdmin && <><label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "programme"} disabled={isReadOnly} onChange={() => changeAudienceScope("programme")} className="text-[#2e2877]" />One programme</label><label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={audienceScope === "school"} disabled={isReadOnly} onChange={() => changeAudienceScope("school")} className="text-[#2e2877]" />Every active student in this centre</label></>}
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "centre"} disabled={isReadOnly} onChange={() => changeAccessMode("centre")} className="text-[#2e2877]" />Matching centre students only</label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "direct"} disabled={isReadOnly} onChange={() => changeAccessMode("direct")} className="text-[#2e2877]" />Direct link only</label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "both"} disabled={isReadOnly} onChange={() => changeAccessMode("both")} className="text-[#2e2877]" />Matching centre students + direct link</label>
                   </div>
               </div>
 
-              {audienceScope === "course" && <div>
+              {deliveryMode === "fixed" && accessMode !== "direct" && <div>
                 <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Programme subject</label>
                 <select 
                   value={courseId}
@@ -1337,15 +1306,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                 )}
               </div>}
 
-              {audienceScope === "programme" && <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Programme</label>
-                <select value={programmeId} disabled={isReadOnly} onChange={(e) => setProgrammeId(e.target.value)} className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]">
-                  <option value="">Select a programme</option>
-                  {programmes.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}
-                </select>
-              </div>}
-
-              {deliveryMode === "subject_combination" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm leading-6 text-[#474551]"><strong className="block text-[#2e2877]">Multi-subject structure selected</strong>Choose the programme above, then use the Subjects step to review its sections before adding questions.</div>}
+              {deliveryMode === "subject_combination" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm leading-6 text-[#474551]"><strong className="block text-[#2e2877]">Multi-subject structure selected</strong>In the Subjects step, choose the exact subject sections and add their questions separately. Centre students only see it when they take every selected subject.</div>}
               </>}
 
               {builderStep === "settings" && <>

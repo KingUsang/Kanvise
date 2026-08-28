@@ -163,7 +163,7 @@ dashboardRouter.get('/student', async (c) => {
       .eq('school_id', schoolId).eq('student_id', user.id),
     courseIds.length ? supabase.from('notes').select('id, course_id, title, file_type, created_at')
       .eq('school_id', schoolId).in('course_id', courseIds).order('created_at', { ascending: false }).limit(6) : empty,
-    supabase.from('mock_exams').select('id, course_id, programme_id, audience_scope, title, publish_at, created_at, time_limit_minutes, course:courses(name), programme:programmes(name)')
+    supabase.from('mock_exams').select('id, course_id, programme_id, audience_scope, title, publish_at, created_at, time_limit_minutes, course:courses(name), programme:programmes(name), sections:mock_sections(course_id)')
       .eq('school_id', schoolId).eq('status', 'published')
       .order('created_at', { ascending: false }).limit(6),
     supabase.from('mock_attempts').select('mock_exam_id, status, submitted_at, mcq_score')

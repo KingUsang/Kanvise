@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 
 export type DueMock = {
   id: string; schoolId: string; courseId: string | null; programmeId: string | null
-  audienceScope: 'course' | 'programme' | 'school'; title: string; courseName: string
+  audienceScope: 'course' | 'programme' | 'school' | 'combination' | 'direct_link'; title: string; courseName: string
 }
 export type DueLiveClass = { id: string; schoolId: string; courseId: string; title: string; courseName: string; startsAt: string }
 export type DueAssignment = { id: string; schoolId: string; courseId: string; title: string; courseName: string; deadlineAt: string; recipientIds: string[] }
@@ -18,7 +18,7 @@ export type JobsRepository = {
 export const jobsRepository: JobsRepository = {
   async claimDueMocks(now, limit) {
     const { data: candidates, error } = await supabase.from('mock_exams')
-      .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, course:courses(name), programme:programmes(name)')
+      .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, direct_link_enabled, course:courses(name), programme:programmes(name)')
       .in('status', ['draft', 'published'])
       .eq('notification_sent', false)
       .not('publish_at', 'is', null)
@@ -30,6 +30,7 @@ export const jobsRepository: JobsRepository = {
     const claimed: DueMock[] = []
     for (const candidate of candidates || []) {
       if (candidate.status === 'published') {
+        await ensureScheduledDirectLink(candidate)
         claimed.push(toDueMock(candidate))
         continue
       }
@@ -45,6 +46,7 @@ export const jobsRepository: JobsRepository = {
           p_published_at: now.toISOString(),
         })
         if (publishError) throw publishError
+        await ensureScheduledDirectLink(candidate)
         claimed.push(toDueMock(candidate))
         continue
       }
@@ -117,8 +119,21 @@ export const jobsRepository: JobsRepository = {
   },
 }
 
+async function ensureScheduledDirectLink(mock: any) {
+  if (!mock.direct_link_enabled) return
+  const { data: version, error: versionError } = await supabase.from('mock_exam_versions').select('id')
+    .eq('school_id', mock.school_id).eq('mock_exam_id', mock.id).order('version_number', { ascending: false }).limit(1).maybeSingle()
+  if (versionError || !version) throw versionError || new Error('Published mock version not found')
+  const { error } = await (supabase as any).from('mock_access_offers').insert({
+    school_id: mock.school_id, created_by: mock.tutor_id, mock_exam_id: mock.id, mock_exam_version_id: version.id,
+    slug: `mock-${mock.id.slice(0, 8)}`, audience_scope: 'public_link', access_mode: 'free_claim',
+    price_kobo: 0, attempts_included: 1, is_active: true,
+  })
+  if (error && error.code !== '23505') throw error
+}
+
 function toDueMock(mock: any): DueMock {
-  const audienceScope = ['course', 'programme', 'school'].includes(mock.audience_scope)
+  const audienceScope = ['course', 'programme', 'school', 'combination', 'direct_link'].includes(mock.audience_scope)
     ? mock.audience_scope as DueMock['audienceScope']
     : 'course'
   return {

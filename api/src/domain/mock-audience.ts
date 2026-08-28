@@ -1,4 +1,6 @@
-export const CENTRE_MOCK_AUDIENCE_SCOPES = ['course', 'programme', 'school'] as const
+// Course is the normal single-subject centre audience. Combination requires a
+// learner to have every section subject. Direct-link mocks have no centre target.
+export const CENTRE_MOCK_AUDIENCE_SCOPES = ['course', 'combination', 'direct_link', 'programme', 'school'] as const
 export const MOCK_AUDIENCE_SCOPES = CENTRE_MOCK_AUDIENCE_SCOPES
 
 export type CentreMockAudienceScope = typeof CENTRE_MOCK_AUDIENCE_SCOPES[number]
@@ -33,10 +35,15 @@ export function validateCentreMockAudience(input: {
   if (scope === 'school' && (courseId || programmeId)) {
     return { error: 'Centre-wide mocks cannot also target a course or programme' } as const
   }
+  if ((scope === 'combination' || scope === 'direct_link') && (courseId || programmeId)) {
+    return { error: 'This mock does not need a programme or subject target' } as const
+  }
   return { scope, courseId, programmeId } as const
 }
 
 export function audienceLabel(scope: CentreMockAudienceScope, name?: string | null) {
+  if (scope === 'direct_link') return 'Direct link only'
+  if (scope === 'combination') return 'Matching subject combination'
   if (scope === 'school') return 'Entire centre'
   return name || (scope === 'programme' ? 'Programme' : 'Course')
 }

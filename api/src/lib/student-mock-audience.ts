@@ -20,9 +20,11 @@ export async function loadStudentMockAudience(user: { id: string; school_id?: st
   }
 }
 
-export function studentCanAccessCentreMock(mock: { audience_scope?: string | null; course_id?: string | null; programme_id?: string | null }, audience: StudentMockAudience) {
+export function studentCanAccessCentreMock(mock: { audience_scope?: string | null; course_id?: string | null; programme_id?: string | null; sections?: Array<{ course_id?: string | null }> | null }, audience: StudentMockAudience) {
   const scope = parseMockAudienceScope(mock.audience_scope ?? 'course') || 'course'
   return (scope === 'course' && typeof mock.course_id === 'string' && audience.courseIds.includes(mock.course_id))
+    || (scope === 'combination' && (mock.sections || []).length > 0
+      && (mock.sections || []).every(section => typeof section.course_id === 'string' && audience.courseIds.includes(section.course_id)))
     || (scope === 'programme' && typeof mock.programme_id === 'string' && audience.programmeIds.includes(mock.programme_id))
     || scope === 'school'
 }

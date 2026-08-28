@@ -44,7 +44,7 @@ function attemptDatabaseError(c: any, error: any, fallback: string) {
 async function accessibleMock(user: any, mockId: string) {
   if (!user.school_id) return null
   const { data, error } = await supabase.from('mock_exams')
-    .select('*, course:courses(id, name)')
+    .select('*, course:courses(id, name), sections:mock_sections(course_id)')
     .eq('id', mockId).eq('school_id', user.school_id).eq('status', 'published').maybeSingle()
   if (error) throw error
   if (!data) return null
@@ -148,7 +148,7 @@ studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileR
     if (!user.school_id) return c.json({ data: { available: [], in_progress: [], upcoming: [], completed: [] }, server_now: new Date().toISOString() })
     const audience = await loadStudentMockAudience(user)
     const { data: mocks, error } = await supabase.from('mock_exams')
-      .select('id, title, description, course_id, programme_id, audience_scope, publish_at, available_from, closes_at, time_limit_minutes, calculator_mode, max_attempts, course:courses(name), programme:programmes(name), versions:mock_exam_versions(id, version_number, total_questions, total_marks)')
+      .select('id, title, description, course_id, programme_id, audience_scope, publish_at, available_from, closes_at, time_limit_minutes, calculator_mode, max_attempts, course:courses(name), programme:programmes(name), sections:mock_sections(course_id), versions:mock_exam_versions(id, version_number, total_questions, total_marks)')
       .eq('school_id', user.school_id).eq('status', 'published')
       .order('available_from', { ascending: true, nullsFirst: true })
     if (error) throw error
@@ -224,8 +224,7 @@ studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, pr
     }
     const extra = (grants || []).reduce((sum: number, grant: any) => sum + grant.additional_attempts, 0)
     let subjectCombination: any = null
-    if (mock.delivery_mode === 'subject_combination') {
-      if (!mock.programme_id) return c.json({ error: 'This adaptive mock needs a programme', code: 'MOCK_CONFIGURATION_INVALID' }, 409)
+    if (mock.delivery_mode === 'subject_combination' && mock.programme_id) {
       const client = supabase as any
       const [{ data: courses, error: courseError }, { data: selected, error: selectionError }] = await Promise.all([
         supabase.from('courses').select('id, name').eq('school_id', user.school_id!).eq('programme_id', mock.programme_id).eq('is_published', true).order('name'),

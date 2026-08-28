@@ -14,10 +14,10 @@ export type PrePublishReview = {
 
 type ReviewInput = {
   title: string;
-  distributionMode: "centre" | "marketplace" | "both";
+  accessMode: "centre" | "direct" | "both";
   courseId: string;
   programmeId?: string;
-  audienceScope?: "course" | "programme" | "school";
+  audienceScope?: "course" | "combination" | "direct_link" | "programme" | "school";
   deliveryMode?: "fixed" | "subject_combination";
   questions: DraftQuestionForReview[];
   selectedBankQuestions: Array<{ questionText: string; questionType: "mcq" | "theory"; marks: number; courseId?: string | null }>;
@@ -28,11 +28,6 @@ type ReviewInput = {
   publishTime: string;
   availableFrom: string;
   closesAt: string;
-  marketplaceExam: string;
-  marketplaceSubjects: string;
-  marketplacePriceType: "free" | "paid";
-  marketplacePrice: string;
-  marketplaceRightsConfirmed: boolean;
 };
 
 export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
@@ -41,9 +36,8 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
   const audienceScope = input.audienceScope || "course";
   const totalQuestions = input.questions.length + input.selectedBankQuestions.length;
   if (!input.title.trim()) errors.push("Add a title for the mock.");
-  if (input.distributionMode === "centre" || input.distributionMode === "both") {
+  if (input.accessMode === "centre" || input.accessMode === "both") {
     if (audienceScope === "course" && !input.courseId) errors.push("Choose the subject this mock is for.");
-    if (audienceScope === "programme" && !input.programmeId) errors.push("Choose the programme this mock is for.");
   }
   if (totalQuestions === 0) errors.push("Add at least one question.");
   if (input.deliveryMode === "subject_combination" && input.questions.some((question) => !question.course_id)) {
@@ -81,12 +75,5 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
   }
   if (input.availableFrom && input.closesAt && new Date(input.closesAt) <= new Date(input.availableFrom)) errors.push("Closing time must be after the opening time.");
 
-  if (input.distributionMode === "marketplace" || input.distributionMode === "both") {
-    if (!input.marketplaceExam.trim()) errors.push("Add the exam or category for the public listing.");
-    if (!input.marketplaceSubjects.trim()) errors.push("Add at least one subject for the public listing.");
-    if (!input.marketplaceRightsConfirmed) errors.push("Confirm that you have the right to publish these questions publicly.");
-    if (input.marketplacePriceType === "paid" && (!Number.isFinite(Number(input.marketplacePrice)) || Number(input.marketplacePrice) < 50)) errors.push("Set a public price of at least ₦50, or make the mock free.");
-    if (!input.title.trim() || !input.marketplaceExam.trim()) warnings.push("Students will use the title and exam category to decide whether this mock is for them.");
-  }
   return { errors: [...new Set(errors)], warnings: [...new Set(warnings)] };
 }

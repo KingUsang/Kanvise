@@ -30,6 +30,13 @@ export async function runMockPublicationJob(now = new Date(), dependencies = def
   let failures = 0
   for (const mock of mocks) {
     try {
+      // Direct links have no centre recipients. Combination recipients are
+      // resolved at dashboard access time, so never blast this to a whole
+      // programme while a precise notification query is absent.
+      if (mock.audienceScope === 'direct_link' || mock.audienceScope === 'combination') {
+        await dependencies.repository.markMockPublicationNotified(mock.id)
+        continue
+      }
       const delivery = await dependencies.notifyMock({
         id: mock.id,
         schoolId: mock.schoolId,
