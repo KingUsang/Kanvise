@@ -515,7 +515,7 @@ mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
   if (errors.length) return c.json({ error: "Check the mock sections", code: "VALIDATION_ERROR", details: errors }, 400);
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, programme_id, delivery_mode, tutor_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, status, course_id, programme_id, audience_scope, delivery_mode, tutor_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError) return mockDatabaseError(c, mockError, "Could not check mock");
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited", code: "MOCK_NOT_DRAFT" }, 409);
