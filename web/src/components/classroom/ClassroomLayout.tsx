@@ -37,9 +37,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
-  const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(
-    () => (isHost && typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches ? "participants" : null)
-  );
+  const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
@@ -256,7 +254,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
                   ${openSidebar === "participants" ? "bg-white text-[#180d62] shadow-sm" : "text-[#787582] hover:text-[#180d62]"}`}
               >
                 <Users size={13} />
-                People ({participants.length})
+                People
               </button>
             </div>
             <button
@@ -282,13 +280,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
 
       {/* ── BOTTOM TOOLBAR (Solid, Pinned) ─────────── */}
       <footer className="flex-shrink-0 h-16 md:h-[80px] bg-white border-t border-[#e4e2e1] flex items-center justify-between px-2 sm:px-4 md:px-6 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
-        {/* Left: Participant count */}
-        <div className="flex items-center gap-3 flex-1">
-          <div className="hidden md:flex items-center gap-1.5 text-[#787582] text-[13px] font-medium bg-[#f5f3f2] px-3 py-2 rounded-lg border border-[#e4e2e1]">
-            <Users size={15} />
-            <span>{participants.length} Participants</span>
-          </div>
-        </div>
+        <div className="flex-1" />
 
         {/* Centre: Media Controls */}
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">

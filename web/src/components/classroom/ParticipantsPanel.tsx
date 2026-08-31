@@ -90,7 +90,7 @@ export default function ParticipantsPanel({ isHost, classId }: { isHost: boolean
 
         <div className="p-4">
           <p className="text-[11px] font-bold text-[#787582] uppercase tracking-wider mb-3">
-            In this class ({participants.length})
+            Everyone in this class
           </p>
 
           {participants.length === 0 ? (
