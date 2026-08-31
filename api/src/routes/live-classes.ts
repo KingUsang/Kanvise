@@ -33,6 +33,21 @@ function getRoomService() {
   return new RoomServiceClient(httpUrl, apiKey, apiSecret)
 }
 
+async function getParticipantDisplayName(user: { id: string; first_name?: string; last_name?: string; kanvise_user_id?: string }, fallback: string) {
+  const fromClaims = `${user.first_name || ''} ${user.last_name || ''}`.trim()
+  if (fromClaims) return fromClaims
+
+  // Auth claims intentionally contain only trusted authorisation data. Names
+  // belong to the canonical profile, so resolve them here for LiveKit's public
+  // participant label instead of showing an internal Kanvise ID.
+  const { data } = await supabase.from('user_profiles')
+    .select('first_name, last_name')
+    .eq('id', user.id)
+    .maybeSingle()
+  const fromProfile = `${data?.first_name || ''} ${data?.last_name || ''}`.trim()
+  return fromProfile || user.kanvise_user_id || fallback
+}
+
 async function generateToken(
   identity: string,
   name: string,
@@ -338,7 +353,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   if (liveClass.status === 'live') {
     // If the tutor refreshes the page, the class is already live. Just let them back in!
     const roomName = liveClass.livekit_room_name || `kanvise-class-${id}`
-    const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Tutor'
+    const displayName = await getParticipantDisplayName(user, 'Tutor')
     const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
     const { wsUrl } = getLiveKitConfig()
     return c.json({ data: {
@@ -378,7 +393,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     return c.json({ error: 'Could not start the class', code: 'CLASS_START_FAILED' }, 500)
   }
 
-  const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Tutor'
+  const displayName = await getParticipantDisplayName(user, 'Tutor')
   const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
   const { wsUrl } = getLiveKitConfig()
 
@@ -423,7 +438,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
   if (user.role === 'tutor' && !isHost) {
     return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
   }
-  const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.kanvise_user_id || 'Participant'
+  const displayName = await getParticipantDisplayName(user, 'Participant')
   const token = await generateToken(
     user.id,
     displayName,
