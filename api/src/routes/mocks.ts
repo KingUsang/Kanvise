@@ -467,7 +467,7 @@ mocksRouter.get("/:id/assembly", requireTutorOrAdmin, async (c) => {
   const user = c.get("user");
   const mockId = c.req.param("id")!;
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, programme_id, delivery_mode, tutor_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
+    .select("id, status, course_id, programme_id, audience_scope, delivery_mode, tutor_id").eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError) return mockDatabaseError(c, mockError, "Could not load mock assembly");
   if (!mock) return c.json({ error: "Mock not found", code: "MOCK_NOT_FOUND" }, 404);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock", code: "MOCK_ACCESS_DENIED" }, 403);
@@ -521,18 +521,21 @@ mocksRouter.put("/:id/assembly", requireTutorOrAdmin, async (c) => {
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited", code: "MOCK_NOT_DRAFT" }, 409);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot edit this mock", code: "MOCK_ACCESS_DENIED" }, 403);
   if (mock.delivery_mode === "subject_combination") {
-    const sections = body.sections as Array<{ course_id?: string | null }>;
+    const sections = body.sections as Array<{ course_id?: string | null; subject_name?: string | null; title?: string | null }>;
     const courseIds = [...new Set(sections.map((section) => section.course_id).filter((id): id is string => typeof id === "string" && !!id))];
-    if (courseIds.length !== sections.length) {
-      return c.json({ error: "Each multi-subject section must represent one subject", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
+    const sectionNames = sections.map((section) => (section.subject_name || section.title || "").trim().toLowerCase()).filter(Boolean);
+    if (sectionNames.length !== sections.length || new Set(sectionNames).size !== sections.length) {
+      return c.json({ error: "Each multi-subject section needs a unique subject name", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
     }
-    let courseQuery = supabase.from("courses").select("id")
-      .eq("school_id", user.school_id).in("id", courseIds);
-    if (mock.programme_id) courseQuery = courseQuery.eq("programme_id", mock.programme_id);
-    const { data: courses, error: courseError } = await courseQuery;
-    if (courseError) return mockDatabaseError(c, courseError, "Could not validate adaptive mock sections");
-    if ((courses || []).length !== courseIds.length) {
-      return c.json({ error: "Multi-subject sections must use subjects available to this centre", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
+    if (mock.audience_scope === "combination" && courseIds.length !== sections.length) {
+      return c.json({ error: "Centre-only multi-subject mocks must match each section to a centre subject", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
+    }
+    if (courseIds.length) {
+      let courseQuery = supabase.from("courses").select("id").eq("school_id", user.school_id).in("id", courseIds);
+      if (mock.programme_id) courseQuery = courseQuery.eq("programme_id", mock.programme_id);
+      const { data: courses, error: courseError } = await courseQuery;
+      if (courseError) return mockDatabaseError(c, courseError, "Could not validate multi-subject sections");
+      if ((courses || []).length !== courseIds.length) return c.json({ error: "Choose valid centre subjects for the mapped sections", code: "ADAPTIVE_SECTIONS_INVALID" }, 400);
     }
   }
 
@@ -657,6 +660,10 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
         audience_scope: audience.scope,
         delivery_mode: deliveryMode,
         direct_link_enabled: body.direct_link_enabled === true,
+        subject_name: typeof body.subject_name === "string" ? body.subject_name.trim() || null : null,
+        direct_link_access_mode: body.direct_link_access_mode === "paid" ? "paid" : "free_claim",
+        direct_link_price_kobo: body.direct_link_access_mode === "paid" ? Math.max(0, Math.floor(Number(body.direct_link_price_kobo) || 0)) : 0,
+        direct_link_slug: typeof body.direct_link_slug === "string" ? body.direct_link_slug.trim().toLowerCase() || null : null,
         title,
         description,
         status: "draft",
@@ -748,6 +755,10 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
       audience_scope: audience.scope,
       delivery_mode: deliveryMode,
       direct_link_enabled: body.direct_link_enabled === true,
+      subject_name: typeof body.subject_name === "string" ? body.subject_name.trim() || null : null,
+      direct_link_access_mode: body.direct_link_access_mode === "paid" ? "paid" : "free_claim",
+      direct_link_price_kobo: body.direct_link_access_mode === "paid" ? Math.max(0, Math.floor(Number(body.direct_link_price_kobo) || 0)) : 0,
+      direct_link_slug: typeof body.direct_link_slug === "string" ? body.direct_link_slug.trim().toLowerCase() || null : null,
       publish_at,
       time_limit_minutes: duration,
       ...settings.updates,
@@ -897,7 +908,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, tutor_id, time_limit_minutes, direct_link_enabled")
+    .select("id, status, course_id, tutor_id, time_limit_minutes, direct_link_enabled, direct_link_access_mode, direct_link_price_kobo, direct_link_slug")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be published" }, 409);
@@ -942,16 +953,15 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     .select("*, course:courses(name), programme:programmes(name)").eq("id", mockId).eq("school_id", user.school_id).single();
   if (error) return mockDatabaseError(c, error, "Mock was published but could not be reloaded");
 
-  // The access choice is made in the builder. When it includes a direct link,
-  // create a usable free link with the frozen version immediately; Share & sell
-  // can later add paid or additional links.
+  // The first link is configured in the builder; offer management remains for
+  // additional links only.
   let directOffer: any = null;
   if (mock.direct_link_enabled) {
     const versionId = (versionResult as any)?.[0]?.mock_exam_version_id || (versionResult as any)?.mock_exam_version_id;
     if (versionId) {
-      const slug = `mock-${data.id.slice(0, 8)}`;
+      const slug = mock.direct_link_slug || `mock-${data.id.slice(0, 8)}`;
       const { data: offer, error: offerError } = await (supabase as any).from("mock_access_offers")
-        .insert({ school_id: user.school_id, created_by: user.id, mock_exam_id: data.id, mock_exam_version_id: versionId, slug, audience_scope: "public_link", access_mode: "free_claim", price_kobo: 0, attempts_included: data.max_attempts || 1, is_active: true })
+        .insert({ school_id: user.school_id, created_by: user.id, mock_exam_id: data.id, mock_exam_version_id: versionId, slug, audience_scope: "public_link", access_mode: mock.direct_link_access_mode || "free_claim", price_kobo: mock.direct_link_access_mode === "paid" ? mock.direct_link_price_kobo || 0 : 0, attempts_included: data.max_attempts || 1, is_active: true })
         .select().maybeSingle();
       if (offerError && offerError.code !== "23505") return mockDatabaseError(c, offerError, "Mock was published but its direct link could not be created");
       directOffer = offer;

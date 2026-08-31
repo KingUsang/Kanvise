@@ -18,7 +18,7 @@ export type JobsRepository = {
 export const jobsRepository: JobsRepository = {
   async claimDueMocks(now, limit) {
     const { data: candidates, error } = await supabase.from('mock_exams')
-      .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, direct_link_enabled, course:courses(name), programme:programmes(name)')
+      .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, direct_link_enabled, direct_link_access_mode, direct_link_price_kobo, direct_link_slug, course:courses(name), programme:programmes(name)')
       .in('status', ['draft', 'published'])
       .eq('notification_sent', false)
       .not('publish_at', 'is', null)
@@ -126,8 +126,8 @@ async function ensureScheduledDirectLink(mock: any) {
   if (versionError || !version) throw versionError || new Error('Published mock version not found')
   const { error } = await (supabase as any).from('mock_access_offers').insert({
     school_id: mock.school_id, created_by: mock.tutor_id, mock_exam_id: mock.id, mock_exam_version_id: version.id,
-    slug: `mock-${mock.id.slice(0, 8)}`, audience_scope: 'public_link', access_mode: 'free_claim',
-    price_kobo: 0, attempts_included: 1, is_active: true,
+    slug: mock.direct_link_slug || `mock-${mock.id.slice(0, 8)}`, audience_scope: 'public_link', access_mode: mock.direct_link_access_mode || 'free_claim',
+    price_kobo: mock.direct_link_access_mode === 'paid' ? mock.direct_link_price_kobo || 0 : 0, attempts_included: 1, is_active: true,
   })
   if (error && error.code !== '23505') throw error
 }

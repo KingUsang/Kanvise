@@ -40,7 +40,10 @@ type QuestionState = {
   content_blocks?: ContentBlock[];
   course_id?: string | null;
   subject_name?: string;
+  section_id?: string;
 };
+
+type SubjectSectionState = { id: string; name: string; courseId: string | null };
 
 type Bank = { id: string; name: string; question_count: number };
 type BankQuestion = {
@@ -62,6 +65,7 @@ type SelectedBankQuestion = {
   marks: number;
   bankName: string;
   courseId: string | null;
+  sectionId?: string;
   options: Array<{ id: string; text: string; contentBlocks?: ContentBlock[] }>;
 };
 
@@ -85,6 +89,13 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [accessMode, setAccessMode] = useState<AccessMode>("centre");
   const [builderStep, setBuilderStep] = useState<BuilderStep>("setup");
   const [activeSubjectCourseId, setActiveSubjectCourseId] = useState("");
+  const [subjectSections, setSubjectSections] = useState<SubjectSectionState[]>([]);
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [singleSubjectName, setSingleSubjectName] = useState("");
+  const [linkAccessMode, setLinkAccessMode] = useState<"free_claim" | "paid">("free_claim");
+  const [linkPrice, setLinkPrice] = useState("");
+  const [linkSlug, setLinkSlug] = useState("");
+  const [linkSlugEdited, setLinkSlugEdited] = useState(false);
   
   const [publishMode, setPublishMode] = useState<"immediate" | "scheduled">("immediate");
   const [publishDate, setPublishDate] = useState("");
@@ -110,6 +121,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
   const [selectedBankQuestions, setSelectedBankQuestions] = useState<SelectedBankQuestion[]>([]);
   const [showBankPicker, setShowBankPicker] = useState(false);
+  const [showImportPanel, setShowImportPanel] = useState(false);
   const [isLoadingBankQuestions, setIsLoadingBankQuestions] = useState(false);
 
   // CSV Upload & Modal State
@@ -122,6 +134,13 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [documentImportSummary, setDocumentImportSummary] = useState<{ pageCount: number | null; warnings: string[]; questionCount: number } | null>(null);
   const importedQuestionsRef = useRef<HTMLDivElement>(null);
+
+  const slugify = (value: string) => value.toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+
+  useEffect(() => {
+    if (!linkSlugEdited) setLinkSlug(slugify(title) || "mock");
+  }, [title, linkSlugEdited]);
 
   const showImportedQuestions = () => {
     window.requestAnimationFrame(() => importedQuestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -144,6 +163,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         setCourses(data || []);
         if (data && data.length > 0 && !isEditMode) {
           setCourseId(data[0].id);
+          setSingleSubjectName(data[0].name || "");
         }
         if (banksRes.ok) {
           const { data } = await banksRes.json();
@@ -188,6 +208,11 @@ export function MockBuilderClient({ token }: { token: string }) {
 
           setTitle(mockData.title || "");
           setDescription(mockData.description || "");
+          setSingleSubjectName(mockData.subject_name || "");
+          setLinkAccessMode(mockData.direct_link_access_mode || "free_claim");
+          setLinkPrice(mockData.direct_link_price_kobo ? String(mockData.direct_link_price_kobo / 100) : "");
+          setLinkSlug(mockData.direct_link_slug || "");
+          setLinkSlugEdited(Boolean(mockData.direct_link_slug));
           setCourseId(mockData.course_id || "");
           setAudienceScope(mockData.audience_scope || "course");
           setDeliveryMode(mockData.delivery_mode || "fixed");
@@ -218,6 +243,13 @@ export function MockBuilderClient({ token }: { token: string }) {
           const assembledQuestions = (assemblyData.sections || []).flatMap((section: any) => (section.questions || []).map((item: any) => ({
             ...item,
             section_course_id: section.course_id || null,
+            section_id: section.id || `section-${section.order_index}`,
+            section_subject_name: section.subject_name || section.title || undefined,
+          })));
+          setSubjectSections((assemblyData.sections || []).map((section: any) => ({
+            id: section.id || `section-${section.order_index}`,
+            name: section.subject_name || section.title || "Untitled subject",
+            courseId: section.course_id || null,
           })));
           const authoredQuestions = assembledQuestions.filter((item: any) => item.question?.bank?.source_mock_exam_id === editMockId);
           const reusedQuestions = assembledQuestions.filter((item: any) => item.question?.bank?.source_mock_exam_id !== editMockId);
@@ -237,6 +269,8 @@ export function MockBuilderClient({ token }: { token: string }) {
               })),
               content_blocks: q.current_version?.content_blocks || [],
               course_id: item.section_course_id || q.course_id || null,
+              section_id: item.section_id || undefined,
+              subject_name: item.section_subject_name || q.subject_name || undefined,
               grading_rubric: (q.current_version?.grading_rubric_blocks || [])
                 .filter((block: any) => block?.type === "text").map((block: any) => block.text).join("\n")
             }}));
@@ -249,6 +283,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               marks: item.marks_override || item.question.current_version?.marks,
               bankName: item.question.bank?.name || "Question bank",
               courseId: item.section_course_id || item.question.course_id || null,
+              sectionId: item.section_id || undefined,
               options: (item.question.current_version?.options || []).map((option: any) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })),
           })));
         } else {
@@ -295,18 +330,22 @@ export function MockBuilderClient({ token }: { token: string }) {
     setAudienceScope(value === "direct" ? "direct_link" : isMulti ? "combination" : "course");
   };
 
-  const programmeCourses = courses;
-  const resolveImportedCourseId = (subjectName: string | undefined) => {
+  const selectedSubjectSections = subjectSections;
+  const selectedSubjectCourses = selectedSubjectSections.map((section) => ({ id: section.id, name: section.name, course_id: section.courseId }));
+  const availableSubjectCourses = courses.filter((course, index) => !subjectSections.some((section) => section.courseId === course.id)
+    && courses.findIndex((candidate) => candidate.name.trim().toLowerCase() === course.name.trim().toLowerCase()) === index);
+  const resolveSubjectSection = (subjectName: string | undefined) => {
     const normalized = (subjectName || "").toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "");
-    if (!normalized) return null;
-    return programmeCourses.find((course) => course.name.toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "") === normalized)?.id || null;
+    if (!normalized) return activeSubjectSection;
+    return selectedSubjectSections.find((section) => section.name.toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "") === normalized) || activeSubjectSection;
   };
 
   const resolvedActiveSubjectCourseId = deliveryMode === "subject_combination"
     ? (activeSubjectCourseId === UNASSIGNED_SUBJECT_ID && questions.some((question) => !question.course_id)
       ? UNASSIGNED_SUBJECT_ID
-      : programmeCourses.some((course) => course.id === activeSubjectCourseId) ? activeSubjectCourseId : programmeCourses[0]?.id || "")
+      : selectedSubjectSections.some((section) => section.id === activeSubjectCourseId) ? activeSubjectCourseId : selectedSubjectSections[0]?.id || "")
     : "";
+  const activeSubjectSection = selectedSubjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) || null;
 
   const handleAddMCQ = () => {
     setQuestions([
@@ -316,7 +355,9 @@ export function MockBuilderClient({ token }: { token: string }) {
         question_type: "mcq",
         question_text: "",
         marks: 2,
-        course_id: deliveryMode === "subject_combination" ? resolvedActiveSubjectCourseId || null : courseId || null,
+        course_id: deliveryMode === "subject_combination" ? activeSubjectSection?.courseId || null : courseId || null,
+        section_id: deliveryMode === "subject_combination" ? activeSubjectSection?.id : undefined,
+        subject_name: deliveryMode === "subject_combination" ? activeSubjectSection?.name : singleSubjectName || undefined,
         options: [
           { id: `o${Date.now()}_1`, option_text: "", is_correct: true },
           { id: `o${Date.now()}_2`, option_text: "", is_correct: false }
@@ -333,7 +374,9 @@ export function MockBuilderClient({ token }: { token: string }) {
         question_type: "theory",
         question_text: "",
         marks: 10,
-        course_id: deliveryMode === "subject_combination" ? resolvedActiveSubjectCourseId || null : courseId || null,
+        course_id: deliveryMode === "subject_combination" ? activeSubjectSection?.courseId || null : courseId || null,
+        section_id: deliveryMode === "subject_combination" ? activeSubjectSection?.id : undefined,
+        subject_name: deliveryMode === "subject_combination" ? activeSubjectSection?.name : singleSubjectName || undefined,
         options: [],
         grading_rubric: ""
       }
@@ -388,7 +431,9 @@ export function MockBuilderClient({ token }: { token: string }) {
             marks: Number(row.Marks) || 1,
             options: [],
             grading_rubric: row['Grading Rubric'] || "",
-            course_id: deliveryMode === "subject_combination" ? resolvedActiveSubjectCourseId || null : courseId || null,
+            course_id: deliveryMode === "subject_combination" ? activeSubjectSection?.courseId || null : courseId || null,
+            section_id: deliveryMode === "subject_combination" ? activeSubjectSection?.id : undefined,
+            subject_name: deliveryMode === "subject_combination" ? activeSubjectSection?.name : singleSubjectName || undefined,
           };
 
           if (qType === 'mcq') {
@@ -437,7 +482,9 @@ export function MockBuilderClient({ token }: { token: string }) {
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Could not import that Word document");
       const imported = body?.data;
-      const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => ({
+      const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => {
+        const section = deliveryMode === "subject_combination" ? resolveSubjectSection(question.subject_name) : null;
+        return ({
         id: question.id || `docx_${Date.now()}_${Math.random()}`,
         question_type: question.question_type === "mcq" ? "mcq" : "theory",
         question_text: question.question_text || "",
@@ -445,11 +492,13 @@ export function MockBuilderClient({ token }: { token: string }) {
         options: (question.options || []).map((option: any, index: number) => ({ id: option.id || `docx_option_${Date.now()}_${index}`, option_text: option.option_text || "", is_correct: option.is_correct === true, content_blocks: option.content_blocks || [] })),
         grading_rubric: question.grading_rubric || "",
         source_page: question.source_page ?? null,
-        review_reasons: [...(question.review_reasons || []), ...(deliveryMode === "subject_combination" && question.subject_name && !resolveImportedCourseId(question.subject_name) ? [`Assign imported subject “${question.subject_name}” to a programme subject.`] : [])],
+        review_reasons: [...(question.review_reasons || []), ...(deliveryMode === "subject_combination" && question.subject_name && !section ? [`Add a section for imported subject “${question.subject_name}”.`] : [])],
         content_blocks: question.content_blocks || [],
-        course_id: deliveryMode === "subject_combination" ? (question.subject_name ? resolveImportedCourseId(question.subject_name) : resolvedActiveSubjectCourseId || null) : courseId || null,
-        subject_name: question.subject_name || undefined,
-      }));
+        course_id: deliveryMode === "subject_combination" ? section?.courseId || null : courseId || null,
+        section_id: deliveryMode === "subject_combination" ? section?.id : undefined,
+        subject_name: section?.name || question.subject_name || singleSubjectName || undefined,
+      });
+      });
       setQuestions((current) => [...current, ...parsedQuestions]);
       const warnings = imported?.warnings || [];
       setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length });
@@ -483,7 +532,9 @@ export function MockBuilderClient({ token }: { token: string }) {
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Could not import that PDF");
       const imported = body?.data;
-      const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => ({
+      const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => {
+        const section = deliveryMode === "subject_combination" ? resolveSubjectSection(question.subject_name) : null;
+        return ({
         id: question.id || `pdf_${Date.now()}_${Math.random()}`,
         question_type: question.question_type === "mcq" ? "mcq" : "theory",
         question_text: question.question_text || "",
@@ -496,11 +547,13 @@ export function MockBuilderClient({ token }: { token: string }) {
         })),
         grading_rubric: question.grading_rubric || "",
         source_page: question.source_page ?? null,
-        review_reasons: [...(question.review_reasons || []), ...(deliveryMode === "subject_combination" && question.subject_name && !resolveImportedCourseId(question.subject_name) ? [`Assign imported subject “${question.subject_name}” to a programme subject.`] : [])],
+        review_reasons: [...(question.review_reasons || []), ...(deliveryMode === "subject_combination" && question.subject_name && !section ? [`Add a section for imported subject “${question.subject_name}”.`] : [])],
         content_blocks: question.content_blocks || [],
-        course_id: deliveryMode === "subject_combination" ? (question.subject_name ? resolveImportedCourseId(question.subject_name) : resolvedActiveSubjectCourseId || null) : courseId || null,
-        subject_name: question.subject_name || undefined,
-      }));
+        course_id: deliveryMode === "subject_combination" ? section?.courseId || null : courseId || null,
+        section_id: deliveryMode === "subject_combination" ? section?.id : undefined,
+        subject_name: section?.name || question.subject_name || singleSubjectName || undefined,
+      });
+      });
       setQuestions((current) => [...current, ...parsedQuestions]);
       const warnings = imported?.warnings || [];
       setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length });
@@ -581,12 +634,16 @@ export function MockBuilderClient({ token }: { token: string }) {
       toast.error("Add a mock title and choose who should receive it");
       return;
     }
-    if (deliveryMode === "subject_combination" && questions.some((question) => !question.course_id)) {
+    if (deliveryMode === "subject_combination" && questions.some((question) => !question.section_id)) {
       toast.error("Every multi-subject question must be assigned to a subject");
       return;
     }
-    if (deliveryMode === "subject_combination" && selectedBankQuestions.some((question) => !question.courseId)) {
-      toast.error("Every adaptive mock question must be linked to one programme subject");
+    if (deliveryMode === "subject_combination" && selectedBankQuestions.some((question) => !question.sectionId)) {
+      toast.error("Every multi-subject bank question must be assigned to a subject");
+      return;
+    }
+    if (deliveryMode === "subject_combination" && (accessMode === "centre" || accessMode === "both") && subjectSections.some((section) => !section.courseId)) {
+      toast.error("Match every subject to a centre subject, or choose direct-link access only");
       return;
     }
 
@@ -608,11 +665,15 @@ export function MockBuilderClient({ token }: { token: string }) {
       const payload = {
         title,
         description,
+        subject_name: deliveryMode === "fixed" ? singleSubjectName || null : null,
         course_id: audienceScope === "course" ? courseId || null : null,
         programme_id: null,
         audience_scope: audienceScope,
         delivery_mode: deliveryMode,
         direct_link_enabled: accessMode === "direct" || accessMode === "both",
+        direct_link_access_mode: linkAccessMode,
+        direct_link_price_kobo: linkAccessMode === "paid" ? Math.round(Number(linkPrice) * 100) : 0,
+        direct_link_slug: linkSlug || null,
         publish_at: finalPublishAt,
         time_limit_minutes: isUntimed ? 0 : timeLimit,
         calculator_mode: calculatorMode,
@@ -679,24 +740,28 @@ export function MockBuilderClient({ token }: { token: string }) {
             question_version_id: item.question_version_id,
             marks_override: item.marks_override,
             course_id: questions[index]?.course_id || null,
+            section_id: questions[index]?.section_id || null,
+            subject_name: questions[index]?.subject_name || null,
           })),
           ...selectedBankQuestions.map((item) => ({
             question_id: item.questionId,
             question_version_id: item.questionVersionId,
             marks_override: null,
             course_id: item.courseId,
+            section_id: item.sectionId || null,
+            subject_name: subjectSections.find((section) => section.id === item.sectionId)?.name || null,
           })),
         ];
         const sections = deliveryMode === "subject_combination"
-          ? courses.filter((course) => combined.some((item: any) => item.course_id === course.id)).map((course) => ({
-              title: course.name,
-              course_id: course.id,
-              subject_name: course.name,
+          ? subjectSections.filter((section) => combined.some((item: any) => item.section_id === section.id)).map((section) => ({
+              title: section.name,
+              course_id: section.courseId,
+              subject_name: section.name,
               instructions: null,
-              questions: combined.filter((item: any) => item.course_id === course.id).map((item: any) => ({ question_id: item.question_id, question_version_id: item.question_version_id, marks_override: item.marks_override })),
+              questions: combined.filter((item: any) => item.section_id === section.id).map((item: any) => ({ question_id: item.question_id, question_version_id: item.question_version_id, marks_override: item.marks_override })),
               rules: [],
             }))
-          : [{ title: "Questions", course_id: courseId || null, instructions: null, questions: combined, rules: [] }];
+          : [{ title: singleSubjectName || "Questions", course_id: courseId || null, subject_name: singleSubjectName || null, instructions: null, questions: combined, rules: [] }];
         const replaceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -747,12 +812,12 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const isMultiSubject = deliveryMode === "subject_combination";
   const visibleQuestions = isMultiSubject && resolvedActiveSubjectCourseId
-    ? questions.filter((question) => resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? !question.course_id : question.course_id === resolvedActiveSubjectCourseId)
+    ? questions.filter((question) => resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? !question.section_id : question.section_id === resolvedActiveSubjectCourseId)
     : questions;
   const visibleBankQuestions = isMultiSubject && resolvedActiveSubjectCourseId
-    ? selectedBankQuestions.filter((question) => question.courseId === resolvedActiveSubjectCourseId)
+    ? selectedBankQuestions.filter((question) => question.sectionId === resolvedActiveSubjectCourseId)
     : selectedBankQuestions;
-  const unassignedQuestionCount = questions.filter((question) => !question.course_id).length;
+  const unassignedQuestionCount = questions.filter((question) => !question.section_id).length;
   const workflowSteps: Array<{ id: BuilderStep; label: string; icon: string }> = [
     { id: "setup", label: "Setup", icon: "edit_note" },
     ...(isMultiSubject ? [{ id: "subjects" as const, label: "Subjects", icon: "library_books" }] : []),
@@ -760,6 +825,24 @@ export function MockBuilderClient({ token }: { token: string }) {
     { id: "settings", label: "Delivery & settings", icon: "tune" },
     { id: "review", label: "Review", icon: "fact_check" },
   ];
+  const currentStepIndex = workflowSteps.findIndex((step) => step.id === builderStep);
+  const moveStep = (direction: -1 | 1) => {
+    const target = workflowSteps[currentStepIndex + direction];
+    if (!target) return;
+    if (direction === 1 && builderStep === "setup" && !title.trim()) {
+      toast.error("Give this mock a title before continuing");
+      return;
+    }
+    if (direction === 1 && builderStep === "subjects" && subjectSections.length === 0) {
+      toast.error("Add at least one subject section");
+      return;
+    }
+    if (direction === 1 && builderStep === "questions" && questions.length + selectedBankQuestions.length === 0) {
+      toast.error("Add at least one question before continuing");
+      return;
+    }
+    setBuilderStep(target.id);
+  };
   const draftPreviewQuestions: DraftPreviewQuestion[] = [
     ...questions.map((question) => ({ id: question.id, subject: courses.find((course) => course.id === question.course_id)?.name || question.subject_name || "Questions", text: question.question_text, marks: question.marks, type: question.question_type, contentBlocks: question.content_blocks, options: question.options.map((option) => ({ id: option.id, text: option.option_text, contentBlocks: option.content_blocks })) })),
     ...selectedBankQuestions.map((question) => ({ id: question.questionId, subject: courses.find((course) => course.id === question.courseId)?.name || "Questions", text: question.questionText, marks: question.marks, type: question.questionType, options: question.options })),
@@ -867,22 +950,14 @@ export function MockBuilderClient({ token }: { token: string }) {
           >
             {isSaving ? "Saving…" : "Save as Draft"}
           </button>
-          <button 
-            onClick={requestPublish}
-            disabled={isReadOnly || isSaving}
-            className="px-6 py-2.5 bg-[#C26627] text-white font-semibold text-sm rounded hover:bg-[#a55621] hover:shadow-md transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="material-symbols-outlined text-[18px]">publish</span>
-            {publishMode === "immediate" ? "Publish Mock" : "Schedule Mock"}
-          </button>
         </div>
       </div>
 
       <nav aria-label="Mock builder steps" className="sticky top-16 z-20 -mx-4 mb-8 border-y border-[#e4e2e1] bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border sm:px-3">
         <div className="flex gap-2 overflow-x-auto pb-1 sm:grid" style={{ gridTemplateColumns: `repeat(${workflowSteps.length}, minmax(0, 1fr))` }}>
           {workflowSteps.map((step, index) => (
-            <button key={step.id} type="button" onClick={() => setBuilderStep(step.id)} aria-current={builderStep === step.id ? "step" : undefined}
-              className={`flex min-w-max items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition sm:min-w-0 ${builderStep === step.id ? "bg-[#2e2877] text-white" : "text-[#5f5964] hover:bg-[#f5f3f8]"}`}>
+            <button key={step.id} type="button" onClick={() => index <= currentStepIndex && setBuilderStep(step.id)} disabled={index > currentStepIndex} aria-current={builderStep === step.id ? "step" : undefined}
+              className={`flex min-w-max items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 sm:min-w-0 ${builderStep === step.id ? "bg-[#2e2877] text-white" : "text-[#5f5964] hover:bg-[#f5f3f8]"}`}>
               <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current text-[11px]">{index + 1}</span>
               <span>{step.label}</span>
             </button>
@@ -895,14 +970,14 @@ export function MockBuilderClient({ token }: { token: string }) {
         {isMultiSubject && (
           <aside className="lg:sticky lg:top-36">
             <div className="rounded-xl border border-[#e4e2e1] bg-white p-3 shadow-sm">
-              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold text-[#1b1c1c]">Subjects</h3><span className="text-xs text-[#787582]">{programmeCourses.length}</span></div>
-              <label className="block lg:hidden"><span className="sr-only">Active subject</span><select value={resolvedActiveSubjectCourseId} onChange={(event) => setActiveSubjectCourseId(event.target.value)} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm">{programmeCourses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}{unassignedQuestionCount > 0 && <option value={UNASSIGNED_SUBJECT_ID}>Needs subject ({unassignedQuestionCount})</option>}</select></label>
-              <div className="hidden space-y-1 lg:block">{programmeCourses.map((course) => { const count = questions.filter((question) => question.course_id === course.id).length + selectedBankQuestions.filter((question) => question.courseId === course.id).length; return <button key={course.id} type="button" onClick={() => setActiveSubjectCourseId(course.id)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === course.id ? "bg-[#eeeafe] font-semibold text-[#2e2877]" : "text-[#474551] hover:bg-[#f7f5f3]"}`}><span className="truncate">{course.name}</span><span className="ml-2 text-xs">{count}</span></button> })}{unassignedQuestionCount > 0 && <button type="button" onClick={() => setActiveSubjectCourseId(UNASSIGNED_SUBJECT_ID)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "bg-[#fff1ed] font-semibold text-[#9b2f20]" : "text-[#9b2f20] hover:bg-[#fff8f5]"}`}><span>Needs subject</span><span className="text-xs">{unassignedQuestionCount}</span></button>}</div>
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold text-[#1b1c1c]">Subjects</h3><span className="text-xs text-[#787582]">{selectedSubjectCourses.length}</span></div>
+              <label className="block lg:hidden"><span className="sr-only">Active subject</span><select value={resolvedActiveSubjectCourseId} onChange={(event) => setActiveSubjectCourseId(event.target.value)} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm">{selectedSubjectCourses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}{unassignedQuestionCount > 0 && <option value={UNASSIGNED_SUBJECT_ID}>Needs subject ({unassignedQuestionCount})</option>}</select></label>
+              <div className="hidden space-y-1 lg:block">{selectedSubjectCourses.map((course) => { const count = questions.filter((question) => question.section_id === course.id).length + selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => setActiveSubjectCourseId(course.id)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === course.id ? "bg-[#eeeafe] font-semibold text-[#2e2877]" : "text-[#474551] hover:bg-[#f7f5f3]"}`}><span className="truncate">{course.name}</span><span className="ml-2 text-xs">{count}</span></button> })}{unassignedQuestionCount > 0 && <button type="button" onClick={() => setActiveSubjectCourseId(UNASSIGNED_SUBJECT_ID)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "bg-[#fff1ed] font-semibold text-[#9b2f20]" : "text-[#9b2f20] hover:bg-[#fff8f5]"}`}><span>Needs subject</span><span className="text-xs">{unassignedQuestionCount}</span></button>}</div>
             </div>
           </aside>
         )}
         <div className="flex min-w-0 flex-col gap-6">
-          {isMultiSubject && <div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Active subject</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">{resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "Needs subject" : programmeCourses.find((course) => course.id === resolvedActiveSubjectCourseId)?.name || "Choose a subject"}</h2><p className="mt-1 text-sm text-[#716c76]">{resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "Assign every imported question before publishing." : "Questions added or imported here stay inside this subject section."}</p></div>}
+          {isMultiSubject && <div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Active subject</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">{resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "Needs subject" : selectedSubjectCourses.find((course) => course.id === resolvedActiveSubjectCourseId)?.name || "Choose a subject"}</h2><p className="mt-1 text-sm text-[#716c76]">{resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "Assign every imported question before publishing." : "Questions added or imported here stay inside this subject section."}</p></div>}
           {documentImportSummary && (
             <div ref={importedQuestionsRef} tabIndex={-1} className="scroll-mt-6 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 outline-none">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -914,23 +989,27 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
             </div>
           )}
-          {!isReadOnly && questions.length === 0 && selectedBankQuestions.length === 0 && (
+          {!isReadOnly && questions.length === 0 && selectedBankQuestions.length === 0 && !showImportPanel && !showBankPicker && (
             <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
                 <span className="material-symbols-outlined text-[28px]">quiz</span>
               </div>
               <h3 className="mt-4 text-xl font-bold text-[#180d62]">Add your first question</h3>
-              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#474551]">
-                Type a question now, reuse one from your question bank, or import several questions below.
-              </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-3">
-                <button type="button" onClick={handleAddMCQ} className="rounded-md bg-[#2e2877] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#180d62]">
-                  Add multiple-choice question
-                </button>
-                <button type="button" onClick={handleAddTheory} className="rounded-md border border-[#2e2877] px-4 py-2.5 text-sm font-semibold text-[#2e2877] hover:bg-[#2e2877]/5">
-                  Add theory question
-                </button>
+              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#474551]">Start in the way that fits the material you already have.</p>
+              <div className="mx-auto mt-6 grid max-w-3xl gap-3 text-left sm:grid-cols-3">
+                <button type="button" onClick={handleAddMCQ} className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">edit_note</span><strong className="mt-2 block text-sm">Write questions</strong><span className="mt-1 block text-xs text-[#716c76]">Create MCQ or theory questions here.</span></button>
+                <button type="button" onClick={() => setShowImportPanel(true)} className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">upload_file</span><strong className="mt-2 block text-sm">Import a file</strong><span className="mt-1 block text-xs text-[#716c76]">PDF, Word or spreadsheet.</span></button>
+                <button type="button" onClick={() => setShowBankPicker(true)} className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">inventory_2</span><strong className="mt-2 block text-sm">Question bank</strong><span className="mt-1 block text-xs text-[#716c76]">Reuse questions you already trust.</span></button>
               </div>
+            </div>
+          )}
+          {!isReadOnly && (questions.length > 0 || selectedBankQuestions.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+              <span className="mr-1 text-sm font-semibold text-[#474551]">Add to this section</span>
+              <button type="button" onClick={handleAddMCQ} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white">+ MCQ</button>
+              <button type="button" onClick={handleAddTheory} className="rounded-lg border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">+ Theory</button>
+              <button type="button" onClick={() => setShowImportPanel((open) => !open)} className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold">Import</button>
+              <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold">Question bank</button>
             </div>
           )}
           <div className="space-y-6">
@@ -940,13 +1019,11 @@ export function MockBuilderClient({ token }: { token: string }) {
                   <div>
                     <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#2e2877]">
                       <span className="material-symbols-outlined text-base">inventory_2</span>
-                      {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks{deliveryMode === "subject_combination" ? ` · ${courses.find((course) => course.id === question.courseId)?.name || "No subject"}` : ""}
+                      From question bank · {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks{deliveryMode === "subject_combination" ? ` · ${subjectSections.find((section) => section.id === question.sectionId)?.name || "No subject"}` : ""}
                     </div>
                     <p className="text-[15px] leading-6 text-[#1b1c1c]">{question.questionText}</p>
                   </div>
-                  {!isReadOnly && <button type="button" onClick={() => setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId))} className="text-[#787582] hover:text-[#ba1a1a]" aria-label={`Remove bank question ${index + 1}`}>
-                    <span className="material-symbols-outlined">close</span>
-                  </button>}
+                  {!isReadOnly && <div className="flex items-center gap-2"><button type="button" onClick={() => { setQuestions((current) => [...current, { id: `copy-${Date.now()}`, question_type: question.questionType, question_text: question.questionText, marks: question.marks, options: question.options.map((option) => ({ id: `copy-${option.id}`, option_text: option.text, is_correct: false, content_blocks: option.contentBlocks })), course_id: question.courseId, section_id: question.sectionId, subject_name: subjectSections.find((section) => section.id === question.sectionId)?.name }]); setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId)); }} className="rounded border border-[#c8c5d2] px-2.5 py-1.5 text-xs font-semibold text-[#2e2877]">Edit a copy</button><button type="button" onClick={() => setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId))} className="text-[#787582] hover:text-[#ba1a1a]" aria-label={`Remove bank question ${index + 1}`}><span className="material-symbols-outlined">close</span></button></div>}
                 </div>
               </div>
             ))}
@@ -978,7 +1055,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                     )}
                   </div>
                 </div>
-                {isMultiSubject && <label className="mb-4 block text-xs font-semibold text-[#474551]">Subject section<select value={q.course_id || ""} disabled={isReadOnly} onChange={(event) => updateQuestion(q.id, { course_id: event.target.value || null, review_reasons: event.target.value ? (q.review_reasons || []).filter((reason) => !reason.startsWith("Assign imported subject")) : q.review_reasons })} className="mt-1.5 w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#2e2877]"><option value="">Needs subject assignment</option>{programmeCourses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select></label>}
+                {isMultiSubject && <label className="mb-4 block text-xs font-semibold text-[#474551]">Subject section<select value={q.section_id || ""} disabled={isReadOnly} onChange={(event) => { const section = subjectSections.find((item) => item.id === event.target.value); updateQuestion(q.id, { section_id: section?.id, course_id: section?.courseId || null, subject_name: section?.name, review_reasons: section ? (q.review_reasons || []).filter((reason) => !reason.startsWith("Add a section for imported subject")) : q.review_reasons }); }} className="mt-1.5 w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#2e2877]"><option value="">Needs subject assignment</option>{selectedSubjectCourses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select></label>}
                 {(q.source_page || q.review_reasons?.length) && (
                   <div className="mb-4 rounded-lg border border-[#e8d7a5] bg-[#fffaf0] px-4 py-3 text-xs leading-5 text-[#7a4b00]">
                     {q.source_page && <p className="font-semibold">Imported from PDF page {q.source_page}.</p>}
@@ -1088,12 +1165,7 @@ export function MockBuilderClient({ token }: { token: string }) {
           {/* Bulk Import Section */}
           {!isReadOnly && (
             <>
-              <div className="order-2 mt-2 border-t border-[#e4e2e1] pt-6">
-                <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Other ways to add questions</h3>
-                <p className="mt-1 text-sm text-[#474551]">Import a prepared set or reuse questions you have already created.</p>
-              </div>
-
-              <div className="order-2">
+              {showImportPanel && <div className="order-2">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Import a prepared set</h3>
                   <button 
@@ -1140,15 +1212,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                     <p className="mt-1">{documentImportSummary.questionCount} question{documentImportSummary.questionCount === 1 ? "" : "s"} added above. {documentImportSummary.warnings.length ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? "" : "s"} need attention.` : "No provider warnings were returned."}</p>
                   </div>
                 )}
-              </div>
+              </div>}
 
-              <div className="order-2 flex items-center justify-center py-6">
-                <div className="h-px bg-[#e4e2e1] w-full"></div>
-                <span className="px-4 text-[#787582] text-[13px] font-medium bg-white">OR</span>
-                <div className="h-px bg-[#e4e2e1] w-full"></div>
-              </div>
-
-              <div className="order-2 rounded-lg border border-[#c8c5d2] bg-white p-5">
+              {showBankPicker && <div className="order-2 rounded-lg border border-[#c8c5d2] bg-white p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div><h3 className="font-semibold text-[#1b1c1c]">Reuse questions from your bank</h3><p className="mt-1 text-sm text-[#474551]">Choose prepared questions instead of typing them again.</p></div>
                   <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">{showBankPicker ? "Close question bank" : "Choose questions"}</button>
@@ -1167,12 +1233,12 @@ export function MockBuilderClient({ token }: { token: string }) {
                             return <label key={question.id} className="flex cursor-pointer items-start gap-3 rounded border border-[#e4e2e1] p-3 hover:bg-[#f8f6ff]">
                               <input type="checkbox" checked={selected} onChange={() => setSelectedBankQuestions((current) => {
                                 if (selected) return current.filter((item) => item.questionId !== question.id);
-                                const targetCourseId = deliveryMode === "subject_combination" ? resolvedActiveSubjectCourseId : question.course_id || null;
-                                if (deliveryMode === "subject_combination" && (!targetCourseId || targetCourseId === UNASSIGNED_SUBJECT_ID)) {
+                                const targetSection = deliveryMode === "subject_combination" ? subjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) : null;
+                                if (deliveryMode === "subject_combination" && !targetSection) {
                                   toast.error("Open a subject section before adding bank questions");
                                   return current;
                                 }
-                                return [...current, { questionId: question.id, questionVersionId: question.current_version.id, questionText: question.current_version.plain_text, questionType: question.question_type, marks: question.current_version.marks, bankName, courseId: targetCourseId, options: (question.current_version.options || []).map((option) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })) }];
+                                return [...current, { questionId: question.id, questionVersionId: question.current_version.id, questionText: question.current_version.plain_text, questionType: question.question_type, marks: question.current_version.marks, bankName, courseId: targetSection?.courseId || question.course_id || null, sectionId: targetSection?.id, options: (question.current_version.options || []).map((option) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })) }];
                               })} className="mt-1" />
                               <span><span className="block text-sm text-[#1b1c1c]">{question.current_version.plain_text}</span><span className="mt-1 block text-xs text-[#787582]">{question.question_type === "mcq" ? "Multiple choice" : "Theory"} · {question.current_version.marks} marks</span></span>
                             </label>;
@@ -1182,28 +1248,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                     </>}
                   </div>
                 )}
-              </div>
-
-              {/* Add Question Controls */}
-              <div className="order-1 flex items-center gap-6 p-6 border-2 border-dashed border-[#c8c5d2] rounded-lg bg-[#fbf9f8] justify-center mt-2">
-                <span className="text-[15px] text-[#474551]">Add another question:</span>
-                <div className="flex gap-4">
-                  <button 
-                    onClick={handleAddMCQ}
-                    className="flex items-center gap-2 px-5 py-2.5 border border-[#2e2877] text-[#2e2877] font-semibold text-sm rounded hover:bg-[#2e2877] hover:text-white transition-all bg-white cursor-pointer hover:shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">list_alt</span>
-                    MCQ Question
-                  </button>
-                  <button 
-                    onClick={handleAddTheory}
-                    className="flex items-center gap-2 px-5 py-2.5 border border-[#2e2877] text-[#2e2877] font-semibold text-sm rounded hover:bg-[#2e2877] hover:text-white transition-all bg-white cursor-pointer hover:shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">subject</span>
-                    Theory Question
-                  </button>
-                </div>
-              </div>
+              </div>}
             </>
           )}
         </div>
@@ -1214,8 +1259,9 @@ export function MockBuilderClient({ token }: { token: string }) {
         <section className="mx-auto max-w-4xl">
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Choose the exact subjects for this mock, then add or import each subject’s questions separately.</p></div><button type="button" onClick={() => setBuilderStep("setup")} className="text-sm font-semibold text-[#2e2877]">Change setup</button></div>
-            {programmeCourses.length === 0 ? <div className="mt-6 rounded-xl border border-[#efd0b8] bg-[#fff8f1] p-5 text-sm text-[#7a431d]">No subjects are available yet. Add subjects to the centre before building this mock.</div>
-              : <div className="mt-6 grid gap-3 sm:grid-cols-2">{programmeCourses.map((course, index) => { const authoredCount = questions.filter((question) => question.course_id === course.id).length; const bankCount = selectedBankQuestions.filter((question) => question.courseId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="group rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]"><span className="flex items-start justify-between gap-3"><span><span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span><strong className="mt-1 block text-base text-[#1b1c1c]">{course.name}</strong></span><span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} questions</span></span><span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></span></button> })}</div>}
+            <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"><p className="text-sm font-semibold text-[#1b1c1c]">Add a subject section</p><div className="mt-2 grid gap-3 sm:grid-cols-2"><select value="" disabled={isReadOnly || availableSubjectCourses.length === 0} onChange={(event) => { const course = availableSubjectCourses.find((item) => item.id === event.target.value); if (!course) return; const section = { id: `section-${Date.now()}`, name: course.name, courseId: course.id }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); }} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"><option value="">Use a centre subject (optional)</option>{availableSubjectCourses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select><div className="flex gap-2"><input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} placeholder="e.g. Use of English" className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm" /><button type="button" disabled={isReadOnly || !newSubjectName.trim()} onClick={() => { const name = newSubjectName.trim(); const section = { id: `section-${Date.now()}`, name, courseId: null }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setNewSubjectName(""); }} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button></div></div><p className="mt-2 text-xs leading-5 text-[#716c76]">Create any exam subject. A centre subject is only needed when you want the centre dashboard to match students to it.</p></div>
+            {selectedSubjectCourses.length === 0 ? <div className="mt-4 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center text-sm text-[#716c76]">Add the subjects for this mock—for example, English, Physics, Chemistry and Biology.</div>
+              : <div className="mt-4 grid gap-3 sm:grid-cols-2">{selectedSubjectCourses.map((course, index) => { const authoredCount = questions.filter((question) => question.section_id === course.id).length; const bankCount = selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="group rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]"><span className="flex items-start justify-between gap-3"><span><span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span><strong className="mt-1 block text-base text-[#1b1c1c]">{course.name}</strong></span><span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} questions</span></span><span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></span></button> })}</div>}
           </div>
         </section>
       )}
@@ -1223,7 +1269,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       {builderStep === "review" && (
         <section className="mx-auto max-w-4xl space-y-5">
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7"><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Final check</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Review and publish</h2><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Format</p><p className="mt-1 font-semibold">{isMultiSubject ? "Multi-subject / JAMB" : "Single subject"}</p></div><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Questions</p><p className="mt-1 font-semibold">{questions.length + selectedBankQuestions.length}</p></div><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Time</p><p className="mt-1 font-semibold">{isUntimed ? "Untimed" : `${timeLimit} minutes`}</p></div></div>
-            {isMultiSubject && <div className="mt-6"><h3 className="text-sm font-semibold">Subject readiness</h3><div className="mt-3 divide-y divide-[#eeeae6] rounded-xl border border-[#e4e2e1]">{programmeCourses.map((course) => { const count = questions.filter((question) => question.course_id === course.id).length + selectedBankQuestions.filter((question) => question.courseId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-[#faf9ff]"><span className="font-medium">{course.name}</span><span className={count ? "text-[#267045]" : "text-[#a43522]"}>{count ? `${count} questions` : "No questions"}</span></button> })}</div></div>}
+            {isMultiSubject && <div className="mt-6"><h3 className="text-sm font-semibold">Subject readiness</h3><div className="mt-3 divide-y divide-[#eeeae6] rounded-xl border border-[#e4e2e1]">{selectedSubjectCourses.map((course) => { const count = questions.filter((question) => question.section_id === course.id).length + selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-[#faf9ff]"><span className="font-medium">{course.name}</span><span className={count ? "text-[#267045]" : "text-[#a43522]"}>{count ? `${count} questions` : "No questions"}</span></button> })}</div></div>}
             <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm text-[#474551] sm:flex-row sm:items-center sm:justify-between"><span><strong className="block text-[#2e2877]">Check the student experience</strong>Preview subject switching, question navigation, and mobile layout without creating an attempt or result.</span><button type="button" onClick={() => setIsPreviewOpen(true)} disabled={draftPreviewQuestions.length === 0} className="shrink-0 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 font-semibold text-[#2e2877] disabled:opacity-45">Preview as student</button></div>
             <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#eeeae6] pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={() => setBuilderStep("questions")} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold">Continue editing</button><button type="button" disabled={isReadOnly || isSaving} onClick={requestPublish} className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{publishMode === "scheduled" ? "Review schedule" : "Review and publish"}</button></div>
           </div>
@@ -1272,22 +1318,23 @@ export function MockBuilderClient({ token }: { token: string }) {
                 />
               </div>
 
-              <div className="rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
-                  <p className="text-[13px] font-semibold text-[#1b1c1c]">Access</p>
-                  <p className="mt-1 text-xs leading-5 text-[#787582]">Keep it within the centre, create a link anyone can use, or do both. A free share link is created when you publish; you can later add a paid link in Share & sell.</p>
+              <div className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+                  <p className="text-[13px] font-semibold text-[#1b1c1c]">Who can take this {isMultiSubject ? "subject combination" : "mock"}?</p>
+                  <p className="mt-1 text-xs leading-5 text-[#787582]">{isMultiSubject ? "Centre access is limited to students taking every subject you add. A direct link works for anyone you share it with." : "Choose a centre subject for enrolled students, a shareable link for anyone, or both."}</p>
                   <div className="mt-3 space-y-2">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "centre"} disabled={isReadOnly} onChange={() => changeAccessMode("centre")} className="text-[#2e2877]" />Matching centre students only</label>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "direct"} disabled={isReadOnly} onChange={() => changeAccessMode("direct")} className="text-[#2e2877]" />Direct link only</label>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "both"} disabled={isReadOnly} onChange={() => changeAccessMode("both")} className="text-[#2e2877]" />Matching centre students + direct link</label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "centre"} disabled={isReadOnly} onChange={() => changeAccessMode("centre")} className="text-[#2e2877]" />{isMultiSubject ? "Students taking every selected subject" : "Students taking this subject in my centre"}</label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "direct"} disabled={isReadOnly} onChange={() => changeAccessMode("direct")} className="text-[#2e2877]" />Anyone with the link</label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "both"} disabled={isReadOnly} onChange={() => changeAccessMode("both")} className="text-[#2e2877]" />Both centre students and anyone with the link</label>
                   </div>
+                  {(accessMode === "direct" || accessMode === "both") && <div className="mt-4 rounded-lg border border-[#d9d3ef] bg-white p-3"><p className="text-sm font-semibold text-[#1b1c1c]">Link access</p><div className="mt-3 flex gap-4"><label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "free_claim"} onChange={() => setLinkAccessMode("free_claim")} />Free</label><label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "paid"} onChange={() => setLinkAccessMode("paid")} />Paid</label></div><div className="mt-3 grid gap-3 sm:grid-cols-2">{linkAccessMode === "paid" && <label className="text-xs font-semibold text-[#474551]">Price (₦)<input type="number" min="1" value={linkPrice} onChange={(event) => setLinkPrice(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm" placeholder="e.g. 1500" /></label>}<label className="text-xs font-semibold text-[#474551]">Link address<input value={linkSlug} onChange={(event) => { setLinkSlugEdited(true); setLinkSlug(slugify(event.target.value)); }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm" /><span className="mt-1 block font-normal text-[#787582]">Generated for you; edit it if you want.</span></label></div></div>}
               </div>
 
               {deliveryMode === "fixed" && accessMode !== "direct" && <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Programme subject</label>
+                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Subject</label>
                 <select 
                   value={courseId}
                   disabled={isReadOnly}
-                  onChange={(e) => setCourseId(e.target.value)}
+                  onChange={(e) => { setCourseId(e.target.value); setSingleSubjectName(courses.find((course) => course.id === e.target.value)?.name || ""); }}
                   className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all appearance-none disabled:bg-[#f5f3f2]"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23787582' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
@@ -1296,7 +1343,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                     backgroundSize: '1.5em 1.5em',
                   }}
                 >
-                  <option value="">Select a programme subject</option>
+                  <option value="">Select a subject</option>
                   {courses.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -1306,7 +1353,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                 )}
               </div>}
 
-              {deliveryMode === "subject_combination" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm leading-6 text-[#474551]"><strong className="block text-[#2e2877]">Multi-subject structure selected</strong>In the Subjects step, choose the exact subject sections and add their questions separately. Centre students only see it when they take every selected subject.</div>}
+              {deliveryMode === "fixed" && accessMode === "direct" && <div><label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Subject</label><input value={singleSubjectName} onChange={(event) => setSingleSubjectName(event.target.value)} placeholder="e.g. Mathematics" className="w-full rounded border border-[#c8c5d2] px-3.5 py-2.5 text-[15px]" /><p className="mt-2 text-xs text-[#716c76]">This labels the mock for students. It does not need to belong to a centre programme.</p></div>}
+
+              {deliveryMode === "subject_combination" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm leading-6 text-[#474551]"><strong className="block text-[#2e2877]">Build the exact combination</strong>Next, add only the subjects in this exam. Each becomes its own tab and keeps its questions while you switch between tabs.</div>}
               </>}
 
               {builderStep === "settings" && <>
@@ -1356,9 +1405,10 @@ export function MockBuilderClient({ token }: { token: string }) {
                         className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3 py-2 text-[13px] text-[#1b1c1c] outline-none transition-all" 
                       />
                     </div>
-                  </div>
-                )}
-              </div>
+        </div>
+      )}
+
+    </div>
 
               <div className="border-t border-[#e4e2e1] pt-5">
                 <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Calculator students can use</label>
@@ -1460,6 +1510,8 @@ export function MockBuilderClient({ token }: { token: string }) {
             </div>
           </div>
         </div>}
+
+      {builderStep !== "review" && <div className="mx-auto mt-8 flex max-w-5xl items-center justify-between border-t border-[#e4e2e1] pt-5"><button type="button" disabled={currentStepIndex === 0} onClick={() => moveStep(-1)} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40">Previous</button><button type="button" onClick={() => moveStep(1)} className="rounded-lg bg-[#2e2877] px-5 py-2.5 text-sm font-semibold text-white">Next</button></div>}
     </div>
   );
 }

@@ -1201,6 +1201,9 @@ export type Database = {
           description: string | null
           delivery_mode: string
           direct_link_enabled: boolean
+          direct_link_access_mode: string
+          direct_link_price_kobo: number
+          direct_link_slug: string | null
           distribution_mode: string
           id: string
           marketplace_approval_status: string
@@ -1218,6 +1221,7 @@ export type Database = {
           shuffle_options: boolean
           shuffle_questions: boolean
           status: string
+          subject_name: string | null
           time_limit_minutes: number | null
           title: string
           total_mcq_questions: number
@@ -1235,6 +1239,9 @@ export type Database = {
           description?: string | null
           delivery_mode?: string
           direct_link_enabled?: boolean
+          direct_link_access_mode?: string
+          direct_link_price_kobo?: number
+          direct_link_slug?: string | null
           distribution_mode?: string
           id?: string
           marketplace_approval_status?: string
@@ -1252,6 +1259,7 @@ export type Database = {
           shuffle_options?: boolean
           shuffle_questions?: boolean
           status?: string
+          subject_name?: string | null
           time_limit_minutes?: number | null
           title: string
           total_mcq_questions?: number
@@ -1269,6 +1277,9 @@ export type Database = {
           description?: string | null
           delivery_mode?: string
           direct_link_enabled?: boolean
+          direct_link_access_mode?: string
+          direct_link_price_kobo?: number
+          direct_link_slug?: string | null
           distribution_mode?: string
           id?: string
           marketplace_approval_status?: string
@@ -1286,6 +1297,7 @@ export type Database = {
           shuffle_options?: boolean
           shuffle_questions?: boolean
           status?: string
+          subject_name?: string | null
           time_limit_minutes?: number | null
           title?: string
           total_mcq_questions?: number
