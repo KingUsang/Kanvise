@@ -7,14 +7,16 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { ConnectionState, RoomEvent, Participant } from "livekit-client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useReducer } from "react";
 import { toast } from "sonner";
 import AudioVideoControls from "./AudioVideoControls";
 import ChatBox from "./ChatBox";
 import VideoPiP from "./VideoPiP";
 import ParticipantsPanel from "./ParticipantsPanel";
-import CollaborativeWhiteboard, { WhiteboardRef } from "./CollaborativeWhiteboard";
 import PresentationControls from "./PresentationControls";
+import PresentationStage from "./PresentationStage";
+import { PresentationSessionProvider } from "./presentation-session";
+import { INITIAL_SIDEBAR_STATE, sidebarReducer } from "./sidebar-state";
 import {
   Hand,
   MessageSquare,
@@ -31,18 +33,17 @@ interface ClassroomLayoutProps {
   courseName: string | null
 }
 
-export default function ClassroomLayout({ isHost, classId, classTitle, courseName }: ClassroomLayoutProps) {
+function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLayoutProps) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
-  const [openSidebar, setOpenSidebar] = useState<"chat" | "participants" | null>(null);
+  const [sidebar, dispatchSidebar] = useReducer(sidebarReducer, INITIAL_SIDEBAR_STATE);
+  const openSidebar = sidebar.panel;
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
-
-  const whiteboardRef = useRef<WhiteboardRef>(null);
 
   const handleEndClass = async () => {
     setIsEnding(true);
@@ -149,14 +150,40 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
     return `${h}:${m}:${sec}`;
   };
 
-  const toggleSidebar = (panel: "chat" | "participants") => {
-    setOpenSidebar((prev) => (prev === panel ? null : panel));
+  const closeSidebar = (consumePanelHistory = true) => {
+    dispatchSidebar({ type: "CLOSE" });
+    if (consumePanelHistory && window.history.state?.kanviseClassroomPanel) window.history.back();
   };
+
+  const toggleSidebar = (panel: "chat" | "participants") => {
+    if (openSidebar === panel) return closeSidebar();
+    if (!openSidebar) window.history.pushState({ ...window.history.state, kanviseClassroomPanel: panel }, "");
+    dispatchSidebar({ type: "USER_OPEN", panel });
+  };
+
+  useEffect(() => {
+    dispatchSidebar({ type: "CLASSROOM_ENTERED" });
+    const onPopState = () => dispatchSidebar({ type: "CLOSE" });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (window.history.state?.kanviseClassroomPanel) window.history.back();
+        else dispatchSidebar({ type: "CLOSE" });
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  useEffect(() => { dispatchSidebar({ type: "CLASS_CHANGED" }); }, [classId]);
 
   return (
     <div className="flex flex-col h-screen h-dvh w-full overflow-hidden bg-[#fbf9f8] font-sans pb-[env(safe-area-inset-bottom)]">
       {/* ── TOP BAR (Solid, Pinned) ─────── */}
-      <header className="flex-shrink-0 h-14 md:h-16 bg-white border-b border-[#e4e2e1] flex items-center justify-between px-3 sm:px-4 md:px-6 z-20">
+      <header className="flex-shrink-0 h-14 bg-white border-b border-[#e4e2e1] flex items-center justify-between px-3 sm:px-4 md:px-6 z-20">
         {/* Left: session info */}
         <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-[#2e2877] flex items-center justify-center flex-shrink-0">
@@ -174,7 +201,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
 
 
 
-        {/* Right: timer + role + leave */}
+        {/* Right: timer + role */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 justify-end">
           <span className={`hidden lg:inline text-[11px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded
             ${isHost ? "bg-[#994704] text-white" : "bg-[#2e2877]/10 text-[#2e2877]"}`}>
@@ -186,13 +213,6 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
             <span className="font-semibold">{formatTime(elapsedTime)}</span>
           </div>
 
-          <button
-            onClick={handleLeaveBtnClick}
-            className="flex items-center gap-1.5 bg-[#ba1a1a]/10 hover:bg-[#ba1a1a]/20 text-[#ba1a1a] px-3 md:px-4 py-2 rounded-lg text-[13px] font-bold transition-all ml-2"
-          >
-            <LogOut size={15} />
-            <span className="hidden md:inline">Leave</span>
-          </button>
         </div>
       </header>
 
@@ -203,9 +223,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
           <div className="flex-1 relative bg-black">
             <VideoPiP />
 
-            <div className="absolute inset-0">
-              <CollaborativeWhiteboard ref={whiteboardRef} />
-            </div>
+            <PresentationStage isHost={isHost} />
 
             {!isTutorPresent && (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center backdrop-blur-md bg-black/40">
@@ -223,25 +241,27 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
           </div>
         </div>
 
-        {/* ── SIDEBAR PANEL (Overlay drawer on mobile, pushes content on md+, always mounted to preserve state) ────── */}
+        {/* Chat/People always overlay the stage and remain mounted but inert while closed. */}
         {openSidebar && (
           <div
             className="absolute inset-0 z-40 bg-black/40 md:hidden"
-            onClick={() => setOpenSidebar(null)}
+            onClick={() => closeSidebar()}
             aria-hidden
           />
         )}
-        <div className={`absolute inset-y-0 right-0 z-50 w-full sm:w-[360px] md:static md:z-20 md:w-auto
-          flex-shrink-0 flex flex-col bg-white transition-transform md:transition-all duration-300 overflow-hidden
+        <div className={`absolute inset-y-0 right-0 z-50 w-full sm:w-[360px] lg:w-[380px]
+          flex flex-col bg-white transition-[transform,visibility] duration-300 overflow-hidden shadow-2xl border-l border-[#e4e2e1]
           ${openSidebar
-            ? "translate-x-0 md:w-[320px] border-l border-[#e4e2e1] shadow-2xl md:shadow-none"
-            : "translate-x-full md:translate-x-0 md:w-0 border-none"}`}
+            ? "visible translate-x-0 pointer-events-auto"
+            : "invisible translate-x-full pointer-events-none"}`}
+          aria-hidden={!openSidebar}
+          inert={!openSidebar}
         >
           {/* Panel Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#e4e2e1] bg-[#fbf9f8] min-w-[320px]">
             <div className="flex gap-1 bg-[#f5f3f2] p-1 rounded-lg border border-[#e4e2e1]">
               <button
-                onClick={() => setOpenSidebar("chat")}
+                onClick={() => dispatchSidebar({ type: "USER_OPEN", panel: "chat" })}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold transition-all
                   ${openSidebar === "chat" ? "bg-white text-[#180d62] shadow-sm" : "text-[#787582] hover:text-[#180d62]"}`}
               >
@@ -249,7 +269,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
                 Chat
               </button>
               <button
-                onClick={() => setOpenSidebar("participants")}
+                onClick={() => dispatchSidebar({ type: "USER_OPEN", panel: "participants" })}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold transition-all
                   ${openSidebar === "participants" ? "bg-white text-[#180d62] shadow-sm" : "text-[#787582] hover:text-[#180d62]"}`}
               >
@@ -258,7 +278,8 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
               </button>
             </div>
             <button
-              onClick={() => setOpenSidebar(null)}
+              onClick={() => closeSidebar()}
+              aria-label="Close side panel"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-[#787582] hover:bg-[#f5f3f2] hover:text-[#180d62] transition-all"
             >
               <X size={16} />
@@ -279,16 +300,13 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
       </div>
 
       {/* ── BOTTOM TOOLBAR (Solid, Pinned) ─────────── */}
-      <footer className="flex-shrink-0 h-16 md:h-[80px] bg-white border-t border-[#e4e2e1] flex items-center justify-between px-2 sm:px-4 md:px-6 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
-        <div className="flex-1" />
+      <footer className="flex-shrink-0 h-16 bg-white border-t border-[#e4e2e1] flex items-center justify-between px-2 sm:px-4 md:px-5 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
+        <div className="hidden flex-1 lg:block" />
 
         {/* Centre: Media Controls */}
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           {isHost && (
-            <PresentationControls
-              classId={classId}
-              onSlideChange={(url) => whiteboardRef.current?.setSlide(url)}
-            />
+            <PresentationControls />
           )}
           <AudioVideoControls />
 
@@ -311,7 +329,7 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
         </div>
 
         {/* Right: Sidebar Toggles */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 justify-end">
+        <div className="flex items-center gap-1 sm:gap-2 lg:flex-1 justify-end">
           <button
             onClick={() => toggleSidebar("chat")}
             className={`flex items-center gap-1.5 px-2.5 py-2 sm:px-3 sm:py-2.5 rounded-lg text-[13px] font-semibold transition-all border
@@ -338,6 +356,14 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
                 {participants.length}
               </span>
             )}
+          </button>
+          <span className="mx-0.5 h-7 w-px bg-[#dedce2]" />
+          <button
+            onClick={handleLeaveBtnClick}
+            className="flex items-center gap-1.5 rounded-lg bg-[#ba1a1a]/10 px-2.5 py-2 text-[13px] font-bold text-[#ba1a1a] transition-colors hover:bg-[#ba1a1a]/20 sm:px-3 sm:py-2.5"
+          >
+            <LogOut size={16} />
+            <span className="hidden xl:inline">Leave</span>
           </button>
         </div>
       </footer>
@@ -378,5 +404,13 @@ export default function ClassroomLayout({ isHost, classId, classTitle, courseNam
         </div>
       )}
     </div>
+  );
+}
+
+export default function ClassroomLayout(props: ClassroomLayoutProps) {
+  return (
+    <PresentationSessionProvider classId={props.classId} isHost={props.isHost}>
+      <ClassroomShell {...props} />
+    </PresentationSessionProvider>
   );
 }

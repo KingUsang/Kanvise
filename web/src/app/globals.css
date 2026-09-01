@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+/* PDF.js text layer: keeps document text selectable without affecting the
+   device-pixel canvas used for the visual page. */
+.kanvise-pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+  line-height: 1;
+  transform-origin: 0 0;
+  text-align: initial;
+  text-size-adjust: none;
+}
+
+.kanvise-pdf-text-layer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+  user-select: text;
+}
+
+.kanvise-pdf-text-layer > :not(.markedContent),
+.kanvise-pdf-text-layer .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--total-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x));
+}
+
+.kanvise-pdf-text-layer .markedContent { display: contents; }
+.kanvise-pdf-text-layer ::selection { background: rgb(55 85 255 / 25%); }
+
 /* ── Scroll-reveal animations ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(28px); }

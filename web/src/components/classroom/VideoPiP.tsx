@@ -88,7 +88,7 @@ export default function VideoPiP() {
 
   return (
     <div
-      className="absolute top-3 right-3 md:top-5 md:right-5 z-30 flex items-start gap-2 md:gap-3 cursor-grab active:cursor-grabbing touch-none select-none"
+      className="absolute right-3 top-3 z-30 flex items-start gap-2 cursor-grab touch-none select-none active:cursor-grabbing md:right-4 md:top-4"
       style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -97,18 +97,18 @@ export default function VideoPiP() {
     >
       {/* Secondary PiP: Active Student or Local Preview */}
       {displayStudentTrack && displayStudent && (
-        <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden border-[3px] border-[#994704] shadow-lg shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto transition-all animate-in fade-in slide-in-from-right-4">
+        <div className="relative h-12 w-20 animate-in overflow-hidden rounded-lg border-2 border-[#994704] bg-[#1b1c1c] shadow-lg shadow-black/20 transition-all fade-in slide-in-from-right-4 pointer-events-auto md:h-14 md:w-24">
           <VideoTrack trackRef={displayStudentTrack} className="w-full h-full object-cover" />
-          {displayStudent.isSpeaking && <div className="absolute inset-0 rounded-full ring-4 ring-green-400/80" />}
+          {displayStudent.isSpeaking && <div className="absolute inset-0 rounded-lg ring-2 ring-inset ring-green-400/80" />}
         </div>
       )}
 
       {/* Primary PiP: Permanent Pinned Tutor */}
-      <div className={`w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden border-[3px] shadow-xl shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto flex items-center justify-center ${tutor.isSpeaking ? "border-green-400 ring-4 ring-green-400/30" : "border-white"}`}>
+      <div className={`relative flex h-[68px] w-[108px] items-center justify-center overflow-hidden rounded-xl border-2 bg-[#1b1c1c] shadow-xl shadow-black/20 pointer-events-auto md:h-20 md:w-32 ${tutor.isSpeaking ? "border-green-400 ring-2 ring-green-400/30" : "border-white"}`}>
         {tutor.isCameraEnabled && tutorTrack ? (
           <VideoTrack trackRef={tutorTrack} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#2e2877] flex items-center justify-center text-white text-xl md:text-2xl font-bold shadow-inner">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2e2877] text-lg font-bold text-white shadow-inner md:h-12 md:w-12 md:text-xl">
             {(tutor.name || tutor.identity).slice(0, 2).toUpperCase()}
           </div>
         )}

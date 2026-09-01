@@ -13,6 +13,7 @@ export const PRIVATE_UPLOAD_TYPES = [
   'assignment_attachment',
   'submission',
   'question_media',
+  'live_class_presentation',
 ] as const
 
 export type PrivateUploadType = typeof PRIVATE_UPLOAD_TYPES[number]
@@ -448,6 +449,30 @@ export async function verifyPublicUpload(input: {
 export async function deleteStoredObject(fileKey: string) {
   const { client, bucketName } = configuredPublicClient()
   await client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: fileKey }))
+}
+
+export async function deletePrivateObject(fileKey: string, schoolId: string) {
+  assertPrivateFileKey(fileKey, schoolId)
+  const { client, bucketName } = configuredClient()
+  await client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: fileKey }))
+}
+
+export async function uploadPrivateObject(input: {
+  fileKey: string
+  schoolId: string
+  body: Buffer | Uint8Array
+  contentType: string
+}) {
+  assertPrivateFileKey(input.fileKey, input.schoolId)
+  const { client, bucketName } = configuredClient()
+  await client.send(new PutObjectCommand({
+    Bucket: bucketName,
+    Key: input.fileKey,
+    Body: input.body,
+    ContentType: input.contentType,
+    ContentLength: input.body.byteLength,
+  }))
+  return { fileKey: input.fileKey }
 }
 
 export async function uploadPublicObject(input: {

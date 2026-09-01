@@ -778,6 +778,7 @@ export type Database = {
           slides_urls: string[] | null
           started_at: string | null
           status: string
+          teaching_mode: string
           title: string
           tutor_id: string
           updated_at: string
@@ -796,6 +797,7 @@ export type Database = {
           slides_urls?: string[] | null
           started_at?: string | null
           status?: string
+          teaching_mode?: string
           title: string
           tutor_id: string
           updated_at?: string
@@ -814,6 +816,7 @@ export type Database = {
           slides_urls?: string[] | null
           started_at?: string | null
           status?: string
+          teaching_mode?: string
           title?: string
           tutor_id?: string
           updated_at?: string
@@ -843,6 +846,79 @@ export type Database = {
           {
             foreignKeyName: "live_classes_tutor_id_fkey"
             columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_class_presentations: {
+        Row: {
+          annotations: Json
+          created_at: string
+          current_page: number
+          file_key: string
+          file_size_bytes: number
+          filename: string
+          id: string
+          is_active: boolean
+          live_class_id: string
+          page_count: number
+          school_id: string
+          sort_order: number
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          annotations?: Json
+          created_at?: string
+          current_page?: number
+          file_key: string
+          file_size_bytes: number
+          filename: string
+          id?: string
+          is_active?: boolean
+          live_class_id: string
+          page_count: number
+          school_id: string
+          sort_order?: number
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          annotations?: Json
+          created_at?: string
+          current_page?: number
+          file_key?: string
+          file_size_bytes?: number
+          filename?: string
+          id?: string
+          is_active?: boolean
+          live_class_id?: string
+          page_count?: number
+          school_id?: string
+          sort_order?: number
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_class_presentations_live_class_id_fkey"
+            columns: ["live_class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_class_presentations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_class_presentations_uploaded_by_fkey"
+            columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "user_profiles"
             referencedColumns: ["id"]

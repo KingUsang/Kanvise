@@ -231,8 +231,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   }, [send, connectionState]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#ece9f2] p-3 sm:p-5">
-      <div className="relative h-full w-full overflow-hidden rounded-xl border border-[#d8d3e4] bg-white shadow-[0_12px_32px_rgba(24,13,98,0.08)]">
+    <div className="absolute inset-0 overflow-hidden bg-white">
       {/* Excalidraw dynamically imports itself, works fine in Next.js CSR */}
       <Excalidraw
         excalidrawAPI={(api) => setExcalidrawAPI(api)}
@@ -254,7 +253,6 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
           }
         }}
       />
-      </div>
     </div>
   );
 });
