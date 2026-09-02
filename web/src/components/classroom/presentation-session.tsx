@@ -19,7 +19,9 @@ export type PresentationMaterial = {
   id: string
   filename: string
   file_size_bytes: number
-  page_count: number
+  page_count: number | null
+  processing_status: 'uploading' | 'processing' | 'ready' | 'failed'
+  processing_error: string | null
   sort_order: number
   current_page: number
   is_active: boolean
@@ -52,7 +54,7 @@ type Session = {
   setMaterialsOpen: (open: boolean) => void
   remotePointer: Pointer
   getViewUrl: (materialId: string) => Promise<string>
-  upload: (file: File) => Promise<void>
+  upload: (file: File, onProgress?: (progress: number) => void) => Promise<void>
   replace: (materialId: string, file: File) => Promise<void>
   activate: (materialId: string) => Promise<void>
   changePage: (page: number) => Promise<void>
@@ -135,6 +137,12 @@ export function PresentationSessionProvider({ classId, isHost, children }: {
   }, [classId, loadState])
 
   useEffect(() => {
+    if (!materials.some((material) => material.processing_status === 'uploading' || material.processing_status === 'processing')) return
+    const timer = window.setTimeout(() => void loadState(), 1500)
+    return () => window.clearTimeout(timer)
+  }, [loadState, materials])
+
+  useEffect(() => {
     if (connectionState !== ConnectionState.Connected) return
     void loadState()
     if (!isHost) publish({ type: 'STATE_RECOVERY_REQUEST' }, STATE_TOPIC, true)
@@ -203,14 +211,24 @@ export function PresentationSessionProvider({ classId, isHost, children }: {
     publish({ type: 'ACTIVE_MATERIAL', material }, STATE_TOPIC, true)
   }, [publish, request])
 
-  const upload = useCallback(async (file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    const material = await request<PresentationMaterial>('/presentations/upload', { method: 'POST', body: form })
-    setMaterials((items) => [...items, material])
-    await activate(material.id)
-    toast.success('Teaching material is ready')
-  }, [activate, request])
+  const upload = useCallback(async (file: File, onProgress?: (progress: number) => void) => {
+    const created = await request<{ material: PresentationMaterial; upload_url: string }>('/presentations/upload', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file_name: file.name, content_type: file.type, file_size_bytes: file.size }),
+    })
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('PUT', created.upload_url)
+      xhr.setRequestHeader('Content-Type', file.type)
+      xhr.upload.onprogress = (event) => { if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100)) }
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`))
+      xhr.onerror = () => reject(new Error('Upload failed. Check your connection and try again.'))
+      xhr.send(file)
+    })
+    const material = await request<PresentationMaterial>(`/presentations/${created.material.id}/complete`, { method: 'POST' })
+    setMaterials((items) => [...items.filter((item) => item.id !== material.id), material])
+    toast.message('PDF uploaded. Checking pages…')
+  }, [request])
 
   const replace = useCallback(async (materialId: string, file: File) => {
     const form = new FormData()
@@ -222,7 +240,7 @@ export function PresentationSessionProvider({ classId, isHost, children }: {
   }, [publish, request])
 
   const changePage = useCallback(async (page: number) => {
-    if (!active || page === active.current_page || page < 1 || page > active.page_count) return
+    if (!active || !active.page_count || page === active.current_page || page < 1 || page > active.page_count) return
     setMaterials((items) => synchronizePage(items, active.id, page))
     publish({ type: 'PAGE_CHANGE', materialId: active.id, page }, STATE_TOPIC, true)
     try { await request(`/presentations/${active.id}/page`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page }) }) }

@@ -9,15 +9,19 @@ import {
 } from '../middleware/auth'
 import {
   buildPrivateFileKey,
+  createPresignedUpload,
   createPresignedDownload,
   deletePrivateObject,
   uploadPrivateObject,
+  verifyPrivateUpload,
 } from '../storage/r2'
 import {
   MAX_SLIDE_PAGES,
   SlideConversionValidationError,
   validateSlidePdf,
+  validateSlidePdfMetadata,
 } from '../slides/conversion-policy'
+import { enqueuePresentationProcessing } from '../slides/presentation-processor'
 import { readPdfPageCount } from '../slides/pdf-metadata'
 
 export const slidesRouter = new Hono()
@@ -78,6 +82,8 @@ function publicPresentation(row: any) {
     filename: row.filename,
     file_size_bytes: row.file_size_bytes,
     page_count: row.page_count,
+    processing_status: row.processing_status || 'ready',
+    processing_error: row.processing_error || null,
     sort_order: row.sort_order,
     current_page: row.current_page,
     is_active: row.is_active,
@@ -128,10 +134,10 @@ slidesRouter.post('/:id/presentations/upload', async (c) => {
   if (access.liveClass.status !== 'live') {
     return c.json({ error: 'Class must be live to upload material', code: 'CLASS_NOT_LIVE' }, 400)
   }
-  let file: File
+  let metadata: { fileName: string; contentType: string; fileSizeBytes: number }
   try {
-    const body = await c.req.parseBody()
-    file = validateSlidePdf(body.file as File | undefined)
+    const body = await c.req.json()
+    metadata = validateSlidePdfMetadata({ fileName: body.file_name, contentType: body.content_type, fileSizeBytes: body.file_size_bytes })
   } catch (error) {
     if (error instanceof SlideConversionValidationError) {
       return c.json({ error: error.message, code: error.code }, 400)
@@ -139,41 +145,49 @@ slidesRouter.post('/:id/presentations/upload', async (c) => {
     throw error
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer())
-  let pageCount: number
-  try {
-    pageCount = await readPdfPageCount(new Uint8Array(buffer))
-  } catch (error) {
-    console.error('[presentations] PDF metadata read failed', error)
-    return c.json({ error: 'The PDF could not be read', code: 'INVALID_PDF' }, 400)
-  }
-  if (pageCount < 1 || pageCount > MAX_SLIDE_PAGES) {
-    return c.json({ error: `PDF must contain between 1 and ${MAX_SLIDE_PAGES} pages`, code: 'PAGE_LIMIT_EXCEEDED' }, 400)
-  }
-
   const presentationId = crypto.randomUUID()
-  const fileKey = buildPrivateFileKey(access.user.school_id, 'live_class_presentation', access.liveClass.id, 'pdf', presentationId)
   const { data: last } = await db.from('live_class_presentations').select('sort_order')
     .eq('live_class_id', access.liveClass.id).order('sort_order', { ascending: false }).limit(1).maybeSingle()
   try {
-    await uploadPrivateObject({ fileKey, schoolId: access.user.school_id, body: buffer, contentType: 'application/pdf' })
+    const upload = await createPresignedUpload({ schoolId: access.user.school_id, entityType: 'live_class_presentation', contextId: access.liveClass.id, fileName: metadata.fileName, contentType: metadata.contentType, fileSizeBytes: metadata.fileSizeBytes })
     const { data, error } = await db.from('live_class_presentations').insert({
       id: presentationId,
       school_id: access.user.school_id,
       live_class_id: access.liveClass.id,
       uploaded_by: access.user.id,
-      file_key: fileKey,
-      filename: file.name.slice(0, 255),
-      file_size_bytes: file.size,
-      page_count: pageCount,
+      file_key: upload.fileKey,
+      filename: metadata.fileName.slice(0, 255),
+      file_size_bytes: metadata.fileSizeBytes,
+      page_count: null,
+      processing_status: 'uploading',
       sort_order: (last?.sort_order ?? -1) + 1,
     }).select('*').single()
     if (error) throw error
-    return c.json({ data: publicPresentation(data) }, 201)
+    return c.json({ data: { material: publicPresentation(data), upload_url: upload.presignedUrl, expires_in_seconds: upload.expiresInSeconds } }, 201)
   } catch (error) {
-    await deletePrivateObject(fileKey, access.user.school_id).catch(() => undefined)
     console.error('[presentations] upload failed', error)
     return c.json({ error: 'Could not save presentation material' }, 500)
+  }
+})
+
+slidesRouter.post('/:id/presentations/:presentationId/complete', async (c) => {
+  const access = await requireClass(c, true)
+  if ('response' in access) return access.response
+  const presentation = await findPresentation(access.liveClass.id, c.req.param('presentationId'))
+  if (!presentation) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
+  if (presentation.processing_status !== 'uploading') return c.json({ error: 'Material upload is not awaiting confirmation', code: 'INVALID_UPLOAD_STATE' }, 409)
+  try {
+    await verifyPrivateUpload({ fileKey: presentation.file_key, schoolId: access.user.school_id, entityType: 'live_class_presentation', contextId: access.liveClass.id, contentType: 'application/pdf', fileSizeBytes: presentation.file_size_bytes })
+    const { data, error } = await db.from('live_class_presentations').update({ processing_status: 'processing', processing_started_at: new Date().toISOString() })
+      .eq('id', presentation.id).eq('live_class_id', access.liveClass.id).eq('processing_status', 'uploading').select('*').single()
+    if (error) throw error
+    enqueuePresentationProcessing(presentation.id)
+    return c.json({ data: publicPresentation(data) })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not verify uploaded PDF'
+    await db.from('live_class_presentations').update({ processing_status: 'failed', processing_error: message.slice(0, 500) })
+      .eq('id', presentation.id).eq('live_class_id', access.liveClass.id)
+    return c.json({ error: message, code: 'UPLOAD_VERIFICATION_FAILED' }, 400)
   }
 })
 
@@ -182,6 +196,7 @@ slidesRouter.get('/:id/presentations/:presentationId/view', async (c) => {
   if ('response' in access) return access.response
   const presentation = await findPresentation(access.liveClass.id, c.req.param('presentationId'))
   if (!presentation) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
+  if (presentation.processing_status !== 'ready') return c.json({ error: 'Material is still being prepared', code: 'MATERIAL_NOT_READY' }, 409)
   const viewUrl = await createPresignedDownload(presentation.file_key, access.user.school_id, 600)
   return c.json({ data: { url: viewUrl, expires_in_seconds: 600 } })
 })

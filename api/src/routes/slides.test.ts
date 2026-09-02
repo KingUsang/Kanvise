@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   uploadPrivate: vi.fn(),
   deletePrivate: vi.fn(),
   createDownload: vi.fn(),
+  createUpload: vi.fn(),
+  verifyUpload: vi.fn(),
   loadCourseIds: vi.fn(),
   readPageCount: vi.fn(),
   user: { id: 'tutor-1', school_id: 'school-1', role: 'tutor' } as any,
@@ -20,6 +22,8 @@ vi.mock('../storage/r2', async (importOriginal) => {
     uploadPrivateObject: mocks.uploadPrivate,
     deletePrivateObject: mocks.deletePrivate,
     createPresignedDownload: mocks.createDownload,
+    createPresignedUpload: mocks.createUpload,
+    verifyPrivateUpload: mocks.verifyUpload,
   }
 })
 vi.mock('../middleware/auth', () => ({
@@ -52,7 +56,7 @@ function liveClass(overrides: Record<string, unknown> = {}) {
 function material(overrides: Record<string, unknown> = {}) {
   return {
     id: 'material-1', live_class_id: 'class-1', file_key: 'schools/school-1/private/live_class_presentation/class-1/material-1.pdf',
-    filename: 'Lesson.pdf', file_size_bytes: 800, page_count: 1, sort_order: 0, current_page: 1,
+    filename: 'Lesson.pdf', file_size_bytes: 800, page_count: 1, processing_status: 'ready', processing_error: null, sort_order: 0, current_page: 1,
     is_active: true, annotations: {}, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z',
     ...overrides,
   }
@@ -84,21 +88,22 @@ describe('private classroom presentations API', () => {
     mocks.uploadPrivate.mockResolvedValue({ fileKey: 'private.pdf' })
     mocks.deletePrivate.mockResolvedValue(undefined)
     mocks.readPageCount.mockResolvedValue(1)
+    mocks.createUpload.mockResolvedValue({ presignedUrl: 'https://r2.example/upload', fileKey: 'schools/school-1/private/live_class_presentation/class-1/new.pdf', expiresInSeconds: 900 })
+    mocks.verifyUpload.mockResolvedValue({ checksum: 'checksum' })
   })
 
-  it('stores the original PDF privately and records its page count', async () => {
+  it('creates a private direct-upload slot without sending the PDF through the API', async () => {
     queue(
       { data: liveClass(), error: null },
       { data: null, error: null },
       { data: material({ is_active: false }), error: null },
     )
-    const form = new FormData()
-    form.append('file', new File([onePagePdf()], 'Lesson.pdf', { type: 'application/pdf' }))
-    const response = await slidesRouter.request('/class-1/presentations/upload', { method: 'POST', body: form })
+    const response = await slidesRouter.request('/class-1/presentations/upload', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ file_name: 'Lesson.pdf', content_type: 'application/pdf', file_size_bytes: 800 }) })
     const responseBody = await response.clone().json()
     expect(response.status, JSON.stringify(responseBody)).toBe(201)
-    expect(mocks.uploadPrivate).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-1', contentType: 'application/pdf' }))
-    expect(mocks.uploadPrivate.mock.calls[0][0].fileKey).toContain('/private/live_class_presentation/class-1/')
+    expect(mocks.createUpload).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-1', entityType: 'live_class_presentation', contextId: 'class-1' }))
+    expect(responseBody.data.upload_url).toBe('https://r2.example/upload')
+    expect(mocks.uploadPrivate).not.toHaveBeenCalled()
   })
 
   it('prevents admins and unassigned tutors from mutating tutor materials', async () => {

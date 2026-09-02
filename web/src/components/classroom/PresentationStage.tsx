@@ -178,6 +178,7 @@ function AnnotationLayer({ isHost, page, width, height }: {
 function MaterialsDrawer() {
   const { materials, active, materialsOpen, setMaterialsOpen, upload, replace, activate, rename, reorder, remove } = usePresentationSession()
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   if (!materialsOpen) return null
@@ -193,10 +194,10 @@ function MaterialsDrawer() {
     setUploading(true)
     try {
       if (replaceTarget) await replace(replaceTarget, file)
-      else await upload(file)
+      else await upload(file, setUploadProgress)
     }
     catch (error) { toast.error('Could not upload the PDF', { description: error instanceof Error ? error.message : undefined }) }
-    finally { setUploading(false); setReplaceTarget(null) }
+    finally { setUploading(false); setUploadProgress(0); setReplaceTarget(null) }
   }
 
   return (
@@ -211,7 +212,7 @@ function MaterialsDrawer() {
           <div key={material.id} className={`rounded-xl border p-3 ${active?.id === material.id ? 'border-[#2e2877] bg-[#f2f0ff]' : 'border-[#e5e3e8]'}`}>
             <button onClick={() => void activate(material.id)} className="flex w-full items-start gap-3 text-left">
               <span className="rounded-lg bg-white p-2 text-[#994704] shadow-sm"><FileText size={18} /></span>
-              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#24212b]">{material.filename}</span><span className="text-[11px] text-[#716e79]">{material.page_count} pages</span></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#24212b]">{material.filename}</span><span className="text-[11px] text-[#716e79]">{material.processing_status === 'ready' ? `${material.page_count} pages` : material.processing_status === 'failed' ? material.processing_error || 'Could not read PDF' : material.processing_status === 'processing' ? 'Checking PDF…' : 'Waiting for upload…'}</span></span>
             </button>
             <div className="mt-2 flex justify-end gap-1 border-t border-black/5 pt-2">
               <button disabled={index === 0} onClick={() => void reorder(material.id, -1)} className="rounded p-1.5 hover:bg-white disabled:opacity-30" title="Move up"><ChevronUp size={14} /></button>
@@ -226,7 +227,7 @@ function MaterialsDrawer() {
       <div className="border-t border-[#e5e3e8] p-3">
         <input ref={inputRef} type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
         <button disabled={uploading} onClick={() => { setReplaceTarget(null); inputRef.current?.click() }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#180d62] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-          {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}{uploading ? 'Uploading…' : 'Add PDF'}
+          {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}{uploading ? `Uploading ${uploadProgress}%` : 'Add PDF'}
         </button>
       </div>
     </aside>
@@ -258,7 +259,7 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
     return <div className="absolute inset-0"><CollaborativeWhiteboard /><MaterialsDrawer /></div>
   }
 
-  if (!active) {
+  if (!active || active.processing_status !== 'ready' || !active.page_count) {
     return <div className="absolute inset-0 flex items-center justify-center bg-[#202124] text-white"><Loader2 className="animate-spin" /></div>
   }
 

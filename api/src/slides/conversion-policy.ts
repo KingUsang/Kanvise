@@ -26,6 +26,22 @@ export function validateSlidePdf(file: File | null | undefined) {
   return file
 }
 
+export function validateSlidePdfMetadata(input: { fileName: unknown; contentType: unknown; fileSizeBytes: unknown }) {
+  const fileName = typeof input.fileName === 'string' ? input.fileName : ''
+  const contentType = typeof input.contentType === 'string' ? input.contentType : ''
+  const fileSizeBytes = Number(input.fileSizeBytes)
+  if (!fileName || !Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) {
+    throw new SlideConversionValidationError('A PDF file is required', 'NO_FILE')
+  }
+  if (contentType !== 'application/pdf' || !fileName.toLowerCase().endsWith('.pdf')) {
+    throw new SlideConversionValidationError('Only PDF files are allowed', 'INVALID_FILE_TYPE')
+  }
+  if (fileSizeBytes > MAX_SLIDE_PDF_SIZE) {
+    throw new SlideConversionValidationError('File exceeds 25MB limit. Please compress your PDF.', 'FILE_TOO_LARGE')
+  }
+  return { fileName, contentType, fileSizeBytes }
+}
+
 export function createConversionDeadline(
   onTimeout: () => void | Promise<void>,
   timeoutMs = SLIDE_CONVERSION_TIMEOUT_MS,

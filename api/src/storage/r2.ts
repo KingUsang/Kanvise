@@ -475,6 +475,14 @@ export async function uploadPrivateObject(input: {
   return { fileKey: input.fileKey }
 }
 
+export async function readPrivateObject(fileKey: string, schoolId: string) {
+  assertPrivateFileKey(fileKey, schoolId)
+  const { client, bucketName } = configuredClient()
+  const object = await client.send(new GetObjectCommand({ Bucket: bucketName, Key: fileKey }))
+  if (!object.Body) throw new StorageError('Uploaded object could not be read', 'FILE_NOT_FOUND', 404)
+  return object.Body.transformToByteArray()
+}
+
 export async function uploadPublicObject(input: {
   fileKey: string
   body: Buffer | Uint8Array

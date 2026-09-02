@@ -32,6 +32,7 @@ export interface WhiteboardRef {
 
 const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
+  const boardContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromRemote = useRef(false);
   const lastBroadcastRef = useRef<number>(0);
   const slideElementRef = useRef<any>(null);
@@ -93,6 +94,32 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const connectionState = useConnectionState();
   const hasRequestedScene = useRef(false);
   const currentSlideUrlRef = useRef<string | null>(null);
+
+  // Excalidraw measures its canvas while it mounts. In a LiveKit classroom the
+  // room, fonts, and stage can all settle a frame later, which previously left
+  // its menu (the hamburger) and the right edge of the canvas unpainted until
+  // another UI action, such as opening People, caused a reflow. Refresh after
+  // the stage has been painted and whenever its dimensions subsequently change.
+  useEffect(() => {
+    if (!excalidrawAPI || !boardContainerRef.current) return;
+
+    let animationFrame = 0;
+    let delayedRefresh = 0;
+    const refresh = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => excalidrawAPI.refresh());
+    };
+    const observer = new ResizeObserver(refresh);
+    observer.observe(boardContainerRef.current);
+    refresh();
+    delayedRefresh = window.setTimeout(refresh, 150);
+
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(animationFrame);
+      window.clearTimeout(delayedRefresh);
+    };
+  }, [excalidrawAPI]);
 
   const loadSlideToCanvas = async (imageUrl: string) => {
     if (!excalidrawAPI) return;
@@ -231,7 +258,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   }, [send, connectionState]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-white">
+    <div ref={boardContainerRef} className="absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-white">
       {/* Excalidraw dynamically imports itself, works fine in Next.js CSR */}
       <Excalidraw
         excalidrawAPI={(api) => setExcalidrawAPI(api)}

@@ -4,7 +4,7 @@ import type { PresentationMaterial } from './presentation-session'
 
 const material = (id: string, page = 1): PresentationMaterial => ({
   id, filename: `${id}.pdf`, file_size_bytes: 100, page_count: 10, sort_order: 0,
-  current_page: page, is_active: id === 'a', annotations: {}, created_at: '', updated_at: '',
+  current_page: page, is_active: id === 'a', processing_status: 'ready', processing_error: null, annotations: {}, created_at: '', updated_at: '',
 })
 
 describe('presentation synchronization state', () => {
