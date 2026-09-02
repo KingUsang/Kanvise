@@ -1,3 +1,5 @@
+import { extractPdfText } from "./mock-pdf-text";
+
 export const MAX_MOCK_PDF_SIZE_BYTES = 15 * 1024 * 1024;
 
 export type ImportedMockQuestion = {
@@ -123,7 +125,7 @@ Return one question per object. Set subject_name to the document's subject headi
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 
-async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null): Promise<MockPdfImportResult> {
+async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null, initialWarnings: string[] = []): Promise<MockPdfImportResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("AI document import is not configured yet. Add GEMINI_API_KEY to the API environment.");
 
@@ -158,18 +160,42 @@ async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null)
     ? parsed.warnings.map((warning: unknown): string => stringValue(warning)).filter((warning: string): boolean => Boolean(warning))
     : [];
   if (questions.length === 0) warnings.push("No questions were found. Check that the PDF contains an examination paper.");
+  const usage = body?.usageMetadata;
+  if (usage) {
+    console.info("[mocks] Gemini import usage", {
+      model,
+      prompt_tokens: usage.promptTokenCount,
+      output_tokens: usage.candidatesTokenCount,
+      total_tokens: usage.totalTokenCount,
+    });
+  }
   return {
     questions,
-    warnings: [...new Set(warnings)],
+    warnings: [...new Set([...initialWarnings, ...warnings])],
     page_count: Number.isInteger(parsed.page_count) ? parsed.page_count : fallbackPageCount,
   };
 }
 
 export async function importQuestionsFromPdf(buffer: Uint8Array): Promise<MockPdfImportResult> {
+  const extracted = await extractPdfText(buffer);
+  if (!extracted.has_readable_text) {
+    return callGemini([
+      { inline_data: { mime_type: "application/pdf", data: Buffer.from(buffer).toString("base64") } },
+      { text: extractionPrompt },
+    ], extracted.page_count, ["This appears to be a scanned PDF, so it was read visually. Review diagrams and answer keys before publishing."]);
+  }
+
+  const imagePages = extracted.pages.filter((page) => page.has_embedded_image).map((page) => page.page_number);
+  const sourceText = extracted.pages
+    .map((page) => `--- Source page ${page.page_number} ---\n${page.text || "[No selectable text on this page]"}`)
+    .join("\n\n");
+  const visualWarning = imagePages.length
+    ? `Pages ${imagePages.join(", ")} contain embedded images or diagrams. Their question text was imported, but review those questions before publishing because figure crops are not attached yet.`
+    : "";
   return callGemini([
-    { inline_data: { mime_type: "application/pdf", data: Buffer.from(buffer).toString("base64") } },
+    { text: `The following is selectable text extracted locally from a PDF. Page markers are authoritative. Do not infer visual content that is not present in this text.\n\n${sourceText}` },
     { text: extractionPrompt },
-  ], null);
+  ], extracted.page_count, visualWarning ? [visualWarning] : []);
 }
 
 export async function importQuestionsFromDocumentText(text: string, fileName?: string): Promise<MockPdfImportResult> {
