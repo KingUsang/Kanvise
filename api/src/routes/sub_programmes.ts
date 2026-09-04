@@ -13,7 +13,7 @@ subProgrammesRouter.use('*', tenantMiddleware)
 // ---------------------------------------------------------------------------
 subProgrammesRouter.patch('/:id', requireRole('admin'), async (c) => {
   const user = c.get('user')
-  const id = c.req.param('id')
+  const id = c.req.param('id')!
   const body = await c.req.json()
 
   const updates: any = {}
@@ -41,7 +41,7 @@ subProgrammesRouter.patch('/:id', requireRole('admin'), async (c) => {
 // ---------------------------------------------------------------------------
 subProgrammesRouter.post('/:id/publish', requireRole('admin'), async (c) => {
   const user = c.get('user')
-  const id = c.req.param('id')
+  const id = c.req.param('id')!
 
   const { error } = await supabase
     .from('sub_programmes')
@@ -55,7 +55,7 @@ subProgrammesRouter.post('/:id/publish', requireRole('admin'), async (c) => {
 
 subProgrammesRouter.post('/:id/unpublish', requireRole('admin'), async (c) => {
   const user = c.get('user')
-  const id = c.req.param('id')
+  const id = c.req.param('id')!
 
   const { error } = await supabase
     .from('sub_programmes')
@@ -72,7 +72,7 @@ subProgrammesRouter.post('/:id/unpublish', requireRole('admin'), async (c) => {
 // ---------------------------------------------------------------------------
 subProgrammesRouter.delete('/:id', requireRole('admin'), async (c) => {
   const user = c.get('user')
-  const id = c.req.param('id')
+  const id = c.req.param('id')!
 
   // Cannot delete if active enrolments exist
   const { count } = await supabase

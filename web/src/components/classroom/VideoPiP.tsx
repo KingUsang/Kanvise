@@ -1,10 +1,12 @@
 "use client";
 
-import { useParticipants, useTracks, VideoTrack, useSpeakingParticipants, useLocalParticipant } from "@livekit/components-react";
+import { useParticipants, useTracks, VideoTrack, useSpeakingParticipants, useLocalParticipant, useRoomContext } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+import { syncCameraSubscriptions } from "./camera-subscriptions";
 
 export default function VideoPiP() {
+  const room = useRoomContext();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const cameraTracks = useTracks([Track.Source.Camera]);
@@ -26,30 +28,53 @@ export default function VideoPiP() {
     (p) => p.identity !== tutor?.identity && p.isCameraEnabled
   );
 
+  // Auto-subscribe remains enabled for classroom audio. Explicitly limit
+  // camera subscriptions to the two participants this PiP can render.
+  useEffect(() => {
+    syncCameraSubscriptions(
+      room.remoteParticipants.values(),
+      tutor?.identity,
+      activeStudent?.identity,
+    );
+  }, [room, participants, cameraTracks, tutor?.identity, activeStudent?.identity]);
+
   const tutorTrack = cameraTracks.find((t) => t.participant.identity === tutor?.identity);
-  
+
   // If an active student is speaking, use them. Otherwise, if the local user is a student and has their camera on, show them as a preview.
   const isLocalHost = localParticipant?.identity === tutor?.identity;
   const showLocalPreview = !isLocalHost && localParticipant?.isCameraEnabled;
-  
+
   const displayStudent = activeStudent || (showLocalPreview ? localParticipant : null);
   const displayStudentTrack = displayStudent ? cameraTracks.find((t) => t.participant.identity === displayStudent.identity) : null;
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
+  const boundsRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
 
   const handlePointerDown = (e: React.PointerEvent) => {
     isDragging.current = true;
     dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    const el = e.currentTarget as HTMLElement;
+    const parent = el.parentElement?.getBoundingClientRect();
+    const self = el.getBoundingClientRect();
+    if (parent) {
+      boundsRef.current = {
+        minX: position.x - (self.left - parent.left),
+        maxX: position.x + (parent.right - self.right),
+        minY: position.y - (self.top - parent.top),
+        maxY: position.y + (parent.bottom - self.bottom),
+      };
+    }
+    el.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
+    const { minX, maxX, minY, maxY } = boundsRef.current;
     setPosition({
-      x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y
+      x: Math.min(Math.max(e.clientX - dragStart.current.x, minX), maxX),
+      y: Math.min(Math.max(e.clientY - dragStart.current.y, minY), maxY)
     });
   };
 
@@ -62,8 +87,8 @@ export default function VideoPiP() {
   if (!tutor) return null;
 
   return (
-    <div 
-      className="absolute top-4 right-4 z-10 flex items-start gap-3 cursor-grab active:cursor-grabbing"
+    <div
+      className="absolute right-3 top-3 z-30 flex items-start gap-2 cursor-grab touch-none select-none active:cursor-grabbing md:right-4 md:top-4"
       style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -72,33 +97,23 @@ export default function VideoPiP() {
     >
       {/* Secondary PiP: Active Student or Local Preview */}
       {displayStudentTrack && displayStudent && (
-        <div className="w-32 h-24 rounded-lg overflow-hidden border-2 border-[#994704] shadow-lg shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto transition-all animate-in fade-in slide-in-from-right-4">
+        <div className="relative h-12 w-20 animate-in overflow-hidden rounded-lg border-2 border-[#994704] bg-[#1b1c1c] shadow-lg shadow-black/20 transition-all fade-in slide-in-from-right-4 pointer-events-auto md:h-14 md:w-24">
           <VideoTrack trackRef={displayStudentTrack} className="w-full h-full object-cover" />
-          <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
-            <span className="truncate max-w-[80px]">
-              {displayStudent.identity === localParticipant?.identity ? "You (Preview)" : (displayStudent.name || displayStudent.identity)}
-            </span>
-            {displayStudent.isSpeaking && (
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-            )}
-          </div>
+          {displayStudent.isSpeaking && <div className="absolute inset-0 rounded-lg ring-2 ring-inset ring-green-400/80" />}
         </div>
       )}
 
       {/* Primary PiP: Permanent Pinned Tutor */}
-      <div className="w-48 h-36 rounded-xl overflow-hidden border-2 border-[#180d62] shadow-xl shadow-black/20 bg-[#1b1c1c] relative pointer-events-auto flex items-center justify-center">
+      <div className={`relative flex h-[68px] w-[108px] items-center justify-center overflow-hidden rounded-xl border-2 bg-[#1b1c1c] shadow-xl shadow-black/20 pointer-events-auto md:h-20 md:w-32 ${tutor.isSpeaking ? "border-green-400 ring-2 ring-green-400/30" : "border-white"}`}>
         {tutor.isCameraEnabled && tutorTrack ? (
           <VideoTrack trackRef={tutorTrack} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-[#2e2877] flex items-center justify-center text-white text-2xl font-bold shadow-inner">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2e2877] text-lg font-bold text-white shadow-inner md:h-12 md:w-12 md:text-xl">
             {(tutor.name || tutor.identity).slice(0, 2).toUpperCase()}
           </div>
         )}
-        <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[11px] px-2 py-1 rounded-md font-semibold flex items-center gap-1.5">
-          <span>Tutor</span>
-          {tutor.isSpeaking && (
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          )}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent pt-5 pb-1.5 text-center text-white text-[10px] font-semibold">
+          Tutor
         </div>
       </div>
     </div>

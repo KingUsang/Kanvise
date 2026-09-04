@@ -64,7 +64,7 @@ There are three distinct registration �ows in Kanvise. Each results in a diffe
 
 - `school_id = NULL (no school yet)` 
 
-`9. Admin is redirected to /dashboard/admin/setup to create their school` 
+`9. Admin is redirected to /dashboard/setup to create their school` 
 
 `10. After school creation, school_id is set on the user_profiles record` 
 
@@ -117,7 +117,7 @@ invite_token: "xxxx" }
 
 - `school_id = extracted from token` 
 
-`12. Tutor is redirected to /dashboard/tutor` 
+`12. Tutor is redirected to /dashboard` 
 
 The invite token payload contains: 
 
@@ -207,9 +207,9 @@ introduced.
 
 `8. User is redirected to the correct dashboard based on their role:` 
 
-- `admin  → /dashboard/admin` 
+- `admin  → /dashboard` 
 
-- `tutor  → /dashboard/tutor` 
+- `tutor  → /dashboard` 
 
 - `student → /dashboard/student` 
 
@@ -245,7 +245,8 @@ Supabase Auth issues JWTs signed with the project's JWT secret. The Hono backend
   "user_metadata": {
     "kanvise_role": "admin | tutor | student",
     "school_id": "uuid | null",
-    "kanvise_user_id": "KNV-ADM-00001"
+    "kanvise_user_id": "KNV-ADM-00001",
+    "profile_id": "uuid"
   }
 }
 ```
@@ -259,6 +260,7 @@ database lookup on every request.
 `school_id` — the user's school UUID. Same reason. 
 
 `kanvise_user_id` — the human-readable user ID. 
+`profile_id` — the database UUID from user_profiles, required for foreign-key relations like tutor_id.
 
 ## **When user_metadata is populated:** 
 
@@ -351,8 +353,7 @@ Extract kanvise_role from user_metadata
 
 ```
 Does the role match the route?
-/dashboard/admin/** → requires kanvise_role = admin
-/dashboard/tutor/** → requires kanvise_role = tutor
+/dashboard/** → requires kanvise_role in [admin, tutor] (with internal component-level authorisation)
 /dashboard/student/** → requires kanvise_role = student
          │
 Role mismatch → Redirect to correct dashboard for their role
@@ -412,10 +413,11 @@ constprofileResolutionMiddleware=async (ctx, next) => {
 const jwtPayload = ctx.get('jwt_payload')
 const supabaseAuthId = jwtPayload.sub
 // Check user_metadata first (fast path — no DB call)
-const { kanvise_role, school_id, kanvise_user_id } = jwtPayload.user_me
-if (kanvise_role && school_id && kanvise_user_id) {
+const { kanvise_role, school_id, kanvise_user_id, profile_id } = jwtPayload.user_me
+if (kanvise_role && school_id && kanvise_user_id && profile_id) {
 // Fast path — metadata is populated
     ctx.set('user', {
+id: profile_id,
 supabase_auth_id: supabaseAuthId,
 role: kanvise_role,
 school_id: school_id,
@@ -748,8 +750,8 @@ Auth user. A user cannot change their own role — the `PATCH /auth/me` endpoint
 ## **13.4 Invite Token Security** 
 
 Invite tokens are HMAC-signed with a secret known only to the Hono server. A malicious actor cannot forge a valid invite token without the secret. The token expires in 7 days. If an Admin suspects a link has been shared with the wrong person, the practical mitigation at MVP is to change the 
-
-`INVITE_TOKEN_SECRET` environment variable — this invalidates all outstanding invite tokens. PostMVP, per-token revocation will be added. 
+INVITE_TOKEN_SECRET
+`` environment variable — this invalidates all outstanding invite tokens. PostMVP, per-token revocation will be added. 
 
 ## **13.5 Webhook Security** 
 
@@ -791,7 +793,7 @@ INVITE_TOKEN_SECRET=random-256-bit-secret
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-NEXT_PUBLIC_HONO_API_URL=https://api.kanvise.ng
+NEXT_PUBLIC_API_URL=https://api.kanvise.com
 HONO_INTERNAL_SECRET=shared-secret-for-next-to-hono-internal-calls
 ```
 
@@ -819,4 +821,3 @@ HONO_INTERNAL_SECRET=shared-secret-for-next-to-hono-internal-calls
 
 
 _End of Document — Version 1.0_ 
-

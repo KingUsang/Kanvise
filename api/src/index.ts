@@ -3,15 +3,24 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { supabase } from "./lib/supabase";
+import { validateProductionPaymentSecrets } from "./config/payment-secrets";
+import { resolveCorsOrigin } from "./config/cors";
+import { startScheduledJobs } from "./jobs/scheduler";
+import { isTelegramEnabled, validateProductionEnvironment } from "./config/runtime-env";
+
+validateProductionPaymentSecrets();
+validateProductionEnvironment();
 
 const app = new Hono();
 
 // Middleware
 app.use("/*", cors({
-  origin: ["http://localhost:3000"], // Allow local Next.js app
+  origin: (origin) => resolveCorsOrigin(origin),
+  credentials: true,
 }));
 
 import { authRouter } from "./routes/auth";
+import { publicRegistrationRouter } from './routes/public-registration';
 import { avatarsRouter } from "./routes/avatars";
 import { schoolsRouter } from "./routes/schools";
 import { liveClassesRouter } from "./routes/live-classes";
@@ -23,7 +32,27 @@ import { subProgrammesRouter } from "./routes/sub-programmes";
 import { coursesRouter } from "./routes/courses";
 import { usersRouter } from "./routes/users";
 import { mocksRouter } from "./routes/mocks";
+import { enrolmentsRouter } from "./routes/enrolments";
+import { paymentsRouter } from "./routes/payments";
+import { attendanceRouter } from "./routes/attendance";
+import { publicRouter } from "./routes/public";
+import { storageRouter } from "./routes/storage";
+import { notesRouter } from "./routes/notes";
+import { internalPaymentsRouter } from "./routes/internal-payments";
+import { submissionsRouter } from "./routes/submissions";
+import { mockAnswersRouter } from "./routes/mock-answers";
+import { healthRouter } from "./routes/health";
+import { assignmentsRouter, courseAssignmentsRouter } from "./routes/assignments";
+import { promosRouter } from "./routes/promos";
+import { questionBanksRouter } from "./routes/question-banks";
+import { studentMocksRouter } from "./routes/student-mocks";
+import { studentSettingsRouter } from "./routes/student-settings";
+import { mockAccessRouter, mockOfferAdminRouter } from "./routes/mock-access";
+import { studentMembershipsRouter } from "./routes/student-memberships";
+import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
+import { pushRouter } from './routes/push';
 
+app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
 app.route("/schools", schoolsRouter);
@@ -34,38 +63,33 @@ app.route("/dashboard", dashboardRouter);
 app.route("/programmes", programmesRouter);
 app.route("/sub-programmes", subProgrammesRouter);
 app.route("/courses", coursesRouter);
+app.route("/courses", courseAssignmentsRouter);
+app.route("/assignments", assignmentsRouter);
 app.route("/users", usersRouter);
 app.route("/mocks", mocksRouter);
-
-// Feature Suggestions Route
-app.post("/suggestions", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { suggestion, email } = body;
-
-    if (!suggestion) {
-      return c.json({ error: "Suggestion text is required" }, 400);
-    }
-
-    const { error: insertError } = await supabase.from("feature_suggestions").insert([
-      {
-        suggestion,
-        email: email || null,
-        status: "pending",
-      },
-    ]);
-
-    if (insertError) {
-      console.error("Error inserting suggestion:", insertError);
-      return c.json({ error: "Failed to submit suggestion. Please try again." }, 500);
-    }
-
-    return c.json({ message: "Thank you! We've added this to our roadmap." }, 201);
-  } catch (error) {
-    console.error("Suggestion endpoint error:", error);
-    return c.json({ error: "Internal server error" }, 500);
-  }
-});
+app.route("/mocks", mockOfferAdminRouter);
+app.route("/question-banks", questionBanksRouter);
+app.route("/enrolments", enrolmentsRouter);
+app.route("/payments", paymentsRouter);
+app.route("/attendance", attendanceRouter);
+app.route("/public", publicRouter);
+app.route("/storage", storageRouter);
+app.route("/notes", notesRouter);
+app.route("/internal/payments", internalPaymentsRouter);
+app.route("/submissions", submissionsRouter);
+app.route("/mock-answers", mockAnswersRouter);
+app.route("/health", healthRouter);
+app.route("/users/me/push", pushRouter);
+if (isTelegramEnabled()) {
+  app.route('/telegram', telegramRouter);
+  app.route('/telegram', telegramWebhookRouter);
+}
+// Promo routes are intentionally confined to this prefix. Mounting this router at
+// `/` caused its router-wide admin middleware to run for unrelated routes such as
+// `/students/me/settings`.
+app.route("/schools/me/promos", promosRouter);
+app.route("/", mockAccessRouter);
+app.route("/", studentMembershipsRouter);
 
 // Waitlist Route
 app.get("/waitlist/count", async (c) => {
@@ -137,10 +161,67 @@ app.post("/waitlist", async (c) => {
   }
 });
 
-const port = Number(process.env.PORT) || 3001;
+app.post("/suggestions", async (c) => {
+  try {
+    const body = await c.req.json();
+    const suggestion = typeof body.suggestion === "string" ? body.suggestion.trim() : "";
+    const email = typeof body.email === "string" ? body.email.trim() : null;
+
+    if (!suggestion) {
+      return c.json({ error: "Suggestion text is required" }, 400);
+    }
+
+    if (suggestion.length > 2000) {
+      return c.json({ error: "Suggestion is too long (max 2000 characters)" }, 400);
+    }
+
+    const { error: insertError } = await supabase.from("feature_suggestions").insert([
+      {
+        suggestion,
+        email: email || null,
+        status: "pending",
+      },
+    ]);
+
+    if (insertError) {
+      console.error("Error inserting suggestion:", insertError);
+      return c.json({ error: "Failed to submit suggestion. Please try again." }, 500);
+    }
+
+    return c.json({ message: "Thank you! We've added this to our roadmap." }, 201);
+  } catch (error) {
+    console.error("Suggestion endpoint error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// These student routers contain several top-level paths (/students, /mocks and
+// /attempts). Register them last so their router-wide student middleware cannot
+// intercept unrelated endpoints such as /payments/summary or /waitlist.
+app.route("/", studentMocksRouter);
+app.route("/", studentSettingsRouter);
+
+const port = Number(process.env.PORT!);
 console.log(`Server is running on port ${port}`);
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port
 });
+
+const scheduledJobs = process.env.SCHEDULED_JOBS_ENABLED === 'false' ? null : startScheduledJobs();
+let shuttingDown = false;
+
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log('server.shutdown_started', { signal });
+  if (scheduledJobs) await scheduledJobs.stop();
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  });
+  console.log('server.shutdown_complete', { signal });
+}
+
+process.once('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.once('SIGINT', () => { void shutdown('SIGINT'); });

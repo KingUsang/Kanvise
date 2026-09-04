@@ -17,8 +17,8 @@ All authenticated endpoints require a valid JWT in the `Authorization: Bearer <t
 ## Conventions
 
 **Base URLs:**
-- Hono API (Scaleway): `https://api.kanvise.ng`
-- Next.js Route Handlers (Vercel): `https://kanvise.ng/api`
+- Hono API (Scaleway): `https://api.kanvise.com`
+- Next.js Route Handlers (Vercel): `https://kanvise.com/api`
 
 **Role shorthand used in this document:**
 - `A` = Admin
@@ -66,7 +66,7 @@ next: string   (redirect path after auth)
 
 ---
 
-### POST `api.kanvise.ng/auth/profile/init`
+### POST `api.kanvise.com/auth/profile/init`
 **Host:** Hono | **Auth:** `*` (any freshly authenticated user)
 
 Called by the Next.js auth callback after a new user verifies their email. Creates the `user_profiles` record if it does not already exist.
@@ -100,7 +100,7 @@ Called by the Next.js auth callback after a new user verifies their email. Creat
 
 ---
 
-### GET `api.kanvise.ng/auth/me`
+### GET `api.kanvise.com/auth/me`
 **Host:** Hono | **Auth:** `*`
 
 Returns the current authenticated user's full profile.
@@ -125,7 +125,7 @@ Returns the current authenticated user's full profile.
 
 ---
 
-### PATCH `api.kanvise.ng/auth/me`
+### PATCH `api.kanvise.com/auth/me`
 **Host:** Hono | **Auth:** `*`
 
 Updates the current user's profile fields.
@@ -148,7 +148,7 @@ Updates the current user's profile fields.
 
 ---
 
-### POST `api.kanvise.ng/schools`
+### POST `api.kanvise.com/schools`
 **Host:** Hono | **Auth:** `A`
 
 Creates a new school for the authenticated Admin. Called immediately after Admin registration. One Admin can only have one school — returns 409 if school already exists for this Admin.
@@ -180,7 +180,7 @@ Creates a new school for the authenticated Admin. Called immediately after Admin
 
 ---
 
-### GET `api.kanvise.ng/schools/me`
+### GET `api.kanvise.com/schools/me`
 **Host:** Hono | **Auth:** `A`
 
 Returns the Admin's own school profile in full including all settings.
@@ -189,7 +189,7 @@ Returns the Admin's own school profile in full including all settings.
 
 ---
 
-### PATCH `api.kanvise.ng/schools/me`
+### PATCH `api.kanvise.com/schools/me`
 **Host:** Hono | **Auth:** `A`
 
 Updates school profile fields.
@@ -216,7 +216,7 @@ Updates school profile fields.
 
 ---
 
-### DELETE `api.kanvise.ng/schools/me/video-intro`
+### DELETE `api.kanvise.com/schools/me/video-intro`
 **Host:** Hono | **Auth:** `A`
 
 Removes the video intro from the school profile. Sets `video_intro_url` to null. Does not delete the R2 file — that is handled separately via storage cleanup.
@@ -228,7 +228,7 @@ Removes the video intro from the school profile. Sets `video_intro_url` to null.
 
 ---
 
-### POST `api.kanvise.ng/schools/me/invite/tutor`
+### POST `api.kanvise.com/schools/me/invite/tutor`
 **Host:** Hono | **Auth:** `A`
 
 Generates a signed invite link for a tutor. The link contains a short-lived token that pre-links the tutor to this school on registration.
@@ -244,7 +244,7 @@ Generates a signed invite link for a tutor. The link contains a short-lived toke
 ```json
 {
   "data": {
-    "invite_url": "https://kanvise.ng/join?token=xxxx",
+    "invite_url": "https://kanvise.com/join?token=xxxx",
     "expires_at": "timestamp"
   }
 }
@@ -258,7 +258,7 @@ Generates a signed invite link for a tutor. The link contains a short-lived toke
 
 ---
 
-### GET `api.kanvise.ng/schools/me/users`
+### GET `api.kanvise.com/schools/me/users`
 **Host:** Hono | **Auth:** `A`
 
 Lists all users in the school. Supports filtering by role.
@@ -291,7 +291,7 @@ limit: integer                  (default 20)
 
 ---
 
-### GET `api.kanvise.ng/schools/me/tutors`
+### GET `api.kanvise.com/schools/me/tutors`
 **Host:** Hono | **Auth:** `A`
 
 Lists all tutors in the school with their assigned courses.
@@ -316,7 +316,7 @@ Lists all tutors in the school with their assigned courses.
 
 ---
 
-### GET `api.kanvise.ng/users/:userId`
+### GET `api.kanvise.com/users/:userId`
 **Host:** Hono | **Auth:** `A`
 
 Returns a single user's profile. Admin can view any user in their school.
@@ -327,7 +327,7 @@ Returns a single user's profile. Admin can view any user in their school.
 
 ---
 
-### DELETE `api.kanvise.ng/schools/me/users/:userId`
+### DELETE `api.kanvise.com/schools/me/users/:userId`
 **Host:** Hono | **Auth:** `A`
 
 Removes a user from the school. Deactivates their profile — does not delete it. Their historical data (attendance, submissions, results) is preserved.
@@ -345,7 +345,7 @@ Removes a user from the school. Deactivates their profile — does not delete it
 
 ---
 
-### GET `api.kanvise.ng/users/me/avatar`
+### GET `api.kanvise.com/users/me/avatar`
 **Host:** Hono | **Auth:** `*`
 
 Returns the current user's avatar configuration.
@@ -367,7 +367,7 @@ Returns the current user's avatar configuration.
 
 ---
 
-### PUT `api.kanvise.ng/users/me/avatar`
+### PUT `api.kanvise.com/users/me/avatar`
 **Host:** Hono | **Auth:** `*`
 
 Creates or replaces the current user's avatar configuration. Full replacement — all fields required.
@@ -393,7 +393,7 @@ Creates or replaces the current user's avatar configuration. Full replacement �
 
 ---
 
-### POST `api.kanvise.ng/programmes`
+### POST `api.kanvise.com/programmes`
 **Host:** Hono | **Auth:** `A`
 
 Creates a new programme for the school.
@@ -416,7 +416,7 @@ Creates a new programme for the school.
 
 ---
 
-### GET `api.kanvise.ng/programmes`
+### GET `api.kanvise.com/programmes`
 **Host:** Hono | **Auth:** `A, T`
 
 Lists all programmes for the school. Admin sees all. Tutor sees programmes that contain courses they are assigned to.
@@ -430,7 +430,7 @@ is_published: boolean   (optional filter)
 
 ---
 
-### GET `api.kanvise.ng/programmes/:id`
+### GET `api.kanvise.com/programmes/:id`
 **Host:** Hono | **Auth:** `A, T`
 
 Returns a single programme with its sub-programmes and courses.
@@ -454,7 +454,7 @@ Returns a single programme with its sub-programmes and courses.
 
 ---
 
-### PATCH `api.kanvise.ng/programmes/:id`
+### PATCH `api.kanvise.com/programmes/:id`
 **Host:** Hono | **Auth:** `A`
 
 Updates a programme's details.
@@ -473,7 +473,7 @@ Updates a programme's details.
 
 ---
 
-### POST `api.kanvise.ng/programmes/:id/publish`
+### POST `api.kanvise.com/programmes/:id/publish`
 **Host:** Hono | **Auth:** `A`
 
 Sets `is_published = true`. Programme becomes visible on the public school page.
@@ -487,7 +487,7 @@ Sets `is_published = true`. Programme becomes visible on the public school page.
 
 ---
 
-### POST `api.kanvise.ng/programmes/:id/unpublish`
+### POST `api.kanvise.com/programmes/:id/unpublish`
 **Host:** Hono | **Auth:** `A`
 
 Sets `is_published = false`. Hides from public page. Does not affect existing enrolments.
@@ -499,7 +499,7 @@ Sets `is_published = false`. Hides from public page. Does not affect existing en
 
 ---
 
-### DELETE `api.kanvise.ng/programmes/:id`
+### DELETE `api.kanvise.com/programmes/:id`
 **Host:** Hono | **Auth:** `A`
 
 Soft-deletes a programme. Cannot delete if active enrolments exist.
@@ -512,7 +512,7 @@ Soft-deletes a programme. Cannot delete if active enrolments exist.
 
 ---
 
-### POST `api.kanvise.ng/programmes/:programmeId/sub-programmes`
+### POST `api.kanvise.com/programmes/:programmeId/sub-programmes`
 **Host:** Hono | **Auth:** `A`
 
 Creates a sub-programme under a programme.
@@ -531,7 +531,7 @@ Creates a sub-programme under a programme.
 
 ---
 
-### GET `api.kanvise.ng/programmes/:programmeId/sub-programmes`
+### GET `api.kanvise.com/programmes/:programmeId/sub-programmes`
 **Host:** Hono | **Auth:** `A, T`
 
 Lists all sub-programmes under a programme.
@@ -540,21 +540,21 @@ Lists all sub-programmes under a programme.
 
 ---
 
-### PATCH `api.kanvise.ng/sub-programmes/:id`
+### PATCH `api.kanvise.com/sub-programmes/:id`
 **Host:** Hono | **Auth:** `A`
 
 Updates a sub-programme.
 
 ---
 
-### POST `api.kanvise.ng/sub-programmes/:id/publish`
+### POST `api.kanvise.com/sub-programmes/:id/publish`
 **Host:** Hono | **Auth:** `A`
 
 Publishes the sub-programme.
 
 ---
 
-### DELETE `api.kanvise.ng/sub-programmes/:id`
+### DELETE `api.kanvise.com/sub-programmes/:id`
 **Host:** Hono | **Auth:** `A`
 
 Soft-deletes. Cannot delete if active enrolments exist.
@@ -565,7 +565,7 @@ Soft-deletes. Cannot delete if active enrolments exist.
 
 ---
 
-### POST `api.kanvise.ng/courses`
+### POST `api.kanvise.com/courses`
 **Host:** Hono | **Auth:** `A`
 
 Creates a course. Specify `programme_id` for a course directly under a programme, `sub_programme_id` for a course under a sub-programme, or neither for a standalone course.
@@ -588,7 +588,7 @@ Creates a course. Specify `programme_id` for a course directly under a programme
 
 ---
 
-### GET `api.kanvise.ng/courses`
+### GET `api.kanvise.com/courses`
 **Host:** Hono | **Auth:** `A, T`
 
 Lists all courses in the school.
@@ -605,7 +605,7 @@ is_published: boolean
 
 ---
 
-### GET `api.kanvise.ng/courses/:id`
+### GET `api.kanvise.com/courses/:id`
 **Host:** Hono | **Auth:** `A, T, S`
 
 Returns a single course with its content summary (note count, assignment count, mock count, upcoming live classes).
@@ -614,28 +614,28 @@ Returns a single course with its content summary (note count, assignment count, 
 
 ---
 
-### PATCH `api.kanvise.ng/courses/:id`
+### PATCH `api.kanvise.com/courses/:id`
 **Host:** Hono | **Auth:** `A`
 
 Updates course details.
 
 ---
 
-### POST `api.kanvise.ng/courses/:id/publish`
+### POST `api.kanvise.com/courses/:id/publish`
 **Host:** Hono | **Auth:** `A`
 
 Publishes the course to the public page.
 
 ---
 
-### DELETE `api.kanvise.ng/courses/:id`
+### DELETE `api.kanvise.com/courses/:id`
 **Host:** Hono | **Auth:** `A`
 
 Soft-deletes. Cannot delete if active enrolments exist.
 
 ---
 
-### POST `api.kanvise.ng/courses/:courseId/tutors`
+### POST `api.kanvise.com/courses/:courseId/tutors`
 **Host:** Hono | **Auth:** `A`
 
 Assigns a tutor to a course.
@@ -654,14 +654,14 @@ Assigns a tutor to a course.
 
 ---
 
-### DELETE `api.kanvise.ng/courses/:courseId/tutors/:tutorId`
+### DELETE `api.kanvise.com/courses/:courseId/tutors/:tutorId`
 **Host:** Hono | **Auth:** `A`
 
 Removes a tutor from a course.
 
 ---
 
-### GET `api.kanvise.ng/courses/:courseId/tutors`
+### GET `api.kanvise.com/courses/:courseId/tutors`
 **Host:** Hono | **Auth:** `A, T`
 
 Lists all tutors assigned to a course.
@@ -674,7 +674,7 @@ All routes in this module require no authentication. All are read-only.
 
 ---
 
-### GET `api.kanvise.ng/public/schools/:slug`
+### GET `api.kanvise.com/public/schools/:slug`
 **Host:** Hono | **Auth:** PUBLIC
 
 Returns the full public page data for a tutorial centre.
@@ -737,7 +737,7 @@ Returns the full public page data for a tutorial centre.
 
 ---
 
-### GET `api.kanvise.ng/public/programmes/:id`
+### GET `api.kanvise.com/public/programmes/:id`
 **Host:** Hono | **Auth:** PUBLIC
 
 Returns the full public page data for a programme — used for the enrolment/marketing page.
@@ -785,14 +785,14 @@ Returns the full public page data for a programme — used for the enrolment/mar
 
 ---
 
-### GET `api.kanvise.ng/public/sub-programmes/:id`
+### GET `api.kanvise.com/public/sub-programmes/:id`
 **Host:** Hono | **Auth:** PUBLIC
 
 Returns the public page data for a sub-programme.
 
 ---
 
-### GET `api.kanvise.ng/public/courses/:id`
+### GET `api.kanvise.com/public/courses/:id`
 **Host:** Hono | **Auth:** PUBLIC
 
 Returns the public page data for a standalone course.
@@ -803,7 +803,7 @@ Returns the public page data for a standalone course.
 
 ---
 
-### POST `api.kanvise.ng/enrolments/initiate`
+### POST `api.kanvise.com/enrolments/initiate`
 **Host:** Hono | **Auth:** `S`
 
 Initiates a payment for a programme, sub-programme, or course. Creates a pending payment record and returns a Paystack payment URL.
@@ -853,7 +853,7 @@ x-paystack-signature: string
 
 ---
 
-### POST `api.kanvise.ng/internal/payments/confirm`
+### POST `api.kanvise.com/internal/payments/confirm`
 **Host:** Hono | **Auth:** Internal (called by Next.js webhook handler only, verified by shared secret)
 
 Processes a confirmed payment. Creates the enrolment record, grants access, sends emails.
@@ -873,7 +873,7 @@ Processes a confirmed payment. Creates the enrolment record, grants access, send
 
 ---
 
-### GET `api.kanvise.ng/enrolments`
+### GET `api.kanvise.com/enrolments`
 **Host:** Hono | **Auth:** `S`
 
 Returns the current student's enrolments.
@@ -900,7 +900,7 @@ Returns the current student's enrolments.
 
 ---
 
-### GET `api.kanvise.ng/payments`
+### GET `api.kanvise.com/payments`
 **Host:** Hono | **Auth:** `A, S`
 
 Admin: returns all payments for the school. Student: returns own payments only.
@@ -917,7 +917,7 @@ limit: integer
 
 ---
 
-### GET `api.kanvise.ng/payments/:id`
+### GET `api.kanvise.com/payments/:id`
 **Host:** Hono | **Auth:** `A, S`
 
 Returns a single payment. Student can only view their own.
@@ -928,7 +928,7 @@ Returns a single payment. Student can only view their own.
 
 ---
 
-### POST `api.kanvise.ng/live-classes`
+### POST `api.kanvise.com/live-classes`
 **Host:** Hono | **Auth:** `A, T`
 
 Schedules a new live class.
@@ -950,7 +950,7 @@ Schedules a new live class.
 
 ---
 
-### GET `api.kanvise.ng/live-classes`
+### GET `api.kanvise.com/live-classes`
 **Host:** Hono | **Auth:** `A, T, S`
 
 Lists live classes. Filtered automatically by role.
@@ -973,28 +973,28 @@ limit: integer
 
 ---
 
-### GET `api.kanvise.ng/live-classes/:id`
+### GET `api.kanvise.com/live-classes/:id`
 **Host:** Hono | **Auth:** `A, T, S`
 
 Returns a single live class. Student access requires enrolment in the relevant course.
 
 ---
 
-### PATCH `api.kanvise.ng/live-classes/:id`
+### PATCH `api.kanvise.com/live-classes/:id`
 **Host:** Hono | **Auth:** `A, T`
 
 Updates a scheduled class (title, time, duration). Cannot update a class that is `live` or `completed`.
 
 ---
 
-### DELETE `api.kanvise.ng/live-classes/:id`
+### DELETE `api.kanvise.com/live-classes/:id`
 **Host:** Hono | **Auth:** `A`
 
 Cancels a scheduled class. Sets `status = cancelled`.
 
 ---
 
-### POST `api.kanvise.ng/live-classes/:id/start`
+### POST `api.kanvise.com/live-classes/:id/start`
 **Host:** Hono | **Auth:** `T`
 
 Called when the tutor clicks Start Class. Creates the LiveKit room, generates host token, updates class status to `live`.
@@ -1005,7 +1005,7 @@ Called when the tutor clicks Start Class. Creates the LiveKit room, generates ho
   "data": {
     "livekit_room_name": "string",
     "access_token": "string",
-    "livekit_url": "wss://livekit.kanvise.ng"
+    "livekit_url": "wss://livekit.kanvise.com"
   }
 }
 ```
@@ -1014,7 +1014,7 @@ Called when the tutor clicks Start Class. Creates the LiveKit room, generates ho
 
 ---
 
-### POST `api.kanvise.ng/live-classes/:id/join`
+### POST `api.kanvise.com/live-classes/:id/join`
 **Host:** Hono | **Auth:** `S, T`
 
 Called when a participant clicks Join Class. Verifies enrolment (for students), generates a LiveKit participant token.
@@ -1025,7 +1025,7 @@ Called when a participant clicks Join Class. Verifies enrolment (for students), 
   "data": {
     "livekit_room_name": "string",
     "access_token": "string",
-    "livekit_url": "wss://livekit.kanvise.ng"
+    "livekit_url": "wss://livekit.kanvise.com"
   }
 }
 ```
@@ -1034,7 +1034,7 @@ Called when a participant clicks Join Class. Verifies enrolment (for students), 
 
 ---
 
-### POST `api.kanvise.ng/live-classes/:id/end`
+### POST `api.kanvise.com/live-classes/:id/end`
 **Host:** Hono | **Auth:** `T`
 
 Ends a live class. Calls LiveKit SDK to close the room. Sets `status = completed` and `ended_at`.
@@ -1046,7 +1046,7 @@ Ends a live class. Calls LiveKit SDK to close the room. Sets `status = completed
 
 ---
 
-### POST `api.kanvise.ng/webhooks/livekit`
+### POST `api.kanvise.com/webhooks/livekit`
 **Host:** Hono | **Auth:** Internal (LiveKit webhook secret)
 
 Receives LiveKit participant events over the private Scaleway network. Processes `participant_joined` and `participant_left` events to record attendance.
@@ -1074,7 +1074,7 @@ Receives LiveKit participant events over the private Scaleway network. Processes
 
 ---
 
-### GET `api.kanvise.ng/live-classes/:id/attendance`
+### GET `api.kanvise.com/live-classes/:id/attendance`
 **Host:** Hono | **Auth:** `A, T`
 
 Returns attendance records for a specific live class.
@@ -1102,7 +1102,7 @@ Returns attendance records for a specific live class.
 
 ---
 
-### GET `api.kanvise.ng/students/:studentId/attendance`
+### GET `api.kanvise.com/students/:studentId/attendance`
 **Host:** Hono | **Auth:** `A, T, S`
 
 Returns attendance history for a student across all their live classes. Student can only access their own.
@@ -1114,7 +1114,7 @@ course_id: uuid   (optional filter)
 
 ---
 
-### GET `api.kanvise.ng/students/me/attendance`
+### GET `api.kanvise.com/students/me/attendance`
 **Host:** Hono | **Auth:** `S`
 
 Shorthand — returns the current student's own attendance history.
@@ -1125,7 +1125,7 @@ Shorthand — returns the current student's own attendance history.
 
 ---
 
-### POST `api.kanvise.ng/courses/:courseId/notes`
+### POST `api.kanvise.com/courses/:courseId/notes`
 **Host:** Hono | **Auth:** `T`
 
 Creates a note record after the file has been uploaded to R2.
@@ -1148,7 +1148,7 @@ Creates a note record after the file has been uploaded to R2.
 
 ---
 
-### GET `api.kanvise.ng/courses/:courseId/notes`
+### GET `api.kanvise.com/courses/:courseId/notes`
 **Host:** Hono | **Auth:** `T, S`
 
 Lists all notes for a course.
@@ -1176,7 +1176,7 @@ Lists all notes for a course.
 
 ---
 
-### DELETE `api.kanvise.ng/notes/:id`
+### DELETE `api.kanvise.com/notes/:id`
 **Host:** Hono | **Auth:** `T, A`
 
 Deletes a note record. Does not delete the R2 file — that is handled by a separate storage cleanup job.
@@ -1187,7 +1187,7 @@ Deletes a note record. Does not delete the R2 file — that is handled by a sepa
 
 ---
 
-### POST `api.kanvise.ng/storage/presign/upload`
+### POST `api.kanvise.com/storage/presign/upload`
 **Host:** Hono | **Auth:** `*`
 
 Generates a presigned R2 PUT URL for a file upload. Validates file type and size before generating. Returns the presigned URL and the file key to use when confirming the upload.
@@ -1217,7 +1217,7 @@ Generates a presigned R2 PUT URL for a file upload. Validates file type and size
 
 ---
 
-### GET `api.kanvise.ng/storage/presign/download`
+### GET `api.kanvise.com/storage/presign/download`
 **Host:** Hono | **Auth:** `*`
 
 Generates a short-lived presigned R2 GET URL for a private file. Verifies the requesting user's school_id matches the file's school before generating.
@@ -1245,7 +1245,7 @@ file_key: string
 
 ---
 
-### POST `api.kanvise.ng/courses/:courseId/assignments`
+### POST `api.kanvise.com/courses/:courseId/assignments`
 **Host:** Hono | **Auth:** `T`
 
 Creates an assignment for a course.
@@ -1267,7 +1267,7 @@ Creates an assignment for a course.
 
 ---
 
-### GET `api.kanvise.ng/courses/:courseId/assignments`
+### GET `api.kanvise.com/courses/:courseId/assignments`
 **Host:** Hono | **Auth:** `T, S`
 
 Lists all published assignments for a course. Students must be enrolled.
@@ -1276,28 +1276,28 @@ Lists all published assignments for a course. Students must be enrolled.
 
 ---
 
-### GET `api.kanvise.ng/assignments/:id`
+### GET `api.kanvise.com/assignments/:id`
 **Host:** Hono | **Auth:** `T, S`
 
 Returns a single assignment with full details.
 
 ---
 
-### PATCH `api.kanvise.ng/assignments/:id`
+### PATCH `api.kanvise.com/assignments/:id`
 **Host:** Hono | **Auth:** `T`
 
 Updates an assignment. Cannot update after any student has submitted.
 
 ---
 
-### POST `api.kanvise.ng/assignments/:id/publish`
+### POST `api.kanvise.com/assignments/:id/publish`
 **Host:** Hono | **Auth:** `T`
 
 Publishes the assignment — makes it visible to enrolled students.
 
 ---
 
-### DELETE `api.kanvise.ng/assignments/:id`
+### DELETE `api.kanvise.com/assignments/:id`
 **Host:** Hono | **Auth:** `A, T`
 
 Soft-deletes. Cannot delete if submissions exist.
@@ -1308,7 +1308,7 @@ Soft-deletes. Cannot delete if submissions exist.
 
 ---
 
-### POST `api.kanvise.ng/assignments/:assignmentId/submit`
+### POST `api.kanvise.com/assignments/:assignmentId/submit`
 **Host:** Hono | **Auth:** `S`
 
 Submits a student's assignment. One submission per student per assignment.
@@ -1327,7 +1327,7 @@ Submits a student's assignment. One submission per student per assignment.
 
 ---
 
-### GET `api.kanvise.ng/assignments/:assignmentId/submissions`
+### GET `api.kanvise.com/assignments/:assignmentId/submissions`
 **Host:** Hono | **Auth:** `T, A`
 
 Lists all submissions for an assignment.
@@ -1357,7 +1357,7 @@ Lists all submissions for an assignment.
 
 ---
 
-### PATCH `api.kanvise.ng/submissions/:id/review`
+### PATCH `api.kanvise.com/submissions/:id/review`
 **Host:** Hono | **Auth:** `T`
 
 Tutor grades and leaves feedback on a submission.
@@ -1374,7 +1374,7 @@ Tutor grades and leaves feedback on a submission.
 
 ---
 
-### GET `api.kanvise.ng/students/me/submissions`
+### GET `api.kanvise.com/students/me/submissions`
 **Host:** Hono | **Auth:** `S`
 
 Returns all of the current student's submissions across all courses.
@@ -1383,9 +1383,69 @@ Returns all of the current student's submissions across all courses.
 
 ## Module 16 — Mock Exams
 
+> **Implementation transition (July 2026):** The versioned question-bank and CBT
+> contracts in `15_MOCK_ENGINE_AND_QUESTION_BANK_IMPLEMENTATION_PLAN.md` supersede
+> the legacy direct-question attempt contract below. Tutor CRUD/results remain the
+> current implementation. The versioned student list, preflight, start/resume,
+> autosave, flag, timeout, submission, and results routes listed below are now
+> implemented and tested through Hono. The older whole-attempt submission examples
+> are retained only as legacy context and must not be used by new clients.
+
+### Question-bank authoring checkpoint
+
+The Hono service exposes the authoring contract below. Its migrations were applied
+and verified against the connected development Supabase project on 23 July 2026:
+
+- `GET /question-banks` — list private banks owned by the tutor and centre banks
+  visible to the tutor; admins see all active banks in their centre.
+- `POST /question-banks` — create a private or centre bank.
+- `GET /question-banks/:bankId` — load accessible bank metadata.
+- `PATCH /question-banks/:bankId` — owner/admin rename, visibility, description,
+  or archive changes.
+- `GET /question-banks/:bankId/questions` — paginated search by text, subject,
+  topic, type, or course.
+- `POST /question-banks/:bankId/questions` — atomically create the source question,
+  immutable version, and answer options.
+- `PATCH /question-banks/questions/:questionId` — author/admin creates a new
+  immutable version rather than rewriting history.
+- `GET /question-banks/questions/:questionId/versions` — accessible version history.
+- `POST /storage/presign/upload` with `entity_type = question_media` and `bank_id`
+  — issue a private, bank-scoped R2 upload intent after tutor/admin bank access.
+- `POST /question-banks/media/confirm` — verify the stored image signature and
+  metadata, require alternative text, and register immutable media metadata.
+- `GET /question-banks/media/:mediaId/url?bank_id=:bankId` — return a short-lived
+  signed URL after school and bank access checks.
+
+These routes are tutor/admin-only and always scope queries to the verified profile's
+`school_id`. Next.js does not query the question-bank tables directly.
+
+### Implemented versioned student CBT routes
+
+- `GET /students/me/mocks` — list published mocks from the authenticated student's
+  entitled courses, classified as available, in progress, upcoming, or completed.
+- `GET /mocks/:mockId/preflight` — return instructions, availability, attempts,
+  question count, marks, timing, and calculator mode without answer keys.
+- `POST /mocks/:mockId/attempts` — atomically start or resume the authenticated
+  student's attempt against the latest immutable published version.
+- `GET /attempts/:attemptId` — resume the owner's immutable question payload and
+  saved responses; the server derives the remaining time from `deadline_at`.
+- `PUT /attempts/:attemptId/answers/:questionId` — idempotently autosave one MCQ or
+  theory response for the authenticated attempt owner.
+- `PATCH /attempts/:attemptId/questions/:questionId/flag` — set or clear the
+  student's review flag for one attempt question.
+- `POST /attempts/:attemptId/submit` — submit or lazily time out an attempt using
+  server-authoritative timing and atomic grading.
+- `GET /attempts/:attemptId/results` — return only the score, corrections,
+  explanations, and theory details allowed by that published version's release
+  settings.
+
+Every route derives student and school IDs from verified authentication, applies
+programme/sub-programme/course entitlement, and returns `404` rather than revealing
+an inaccessible cross-tenant or unenrolled resource.
+
 ---
 
-### POST `api.kanvise.ng/courses/:courseId/mocks`
+### POST `api.kanvise.com/courses/:courseId/mocks`
 **Host:** Hono | **Auth:** `T`
 
 Creates a new mock exam in draft status.
@@ -1406,7 +1466,7 @@ Creates a new mock exam in draft status.
 
 ---
 
-### GET `api.kanvise.ng/courses/:courseId/mocks`
+### GET `api.kanvise.com/courses/:courseId/mocks`
 **Host:** Hono | **Auth:** `T, A, S`
 
 Lists mock exams for a course.
@@ -1416,21 +1476,21 @@ Lists mock exams for a course.
 
 ---
 
-### GET `api.kanvise.ng/mocks/:id`
+### GET `api.kanvise.com/mocks/:id`
 **Host:** Hono | **Auth:** `T, A, S`
 
 Returns a mock exam. Questions are returned for Tutor/Admin. For Students, questions are returned only when starting an attempt — not on this endpoint.
 
 ---
 
-### PATCH `api.kanvise.ng/mocks/:id`
+### PATCH `api.kanvise.com/mocks/:id`
 **Host:** Hono | **Auth:** `T`
 
 Updates a mock. Cannot update a published mock if any student has already attempted it.
 
 ---
 
-### POST `api.kanvise.ng/mocks/:id/publish`
+### POST `api.kanvise.com/mocks/:id/publish`
 **Host:** Hono | **Auth:** `T`
 
 Immediately publishes a mock (sets `status = published`, clears `publish_at`).
@@ -1439,14 +1499,14 @@ Immediately publishes a mock (sets `status = published`, clears `publish_at`).
 
 ---
 
-### DELETE `api.kanvise.ng/mocks/:id`
+### DELETE `api.kanvise.com/mocks/:id`
 **Host:** Hono | **Auth:** `T, A`
 
 Archives a mock (sets `status = archived`). Cannot hard-delete if attempts exist.
 
 ---
 
-### POST `api.kanvise.ng/mocks/:mockId/questions`
+### POST `api.kanvise.com/mocks/:mockId/questions`
 **Host:** Hono | **Auth:** `T`
 
 Adds a question to a mock.
@@ -1475,21 +1535,21 @@ Adds a question to a mock.
 
 ---
 
-### PATCH `api.kanvise.ng/mocks/:mockId/questions/:questionId`
+### PATCH `api.kanvise.com/mocks/:mockId/questions/:questionId`
 **Host:** Hono | **Auth:** `T`
 
 Updates a question.
 
 ---
 
-### DELETE `api.kanvise.ng/mocks/:mockId/questions/:questionId`
+### DELETE `api.kanvise.com/mocks/:mockId/questions/:questionId`
 **Host:** Hono | **Auth:** `T`
 
 Deletes a question and its options.
 
 ---
 
-### POST `api.kanvise.ng/mocks/:mockId/attempts`
+### POST `api.kanvise.com/mocks/:mockId/attempts`
 **Host:** Hono | **Auth:** `S`
 
 Starts a student's attempt on a mock. Creates an attempt record and returns the questions (without `is_correct`).
@@ -1521,7 +1581,7 @@ Starts a student's attempt on a mock. Creates an attempt record and returns the 
 
 ---
 
-### POST `api.kanvise.ng/attempts/:attemptId/submit`
+### POST `api.kanvise.com/attempts/:attemptId/submit`
 **Host:** Hono | **Auth:** `S`
 
 Submits a mock attempt. Hono auto-grades MCQ answers, stores theory answers.
@@ -1558,7 +1618,7 @@ Submits a mock attempt. Hono auto-grades MCQ answers, stores theory answers.
 
 ---
 
-### GET `api.kanvise.ng/mocks/:mockId/results`
+### GET `api.kanvise.com/mocks/:mockId/results`
 **Host:** Hono | **Auth:** `T, A`
 
 Returns all student results for a mock.
@@ -1588,14 +1648,14 @@ Returns all student results for a mock.
 
 ---
 
-### GET `api.kanvise.ng/attempts/:attemptId/results`
+### GET `api.kanvise.com/attempts/:attemptId/results`
 **Host:** Hono | **Auth:** `S, T, A`
 
 Returns detailed results for a specific attempt including per-question breakdown.
 
 ---
 
-### PATCH `api.kanvise.ng/mock-answers/:answerId/grade`
+### PATCH `api.kanvise.com/mock-answers/:answerId/grade`
 **Host:** Hono | **Auth:** `T`
 
 Tutor grades a theory answer.
@@ -1612,11 +1672,47 @@ Tutor grades a theory answer.
 
 ---
 
+## Module 16A — Student Portal Aggregates
+
+These routes are Hono-owned presentation aggregates. Next.js supplies the student's
+verified access token but does not read application tables from Supabase directly.
+
+### GET `api.kanvise.com/notes/me`
+**Host:** Hono | **Auth:** `S`
+
+Returns learning materials across every course granted by the student's active
+programme, sub-programme, or direct-course enrolments. Each item contains a
+short-lived Cloudflare R2 `download_url`; private `file_key` values are never
+returned.
+
+### GET `api.kanvise.com/dashboard/student/progress`
+**Host:** Hono | **Auth:** `S`
+
+Returns overall and per-course attendance, assignment completion, mock averages,
+and recent mock results for the authenticated student. Percentages are `null` when
+no denominator has been recorded; the API does not invent missing progress.
+
+### GET `api.kanvise.com/students/me/settings`
+**Host:** Hono | **Auth:** `S`
+
+Returns the student's safe profile fields and centre name. The response exposes a
+public profile-photo URL, not its storage key.
+
+### PATCH `api.kanvise.com/students/me/settings`
+**Host:** Hono | **Auth:** `S`
+
+Updates only `first_name`, `last_name`, and optional `bio`. Email, role, school,
+student ID, and arbitrary fields are ignored and cannot be changed through this
+route. Profile photos use the verified `/storage/presign/public` and
+`/storage/public/confirm` flow with `entity_type = profile_photo`.
+
+---
+
 ## Module 17 — Notifications
 
 ---
 
-### GET `api.kanvise.ng/notifications`
+### GET `api.kanvise.com/notifications`
 **Host:** Hono | **Auth:** `*`
 
 Returns notifications for the current user. Most recent first.
@@ -1648,14 +1744,14 @@ limit: integer     (default 20)
 
 ---
 
-### PATCH `api.kanvise.ng/notifications/:id/read`
+### PATCH `api.kanvise.com/notifications/:id/read`
 **Host:** Hono | **Auth:** `*`
 
 Marks a notification as read.
 
 ---
 
-### POST `api.kanvise.ng/notifications/read-all`
+### POST `api.kanvise.com/notifications/read-all`
 **Host:** Hono | **Auth:** `*`
 
 Marks all of the current user's notifications as read.
@@ -1666,7 +1762,7 @@ Marks all of the current user's notifications as read.
 
 ---
 
-### POST `api.kanvise.ng/schools/me/promos`
+### POST `api.kanvise.com/schools/me/promos`
 **Host:** Hono | **Auth:** `A`
 
 Creates a promotional banner for the school's public page.
@@ -1686,28 +1782,28 @@ Creates a promotional banner for the school's public page.
 
 ---
 
-### GET `api.kanvise.ng/schools/me/promos`
+### GET `api.kanvise.com/schools/me/promos`
 **Host:** Hono | **Auth:** `A`
 
 Lists all promos for the school ordered by `order_index`.
 
 ---
 
-### PATCH `api.kanvise.ng/promos/:id`
+### PATCH `api.kanvise.com/promos/:id`
 **Host:** Hono | **Auth:** `A`
 
 Updates a promo.
 
 ---
 
-### DELETE `api.kanvise.ng/promos/:id`
+### DELETE `api.kanvise.com/promos/:id`
 **Host:** Hono | **Auth:** `A`
 
 Deletes a promo.
 
 ---
 
-### PATCH `api.kanvise.ng/schools/me/promos/reorder`
+### PATCH `api.kanvise.com/schools/me/promos/reorder`
 **Host:** Hono | **Auth:** `A`
 
 Updates the display order of promos.
@@ -1730,7 +1826,7 @@ Updates the display order of promos.
 
 ---
 
-### POST `api.kanvise.ng/reviews`
+### POST `api.kanvise.com/reviews`
 **Host:** Hono | **Auth:** `S`
 
 Creates a review. Student must be enrolled in the thing being reviewed.
@@ -1752,7 +1848,7 @@ Creates a review. Student must be enrolled in the thing being reviewed.
 
 ---
 
-### GET `api.kanvise.ng/programmes/:id/reviews`
+### GET `api.kanvise.com/programmes/:id/reviews`
 **Host:** Hono | **Auth:** PUBLIC
 
 Returns published reviews for a programme.
@@ -1767,21 +1863,21 @@ page: integer
 
 ---
 
-### GET `api.kanvise.ng/sub-programmes/:id/reviews`
+### GET `api.kanvise.com/sub-programmes/:id/reviews`
 **Host:** Hono | **Auth:** PUBLIC
 
 Returns published reviews for a sub-programme.
 
 ---
 
-### GET `api.kanvise.ng/courses/:id/reviews`
+### GET `api.kanvise.com/courses/:id/reviews`
 **Host:** Hono | **Auth:** PUBLIC
 
 Returns published reviews for a course.
 
 ---
 
-### PATCH `api.kanvise.ng/reviews/:id/visibility`
+### PATCH `api.kanvise.com/reviews/:id/visibility`
 **Host:** Hono | **Auth:** `A`
 
 Admin toggles whether a review is published or hidden.
@@ -1797,7 +1893,7 @@ Admin toggles whether a review is published or hidden.
 
 ---
 
-### POST `api.kanvise.ng/subscriptions/initiate`
+### POST `api.kanvise.com/subscriptions/initiate`
 **Host:** Hono | **Auth:** `A`
 
 Initiates a Kanvise platform subscription payment for the tutorial centre.
@@ -1815,7 +1911,7 @@ Initiates a Kanvise platform subscription payment for the tutorial centre.
 
 ---
 
-### GET `api.kanvise.ng/subscriptions/me`
+### GET `api.kanvise.com/subscriptions/me`
 **Host:** Hono | **Auth:** `A`
 
 Returns the current school's subscription status.
@@ -1834,7 +1930,7 @@ Returns the current school's subscription status.
 
 ---
 
-### GET `api.kanvise.ng/subscriptions/me/history`
+### GET `api.kanvise.com/subscriptions/me/history`
 **Host:** Hono | **Auth:** `A`
 
 Returns billing history for the school.

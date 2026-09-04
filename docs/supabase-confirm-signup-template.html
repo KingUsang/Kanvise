@@ -1,0 +1,42 @@
+<!--
+  Supabase Auth → Email Templates → Confirm signup
+  Subject: Your Kanvise verification code
+
+  This template intentionally uses {{ .Token }} instead of {{ .ConfirmationURL }}.
+  The registration screen verifies the code with supabase.auth.verifyOtp().
+-->
+<div style="margin:0;padding:32px 12px;background:#F7F5F2;color:#3C3027;font-family:Arial,Helvetica,sans-serif;">
+  <div style="width:100%;max-width:600px;margin:0 auto;overflow:hidden;background:#FFFFFF;border:1px solid #E3DED5;border-radius:16px;">
+    <div style="padding:24px 36px;background:#F1EFEA;">
+      <img src="https://staging.kanvise.com/kanvise_logo_small_blue.png" width="54" height="49" alt="Kanvise" style="display:inline-block;vertical-align:middle;" />
+      <span style="display:inline-block;margin:0 0 0 14px;color:#322B7A;font-size:18px;font-weight:700;letter-spacing:3px;line-height:49px;vertical-align:middle;">KANVISE</span>
+    </div>
+
+    <div style="padding:38px 36px 28px;">
+      <p style="margin:0 0 12px;color:#C26627;font-size:12px;font-weight:700;letter-spacing:1.5px;">VERIFY YOUR EMAIL</p>
+      <h1 style="margin:0 0 20px;color:#322B7A;font-size:30px;line-height:38px;">Your account is almost ready.</h1>
+
+      <p style="margin:0 0 16px;color:#3C3027;font-size:16px;line-height:26px;">
+        Use the verification code below to confirm your email address and finish creating your Kanvise account.
+      </p>
+
+      <div style="margin:24px 0;padding:22px 18px;background:#F1EFEA;border:1px solid #E3DED5;border-radius:10px;text-align:center;">
+        <p style="margin:0 0 8px;color:#77727F;font-size:12px;font-weight:700;letter-spacing:1.5px;">YOUR VERIFICATION CODE</p>
+        <p style="margin:0;color:#322B7A;font-size:34px;font-weight:700;letter-spacing:9px;line-height:42px;">{{ .Token }}</p>
+      </div>
+
+      <p style="margin:0 0 16px;color:#5F5964;font-size:13px;line-height:20px;">
+        Enter this six-digit code in the Kanvise registration window. The code expires shortly and can only be used once.
+      </p>
+
+      <p style="margin:0;color:#77727F;font-size:12px;line-height:19px;">
+        If you did not create a Kanvise account, you can safely ignore this email. Never share this code with anyone.
+      </p>
+    </div>
+
+    <div style="height:1px;margin:0 36px;background:#E3DED5;"></div>
+    <p style="margin:0;padding:22px 36px 28px;color:#77727F;font-size:12px;line-height:18px;text-align:center;">
+      Kanvise helps tutorial centres run focused, professional virtual schools.
+    </p>
+  </div>
+</div>

@@ -4,6 +4,28 @@ import { supabase } from '../lib/supabase'
 
 import { decode, verifyWithJwks } from 'hono/jwt'
 
+export type Variables = {
+  user: any;
+  jwt_payload: any;
+};
+
+export function resolveTrustedProfileClaims(jwtPayload: any) {
+  const appMetadata = jwtPayload?.app_metadata || {}
+  const role = appMetadata.kanvise_role || appMetadata.role
+  const { school_id, kanvise_user_id, profile_id } = appMetadata
+
+  if (!role || !kanvise_user_id || !profile_id) return null
+
+  return {
+    id: profile_id,
+    supabase_auth_id: jwtPayload.sub,
+    role,
+    school_id: school_id || null,
+    kanvise_user_id,
+    email: jwtPayload.email || null,
+  }
+}
+
 // In-memory cache for JWKS public keys — fetched once on first request, reused forever
 // (until server restarts). Supabase rarely rotates keys.
 let cachedJwks: any[] | null = null
@@ -68,24 +90,20 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   const jwtPayload = c.get('jwt_payload')
   const supabaseAuthId = jwtPayload.sub
   
-  // Fast path - metadata is populated
-  const userMetadata = jwtPayload.user_metadata || {}
-  const { kanvise_role, school_id, kanvise_user_id } = userMetadata
-  
-  if (kanvise_role && kanvise_user_id) {
-    c.set('user', {
-      supabase_auth_id: supabaseAuthId,
-      role: kanvise_role,
-      school_id: school_id || null,
-      kanvise_user_id: kanvise_user_id
-    })
+  // Fast path: only app_metadata is trusted for authorisation claims.
+  // Supabase users can edit user_metadata themselves, so it must never decide
+  // role, tenant, or profile identity.
+  const trustedClaims = resolveTrustedProfileClaims(jwtPayload)
+
+  if (trustedClaims) {
+    c.set('user', trustedClaims)
     return await next()
   }
   
   // Slow path - lookup from DB
   const { data: profile, error } = await supabase
     .from('user_profiles')
-    .select('id, role, school_id, kanvise_user_id, first_name, last_name')
+    .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active')
     .eq('supabase_auth_id', supabaseAuthId)
     .single()
     
@@ -97,6 +115,10 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
     }
     return c.json({ error: 'User profile not found', code: 'PROFILE_NOT_FOUND' }, 403)
   }
+
+  if (profile.is_active === false) {
+    return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
+  }
   
   c.set('user', {
     id: profile.id,
@@ -105,8 +127,28 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
     school_id: profile.school_id,
     kanvise_user_id: profile.kanvise_user_id,
     first_name: profile.first_name,
-    last_name: profile.last_name
+    last_name: profile.last_name,
+    email: profile.email || jwtPayload.email || null,
   })
+
+  // Existing users may have been issued tokens before trusted claims moved to
+  // app_metadata. Backfill from the canonical profile without blocking access
+  // if the Auth admin update is temporarily unavailable. The new claims take
+  // effect when Supabase next refreshes the user's token.
+  try {
+    await supabase.auth.admin.updateUserById(supabaseAuthId, {
+      app_metadata: {
+        ...(jwtPayload.app_metadata || {}),
+        role: profile.role,
+        kanvise_role: profile.role,
+        school_id: profile.school_id,
+        kanvise_user_id: profile.kanvise_user_id,
+        profile_id: profile.id,
+      },
+    })
+  } catch (metadataError) {
+    console.error('[auth] Failed to backfill trusted profile claims:', metadataError)
+  }
   
   await next()
 }

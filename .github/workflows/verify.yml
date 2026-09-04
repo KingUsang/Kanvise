@@ -1,0 +1,57 @@
+name: Verify application
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm test --workspace=api
+      - run: npm run build --workspace=api
+
+  web:
+    name: Web lint, types, tests, and build
+    runs-on: ubuntu-latest
+    # Next.js prerenders routes that construct Supabase/API clients during the
+    # build. CI only needs syntactically valid public values; no live credentials
+    # or provider calls are required for verification.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
+      API_URL: http://127.0.0.1:3001
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_LIVEKIT_URL: ws://127.0.0.1:7880
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run lint --workspace=web
+      - run: npm run type-check --workspace=web
+      - run: npm test --workspace=web
+      - run: npm run build --workspace=web

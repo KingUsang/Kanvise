@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import type { Database } from "./database.types";
 
 dotenv.config();
 
@@ -10,4 +11,4 @@ if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseServiceKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);

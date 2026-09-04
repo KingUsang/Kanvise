@@ -22,7 +22,7 @@ This document defines the complete infrastructure setup for the Kanvise platform
 │  │     VERCEL       │    │            SCALEWAY                  │    │
 │  │                  │    │                                      │    │
 │  │  Next.js App     │    │  ┌─────────────┐  ┌─────────────┐  │    │
-│  │  kanvise.ng      │    │  │  Hono API   │  │  LiveKit    │  │    │
+│  │  kanvise.com      │    │  │  Hono API   │  │  LiveKit    │  │    │
 │  │                  │    │  │  Node.js    │  │  Server     │  │    │
 │  │  - SSR/SSG       │◄──►│  │  PM2        │  │             │  │    │
 │  │  - Edge CDN      │    │  │             │◄─►│             │  │    │
@@ -51,8 +51,8 @@ Kanvise runs three environments. Each is completely isolated — no environment 
 | Environment | Purpose | Domain | Deploy Trigger |
 |---|---|---|---|
 | **Local** | Developer machines | `localhost` | Manual |
-| **Staging** | Pre-production testing | `staging.kanvise.ng` | Push to `develop` branch |
-| **Production** | Live platform | `kanvise.ng` | Push to `main` branch |
+| **Staging** | Pre-production testing | `staging.kanvise.com` | Push to `staging` branch |
+| **Production** | Live platform | `kanvise.com` | Push to `main` branch |
 
 ### Environment Isolation Rules
 
@@ -72,8 +72,8 @@ The Next.js repository is connected to Vercel via GitHub integration. Vercel aut
 
 **Branch to environment mapping:**
 ```
-main    → Production (kanvise.ng)
-develop → Staging (staging.kanvise.ng)
+main    → Production (kanvise.com)
+staging → Staging (staging.kanvise.com)
 feature/* → Preview deployments (auto-generated URLs)
 ```
 
@@ -114,31 +114,31 @@ See Document 17 (Environment Configuration) for the complete variable list.
 ### 3.4 Custom Domain Configuration
 
 **Production:**
-- Root domain `kanvise.ng` → Vercel
-- `www.kanvise.ng` → redirects to `kanvise.ng` (301)
-- `cdn.kanvise.ng` → Cloudflare R2 public bucket
+- Root domain `kanvise.com` → Vercel
+- `www.kanvise.com` → redirects to `kanvise.com` (301)
+- `cdn.kanvise.com` → Cloudflare R2 public bucket
 
 **Staging:**
-- `staging.kanvise.ng` → Vercel staging deployment
+- `staging.kanvise.com` → Vercel staging deployment
 
-DNS is managed through Cloudflare. Cloudflare is set to "DNS only" (grey cloud) for the Vercel domains to let Vercel handle SSL. Cloudflare's proxy (orange cloud) is only active for `cdn.kanvise.ng` which serves R2 files.
+DNS is managed through Cloudflare. Cloudflare is set to "DNS only" (grey cloud) for the Vercel domains to let Vercel handle SSL. Cloudflare's proxy (orange cloud) is only active for `cdn.kanvise.com` which serves R2 files.
 
 ### 3.5 Vercel Build Settings
 
 **Build command:** `npm run build`
 **Install command:** `npm ci` (not `npm install` — `ci` is faster and more deterministic in CI)
-**Node.js version:** 20.x (LTS)
+**Node.js version:** 22.x (LTS)
 
 **`next.config.js` key settings:**
 ```javascript
 module.exports = {
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'cdn.kanvise.ng' }
+      { protocol: 'https', hostname: 'cdn.kanvise.com' }
     ]
   },
   experimental: {
-    serverActions: { allowedOrigins: ['kanvise.ng', 'staging.kanvise.ng'] }
+    serverActions: { allowedOrigins: ['kanvise.com', 'staging.kanvise.com'] }
   }
 }
 ```
@@ -168,11 +168,11 @@ The following steps are performed once on a fresh Scaleway instance. They are do
 apt update && apt upgrade -y
 ```
 
-**2. Install Node.js 20 via NodeSource:**
+**2. Install Node.js 22 via NodeSource:**
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt install -y nodejs
-node --version  # Should output v20.x.x
+node --version  # Should output v22.x.x or newer
 ```
 
 **3. Install PM2 globally:**
@@ -194,7 +194,7 @@ apt install -y nginx
 **6. Install Certbot for SSL:**
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d api.kanvise.ng
+certbot --nginx -d api.kanvise.com
 ```
 
 **7. Configure UFW firewall:**
@@ -212,10 +212,10 @@ Nginx sits in front of the Hono process. It handles SSL termination and proxies 
 ```nginx
 server {
     listen 443 ssl;
-    server_name api.kanvise.ng;
+    server_name api.kanvise.com;
 
-    ssl_certificate /etc/letsencrypt/live/api.kanvise.ng/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.kanvise.ng/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/api.kanvise.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.kanvise.com/privkey.pem;
 
     client_max_body_size 10M;
 
@@ -235,7 +235,7 @@ server {
 
 server {
     listen 80;
-    server_name api.kanvise.ng;
+    server_name api.kanvise.com;
     return 301 https://$server_name$request_uri;
 }
 ```
@@ -286,39 +286,19 @@ pm2 startup  # Generates systemd startup command — run the output
 
 ### 4.5 Hono Deployment Process
 
-Deployments to the Hono server are triggered manually for MVP. A GitHub Action triggers on push to `main` and SSHs into the Scaleway server to pull, build, and restart.
+API deployments are automated by `.github/workflows/deploy.yml`. A push that changes `api/**` deploys `staging` to the staging Scaleway environment and `main` to production. Tests and a TypeScript build must pass before the workflow connects to the server. After deployment it verifies the environment's `/health` endpoint.
 
-**`.github/workflows/deploy-api.yml`:**
-```yaml
-name: Deploy API
+The repository uses GitHub Environments named `Preview` (the `staging` branch) and `Production` (the `main` branch). Configure `SCALEWAY_HOST`, `SCALEWAY_USER`, `SCALEWAY_SSH_KEY`, and optional `SCALEWAY_PORT` as secrets separately in each environment. Do not leave Scaleway credentials only at repository level because that would let staging and production resolve to the same server credentials. Configure these ordinary environment variables separately in each environment:
 
-on:
-  push:
-    branches: [main]
-    paths: ['apps/api/**']
+- `API_HEALTH_URL`: API origin without `/health`
+- `FRONTEND_URL`: canonical frontend origin used for links and redirects
+- `CORS_ALLOWED_ORIGINS`: comma-separated additional exact frontend origins
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to Scaleway
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SCALEWAY_API_HOST }}
-          username: kanvise
-          key: ${{ secrets.SCALEWAY_SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/kanvise/kanvise-api
-            git pull origin main
-            npm ci
-            npm run build
-            pm2 restart kanvise-api
-            pm2 save
-```
+The deployment passes the frontend-origin variables to PM2 and restarts it with `--update-env`, so future CORS changes do not require manually editing Scaleway. Other sensitive application variables remain in the API process environment on the server. The checked-out repository must be at `~/Kanvise` for the deployment user.
 
 **Deployment time:** Typically 2–4 minutes from push to live. The Hono server has zero-downtime restarts via PM2's graceful reload — in-flight requests complete before the process restarts.
 
-**Rollback:** If a deployment introduces a breaking issue, rollback by SSH-ing into the server and running `git checkout HEAD~1 && npm run build && pm2 restart kanvise-api`.
+**Rollback:** Revert the bad commit on the affected branch and push the revert. The same verified deployment pipeline will deploy that known Git state; do not put the server into a detached or untracked state with a manual checkout.
 
 ### 4.6 Log Management
 
@@ -353,7 +333,7 @@ LiveKit runs on a dedicated Scaleway instance separate from the Hono API. Video 
 
 LiveKit setup and configuration is the responsibility of the live class developer. The Hono API server needs the following from the LiveKit setup:
 
-- The LiveKit server URL: `wss://livekit.kanvise.ng`
+- The LiveKit server URL: `wss://livekit.kanvise.com`
 - The LiveKit API key and secret (stored in Hono's environment)
 - The LiveKit webhook secret (for verifying webhook payloads)
 - The private network IP of the LiveKit server (for Hono to call LiveKit's internal API)
@@ -433,8 +413,8 @@ The following settings are configured in the Supabase dashboard under Authentica
 
 **Redirect URLs (allowed list):**
 ```
-https://kanvise.ng/api/auth/callback
-https://staging.kanvise.ng/api/auth/callback
+https://kanvise.com/api/auth/callback
+https://staging.kanvise.com/api/auth/callback
 http://localhost:3000/api/auth/callback
 ```
 
@@ -486,9 +466,9 @@ kanvise-production/
 
 ### 7.2 R2 Public Access Configuration
 
-The R2 bucket does not have blanket public access. Public files are served through a Cloudflare custom domain `cdn.kanvise.ng` which is configured as an R2 public bucket domain in the Cloudflare dashboard.
+The R2 bucket does not have blanket public access. Public files are served through a Cloudflare custom domain `cdn.kanvise.com` which is configured as an R2 public bucket domain in the Cloudflare dashboard.
 
-Only the `/public/` prefix path is served through `cdn.kanvise.ng`. The `/private/` prefix path requires presigned URLs.
+Only the `/public/` prefix path is served through `cdn.kanvise.com`. The `/private/` prefix path requires presigned URLs.
 
 ### 7.3 Cloudflare DNS Configuration
 
@@ -496,7 +476,7 @@ All DNS records are managed in Cloudflare. The following records are configured:
 
 | Type | Name | Value | Proxy |
 |---|---|---|---|
-| A/CNAME | `kanvise.ng` | Vercel | DNS only |
+| A/CNAME | `kanvise.com` | Vercel | DNS only |
 | CNAME | `www` | `cname.vercel-dns.com` | DNS only |
 | CNAME | `api` | Scaleway server IP | DNS only |
 | CNAME | `livekit` | LiveKit server IP | DNS only |
@@ -505,7 +485,7 @@ All DNS records are managed in Cloudflare. The following records are configured:
 
 **Why DNS only for Vercel and Scaleway:** Vercel and Scaleway handle their own SSL. Cloudflare proxying (orange cloud) would interfere with their SSL certificates.
 
-**Why proxied for CDN:** Cloudflare's proxy is enabled for `cdn.kanvise.ng` to benefit from Cloudflare's global CDN caching for public files. Files uploaded to R2 are automatically cached at Cloudflare's edge nodes closest to Nigerian users.
+**Why proxied for CDN:** Cloudflare's proxy is enabled for `cdn.kanvise.com` to benefit from Cloudflare's global CDN caching for public files. Files uploaded to R2 are automatically cached at Cloudflare's edge nodes closest to Nigerian users.
 
 ### 7.4 R2 API Access
 
@@ -551,10 +531,10 @@ kanvise/
 ### 8.2 GitHub Actions Workflows
 
 **Frontend (Next.js) — Auto-deployed by Vercel:**
-Vercel's GitHub integration handles frontend deployments automatically. No custom GitHub Action is needed for the frontend — Vercel detects pushes to `main` and `develop` and deploys automatically.
+Vercel's GitHub integration handles frontend deployments automatically. No custom GitHub Action is needed for the frontend — Vercel detects pushes to `main` and `staging` and deploys automatically.
 
 **Backend (Hono API) — Custom GitHub Action:**
-Defined in `.github/workflows/deploy-api.yml` (shown in Section 4.5).
+Defined in `.github/workflows/deploy.yml` (shown in Section 4.5).
 
 The workflow is path-filtered — it only triggers when files inside `apps/api/` change. A frontend-only change does not trigger an API deployment.
 
@@ -590,24 +570,40 @@ Vercel creates preview deployment automatically
 Reviewer tests on the preview URL
          │
          ▼
-Pull request approved → Merge to develop
+Pull request approved → Merge to staging
          │
          ▼
-Vercel deploys to staging.kanvise.ng (frontend)
+Vercel deploys to staging.kanvise.com (frontend)
 GitHub Action deploys to Scaleway staging (backend)
          │
 Staging tested and verified
          │
          ▼
-Merge develop to main
+Merge staging to main
          │
          ▼
-Vercel deploys to kanvise.ng (frontend — automatic)
+Vercel deploys to kanvise.com (frontend — automatic)
 GitHub Action deploys to Scaleway production (backend)
          │
          ▼
 Production deployment complete
 ```
+
+### 8.1 Frontend API environment
+
+The Vercel frontend project must define `NEXT_PUBLIC_API_URL=https://api.kanvise.com` for every environment that builds Kanvise, including Preview deployments for the staging branch. This is a build-time variable, so redeploy after adding or changing it.
+
+The Hono process on Scaleway must also allow every stable frontend hostname that makes browser-side API requests:
+
+```env
+# Canonical public frontend used in email links and redirects
+FRONTEND_URL=https://kanvise.com
+
+# Additional exact browser origins, comma-separated and without paths
+CORS_ALLOWED_ORIGINS=https://staging.kanvise.com,https://app.kanvise.com
+```
+
+When a frontend subdomain is added, add its full origin to `CORS_ALLOWED_ORIGINS` in the Scaleway API process environment and restart the Hono process. DNS configuration alone does not authorize the origin. Vercel preview URLs under HTTPS `*.vercel.app` and local development at `http://localhost:3000` are handled by the application.
 
 ---
 
@@ -615,7 +611,7 @@ Production deployment complete
 
 ### 9.1 Uptime Monitoring
 
-**Tool:** Vercel Analytics (built-in) for the frontend. A free UptimeRobot monitor checks `api.kanvise.ng/health` every 5 minutes for the backend.
+**Tool:** Vercel Analytics (built-in) for the frontend. A free UptimeRobot monitor checks `api.kanvise.com/health` every 5 minutes for the backend.
 
 **Health check endpoint:** Hono exposes `GET /health` which returns `200 { status: "ok", timestamp: "..." }`. This endpoint requires no authentication and performs no database query — it is a pure liveness check.
 

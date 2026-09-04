@@ -1,26 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [checkingRecovery, setCheckingRecovery] = useState(true);
+  const [recoveryVerified, setRecoveryVerified] = useState(false);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    let active = true;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!active) return;
+      if (!user) {
+        setError("Enter the reset code from your email before choosing a new password.");
+      } else {
+        setRecoveryVerified(true);
+      }
+      setCheckingRecovery(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  // Password validation checks
+  const hasMinLength = password.length >= 12;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumberOrSymbol = /[\d!@#$%^&*(),.?":{}|<>]/.test(password);
+  
+  const isValid = hasMinLength && hasUppercase && hasNumberOrSymbol && password === confirmPassword && password !== "";
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!recoveryVerified || !isValid) return;
+
     setLoading(true);
     setError(null);
 
-    const { error: updateError } = await supabase.auth.updateUser({
+    const { error: updateError, data } = await supabase.auth.updateUser({
       password: password
     });
 
@@ -30,85 +62,201 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    // Imported students already have a roster profile and programme enrolment.
+    // Their invitation only creates a login, so record that this profile is now
+    // active once they have chosen a password.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile/activate`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+      }
+    } catch (activationError) {
+      console.error('Could not mark student profile active:', activationError);
+    }
+
     setSuccess(true);
     setLoading(false);
     
-    // Automatically redirect after a short delay
-    setTimeout(() => {
-      router.push("/");
+    // Automatically redirect to appropriate dashboard based on role
+    setTimeout(async () => {
+      // The updateUser call usually updates the session, but we can explicitly get the user
+      const { data: { user } } = await supabase.auth.getUser();
+      const role = user?.app_metadata?.kanvise_role || user?.app_metadata?.role;
+      
+      let redirectUrl = "/";
+      if (role === "admin" || role === "tutor") {
+        redirectUrl = "/dashboard";
+      } else if (role === "student") {
+        redirectUrl = "/dashboard/student";
+      }
+      
+      router.push(redirectUrl);
       router.refresh();
-    }, 2000);
+    }, 2500);
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-kv-soft p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-card p-8 border-l-4 border-kv-blue text-center">
-          <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-kv-dark mb-3">Password Updated</h2>
-          <p className="text-gray-500 mb-6">
-            Your password has been successfully reset. Redirecting you to your dashboard...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-kv-soft p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-card p-8 border-l-4 border-kv-blue">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-kv-dark mb-2">Create New Password</h1>
-          <p className="text-gray-500">
-            Enter your new password below.
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center relative bg-surface-container font-body-md text-on-surface p-6">
+      {/* Abstract Background Texture */}
+      <div 
+        className="absolute inset-0 z-0 opacity-40 bg-cover bg-center mix-blend-multiply pointer-events-none" 
+        style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCahZy7I9sWCjjimOXPZn9tKldsw1esRFZa2B7h89xy3NvBwmqburrJpCSdFU2ktVyaMd_6SYllFZ6NcucgN8eEd6X6SO9g7qFnbVaPybQFPH5vwVJbcuvlcYt3V5gi6m3Sxf6wYCXtDvHSLb7yy3Cn9dJv9lhCqwt9gch7SOAQ_dg96vt_A8OO7vqgFBoZlAoQRyXdeMFyFjSvPXN33v5l44IZkYoKXvEcwfoZjL3dN7VMogh2pQ-bkoy6GeLZhrg1EcXUIeiBBqA')" }}
+      ></div>
 
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 text-error rounded-md text-sm border border-red-100">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleUpdate} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-kv-dark mb-1.5" htmlFor="password">
-              New Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-kv-blue/20 focus:border-kv-blue transition-all pr-10"
-                placeholder="Must be at least 8 characters"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-kv-dark"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+      {/* Centered Card Container (Level 1 Elevation) */}
+      <main className="w-full max-w-[480px] bg-surface-container-lowest border border-outline-variant rounded-lg p-10 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] z-10 relative overflow-hidden transition-all duration-300">
+        
+        {success ? (
+          <div className="text-center py-stack-lg animate-in fade-in zoom-in duration-500">
+            <div className="w-16 h-16 rounded-full bg-primary-container text-on-primary flex items-center justify-center mx-auto mb-stack-md animate-bounce">
+              <span className="material-symbols-outlined text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+            </div>
+            <h2 className="font-headline-md text-headline-md font-bold text-primary-container mb-3 tracking-tight">Password updated</h2>
+            <p className="font-body-md text-body-md text-on-surface-variant mb-stack-lg leading-relaxed">
+                Your password has been changed. Taking you to your dashboard now.
+            </p>
+            <div className="w-full flex items-center justify-center gap-2 bg-primary-container text-on-primary font-label-md text-label-md uppercase tracking-wider font-semibold py-4 px-6 rounded opacity-80 cursor-wait">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Redirecting...</span>
             </div>
           </div>
+        ) : (
+          <div className="animate-in fade-in duration-300">
+            {/* Header Section */}
+            <header className="text-center mb-stack-lg">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded bg-primary-container text-on-primary mb-stack-md shadow-lg shadow-primary-container/20">
+                <span className="material-symbols-outlined text-[24px]">lock_reset</span>
+              </div>
+              <h1 className="font-headline-md text-headline-md font-bold text-primary-container mb-2 tracking-tight">Kanvise</h1>
+              <h2 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Set a new password</h2>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-2 max-w-[85%] mx-auto leading-relaxed">
+                  Choose a password you haven't used before to keep your account safe.
+              </p>
+            </header>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-kv-blue hover:bg-kv-blue/90 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-sm disabled:opacity-70 mt-2"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Update Password"}
-          </button>
-        </form>
-      </div>
+            {error && (
+              <div className="mb-6 p-4 bg-error-container text-on-error-container rounded-lg text-sm border border-error/20 animate-in fade-in">
+                {error}
+                {!recoveryVerified && !checkingRecovery && <Link href="/auth/forgot-password" className="mt-2 block font-semibold underline">Request a reset code</Link>}
+              </div>
+            )}
+
+            {/* Reset Form */}
+            <form className="space-y-6" onSubmit={handleUpdate}>
+              {/* Password Input Group */}
+              <div className="space-y-stack-sm">
+                <label className="block font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold" htmlFor="new_password">
+                    New Password
+                </label>
+                <div className="relative group">
+                  <input 
+                    className="w-full bg-surface border border-outline-variant rounded py-3 px-4 font-body-md text-body-md text-on-surface transition-all outline-none focus:ring-2 focus:ring-primary-container focus:border-primary-container" 
+                    id="new_password" 
+                    placeholder="Enter new password" 
+                    required 
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button 
+                    aria-label="Toggle password visibility" 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary-container transition-colors focus:outline-none" 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    <span className="material-symbols-outlined">{showPassword ? "visibility_off" : "visibility"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Password Requirements Indicators */}
+              <div className="bg-surface p-4 border border-outline-variant rounded space-y-3">
+                <h3 className="font-label-md text-label-md text-on-surface font-semibold">Password Requirements</h3>
+                <ul className="space-y-2">
+                  <li className={`flex items-center gap-3 font-body-sm text-body-sm transition-colors ${hasMinLength ? 'text-primary-container' : 'text-on-surface-variant'}`}>
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasMinLength ? "'FILL' 1" : "'FILL' 0" }}>
+                      {hasMinLength ? "check_circle" : "radio_button_unchecked"}
+                    </span>
+                    <span>Minimum 12 characters</span>
+                  </li>
+                  <li className={`flex items-center gap-3 font-body-sm text-body-sm transition-colors ${hasUppercase ? 'text-primary-container' : 'text-on-surface-variant'}`}>
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasUppercase ? "'FILL' 1" : "'FILL' 0" }}>
+                      {hasUppercase ? "check_circle" : "radio_button_unchecked"}
+                    </span>
+                    <span>At least one uppercase letter</span>
+                  </li>
+                  <li className={`flex items-center gap-3 font-body-sm text-body-sm transition-colors ${hasNumberOrSymbol ? 'text-primary-container' : 'text-on-surface-variant'}`}>
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasNumberOrSymbol ? "'FILL' 1" : "'FILL' 0" }}>
+                      {hasNumberOrSymbol ? "check_circle" : "radio_button_unchecked"}
+                    </span>
+                    <span>At least one number or symbol</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Confirm Password Input Group */}
+              <div className="space-y-stack-sm">
+                <label className="block font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold" htmlFor="confirm_password">
+                    Confirm Password
+                </label>
+                <div className="relative">
+                  <input 
+                    className="w-full bg-surface border border-outline-variant rounded py-3 px-4 font-body-md text-body-md text-on-surface transition-all outline-none focus:ring-2 focus:ring-primary-container focus:border-primary-container" 
+                    id="confirm_password" 
+                    placeholder="Re-enter new password" 
+                    required 
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  <button 
+                    aria-label="Toggle password visibility" 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary-container transition-colors focus:outline-none" 
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <span className="material-symbols-outlined">{showConfirmPassword ? "visibility_off" : "visibility"}</span>
+                  </button>
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-error mt-2">Passwords do not match.</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="pt-4">
+                <button 
+                  disabled={!recoveryVerified || checkingRecovery || loading || !isValid}
+                  className="w-full flex items-center justify-center gap-2 bg-secondary text-on-secondary font-label-md text-label-md uppercase tracking-wider font-semibold py-4 px-6 rounded hover:bg-on-secondary-fixed-variant transition-colors group disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-secondary/10" 
+                  type="submit"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Update Password</span>
+                      <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </>
+                  )}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => router.push("/auth/login")}
+                  className="w-full block text-center mt-6 font-body-sm text-body-sm text-on-surface-variant hover:text-primary-container transition-colors font-medium"
+                >
+                  Cancel and return to Login
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

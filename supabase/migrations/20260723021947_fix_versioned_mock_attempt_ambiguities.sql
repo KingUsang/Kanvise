@@ -1,0 +1,3 @@
+-- The preceding attempt-function migration was corrected before this branch was
+-- committed so clean environments receive qualified PL/pgSQL column references.
+-- Staging received the same corrected definitions under this migration name.

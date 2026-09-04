@@ -4,8 +4,9 @@ import { useParticipants, useLocalParticipant, useRoomContext } from "@livekit/c
 import { Hand, Users, UserMinus, MicOff } from "lucide-react";
 
 import { Participant } from "livekit-client";
+import { toast } from "sonner";
 
-export default function ParticipantsPanel({ isHost }: { isHost: boolean }) {
+export default function ParticipantsPanel({ isHost, classId }: { isHost: boolean; classId: string }) {
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const roomContext = useRoomContext();
@@ -26,20 +27,30 @@ export default function ParticipantsPanel({ isHost }: { isHost: boolean }) {
 
   const handleHostAction = async (action: "mute" | "kick" | "lowerHand", identity: string, trackSid?: string) => {
     try {
-      const room = roomContext.name;
-      const res = await fetch("/api/livekit/host", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, room, identity, trackSid }),
+      const honoUrl = process.env.NEXT_PUBLIC_API_URL;
+      const { createBrowserClient } = await import('@supabase/ssr');
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${honoUrl}/live-classes/${classId}/host-action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ action, identity, trackSid }),
       });
 
       if (!res.ok) {
         const error = await res.json();
         console.error(`Failed to ${action} participant:`, error);
-        alert(`Failed to ${action} participant: ${error.error}`);
+        toast.error(`Could not ${action} participant`, { description: error.error });
       }
     } catch (e) {
       console.error(`Error performing ${action}:`, e);
+      toast.error(`Could not ${action} participant`, { description: "Please try again." });
     }
   };
 
@@ -79,7 +90,7 @@ export default function ParticipantsPanel({ isHost }: { isHost: boolean }) {
 
         <div className="p-4">
           <p className="text-[11px] font-bold text-[#787582] uppercase tracking-wider mb-3">
-            In this class ({participants.length})
+            Everyone in this class
           </p>
 
           {participants.length === 0 ? (
@@ -156,7 +167,7 @@ function ParticipantRow({
       </div>
 
       {isHost && !isMe && !isParticipantHost && (
-        <div className="hidden group-hover:flex items-center gap-1">
+        <div className="flex items-center gap-1">
           {audioTrack && !audioTrack.isMuted && (
             <button
               onClick={() => onAction("mute", participant.identity, audioTrack.trackSid)}

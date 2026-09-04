@@ -1,3 +1,4 @@
+
 **Version:** 1.0 | **Prepared by:** Architecture Team | **Date:** June 2026
 
 **Status:** Approved — Reference for All Development Decisions
@@ -20,10 +21,12 @@ Kanvise is distributed across four runtime environments. Each has a single respo
 │   │   ├── kanvise.ng/[centre-slug]      (Centre Public Page)        │
 │   │   └── kanvise.ng/[centre-slug]/[programme-slug]                 │
 │   ├── Auth Pages (/login, /register, /reset-password)              │
-│   ├── Dashboard Pages (Role Protected)                             │
-│   │   ├── /dashboard/admin/**                                       │
-│   │   ├── /dashboard/tutor/**                                       │
-│   │   └── /dashboard/student/**                                     │
+│   ├── Dashboard Pages (Capability Protected)                       │
+│   │   ├── /dashboard/**       (unified Admin+Tutor shell —          │
+│   │   │                        section visibility driven by         │
+│   │   │                        capabilities, not by role alone)     │
+│   │   └── /dashboard/student/**  (kept separate — different         │
+│   │                               audience/content shape)           │
 │   └── Next.js Route Handlers                                        │
 │       ├── /api/webhooks/paystack        (Payment webhook receiver)  │
 │       ├── /api/auth/**                  (Supabase Auth callbacks)   │
@@ -145,10 +148,12 @@ User profile (role, school_id, Kanvise user ID) attached to request context
 Route handler runs with full user context
 ```
 
-Role-based routing enforced at two levels:
+Routing enforcement differs by boundary, since Admin and Tutor now share a single dashboard shell:
 
-- **Frontend:** Next.js middleware checks role from JWT cookie and redirects if wrong route (UX convenience)
-- **Backend:** Hono middleware checks role on every request (security enforcement)
+- **Student vs. Admin/Tutor:** enforced by role at both levels — Next.js middleware redirects a Student away from `/dashboard/**` and an Admin/Tutor away from `/dashboard/student/**` (UX convenience); Hono middleware enforces this as the real security boundary on every request.
+- **Within `/dashboard/**` (Admin vs. Tutor):** not a route-level split at all. The frontend derives a `capabilities` object per session — `{ isAdmin: role === 'admin', isTutor: role === 'tutor' || (role === 'admin' && hasAnyTutorAssignment) }` — and uses it to show/hide nav sections and page content. Admin-only sections (School Setup, Manage Tutors, Manage Students, Payments Overview), Tutor-only sections (Notes Upload, Assignment Creator, Mock Results, Live Classroom hosting), and shared sections (Class Schedule Manager, Attendance Records, Mock Creator — usable by both per the dev brief) all live under the same shell. The real enforcement for Tutor-scoped actions still happens in Hono, via the `tutor_course_assignments` check (Doc 03, Section 10) — the frontend capability check is convenience, not security.
+
+This split exists specifically to support a solo operator who is both Admin and Tutor for their own school: one login, one dashboard, sections composited by capability rather than forced into two separate role-locked apps.
 
 ---
 

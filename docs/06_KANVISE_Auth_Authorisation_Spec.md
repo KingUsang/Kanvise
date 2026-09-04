@@ -37,19 +37,19 @@ There are three distinct registration flows in Kanvise. Each results in a differ
 ### 2.1 Admin Registration Flow
 
 ```
-1. Admin visits kanvise.ng/auth/register
+1. Admin visits kanvise.com/auth/register
 2. Selects role: Admin
 3. Fills in: first name, last name, email, password
 4. Supabase Auth creates the user record and sends a verification email
 5. Admin clicks the verification link in email
-6. Supabase Auth callback fires at kanvise.ng/api/auth/callback
+6. Supabase Auth callback fires at kanvise.com/api/auth/callback
 7. Next.js callback handler calls Hono: POST /auth/profile/init
    with: { role: "admin", supabase_auth_id, first_name, last_name, email }
 8. Hono creates user_profiles record:
    - kanvise_user_id generated: KNV-ADM-XXXXX
    - role = admin
    - school_id = NULL (no school yet)
-9. Admin is redirected to /dashboard/admin/setup to create their school
+9. Admin is redirected to `/dashboard/school-setup` to create their school
 10. After school creation, school_id is set on the user_profiles record
 ```
 
@@ -60,7 +60,7 @@ The Admin's `school_id` is null until they complete the school creation step. Al
 ```
 1. Admin generates an invite link from their dashboard
    - Hono creates a signed invite token (HMAC-SHA256, expires in 7 days)
-   - Invite URL: kanvise.ng/join?token=xxxx
+   - Invite URL: kanvise.com/join?token=xxxx
 2. Admin shares the link anywhere (WhatsApp, email, social media)
 3. Tutor clicks the link
 4. Next.js reads the token from the URL and stores it in sessionStorage
@@ -78,7 +78,7 @@ The Admin's `school_id` is null until they complete the school creation step. Al
     - kanvise_user_id generated: KNV-TUT-XXXXX
     - role = tutor
     - school_id = extracted from token
-12. Tutor is redirected to /dashboard/tutor
+12. Tutor is redirected to /dashboard
 ```
 
 The invite token payload contains:
@@ -95,10 +95,10 @@ The invite token payload contains:
 
 ```
 1. Student clicks a shared programme or course link:
-   kanvise.ng/brightminds/waec-bootcamp
+   kanvise.com/brightminds/waec-bootcamp
 2. Student sees the public programme page
 3. Student clicks Enrol / Pay
-4. If not logged in — redirected to kanvise.ng/auth/register
+4. If not logged in — redirected to kanvise.com/auth/register
    with the programme URL stored in a redirect param
 5. Student fills in: first name, last name, email, password
    (Role is automatically set to "student" — not selectable on this flow)
@@ -124,7 +124,7 @@ A student's `school_id` is set at the point of first enrolment — when they pay
 ## 3. Login Flow
 
 ```
-1. User visits kanvise.ng/auth/login
+1. User visits kanvise.com/auth/login
 2. Enters email and password
 3. Next.js calls Supabase Auth JS client: signInWithPassword()
 4. Supabase Auth validates credentials
@@ -135,8 +135,8 @@ A student's `school_id` is set at the point of first enrolment — when they pay
 6. Next.js stores the session in an httpOnly cookie via Supabase's cookie helper
 7. Next.js reads the user's role from their Kanvise profile (via GET /auth/me on Hono)
 8. User is redirected to the correct dashboard based on their role:
-   - admin  → /dashboard/admin
-   - tutor  → /dashboard/tutor
+   - admin  → /dashboard
+   - tutor  → /dashboard
    - student → /dashboard/student
 ```
 
@@ -167,27 +167,32 @@ Supabase Auth issues JWTs signed with the project's JWT secret. The Hono backend
   "email": "user@example.com",
   "role": "authenticated",
   "app_metadata": {
-    "provider": "email"
-  },
-  "user_metadata": {
+    "provider": "email",
+    "role": "admin | tutor | student",
     "kanvise_role": "admin | tutor | student",
     "school_id": "uuid | null",
-    "kanvise_user_id": "KNV-ADM-00001"
+    "kanvise_user_id": "KNV-ADM-00001",
+    "profile_id": "uuid"
+  },
+  "user_metadata": {
+    "first_name": "Ada",
+    "last_name": "Okafor"
   }
 }
 ```
 
-**Custom claims stored in `user_metadata`:**
+**Authorisation claims stored in `app_metadata`:**
 
-- `kanvise_role` — the user's role on Kanvise. Stored here so it is available in the JWT without a database lookup on every request.
-- `school_id` — the user's school UUID. Same reason.
+- `role` / `kanvise_role` — the user's role on Kanvise. Both names are emitted during the compatibility period; `role` also matches the RLS policies.
+- `school_id` — the user's school UUID.
 - `kanvise_user_id` — the human-readable user ID.
+- `profile_id` — the canonical `user_profiles.id` used by API relationships.
 
-**When user_metadata is populated:**
+Supabase users can edit their own `user_metadata`, so it must never be used to decide a role, tenant, or profile identity. Editable presentation fields such as `first_name` and `last_name` remain in `user_metadata`. The server writes access-control claims to `app_metadata` with the Admin API; signed-in users cannot change that field.
 
-Hono updates the Supabase Auth user's `user_metadata` via the Supabase Admin API immediately after creating the `user_profiles` record in `POST /auth/profile/init`. This means the second JWT the user receives (after the first token refresh) will contain the custom claims.
+**When app_metadata is populated:**
 
-The profile resolution middleware in Hono handles the case where `user_metadata` is empty (first request after registration before the first refresh) by falling back to a database lookup using the `sub` claim.
+Hono updates the Supabase Auth user's `app_metadata` immediately after creating the `user_profiles` record in `POST /auth/profile/init`. The next JWT issued after token refresh contains the custom claims. The profile resolution middleware falls back to a database lookup when trusted claims are missing, including existing sessions created before this migration. After a successful canonical lookup, it opportunistically backfills `app_metadata`; the request still succeeds if that backfill is temporarily unavailable.
 
 ---
 
@@ -266,12 +271,11 @@ No session found → Redirect to /auth/login?redirect=[original-path]
          │
 Session found ↓
          ▼
-Extract kanvise_role from user_metadata
+Extract kanvise_role from app_metadata (legacy user_metadata fallback for redirects only)
          │
          ▼
 Does the role match the route?
-/dashboard/admin/** → requires kanvise_role = admin
-/dashboard/tutor/** → requires kanvise_role = tutor
+/dashboard/** → requires kanvise_role in [admin, tutor] (with internal component-level authorisation)
 /dashboard/student/** → requires kanvise_role = student
          │
 Role mismatch → Redirect to correct dashboard for their role
@@ -327,14 +331,16 @@ const profileResolutionMiddleware = async (ctx, next) => {
   const jwtPayload = ctx.get('jwt_payload')
   const supabaseAuthId = jwtPayload.sub
 
-  // Check user_metadata first (fast path — no DB call)
-  const { kanvise_role, school_id, kanvise_user_id } = jwtPayload.user_metadata || {}
+  // Check trusted app_metadata first (fast path — no DB call)
+  const { kanvise_role, role, school_id, kanvise_user_id, profile_id } = jwtPayload.app_metadata || {}
+  const resolvedRole = kanvise_role || role
 
-  if (kanvise_role && school_id && kanvise_user_id) {
+  if (resolvedRole && kanvise_user_id && profile_id) {
     // Fast path — metadata is populated
     ctx.set('user', {
       supabase_auth_id: supabaseAuthId,
-      role: kanvise_role,
+      id: profile_id,
+      role: resolvedRole,
       school_id: school_id,
       kanvise_user_id: kanvise_user_id
     })
@@ -490,11 +496,11 @@ The following table defines which roles can perform which actions. This is the a
 ## 10. Password Reset Flow
 
 ```
-1. User visits kanvise.ng/auth/forgot-password
+1. User visits kanvise.com/auth/forgot-password
 2. Enters their email address
-3. Next.js calls Supabase Auth: resetPasswordForEmail(email, { redirectTo: 'kanvise.ng/api/auth/callback?next=/auth/reset-password' })
+3. Next.js calls Supabase Auth: resetPasswordForEmail(email, { redirectTo: 'kanvise.com/api/auth/callback?next=/auth/reset-password' })
 4. Supabase sends a password reset email containing a one-time link
-5. User clicks the link — Supabase callback fires at kanvise.ng/api/auth/callback
+5. User clicks the link — Supabase callback fires at kanvise.com/api/auth/callback
 6. Next.js callback processes the reset token and redirects to /auth/reset-password
 7. User enters their new password
 8. Next.js calls Supabase Auth: updateUser({ password: newPassword })
@@ -555,7 +561,12 @@ const validateInviteToken = (token) => {
 }
 ```
 
-**Invite token storage:** Tokens are not stored in the database for MVP. They are stateless — the signature is sufficient to validate authenticity and the payload contains the expiry. Post-MVP, a token revocation table can be added so Admins can invalidate outstanding invite links.
+**Invite enforcement:** The signed token contains the exact `tutor_invites.id`,
+school, recipient email, and expiry. Profile initialisation verifies the HMAC and
+then atomically consumes that database row. The row must still be pending,
+unexpired, and addressed to the verified Supabase email. Revocation therefore
+invalidates one invite immediately, and an accepted invite cannot be reused by a
+different Auth user. A callback retry by the same verified Auth user is idempotent.
 
 ---
 
@@ -615,7 +626,7 @@ The Supabase RPC function `increment_user_sequence` runs as a single atomic oper
 
 ### 13.1 What the Frontend Can Never Do
 
-The Supabase service role key must never appear in any frontend code, Next.js Client Component, or any file that is bundled and sent to the browser. It lives only in Hono's environment on Scaleway and in Next.js server-only code.
+The Supabase service role key must never appear in frontend or Next.js code. It lives only in Hono's environment on Scaleway.
 
 The Supabase anon key is safe to expose — it is intentionally public. It only allows what Supabase RLS and Auth configurations permit, which for Kanvise is only auth operations.
 
@@ -625,17 +636,19 @@ Because `school_id` is always derived from the authenticated user's profile in H
 
 ### 13.3 Role Escalation
 
-Role is stored in the `user_profiles` database record and in `user_metadata` in the Supabase Auth user. A user cannot change their own role — the `PATCH /auth/me` endpoint explicitly excludes `role` from the list of updatable fields. Role can only be set at registration time in `POST /auth/profile/init`.
+Role is canonical in `user_profiles` and copied to Supabase Auth `app_metadata` by trusted server code for fast JWT-based resolution. It is never read from `user_metadata` for authorisation because users can update that field through Supabase Auth independently of `PATCH /auth/me`. Role-changing operations must update the database and `app_metadata`, then refresh or revoke affected sessions because existing JWTs remain valid until refreshed or expired.
 
 ### 13.4 Invite Token Security
 
-Invite tokens are HMAC-signed with a secret known only to the Hono server. A malicious actor cannot forge a valid invite token without the secret. The token expires in 7 days. If an Admin suspects a link has been shared with the wrong person, the practical mitigation at MVP is to change the `INVITE_TOKEN_SECRET` environment variable — this invalidates all outstanding invite tokens. Post-MVP, per-token revocation will be added.
+Invite tokens are HMAC-signed with a secret known only to Hono and bound to one
+database invite row and one normalized recipient email. They expire after seven
+days, are atomically marked accepted, and honour per-invite revocation.
 
 ### 13.5 Webhook Security
 
-The Paystack webhook at `kanvise.ng/api/webhooks/paystack` verifies the `x-paystack-signature` header using HMAC-SHA512 with the Paystack secret key before processing any payload. Any request that fails signature verification receives a `400` immediately with no processing.
+The Paystack webhook at `kanvise.com/api/webhooks/paystack` verifies the `x-paystack-signature` header using HMAC-SHA512 with the Paystack secret key before processing any payload. Any request that fails signature verification receives a `400` immediately with no processing.
 
-The LiveKit webhook at `api.kanvise.ng/webhooks/livekit` is on a private Scaleway network endpoint not exposed to the public internet. It additionally verifies the LiveKit webhook JWT in the `Authorization` header.
+The LiveKit webhook at `api.kanvise.com/webhooks/livekit` is on a private Scaleway network endpoint not exposed to the public internet. It additionally verifies the LiveKit webhook JWT in the `Authorization` header.
 
 ### 13.6 Password Requirements
 
@@ -663,13 +676,18 @@ SUPABASE_URL=https://[project-ref].supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 SUPABASE_JWT_SECRET=your-jwt-secret
 INVITE_TOKEN_SECRET=random-256-bit-secret
+FRONTEND_URL=https://kanvise.com
+CORS_ALLOWED_ORIGINS=https://staging.kanvise.com,https://app.kanvise.com
 ```
+
+`FRONTEND_URL` is the canonical frontend used for generated links. `CORS_ALLOWED_ORIGINS` is a comma-separated list of additional exact frontend origins allowed to call Hono from a browser. Add new stable subdomains here and restart the API process after changing the value.
 
 **Next.js (Vercel — NEXT_PUBLIC_ prefix for browser-safe vars):**
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-NEXT_PUBLIC_HONO_API_URL=https://api.kanvise.ng
+NEXT_PUBLIC_API_URL=https://api.kanvise.com
+NEXT_PUBLIC_SITE_URL=https://staging.kanvise.com
 HONO_INTERNAL_SECRET=shared-secret-for-next-to-hono-internal-calls
 ```
 

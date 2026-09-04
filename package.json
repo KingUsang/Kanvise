@@ -9,10 +9,14 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=web\" \"npm run dev --workspace=api\"",
     "build": "npm run build --workspaces",
+    "db:types": "supabase gen types typescript --linked --schema public > api/src/lib/database.types.ts",
     "install:all": "npm install"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "wrangler": "^4.119.0"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

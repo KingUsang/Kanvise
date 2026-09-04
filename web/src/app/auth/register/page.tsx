@@ -1,371 +1,196 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeOff, Loader2, Mail, Lock, User, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Suspense, useState, type FormEvent, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-
-import { Suspense } from "react";
+import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { safeRedirectPath } from '@/lib/safe-redirect'
 
 function RegisterContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const redirectParam = searchParams.get("redirect");
-  
-  // If there's a redirect param, this is a student enrolling. 
-  // Otherwise, it's an Admin registering manually.
-  const isStudentFlow = !!redirectParam;
-  
+  // Public enrolment starts here with `return_to`; Login uses `redirect`.
+  // Accept both so switching between the two forms never loses the programme
+  // page the student intended to return to.
+  const redirectParam = safeRedirectPath(searchParams.get("return_to") || searchParams.get("redirect"));
+  const isStudentFlow = pathname.endsWith('/student');
+  const flow = isStudentFlow ? 'student' : 'centre';
+  const studentRegistrationToken = searchParams.get('intent');
+  const loginHref = redirectParam
+    ? `/auth/login?redirect=${encodeURIComponent(redirectParam)}`
+    : '/auth/login';
+  const supabase = createClient();
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role] = useState(isStudentFlow ? "student" : "admin"); // Role is locked
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isCodeStep, setIsCodeStep] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (event: FormEvent) => {
+    event.preventDefault();
     setLoading(true);
     setError(null);
-
-    // Prepare redirect URL for the Supabase email verification callback
-    let redirectTo = `${window.location.origin}/api/auth/callback?role=${role}`;
-    if (redirectParam) {
-      redirectTo += `&redirect=${encodeURIComponent(redirectParam)}`;
-    }
 
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectTo,
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          // role will be handled securely by Hono on the callback
-        }
-      }
+        data: { first_name: firstName, last_name: lastName },
+      },
     });
 
     if (signUpError) {
       setError(signUpError.message);
-      setLoading(false);
-      return;
+    } else {
+      setIsCodeStep(true);
     }
-
-    setSuccess(true);
     setLoading(false);
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-kv-soft p-4 relative overflow-hidden font-sans">
-        {/* Ambient Background Elements */}
-        <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-        <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-kv-blue/10 to-transparent pointer-events-none"></div>
-        
-        {/* Main Card Container */}
-        <div className="z-10 bg-white w-full max-w-[480px] rounded-xl border border-kv-dust shadow-2xl p-8 md:p-10 relative overflow-hidden flex flex-col items-center text-center">
-          {/* Top Accent Bar */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-kv-blue"></div>
-          
-          {/* Brand Mark */}
-          <div className="mb-6 w-full flex justify-center">
-            <span className="text-2xl font-bold text-kv-blue tracking-tight">Kanvise</span>
-          </div>
-          
-          {/* Icon Graphic */}
-          <div className="w-20 h-20 rounded-full bg-kv-blue/5 flex items-center justify-center mb-6 border border-kv-blue/20">
-            <svg className="w-10 h-10 text-kv-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          
-          {/* Text Content */}
-          <h1 className="text-2xl font-bold text-kv-dark mb-2 w-full">Check your email</h1>
-          <p className="text-kv-dark/70 mb-8 w-full max-w-[360px] mx-auto text-sm leading-relaxed">
-            We&apos;ve sent a verification link to <span className="font-semibold text-kv-dark">{email}</span>. Please click the link to activate your account.
-          </p>
-          
-          {/* Contextual Reminder */}
-          <div className="w-full bg-[#f5f3f2] border border-[#e4e2e1] rounded-lg p-4 mb-8 flex items-start text-left gap-3">
-            <svg className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-kv-dark uppercase tracking-wider mb-1">Didn&apos;t receive the email?</p>
-              <p className="text-xs text-kv-dark/70">Check your spam folder or verify that the email address provided was correct.</p>
-            </div>
-          </div>
-          
-          {/* Actions */}
-          <div className="w-full flex flex-col gap-3">
-            <button 
-              onClick={() => window.location.href = '/auth/login'}
-              className="w-full bg-kv-brown hover:bg-kv-brown/90 text-white py-3 px-6 rounded flex items-center justify-center gap-2 transition-colors font-bold text-xs uppercase tracking-wider"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-              Go to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const finishRegistration = async (accessToken: string, userEmail: string) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) throw new Error("Account setup is temporarily unavailable");
+
+    const response = await fetch(`${apiUrl}/auth/profile/init`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ flow, student_registration_token: studentRegistrationToken, first_name: firstName, last_name: lastName, email: userEmail }),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error || "Your email was verified, but account setup could not be completed");
+    }
+
+    // profile/init updates the trusted role claims server-side. Refresh before
+    // navigating so middleware and server layouts do not evaluate the new user
+    // with the pre-initialisation JWT (or a stale session from another account
+    // previously used in this browser).
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session) {
+      throw new Error("Your account was created, but the dashboard session could not be refreshed. Please sign in again.");
+    }
+
+    const destination = flow === "centre"
+      ? "/dashboard/school-setup"
+      : redirectParam || "/dashboard/student";
+    window.location.assign(destination);
+  };
+
+  const handleVerifyCode = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(verificationCode)) {
+      setError("Enter the six-digit code from your email");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: verificationCode,
+        type: "signup",
+      });
+      if (verifyError) throw verifyError;
+      if (!data.session?.access_token || !data.user?.email) throw new Error("Verification succeeded, but no session was returned");
+      await finishRegistration(data.session.access_token, data.user.email);
+    } catch (verificationError: any) {
+      setError(verificationError.message || "That code is invalid or has expired");
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setResendLoading(true);
+    setError(null);
+    const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
+    if (resendError) setError(resendError.message);
+    setResendLoading(false);
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-kv-soft">
-      <main className="w-full max-w-[1440px] min-h-screen grid grid-cols-1 lg:grid-cols-2 overflow-hidden bg-white">
-        
-        {/* Left Side: Visual Anchor & Value Props */}
-        <section className="hidden lg:flex flex-col relative p-12 bg-kv-blue overflow-hidden">
-          {/* Background Image with Overlay */}
-          <div 
-            className="absolute inset-0 z-0 bg-cover bg-center" 
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format&fit=crop')" }}
-          ></div>
-          <div className="absolute inset-0 z-10 bg-kv-blue/90 mix-blend-multiply"></div>
-          
-          {/* Branding */}
-          <div className="relative z-20 mb-auto">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="text-kv-brown w-10 h-10" />
-              <h1 className="text-3xl font-bold text-white tracking-tight">Kanvise</h1>
-            </div>
-            <p className="text-white/80 mt-2 font-medium">Built for Nigerian tutorial centres</p>
-          </div>
-          
-          {/* Value Propositions */}
-          <div className="relative z-20 space-y-12">
-            <div>
-              <h2 className="text-5xl font-bold text-white mb-4 leading-tight">
-                {isStudentFlow ? (
-                  <>Access Your<br/><span className="text-[#ff9653]">School&apos;s Portal</span></>
-                ) : (
-                  <>Set up your<br/><span className="text-[#ff9653]">school.</span></>
-                )}
-              </h2>
-              <p className="text-lg text-white/90 max-w-md">
-                {isStudentFlow 
-                  ? "Log in to access your classes, track your performance, and manage your learning."
-                  : "Add your programmes, invite your tutors, and get paid for your classes — all from one dashboard built for Nigerian tutorial centres. Takes about 2 minutes."
-                }
-              </p>
-            </div>
-            
-            {!isStudentFlow && (
-              <div className="grid gap-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-kv-brown/20 rounded-lg">
-                    <ShieldCheck className="text-kv-brown w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">No more chasing fees on WhatsApp.</h3>
-                    <p className="text-sm text-white/80 mt-1">Get paid instantly to your account once a students enrols, no spreadsheets, no manual tracking.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-kv-brown/20 rounded-lg">
-                    <svg className="text-kv-brown w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">Everything in one place.</h3>
-                    <p className="text-sm text-white/80 mt-1">Attendance, notes, assignments, and mock exams — organized by course, visible to your students automatically.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Footer Badge */}
-          <div className="relative z-20 mt-auto pt-8 border-t border-white/10 flex items-center gap-2">
-            <ShieldCheck className="text-white/60 w-4 h-4" />
-            <p className="text-xs text-white/60 uppercase tracking-widest font-semibold">Payments secured by Paystack</p>
-          </div>
-        </section>
+    <main className="min-h-screen bg-[#f7f5f3] px-4 py-10 text-[#1b1c1c] sm:flex sm:items-center sm:justify-center">
+      <section className="mx-auto w-full max-w-[520px] rounded-2xl border border-[#e4e2e1] bg-white p-6 shadow-sm sm:p-10">
+        <Link href="/" className="mb-10 block text-center text-2xl font-bold tracking-tight text-[#2e2877]">Kanvise</Link>
 
-        {/* Right Side: Registration Form */}
-        <section className="flex flex-col justify-center items-center p-8 md:p-12 bg-white relative">
-          <div className="w-full max-w-[480px]">
-            {/* Mobile Logo */}
-            <div className="lg:hidden flex items-center gap-2 mb-10">
-              <ShieldCheck className="text-kv-blue w-8 h-8" />
-              <span className="text-2xl font-bold text-kv-blue">Kanvise</span>
-            </div>
-            
-            <header className="mb-10">
-              <h2 className="text-3xl font-bold text-kv-blue mb-2">Create Account</h2>
-              <p className="text-kv-dark/70">
-                {isStudentFlow 
-                  ? "Sign up to enroll in your programme." 
-                  : "Set up your Kanvise profile to start managing your school."
-                }
-              </p>
+        {!isCodeStep ? (
+          <>
+            <header className="mb-8">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Create account</p>
+              <h1 className="mt-2 text-3xl font-bold text-[#2e2877]">{isStudentFlow ? "Join your programme" : "Set up your school"}</h1>
+              <p className="mt-3 text-sm leading-6 text-[#6a6874]">Use your email and password to create your Kanvise account.</p>
             </header>
 
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100 flex items-start gap-3">
-                <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{error}</span>
-              </div>
-            )}
+            {error && <div className="mb-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
-            <form onSubmit={handleRegister} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* First Name */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-kv-dark uppercase tracking-wider" htmlFor="firstName">First Name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input 
-                      id="firstName" 
-                      type="text" 
-                      required
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3.5 bg-white border border-kv-dust/80 rounded-lg focus:outline-none focus:border-kv-blue focus:ring-1 focus:ring-kv-blue/30 transition-all text-kv-dark" 
-                      placeholder="John" 
-                    />
-                  </div>
-                </div>
-                
-                {/* Last Name */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-kv-dark uppercase tracking-wider" htmlFor="lastName">Last Name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input 
-                      id="lastName" 
-                      type="text" 
-                      required
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3.5 bg-white border border-kv-dust/80 rounded-lg focus:outline-none focus:border-kv-blue focus:ring-1 focus:ring-kv-blue/30 transition-all text-kv-dark" 
-                      placeholder="Doe" 
-                    />
-                  </div>
-                </div>
+            <form onSubmit={handleRegister} className="space-y-5">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="First name" icon={<User size={18} />} value={firstName} onChange={setFirstName} placeholder="John" />
+                <Field label="Last name" icon={<User size={18} />} value={lastName} onChange={setLastName} placeholder="Doe" />
               </div>
-
-              {/* Email Address */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-kv-dark uppercase tracking-wider" htmlFor="email">Email Address</label>
+              <Field label="Email address" icon={<Mail size={18} />} type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
+              <div>
+                <label htmlFor="password" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">Password</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    id="email" 
-                    type="email" 
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 bg-white border border-kv-dust/80 rounded-lg focus:outline-none focus:border-kv-blue focus:ring-1 focus:ring-kv-blue/30 transition-all text-kv-dark" 
-                    placeholder="tutor@institution.edu.ng" 
-                  />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9b98a3]" size={18} />
+                  <input id="password" type={showPassword ? "text" : "password"} required minLength={8} pattern="(?=.*[A-Z])(?=.*\d).{8,}" title="Use at least 8 characters, one uppercase letter, and one number" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-[#c8c5d2] py-3.5 pl-11 pr-12 text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]/30" />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9b98a3] hover:text-[#2e2877]" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
+                <p className="mt-1.5 text-[11px] text-[#6a6874]">At least 8 characters, one uppercase letter, and one number.</p>
               </div>
+              <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#994704] py-4 font-bold text-white transition hover:bg-[#753400] disabled:opacity-70">{loading && <Loader2 className="animate-spin" size={18} />}{loading ? "Creating account…" : "Create account"}</button>
+            </form>
+          </>
+        ) : (
+          <>
+            <header className="mb-8 text-center">
+              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0edff] text-[#2e2877]"><Mail size={26} /></div>
+              <h1 className="text-3xl font-bold text-[#2e2877]">Check your email</h1>
+              <p className="mt-3 text-sm leading-6 text-[#6a6874]">Enter the six-digit code sent to <span className="font-semibold text-[#1b1c1c]">{email}</span>.</p>
+            </header>
 
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-kv-dark uppercase tracking-wider" htmlFor="password">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    id="password" 
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={8}
-                    pattern="(?=.*[A-Z])(?=.*\d).{8,}"
-                    title="Must contain at least one number and one uppercase letter, and at least 8 or more characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-11 pr-12 py-3.5 bg-white border border-kv-dust/80 rounded-lg focus:outline-none focus:border-kv-blue focus:ring-1 focus:ring-kv-blue/30 transition-all text-kv-dark" 
-                    placeholder="••••••••" 
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-kv-blue transition-colors focus:outline-none"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                <p className="text-[11px] text-gray-400 mt-1 font-medium">Minimum 8 characters, at least 1 uppercase letter and 1 number.</p>
-              </div>
+            {error && <div className="mb-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
-              {/* Terms & Privacy */}
-              <div className="flex items-start gap-3 pt-2">
-                <div className="flex items-center h-5 mt-0.5">
-                  <input 
-                    id="terms" 
-                    type="checkbox" 
-                    required
-                    className="w-4 h-4 text-kv-brown border-kv-dust rounded focus:ring-kv-brown cursor-pointer" 
-                  />
-                </div>
-                <label className="text-sm text-kv-dark/70" htmlFor="terms">
-                  I agree to the <a href="#" className="text-kv-brown font-semibold hover:underline">Terms of Service</a> and <a href="#" className="text-kv-brown font-semibold hover:underline">Privacy Policy</a>.
-                </label>
-              </div>
-
-              {/* CTA */}
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full py-4 bg-kv-brown text-white font-bold rounded-lg shadow-sm hover:bg-kv-brown/90 transition-all active:scale-[0.98] mt-2 flex items-center justify-center gap-2 disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-kv-brown focus:ring-offset-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="animate-spin" size={20} />
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Create Account</span>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </>
-                )}
-              </button>
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              <label htmlFor="verification-code" className="sr-only">Verification code</label>
+              <input id="verification-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ""))} placeholder="000000" className="w-full rounded-lg border border-[#c8c5d2] px-4 py-4 text-center text-2xl font-bold tracking-[0.45em] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]/30" />
+              <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#994704] py-4 font-bold text-white transition hover:bg-[#753400] disabled:opacity-70">{loading && <Loader2 className="animate-spin" size={18} />}{loading ? "Verifying…" : "Verify email"}</button>
             </form>
 
-            {/* Footer Switch */}
-            <div className="mt-10 pt-6 border-t border-kv-dust/30 text-center">
-              <p className="text-sm text-kv-dark/70">
-                Already have an account?{" "}
-                <Link href="/auth/login" className="text-kv-blue font-bold hover:text-kv-brown transition-colors inline-flex items-center gap-1 group">
-                  Login here
-                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </Link>
-              </p>
+            <div className="mt-6 flex flex-col gap-3 text-center text-sm">
+              <button type="button" onClick={() => void handleResendCode()} disabled={resendLoading} className="font-semibold text-[#2e2877] hover:text-[#994704] disabled:opacity-50">{resendLoading ? "Sending…" : "Send a new code"}</button>
+              <Link href={loginHref} className="text-[#6a6874] hover:text-[#2e2877]">Back to login</Link>
             </div>
-          </div>
-          
-         
-        </section>
-      </main>
+          </>
+        )}
+
+        {!isCodeStep && <p className="mt-8 border-t border-[#e4e2e1] pt-6 text-center text-sm text-[#6a6874]">Already have an account? <Link href={loginHref} className="font-semibold text-[#2e2877]">Log in</Link></p>}
+      </section>
+    </main>
+  );
+}
+
+function Field({ label, icon, type = "text", value, onChange, placeholder }: { label: string; icon: ReactNode; type?: string; value: string; onChange: (value: string) => void; placeholder: string }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">{label}</label>
+      <div className="relative">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9b98a3]">{icon}</span>
+        <input type={type} required value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full rounded-lg border border-[#c8c5d2] py-3.5 pl-11 pr-4 text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]/30" />
+      </div>
     </div>
   );
 }
 
 export default function RegisterPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-kv-soft"><Loader2 className="animate-spin" size={32} /></div>}>
-      <RegisterContent />
-    </Suspense>
-  );
+  return <Suspense fallback={null}><RegisterContent /></Suspense>;
 }

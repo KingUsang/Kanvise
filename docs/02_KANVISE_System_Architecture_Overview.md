@@ -22,9 +22,9 @@ Kanvise is distributed across four runtime environments. Each environment has a 
 │                                                                      │
 │   Next.js Application                                               │
 │   ├── Public Pages (SSR/SSG)                                        │
-│   │   ├── kanvise.ng                    (Marketing / Landing)       │
-│   │   ├── kanvise.ng/[centre-slug]      (Centre Public Page)        │
-│   │   └── kanvise.ng/[centre-slug]/[programme-slug] (Programme Page)│
+│   │   ├── kanvise.com                    (Marketing / Landing)       │
+│   │   ├── kanvise.com/[centre-slug]      (Centre Public Page)        │
+│   │   └── kanvise.com/[centre-slug]/[programme-slug] (Programme Page)│
 │   │                                                                  │
 │   ├── Auth Pages                                                     │
 │   │   ├── /auth/login                                               │
@@ -32,8 +32,7 @@ Kanvise is distributed across four runtime environments. Each environment has a 
 │   │   └── /auth/reset-password                                      │
 │   │                                                                  │
 │   ├── Dashboard Pages (CSR — Role Protected)                        │
-│   │   ├── /dashboard/admin/**                                       │
-│   │   ├── /dashboard/tutor/**                                       │
+│   │   ├── /dashboard/**                 (Unified Admin/Tutor)       │
 │   │   └── /dashboard/student/**                                     │
 │   │                                                                  │
 │   └── Next.js Route Handlers                                        │
@@ -101,7 +100,7 @@ Every arrow in the architecture above represents a specific type of communicatio
 
 ### 2.1 Browser → Vercel (Next.js)
 
-All user-facing traffic enters through Vercel. The browser never speaks directly to Hono, Supabase, LiveKit, or any other backend service. Vercel is the single entry point for users.
+Page traffic enters through Vercel. After a page loads, the browser may call Hono for application operations, Supabase Auth for authentication/session operations, R2 through a presigned URL, and LiveKit for a live session. The browser never queries Supabase application tables directly.
 
 Public pages are served as pre-rendered HTML with JSON data embedded. The browser receives a fully rendered page immediately — no loading state for public content.
 
@@ -121,7 +120,7 @@ Some Next.js route handlers act as a proxy to Hono — for example, the Paystack
 
 ### 2.5 Hono → Supabase
 
-Hono is the only service that communicates with Supabase. It uses the Supabase JS client with the service role key. Every query is scoped to a school_id extracted from the authenticated user's context. Supabase is never called directly from the frontend.
+Hono is the only service that queries Supabase application tables. It uses the Supabase JS client with the service role key. Every query is scoped to a school_id extracted from the authenticated user's context. Next.js and the browser communicate with Supabase Auth only for credentials, callbacks, and session management; they never query application tables.
 
 ### 2.6 Hono → Cloudflare R2
 
@@ -141,7 +140,7 @@ Hono calls the Paystack API to initiate payment transactions, create subaccounts
 
 ### 2.10 Paystack → Next.js (Webhook)
 
-Paystack sends payment event webhooks to `kanvise.ng/api/webhooks/paystack`. The Next.js route handler verifies the Paystack signature, then calls the Hono API to process the confirmed payment — granting enrolment access, sending the receipt email, and recording the transaction.
+Paystack sends payment event webhooks to `kanvise.com/api/webhooks/paystack`. The Next.js route handler verifies the Paystack signature, then calls the Hono API to process the confirmed payment — granting enrolment access, sending the receipt email, and recording the transaction.
 
 ### 2.11 Hono → Resend
 
@@ -162,10 +161,10 @@ Once the browser has a LiveKit access token from Hono, it connects to the LiveKi
 The public layer is the part of Kanvise that is visible without any login. It serves two purposes: marketing Kanvise itself to tutorial centres, and marketing individual tutorial centres to their prospective students.
 
 ```
-kanvise.ng                    → Kanvise marketing page
-kanvise.ng/[centre-slug]      → Tutorial centre public page
-kanvise.ng/[centre-slug]/[programme-slug]  → Programme page
-kanvise.ng/[centre-slug]/[course-slug]     → Standalone course page
+kanvise.com                    → Kanvise marketing page
+kanvise.com/[centre-slug]      → Tutorial centre public page
+kanvise.com/[centre-slug]/[programme-slug]  → Programme page
+kanvise.com/[centre-slug]/[course-slug]     → Standalone course page
 ```
 
 All public pages are Server Components. They fetch data from Hono during server render. The rendered HTML is cached at Vercel's edge CDN. Cache is invalidated when an Admin updates their school profile or programme details.
@@ -238,7 +237,7 @@ This section traces the complete path of requests for the most important operati
 ### 6.1 Student Enrols in a Programme
 
 ```
-1. Student lands on programme page (kanvise.ng/[centre]/[programme])
+1. Student lands on programme page (kanvise.com/[centre]/[programme])
    └── Next.js Server Component fetches programme data from Hono
    └── Page renders with price, tutors, courses, reviews, enrol CTA
 
@@ -257,7 +256,7 @@ This section traces the complete path of requests for the most important operati
    └── Student completes payment (card / bank transfer / USSD)
    └── Paystack processes payment and splits: centre amount → subaccount, Kanvise fee → main account
 
-5. Paystack sends charge.success webhook to kanvise.ng/api/webhooks/paystack
+5. Paystack sends charge.success webhook to kanvise.com/api/webhooks/paystack
    └── Next.js route handler verifies Paystack signature
    └── Route handler calls POST /internal/payments/confirm (Hono)
    └── Hono verifies the payment reference
@@ -411,7 +410,7 @@ Paystack processes the payment
          └──► Kanvise's service fee → Kanvise main Paystack account
          │
          ▼
-charge.success webhook → kanvise.ng/api/webhooks/paystack
+charge.success webhook → kanvise.com/api/webhooks/paystack
          │
          ▼
 Hono processes confirmation:

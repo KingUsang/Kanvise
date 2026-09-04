@@ -1,68 +1,80 @@
 "use client";
 
-import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant } from "@livekit/components-react";
+import { useEffect, useRef } from "react";
 import ClassroomLayout from "@/components/classroom/ClassroomLayout";
+import { CLASSROOM_ROOM_OPTIONS } from "@/components/classroom/livekit-room-options";
 
-function ClassroomConnection({ roomId }: { roomId: string }) {
-  const [token, setToken] = useState("");
-  const [error, setError] = useState("");
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const username = searchParams.get("username") || "Student-" + Math.floor(Math.random() * 1000);
-  const isHost = searchParams.get("isHost") === "true";
+interface ClientClassroomProps {
+  token: string;
+  serverUrl: string;
+  roomName: string;
+  classId: string;
+  isHost: boolean;
+  classTitle: string;
+  courseName: string | null;
+}
+
+function MuteStudentOnJoin({ isHost }: { isHost: boolean }) {
+  const { localParticipant } = useLocalParticipant();
+  const hasAppliedInitialMute = useRef(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const resp = await fetch(
-          `/api/livekit/token?room=${roomId}&username=${username}&isHost=${isHost}`
-        );
-        const data = await resp.json();
-        
-        if (!resp.ok) {
-          setError(data.error || "Failed to fetch token");
-          return;
-        }
-        
-        setToken(data.token);
-      } catch (e: unknown) {
-        setError((e as Error).message);
-        console.error(e);
-      }
-    })();
-  }, [roomId, username, isHost]);
+    if (isHost || !localParticipant || hasAppliedInitialMute.current) return;
+    hasAppliedInitialMute.current = true;
+    // LiveKitRoom's audio={false} is the intended initial setting. Apply an
+    // explicit post-connect mute as well because browsers may restore a local
+    // input device during reconnects.
+    void localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
+  }, [isHost, localParticipant]);
 
-  if (error) {
-    // We will just log the error and allow the UI to render for development
-    console.warn("LiveKit connection error:", error);
-  }
+  return null;
+}
+
+export default function ClientClassroom({
+  token,
+  serverUrl,
+  roomName,
+  classId,
+  isHost,
+  classTitle,
+  courseName,
+}: ClientClassroomProps) {
+  const isLeavingClassroom = useRef(false);
+  const dashboardPath = isHost ? "/dashboard" : "/dashboard/student/classes";
+
+  const leaveClassroom = () => {
+    if (isLeavingClassroom.current) return;
+    isLeavingClassroom.current = true;
+    // LiveKit disconnects after the room closes. A document navigation ensures
+    // the dashboard shell is rebuilt instead of retaining the classroom's
+    // client-side navigation state.
+    window.location.assign(dashboardPath);
+  };
 
   return (
     <LiveKitRoom
-      video={false} // Audio-first MVP
-      audio={true}
-      token={token || "dummy-token"}
-      serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL || "wss://dummy.livekit.cloud"}
-      connect={!!token} // Only try connecting if we actually have a valid token
+      video={false}
+      audio={isHost}
+      token={token}
+      serverUrl={serverUrl}
+      connect={true}
+      options={CLASSROOM_ROOM_OPTIONS}
       data-lk-theme="default"
-      className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden"
-      onDisconnected={() => router.push("/")}
+      className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
+      onDisconnected={leaveClassroom}
     >
+      <MuteStudentOnJoin isHost={isHost} />
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
-      
-      {/* The main UI layout for the classroom */}
-      <ClassroomLayout isHost={isHost} />
-    </LiveKitRoom>
-  );
-}
 
-export default function ClientClassroom({ roomId }: { roomId: string }) {
-  return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-background">Loading...</div>}>
-      <ClassroomConnection roomId={roomId} />
-    </Suspense>
+      {/* Main classroom UI */}
+      <ClassroomLayout
+        isHost={isHost}
+        classId={classId}
+        classTitle={classTitle}
+        courseName={courseName}
+      />
+    </LiveKitRoom>
   );
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-
-import { Suspense } from "react";
+import { getBrowserAppUrl } from "@/config/app";
 
 function JoinContent() {
   const router = useRouter();
@@ -43,7 +42,7 @@ function JoinContent() {
     setError(null);
 
     // Pass role=tutor and invite_token to the callback
-    const redirectTo = `${window.location.origin}/api/auth/callback?role=tutor&invite_token=${activeToken}`;
+    const redirectTo = `${getBrowserAppUrl()}/api/auth/callback?role=tutor&invite_token=${activeToken}`;
 
     const { error: signUpError } = await supabase.auth.signUp({
       email,
@@ -211,7 +210,7 @@ function JoinContent() {
 
 export default function JoinPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin" size={32} /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-kv-soft"><Loader2 className="animate-spin text-kv-blue" size={32} /></div>}>
       <JoinContent />
     </Suspense>
   );
