@@ -1,5 +1,4 @@
 import { Context, Next } from 'hono'
-import { verify } from 'hono/jwt'
 import { supabase } from '../lib/supabase'
 
 import { decode, verifyWithJwks } from 'hono/jwt'
@@ -47,20 +46,19 @@ async function getJwks(): Promise<any[]> {
   return cachedJwks!
 }
 
-// Handles both HS256 (legacy Supabase) and ES256 (new Supabase projects)
-const verifyJWT = async (token: string, secret: string) => {
+// Kanvise's staging and production Supabase projects use asymmetric signing
+// keys. Verify user tokens against the project's public JWKS, rather than
+// keeping a shared JWT secret on the API server.
+const verifyJWT = async (token: string) => {
   const { header } = decode(token)
-
-  if (header.alg === 'HS256') {
-    // Legacy symmetric encryption — use the shared JWT secret
-    return await verify(token, secret, 'HS256')
-  }
-
-  // Asymmetric algorithm (ES256 etc.) — verify against Supabase public keys
   const keys = await getJwks()
+  const allowedAlgorithms = [...new Set(keys.map((key) => key.alg).filter(Boolean))]
+  if (!allowedAlgorithms.includes(header.alg)) {
+    throw new Error(`Unsupported JWT signing algorithm: ${header.alg}`)
+  }
   return await verifyWithJwks(token, {
     keys,
-    allowedAlgorithms: [header.alg] as any
+    allowedAlgorithms: allowedAlgorithms as any,
   })
 }
 
@@ -73,8 +71,7 @@ export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
   
   const token = authHeader.split(' ')[1]
   try {
-    const secret = process.env.SUPABASE_JWT_SECRET
-    const payload = await verifyJWT(token, secret as string)
+    const payload = await verifyJWT(token)
     c.set('jwt_payload', payload)
     await next()
   } catch (error: any) {

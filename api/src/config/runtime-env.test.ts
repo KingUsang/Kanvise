@@ -5,7 +5,6 @@ const validProductionEnv = {
   NODE_ENV: 'production',
   SUPABASE_URL: 'https://project.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role',
-  SUPABASE_JWT_SECRET: 'jwt-secret',
   PAYSTACK_SECRET_KEY: 'paystack-production-secret-for-tests-only',
   KANVISE_INTERNAL_SECRET: 'internal-secret-1234567890123456',
   INVITE_TOKEN_SECRET: 'invite-secret',
