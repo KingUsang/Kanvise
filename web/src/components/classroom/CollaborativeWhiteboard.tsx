@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any -- Excalidraw's imperative scene objects are intentionally passed through unchanged. */
 
-import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from "react";
 import dynamic from "next/dynamic";
 
 const Excalidraw = dynamic(
@@ -95,29 +95,40 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const hasRequestedScene = useRef(false);
   const currentSlideUrlRef = useRef<string | null>(null);
 
-  // Excalidraw measures its canvas while it mounts. In a LiveKit classroom the
-  // room, fonts, and stage can all settle a frame later, which previously left
-  // its menu (the hamburger) and the right edge of the canvas unpainted until
-  // another UI action, such as opening People, caused a reflow. Refresh after
-  // the stage has been painted and whenever its dimensions subsequently change.
-  useEffect(() => {
+  // Excalidraw measures itself while its dynamic import mounts. The classroom
+  // stage and web fonts can settle after that measurement. Opening People used
+  // to incidentally cause the later reflow that corrected the canvas. Make
+  // that reflow explicit during entry instead, and keep it tied to the stage.
+  useLayoutEffect(() => {
     if (!excalidrawAPI || !boardContainerRef.current) return;
 
     let animationFrame = 0;
-    let delayedRefresh = 0;
+    const delayedRefreshes: number[] = [];
     const refresh = () => {
       cancelAnimationFrame(animationFrame);
-      animationFrame = requestAnimationFrame(() => excalidrawAPI.refresh());
+      animationFrame = requestAnimationFrame(() => {
+        // A second frame guarantees the stage's flex dimensions have committed.
+        animationFrame = requestAnimationFrame(() => {
+          excalidrawAPI.refresh();
+          // Excalidraw also owns window-resize listeners for its UI chrome.
+          // Trigger them once the stage is stable; this is what the People
+          // interaction used to do accidentally.
+          window.dispatchEvent(new Event("resize"));
+        });
+      });
     };
     const observer = new ResizeObserver(refresh);
     observer.observe(boardContainerRef.current);
     refresh();
-    delayedRefresh = window.setTimeout(refresh, 150);
+    for (const delay of [80, 300, 800]) delayedRefreshes.push(window.setTimeout(refresh, delay));
+    void document.fonts?.ready.then(refresh);
+    window.addEventListener("load", refresh, { once: true });
 
     return () => {
       observer.disconnect();
       cancelAnimationFrame(animationFrame);
-      window.clearTimeout(delayedRefresh);
+      delayedRefreshes.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("load", refresh);
     };
   }, [excalidrawAPI]);
 
