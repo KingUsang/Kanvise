@@ -23,41 +23,9 @@ import { AnimatedSection } from '@/components/landing/AnimatedSection';
 // import Footer from "@/components/landing/Footer";
 
 export default function LandingPage() {
-  const [countdown, setCountdown] = useState("");
   const [tutorsCount, setTutorsCount] = useState(0);
-  const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
   const [suggestionText, setSuggestionText] = useState("");
   const [suggestionStatus, setSuggestionStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-
-  const [waitlistData, setWaitlistData] = useState({
-    contact_name: "",
-    contact_email: "",
-    centre_name: "",
-    contact_phone: "",
-    estimated_student_count: "",
-    wants_beta_testing: false
-  });
-  const [waitlistSubmitStatus, setWaitlistSubmitStatus] = useState<"idle" | "loading" | "success" | "error" | "conflict">("idle");
-
-  const handleWaitlistSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setWaitlistSubmitStatus("loading");
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(waitlistData),
-      });
-      if (res.status === 409) {
-        setWaitlistSubmitStatus("conflict");
-        return;
-      }
-      if (!res.ok) throw new Error("Failed to submit");
-      setWaitlistSubmitStatus("success");
-    } catch (e) {
-      setWaitlistSubmitStatus("error");
-    }
-  };
 
   const handleSuggestionSubmit = async () => {
     if (!suggestionText.trim()) return;
@@ -76,22 +44,6 @@ export default function LandingPage() {
       setSuggestionStatus("error");
     }
   };
-
-  useEffect(() => {
-    // Fetch live waitlist count
-    const fetchWaitlistCount = async () => {
-      try {
-        const res = await fetch("/api/waitlist/count");
-        if (res.ok) {
-          const data = await res.json();
-          setWaitlistCount(data.count);
-        }
-      } catch (err) {
-        console.error("Failed to fetch waitlist count:", err);
-      }
-    };
-    fetchWaitlistCount();
-  }, []);
 
   useEffect(() => {
     // Stats animation logic
@@ -120,35 +72,6 @@ export default function LandingPage() {
     return () => statsObserver.disconnect();
   }, []);
 
-  useEffect(() => {
-    // Countdown logic to August 1st 2026
-    const updateCountdown = () => {
-      const now = new Date();
-      const targetDate = new Date('2026-08-01T00:00:00');
-      const diff = targetDate.getTime() - now.getTime();
-      
-      if (diff <= 0) {
-        setCountdown("00:00:00");
-        return;
-      }
-
-      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      
-      if (d > 0) {
-        setCountdown(`${d}d ${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`);
-      } else {
-        setCountdown(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
-      }
-    };
-
-    const interval = setInterval(updateCountdown, 1000);
-    updateCountdown();
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <main className="landing font-body-md overflow-x-hidden text-[#241915]">
       {/* TopNavBar */}
@@ -164,7 +87,7 @@ export default function LandingPage() {
           <a className="font-label-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#story">Our Story</a>
           <a className="font-label-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#mission">Mission</a>
           <a className="font-label-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#timeline">Timeline</a>
-          <a className="px-6 py-2 bg-primary text-white font-label-md rounded-lg active:scale-95 transition-all" href="#waitlist">Join Waitlist</a>
+          <Link className="px-6 py-2 bg-primary text-white font-label-md rounded-lg active:scale-95 transition-all" href="/auth/register">Set up your tutorial</Link>
         </div>
         <button className="md:hidden text-primary">
           <span className="material-symbols-outlined">menu</span>
@@ -186,15 +109,15 @@ export default function LandingPage() {
           Kanvise is the Operating System for private tutors and students. Organize materials, track payments, and automate attendance in one tactile, focused space.
         </p>
         <div className="flex flex-col md:flex-row justify-center items-center gap-4 mb-20">
-          <a className="w-full md:w-auto px-10 py-4 bg-primary text-white font-label-md rounded-lg text-[16px] hover:bg-primary/90 transition-all desk-mockup-shadow text-center" href="#waitlist">
-            Join Waitlist
-          </a>
+          <Link className="w-full md:w-auto px-10 py-4 bg-primary text-white font-label-md rounded-lg text-[16px] hover:bg-primary/90 transition-all desk-mockup-shadow text-center" href="/auth/register">
+            Set up your tutorial
+          </Link>
           <a className="w-full md:w-auto px-10 py-4 border border-primary text-primary font-label-md rounded-lg text-[16px] hover:bg-surface-variant transition-all text-center" href="#suggest">
             Suggest a Feature
           </a>
         </div>
 
-        {/* Hero Mockup & Live Data */}
+          {/* Hero mockup */}
         <AnimatedSection delay={100} className="relative w-full max-w-[1080px] mx-auto animate-float">
           <div className="desk-mockup-shadow rounded-xl overflow-hidden border border-outline-variant bg-white p-4">
             <img 
@@ -204,25 +127,12 @@ export default function LandingPage() {
             />
           </div>
           
-          {/* Live Data Chips */}
+          {/* Live status */}
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-4 w-full md:w-auto">
             <div className="bg-white px-6 py-4 rounded-xl border border-outline-variant flex flex-col items-center min-w-[140px] desk-mockup-shadow">
-              <span className="text-primary font-bold text-[24px]">{countdown}</span>
-              <span className="font-annotation text-[13px] opacity-60">Beta Launch In</span>
+              <span className="text-primary font-bold text-[24px]">Now live</span>
+              <span className="font-annotation text-[13px] opacity-60">Built for tutorial centres</span>
             </div>
-            
-            {waitlistCount !== null && waitlistCount >= 20 && (
-              <>
-                <div className="bg-white px-6 py-4 rounded-xl border border-outline-variant flex flex-col items-center min-w-[140px] desk-mockup-shadow">
-                  <span className="text-primary font-bold text-[24px]">{waitlistCount.toLocaleString()}</span>
-                  <span className="font-annotation text-[13px] opacity-60">Waitlist Size</span>
-                </div>
-                <div className="hidden md:flex bg-white px-6 py-4 rounded-xl border border-outline-variant flex flex-col items-center min-w-[140px] desk-mockup-shadow">
-                  <span className="text-secondary font-bold text-[24px]">#{waitlistCount + 1}</span>
-                  <span className="font-annotation text-[13px] opacity-60">Next Spot</span>
-                </div>
-              </>
-            )}
           </div>
         </AnimatedSection>
       </header>
@@ -460,73 +370,28 @@ export default function LandingPage() {
             <div className="pb-12 border-l border-outline-variant pl-8 relative">
               <div className="absolute w-3 h-3 bg-[#8a7269] rounded-full -left-[6.5px] top-2"></div>
               <h4 className="text-[20px] font-semibold mb-2">Architecture Locked</h4>
-              <p className="text-on-surface-variant">Database designed for scale. First interactive wireframes tested with our waitlist alpha group.</p>
+              <p className="text-on-surface-variant">Database designed for scale. First interactive wireframes tested with tutorial centres.</p>
             </div>
           </AnimatedSection>
           <AnimatedSection delay={400} className="flex gap-8 items-start">
-            <div className="w-24 shrink-0 font-semibold text-on-surface-variant pt-1 text-right italic">AUG 1, 2026</div>
+            <div className="w-24 shrink-0 font-semibold text-on-surface-variant pt-1 text-right italic">NOW</div>
             <div className="pb-12 pl-8 relative">
               <div className="absolute w-3 h-3 bg-[var(--kv-ruddy-brown)] rounded-full -left-[6.5px] top-2 animate-pulse"></div>
-              <h4 className="text-[20px] font-semibold mb-2 text-[var(--kv-ruddy-brown)]">Private Beta Launch</h4>
-              <p className="text-on-surface-variant">Limited rollout for the first 100 people on the waitlist. Be one of them.</p>
+              <h4 className="text-[20px] font-semibold mb-2 text-[var(--kv-ruddy-brown)]">Kanvise is live</h4>
+              <p className="text-on-surface-variant">Tutorial centres can set up their workspace and start teaching with Kanvise today.</p>
             </div>
           </AnimatedSection>
         </div>
       </section>
 
-      {/* Join the Waitlist Form */}
-      <section className="py-20 px-6 md:px-12 max-w-[1120px] mx-auto" id="waitlist">
+      {/* Tutorial centre registration */}
+      <section className="py-20 px-6 md:px-12 max-w-[1120px] mx-auto" id="signup">
         <AnimatedSection className="bg-surface-container-high rounded-3xl p-10 md:p-20 text-center desk-mockup-shadow">
-          <h2 className="text-[36px] md:text-[48px] font-bold mb-4">Join the movement.</h2>
-          <p className="text-[18px] text-on-surface-variant mb-12 max-w-lg mx-auto">Sign up to be notified when Kanvise officially launches. Want early access? Opt into our private beta starting August 1st below.</p>
-          <form className="max-w-md mx-auto grid grid-cols-1 gap-6" onSubmit={handleWaitlistSubmit}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <input name="contact_name" value={waitlistData.contact_name} onChange={(e) => setWaitlistData({...waitlistData, contact_name: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Full Name *" required type="text" />
-              <input name="contact_email" value={waitlistData.contact_email} onChange={(e) => setWaitlistData({...waitlistData, contact_email: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Email Address *" required type="email" />
-            </div>
-            <input name="centre_name" value={waitlistData.centre_name} onChange={(e) => setWaitlistData({...waitlistData, centre_name: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Tutorial Centre Name *" required type="text" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <input name="contact_phone" value={waitlistData.contact_phone} onChange={(e) => setWaitlistData({...waitlistData, contact_phone: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Phone Number" type="tel" />
-              <input name="estimated_student_count" value={waitlistData.estimated_student_count} onChange={(e) => setWaitlistData({...waitlistData, estimated_student_count: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Estimated Students" type="number" />
-            </div>
-            
-            <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-outline-variant text-left">
-              <input 
-                type="checkbox" 
-                id="wants_beta" 
-                checked={waitlistData.wants_beta_testing}
-                onChange={(e) => setWaitlistData({...waitlistData, wants_beta_testing: e.target.checked})}
-                className="w-5 h-5 accent-primary cursor-pointer"
-              />
-              <label htmlFor="wants_beta" className="text-[14px] text-on-surface-variant cursor-pointer select-none">
-                I&apos;m interested in being part of the private beta testing group.
-              </label>
-            </div>
-
-            {waitlistSubmitStatus === "success" && (
-              <div className="p-4 bg-green-50 text-green-700 rounded-xl font-medium border border-green-200">
-                You&apos;re on the list! Keep an eye on your email.
-              </div>
-            )}
-            {waitlistSubmitStatus === "conflict" && (
-              <div className="p-4 bg-blue-50 text-primary rounded-xl font-medium border border-blue-200">
-                You&apos;ve already joined the waitlist! We&apos;ll be in touch.
-              </div>
-            )}
-            {waitlistSubmitStatus === "error" && (
-              <div className="p-4 bg-red-50 text-red-600 rounded-xl font-medium border border-red-200">
-                Oops, something went wrong. Please try again.
-              </div>
-            )}
-
-            <button 
-              type="submit"
-              disabled={waitlistSubmitStatus === "loading" || waitlistSubmitStatus === "success"}
-              className="w-full py-5 bg-[#C26627] text-white font-semibold text-[18px] rounded-xl desk-mockup-shadow active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100" 
-            >
-              {waitlistSubmitStatus === "loading" ? "Joining..." : waitlistSubmitStatus === "success" ? "Joined!" : "Join Waitlist"}
-            </button>
-          </form>
+          <h2 className="text-[36px] md:text-[48px] font-bold mb-4">Your tutorial can start today.</h2>
+          <p className="text-[18px] text-on-surface-variant mb-10 max-w-lg mx-auto">Create your tutorial centre account, invite your tutors, and organise everything in one place.</p>
+          <Link href="/auth/register" className="inline-flex items-center justify-center px-10 py-5 bg-[#C26627] text-white font-semibold text-[18px] rounded-xl desk-mockup-shadow active:scale-95 transition-all hover:bg-[#a9541e]">
+            Sign up your tutorial centre
+          </Link>
         </AnimatedSection>
       </section>
 
