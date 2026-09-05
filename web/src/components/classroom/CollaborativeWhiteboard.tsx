@@ -30,6 +30,32 @@ export interface WhiteboardRef {
   setSlide: (imageUrl: string) => Promise<void>;
 }
 
+type WhiteboardBoundsApi = {
+  getAppState: () => { width: number; height: number; offsetLeft: number; offsetTop: number };
+  updateScene: (scene: { appState: { width: number; height: number; offsetLeft: number; offsetTop: number } }) => void;
+};
+
+export function syncWhiteboardBounds(api: WhiteboardBoundsApi, container: HTMLElement) {
+  const bounds = container.getBoundingClientRect();
+  if (bounds.width <= 0 || bounds.height <= 0) return false;
+  const current = api.getAppState();
+  if (
+    current.width === bounds.width
+    && current.height === bounds.height
+    && current.offsetLeft === bounds.left
+    && current.offsetTop === bounds.top
+  ) return false;
+  api.updateScene({
+    appState: {
+      width: bounds.width,
+      height: bounds.height,
+      offsetLeft: bounds.left,
+      offsetTop: bounds.top,
+    },
+  });
+  return true;
+}
+
 const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -95,40 +121,30 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const hasRequestedScene = useRef(false);
   const currentSlideUrlRef = useRef<string | null>(null);
 
-  // Excalidraw measures itself while its dynamic import mounts. The classroom
-  // stage and web fonts can settle after that measurement. Opening People used
-  // to incidentally cause the later reflow that corrected the canvas. Make
-  // that reflow explicit during entry instead, and keep it tied to the stage.
+  // Excalidraw initially uses window dimensions, which are larger than the
+  // classroom stage. Its public refresh() only updates offsets, and view-only
+  // canvases do not install Excalidraw's window resize listener. Always copy
+  // the real stage rectangle into appState for both tutors and students.
   useLayoutEffect(() => {
     if (!excalidrawAPI || !boardContainerRef.current) return;
 
     let animationFrame = 0;
-    const delayedRefreshes: number[] = [];
-    const refresh = () => {
+    let delayedSync = 0;
+    const syncBounds = () => {
       cancelAnimationFrame(animationFrame);
       animationFrame = requestAnimationFrame(() => {
-        // A second frame guarantees the stage's flex dimensions have committed.
-        animationFrame = requestAnimationFrame(() => {
-          excalidrawAPI.refresh();
-          // Excalidraw also owns window-resize listeners for its UI chrome.
-          // Trigger them once the stage is stable; this is what the People
-          // interaction used to do accidentally.
-          window.dispatchEvent(new Event("resize"));
-        });
+        if (boardContainerRef.current) syncWhiteboardBounds(excalidrawAPI, boardContainerRef.current);
       });
     };
-    const observer = new ResizeObserver(refresh);
+    const observer = new ResizeObserver(syncBounds);
     observer.observe(boardContainerRef.current);
-    refresh();
-    for (const delay of [80, 300, 800]) delayedRefreshes.push(window.setTimeout(refresh, delay));
-    void document.fonts?.ready.then(refresh);
-    window.addEventListener("load", refresh, { once: true });
+    syncBounds();
+    delayedSync = window.setTimeout(syncBounds, 250);
 
     return () => {
       observer.disconnect();
       cancelAnimationFrame(animationFrame);
-      delayedRefreshes.forEach((timer) => window.clearTimeout(timer));
-      window.removeEventListener("load", refresh);
+      window.clearTimeout(delayedSync);
     };
   }, [excalidrawAPI]);
 
