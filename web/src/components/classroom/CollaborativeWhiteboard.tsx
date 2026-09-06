@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any -- Excalidraw's imperative scene objects are intentionally passed through unchanged. */
 
-import { useState, useRef, useCallback, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import dynamic from "next/dynamic";
 
 const Excalidraw = dynamic(
@@ -28,32 +28,6 @@ import { ConnectionState } from "livekit-client";
 
 export interface WhiteboardRef {
   setSlide: (imageUrl: string) => Promise<void>;
-}
-
-type WhiteboardBoundsApi = {
-  getAppState: () => { width: number; height: number; offsetLeft: number; offsetTop: number };
-  updateScene: (scene: { appState: { width: number; height: number; offsetLeft: number; offsetTop: number } }) => void;
-};
-
-export function syncWhiteboardBounds(api: WhiteboardBoundsApi, container: HTMLElement) {
-  const bounds = container.getBoundingClientRect();
-  if (bounds.width <= 0 || bounds.height <= 0) return false;
-  const current = api.getAppState();
-  if (
-    current.width === bounds.width
-    && current.height === bounds.height
-    && current.offsetLeft === bounds.left
-    && current.offsetTop === bounds.top
-  ) return false;
-  api.updateScene({
-    appState: {
-      width: bounds.width,
-      height: bounds.height,
-      offsetLeft: bounds.left,
-      offsetTop: bounds.top,
-    },
-  });
-  return true;
 }
 
 const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
@@ -121,30 +95,25 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const hasRequestedScene = useRef(false);
   const currentSlideUrlRef = useRef<string | null>(null);
 
-  // Excalidraw initially uses window dimensions, which are larger than the
-  // classroom stage. Its public refresh() only updates offsets, and view-only
-  // canvases do not install Excalidraw's window resize listener. Always copy
-  // the real stage rectangle into appState for both tutors and students.
-  useLayoutEffect(() => {
+  // Keep Excalidraw's offsets current when the classroom stage changes size.
+  useEffect(() => {
     if (!excalidrawAPI || !boardContainerRef.current) return;
 
     let animationFrame = 0;
-    let delayedSync = 0;
-    const syncBounds = () => {
+    let delayedRefresh = 0;
+    const refresh = () => {
       cancelAnimationFrame(animationFrame);
-      animationFrame = requestAnimationFrame(() => {
-        if (boardContainerRef.current) syncWhiteboardBounds(excalidrawAPI, boardContainerRef.current);
-      });
+      animationFrame = requestAnimationFrame(() => excalidrawAPI.refresh());
     };
-    const observer = new ResizeObserver(syncBounds);
+    const observer = new ResizeObserver(refresh);
     observer.observe(boardContainerRef.current);
-    syncBounds();
-    delayedSync = window.setTimeout(syncBounds, 250);
+    refresh();
+    delayedRefresh = window.setTimeout(refresh, 150);
 
     return () => {
       observer.disconnect();
       cancelAnimationFrame(animationFrame);
-      window.clearTimeout(delayedSync);
+      window.clearTimeout(delayedRefresh);
     };
   }, [excalidrawAPI]);
 
