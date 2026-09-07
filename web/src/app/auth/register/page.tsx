@@ -39,20 +39,22 @@ function RegisterContent() {
     setLoading(true);
     setError(null);
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { first_name: firstName, last_name: lastName },
-      },
-    });
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { first_name: firstName, last_name: lastName },
+        },
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
-    } else {
-      setIsCodeStep(true);
+      if (signUpError) throw signUpError
+      setIsCodeStep(true)
+    } catch (signUpError) {
+      setError(signUpError instanceof Error && signUpError.message ? signUpError.message : 'We could not create your account. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false);
   };
 
   const finishRegistration = async (accessToken: string, userEmail: string) => {

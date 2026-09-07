@@ -8,6 +8,46 @@ import { createHash } from 'node:crypto'
 
 export const authRouter = new Hono<{ Variables: Variables }>()
 
+// This is intentionally public: the holder of an invite link needs to know
+// which email it was issued to before they can authenticate. The signed token
+// and the pending invite row are both checked; this endpoint never consumes an
+// invitation or grants access.
+authRouter.post('/tutor-invite/preview', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const token = body?.invite_token
+  if (typeof token !== 'string' || !token) {
+    return c.json({ error: 'Invite token is required' }, 400)
+  }
+
+  try {
+    const payload = validateInviteToken(token)
+    const { data: invite, error } = await supabase
+      .from('tutor_invites')
+      .select('email, status, expires_at, school:schools(name)')
+      .eq('id', payload.invite_id)
+      .eq('school_id', payload.school_id)
+      .maybeSingle()
+
+    if (error || !invite || invite.status !== 'pending' || new Date(invite.expires_at).getTime() <= Date.now()) {
+      return c.json({ error: 'This invitation is no longer valid' }, 404)
+    }
+    if (invite.email.toLowerCase() !== payload.email.toLowerCase()) {
+      return c.json({ error: 'This invitation is no longer valid' }, 404)
+    }
+
+    const school = Array.isArray(invite.school) ? invite.school[0] : invite.school
+    return c.json({
+      data: {
+        email: invite.email,
+        school_name: school?.name || 'this tutorial centre',
+        expires_at: invite.expires_at,
+      },
+    })
+  } catch {
+    return c.json({ error: 'This invitation is invalid or has expired' }, 400)
+  }
+})
+
 async function deliverWelcome(profile: any, email: string) {
   try {
     const frontendUrl = process.env.FRONTEND_URL
@@ -59,6 +99,19 @@ authRouter.post('/profile/init', async (c) => {
     return c.json({ error: 'First name and last name are required' }, 400)
   }
 
+  let tutorInvite: ReturnType<typeof validateInviteToken> | null = null
+  if (role === 'tutor') {
+    if (!invite_token) return c.json({ error: 'Invite token required for tutors' }, 400)
+    try {
+      tutorInvite = validateInviteToken(invite_token)
+      if (String(tutorInvite.email).toLowerCase() !== String(email).toLowerCase()) {
+        return c.json({ error: 'This invitation was sent to a different email address' }, 403)
+      }
+    } catch (e: any) {
+      return c.json({ error: e.message || 'Invalid invite token' }, 400)
+    }
+  }
+
   const { data: existingProfile } = await supabase
     .from('user_profiles')
     .select('*')
@@ -66,6 +119,9 @@ authRouter.post('/profile/init', async (c) => {
     .maybeSingle()
 
   if (existingProfile) {
+    if (role === 'tutor' && (existingProfile.role !== 'tutor' || existingProfile.school_id !== tutorInvite?.school_id)) {
+      return c.json({ error: 'This Kanvise account already belongs to a different centre' }, 409)
+    }
     const welcome = await deliverWelcome(existingProfile, email)
     return c.json({
       profile: existingProfile,
@@ -79,14 +135,9 @@ authRouter.post('/profile/init', async (c) => {
   let schoolId = null
 
   if (role === 'tutor') {
-    if (!invite_token) return c.json({ error: 'Invite token required for tutors' }, 400)
     try {
-      const payload = validateInviteToken(invite_token)
-      if (String(payload.email).toLowerCase() !== String(email).toLowerCase()) {
-        return c.json({ error: 'This invitation was sent to a different email address' }, 403)
-      }
       const { data: claimed, error: claimError } = await supabase.rpc('consume_tutor_invite', {
-        p_invite_id: payload.invite_id,
+        p_invite_id: tutorInvite!.invite_id,
         p_email: email,
         p_supabase_auth_id: supabaseAuthId,
       })
@@ -94,7 +145,7 @@ authRouter.post('/profile/init', async (c) => {
         return c.json({ error: claimError?.message || 'This invitation is no longer valid' }, 400)
       }
       schoolId = claimed
-      if (schoolId !== payload.school_id) {
+      if (schoolId !== tutorInvite!.school_id) {
         return c.json({ error: 'Invalid invitation' }, 400)
       }
     } catch (e: any) {
