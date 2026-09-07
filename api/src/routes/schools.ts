@@ -241,7 +241,20 @@ schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
   const token = generateInviteToken(invite.id, user.school_id, invite.email)
 
   const appUrl = process.env.FRONTEND_URL!
-  const inviteUrl = `${appUrl}/join?token=${token}`
+  // Supabase generates the one-time action link. We send that link through our
+  // branded Resend template, rather than first sending a Kanvise link and then
+  // making the tutor complete a second Supabase verification email.
+  const redirectTo = `${appUrl}/api/auth/callback?role=tutor&invite_token=${encodeURIComponent(token)}`
+  const { data: generatedLink, error: generatedLinkError } = await supabase.auth.admin.generateLink({
+    type: 'invite',
+    email: invite.email,
+    options: { redirectTo },
+  })
+
+  if (generatedLinkError || !generatedLink?.properties?.action_link) {
+    return c.json({ error: generatedLinkError?.message || 'Could not create the tutor invitation' }, 502)
+  }
+  const inviteUrl = generatedLink.properties.action_link
 
   const { data: school } = await supabase
     .from('schools')

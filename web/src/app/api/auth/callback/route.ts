@@ -19,6 +19,13 @@ export async function GET(request: Request) {
     }
 
     if (!error && data.user) {
+      // Supabase's invite link has already proven that the recipient controls
+      // the invited mailbox. Let them choose their password and names in one
+      // final screen; do not send a second signup confirmation or OTP.
+      if (role === 'tutor' && inviteToken) {
+        return NextResponse.redirect(`${origin}/auth/complete-tutor-invite?invite_token=${encodeURIComponent(inviteToken)}`)
+      }
+
       // If there is no role attached to the verification link, it might be a password reset flow
       if (!role) {
         return NextResponse.redirect(`${origin}${next}`)
@@ -49,7 +56,7 @@ export async function GET(request: Request) {
           body: JSON.stringify({
             supabase_auth_id: user.id,
             email: user.email,
-            role: role,
+            flow: role,
             first_name: user.user_metadata?.first_name || '',
             last_name: user.user_metadata?.last_name || '',
             invite_token: inviteToken || undefined

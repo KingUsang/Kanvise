@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  generateLink: vi.fn(),
   sendTutorInvitation: vi.fn(),
 }))
 
 vi.mock('../lib/supabase', () => ({
-  supabase: { from: mocks.from },
+  supabase: { from: mocks.from, auth: { admin: { generateLink: mocks.generateLink } } },
 }))
 
 vi.mock('../emails/send-tutor-invitation', () => ({
@@ -62,6 +63,10 @@ describe('POST /schools/me/invite/tutor', () => {
       if (table === 'schools') return query({ data: { name: 'Bright Minds' }, error: null }, 'single')
       throw new Error(`Unexpected table: ${table}`)
     })
+    mocks.generateLink.mockResolvedValue({
+      data: { properties: { action_link: 'https://project.supabase.co/auth/v1/verify?token=one-time' } },
+      error: null,
+    })
     mocks.sendTutorInvitation.mockRejectedValue(new Error('provider unavailable'))
 
     const response = await schoolsRouter.request('/me/invite/tutor', {
@@ -74,9 +79,9 @@ describe('POST /schools/me/invite/tutor', () => {
     expect(response.status).toBe(201)
     expect(body.data.email_sent).toBe(false)
     expect(body.data.email_id).toBeNull()
-    expect(body.data.invite_url).toMatch(/^https:\/\/kanvise\.com\/join\?token=/)
+    expect(body.data.invite_url).toBe('https://project.supabase.co/auth/v1/verify?token=one-time')
     expect(body.data.expires_at).toBe(insertedInvite.expires_at)
     expect(mocks.sendTutorInvitation).toHaveBeenCalledOnce()
+    expect(mocks.sendTutorInvitation.mock.calls[0][0].inviteUrl).toBe(body.data.invite_url)
   })
 })
-
