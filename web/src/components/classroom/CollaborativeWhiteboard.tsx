@@ -95,11 +95,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
   const hasRequestedScene = useRef(false);
   const currentSlideUrlRef = useRef<string | null>(null);
 
-  // Excalidraw measures its canvas while it mounts. In a LiveKit classroom the
-  // room, fonts, and stage can all settle a frame later, which previously left
-  // its menu (the hamburger) and the right edge of the canvas unpainted until
-  // another UI action, such as opening People, caused a reflow. Refresh after
-  // the stage has been painted and whenever its dimensions subsequently change.
+  // Keep Excalidraw's offsets current when the classroom stage changes size.
   useEffect(() => {
     if (!excalidrawAPI || !boardContainerRef.current) return;
 

@@ -58,7 +58,10 @@ async function loadClassForUser(classId: string, user: ClassroomUser) {
 }
 
 function canManage(liveClass: LiveClassAccess, user: ClassroomUser) {
-  return user.role === 'tutor' && liveClass.tutor_id === user.id
+  // A school admin may also be the tutor assigned to a particular class. Keep
+  // the class-level tutor check so this does not grant an admin control over
+  // another tutor's live material.
+  return (user.role === 'tutor' || user.role === 'admin') && liveClass.tutor_id === user.id
 }
 
 async function requireClass(c: any, manage = false) {
@@ -71,7 +74,7 @@ async function requireClass(c: any, manage = false) {
   }
   if (!liveClass) return { response: c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404) }
   if (manage && !canManage(liveClass, user)) {
-    return { response: c.json({ error: 'Only the assigned tutor can change presentation materials', code: 'NOT_CLASS_TUTOR' }, 403) }
+    return { response: c.json({ error: 'Only the tutor assigned to this class can change presentation materials', code: 'NOT_CLASS_TUTOR' }, 403) }
   }
   return { liveClass, user }
 }

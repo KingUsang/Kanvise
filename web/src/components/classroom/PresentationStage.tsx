@@ -13,6 +13,11 @@ import { nextLocalZoom } from './presentation-state'
 type PdfModule = typeof import('pdfjs-dist/legacy/build/pdf.mjs')
 type PdfDocument = Awaited<ReturnType<PdfModule['getDocument']>['promise']>
 
+export function pdfRenderScale(scrollAreaWidth: number, naturalPageWidth: number, zoom: number) {
+  const availableWidth = Math.max(280, scrollAreaWidth - 32)
+  return (availableWidth / naturalPageWidth) * zoom
+}
+
 function PdfPage({ url, pageNumber, zoom, onSize }: {
   url: string
   pageNumber: number
@@ -26,7 +31,11 @@ function PdfPage({ url, pageNumber, zoom, onSize }: {
   const [containerWidth, setContainerWidth] = useState(0)
 
   useEffect(() => {
-    const element = containerRef.current?.parentElement
+    // The page is inside a `w-fit` wrapper, which grows as the user zooms.
+    // Observing that wrapper fed the zoomed width back into the next render
+    // (130% → 169% → 220%…). Only the fixed scroll viewport is a valid
+    // fit-to-width baseline.
+    const element = containerRef.current?.closest<HTMLElement>('[data-pdf-scroll-area]')
     if (!element) return
     const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width))
     observer.observe(element)
@@ -62,8 +71,7 @@ function PdfPage({ url, pageNumber, zoom, onSize }: {
       const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
       const page = await document.getPage(pageNumber)
       const natural = page.getViewport({ scale: 1 })
-      const available = Math.max(280, containerWidth - 32)
-      const scale = (available / natural.width) * zoom
+      const scale = pdfRenderScale(containerWidth, natural.width, zoom)
       const viewport = page.getViewport({ scale })
       const canvas = canvasRef.current!
       const textContainer = textRef.current!

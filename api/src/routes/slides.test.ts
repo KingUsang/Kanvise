@@ -106,12 +106,24 @@ describe('private classroom presentations API', () => {
     expect(mocks.uploadPrivate).not.toHaveBeenCalled()
   })
 
-  it('prevents admins and unassigned tutors from mutating tutor materials', async () => {
+  it('prevents administrators who are not assigned to the class from mutating materials', async () => {
     mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
     queue({ data: liveClass(), error: null })
     const response = await slidesRouter.request('/class-1/presentations/material-1/activate', { method: 'POST' })
     expect(response.status).toBe(403)
     expect(mocks.uploadPrivate).not.toHaveBeenCalled()
+  })
+
+  it('allows an administrator who is the class tutor to manage materials', async () => {
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'admin' }
+    queue(
+      { data: liveClass(), error: null },
+      { data: material(), error: null },
+      { data: null, error: null },
+      { data: material(), error: null },
+    )
+    const response = await slidesRouter.request('/class-1/presentations/material-1/activate', { method: 'POST' })
+    expect(response.status).toBe(200)
   })
 
   it('returns multiple materials and durable active page annotations for recovery', async () => {

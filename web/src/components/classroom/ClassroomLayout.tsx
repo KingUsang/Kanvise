@@ -217,7 +217,11 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
       </header>
 
       {/* ── MAIN BODY ─────────── */}
-      <div className="flex flex-1 overflow-hidden relative">
+      {/* `overflow-hidden` creates a programmatically scrollable box. The
+          translated closed drawer made Chromium scroll this container right,
+          shifting the teaching stage off-screen. `overflow-clip` clips the
+          drawer without creating a scroll container. */}
+      <div className="flex flex-1 overflow-clip relative" data-classroom-main>
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col bg-[#f5f3f2] relative">
           <div className="flex-1 relative bg-black">
