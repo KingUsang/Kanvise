@@ -443,7 +443,7 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   const { error: updateError } = await supabase
     .from('live_classes')
     .update({ status: 'completed', ended_at: new Date().toISOString() })
-    .eq('id', id)
+    .eq('id', liveClass.id)
   if (updateError) {
     return c.json({ error: 'The room closed, but the class record could not be completed', code: 'CLASS_END_UPDATE_FAILED' }, 500)
   }
