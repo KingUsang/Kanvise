@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { loadStudentCourseIds } from '../lib/student-course-access'
+import { classroomAccessError, resolveClassroomAccess, type ClassroomRecord, type ClassroomUser } from '../lib/classroom-access'
 import {
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
@@ -28,55 +28,25 @@ export const slidesRouter = new Hono()
 const db = supabase as any
 const MAX_ANNOTATION_BYTES = 512 * 1024
 
-type ClassroomUser = { id: string; school_id: string; role: string }
-type LiveClassAccess = {
-  id: string
-  school_id: string
-  course_id: string
-  tutor_id: string
-  status: string
+type LiveClassAccess = ClassroomRecord & {
   teaching_mode: 'whiteboard' | 'presentation'
   slides_urls: string[] | null
 }
 
 slidesRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
 
-async function loadClassForUser(classId: string, user: ClassroomUser) {
-  const { data, error } = await db.from('live_classes')
-    .select('id, school_id, course_id, tutor_id, status, teaching_mode, slides_urls')
-    .eq('id', classId)
-    .eq('school_id', user.school_id)
-    .maybeSingle()
-  if (error || !data) return null
-  const liveClass = data as LiveClassAccess
-  if (user.role === 'student') {
-    const courseIds = await loadStudentCourseIds(user.id, user.school_id)
-    if (!courseIds.includes(liveClass.course_id)) return null
-  }
-  if (user.role === 'tutor' && liveClass.tutor_id !== user.id) return null
-  return liveClass
-}
-
-function canManage(liveClass: LiveClassAccess, user: ClassroomUser) {
-  // A school admin may also be the tutor assigned to a particular class. Keep
-  // the class-level tutor check so this does not grant an admin control over
-  // another tutor's live material.
-  return (user.role === 'tutor' || user.role === 'admin') && liveClass.tutor_id === user.id
-}
-
 async function requireClass(c: any, manage = false) {
   const user = c.get('user') as ClassroomUser
-  let liveClass: LiveClassAccess | null
   try {
-    liveClass = await loadClassForUser(c.req.param('id'), user)
+    const result = await resolveClassroomAccess(c.req.param('id'), user, manage ? 'host' : 'view')
+    if ('reason' in result) {
+      const failure = classroomAccessError(result.reason)
+      return { response: c.json({ error: failure.error, code: failure.code }, failure.status) }
+    }
+    return { liveClass: result.liveClass as LiveClassAccess, user }
   } catch {
     return { response: c.json({ error: 'Could not verify class access', code: 'CLASS_ACCESS_FAILED' }, 500) }
   }
-  if (!liveClass) return { response: c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404) }
-  if (manage && !canManage(liveClass, user)) {
-    return { response: c.json({ error: 'Only the tutor assigned to this class can change presentation materials', code: 'NOT_CLASS_TUTOR' }, 403) }
-  }
-  return { liveClass, user }
 }
 
 function publicPresentation(row: any) {

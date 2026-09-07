@@ -154,7 +154,8 @@ describe('private classroom presentations API', () => {
     mocks.loadCourseIds.mockResolvedValue([])
     queue({ data: liveClass(), error: null })
     const forbidden = await slidesRouter.request('/class-1/presentations/material-1/view')
-    expect(forbidden.status).toBe(404)
+    expect(forbidden.status).toBe(403)
+    expect((await forbidden.clone().json() as any).code).toBe('NOT_ENROLLED')
     expect(mocks.createDownload).not.toHaveBeenCalled()
   })
 

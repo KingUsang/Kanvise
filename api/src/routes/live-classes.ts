@@ -10,6 +10,7 @@ import {
 import type { TenantVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
 import { loadStudentCourseIds } from '../lib/student-course-access'
+import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -99,6 +100,24 @@ async function getAvatarConfig(userId: string, schoolId: string | null) {
 
 async function studentCanAccessCourse(studentId: string, schoolId: string, courseId: string) {
   return (await loadStudentCourseIds(studentId, schoolId)).includes(courseId)
+}
+
+async function requireClassroom(c: any, level: 'view' | 'host' = 'view', hideStudentCourse = false) {
+  try {
+    const result = await resolveClassroomAccess(c.req.param('id'), c.get('user'), level)
+    if ('reason' in result) {
+      // Keep the existing single-class discovery behaviour for students: an
+      // unenrolled student cannot learn that a class exists by guessing its
+      // ID. Presentation/join routes intentionally return NOT_ENROLLED so the
+      // browser can explain an action the user has already attempted.
+      const failure = classroomAccessError(hideStudentCourse && result.reason === 'not_enrolled' ? 'missing' : result.reason)
+      return { response: c.json({ error: failure.error, code: failure.code }, failure.status) }
+    }
+    return result
+  } catch (error) {
+    console.error('[live-classes] class access check failed:', error)
+    return { response: c.json({ error: 'Could not verify class access', code: 'CLASS_ACCESS_FAILED' }, 500) }
+  }
 }
 
 // ── Apply auth middleware to all routes ────────────────────────────────────
@@ -216,44 +235,20 @@ liveClassesRouter.get('/', async (c) => {
 // ── GET /live-classes/:id — Get single class ───────────────────────────────
 
 liveClassesRouter.get('/:id', async (c) => {
-  const user = c.get('user')
-  const { id } = c.req.param()
-
-  const { data, error } = await supabase
-    .from('live_classes')
-    .select('*')
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .single()
-
-  if (error || !data) {
-    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-  }
-
-  if (user.role === 'student' && !(await studentCanAccessCourse(user.id, user.school_id!, data.course_id))) {
-    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-  }
-
-  return c.json({ data })
+  const access = await requireClassroom(c, 'view', true)
+  if ('response' in access) return access.response
+  return c.json({ data: access.liveClass })
 })
 
 // ── PATCH /live-classes/:id — Update a scheduled class (Admin, Tutor) ──────
 
 liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
+  const access = await requireClassroom(c)
+  if ('response' in access) return access.response
+  const { liveClass: existing } = access
   const { id } = c.req.param()
   const body = await c.req.json()
-
-  const { data: existing, error: fetchError } = await supabase
-    .from('live_classes')
-    .select('status, tutor_id, scheduled_at')
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .single()
-
-  if (fetchError || !existing) {
-    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-  }
 
   if (existing.status !== 'scheduled') {
     return c.json({ error: 'Only scheduled classes can be updated', code: 'CLASS_NOT_EDITABLE' }, 409)
@@ -292,15 +287,9 @@ liveClassesRouter.delete('/:id', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
   const reason = c.req.query('reason') || undefined
-
-  const { data: liveClass, error: fetchError } = await supabase
-    .from('live_classes')
-    .select('*, school:schools(name)')
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .single()
-
-  if (fetchError || !liveClass) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+  const access = await requireClassroom(c)
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
   if (liveClass.status !== 'scheduled') {
     return c.json({ error: 'Only scheduled classes can be cancelled', code: 'CLASS_NOT_CANCELLABLE' }, 409)
   }
@@ -334,21 +323,9 @@ liveClassesRouter.delete('/:id', requireRole('admin'), async (c) => {
 liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
-
-  const { data: liveClass, error: fetchError } = await supabase
-    .from('live_classes')
-    .select('*, courses(name)')
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .single()
-
-  if (fetchError || !liveClass) {
-    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-  }
-
-  if (liveClass.tutor_id !== user.id) {
-    return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
-  }
+  const access = await requireClassroom(c, 'host')
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
 
   if (liveClass.status === 'live') {
     // If the tutor refreshes the page, the class is already live. Just let them back in!
@@ -411,22 +388,9 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
 liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), async (c) => {
   const user = c.get('user')
-  const { id } = c.req.param()
-
-  const { data: liveClass, error: fetchError } = await supabase
-    .from('live_classes')
-    .select('*, courses(name)')
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .single()
-
-  if (fetchError || !liveClass) {
-    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-  }
-
-  if (user.role === 'student' && !(await studentCanAccessCourse(user.id, user.school_id!, liveClass.course_id))) {
-    return c.json({ error: 'You are not enrolled in this class', code: 'NOT_ENROLLED' }, 403)
-  }
+  const access = await requireClassroom(c)
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
 
   if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
@@ -434,10 +398,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   // Only the assigned tutor gets host permissions. School admins may join as
   // non-host observers; unassigned tutors cannot enter another tutor's class.
-  const isHost = liveClass.tutor_id === user.id
-  if (user.role === 'tutor' && !isHost) {
-    return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
-  }
+  const isHost = access.isHost
   const displayName = await getParticipantDisplayName(user, 'Participant')
   const token = await generateToken(
     user.id,
@@ -464,26 +425,13 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
 liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
-  const { id } = c.req.param()
-
-  const { data: liveClass, error: fetchError } = await supabase
-    .from('live_classes')
-    .select('*')
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .single()
-
-  if (fetchError || !liveClass) {
-    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-  }
+  const access = await requireClassroom(c, 'host')
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
 
   if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
   }
-  if (liveClass.tutor_id !== user.id) {
-    return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
-  }
-
   try {
     const roomService = getRoomService()
     await roomService.deleteRoom(liveClass.livekit_room_name)
@@ -507,24 +455,10 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
 
 // TODO(auth): Remove 'admin' role bypass after MVP testing is complete
 liveClassesRouter.post('/:id/host-action', requireRole('tutor', 'admin'), async (c) => {
-  const user = c.get('user')
-  const { id } = c.req.param()
   const { action, identity, trackSid } = await c.req.json()
-
-  const { data: liveClass, error: fetchError } = await supabase
-    .from('live_classes')
-    .select('tutor_id, livekit_room_name, status')
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .single()
-
-  if (fetchError || !liveClass) {
-    return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-  }
-
-  if (liveClass.tutor_id !== user.id) {
-    return c.json({ error: 'You are not the tutor for this class', code: 'NOT_CLASS_TUTOR' }, 403)
-  }
+  const access = await requireClassroom(c, 'host')
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
 
   if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live' }, 400)

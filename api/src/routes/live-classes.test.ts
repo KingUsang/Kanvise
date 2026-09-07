@@ -191,7 +191,7 @@ describe('live classes API - student access', () => {
 
   it('hides a single class when the student is not enrolled', async () => {
     mocks.from.mockImplementation((table: string) => {
-      if (table === 'live_classes') return builder({ data: { id: 'class-2', course_id: 'course-2' }, error: null })
+      if (table === 'live_classes') return builder({ data: { id: 'class-2', school_id: 'school-1', course_id: 'course-2' }, error: null })
       if (table === 'enrolments') return builder({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
       if (table === 'courses') return builder({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }, { id: 'course-2', programme_id: null, sub_programme_id: null }], error: null })
       return builder({ data: [], error: null })
@@ -203,7 +203,7 @@ describe('live classes API - student access', () => {
 
   it('prevents an unenrolled student from joining a live class', async () => {
     mocks.from.mockImplementation((table: string) => {
-      if (table === 'live_classes') return builder({ data: { id: 'class-2', course_id: 'course-2', status: 'live' }, error: null })
+      if (table === 'live_classes') return builder({ data: { id: 'class-2', school_id: 'school-1', course_id: 'course-2', status: 'live' }, error: null })
       if (table === 'enrolments') return builder({ data: [], error: null })
       if (table === 'courses') return builder({ data: [{ id: 'course-2', programme_id: null, sub_programme_id: null }], error: null })
       return builder({ data: [], error: null })
@@ -224,6 +224,7 @@ describe('live classes API - editing', () => {
     mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
     mocks.from.mockReturnValue(builder({
       data: {
+        school_id: 'school-1',
         status: 'scheduled',
         tutor_id: 'tutor-2',
         scheduled_at: new Date(Date.now() + 86400000).toISOString(),
@@ -253,7 +254,7 @@ describe('live classes API - host permissions', () => {
     process.env.LIVEKIT_API_KEY = 'test-key'
     process.env.LIVEKIT_API_SECRET = 'test-secret-with-enough-entropy-for-signing'
     mocks.from.mockReturnValue(builder({
-      data: { id: 'class-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
+      data: { id: 'class-1', school_id: 'school-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
       error: null,
     }))
 
@@ -266,10 +267,25 @@ describe('live classes API - host permissions', () => {
     })
   })
 
+  it('gives an admin who is the assigned class tutor host access', async () => {
+    process.env.LIVEKIT_URL = 'wss://livekit.example.com'
+    process.env.LIVEKIT_API_KEY = 'test-key'
+    process.env.LIVEKIT_API_SECRET = 'test-secret-with-enough-entropy-for-signing'
+    mocks.from.mockReturnValue(builder({
+      data: { id: 'class-1', school_id: 'school-1', course_id: 'course-1', tutor_id: 'admin-1', status: 'live', livekit_room_name: 'room-1' },
+      error: null,
+    }))
+
+    const response = await liveClassesRouter.request('/class-1/join', { method: 'POST' })
+
+    expect(response.status).toBe(200)
+    expect((await response.json() as any).data.is_host).toBe(true)
+  })
+
   it('still blocks an unassigned tutor from joining another tutor classroom', async () => {
     mocks.user = { id: 'tutor-2', school_id: 'school-1', role: 'tutor' }
     mocks.from.mockReturnValue(builder({
-      data: { id: 'class-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
+      data: { id: 'class-1', school_id: 'school-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
       error: null,
     }))
 
@@ -281,7 +297,7 @@ describe('live classes API - host permissions', () => {
 
   it('does not let an unassigned admin end a tutor classroom', async () => {
     mocks.from.mockReturnValue(builder({
-      data: { id: 'class-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
+      data: { id: 'class-1', school_id: 'school-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
       error: null,
     }))
 
