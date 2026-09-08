@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;background:#f7f5f3;font-family:Arial,sans-serif;color:#3c3027">
+    <div style="display:none;max-height:0;overflow:hidden">{{ if .Data.school_name }}{{ .Data.invited_by_name }} invited you to {{ .Data.programme_name }} at {{ .Data.school_name }}.{{ else }}You’re invited to create your Kanvise account.{{ end }}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f5f3;padding:32px 16px">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #e4e2e1;border-radius:16px">
+          <tr><td style="padding:36px">
+            <img src="{{ if .Data.app_url }}{{ .Data.app_url }}{{ else }}https://kanvise.com{{ end }}/kanvise_logo_small_blue.png" width="48" height="48" alt="Kanvise" style="display:block;margin-bottom:28px">
+            <p style="margin:0 0 12px;color:#994704;font-size:12px;font-weight:700;letter-spacing:1.6px">STUDENT INVITATION</p>
+            <h1 style="margin:0 0 20px;color:#2e2877;font-size:30px;line-height:38px">{{ if .Data.school_name }}You’re invited to learn with {{ .Data.school_name }}.{{ else }}You’re invited to learn on Kanvise.{{ end }}</h1>
+            <p style="margin:0 0 16px;font-size:16px;line-height:26px">Hello{{ if .Data.first_name }} {{ .Data.first_name }}{{ end }},</p>
+            {{ if .Data.school_name }}<p style="margin:0 0 16px;font-size:16px;line-height:26px"><strong>{{ .Data.invited_by_name }}</strong> has enrolled you in <strong>{{ .Data.programme_name }}</strong> at <strong>{{ .Data.school_name }}</strong> on Kanvise.</p>{{ end }}
+            <p style="margin:0 0 24px;font-size:16px;line-height:26px">Accept your invitation to create your password and access your learning dashboard.</p>
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#994704;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 24px;border-radius:10px">Accept invitation</a>
+            <p style="margin:24px 0 0;color:#6a6874;font-size:13px;line-height:21px">This secure link expires shortly and can only be used once. If you were not expecting this invitation, you can safely ignore this email.</p>
+            <p style="margin:20px 0 0;color:#77727f;font-size:11px;line-height:18px;word-break:break-all">If the button does not work, copy and paste this link into your browser:<br>{{ .ConfirmationURL }}</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>
