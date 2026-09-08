@@ -12,9 +12,9 @@
             <p style="margin:0 0 16px;font-size:16px;line-height:26px">Hello{{ if .Data.first_name }} {{ .Data.first_name }}{{ end }},</p>
             {{ if .Data.school_name }}<p style="margin:0 0 16px;font-size:16px;line-height:26px"><strong>{{ .Data.invited_by_name }}</strong> has enrolled you in <strong>{{ .Data.programme_name }}</strong> at <strong>{{ .Data.school_name }}</strong> on Kanvise.</p>{{ end }}
             <p style="margin:0 0 24px;font-size:16px;line-height:26px">Accept your invitation to create your password and access your learning dashboard.</p>
-            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#994704;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 24px;border-radius:10px">Accept invitation</a>
+            <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;background:#994704;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 24px;border-radius:10px">Review invitation</a>
             <p style="margin:24px 0 0;color:#6a6874;font-size:13px;line-height:21px">This secure link expires shortly and can only be used once. If you were not expecting this invitation, you can safely ignore this email.</p>
-            <p style="margin:20px 0 0;color:#77727f;font-size:11px;line-height:18px;word-break:break-all">If the button does not work, copy and paste this link into your browser:<br>{{ .ConfirmationURL }}</p>
+            <p style="margin:20px 0 0;color:#77727f;font-size:11px;line-height:18px;word-break:break-all">If the button does not work, copy and paste this link into your browser:<br>{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=invite</p>
           </td></tr>
         </table>
       </td></tr>

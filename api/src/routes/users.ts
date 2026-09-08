@@ -154,7 +154,10 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
             app_url: frontendUrl,
           };
           const { data: invite, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(row.email, {
-            redirectTo: `${frontendUrl}/api/auth/callback?next=/auth/accept-invitation`,
+            // Admin invites do not support PKCE. The email template sends the
+            // invite token hash to this review page, where an explicit user
+            // action verifies it before password setup.
+            redirectTo: `${frontendUrl}/auth/invitation`,
             data: invitationData,
           });
           if (inviteError || !invite.user) throw new Error(inviteError?.message || 'Could not send activation email');
