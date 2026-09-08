@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -12,12 +12,16 @@ const INVALID_INVITATION = "This invitation link has expired or was already used
 export default function InvitationPage() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const linkRead = useRef(false)
   const [tokenHash, setTokenHash] = useState("")
   const [checking, setChecking] = useState(true)
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (linkRead.current) return
+    linkRead.current = true
+
     const params = new URLSearchParams(window.location.search)
     const token = params.get("token_hash") || ""
     const type = params.get("type")
