@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getUserById: vi.fn(),
   ensureWelcomeEmail: vi.fn(),
   validateInviteToken: vi.fn(),
+  user: { supabase_auth_id: 'auth-1' } as any,
 }))
 
 vi.mock('../lib/supabase', () => ({
@@ -31,7 +32,7 @@ vi.mock('../middleware/auth', () => ({
     await next()
   },
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => {
-    c.set('user', { supabase_auth_id: 'auth-1' })
+    c.set('user', mocks.user)
     await next()
   },
   tenantMiddleware: async (_c: any, next: () => Promise<void>) => { await next() },
@@ -60,6 +61,7 @@ async function initProfile(body: Record<string, unknown>) {
 describe('POST /auth/profile/init registration flow hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.user = { supabase_auth_id: 'auth-1' }
     vi.stubEnv('FRONTEND_URL', 'https://kanvise.com')
   })
 
@@ -89,5 +91,28 @@ describe('POST /auth/profile/init registration flow hardening', () => {
 
     expect(response.status).toBe(400)
     expect(body.error).toBe('Invite token required for tutors')
+  })
+})
+
+describe('POST /auth/profile/activate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv('FRONTEND_URL', 'https://kanvise.com')
+    mocks.user = { id: 'student-1', supabase_auth_id: 'auth-1', role: 'student' }
+  })
+
+  it('activates the roster profile without sending a duplicate welcome email', async () => {
+    const builder: any = {
+      update: vi.fn(() => builder),
+      eq: vi.fn(() => builder),
+      then: (resolve: (value: unknown) => unknown) => resolve({ error: null }),
+    }
+    mocks.from.mockReturnValue(builder)
+
+    const response = await authRouter.request('/profile/activate', { method: 'POST' })
+
+    expect(response.status).toBe(200)
+    expect(mocks.ensureWelcomeEmail).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toEqual({ message: 'Student profile activated' })
   })
 })

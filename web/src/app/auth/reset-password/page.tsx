@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
+import { meetsPasswordPolicy, passwordChecks } from '@/lib/password-policy';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -39,11 +40,9 @@ export default function ResetPasswordPage() {
   }, [supabase]);
 
   // Password validation checks
-  const hasMinLength = password.length >= 12;
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasNumberOrSymbol = /[\d!@#$%^&*(),.?":{}|<>]/.test(password);
+  const { hasMinLength, hasLowercase, hasUppercase, hasNumber } = passwordChecks(password);
   
-  const isValid = hasMinLength && hasUppercase && hasNumberOrSymbol && password === confirmPassword && password !== "";
+  const isValid = meetsPasswordPolicy(password) && password === confirmPassword && password !== "";
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +51,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
     setError(null);
 
-    const { error: updateError, data } = await supabase.auth.updateUser({
+    const { error: updateError } = await supabase.auth.updateUser({
       password: password
     });
 
@@ -180,7 +179,7 @@ export default function ResetPasswordPage() {
                     <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasMinLength ? "'FILL' 1" : "'FILL' 0" }}>
                       {hasMinLength ? "check_circle" : "radio_button_unchecked"}
                     </span>
-                    <span>Minimum 12 characters</span>
+                    <span>Minimum 8 characters</span>
                   </li>
                   <li className={`flex items-center gap-3 font-body-sm text-body-sm transition-colors ${hasUppercase ? 'text-primary-container' : 'text-on-surface-variant'}`}>
                     <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasUppercase ? "'FILL' 1" : "'FILL' 0" }}>
@@ -188,11 +187,17 @@ export default function ResetPasswordPage() {
                     </span>
                     <span>At least one uppercase letter</span>
                   </li>
-                  <li className={`flex items-center gap-3 font-body-sm text-body-sm transition-colors ${hasNumberOrSymbol ? 'text-primary-container' : 'text-on-surface-variant'}`}>
-                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasNumberOrSymbol ? "'FILL' 1" : "'FILL' 0" }}>
-                      {hasNumberOrSymbol ? "check_circle" : "radio_button_unchecked"}
+                  <li className={`flex items-center gap-3 font-body-sm text-body-sm transition-colors ${hasLowercase ? 'text-primary-container' : 'text-on-surface-variant'}`}>
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasLowercase ? "'FILL' 1" : "'FILL' 0" }}>
+                      {hasLowercase ? "check_circle" : "radio_button_unchecked"}
                     </span>
-                    <span>At least one number or symbol</span>
+                    <span>At least one lowercase letter</span>
+                  </li>
+                  <li className={`flex items-center gap-3 font-body-sm text-body-sm transition-colors ${hasNumber ? 'text-primary-container' : 'text-on-surface-variant'}`}>
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: hasNumber ? "'FILL' 1" : "'FILL' 0" }}>
+                      {hasNumber ? "check_circle" : "radio_button_unchecked"}
+                    </span>
+                    <span>At least one number</span>
                   </li>
                 </ul>
               </div>

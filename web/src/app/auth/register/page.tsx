@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { safeRedirectPath } from '@/lib/safe-redirect'
+import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, PASSWORD_REQUIREMENTS } from '@/lib/password-policy'
 
 function RegisterContent() {
   const router = useRouter();
@@ -144,10 +145,10 @@ function RegisterContent() {
                 <label htmlFor="password" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9b98a3]" size={18} />
-                  <input id="password" type={showPassword ? "text" : "password"} required minLength={8} pattern="(?=.*[A-Z])(?=.*\d).{8,}" title="Use at least 8 characters, one uppercase letter, and one number" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-[#c8c5d2] py-3.5 pl-11 pr-12 text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]/30" />
+                  <input id="password" type={showPassword ? "text" : "password"} required minLength={PASSWORD_MIN_LENGTH} pattern={PASSWORD_PATTERN} title={PASSWORD_REQUIREMENTS} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-[#c8c5d2] py-3.5 pl-11 pr-12 text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]/30" />
                   <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9b98a3] hover:text-[#2e2877]" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
-                <p className="mt-1.5 text-[11px] text-[#6a6874]">At least 8 characters, one uppercase letter, and one number.</p>
+                <p className="mt-1.5 text-[11px] text-[#6a6874]">{PASSWORD_REQUIREMENTS}</p>
               </div>
               <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#994704] py-4 font-bold text-white transition hover:bg-[#753400] disabled:opacity-70">{loading && <Loader2 className="animate-spin" size={18} />}{loading ? "Creating account…" : "Create account"}</button>
             </form>

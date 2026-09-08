@@ -78,7 +78,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
     const programmeIds = [...new Set(normalizedRows.map((row) => row.programme_id))];
     const { data: programmes, error: programmesError } = await supabase
       .from('programmes')
-      .select('id')
+      .select('id, name')
       .eq('school_id', admin.school_id)
       .in('id', programmeIds);
     if (programmesError) throw programmesError;
@@ -87,6 +87,15 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
     if (unknownProgrammes.length) {
       return c.json({ error: 'One or more programmes do not belong to your centre', code: 'INVALID_PROGRAMME', errors: unknownProgrammes.map((row) => ({ row: row.row, errors: ['Programme not found'] })) }, 400);
     }
+
+    const { data: school, error: schoolError } = await supabase
+      .from('schools')
+      .select('name')
+      .eq('id', admin.school_id)
+      .single();
+    if (schoolError || !school) throw schoolError || new Error('Could not load your centre');
+    const programmeNames = new Map((programmes || []).map((programme) => [programme.id, programme.name]));
+    const invitedByName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Your centre administrator';
 
     const emails = [...new Set(normalizedRows.map((row) => row.email).filter((email): email is string => Boolean(email)))];
     const { data: existingProfiles, error: existingError } = emails.length ? await supabase
@@ -134,12 +143,24 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
           summary.enrolled += 1;
         }
 
-        if (sendInvitations && row.email && !student.supabase_auth_id) {
-          const { data: invite, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(row.email, { redirectTo: `${frontendUrl}/api/auth/callback?next=/auth/reset-password`, data: { first_name: row.first_name, last_name: row.last_name } });
+        if (sendInvitations && row.email && student.onboarding_status !== 'active') {
+          const programmeName = programmeNames.get(row.programme_id) || 'your programme';
+          const invitationData = {
+            first_name: row.first_name,
+            last_name: row.last_name,
+            school_name: school.name,
+            programme_name: programmeName,
+            invited_by_name: invitedByName,
+            app_url: frontendUrl,
+          };
+          const { data: invite, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(row.email, {
+            redirectTo: `${frontendUrl}/api/auth/callback?next=/auth/accept-invitation`,
+            data: invitationData,
+          });
           if (inviteError || !invite.user) throw new Error(inviteError?.message || 'Could not send activation email');
           const { error: profileError } = await supabase.from('user_profiles').update({ supabase_auth_id: invite.user.id, onboarding_status: 'invited' } as any).eq('id', student.id);
           if (profileError) throw profileError;
-          const { error: metadataError } = await supabase.auth.admin.updateUserById(invite.user.id, { user_metadata: { first_name: row.first_name, last_name: row.last_name }, app_metadata: { kanvise_role: 'student', role: 'student', school_id: admin.school_id, kanvise_user_id: student.kanvise_user_id, profile_id: student.id } });
+          const { error: metadataError } = await supabase.auth.admin.updateUserById(invite.user.id, { user_metadata: invitationData, app_metadata: { kanvise_role: 'student', role: 'student', school_id: admin.school_id, kanvise_user_id: student.kanvise_user_id, profile_id: student.id } });
           if (metadataError) throw metadataError;
           summary.invited += 1;
         }
@@ -223,7 +244,7 @@ usersRouter.get("/students", enforceAdmin, async (c) => {
     // 1. Fetch all students in this school
     const { data: students, error: studentsError } = await supabase
       .from("user_profiles")
-      .select("id, kanvise_user_id, first_name, last_name, email, profile_photo_key, role")
+      .select("id, kanvise_user_id, first_name, last_name, email, profile_photo_key, role, onboarding_status")
       .eq("school_id", profile.school_id)
       .eq("role", "student")
       .order("created_at", { ascending: false });

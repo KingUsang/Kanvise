@@ -81,7 +81,9 @@ export async function updateSession(request: NextRequest) {
     const schoolId = appMetadata.school_id
     const needsAdminSetup = kanvise_role === 'admin' && !schoolId
     // Redirect logged in users away from auth routes (unless they are doing a password reset or similar)
-    if (isAuthRoute && !request.nextUrl.pathname.includes('reset-password')) {
+    const isPasswordSetupRoute = request.nextUrl.pathname.includes('reset-password')
+      || request.nextUrl.pathname.includes('accept-invitation')
+    if (isAuthRoute && !isPasswordSetupRoute) {
       const url = request.nextUrl.clone()
       if (needsAdminSetup) {
         url.pathname = '/dashboard/school-setup'
