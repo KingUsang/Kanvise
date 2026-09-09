@@ -1,8 +1,11 @@
 import { Hono } from 'hono'
+import { handleSupabaseEmailHook } from './supabase-email-hook'
 import { WebhookReceiver } from 'livekit-server-sdk'
 import { supabase } from '../lib/supabase'
 
 export const webhooksRouter = new Hono()
+
+webhooksRouter.post('/supabase/send-email', (c) => handleSupabaseEmailHook(c.req.raw))
 
 const receiver = new WebhookReceiver(
   process.env.LIVEKIT_API_KEY!,
