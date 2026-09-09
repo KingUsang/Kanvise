@@ -121,7 +121,7 @@ function normalizeQuestions(value: any): ImportedMockQuestion[] {
 
 const extractionPrompt = `You are importing an examination document into Kanvise, a Nigerian mock-exam platform.
 
-Extract every question exactly as it appears. The document may have any layout: scanned pages, columns, tables, diagrams, equations, mixed subjects, separate answer keys, or no answer key. Do not assume a fixed template and do not invent missing answers. When the document contains an answer key, is_correct must reproduce that key exactly, even if you believe the source answer is academically wrong. In that case preserve the source answer and add a review reason explaining the suspected source error; never silently substitute your own answer.
+Extract every question exactly as it appears. The document may have any layout: scanned pages, columns, tables, diagrams, equations, mixed subjects, separate answer keys, or no answer key. Do not assume a fixed template and do not invent missing answers. When the document contains an answer key, is_correct must reproduce that key exactly, even if you believe the source answer is academically wrong. In that case preserve the source answer and add a review reason explaining the suspected source error; never silently substitute your own answer. The answer-key reference is metadata only: never copy its explanations, calculations, worked solutions, corrected formulae, or final-answer text into question_text, option_text, equation_latex, chemistry_latex, or grading_rubric. Student-visible content must come only from the question paper section.
 
 Return one question per object. Set subject_name to the document's subject heading for that question (for example Use of English, Physics, Chemistry or Mathematics). Carry the most recent clear subject heading across following pages until another heading begins. Use an empty subject_name and add a review reason when the subject cannot be determined confidently. Use question_type=mcq only when the question has selectable answer options; otherwise use theory. For question_text and option_text, return only the ordinary-language prose. Do not repeat a mathematical or chemical expression in those text fields when you also return that expression as LaTeX. Put each mathematical expression once in equation_latex and each chemical formula or reaction once in chemistry_latex, using proper subscripts and superscripts (for example 110111_{2} + 10100_{2}). A text field may be empty when its entire content is represented by its LaTeX field. Use an empty string for whichever notation field does not apply. If an image, diagram, table, or equation is important but cannot be represented faithfully, add a short review_reasons entry. If an answer is missing or uncertain, leave every option is_correct=false and add a review reason. Record the source page when the document makes it possible. Keep mixed subjects together as one mock and label each question with its subject; do not reject mixed-subject documents.`;
 
@@ -210,9 +210,28 @@ export async function importQuestionsFromPdf(buffer: Uint8Array): Promise<MockPd
   }
 
   const imagePages = extracted.pages.filter((page) => page.has_embedded_image).map((page) => page.page_number);
-  const sourceText = extracted.pages
-    .map((page) => `--- Source page ${page.page_number} ---\n${page.text || "[No selectable text on this page]"}`)
-    .join("\n\n");
+  const questionPaperPages: string[] = [];
+  const answerKeyPages: string[] = [];
+  let readingAnswerKey = false;
+  for (const page of extracted.pages) {
+    const markerIndex = page.text.search(/\bAnswers?:/i);
+    if (!readingAnswerKey && markerIndex >= 0) {
+      const questionText = page.text.slice(0, markerIndex).trim();
+      const answerText = page.text.slice(markerIndex).trim();
+      if (questionText) questionPaperPages.push(`--- Source page ${page.page_number} ---\n${questionText}`);
+      if (answerText) answerKeyPages.push(`--- Source page ${page.page_number} ---\n${answerText}`);
+      readingAnswerKey = true;
+    } else {
+      const target = readingAnswerKey ? answerKeyPages : questionPaperPages;
+      target.push(`--- Source page ${page.page_number} ---\n${page.text || "[No selectable text on this page]"}`);
+    }
+  }
+  const sourceText = [
+    `QUESTION PAPER — the only source for student-visible question and option content:\n\n${questionPaperPages.join("\n\n")}`,
+    answerKeyPages.length
+      ? `ANSWER-KEY REFERENCE — use only to set is_correct and flag suspected source errors. Never copy workings or explanations into student-visible fields:\n\n${answerKeyPages.join("\n\n")}`
+      : "",
+  ].filter(Boolean).join("\n\n");
   const visualWarning = imagePages.length
     ? `Pages ${imagePages.join(", ")} contain embedded images or diagrams. Their question text was imported, but review those questions before publishing because figure crops are not attached yet.`
     : "";

@@ -14,7 +14,7 @@ describe("Gemini mock PDF import", () => {
       has_readable_text: true,
       pages: [
         { page_number: 1, text: "1. What is 2 + 2?", has_embedded_image: false },
-        { page_number: 2, text: "2. Explain osmosis.", has_embedded_image: false },
+        { page_number: 2, text: "2. Explain osmosis. Answers: 1. B Worked solution: 2 + 2 = 4", has_embedded_image: false },
       ],
     });
   });
@@ -43,6 +43,8 @@ describe("Gemini mock PDF import", () => {
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining("gemini-2.5-flash"), expect.objectContaining({ method: "POST" }));
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("Source page 1");
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("must reproduce that key exactly");
+    expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("ANSWER-KEY REFERENCE");
+    expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("metadata only");
   });
 
   it("surfaces provider errors", async () => {
