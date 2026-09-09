@@ -108,7 +108,7 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
       const response = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${mockOfferId}/attempts`, session.access_token, { method: 'POST' })
       const body = await response.json().catch(() => null)
       if (!response.ok || !body?.data?.attempt_id) throw new Error(body?.error || 'Could not start this mock')
-      window.location.assign(`/attempt/${body.data.attempt_id}`)
+      window.location.assign(`/dashboard/student/mocks/attempt/${body.data.attempt_id}`)
     } catch (error) {
       setState('error')
       setMessage(error instanceof Error ? error.message : 'Could not start this mock')
