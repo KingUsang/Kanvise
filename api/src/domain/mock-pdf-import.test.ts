@@ -49,8 +49,9 @@ describe("Gemini mock PDF import", () => {
   });
 
   it("surfaces provider errors", async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ error: { message: "bad request" } }), { status: 400 }));
-    await expect(importQuestionsFromPdf(new Uint8Array([1]))).rejects.toThrow("bad request");
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ error: { message: "quota exceeded" } }), { status: 429 }));
+    await expect(importQuestionsFromPdf(new Uint8Array([1]))).rejects.toThrow("quota exceeded");
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
   });
 
   it("retries temporary provider capacity errors", async () => {
@@ -64,6 +65,16 @@ describe("Gemini mock PDF import", () => {
     expect(result.page_count).toBe(2);
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
+  });
+
+  it("falls back to sectioned local text when Gemini cannot decode the PDF visual", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: "The document has no pages." } }), { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ page_count: 2, warnings: [], questions: [] }) }] } }] }), { status: 200 }));
+    const result = await importQuestionsFromPdf(new Uint8Array([1]));
+    expect(result.warnings.join(" ")).toContain("locally extracted text");
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(vi.mocked(fetch).mock.calls[1][1])).not.toContain("application/pdf");
   });
 
   it("falls back to visual-only PDF mode when no selectable text is available", async () => {

@@ -127,7 +127,9 @@ Return one question per object. Set subject_name to the document's subject headi
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 
-const TRANSIENT_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
+// A 429 often carries a minute/day quota reset and retrying immediately only
+// burns request time. Capacity/server failures are safe to retry briefly.
+const TRANSIENT_GEMINI_STATUSES = new Set([500, 502, 503, 504]);
 
 function retryDelayMs(response: Response, attempt: number) {
   const retryAfterSeconds = Number(response.headers.get("retry-after"));
@@ -235,11 +237,21 @@ export async function importQuestionsFromPdf(buffer: Uint8Array): Promise<MockPd
   const visualWarning = imagePages.length
     ? `Pages ${imagePages.join(", ")} contain embedded images or diagrams. Their question text was imported, but review those questions before publishing because figure crops are not attached yet.`
     : "";
-  return callGemini([
-    { inline_data: { mime_type: "application/pdf", data: Buffer.from(buffer).toString("base64") } },
-    { text: `Use the attached PDF as the visual reference for layout, mathematical notation, tables, and diagrams. The following text was extracted locally and separates the question paper from its answer key; its page markers and section boundary are authoritative. Do not copy answer-key workings into student-visible fields.\n\n${sourceText}` },
-    { text: extractionPrompt },
-  ], extracted.page_count, visualWarning ? [visualWarning] : []);
+  const initialWarnings = visualWarning ? [visualWarning] : [];
+  try {
+    return await callGemini([
+      { inline_data: { mime_type: "application/pdf", data: Buffer.from(buffer).toString("base64") } },
+      { text: `Use the attached PDF as the visual reference for layout, mathematical notation, tables, and diagrams. The following text was extracted locally and separates the question paper from its answer key; its page markers and section boundary are authoritative. Do not copy answer-key workings into student-visible fields.\n\n${sourceText}` },
+      { text: extractionPrompt },
+    ], extracted.page_count, initialWarnings);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/document has no pages|invalid (?:pdf|document)|could not parse (?:the )?(?:pdf|document)/i.test(message)) throw error;
+    return callGemini([
+      { text: `The following is locally extracted PDF text. Its page markers and QUESTION PAPER / ANSWER-KEY REFERENCE boundary are authoritative. Do not copy answer-key workings into student-visible fields.\n\n${sourceText}` },
+      { text: extractionPrompt },
+    ], extracted.page_count, [...initialWarnings, "Gemini could not read this PDF visually, so Kanvise used its locally extracted text. Review mathematical layout before publishing."]);
+  }
 }
 
 export async function importQuestionsFromDocumentText(text: string, fileName?: string): Promise<MockPdfImportResult> {
