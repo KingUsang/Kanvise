@@ -196,7 +196,11 @@ mockAccessRouter.post('/mock/orders/:reference/confirm', requireRole('student'),
   return c.json({ data: { status: 'paid', offer_id: order.offer_id, entitlement_id: confirmed?.entitlement_id, already_confirmed: Boolean(confirmed?.already_processed) } })
 })
 
-mockOfferAdminRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('admin', 'tutor'))
+// Keep offer-management authorisation on the offer endpoints themselves. A
+// router-wide guard also ran for unrelated `/mocks/:id/attempts` requests when
+// this router was mounted beside the student mocks router, rejecting students
+// before their actual attempt route could run.
+mockOfferAdminRouter.use('/:mockId/offers', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('admin', 'tutor'))
 mockOfferAdminRouter.get('/:mockId/offers', async c => {
   const user = c.get('user'); const mockId = c.req.param('mockId')!
   const [{ data, error }, { data: versions, error: versionError }] = await Promise.all([
