@@ -7,6 +7,8 @@ import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { safeRedirectPath } from '@/lib/safe-redirect'
 import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, PASSWORD_REQUIREMENTS } from '@/lib/password-policy'
+import { loginHref as buildLoginHref, postAuthDestination } from '@/lib/auth-continuation'
+import { getApiUrl } from '@/config/api'
 
 function RegisterContent() {
   const router = useRouter();
@@ -19,9 +21,11 @@ function RegisterContent() {
   const isStudentFlow = pathname.endsWith('/student');
   const flow = isStudentFlow ? 'student' : 'centre';
   const studentRegistrationToken = searchParams.get('intent');
-  const loginHref = redirectParam
-    ? `/auth/login?redirect=${encodeURIComponent(redirectParam)}`
-    : '/auth/login';
+  const loginHref = buildLoginHref({
+    redirect: redirectParam,
+    flow: isStudentFlow ? 'student' : 'centre',
+    intent: studentRegistrationToken,
+  });
   const supabase = createClient();
 
   const [firstName, setFirstName] = useState("");
@@ -41,8 +45,37 @@ function RegisterContent() {
     setError(null);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
+      const normalisedEmail = email.trim().toLowerCase()
+
+      // Someone following a student offer may already use Kanvise. When their
+      // password is correct, continue the existing identity immediately.
+      if (isStudentFlow) {
+        const { data: existingSignIn, error: existingSignInError } = await supabase.auth.signInWithPassword({
+          email: normalisedEmail,
+          password,
+        })
+        if (existingSignIn.session?.access_token) {
+          const profileResponse = await fetch(`${getApiUrl()}/auth/me`, {
+            headers: { Authorization: `Bearer ${existingSignIn.session.access_token}` },
+          })
+          const profileBody = await profileResponse.json().catch(() => null)
+          if (!profileResponse.ok) throw new Error(profileBody?.error || 'Could not load your existing account')
+          if (profileBody?.user?.role !== 'student') {
+            await supabase.auth.signOut()
+            throw new Error('This email belongs to a staff account. Use a student email to continue.')
+          }
+          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+          if (refreshError || !refreshed.session) throw refreshError || new Error('Your session could not be refreshed')
+          window.location.assign(postAuthDestination({ role: 'student', redirect: redirectParam }))
+          return
+        }
+        if (existingSignInError && !['invalid_credentials', 'email_not_confirmed'].includes(existingSignInError.code || '')) {
+          throw existingSignInError
+        }
+      }
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: normalisedEmail,
         password,
         options: {
           data: { first_name: firstName, last_name: lastName },
@@ -50,6 +83,13 @@ function RegisterContent() {
       });
 
       if (signUpError) throw signUpError
+      // Supabase deliberately obscures an existing confirmed account when
+      // email confirmation is enabled. Do not leave that person waiting for a
+      // verification email that will not be sent.
+      if (signUpData.user && signUpData.user.identities?.length === 0) {
+        setError('An account already uses this email. Log in with its password, or reset the password if you have forgotten it.')
+        return
+      }
       setIsCodeStep(true)
     } catch (signUpError) {
       setError(signUpError instanceof Error && signUpError.message ? signUpError.message : 'We could not create your account. Please try again.')

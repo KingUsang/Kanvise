@@ -1,27 +1,33 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
 import { AuthLogo } from "@/components/auth/auth-logo";
 import { safeRedirectPath } from "@/lib/safe-redirect";
+import { getApiUrl } from '@/config/api'
+import { postAuthDestination, studentRegisterHref, type KanviseRole } from '@/lib/auth-continuation'
+import { createStudentRegistrationIntent } from '@/lib/student-registration'
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParams = safeRedirectPath(searchParams.get("redirect"));
   const reason = searchParams.get("reason");
-  const registerHref = redirectParams
-    ? `/auth/register?redirect=${encodeURIComponent(redirectParams)}`
-    : "/auth/register";
+  const flow = searchParams.get('flow') === 'student' ? 'student' : 'centre'
+  const registrationIntent = searchParams.get('intent')
+  const registerHref = flow === 'student'
+    ? studentRegisterHref({ redirect: redirectParams, intent: registrationIntent })
+    : redirectParams ? `/auth/register?redirect=${encodeURIComponent(redirectParams)}` : '/auth/register'
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false)
 
   const supabase = createClient();
 
@@ -41,30 +47,43 @@ function LoginContent() {
       return;
     }
 
-    if (redirectParams) {
-      router.push(redirectParams);
-      return;
-    }
-
     try {
       if (!signInData.session?.access_token) throw new Error('Your session could not be started')
       // Existing accounts created before trusted role claims were introduced
       // need one profile resolution before routing. The API backfills the
       // server-controlled claims from the canonical profile; refreshing here
       // prevents the web middleware from treating that account as a student.
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+      const profileResponse = await fetch(`${getApiUrl()}/auth/me`, {
         headers: { Authorization: `Bearer ${signInData.session.access_token}` },
       })
       const profileBody = await profileResponse.json()
       if (!profileResponse.ok || !profileBody.user?.role) throw new Error(profileBody.error || 'Could not load your account')
-      const { error: refreshError } = await supabase.auth.refreshSession()
-      if (refreshError) throw refreshError
-      window.location.assign(['admin', 'tutor'].includes(profileBody.user.role) ? '/dashboard' : '/dashboard/student')
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+      if (refreshError || !refreshed.session) throw refreshError || new Error('Your session could not be refreshed')
+      window.location.assign(postAuthDestination({
+        role: profileBody.user.role as KanviseRole,
+        schoolId: profileBody.user.school_id,
+        redirect: redirectParams,
+      }))
     } catch (profileError) {
       setError(profileError instanceof Error ? profileError.message : 'Could not open your account')
       setLoading(false)
     }
   };
+
+  const handleRegister = async (event: MouseEvent<HTMLAnchorElement>) => {
+    if (flow !== 'student' || registrationIntent || !redirectParams) return
+    event.preventDefault()
+    setRegisterLoading(true)
+    setError(null)
+    try {
+      const intent = await createStudentRegistrationIntent(redirectParams)
+      router.push(studentRegisterHref({ redirect: redirectParams, intent }))
+    } catch (registrationError) {
+      setError(registrationError instanceof Error ? registrationError.message : 'Could not start student registration')
+      setRegisterLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-kv-soft" style={{
@@ -175,8 +194,8 @@ function LoginContent() {
           <div className="mt-8 pt-6 border-t border-kv-dust/30 text-center">
             <p className="text-center text-sm text-gray-600 mt-8">
               Don&apos;t have an account?{" "}
-              <Link href={registerHref} className="font-semibold text-kv-brown hover:text-kv-dark transition-colors">
-                Sign Up
+              <Link href={registerHref} onClick={handleRegister} aria-disabled={registerLoading} className="font-semibold text-kv-brown hover:text-kv-dark transition-colors">
+                {registerLoading ? 'Preparing signup…' : 'Sign Up'}
               </Link>
             </p>
           </div>

@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getDashboardAccess } from '@/config/dashboard-navigation'
 import { safeRedirectPath } from '@/lib/safe-redirect'
+import { postAuthDestination, type KanviseRole } from '@/lib/auth-continuation'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -86,13 +87,15 @@ export async function updateSession(request: NextRequest) {
       || request.nextUrl.pathname.includes('/auth/invitation')
     if (isAuthRoute && !isPasswordSetupRoute) {
       const url = request.nextUrl.clone()
-      if (needsAdminSetup) {
-        url.pathname = '/dashboard/school-setup'
-      } else if (kanvise_role === 'admin' || kanvise_role === 'tutor') {
-        url.pathname = '/dashboard'
-      } else {
-        url.pathname = '/dashboard/student' // Default
-      }
+      const destination = postAuthDestination({
+        role: kanvise_role as KanviseRole,
+        schoolId,
+        redirect: request.nextUrl.searchParams.get('redirect') || request.nextUrl.searchParams.get('return_to'),
+      })
+      const resolved = new URL(destination, request.url)
+      url.pathname = resolved.pathname
+      url.search = resolved.search
+      url.hash = resolved.hash
       return NextResponse.redirect(url)
     }
 

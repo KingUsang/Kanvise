@@ -82,22 +82,22 @@ authRouter.post('/profile/init', async (c) => {
     return c.json({ error: 'Authenticated user has no email address' }, 400)
   }
 
+  if (!String(first_name || '').trim() || !String(last_name || '').trim()) {
+    return c.json({ error: 'First name and last name are required' }, 400)
+  }
+
   let role: 'admin' | 'tutor' | 'student'
+  let studentIntent: any = null
   if (flow === 'centre') role = 'admin'
   else if (flow === 'tutor') role = 'tutor'
   else if (flow === 'student' && typeof student_registration_token === 'string') {
     const tokenHash = createHash('sha256').update(student_registration_token).digest('hex')
     const intents = (supabase as any).from('registration_intents')
     const { data: intent, error: intentError } = await intents.select('*').eq('token_hash', tokenHash).eq('kind', 'student').is('consumed_at', null).gt('expires_at', new Date().toISOString()).maybeSingle()
-    if (intentError || !intent) return c.json({ error: 'Student registration has expired. Return to the programme and try again.' }, 400)
-    const { error: consumeError } = await (supabase as any).from('registration_intents').update({ consumed_at: new Date().toISOString(), consumed_by: supabaseAuthId }).eq('id', intent.id).is('consumed_at', null)
-    if (consumeError) return c.json({ error: 'Student registration could not be completed' }, 409)
+    if (intentError || !intent) return c.json({ error: 'Student registration has expired. Return to the programme or mock and try again.' }, 400)
+    studentIntent = intent
     role = 'student'
   } else return c.json({ error: 'A valid registration flow is required' }, 400)
-
-  if (!String(first_name || '').trim() || !String(last_name || '').trim()) {
-    return c.json({ error: 'First name and last name are required' }, 400)
-  }
 
   let tutorInvite: ReturnType<typeof validateInviteToken> | null = null
   if (role === 'tutor') {
@@ -122,6 +122,9 @@ authRouter.post('/profile/init', async (c) => {
     if (role === 'tutor' && (existingProfile.role !== 'tutor' || existingProfile.school_id !== tutorInvite?.school_id)) {
       return c.json({ error: 'This Kanvise account already belongs to a different centre' }, 409)
     }
+    if (role !== 'tutor' && existingProfile.role !== role) {
+      return c.json({ error: `This email already belongs to a ${existingProfile.role} account` }, 409)
+    }
     const welcome = await deliverWelcome(existingProfile, email)
     return c.json({
       profile: existingProfile,
@@ -130,6 +133,19 @@ authRouter.post('/profile/init', async (c) => {
       welcome_email_id: welcome.id,
       welcome_email_already_sent: welcome.alreadySent,
     })
+  }
+
+  if (studentIntent) {
+    // Returning the conditionally updated row is what makes the token truly
+    // one-time. A concurrent request that updates zero rows must not continue.
+    const { data: consumedIntent, error: consumeError } = await (supabase as any)
+      .from('registration_intents')
+      .update({ consumed_at: new Date().toISOString(), consumed_by: supabaseAuthId })
+      .eq('id', studentIntent.id)
+      .is('consumed_at', null)
+      .select('id')
+      .maybeSingle()
+    if (consumeError || !consumedIntent) return c.json({ error: 'Student registration could not be completed' }, 409)
   }
 
   let schoolId = null

@@ -8,6 +8,8 @@ import { getApiUrl } from '@/config/api'
 import { QuestionContent } from '@/components/questions/question-content'
 import { ExamCalculator } from './exam-calculator'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
+import Link from 'next/link'
+import { loginHref } from '@/lib/auth-continuation'
 
 type SavedAnswer = {
   selected_option_version_id: string | null
@@ -41,7 +43,7 @@ function formatRemaining(seconds: number) {
   return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}` : `${minutes}:${String(secs).padStart(2, '0')}`
 }
 
-export function MockAttemptClient({ data, token }: { data: AttemptData; token: string }) {
+export function MockAttemptClient({ data, token, guest = false }: { data: AttemptData; token?: string; guest?: boolean }) {
   const router = useRouter()
   const questions = useMemo(() => data.questions || [], [data.questions])
   const initial = useMemo(() => new Map<string, SavedAnswer>((data.answers || []).map((answer): [string, SavedAnswer] => [answer.mock_version_question_id, {
@@ -83,8 +85,10 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
     }
     setSaveStates(states => new Map(states).set(questionId, 'saving'))
     try {
-      const response = await fetch(`${getApiUrl()}/attempts/${data.attempt.id}/answers/${questionId}`, {
-        method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      const answerPath = guest ? `/guest/attempts/${data.attempt.id}/answers/${questionId}` : `/attempts/${data.attempt.id}/answers/${questionId}`
+      const response = await fetch(`${getApiUrl()}${answerPath}`, {
+        method: 'PUT', credentials: guest ? 'include' : 'same-origin',
+        headers: { ...(guest ? {} : { Authorization: `Bearer ${token}` }), 'Content-Type': 'application/json' },
         body: JSON.stringify(answer),
       })
       const body = await response.json().catch(() => null)
@@ -99,7 +103,7 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
       if (!offline) toast.error(error instanceof Error ? error.message : 'Could not save answer')
       return false
     }
-  }, [data.attempt.id, timedOut, token])
+  }, [data.attempt.id, guest, timedOut, token])
 
   const changeAnswer = useCallback((questionId: string, patch: Partial<SavedAnswer>, delayed = false) => {
     if (timedOut) return
@@ -124,18 +128,22 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
           throw new Error('Your answers are safely queued on this device, but reconnect before submitting so they can reach the exam server.')
         }
       }
-      const response = await fetch(`${getApiUrl()}/attempts/${data.attempt.id}/submit`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+      const submitPath = guest ? `/guest/attempts/${data.attempt.id}/submit` : `/attempts/${data.attempt.id}/submit`
+      const response = await fetch(`${getApiUrl()}${submitPath}`, {
+        method: 'POST', credentials: guest ? 'include' : 'same-origin',
+        headers: guest ? {} : { Authorization: `Bearer ${token}` },
+      })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not submit mock')
       toast.success(timedOut ? 'Time is up. Your mock has been finalized.' : 'Your mock has been submitted.')
-      startNavigationProgress(); router.replace(`/dashboard/student/mocks/result/${data.attempt.id}`)
+      startNavigationProgress(); router.replace(guest ? `/guest/result/${data.attempt.id}` : `/dashboard/student/mocks/result/${data.attempt.id}`)
       return true
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not submit mock')
       return false
     }
     finally { setSubmitting(false); setConfirming(false) }
-  }, [answers, data.attempt.id, router, save, timedOut, token])
+  }, [answers, data.attempt.id, guest, router, save, timedOut, token])
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000)
@@ -205,6 +213,7 @@ export function MockAttemptClient({ data, token }: { data: AttemptData; token: s
   const saveState = saveStates.get(active.id) || 'idle'
 
   return <main className="min-h-[calc(100vh-4rem)] bg-[#f8f7f5] pb-28 lg:pb-8">
+    {guest && <div className="border-b border-[#d7d1cc] bg-[#fff7ed] px-4 py-3 text-sm text-[#713f12] sm:px-6"><div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3"><p><strong>Guest attempt.</strong> Your work is saved on this browser.</p><Link href={loginHref({ redirect: `/guest/attempt/${data.attempt.id}`, flow: 'student' })} className="font-semibold text-[#2e2877] underline underline-offset-2">Sign in to save it to your account</Link></div></div>}
     <header className="sticky top-16 z-20 border-b border-[#dfdad5] bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:top-16 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{data.mock.title}</p><p className="truncate text-xs text-[#716c76]">{active.section_title}</p></div><div className="flex items-center gap-2">{data.mock.calculator_mode !== 'none' && <button onClick={() => setCalculatorOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm font-medium text-[#2e2877]"><Calculator size={16} /><span className="hidden sm:inline">Calculator</span></button>}<button onClick={() => setShortcutsOpen(true)} className="hidden min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm text-[#716c76] sm:inline-flex"><Keyboard size={16} />Shortcuts</button>{remaining !== null && <span className={`min-w-[78px] rounded-lg px-3 py-2 text-center font-mono text-sm font-semibold ${remaining < 300 ? 'bg-[#fde8e4] text-[#a43522]' : 'bg-[#eeeafe] text-[#2e2877]'}`}>{formatRemaining(remaining)}</span>}</div></div></header>
     {timedOut ? <div role="alert" className="border-b border-[#efb5aa] bg-[#fde8e4] px-4 py-3 text-sm text-[#87351f] sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-start gap-2"><AlertTriangle className="mt-0.5 shrink-0" size={17} /><p><strong>Time is up.</strong> Answers are now locked. {!isOnline ? 'Reconnect to finalize the mock; answers that were not received before the deadline cannot be counted.' : 'The mock is being finalized.'}</p></div></div>
       : !isOnline && <div role="status" className="border-b border-[#f0c8bb] bg-[#fff4ee] px-4 py-3 text-sm text-[#87351f] sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-start gap-2"><CloudOff className="mt-0.5 shrink-0" size={17} /><p><strong>Connection lost.</strong> Keep working—your answers are stored on this device and will retry when you reconnect. The mock timer continues and answers received after time runs out cannot be accepted.</p></div></div>}

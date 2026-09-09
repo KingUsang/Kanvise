@@ -49,6 +49,7 @@ import { studentMocksRouter } from "./routes/student-mocks";
 import { studentSettingsRouter } from "./routes/student-settings";
 import { mockAccessRouter, mockOfferAdminRouter } from "./routes/mock-access";
 import { studentMembershipsRouter } from "./routes/student-memberships";
+import { guestMocksRouter } from './routes/guest-mocks';
 import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
 
@@ -90,6 +91,7 @@ if (isTelegramEnabled()) {
 app.route("/schools/me/promos", promosRouter);
 app.route("/", mockAccessRouter);
 app.route("/", studentMembershipsRouter);
+app.route('/', guestMocksRouter);
 
 // Waitlist Route
 app.get("/waitlist/count", async (c) => {

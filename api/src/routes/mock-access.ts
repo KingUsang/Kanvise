@@ -127,11 +127,48 @@ mockAccessRouter.get('/my-mocks', requireRole('student'), async c => {
 
 mockAccessRouter.get('/mock/orders/:reference', requireRole('student'), async c => {
   const user = c.get('user')
-  const { data, error } = await db.from('mock_orders').select('paystack_reference, status, amount_kobo, paid_at, offer:mock_access_offers(slug, mock:mock_exams(title))')
+  const { data, error } = await db.from('mock_orders').select('paystack_reference, status, amount_kobo, paid_at, offer:mock_access_offers(id, slug, mock:mock_exams(title))')
     .eq('student_id', user.id).eq('paystack_reference', c.req.param('reference')!).maybeSingle()
   if (error) return c.json({ error: 'Could not load mock payment status' }, 500)
   if (!data) return c.json({ error: 'Mock order not found' }, 404)
   return c.json({ data })
+})
+
+// Authenticated return-page recovery for a delayed/missed webhook. The order
+// is scoped to the current student and Paystack is re-verified server-side;
+// the browser cannot assert that payment succeeded.
+mockAccessRouter.post('/mock/orders/:reference/confirm', requireRole('student'), async c => {
+  const user = c.get('user'); const reference = c.req.param('reference')!
+  const { data: order, error: orderError } = await db.from('mock_orders')
+    .select('paystack_reference, status, amount_kobo, offer_id')
+    .eq('student_id', user.id).eq('paystack_reference', reference).maybeSingle()
+  if (orderError) return c.json({ error: 'Could not load mock payment status' }, 500)
+  if (!order) return c.json({ error: 'Mock order not found', code: 'MOCK_ORDER_NOT_FOUND' }, 404)
+  if (order.status === 'paid') return c.json({ data: { status: 'paid', offer_id: order.offer_id, already_confirmed: true } })
+
+  const paystackSecret = process.env.PAYSTACK_SECRET_KEY
+  if (!paystackSecret) return c.json({ error: 'Payment confirmation is not configured', code: 'PAYMENTS_NOT_CONFIGURED' }, 503)
+  let verification: any; let verifyResponse: Response
+  try {
+    verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${paystackSecret}` }, signal: AbortSignal.timeout(15_000),
+    })
+    verification = await verifyResponse.json()
+  } catch { return c.json({ error: 'Paystack verification is temporarily unavailable', retryable: true }, 503) }
+  if (!verifyResponse.ok || !verification.status || verification.data?.status !== 'success') {
+    return c.json({ data: { status: 'pending', offer_id: order.offer_id } })
+  }
+  if (verification.data.reference !== reference || verification.data.currency !== 'NGN'
+    || !Number.isInteger(verification.data.amount) || verification.data.amount !== order.amount_kobo) {
+    return c.json({ error: 'Paystack transaction details do not match this mock order', code: 'PAYMENT_MISMATCH' }, 409)
+  }
+  const { data, error } = await db.rpc('confirm_mock_order_payment', {
+    p_paystack_reference: reference, p_paystack_transaction_id: String(verification.data.id),
+    p_amount_kobo: verification.data.amount, p_now: new Date().toISOString(),
+  })
+  if (error) return c.json({ error: 'Mock payment confirmation failed', code: 'PAYMENT_CONFIRMATION_FAILED' }, 500)
+  const confirmed: any = data?.[0] || data
+  return c.json({ data: { status: 'paid', offer_id: order.offer_id, entitlement_id: confirmed?.entitlement_id, already_confirmed: Boolean(confirmed?.already_processed) } })
 })
 
 mockOfferAdminRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('admin', 'tutor'))

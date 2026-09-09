@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // The CLI-backed checker can lose `tsc --showConfig` output under some
+    // Node/Next combinations. The compiler API performs the same check without
+    // spawning that fragile subprocess.
+    useTypeScriptCli: false,
+  },
   async headers() {
     return [{
       source: '/sw.js',

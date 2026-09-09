@@ -66,7 +66,7 @@ function imageMediaIds(blocks: any[]) {
   return (blocks || []).flatMap(block => block?.type === 'image' && typeof block.media_id === 'string' ? [block.media_id] : [])
 }
 
-async function attachStudentMedia(questions: any[], schoolId: string) {
+export async function attachStudentMedia(questions: any[], schoolId: string) {
   const ids = [...new Set(questions.flatMap(question => [
     ...imageMediaIds(question.content_blocks),
     ...imageMediaIds(question.explanation_blocks),
@@ -117,7 +117,7 @@ async function ownedAttemptSchoolId(user: any, attemptId: string) {
   return data?.school_id || null
 }
 
-async function loadAttemptQuestionIds(attemptId: string, schoolId: string) {
+export async function loadAttemptQuestionIds(attemptId: string, schoolId: string) {
   const client = supabase as any
   const { data, error } = await client.from('mock_attempt_questions').select('mock_version_question_id')
     .eq('school_id', schoolId).eq('attempt_id', attemptId)
