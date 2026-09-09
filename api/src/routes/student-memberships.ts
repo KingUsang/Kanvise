@@ -8,7 +8,7 @@ const db = supabase as any
 
 studentMembershipsRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'))
 
-studentMembershipsRouter.get('/students/me/centres', async c => {
+studentMembershipsRouter.get('/centres', async c => {
   const user = c.get('user')
   const { data, error } = await db.from('student_centre_memberships')
     .select('id, school_id, joined_at, school:schools(id, name)').eq('student_id', user.id).eq('status', 'active').order('joined_at')
@@ -16,7 +16,7 @@ studentMembershipsRouter.get('/students/me/centres', async c => {
   return c.json({ data: (data || []).map((membership: any) => ({ ...membership, active: membership.school_id === user.school_id })) })
 })
 
-studentMembershipsRouter.post('/students/me/centres/:schoolId/select', async c => {
+studentMembershipsRouter.post('/centres/:schoolId/select', async c => {
   const user = c.get('user'); const schoolId = c.req.param('schoolId')!
   const { data: membership, error } = await db.from('student_centre_memberships').select('id').eq('student_id', user.id).eq('school_id', schoolId).eq('status', 'active').maybeSingle()
   if (error || !membership) return c.json({ error: 'You are not an active student of this centre' }, 403)

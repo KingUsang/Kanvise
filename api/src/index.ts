@@ -90,7 +90,7 @@ if (isTelegramEnabled()) {
 // `/students/me/settings`.
 app.route("/schools/me/promos", promosRouter);
 app.route("/", mockAccessRouter);
-app.route("/", studentMembershipsRouter);
+app.route("/students/me", studentMembershipsRouter);
 app.route('/', guestMocksRouter);
 
 // Waitlist Route
