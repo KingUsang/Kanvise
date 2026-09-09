@@ -19,6 +19,6 @@ describe('sendNotificationEmail', () => {
       mockTitle: 'Physics Mock',
       courseName: 'Physics',
       mockUrl: 'https://kanvise.com/mocks/1',
-    }, transport)).rejects.toThrow('Resend could not deliver mock_published: rate limited')
+    }, transport)).rejects.toThrow('Email provider could not deliver mock_published: rate limited')
   })
 })
