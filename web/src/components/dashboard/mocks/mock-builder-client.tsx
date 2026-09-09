@@ -801,7 +801,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         : "Draft saved";
       toast.success(publicationMessage);
       startNavigationProgress();
-      router.push((accessMode === "direct" || accessMode === "both") && shouldPublish && publishMode === "immediate" ? `/dashboard/mocks/${mockId}/offers` : "/dashboard/mocks");
+      router.push("/dashboard/mocks");
     } catch (err) {
       console.error(err);
       toast.error("Could not save the mock", { description: err instanceof Error ? err.message : "Please try again." });
@@ -928,7 +928,10 @@ export function MockBuilderClient({ token }: { token: string }) {
             )}
             <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-[#e4e2e1] pt-5">
               <button type="button" onClick={() => setIsReviewOpen(false)} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#474551] hover:bg-[#f8f6ff]">Go back and edit</button>
-              <button type="button" disabled={publishReview.errors.length > 0 || isSaving} onClick={() => { setIsReviewOpen(false); void handleSave(true); }} className="rounded-lg bg-[#C26627] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{publishMode === "scheduled" ? "Confirm schedule" : "Confirm and publish"}</button>
+              <button type="button" disabled={publishReview.errors.length > 0 || isSaving} onClick={() => void handleSave(true)} aria-busy={isSaving} className="inline-flex min-w-44 items-center justify-center gap-2 rounded-lg bg-[#C26627] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-65">
+                {isSaving && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
+                {isSaving ? (publishMode === "scheduled" ? "Scheduling mock…" : "Publishing mock…") : (publishMode === "scheduled" ? "Confirm schedule" : "Confirm and publish")}
+              </button>
             </div>
           </div>
         </div>
@@ -1271,7 +1274,7 @@ export function MockBuilderClient({ token }: { token: string }) {
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7"><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Final check</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Review and publish</h2><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Format</p><p className="mt-1 font-semibold">{isMultiSubject ? "Multi-subject / JAMB" : "Single subject"}</p></div><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Questions</p><p className="mt-1 font-semibold">{questions.length + selectedBankQuestions.length}</p></div><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Time</p><p className="mt-1 font-semibold">{isUntimed ? "Untimed" : `${timeLimit} minutes`}</p></div></div>
             {isMultiSubject && <div className="mt-6"><h3 className="text-sm font-semibold">Subject readiness</h3><div className="mt-3 divide-y divide-[#eeeae6] rounded-xl border border-[#e4e2e1]">{selectedSubjectCourses.map((course) => { const count = questions.filter((question) => question.section_id === course.id).length + selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-[#faf9ff]"><span className="font-medium">{course.name}</span><span className={count ? "text-[#267045]" : "text-[#a43522]"}>{count ? `${count} questions` : "No questions"}</span></button> })}</div></div>}
             <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm text-[#474551] sm:flex-row sm:items-center sm:justify-between"><span><strong className="block text-[#2e2877]">Check the student experience</strong>Preview subject switching, question navigation, and mobile layout without creating an attempt or result.</span><button type="button" onClick={() => setIsPreviewOpen(true)} disabled={draftPreviewQuestions.length === 0} className="shrink-0 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 font-semibold text-[#2e2877] disabled:opacity-45">Preview as student</button></div>
-            <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#eeeae6] pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={() => setBuilderStep("questions")} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold">Continue editing</button><button type="button" disabled={isReadOnly || isSaving} onClick={requestPublish} className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{publishMode === "scheduled" ? "Review schedule" : "Review and publish"}</button></div>
+            <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#eeeae6] pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={() => setBuilderStep("questions")} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold">Continue editing</button><button type="button" disabled={isReadOnly || isSaving} onClick={requestPublish} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{isSaving && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}{isSaving ? "Publishing mock…" : publishMode === "scheduled" ? "Review schedule" : "Review and publish"}</button></div>
           </div>
         </section>
       )}

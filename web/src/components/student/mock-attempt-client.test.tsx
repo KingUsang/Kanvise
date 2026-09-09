@@ -77,4 +77,15 @@ describe('MockAttemptClient timeout', () => {
     expect(screen.getByRole('button', { name: 'Physics question 1' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Physics question 2' })).toBeInTheDocument()
   })
+
+  it('lets the attempt header reach the top after the guest notice scrolls away', () => {
+    const { container } = render(<MockAttemptClient data={{
+      ...data,
+      attempt: { id: 'guest-attempt', deadline_at: null },
+    }} guest />)
+
+    expect(screen.getByText('Guest attempt.')).toBeInTheDocument()
+    expect(container.querySelector('header')).toHaveClass('sticky', 'top-0')
+    expect(container.querySelector('header')).not.toHaveClass('top-16')
+  })
 })

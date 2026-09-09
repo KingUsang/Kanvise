@@ -1,7 +1,5 @@
-import { MockOffersManager } from '@/components/mock-access/mock-offers-manager'
-import { requireServerAccessToken } from '@/lib/server-session'
+import { redirect } from 'next/navigation'
 
-export default async function MockOffersPage({ params }: { params: Promise<{ mockId: string }> }) {
-  const [{ mockId }, token] = await Promise.all([params, requireServerAccessToken()])
-  return <MockOffersManager mockId={mockId} token={token} />
+export default function MockOffersPage() {
+  redirect('/dashboard/mocks')
 }

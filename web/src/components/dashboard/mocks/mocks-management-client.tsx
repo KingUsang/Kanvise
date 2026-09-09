@@ -16,6 +16,8 @@ interface MockExam {
   publish_at: string | null
   updated_at: string
   created_at: string
+  direct_link_enabled?: boolean
+  direct_link_slug?: string | null
   metrics: {
     attempts: number
     pending_grading: number
@@ -105,6 +107,15 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       })
     } finally {
       setIsArchiving(false)
+    }
+  }
+
+  const copyStudentLink = async (slug: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/mock/${slug}`)
+      toast.success('Student link copied')
+    } catch {
+      toast.error('Could not copy the student link')
     }
   }
 
@@ -312,7 +323,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                       <td className="py-5 px-6 text-right align-top pt-6">
                         {mock.status === 'published' && (
                           <div className="flex items-center justify-end gap-3">
-                            <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/offers`) }} className="text-[#2e2877] text-[12px] font-semibold hover:underline">Share & sell</button>
+                            {mock.direct_link_enabled && mock.direct_link_slug && <button onClick={() => void copyStudentLink(mock.direct_link_slug!)} className="text-[#2e2877] text-[12px] font-semibold hover:underline">Copy student link</button>}
                             <button onClick={() => setMockToArchive(mock)} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704]">Archive</button>
                             <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#994704] text-[12px] font-semibold hover:underline">View Results</button>
                           </div>

@@ -235,8 +235,8 @@ DECLARE
   v_guest public.guest_mock_learners%ROWTYPE; v_offer public.mock_access_offers%ROWTYPE;
   v_entitlement public.mock_entitlements%ROWTYPE; v_attempt_number INTEGER;
 BEGIN
-  SELECT * INTO v_ownership FROM public.guest_mock_attempts
-  WHERE guest_id = p_guest_id AND attempt_id = p_attempt_id FOR UPDATE;
+  SELECT ownership.* INTO v_ownership FROM public.guest_mock_attempts ownership
+  WHERE ownership.guest_id = p_guest_id AND ownership.attempt_id = p_attempt_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'GUEST_ATTEMPT_NOT_FOUND'; END IF;
   SELECT * INTO v_attempt FROM public.mock_attempts WHERE id = p_attempt_id FOR UPDATE;
   IF v_ownership.transferred_at IS NOT NULL THEN
