@@ -77,7 +77,7 @@ export function StudentMocksClient({ groups, unlocked, initialView }: { groups: 
       const response = await fetch(`${getApiUrl()}/mock/${item.offer.id}/attempts`, { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` } })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not start this mock')
-      router.push(`/attempt/${body.data.attempt_id}`)
+      router.push(`/dashboard/student/mocks/attempt/${body.data.attempt_id}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not start this mock')
     } finally {

@@ -1,8 +1,6 @@
-import { MockResultClient } from '@/components/student/mock-result-client'
-import { getStudentMockResult } from '@/lib/student-mocks'
-import { requireServerAccessToken } from '@/lib/server-session'
+import { redirect } from 'next/navigation'
 
 export default async function ResultPage({ params }: { params: Promise<{ attemptId: string }> }) {
-  const [{ attemptId }, token] = await Promise.all([params, requireServerAccessToken()])
-  return <MockResultClient data={await getStudentMockResult(attemptId, token)} />
+  const { attemptId } = await params
+  redirect(`/dashboard/student/mocks/result/${attemptId}`)
 }

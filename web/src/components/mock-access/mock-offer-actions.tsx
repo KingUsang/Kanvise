@@ -49,7 +49,7 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
           const start = await authenticatedFetch(supabase, `${getApiUrl()}/mocks/${mockId}/attempts`, session.access_token, { method: 'POST' })
           const attempt = await start.json().catch(() => null)
           if (!start.ok) throw new Error(attempt?.error || 'Could not open this mock')
-          router.push(`/attempt/${attempt.data.attempt_id}`)
+          router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
           return
         }
         if (centrePreflight.status !== 404) throw new Error(centreBody?.error || 'Could not check your programme access')
@@ -64,7 +64,7 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
         const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, session.access_token, { method: 'POST' })
         const attempt = await start.json().catch(() => null)
         if (!start.ok) throw new Error(attempt?.error || 'Could not open this mock')
-        router.push(`/attempt/${attempt.data.attempt_id}`)
+        router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
         return
       }
       if (preflight.status !== 403 || preflightBody?.code !== 'MOCK_ENTITLEMENT_NOT_FOUND') {
@@ -80,7 +80,7 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
       const body = await claim.json().catch(() => null); if (!claim.ok) throw new Error(body?.error || 'Could not unlock this mock')
       const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, session.access_token, { method: 'POST' })
       const attempt = await start.json().catch(() => null); if (!start.ok) throw new Error(attempt?.error || 'Mock unlocked — open My Mocks to start')
-      router.push(`/attempt/${attempt.data.attempt_id}`)
+      router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not continue') } finally { setLoading(false) }
   }
   const label = accessMode === 'paid' ? 'Buy and attempt mock' : loading ? 'Unlocking mock…' : 'Attempt mock'
