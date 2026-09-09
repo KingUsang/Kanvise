@@ -942,31 +942,26 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   }
 
   const publishedAt = new Date().toISOString();
-  const { data: versionResult, error: publishError } = await supabase.rpc("publish_versioned_mock", {
+  const directSlug = mock.direct_link_slug || `mock-${mock.id.slice(0, 8)}`;
+  const { data: versionResult, error: publishError } = await (supabase as any).rpc("publish_versioned_mock_with_offer", {
     p_school_id: user.school_id,
     p_mock_exam_id: mockId,
     p_published_by: user.id,
     p_published_at: publishedAt,
+    p_create_direct_offer: mock.direct_link_enabled === true,
+    p_direct_slug: directSlug,
+    p_direct_access_mode: mock.direct_link_access_mode || "free_claim",
+    p_direct_price_kobo: mock.direct_link_access_mode === "paid" ? mock.direct_link_price_kobo || 0 : 0,
   });
   if (publishError) return mockDatabaseError(c, publishError, "Could not publish the mock");
+  const publication = Array.isArray(versionResult) ? versionResult[0] : versionResult;
   const { data, error } = await supabase.from("mock_exams")
     .select("*, course:courses(name), programme:programmes(name)").eq("id", mockId).eq("school_id", user.school_id).single();
   if (error) return mockDatabaseError(c, error, "Mock was published but could not be reloaded");
 
-  // The first link is configured in the builder; offer management remains for
-  // additional links only.
-  let directOffer: any = null;
-  if (mock.direct_link_enabled) {
-    const versionId = (versionResult as any)?.[0]?.mock_exam_version_id || (versionResult as any)?.mock_exam_version_id;
-    if (versionId) {
-      const slug = mock.direct_link_slug || `mock-${data.id.slice(0, 8)}`;
-      const { data: offer, error: offerError } = await (supabase as any).from("mock_access_offers")
-        .insert({ school_id: user.school_id, created_by: user.id, mock_exam_id: data.id, mock_exam_version_id: versionId, slug, audience_scope: "public_link", access_mode: mock.direct_link_access_mode || "free_claim", price_kobo: mock.direct_link_access_mode === "paid" ? mock.direct_link_price_kobo || 0 : 0, attempts_included: data.max_attempts || 1, is_active: true })
-        .select().maybeSingle();
-      if (offerError && offerError.code !== "23505") return mockDatabaseError(c, offerError, "Mock was published but its direct link could not be created");
-      directOffer = offer;
-    }
-  }
+  const directOffer = publication?.direct_offer_id
+    ? { id: publication.direct_offer_id, slug: publication.direct_offer_slug }
+    : null;
 
   const publishedAudience = parseMockAudienceScope(data.audience_scope ?? "course") || "course";
   const notification = ['course', 'programme', 'school'].includes(publishedAudience) ? await notifyMockPublished({
@@ -986,7 +981,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   return c.json({
     message: "Mock published successfully",
     data,
-    version: versionResult?.[0] || versionResult,
+    version: publication,
     direct_offer: directOffer,
     notification,
   });

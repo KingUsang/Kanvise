@@ -121,7 +121,7 @@ function normalizeQuestions(value: any): ImportedMockQuestion[] {
 
 const extractionPrompt = `You are importing an examination document into Kanvise, a Nigerian mock-exam platform.
 
-Extract every question exactly as it appears. The document may have any layout: scanned pages, columns, tables, diagrams, equations, mixed subjects, separate answer keys, or no answer key. Do not assume a fixed template and do not invent missing answers.
+Extract every question exactly as it appears. The document may have any layout: scanned pages, columns, tables, diagrams, equations, mixed subjects, separate answer keys, or no answer key. Do not assume a fixed template and do not invent missing answers. When the document contains an answer key, is_correct must reproduce that key exactly, even if you believe the source answer is academically wrong. In that case preserve the source answer and add a review reason explaining the suspected source error; never silently substitute your own answer.
 
 Return one question per object. Set subject_name to the document's subject heading for that question (for example Use of English, Physics, Chemistry or Mathematics). Carry the most recent clear subject heading across following pages until another heading begins. Use an empty subject_name and add a review reason when the subject cannot be determined confidently. Use question_type=mcq only when the question has selectable answer options; otherwise use theory. For question_text and option_text, return only the ordinary-language prose. Do not repeat a mathematical or chemical expression in those text fields when you also return that expression as LaTeX. Put each mathematical expression once in equation_latex and each chemical formula or reaction once in chemistry_latex, using proper subscripts and superscripts (for example 110111_{2} + 10100_{2}). A text field may be empty when its entire content is represented by its LaTeX field. Use an empty string for whichever notation field does not apply. If an image, diagram, table, or equation is important but cannot be represented faithfully, add a short review_reasons entry. If an answer is missing or uncertain, leave every option is_correct=false and add a review reason. Record the source page when the document makes it possible. Keep mixed subjects together as one mock and label each question with its subject; do not reject mixed-subject documents.`;
 
@@ -174,7 +174,9 @@ async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null,
   return {
     questions,
     warnings: [...new Set([...initialWarnings, ...warnings])],
-    page_count: Number.isInteger(parsed.page_count) ? parsed.page_count : fallbackPageCount,
+    // PDF.js is authoritative for real PDFs. Models can under-count blank,
+    // cover, or answer-key pages even when all question data is present.
+    page_count: fallbackPageCount ?? (Number.isInteger(parsed.page_count) ? parsed.page_count : null),
   };
 }
 

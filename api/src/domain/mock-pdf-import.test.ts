@@ -22,7 +22,7 @@ describe("Gemini mock PDF import", () => {
   it("normalises Gemini's structured mixed mock response", async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
       candidates: [{ content: { parts: [{ text: JSON.stringify({
-        page_count: 2,
+        page_count: 999,
         warnings: [],
         questions: [
           { question_type: "mcq", question_text: "What is 2 + 2?", subject_name: "Mathematics", marks: 1, options: [
@@ -42,6 +42,7 @@ describe("Gemini mock PDF import", () => {
     expect(result.questions[1].question_type).toBe("theory");
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining("gemini-2.5-flash"), expect.objectContaining({ method: "POST" }));
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("Source page 1");
+    expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("must reproduce that key exactly");
   });
 
   it("surfaces provider errors", async () => {
