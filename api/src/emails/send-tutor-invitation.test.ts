@@ -45,7 +45,7 @@ describe('sendTutorInvitation', () => {
     }
 
     await expect(sendTutorInvitation(input, transport)).rejects.toThrow(
-      'Resend could not deliver the tutor invitation: API key rejected',
+      'Email provider could not deliver the tutor invitation: API key rejected',
     )
   })
 })
