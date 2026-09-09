@@ -8,7 +8,7 @@ import { getApiUrl } from '@/config/api'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 import { loginHref } from '@/lib/auth-continuation'
 
-export function MockOfferActions({ offerId, slug, accessMode }: { offerId: string; slug: string; accessMode: string }) {
+export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerId: string; mockId: string; slug: string; accessMode: string }) {
   const router = useRouter(); const [loading, setLoading] = useState(false)
   const redirect = `/mock/${encodeURIComponent(slug)}`
   async function access() {
@@ -35,6 +35,25 @@ export function MockOfferActions({ offerId, slug, accessMode }: { offerId: strin
       const profile = await profileResponse.json().catch(() => null)
       if (!profileResponse.ok) throw new Error(profile?.error || 'Could not verify your account')
       if (profile?.user?.role !== 'student') throw new Error('Please use a student account to attempt this mock.')
+
+      // A public link is an additional way into the same mock. If this student
+      // already receives it through their centre, preserve that one attempt
+      // history and allowance instead of creating a second entitlement.
+      if (profile.user.school_id) {
+        const centrePreflight = await authenticatedFetch(supabase, `${getApiUrl()}/mocks/${mockId}/preflight`, session.access_token, { cache: 'no-store' })
+        const centreBody = await centrePreflight.json().catch(() => null)
+        if (centrePreflight.ok) {
+          if (!centreBody.data.resumable_attempt && centreBody.data.attempts_used >= centreBody.data.attempts_allowed) {
+            throw new Error('You have used all attempts included with this mock.')
+          }
+          const start = await authenticatedFetch(supabase, `${getApiUrl()}/mocks/${mockId}/attempts`, session.access_token, { method: 'POST' })
+          const attempt = await start.json().catch(() => null)
+          if (!start.ok) throw new Error(attempt?.error || 'Could not open this mock')
+          router.push(`/attempt/${attempt.data.attempt_id}`)
+          return
+        }
+        if (centrePreflight.status !== 404) throw new Error(centreBody?.error || 'Could not check your programme access')
+      }
 
       const preflight = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/preflight`, session.access_token, { cache: 'no-store' })
       const preflightBody = await preflight.json().catch(() => null)

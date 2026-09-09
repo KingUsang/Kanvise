@@ -23,6 +23,20 @@ export type StudentMockGroups = {
   completed: StudentMockCard[]
 }
 
+export type UnlockedMock = {
+  id: string
+  attempts_granted: number
+  attempts_consumed: number
+  expires_at: string | null
+  current_attempt: { id: string; status: 'in_progress'; started_at: string; deadline_at: string | null } | null
+  offer: {
+    id: string
+    access_mode: 'free_claim' | 'paid'
+    mock: { id: string; title: string; description: string | null; time_limit_minutes: number; calculator_mode: 'none' | 'basic' | 'scientific'; school?: { name: string } | null }
+    version: { id: string; total_questions: number; total_marks: number }
+  } | null
+}
+
 async function api<T>(path: string, accessToken: string): Promise<T> {
   const response = await fetch(`${getApiUrl()}${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store',
@@ -34,6 +48,10 @@ async function api<T>(path: string, accessToken: string): Promise<T> {
 
 export function getStudentMocks(accessToken: string) {
   return api<StudentMockGroups>('/students/me/mocks', accessToken)
+}
+
+export function getUnlockedMocks(accessToken: string) {
+  return api<UnlockedMock[]>('/my-mocks', accessToken)
 }
 
 export function getMockPreflight(mockId: string, accessToken: string) {

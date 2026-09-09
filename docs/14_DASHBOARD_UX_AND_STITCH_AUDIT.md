@@ -39,6 +39,7 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | T: Instructional Materials Library | Tutor | `/dashboard/notes` | Implemented |
 | T: Mock Examination Results Analysis | Tutor | `/dashboard/mocks/[mockId]/results` | Implemented as a mock-scoped results and theory-grading workspace |
 | S3: Student Dashboard | Student | `/dashboard/student` | Implemented with enrolment-scoped Hono data |
+| S3a: Student Learn hub | Student | `/dashboard/student/learn` | Mobile-first entry to classes, assignments and materials |
 | S4: My Classes | Student | `/dashboard/student/classes` | Implemented with enrolment-scoped class sessions |
 | S5: Assignments Management | Student | `/dashboard/student/assignments` | Implemented with private submission upload and feedback |
 | S6: Mocks Management | Student | `/dashboard/student/mocks` | Implemented through preflight, CBT attempt, submission, and released results |
@@ -47,6 +48,8 @@ Stitch is a visual reference, not the authority for permissions, product languag
 | S9: Student Settings | Student | `/dashboard/student/settings` | Implemented with safe profile edits, profile photo upload, and password-reset entry point |
 
 The student dashboard follows Stitch's hierarchy, spacing, colour, desktop sidebar, and mobile navigation direction, but only displays metrics supported by real Kanvise data. Generated countdowns, registration codes, attendance percentages, and scores must not be shown until the corresponding product logic exists.
+
+Student navigation is role- and viewport-aware. Desktop keeps the visible sidebar. Mobile uses a persistent bottom bar instead of hiding primary destinations in a hamburger: programme students see Home, Learn, Mocks and Progress, while standalone mock students see Home and Mocks. Account settings and logout live behind the visible avatar. Guest mock links bypass the dashboard and global navigation completely. During an attempt, the CBT interface owns the screen so global student navigation cannot distract from or overlap the questions.
 
 ### Student S3–S9 completion evidence — 23 July 2026
 

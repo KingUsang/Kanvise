@@ -15,8 +15,40 @@ function Formula({ latex }: { latex: string }) {
     try { return katex.renderToString(latex, { throwOnError: false, displayMode: true, strict: false, trust: false }) }
     catch { return '' }
   }, [latex])
-  return html ? <div className="my-3 overflow-x-auto" dangerouslySetInnerHTML={{ __html: html }} />
-    : <code className="my-3 block overflow-x-auto rounded-lg bg-[#f3f0ed] p-3">{latex}</code>
+  return html ? <div className="my-3 max-w-full overflow-x-auto overscroll-x-contain" dangerouslySetInnerHTML={{ __html: html }} />
+    : <code className="my-3 block max-w-full overflow-x-auto rounded-lg bg-[#f3f0ed] p-3">{latex}</code>
+}
+
+function comparableMath(value: string) {
+  const scriptDigits: Record<string, string> = {
+    '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9',
+    '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9',
+  }
+  return value
+    .replace(/[₀₁₂₃₄₅₆₇₈₉⁰¹²³⁴⁵⁶⁷⁸⁹]/g, digit => scriptDigits[digit])
+    .replace(/\\(?:mathrm|mathbf|text|operatorname)\s*\{([^{}]*)\}/g, '$1')
+    .replace(/\\(?:left|right|,|;|!)/g, '')
+    .replace(/\\times|×/g, '*')
+    .replace(/\\div|÷/g, '/')
+    .replace(/[{}_^\s]/g, '')
+    .replace(/[−–—]/g, '-')
+    .toLowerCase()
+}
+
+export function stripDuplicatedTrailingFormula(plainText: string, blocks: ContentBlock[]) {
+  let result = plainText.trim()
+  for (const block of blocks) {
+    if (block.type !== 'equation' && block.type !== 'chemistry') continue
+    const formula = comparableMath(block.latex)
+    if (!formula) continue
+    for (let index = 0; index < result.length; index += 1) {
+      if (comparableMath(result.slice(index)) === formula) {
+        result = result.slice(0, index).trim().replace(/[:;,]$/, '').trim()
+        break
+      }
+    }
+  }
+  return result
 }
 
 export function shouldRenderPlainText(plainText: string | null | undefined, blocks: ContentBlock[]) {
@@ -26,10 +58,11 @@ export function shouldRenderPlainText(plainText: string | null | undefined, bloc
 }
 
 export function QuestionContent({ plainText, blocks = [] }: { plainText?: string | null; blocks?: ContentBlock[] }) {
-  return <div className="space-y-3 text-[15px] leading-7 text-[#302d36]">
-    {shouldRenderPlainText(plainText, blocks) && <p className="whitespace-pre-wrap">{plainText}</p>}
+  const displayText = plainText ? stripDuplicatedTrailingFormula(plainText, blocks) : plainText
+  return <div className="min-w-0 max-w-full space-y-3 text-[15px] leading-7 text-[#302d36]">
+    {shouldRenderPlainText(displayText, blocks) && <p className="whitespace-pre-wrap break-words">{displayText}</p>}
     {blocks.map((block, index) => {
-      if (block.type === 'text') return <p key={index} className="whitespace-pre-wrap">{block.text}</p>
+      if (block.type === 'text') return <p key={index} className="whitespace-pre-wrap break-words">{block.text}</p>
       if (block.type === 'equation' || block.type === 'chemistry') return <Formula key={index} latex={block.latex} />
       if (block.type === 'image') return block.url
         ? <figure key={index} className="my-4">

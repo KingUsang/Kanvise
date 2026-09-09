@@ -83,16 +83,18 @@ function normalizeQuestions(value: any): ImportedMockQuestion[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((question: any, index) => {
     const questionText = stringValue(question?.question_text);
+    const questionBlocks = scientificBlocks(question);
     const type = question?.question_type === "mcq" ? "mcq" : "theory";
-    if (!questionText) return [];
+    if (!questionText && questionBlocks.length === 0) return [];
     const options = Array.isArray(question?.options)
       ? question.options.flatMap((option: any, optionIndex: number) => {
         const optionText = stringValue(option?.option_text);
-        return optionText ? [{
+        const optionBlocks = scientificBlocks(option);
+        return optionText || optionBlocks.length ? [{
           id: `pdf_${Date.now()}_${index}_${optionIndex}`,
           option_text: optionText,
           is_correct: option?.is_correct === true,
-          content_blocks: scientificBlocks(option),
+          content_blocks: optionBlocks,
         }] : [];
       })
       : [];
@@ -109,7 +111,7 @@ function normalizeQuestions(value: any): ImportedMockQuestion[] {
       subject_name: stringValue(question?.subject_name) || undefined,
       marks: Number.isFinite(Number(question?.marks)) && Number(question.marks) > 0 ? Number(question.marks) : 1,
       options: type === "mcq" ? options : [],
-      content_blocks: scientificBlocks(question),
+      content_blocks: questionBlocks,
       grading_rubric: type === "theory" ? stringValue(question?.grading_rubric) : undefined,
       source_page: Number.isInteger(question?.source_page) ? question.source_page : null,
       review_reasons: [...new Set(reviewReasons)],
@@ -121,7 +123,7 @@ const extractionPrompt = `You are importing an examination document into Kanvise
 
 Extract every question exactly as it appears. The document may have any layout: scanned pages, columns, tables, diagrams, equations, mixed subjects, separate answer keys, or no answer key. Do not assume a fixed template and do not invent missing answers.
 
-Return one question per object. Set subject_name to the document's subject heading for that question (for example Use of English, Physics, Chemistry or Mathematics). Carry the most recent clear subject heading across following pages until another heading begins. Use an empty subject_name and add a review reason when the subject cannot be determined confidently. Use question_type=mcq only when the question has selectable answer options; otherwise use theory. Preserve mathematical and chemical notation in readable text. When a question or option contains a mathematical equation, put its LaTeX in equation_latex; when it contains a chemical formula or reaction, put mhchem/LaTeX in chemistry_latex. Use an empty string for whichever does not apply. If an image, diagram, table, or equation is important but cannot be represented faithfully as text, add a short review_reasons entry. If an answer is missing or uncertain, leave every option is_correct=false and add a review reason. Record the source page when the document makes it possible. Keep mixed subjects together as one mock and label each question with its subject; do not reject mixed-subject documents.`;
+Return one question per object. Set subject_name to the document's subject heading for that question (for example Use of English, Physics, Chemistry or Mathematics). Carry the most recent clear subject heading across following pages until another heading begins. Use an empty subject_name and add a review reason when the subject cannot be determined confidently. Use question_type=mcq only when the question has selectable answer options; otherwise use theory. For question_text and option_text, return only the ordinary-language prose. Do not repeat a mathematical or chemical expression in those text fields when you also return that expression as LaTeX. Put each mathematical expression once in equation_latex and each chemical formula or reaction once in chemistry_latex, using proper subscripts and superscripts (for example 110111_{2} + 10100_{2}). A text field may be empty when its entire content is represented by its LaTeX field. Use an empty string for whichever notation field does not apply. If an image, diagram, table, or equation is important but cannot be represented faithfully, add a short review_reasons entry. If an answer is missing or uncertain, leave every option is_correct=false and add a review reason. Record the source page when the document makes it possible. Keep mixed subjects together as one mock and label each question with its subject; do not reject mixed-subject documents.`;
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 

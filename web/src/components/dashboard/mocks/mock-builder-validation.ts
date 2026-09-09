@@ -2,7 +2,8 @@ export type DraftQuestionForReview = {
   question_type: "mcq" | "theory";
   question_text: string;
   marks: number;
-  options: Array<{ option_text: string; is_correct: boolean }>;
+  content_blocks?: Array<unknown>;
+  options: Array<{ option_text: string; is_correct: boolean; content_blocks?: Array<unknown> }>;
   review_reasons?: string[];
   course_id?: string | null;
 };
@@ -49,10 +50,10 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
 
   input.questions.forEach((question, index) => {
     const label = `Question ${index + 1}`;
-    if (!question.question_text.trim()) errors.push(`${label} needs question text.`);
+    if (!question.question_text.trim() && !question.content_blocks?.length) errors.push(`${label} needs question text.`);
     if (!Number.isFinite(question.marks) || question.marks <= 0) errors.push(`${label} needs positive marks.`);
     if (question.question_type === "mcq") {
-      const options = question.options.filter((option) => option.option_text.trim());
+      const options = question.options.filter((option) => option.option_text.trim() || option.content_blocks?.length);
       if (options.length < 2) errors.push(`${label} needs at least two options.`);
       if (options.filter((option) => option.is_correct).length !== 1) errors.push(`${label} needs exactly one correct answer.`);
     } else if (!question.review_reasons?.length && !question.question_text.trim()) {

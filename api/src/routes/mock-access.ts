@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import { createPaystackReference, isUuid } from '../payments/checkout'
 import type { AppVariables, TenantVariables } from '../types'
+import { loadStudentMockAudience, studentCanAccessCentreMock } from '../lib/student-mock-audience'
 
 export const mockAccessRouter = new Hono<{ Variables: AppVariables }>()
 export const mockOfferAdminRouter = new Hono<{ Variables: TenantVariables }>()
@@ -51,6 +52,16 @@ async function canUseOffer(studentId: string, offer: any) {
   return false
 }
 
+async function hasCentreAccessToOffer(user: { id: string; school_id?: string | null }, offer: any) {
+  if (!user.school_id || offer?.school_id !== user.school_id || !offer?.mock_exam_id) return false
+  const { data: mock, error } = await db.from('mock_exams')
+    .select('id, school_id, audience_scope, course_id, programme_id, sections:mock_sections(course_id)')
+    .eq('id', offer.mock_exam_id).eq('school_id', user.school_id).maybeSingle()
+  if (error) throw error
+  if (!mock || mock.audience_scope === 'direct_link') return false
+  return studentCanAccessCentreMock(mock, await loadStudentMockAudience(user))
+}
+
 mockAccessRouter.get('/mock/:slug', async c => {
   try {
     const offer = await loadOffer(c.req.param('slug')!, true)
@@ -65,6 +76,7 @@ mockAccessRouter.use('/my-mocks', jwtVerificationMiddleware, profileResolutionMi
 mockAccessRouter.post('/mock/:offerId/claim', requireRole('student'), async c => {
   const user = c.get('user'); const offer = await loadOffer(c.req.param('offerId')!)
   if (!offer || offer.access_mode !== 'free_claim' || !(await canUseOffer(user.id, offer))) return c.json({ error: 'This mock is not available to you' }, 409)
+  if (await hasCentreAccessToOffer(user, offer)) return c.json({ error: 'This mock is already included in your programme', code: 'CENTRE_ACCESS_AVAILABLE', mock_id: offer.mock_exam_id }, 409)
   const { data, error } = await db.rpc('claim_free_mock_offer', { p_offer_id: offer.id, p_student_id: user.id, p_now: new Date().toISOString() })
   if (error) return c.json({ error: 'Could not claim this mock' }, 409)
   const result = data?.[0] || data
@@ -79,6 +91,7 @@ mockAccessRouter.post('/mock/:offerId/checkout', requireRole('student'), async c
   if (profileError || !studentEmail) return c.json({ error: 'Your account needs an email address before checkout' }, 400)
   const offer = await loadOffer(c.req.param('offerId')!)
   if (!offer || offer.access_mode !== 'paid' || !(await canUseOffer(user.id, offer))) return c.json({ error: 'This paid mock is not available to you' }, 409)
+  if (await hasCentreAccessToOffer(user, offer)) return c.json({ error: 'This mock is already included in your programme', code: 'CENTRE_ACCESS_AVAILABLE', mock_id: offer.mock_exam_id }, 409)
   const { data: entitlement } = await db.from('mock_entitlements').select('id').eq('student_id', user.id).eq('offer_id', offer.id).is('revoked_at', null).maybeSingle()
   if (entitlement) return c.json({ error: 'This mock is already in your library' }, 409)
   const { data: existing } = await db.from('mock_orders').select('*').eq('student_id', user.id).eq('idempotency_key', idempotencyKey).maybeSingle()
@@ -106,6 +119,7 @@ mockAccessRouter.post('/mock/:offerId/checkout', requireRole('student'), async c
 mockAccessRouter.get('/mock/:offerId/preflight', requireRole('student'), async c => {
   const user = c.get('user'); const offer = await loadOffer(c.req.param('offerId')!)
   if (!offer || !(await canUseOffer(user.id, offer))) return c.json({ error: 'Mock not found' }, 404)
+  if (await hasCentreAccessToOffer(user, offer)) return c.json({ error: 'Use your programme access for this mock', code: 'CENTRE_ACCESS_AVAILABLE', mock_id: offer.mock_exam_id }, 409)
   const { data: entitlement } = await db.from('mock_entitlements').select('id, attempts_granted, attempts_consumed, expires_at').eq('student_id', user.id).eq('offer_id', offer.id).is('revoked_at', null).maybeSingle()
   if (!entitlement || (entitlement.expires_at && new Date(entitlement.expires_at) <= new Date())) return c.json({ error: 'Get access to this mock first', code: 'MOCK_ENTITLEMENT_NOT_FOUND' }, 403)
   const { data: attempts } = await db.from('mock_attempts').select('id, attempt_number, status, deadline_at').eq('student_id', user.id).eq('entitlement_id', entitlement.id)
@@ -113,7 +127,12 @@ mockAccessRouter.get('/mock/:offerId/preflight', requireRole('student'), async c
 })
 
 mockAccessRouter.post('/mock/:offerId/attempts', requireRole('student'), async c => {
-  const user = c.get('user'); const { data, error } = await db.rpc('start_or_resume_mock_offer_attempt', { p_offer_id: c.req.param('offerId')!, p_student_id: user.id, p_now: new Date().toISOString() })
+  const user = c.get('user'); const offer = await loadOffer(c.req.param('offerId')!)
+  if (!offer || !(await canUseOffer(user.id, offer))) return c.json({ error: 'Mock not found' }, 404)
+  const centreAccess = await hasCentreAccessToOffer(user, offer)
+  const { data, error } = centreAccess
+    ? await db.rpc('start_or_resume_versioned_mock_attempt', { p_school_id: user.school_id, p_mock_exam_id: offer.mock_exam_id, p_student_id: user.id, p_now: new Date().toISOString() })
+    : await db.rpc('start_or_resume_mock_offer_attempt', { p_offer_id: offer.id, p_student_id: user.id, p_now: new Date().toISOString() })
   if (error) return c.json({ error: String(error.message || 'Could not start the mock'), code: 'ATTEMPT_START_FAILED' }, 409)
   return c.json({ data: data?.[0] || data, server_now: new Date().toISOString() }, 201)
 })
@@ -122,7 +141,13 @@ mockAccessRouter.get('/my-mocks', requireRole('student'), async c => {
   const user = c.get('user')
   const { data, error } = await db.from('mock_entitlements').select(`id, attempts_granted, attempts_consumed, granted_at, expires_at, offer:mock_access_offers(${publicOfferFields})`).eq('student_id', user.id).is('revoked_at', null).order('granted_at', { ascending: false })
   if (error) return c.json({ error: 'Could not load your mocks' }, 500)
-  return c.json({ data: data || [] })
+  const entitlementIds = (data || []).map((item: any) => item.id)
+  const { data: attempts, error: attemptsError } = entitlementIds.length
+    ? await db.from('mock_attempts').select('id, entitlement_id, status, started_at, deadline_at').eq('student_id', user.id).in('entitlement_id', entitlementIds).eq('status', 'in_progress')
+    : { data: [], error: null }
+  if (attemptsError) return c.json({ error: 'Could not load your mock attempts' }, 500)
+  const currentAttemptByEntitlement = new Map((attempts || []).map((attempt: any) => [attempt.entitlement_id, attempt]))
+  return c.json({ data: (data || []).map((item: any) => ({ ...item, current_attempt: currentAttemptByEntitlement.get(item.id) || null })) })
 })
 
 mockAccessRouter.get('/mock/orders/:reference', requireRole('student'), async c => {

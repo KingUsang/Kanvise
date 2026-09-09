@@ -93,7 +93,23 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   const trustedClaims = resolveTrustedProfileClaims(jwtPayload)
 
   if (trustedClaims) {
-    c.set('user', trustedClaims)
+    let resolvedClaims = trustedClaims
+    // A first centre enrolment can commit between access-token issuance and
+    // the next refresh. Consult the canonical profile only for this transition
+    // state so a stale null claim cannot serve the standalone-student view.
+    if (trustedClaims.role === 'student' && !trustedClaims.school_id) {
+      const { data: currentProfile } = await supabase
+        .from('user_profiles')
+        .select('school_id, is_active')
+        .eq('id', trustedClaims.id)
+        .eq('supabase_auth_id', supabaseAuthId)
+        .maybeSingle()
+      if (currentProfile?.is_active === false) {
+        return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
+      }
+      if (currentProfile?.school_id) resolvedClaims = { ...trustedClaims, school_id: currentProfile.school_id }
+    }
+    c.set('user', resolvedClaims)
     return await next()
   }
   

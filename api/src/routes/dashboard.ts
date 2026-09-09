@@ -114,17 +114,28 @@ dashboardRouter.get('/student', async (c) => {
 
   const schoolId = user.school_id
   if (!schoolId) {
-    const [{ data: profile, error: profileError }, { count: entitlementCount, error: entitlementError }, { count: activeAttempts, error: attemptError }] = await Promise.all([
+    const [{ data: profile, error: profileError }, { count: entitlementCount, error: entitlementError }, { count: activeAttempts, error: attemptError }, { data: completedAttempts, count: completedAttemptCount, error: completedAttemptError }] = await Promise.all([
       supabase.from('user_profiles').select('first_name, last_name').eq('id', user.id).maybeSingle(),
       (supabase as any).from('mock_entitlements').select('id', { count: 'exact', head: true }).eq('student_id', user.id).is('revoked_at', null),
       supabase.from('mock_attempts').select('id', { count: 'exact', head: true }).eq('student_id', user.id).eq('access_source', 'entitlement').eq('status', 'in_progress'),
+      supabase.from('mock_attempts').select('id, total_score, total_marks, submitted_at, mock_exam:mock_exams(title)', { count: 'exact' })
+        .eq('student_id', user.id).eq('access_source', 'entitlement').in('status', ['submitted', 'timed_out', 'fully_graded'])
+        .order('submitted_at', { ascending: false }).limit(1),
     ])
-    if (profileError || entitlementError || attemptError) return c.json({ error: 'Failed to load student dashboard', code: 'DASHBOARD_LOAD_FAILED' }, 500)
+    if (profileError || entitlementError || attemptError || completedAttemptError) return c.json({ error: 'Failed to load student dashboard', code: 'DASHBOARD_LOAD_FAILED' }, 500)
+    const latestAttempt: any = completedAttempts?.[0] || null
+    const latestPercentage = latestAttempt && Number(latestAttempt.total_marks) > 0 && latestAttempt.total_score !== null
+      ? Math.round((Number(latestAttempt.total_score) / Number(latestAttempt.total_marks)) * 100) : null
     return c.json({ data: {
       student: { first_name: profile?.first_name || '', last_name: profile?.last_name || '' },
       school: null, course_count: 0, next_class: null, upcoming_classes: [], assignments_due: [], recent_updates: [],
       capabilities: { hasCentreLearning: false, hasMarketplaceAccess: (entitlementCount || 0) > 0 },
-      standalone_mocks: { mocks_owned: entitlementCount || 0, attempts_in_progress: activeAttempts || 0 },
+      standalone_mocks: {
+        mocks_owned: entitlementCount || 0,
+        attempts_in_progress: activeAttempts || 0,
+        attempts_completed: completedAttemptCount || 0,
+        latest_result: latestAttempt ? { id: latestAttempt.id, title: latestAttempt.mock_exam?.title || 'Mock', percentage: latestPercentage } : null,
+      },
     } })
   }
 

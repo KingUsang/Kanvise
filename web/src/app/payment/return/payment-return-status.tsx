@@ -133,8 +133,8 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
             {startingMock ? 'Starting mock…' : 'Start mock'}
           </button>
         ) : (
-          <Link href={purchaseKind === 'mock' ? '/my-mocks' : '/dashboard/student'} className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90">
-            {purchaseKind === 'mock' ? 'Go to my mocks' : 'Go to my learning'}
+          <Link href={purchaseKind === 'mock' ? '/dashboard/student/mocks?view=unlocked' : '/dashboard/student'} className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90">
+            {purchaseKind === 'mock' ? 'Go to mocks' : 'Go to my learning'}
           </Link>
         )}
       </section>

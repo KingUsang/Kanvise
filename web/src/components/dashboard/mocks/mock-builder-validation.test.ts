@@ -28,6 +28,22 @@ describe("buildPrePublishReview", () => {
     expect(review.warnings).toContain("Question 1: Check the diagram");
   });
 
+  it("accepts formula-only options produced by document import", () => {
+    const review = buildPrePublishReview({
+      ...base,
+      questions: [{
+        ...base.questions[0],
+        question_text: "Find the value of",
+        content_blocks: [{ type: "equation", latex: String.raw`110111_{2} + 10100_{2}` }],
+        options: [
+          { option_text: "", content_blocks: [{ type: "equation", latex: String.raw`1001011_{2}` }], is_correct: true },
+          { option_text: "", content_blocks: [{ type: "equation", latex: String.raw`1000011_{2}` }], is_correct: false },
+        ],
+      }],
+    });
+    expect(review.errors).toEqual([]);
+  });
+
   it("requires every authored multi-subject question to have a subject section", () => {
     const review = buildPrePublishReview({
       ...base,

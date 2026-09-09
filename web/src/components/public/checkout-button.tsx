@@ -84,7 +84,10 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       }
 
       if (data.data?.free) {
-        router.push("/dashboard/student");
+        // The enrolment adopts a standalone student into this centre. Refresh
+        // Auth metadata before the dashboard decides which student home to show.
+        await supabase.auth.refreshSession().catch(() => undefined);
+        window.location.assign("/dashboard/student");
       } else if (data.data && data.data.payment_url) {
         // Redirect to Paystack
         window.location.href = data.data.payment_url;
