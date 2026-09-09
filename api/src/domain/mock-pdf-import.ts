@@ -127,13 +127,38 @@ Return one question per object. Set subject_name to the document's subject headi
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 
+const TRANSIENT_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+function retryDelayMs(response: Response, attempt: number) {
+  const retryAfterSeconds = Number(response.headers.get("retry-after"));
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return Math.min(retryAfterSeconds * 1_000, 5_000);
+  }
+  return [750, 2_000][attempt] ?? 2_000;
+}
+
+async function requestGemini(url: string, init: RequestInit) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch(url, init);
+    const body: any = await response.json().catch(() => null);
+    if (response.ok) return body;
+
+    const message = stringValue(body?.error?.message) || "Gemini could not process this PDF";
+    if (!TRANSIENT_GEMINI_STATUSES.has(response.status) || attempt === 2) throw new Error(message);
+    const delayMs = retryDelayMs(response, attempt);
+    console.warn("[mocks] Retrying transient Gemini import failure", { status: response.status, attempt: attempt + 1, delay_ms: delayMs });
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error("Gemini could not process this PDF");
+}
+
 async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null, initialWarnings: string[] = []): Promise<MockPdfImportResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("AI document import is not configured yet. Add GEMINI_API_KEY to the API environment.");
 
   const model = process.env.GEMINI_MOCK_IMPORT_MODEL || "gemini-2.5-flash";
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+  const body = await requestGemini(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -145,11 +170,6 @@ async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null,
       },
     }),
   });
-  const body: any = await response.json().catch(() => null);
-  if (!response.ok) {
-    const message = stringValue(body?.error?.message) || "Gemini could not process this PDF";
-    throw new Error(message);
-  }
   const rawText = body?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text || "").join("") || "";
   let parsed: any;
   try {

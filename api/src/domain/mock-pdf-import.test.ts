@@ -46,8 +46,21 @@ describe("Gemini mock PDF import", () => {
   });
 
   it("surfaces provider errors", async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ error: { message: "quota exceeded" } }), { status: 429 }));
-    await expect(importQuestionsFromPdf(new Uint8Array([1]))).rejects.toThrow("quota exceeded");
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ error: { message: "bad request" } }), { status: 400 }));
+    await expect(importQuestionsFromPdf(new Uint8Array([1]))).rejects.toThrow("bad request");
+  });
+
+  it("retries temporary provider capacity errors", async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: "high demand" } }), { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ page_count: 2, warnings: [], questions: [] }) }] } }] }), { status: 200 }));
+    const importPromise = importQuestionsFromPdf(new Uint8Array([1]));
+    await vi.advanceTimersByTimeAsync(750);
+    const result = await importPromise;
+    expect(result.page_count).toBe(2);
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 
   it("uses Gemini's visual PDF mode only when no selectable text is available", async () => {
