@@ -10,8 +10,12 @@ describe('getEmailConfig', () => {
     } as NodeJS.ProcessEnv)).toEqual({
       resendApiKey: 're_test',
       brevoApiKey: undefined,
+      mailjetApiKey: undefined,
+      mailjetSecretKey: undefined,
       providerOrder: ['resend'],
       providerTimeoutMs: 3500,
+      providerDailyLimits: { resend: 100, brevo: 300, mailjet: 200 },
+      providerUsageThresholdPercent: 95,
       from: 'Kanvise <noreply@kanvise.com>',
       replyTo: undefined,
       logoUrl: 'https://kanvise.com/kanvise_logo_small_blue.png',
@@ -55,6 +59,38 @@ describe('getEmailConfig', () => {
     expect(() => getEmailConfig({
       EMAIL_FROM: 'Kanvise <noreply@mail.kanvise.com>',
       FRONTEND_URL: 'https://kanvise.com',
-    } as NodeJS.ProcessEnv)).toThrow('RESEND_API_KEY or BREVO_API_KEY is required')
+    } as NodeJS.ProcessEnv)).toThrow('At least one email provider must be configured')
+  })
+
+  it('accepts Mailjet only when both credentials are configured', () => {
+    expect(getEmailConfig({
+      MAILJET_API_KEY: 'mailjet-public',
+      MAILJET_SECRET_KEY: 'mailjet-private',
+      EMAIL_FROM: 'Kanvise <noreply@mail.kanvise.com>',
+      FRONTEND_URL: 'https://kanvise.com',
+    } as NodeJS.ProcessEnv)).toMatchObject({
+      mailjetApiKey: 'mailjet-public',
+      mailjetSecretKey: 'mailjet-private',
+      providerOrder: ['mailjet'],
+    })
+
+    expect(() => getEmailConfig({
+      MAILJET_API_KEY: 'mailjet-public',
+      EMAIL_FROM: 'Kanvise <noreply@mail.kanvise.com>',
+      FRONTEND_URL: 'https://kanvise.com',
+    } as NodeJS.ProcessEnv)).toThrow('MAILJET_API_KEY and MAILJET_SECRET_KEY must be configured together')
+  })
+
+  it('allows daily limits and the switching threshold to be configured', () => {
+    expect(getEmailConfig({
+      RESEND_API_KEY: 're_test',
+      EMAIL_FROM: 'Kanvise <noreply@mail.kanvise.com>',
+      FRONTEND_URL: 'https://kanvise.com',
+      RESEND_DAILY_LIMIT: '500',
+      EMAIL_PROVIDER_USAGE_THRESHOLD_PERCENT: '95',
+    } as NodeJS.ProcessEnv)).toMatchObject({
+      providerDailyLimits: { resend: 500, brevo: 300, mailjet: 200 },
+      providerUsageThresholdPercent: 95,
+    })
   })
 })
