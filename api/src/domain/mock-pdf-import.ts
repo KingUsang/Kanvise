@@ -236,7 +236,8 @@ export async function importQuestionsFromPdf(buffer: Uint8Array): Promise<MockPd
     ? `Pages ${imagePages.join(", ")} contain embedded images or diagrams. Their question text was imported, but review those questions before publishing because figure crops are not attached yet.`
     : "";
   return callGemini([
-    { text: `The following is selectable text extracted locally from a PDF. Page markers are authoritative. Do not infer visual content that is not present in this text.\n\n${sourceText}` },
+    { inline_data: { mime_type: "application/pdf", data: Buffer.from(buffer).toString("base64") } },
+    { text: `Use the attached PDF as the visual reference for layout, mathematical notation, tables, and diagrams. The following text was extracted locally and separates the question paper from its answer key; its page markers and section boundary are authoritative. Do not copy answer-key workings into student-visible fields.\n\n${sourceText}` },
     { text: extractionPrompt },
   ], extracted.page_count, visualWarning ? [visualWarning] : []);
 }

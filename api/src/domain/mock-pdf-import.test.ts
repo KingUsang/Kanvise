@@ -42,6 +42,7 @@ describe("Gemini mock PDF import", () => {
     expect(result.questions[1].question_type).toBe("theory");
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining("gemini-2.5-flash"), expect.objectContaining({ method: "POST" }));
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("Source page 1");
+    expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("application/pdf");
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("must reproduce that key exactly");
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("ANSWER-KEY REFERENCE");
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0][1])).toContain("metadata only");
@@ -65,7 +66,7 @@ describe("Gemini mock PDF import", () => {
     vi.useRealTimers();
   });
 
-  it("uses Gemini's visual PDF mode only when no selectable text is available", async () => {
+  it("falls back to visual-only PDF mode when no selectable text is available", async () => {
     pdfText.extractPdfText.mockResolvedValue({ page_count: 1, has_readable_text: false, pages: [{ page_number: 1, text: "", has_embedded_image: false }] });
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
       candidates: [{ content: { parts: [{ text: JSON.stringify({ page_count: 1, warnings: [], questions: [{
