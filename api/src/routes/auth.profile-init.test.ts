@@ -102,17 +102,34 @@ describe('POST /auth/profile/activate', () => {
   })
 
   it('activates the roster profile without sending a duplicate welcome email', async () => {
+    const update = vi.fn(() => builder)
     const builder: any = {
-      update: vi.fn(() => builder),
+      update,
       eq: vi.fn(() => builder),
       then: (resolve: (value: unknown) => unknown) => resolve({ error: null }),
     }
     mocks.from.mockReturnValue(builder)
 
-    const response = await authRouter.request('/profile/activate', { method: 'POST' })
+    const response = await authRouter.request('/profile/activate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ first_name: ' Ada ', last_name: ' Okafor ' }),
+    })
 
     expect(response.status).toBe(200)
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ first_name: 'Ada', last_name: 'Okafor', onboarding_status: 'active' }))
     expect(mocks.ensureWelcomeEmail).not.toHaveBeenCalled()
     await expect(response.json()).resolves.toEqual({ message: 'Student profile activated' })
+  })
+
+  it('does not activate an unnamed student profile', async () => {
+    const response = await authRouter.request('/profile/activate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ first_name: '', last_name: '' }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(mocks.from).not.toHaveBeenCalled()
   })
 })

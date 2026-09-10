@@ -16,7 +16,7 @@ export default function AcceptInvitationPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [invitation, setInvitation] = useState({ firstName: "", schoolName: "", programmeName: "" });
+  const [invitation, setInvitation] = useState({ firstName: "", lastName: "", schoolName: "", programmeName: "" });
 
   useEffect(() => {
     let mounted = true;
@@ -28,6 +28,7 @@ export default function AcceptInvitationPage() {
         const metadata = user.user_metadata || {};
         setInvitation({
           firstName: String(metadata.first_name || ""),
+          lastName: String(metadata.last_name || ""),
           schoolName: String(metadata.school_name || ""),
           programmeName: String(metadata.programme_name || ""),
         });
@@ -39,7 +40,7 @@ export default function AcceptInvitationPage() {
   }, [supabase]);
 
   const checks = passwordChecks(password);
-  const valid = meetsPasswordPolicy(password) && password === confirmation;
+  const valid = Boolean(invitation.firstName.trim() && invitation.lastName.trim()) && meetsPasswordPolicy(password) && password === confirmation;
 
   async function acceptInvitation(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,7 +48,12 @@ export default function AcceptInvitationPage() {
     setSaving(true);
     setError(null);
     try {
-      const { error: passwordError } = await supabase.auth.updateUser({ password });
+      const firstName = invitation.firstName.trim();
+      const lastName = invitation.lastName.trim();
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password,
+        data: { first_name: firstName, last_name: lastName },
+      });
       if (passwordError) throw passwordError;
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Your account session could not be started");
@@ -55,7 +61,8 @@ export default function AcceptInvitationPage() {
       if (!apiUrl) throw new Error("Account activation is temporarily unavailable");
       const response = await fetch(`${apiUrl}/auth/profile/activate`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ first_name: firstName, last_name: lastName }),
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Your account could not be activated");
@@ -92,12 +99,15 @@ export default function AcceptInvitationPage() {
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Student invitation</p>
               <h1 className="mt-2 text-3xl font-bold text-[#2e2877]">Accept your invitation</h1>
               <p className="mt-3 text-sm leading-6 text-[#6a6874]">
-                {invitation.firstName ? `Welcome, ${invitation.firstName}. ` : ""}
-                Create your password{invitation.programmeName ? ` to access ${invitation.programmeName}` : ""}{invitation.schoolName ? ` at ${invitation.schoolName}` : ""}.
+                Create your profile and password{invitation.programmeName ? ` to access ${invitation.programmeName}` : ""}{invitation.schoolName ? ` at ${invitation.schoolName}` : ""}.
               </p>
             </header>
             {error && <div className="mb-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
             <form onSubmit={acceptInvitation} className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextField id="first-name" label="First name" value={invitation.firstName} autoComplete="given-name" onChange={firstName => setInvitation(current => ({ ...current, firstName }))} />
+                <TextField id="last-name" label="Last name" value={invitation.lastName} autoComplete="family-name" onChange={lastName => setInvitation(current => ({ ...current, lastName }))} />
+              </div>
               <PasswordField id="password" label="Create password" value={password} onChange={setPassword} shown={showPassword} onToggle={() => setShowPassword(value => !value)} />
               <div className="rounded-lg border border-[#e4e2e1] bg-[#f9f7f4] p-4 text-sm text-[#6a6874]">
                 <p className={checks.hasMinLength ? "text-green-700" : ""}>• At least 8 characters</p>
@@ -116,6 +126,10 @@ export default function AcceptInvitationPage() {
       </section>
     </main>
   );
+}
+
+function TextField({ id, label, value, autoComplete, onChange }: { id: string; label: string; value: string; autoComplete: string; onChange: (value: string) => void }) {
+  return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">{label}</label><input id={id} required autoComplete={autoComplete} value={value} onChange={event => onChange(event.target.value)} className="w-full rounded-lg border border-[#c8c5d2] px-4 py-3.5 outline-none focus:border-[#2e2877]" /></div>;
 }
 
 function PasswordField({ id, label, value, onChange, shown, onToggle }: { id: string; label: string; value: string; onChange: (value: string) => void; shown: boolean; onToggle: () => void }) {
