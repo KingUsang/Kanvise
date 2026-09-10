@@ -9,11 +9,13 @@ import { QuestionContent, type ContentBlock } from "@/components/questions/quest
 import { buildPrePublishReview, type PrePublishReview } from "./mock-builder-validation";
 import { MockDraftPreview, type DraftPreviewQuestion } from "./mock-draft-preview";
 import { MockImportProgressCard, newMockImportProgress, type MockImportProgress } from "./mock-import-progress";
+import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 
 type Course = {
   id: string;
   name: string;
   programme_id?: string | null;
+  programme?: { name: string } | Array<{ name: string }> | null;
   is_published?: boolean;
 };
 type CentreAudienceScope = "course" | "combination" | "direct_link" | "programme" | "school";
@@ -403,8 +405,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const selectedSubjectSections = subjectSections;
   const selectedSubjectCourses = selectedSubjectSections.map((section) => ({ id: section.id, name: section.name, course_id: section.courseId }));
-  const availableSubjectCourses = courses.filter((course, index) => !subjectSections.some((section) => section.courseId === course.id)
-    && courses.findIndex((candidate) => candidate.name.trim().toLowerCase() === course.name.trim().toLowerCase()) === index);
+  const availableSubjectCourses = unusedMockCourses(courses, subjectSections.map((section) => section.courseId));
   const resolveSubjectSection = (subjectName: string | undefined) => {
     const normalized = (subjectName || "").toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "");
     if (!normalized) return activeSubjectSection;
@@ -914,11 +915,13 @@ export function MockBuilderClient({ token }: { token: string }) {
     ? selectedBankQuestions.filter((question) => question.sectionId === resolvedActiveSubjectCourseId)
     : selectedBankQuestions;
   const unassignedQuestionCount = questions.filter((question) => !question.section_id).length;
+  const centreAccessEnabled = accessMode !== "direct";
+  const shareLinkEnabled = accessMode !== "centre";
   const workflowSteps: Array<{ id: BuilderStep; label: string; icon: string }> = [
-    { id: "setup", label: "Setup", icon: "edit_note" },
+    { id: "setup", label: "Basics", icon: "edit_note" },
     ...(isMultiSubject ? [{ id: "subjects" as const, label: "Subjects", icon: "library_books" }] : []),
     { id: "questions", label: "Questions", icon: "quiz" },
-    { id: "settings", label: "Delivery & settings", icon: "tune" },
+    { id: "settings", label: "Share & publish", icon: "tune" },
     { id: "review", label: "Review", icon: "fact_check" },
   ];
   const currentStepIndex = Math.max(0, workflowSteps.findIndex((step) => step.id === builderStep));
@@ -1404,28 +1407,15 @@ export function MockBuilderClient({ token }: { token: string }) {
                 />
               </div>
               
-              <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Description / Instructions</label>
-                <textarea 
-                  value={description}
-                  disabled={isReadOnly}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[14px] text-[#474551] outline-none transition-all min-h-[100px] resize-y disabled:bg-[#f5f3f2]" 
-                />
-              </div>
+              <details className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8]">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Add instructions <span className="font-normal text-[#787582]">(optional)</span></summary>
+                <div className="border-t border-[#e4e2e1] p-4">
+                  <label className="sr-only" htmlFor="mock-instructions">Instructions for students</label>
+                  <textarea id="mock-instructions" value={description} disabled={isReadOnly} onChange={(e) => setDescription(e.target.value)} placeholder="What should students know before they begin?" className="min-h-[100px] w-full resize-y rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] text-[#474551] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]" />
+                </div>
+              </details>
 
-              <div className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4">
-                  <p className="text-[13px] font-semibold text-[#1b1c1c]">Who can take this {isMultiSubject ? "subject combination" : "mock"}?</p>
-                  <p className="mt-1 text-xs leading-5 text-[#787582]">{isMultiSubject ? "Centre access is limited to students taking every subject you add. A direct link works for anyone you share it with." : "Choose a centre subject for enrolled students, a shareable link for anyone, or both."}</p>
-                  <div className="mt-3 space-y-2">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "centre"} disabled={isReadOnly} onChange={() => changeAccessMode("centre")} className="text-[#2e2877]" />{isMultiSubject ? "Students taking every selected subject" : "Students taking this subject in my centre"}</label>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "direct"} disabled={isReadOnly} onChange={() => changeAccessMode("direct")} className="text-[#2e2877]" />Anyone with the link</label>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="radio" checked={accessMode === "both"} disabled={isReadOnly} onChange={() => changeAccessMode("both")} className="text-[#2e2877]" />Both centre students and anyone with the link</label>
-                  </div>
-                  {(accessMode === "direct" || accessMode === "both") && <div className="mt-4 rounded-lg border border-[#d9d3ef] bg-white p-3"><p className="text-sm font-semibold text-[#1b1c1c]">Link access</p><div className="mt-3 flex gap-4"><label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "free_claim"} onChange={() => setLinkAccessMode("free_claim")} />Free</label><label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "paid"} onChange={() => setLinkAccessMode("paid")} />Paid</label></div><div className="mt-3 grid gap-3 sm:grid-cols-2">{linkAccessMode === "paid" && <label className="text-xs font-semibold text-[#474551]">Price (₦)<input type="number" min="1" value={linkPrice} onChange={(event) => setLinkPrice(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm" placeholder="e.g. 1500" /></label>}<label className="text-xs font-semibold text-[#474551]">Link address<input value={linkSlug} onChange={(event) => { setLinkSlugEdited(true); setLinkSlug(slugify(event.target.value)); }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm" /><span className="mt-1 block font-normal text-[#787582]">Generated for you; edit it if you want.</span></label></div></div>}
-              </div>
-
-              {deliveryMode === "fixed" && accessMode !== "direct" && <div>
+              {deliveryMode === "fixed" && <div>
                 <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Subject</label>
                 <select 
                   value={courseId}
@@ -1439,9 +1429,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                     backgroundSize: '1.5em 1.5em',
                   }}
                 >
-                  <option value="">Select a subject</option>
+                  <option value="">Use a custom subject</option>
                   {courses.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{mockCourseLabel(c)}</option>
                   ))}
                 </select>
                 {courses.length === 0 && (
@@ -1449,12 +1439,53 @@ export function MockBuilderClient({ token }: { token: string }) {
                 )}
               </div>}
 
-              {deliveryMode === "fixed" && accessMode === "direct" && <div><label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Subject</label><input value={singleSubjectName} onChange={(event) => setSingleSubjectName(event.target.value)} placeholder="e.g. Mathematics" className="w-full rounded border border-[#c8c5d2] px-3.5 py-2.5 text-[15px]" /></div>}
+              {deliveryMode === "fixed" && !courseId && <div><label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Custom subject name</label><input value={singleSubjectName} onChange={(event) => setSingleSubjectName(event.target.value)} placeholder="e.g. Mathematics" className="w-full rounded border border-[#c8c5d2] px-3.5 py-2.5 text-[15px]" /></div>}
 
               {deliveryMode === "subject_combination" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm leading-6 text-[#474551]"><strong className="block text-[#2e2877]">Build the exact combination</strong>Next, add only the subjects in this exam. Each becomes its own tab and keeps its questions while you switch between tabs.</div>}
               </>}
 
               {builderStep === "settings" && <>
+
+              <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
+                <h4 className="text-sm font-semibold text-[#1b1c1c]">Who can take this mock?</h4>
+                <p className="mt-1 text-xs leading-5 text-[#716c76]">Choose one or both. This does not change the subject or move questions.</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${centreAccessEnabled ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}>
+                    <input
+                      type="checkbox"
+                      checked={centreAccessEnabled}
+                      disabled={isReadOnly || (centreAccessEnabled && !shareLinkEnabled)}
+                      onChange={(event) => changeAccessMode(event.target.checked ? (shareLinkEnabled ? "both" : "centre") : "direct")}
+                      className="mt-0.5 rounded text-[#2e2877] focus:ring-[#2e2877]"
+                    />
+                    <span><strong className="block text-sm text-[#1b1c1c]">My centre students</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">{isMultiSubject ? "Students enrolled in every matched subject." : "Students enrolled in the selected centre subject."}</span></span>
+                  </label>
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${shareLinkEnabled ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}>
+                    <input
+                      type="checkbox"
+                      checked={shareLinkEnabled}
+                      disabled={isReadOnly || (shareLinkEnabled && !centreAccessEnabled)}
+                      onChange={(event) => changeAccessMode(event.target.checked ? (centreAccessEnabled ? "both" : "direct") : "centre")}
+                      className="mt-0.5 rounded text-[#994704] focus:ring-[#994704]"
+                    />
+                    <span><strong className="block text-sm text-[#1b1c1c]">Anyone with the link</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Share outside your centre, free or paid.</span></span>
+                  </label>
+                </div>
+
+                {shareLinkEnabled && (
+                  <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
+                    <p className="text-sm font-semibold text-[#1b1c1c]">Share link</p>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                      <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "free_claim"} disabled={isReadOnly} onChange={() => setLinkAccessMode("free_claim")} />Free</label>
+                      <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "paid"} disabled={isReadOnly} onChange={() => setLinkAccessMode("paid")} />Paid</label>
+                    </div>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      {linkAccessMode === "paid" && <label className="text-xs font-semibold text-[#474551]">Price (₦)<input type="number" min="1" value={linkPrice} disabled={isReadOnly} onChange={(event) => setLinkPrice(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" placeholder="e.g. 1500" /></label>}
+                      <label className="min-w-0 text-xs font-semibold text-[#474551]">Link address<input value={linkSlug} disabled={isReadOnly} onChange={(event) => { setLinkSlugEdited(true); setLinkSlug(slugify(event.target.value)); }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" /><span className="mt-1 block font-normal leading-5 text-[#787582]">Generated from the title. Edit only if needed.</span></label>
+                    </div>
+                  </div>
+                )}
+              </section>
 
               <div className="bg-[#fbf9f8] p-4 rounded-lg border border-[#e4e2e1]">
                 <label className="block text-[13px] text-[#1b1c1c] mb-3 font-semibold">When students should see it</label>
