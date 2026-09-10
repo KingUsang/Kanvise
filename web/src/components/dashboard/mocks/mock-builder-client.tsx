@@ -137,6 +137,8 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [documentImportSummary, setDocumentImportSummary] = useState<{ pageCount: number | null; warnings: string[]; questionCount: number } | null>(null);
   const [importProgress, setImportProgress] = useState<MockImportProgress | null>(null);
+  const [builderActionMessage, setBuilderActionMessage] = useState("");
+  const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
   const importedQuestionsRef = useRef<HTMLDivElement>(null);
   const importGenerationRef = useRef(0);
 
@@ -150,6 +152,16 @@ export function MockBuilderClient({ token }: { token: string }) {
   const showImportedQuestions = () => {
     window.requestAnimationFrame(() => importedQuestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
+
+  useEffect(() => {
+    if (!lastAddedQuestionId) return;
+    window.requestAnimationFrame(() => {
+      const question = document.getElementById(`mock-question-${lastAddedQuestionId}`);
+      question?.scrollIntoView({ behavior: "smooth", block: "center" });
+      question?.querySelector<HTMLTextAreaElement>("textarea[data-question-text]")?.focus({ preventScroll: true });
+      setLastAddedQuestionId(null);
+    });
+  }, [lastAddedQuestionId, questions]);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -420,10 +432,11 @@ export function MockBuilderClient({ token }: { token: string }) {
   const activeSubjectSection = selectedSubjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) || null;
 
   const handleAddMCQ = () => {
-    setQuestions([
-      ...questions,
+    const id = `q${Date.now()}`;
+    setQuestions((current) => [
+      ...current,
       {
-        id: `q${Date.now()}`,
+        id,
         question_type: "mcq",
         question_text: "",
         marks: 2,
@@ -436,13 +449,16 @@ export function MockBuilderClient({ token }: { token: string }) {
         ]
       }
     ]);
+    setBuilderActionMessage("Multiple-choice question added and ready to edit.");
+    setLastAddedQuestionId(id);
   };
 
   const handleAddTheory = () => {
-    setQuestions([
-      ...questions,
+    const id = `q${Date.now()}`;
+    setQuestions((current) => [
+      ...current,
       {
-        id: `q${Date.now()}`,
+        id,
         question_type: "theory",
         question_text: "",
         marks: 10,
@@ -453,6 +469,33 @@ export function MockBuilderClient({ token }: { token: string }) {
         grading_rubric: ""
       }
     ]);
+    setBuilderActionMessage("Theory question added and ready to edit.");
+    setLastAddedQuestionId(id);
+  };
+
+  const toggleBankQuestion = (question: BankQuestion, selected: boolean, bankName: string) => {
+    if (selected) {
+      setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.id));
+      setBuilderActionMessage("Question removed from this mock.");
+      return;
+    }
+    const targetSection = deliveryMode === "subject_combination" ? subjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) : null;
+    if (deliveryMode === "subject_combination" && !targetSection) {
+      toast.error("Open a subject section before adding bank questions");
+      return;
+    }
+    setSelectedBankQuestions((current) => [...current, {
+      questionId: question.id,
+      questionVersionId: question.current_version.id,
+      questionText: question.current_version.plain_text,
+      questionType: question.question_type,
+      marks: question.current_version.marks,
+      bankName,
+      courseId: targetSection?.courseId || question.course_id || null,
+      sectionId: targetSection?.id,
+      options: (question.current_version.options || []).map((option) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })),
+    }]);
+    setBuilderActionMessage("Question added from the bank.");
   };
 
   const updateQuestion = (id: string, updates: Partial<QuestionState>) => {
@@ -1095,8 +1138,9 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
               <h3 className="mt-4 text-xl font-bold text-[#180d62]">Add your first question</h3>
               <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#474551]">Start in the way that fits the material you already have.</p>
-              <div className="mx-auto mt-6 grid max-w-3xl gap-3 text-left sm:grid-cols-3">
-                <button type="button" onClick={handleAddMCQ} className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">edit_note</span><strong className="mt-2 block text-sm">Write questions</strong><span className="mt-1 block text-xs text-[#716c76]">Create MCQ or theory questions here.</span></button>
+              <div className="mx-auto mt-6 grid max-w-4xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-4">
+                <button type="button" onClick={handleAddMCQ} className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">checklist</span><strong className="mt-2 block text-sm">Add an MCQ</strong><span className="mt-1 block text-xs text-[#716c76]">Question with answer options.</span></button>
+                <button type="button" onClick={handleAddTheory} className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">edit_note</span><strong className="mt-2 block text-sm">Add theory</strong><span className="mt-1 block text-xs text-[#716c76]">Written answer question.</span></button>
                 <button type="button" onClick={() => setShowImportPanel(true)} className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">upload_file</span><strong className="mt-2 block text-sm">Import a file</strong><span className="mt-1 block text-xs text-[#716c76]">PDF, Word or spreadsheet.</span></button>
                 <button type="button" onClick={() => setShowBankPicker(true)} className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">inventory_2</span><strong className="mt-2 block text-sm">Question bank</strong><span className="mt-1 block text-xs text-[#716c76]">Reuse questions you already trust.</span></button>
               </div>
@@ -1109,6 +1153,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               <button type="button" onClick={handleAddTheory} className="rounded-lg border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">+ Theory</button>
               <button type="button" onClick={() => setShowImportPanel((open) => !open)} className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold">Import</button>
               <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold">Question bank</button>
+              {builderActionMessage && <span role="status" aria-live="polite" className="basis-full pt-1 text-xs font-medium text-[#166534]">{builderActionMessage}</span>}
             </div>
           )}
           <div className="space-y-6">
@@ -1127,10 +1172,10 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
             ))}
             {visibleQuestions.map((q, idx) => (
-              <div key={q.id} className="bg-white border border-[#e4e2e1] rounded-lg p-6 shadow-sm group relative">
+              <div id={`mock-question-${q.id}`} key={q.id} className="group relative scroll-mt-36 rounded-lg border border-[#e4e2e1] bg-white p-4 shadow-sm sm:p-6">
                 
-                <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center gap-3">
+                <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <span className={`px-2.5 py-0.5 rounded text-[12px] font-bold ${q.question_type === 'mcq' ? 'bg-[#e3dfff] text-[#180d62]' : 'bg-[#ffdbc9] text-[#994704]'}`}>
                       Q{idx + 1}
                     </span>
@@ -1164,6 +1209,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
                 <div>
                   <textarea 
+                    data-question-text
                     value={q.question_text}
                     disabled={isReadOnly}
                     onChange={(e) => updateQuestion(q.id, { question_text: e.target.value })}
@@ -1191,7 +1237,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                   {q.question_type === 'mcq' && (
                     <div className="space-y-3">
                       {q.options.map((opt) => (
-                        <div key={opt.id} className="flex items-center gap-4">
+                        <div key={opt.id} className="flex items-center gap-2 sm:gap-4">
                           <button 
                             type="button"
                             onClick={() => {
@@ -1206,7 +1252,8 @@ export function MockBuilderClient({ token }: { token: string }) {
                             {opt.is_correct && <div className="w-2.5 h-2.5 rounded-full bg-[#2e2877]" />}
                           </button>
                           
-                          <input 
+                          <input
+                            id={`mock-option-${opt.id}`}
                             type="text" 
                             disabled={isReadOnly}
                             value={opt.option_text}
@@ -1214,7 +1261,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                               const newOpts = q.options.map(o => o.id === opt.id ? { ...o, option_text: e.target.value } : o);
                               updateQuestion(q.id, { options: newOpts });
                             }}
-                            className={`flex-1 border rounded px-4 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2] ${opt.is_correct ? 'border-[#2e2877] bg-[#e3dfff]/20' : 'border-[#c8c5d2] bg-white'}`} 
+                            className={`min-w-0 flex-1 rounded border px-3 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2] sm:px-4 ${opt.is_correct ? 'border-[#2e2877] bg-[#e3dfff]/20' : 'border-[#c8c5d2] bg-white'}`}
                           />
                           {opt.content_blocks?.length ? <QuestionContent plainText={null} blocks={opt.content_blocks} /> : null}
                           <button 
@@ -1230,9 +1277,13 @@ export function MockBuilderClient({ token }: { token: string }) {
                       ))}
                       {!isReadOnly && (
                         <button 
+                          type="button"
                           onClick={() => {
-                            const newOpts = [...q.options, { id: `o${Date.now()}`, option_text: "", is_correct: false }];
+                            const optionId = `o${Date.now()}`;
+                            const newOpts = [...q.options, { id: optionId, option_text: "", is_correct: false }];
                             updateQuestion(q.id, { options: newOpts });
+                            setBuilderActionMessage(`Answer option ${newOpts.length} added.`);
+                            window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.getElementById(`mock-option-${optionId}`)?.focus()));
                           }}
                           className="flex items-center gap-1.5 text-[#2e2877] text-[14px] font-semibold mt-4 hover:underline ml-9 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
                         >
@@ -1242,20 +1293,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                     </div>
                   )}
 
-                  {q.question_type === 'theory' && (
-                    <div className="flex items-start gap-4 mt-2">
-                      <label className="text-[13px] text-[#474551] font-medium pt-2 w-32 shrink-0">
-                        Marking guide (only tutors see this)
-                      </label>
-                      <textarea 
-                        value={q.grading_rubric || ""}
-                        disabled={isReadOnly}
-                        onChange={(e) => updateQuestion(q.id, { grading_rubric: e.target.value })}
-                        className="flex-1 bg-[#fbf9f8] border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[14px] text-[#474551] outline-none transition-all min-h-[80px] resize-y disabled:bg-[#f5f3f2]" 
-                        placeholder="Keywords expected for full marks..."
-                      />
-                    </div>
-                  )}
+                  {q.question_type === 'theory' && <details className="mt-4 rounded-lg border border-[#e4e2e1] bg-[#fbf9f8]"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Add an expected answer <span className="font-normal text-[#787582]">(optional)</span></summary><div className="border-t border-[#e4e2e1] p-4"><label className="block text-xs font-medium text-[#474551]">Private reference for this question<textarea value={q.grading_rubric || ""} disabled={isReadOnly} onChange={(event) => updateQuestion(q.id, { grading_rubric: event.target.value })} className="mt-2 min-h-[80px] w-full resize-y rounded border border-[#c8c5d2] bg-white px-4 py-3 text-[14px] font-normal text-[#474551] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]" placeholder="Example: Defines osmosis and mentions movement through a semi-permeable membrane." /></label><p className="mt-2 text-xs leading-5 text-[#787582]">Students do not see this note.</p></div></details>}
                 </div>
               </div>
             ))}
@@ -1315,7 +1353,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
               {showBankPicker && <div className="order-2 rounded-lg border border-[#c8c5d2] bg-white p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div><h3 className="font-semibold text-[#1b1c1c]">Reuse questions from your bank</h3><p className="mt-1 text-sm text-[#474551]">Choose prepared questions instead of typing them again.</p></div>
+                  <div><h3 className="font-semibold text-[#1b1c1c]">Reuse questions from your bank</h3><p className="mt-1 text-sm text-[#474551]">Choose prepared questions instead of typing them again. <span className="font-semibold text-[#2e2877]">{selectedBankQuestions.length} selected.</span></p></div>
                   <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">{showBankPicker ? "Close question bank" : "Choose questions"}</button>
                 </div>
                 {showBankPicker && (
@@ -1330,15 +1368,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                             const selected = selectedBankQuestions.some((item) => item.questionId === question.id);
                             const bankName = banks.find((bank) => bank.id === selectedBankId)?.name || "Question bank";
                             return <label key={question.id} className="flex cursor-pointer items-start gap-3 rounded border border-[#e4e2e1] p-3 hover:bg-[#f8f6ff]">
-                              <input type="checkbox" checked={selected} onChange={() => setSelectedBankQuestions((current) => {
-                                if (selected) return current.filter((item) => item.questionId !== question.id);
-                                const targetSection = deliveryMode === "subject_combination" ? subjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) : null;
-                                if (deliveryMode === "subject_combination" && !targetSection) {
-                                  toast.error("Open a subject section before adding bank questions");
-                                  return current;
-                                }
-                                return [...current, { questionId: question.id, questionVersionId: question.current_version.id, questionText: question.current_version.plain_text, questionType: question.question_type, marks: question.current_version.marks, bankName, courseId: targetSection?.courseId || question.course_id || null, sectionId: targetSection?.id, options: (question.current_version.options || []).map((option) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })) }];
-                              })} className="mt-1" />
+                              <input type="checkbox" checked={selected} onChange={() => toggleBankQuestion(question, selected, bankName)} className="mt-1" />
                               <span><span className="block text-sm text-[#1b1c1c]">{question.current_version.plain_text}</span><span className="mt-1 block text-xs text-[#787582]">{question.question_type === "mcq" ? "Multiple choice" : "Theory"} · {question.current_version.marks} marks</span></span>
                             </label>;
                           })}
@@ -1358,7 +1388,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         <section className="mx-auto max-w-4xl">
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Choose the exact subjects for this mock, then add or import each subject’s questions separately.</p></div><button type="button" onClick={() => setBuilderStep("setup")} className="text-sm font-semibold text-[#2e2877]">Change setup</button></div>
-            <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"><p className="text-sm font-semibold text-[#1b1c1c]">Add a subject section</p><div className="mt-2 grid gap-3 sm:grid-cols-2"><select value="" disabled={isReadOnly || availableSubjectCourses.length === 0} onChange={(event) => { const course = availableSubjectCourses.find((item) => item.id === event.target.value); if (!course) return; const section = { id: `section-${Date.now()}`, name: course.name, courseId: course.id }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); }} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"><option value="">Use a centre subject (optional)</option>{availableSubjectCourses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select><div className="flex gap-2"><input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} placeholder="e.g. Use of English" className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm" /><button type="button" disabled={isReadOnly || !newSubjectName.trim()} onClick={() => { const name = newSubjectName.trim(); const section = { id: `section-${Date.now()}`, name, courseId: null }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setNewSubjectName(""); }} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button></div></div><p className="mt-2 text-xs leading-5 text-[#716c76]">Create any exam subject. A centre subject is only needed when you want the centre dashboard to match students to it.</p></div>
+            <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"><p className="text-sm font-semibold text-[#1b1c1c]">Add a subject section</p><div className="mt-2 grid gap-3 sm:grid-cols-2"><select value="" disabled={isReadOnly || availableSubjectCourses.length === 0} onChange={(event) => { const course = availableSubjectCourses.find((item) => item.id === event.target.value); if (!course) return; const section = { id: `section-${Date.now()}`, name: course.name, courseId: course.id }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setBuilderActionMessage(`${course.name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"><option value="">Use a centre subject (optional)</option>{availableSubjectCourses.map((course) => <option key={course.id} value={course.id}>{mockCourseLabel(course)}</option>)}</select><div className="flex gap-2"><input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} placeholder="e.g. Use of English" className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm" /><button type="button" disabled={isReadOnly || !newSubjectName.trim()} onClick={() => { const name = newSubjectName.trim(); const section = { id: `section-${Date.now()}`, name, courseId: null }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setNewSubjectName(""); setBuilderActionMessage(`${name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button></div></div>{builderActionMessage && <p role="status" aria-live="polite" className="mt-3 text-xs font-medium text-green-700">{builderActionMessage}</p>}<p className="mt-2 text-xs leading-5 text-[#716c76]">Create any exam subject. A centre subject is only needed when you want the centre dashboard to match students to it.</p></div>
             {selectedSubjectCourses.length === 0 ? <div className="mt-4 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center text-sm text-[#716c76]">Add the subjects for this mock—for example, English, Physics, Chemistry and Biology.</div>
               : <div className="mt-4 grid gap-3 sm:grid-cols-2">{selectedSubjectCourses.map((course, index) => { const authoredCount = questions.filter((question) => question.section_id === course.id).length; const bankCount = selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="group rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]"><span className="flex items-start justify-between gap-3"><span><span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span><strong className="mt-1 block text-base text-[#1b1c1c]">{course.name}</strong></span><span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} questions</span></span><span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></span></button> })}</div>}
           </div>
@@ -1376,10 +1406,10 @@ export function MockBuilderClient({ token }: { token: string }) {
       )}
 
         {(builderStep === "setup" || builderStep === "settings") && <div className="mx-auto max-w-3xl">
-          <div className="bg-white border border-[#e4e2e1] rounded-lg p-7 shadow-sm">
+          <div className="rounded-lg border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-6 flex items-center gap-3 border-b border-[#e4e2e1] pb-4">
               <span className="material-symbols-outlined text-[#2e2877]">tune</span>
-              {builderStep === "setup" ? "Mock setup" : "Delivery & settings"}
+              {builderStep === "setup" ? "Mock setup" : "Share & publish"}
             </h3>
             
             <div className="space-y-6">
@@ -1487,9 +1517,9 @@ export function MockBuilderClient({ token }: { token: string }) {
                 )}
               </section>
 
-              <div className="bg-[#fbf9f8] p-4 rounded-lg border border-[#e4e2e1]">
-                <label className="block text-[13px] text-[#1b1c1c] mb-3 font-semibold">When students should see it</label>
-                <div className="flex gap-4 mb-4">
+              <section className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+                <p className="mb-3 text-[13px] font-semibold text-[#1b1c1c]">When should it become available?</p>
+                <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input 
                       type="radio" 
@@ -1498,7 +1528,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                       onChange={() => setPublishMode("immediate")}
                       className="text-[#2e2877] focus:ring-[#2e2877] cursor-pointer"
                     />
-                    <span className="text-[14px] text-[#474551]">Immediate</span>
+                    <span className="text-[14px] text-[#474551]">Publish now</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input 
@@ -1508,12 +1538,12 @@ export function MockBuilderClient({ token }: { token: string }) {
                       onChange={() => setPublishMode("scheduled")}
                       className="text-[#2e2877] focus:ring-[#2e2877] cursor-pointer"
                     />
-                    <span className="text-[14px] text-[#474551]">Schedule Date</span>
+                    <span className="text-[14px] text-[#474551]">Publish later</span>
                   </label>
                 </div>
 
                 {publishMode === "scheduled" && (
-                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#e4e2e1] mt-2">
+                  <div className="mt-2 grid gap-4 border-t border-[#e4e2e1] pt-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-[12px] text-[#474551] mb-1.5 font-medium">Publish Date</label>
                       <input 
@@ -1532,12 +1562,31 @@ export function MockBuilderClient({ token }: { token: string }) {
                         className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3 py-2 text-[13px] text-[#1b1c1c] outline-none transition-all" 
                       />
                     </div>
-        </div>
-      )}
+                  </div>
+                )}
+              </section>
 
-    </div>
+              <div className="rounded-xl border border-[#e4e2e1] p-4">
+                <label className="mb-2 flex items-center justify-between gap-3 text-[13px] font-medium text-[#474551]">
+                  Time allowed
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={isUntimed}
+                      disabled={isReadOnly}
+                      onChange={(event) => setIsUntimed(event.target.checked)}
+                      className="rounded text-[#2e2877] focus:ring-[#2e2877]"
+                    />
+                    <span className="text-[12px] font-normal">Untimed</span>
+                  </span>
+                </label>
+                {!isUntimed && <div className="flex items-center gap-3"><input type="number" min={1} max={1440} disabled={isReadOnly} value={Number.isFinite(timeLimit) ? timeLimit : ""} onChange={(event) => setTimeLimit(event.target.value === "" ? Number.NaN : Number(event.target.value))} className="w-24 rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]" /><span className="text-[13px] text-[#787582]">minutes</span></div>}
+              </div>
 
-              <div className="border-t border-[#e4e2e1] pt-5">
+              <details className="rounded-xl border border-[#e4e2e1] bg-white">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Advanced settings <span className="font-normal text-[#787582]">(optional)</span></summary>
+                <div className="space-y-5 border-t border-[#e4e2e1] p-4">
+              <div>
                 <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Calculator students can use</label>
                 <select
                   value={calculatorMode}
@@ -1579,7 +1628,11 @@ export function MockBuilderClient({ token }: { token: string }) {
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
+              <div>
+                <p className="text-[13px] font-semibold text-[#1b1c1c]">Optional attempt window</p>
+                <p className="mt-1 text-xs leading-5 text-[#787582]">Use this only when a published mock should open later or close automatically.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Students can start from</label>
                   <input type="datetime-local" value={availableFrom} disabled={isReadOnly}
@@ -1607,38 +1660,14 @@ export function MockBuilderClient({ token }: { token: string }) {
                 </label>
               </div>
 
-              <div>
-                <label className="block text-[13px] text-[#474551] mb-2 font-medium flex items-center justify-between">
-                  Time allowed
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={isUntimed}
-                      onChange={(e) => setIsUntimed(e.target.checked)}
-                      className="text-[#2e2877] rounded focus:ring-[#2e2877] cursor-pointer"
-                    />
-                    <span className="text-[12px] font-normal">Untimed mock</span>
-                  </label>
-                </label>
-                {!isUntimed && (
-                  <div className="flex items-center gap-3">
-                    <input 
-                      type="number" 
-                      disabled={isReadOnly}
-                      value={Number.isFinite(timeLimit) ? timeLimit : ""}
-                      onChange={(e) => setTimeLimit(e.target.value === "" ? Number.NaN : Number(e.target.value))}
-                      className="w-24 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]" 
-                    />
-                    <span className="text-[13px] text-[#787582]">Minutes</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              </details>
               </>}
             </div>
           </div>
         </div>}
 
-      {builderStep !== "review" && <div className="mx-auto mt-8 flex max-w-5xl items-center justify-between border-t border-[#e4e2e1] pt-5"><button type="button" disabled={isReadOnly || currentStepIndex === 0} onClick={() => moveStep(-1)} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40">Previous</button><button type="button" disabled={isReadOnly} onClick={() => moveStep(1)} className="rounded-lg bg-[#2e2877] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Next</button></div>}
+      {builderStep !== "review" && <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 mx-auto mt-8 flex max-w-5xl items-center justify-between gap-3 rounded-xl border border-[#d8d2cd] bg-white/95 p-3 shadow-[0_8px_30px_rgba(24,13,98,0.16)] backdrop-blur sm:static sm:rounded-none sm:border-x-0 sm:border-b-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none"><button type="button" disabled={isReadOnly || currentStepIndex === 0} onClick={() => moveStep(-1)} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40">Back</button><button type="button" disabled={isReadOnly} onClick={() => moveStep(1)} className="min-w-28 rounded-lg bg-[#2e2877] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Continue</button></div>}
     </div>
   );
 }

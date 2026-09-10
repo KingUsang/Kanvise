@@ -12,7 +12,7 @@ import {
 } from "../domain/mock-assembly";
 import { canReadQuestionBank } from "../domain/question-bank";
 import { createPresignedDownload } from "../storage/r2";
-import { REVIEWABLE_ATTEMPT_STATUSES } from "../domain/mock-results";
+import { expectedAnswerFromBlocks, REVIEWABLE_ATTEMPT_STATUSES } from "../domain/mock-results";
 import { parseMockDistributionMode } from "../domain/mock-distribution";
 import {
   canCreateMockForAudience,
@@ -302,7 +302,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
     ? await supabase.from("mock_answers")
       .select(`id, attempt_id, theory_answer_text, is_correct, tutor_score, tutor_feedback,
         question:mock_version_questions(id, marks, order_index,
-          version:bank_question_versions(plain_text, content_blocks,
+          version:bank_question_versions(plain_text, content_blocks, grading_rubric_blocks,
           ${BANK_QUESTION_TYPE_RELATION}
           )
         )`)
@@ -344,6 +344,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
         question_type: snapshot?.version?.question?.question_type,
         marks: snapshot?.marks,
         order_index: snapshot?.order_index,
+        expected_answer: expectedAnswerFromBlocks(snapshot?.version?.grading_rubric_blocks),
       },
     });
     answersByAttempt.set(answer.attempt_id, current);
