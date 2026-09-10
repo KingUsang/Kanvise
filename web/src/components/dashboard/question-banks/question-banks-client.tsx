@@ -37,7 +37,7 @@ type Question = {
   }
 }
 
-type Course = { id: string; name: string }
+type Course = { id: string; name: string; programme?: { name: string } | null }
 
 type ApiError = { error?: string; details?: string[] }
 
@@ -56,6 +56,14 @@ function initials(name: string) {
 
 function formattedDate(value: string) {
   return new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value))
+}
+
+export function buildQuestionBankCreatePayload(form: FormData) {
+  return { name: String(form.get('name') || '').trim() }
+}
+
+export function courseOptionLabel(course: Course) {
+  return `${course.programme?.name ? `${course.programme.name} — ` : ''}${course.name}`
 }
 
 function ScientificBlock({ block }: { block: Extract<ContentBlock, { type: 'equation' | 'chemistry' }> }) {
@@ -182,11 +190,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
       const response = await fetch(`${apiUrl}/question-banks`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.get('name'),
-          description: form.get('description'),
-          visibility: form.get('visibility'),
-        }),
+        body: JSON.stringify(buildQuestionBankCreatePayload(form)),
       })
       const body = await responseBody<{ data: Bank }>(response)
       toast.success('Question bank created')
@@ -332,15 +336,10 @@ export function QuestionBanksClient({ token }: { token: string }) {
 
 function BankDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-labelledby="create-bank-title">
-    <form onSubmit={onSubmit} className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+    <form onSubmit={onSubmit} className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
       <h2 id="create-bank-title" className="text-xl font-bold text-[#25222b]">Create a question bank</h2>
-      <p className="mt-1 text-sm leading-6 text-[#696570]">Use a private bank for your own questions or let tutors in your centre reuse a shared bank.</p>
+      <p className="mt-1 text-sm leading-6 text-[#696570]">Give this collection a name. It starts private and you can change its details later.</p>
       <label className="mt-5 block text-sm font-semibold text-[#3e3a45]">Bank name<input name="name" required maxLength={160} autoFocus placeholder="e.g. JAMB Physics — Mechanics" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal outline-none focus:border-[#2e2877]" /></label>
-      <label className="mt-4 block text-sm font-semibold text-[#3e3a45]">Short description <span className="font-normal text-[#7a7580]">(optional)</span><textarea name="description" rows={3} placeholder="What kinds of questions belong here?" className="mt-2 w-full rounded-lg border border-[#cbc7c4] px-3 py-2 font-normal outline-none focus:border-[#2e2877]" /></label>
-      <fieldset className="mt-4"><legend className="text-sm font-semibold text-[#3e3a45]">Who can use it?</legend><div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <label className="flex cursor-pointer gap-3 rounded-lg border border-[#d9d5d2] p-3"><input type="radio" name="visibility" value="private" defaultChecked className="mt-1 accent-[#2e2877]" /><span><strong className="block text-sm text-[#302d36]">Only me</strong><span className="text-xs leading-5 text-[#716d77]">Keep it private while you build.</span></span></label>
-        <label className="flex cursor-pointer gap-3 rounded-lg border border-[#d9d5d2] p-3"><input type="radio" name="visibility" value="centre" className="mt-1 accent-[#2e2877]" /><span><strong className="block text-sm text-[#302d36]">My centre</strong><span className="text-xs leading-5 text-[#716d77]">Tutors can find and reuse it.</span></span></label>
-      </div></fieldset>
       <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={onClose} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69]">Cancel</button><button className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white">Create bank</button></div>
     </form>
   </div>
@@ -357,6 +356,7 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
   const [imagePreviewUrl, setImagePreviewUrl] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [examSubject, setExamSubject] = useState('')
+  const [courseId, setCourseId] = useState('')
 
   useEffect(() => {
     if (!imageFile) {
@@ -418,6 +418,7 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
     const normalizedLatex = String(form.get('latex') || '').trim()
     const nonEmptyOptionCount = options.map(value => value.trim()).filter(Boolean).length
     if (!plainText && !imageFile && !normalizedLatex) return toast.error('Add question text, an image, or scientific notation')
+    if (extraBlock !== 'none' && !normalizedLatex) return toast.error('Enter the notation or choose no notation')
     if (type === 'mcq' && nonEmptyOptionCount < 2) return toast.error('Add at least two answer options')
     if (type === 'mcq' && !options[correctOption]?.trim()) return toast.error('Choose a completed option as the correct answer')
     setIsSaving(true)
@@ -458,9 +459,9 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
     <form onSubmit={submit} className="mx-auto w-full max-w-3xl rounded-xl bg-white shadow-2xl">
       <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[#e5e1de] bg-white px-5 py-4 md:px-7"><div><h2 id="question-editor-title" className="text-xl font-bold text-[#24212a]">Add to {bank.name}</h2><p className="mt-1 text-sm text-[#6e6974]">This creates version 1. Future edits create a new version.</p></div><button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-[#696570] hover:bg-[#f2efed]"><span className="material-symbols-outlined">close</span></button></div>
       <div className="space-y-5 p-5 md:p-7">
-        <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold text-[#3b3742]">Question type<select value={type} onChange={event => { const value = event.target.value; if (value === 'mcq' || value === 'theory') setType(value) }} className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-normal"><option value="mcq">Multiple choice</option><option value="theory">Theory / written answer</option></select></label><label className="text-sm font-semibold text-[#3b3742]">Marks<input name="marks" type="number" min="0.01" max="10000" step="0.01" defaultValue="1" required className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label></div>
+        <label className="block max-w-sm text-sm font-semibold text-[#3b3742]">Question type<select value={type} onChange={event => { const value = event.target.value; if (value === 'mcq' || value === 'theory') setType(value) }} className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-normal"><option value="mcq">Multiple choice</option><option value="theory">Theory / written answer</option></select></label>
         <label className="block text-sm font-semibold text-[#3b3742]">Question text <span className="font-normal text-[#77727e]">(optional for image-only questions)</span><textarea name="plain_text" rows={4} placeholder="Write the question exactly as students should see it." className="mt-2 w-full rounded-lg border border-[#cbc7c4] px-3 py-3 font-normal leading-6 outline-none focus:border-[#2e2877]" /></label>
-        <div className="rounded-lg border border-[#dfdbd8] bg-[#faf8f6] p-4">
+        <details className="rounded-lg border border-[#dfdbd8] bg-[#faf8f6]" open={imageFile ? true : undefined}><summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#2e2877] marker:content-none"><span className="material-symbols-outlined mr-2 align-middle text-lg">add_photo_alternate</span>{imageFile ? imageFile.name : 'Add a diagram or image'} <span className="font-normal text-[#77727e]">(optional)</span></summary><div className="border-t border-[#dfdbd8] p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h3 className="text-sm font-semibold text-[#3b3742]">Question image <span className="font-normal text-[#77727e]">(optional)</span></h3><p className="mt-1 text-xs leading-5 text-[#77727e]">Use this for diagrams, graphs, maps, circuits, or an image-only question. JPG, PNG, or WebP; maximum 10 MB.</p></div>{imageFile && <button type="button" onClick={() => { setImageFile(null); setImageAltText('') }} className="text-xs font-semibold text-[#994704]">Remove image</button>}</div>
           <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#aaa4ad] bg-white px-4 py-3 text-sm font-semibold text-[#4f4a55] hover:border-[#2e2877]"><span className="material-symbols-outlined">add_photo_alternate</span>{imageFile ? 'Choose a different image' : 'Choose an image'}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event => chooseImage(event.target.files?.[0] || null)} /></label>
           {imagePreviewUrl && <div className="mt-4 grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]"><div className="rounded-lg border border-[#ddd8d5] bg-white p-2">
@@ -468,11 +469,10 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imagePreviewUrl} alt="Local preview" className="max-h-40 w-full rounded object-contain" />
           </div><label className="text-sm font-semibold text-[#3b3742]">Describe the image for accessibility<textarea value={imageAltText} onChange={event => setImageAltText(event.target.value)} required rows={3} placeholder="e.g. A velocity-time graph rising steadily from 0 to 20 m/s" className="mt-2 w-full rounded-lg border border-[#cbc7c4] px-3 py-2 font-normal leading-5" /><span className="mt-1 block text-xs font-normal text-[#77727e]">Describe the information a student needs—not merely “an image”.</span></label></div>}
-        </div>
-        <div className="rounded-lg border border-[#dfdbd8] bg-[#faf8f6] p-4"><label className="text-sm font-semibold text-[#3b3742]">Scientific notation <span className="font-normal text-[#77727e]">(optional)</span><select value={extraBlock} onChange={event => { const value = event.target.value; if (value === 'none' || value === 'equation' || value === 'chemistry') { setExtraBlock(value); setLatex('') } }} className="mt-2 h-10 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-normal"><option value="none">No equation block</option><option value="equation">Mathematical equation</option><option value="chemistry">Chemical equation or formula</option></select></label>{extraBlock !== 'none' && <><label className="mt-3 block text-sm font-semibold text-[#3b3742]">LaTeX / {extraBlock === 'chemistry' ? 'mhchem' : 'math'} notation<input name="latex" required value={latex} onChange={event => setLatex(event.target.value)} placeholder={extraBlock === 'chemistry' ? '\\ce{2H2 + O2 -> 2H2O}' : '\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}'} className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-mono text-sm font-normal" /></label>{extraBlock === 'equation' && <p className="mt-1 text-xs text-[#77727e]">For example, use <code>v = f \\lambda</code> to display v = f λ.</p>}{latex.trim() && <div className="mt-3"><span className="text-xs font-semibold uppercase tracking-wider text-[#77727e]">Student preview</span><ScientificBlock block={{ type: extraBlock, latex }} /></div>}</>}</div>
+        </div></details>
+        <details className="rounded-lg border border-[#dfdbd8] bg-[#faf8f6]" open={extraBlock !== 'none' || undefined}><summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#2e2877] marker:content-none"><span className="material-symbols-outlined mr-2 align-middle text-lg">function</span>Add maths or chemistry notation <span className="font-normal text-[#77727e]">(optional)</span></summary><div className="border-t border-[#dfdbd8] p-4"><label className="text-sm font-semibold text-[#3b3742]">Notation type<select value={extraBlock} onChange={event => { const value = event.target.value; if (value === 'none' || value === 'equation' || value === 'chemistry') { setExtraBlock(value); setLatex('') } }} className="mt-2 h-10 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-normal"><option value="none">Choose a type</option><option value="equation">Mathematical equation</option><option value="chemistry">Chemical equation or formula</option></select></label>{extraBlock !== 'none' && <><label className="mt-3 block text-sm font-semibold text-[#3b3742]">LaTeX / {extraBlock === 'chemistry' ? 'mhchem' : 'math'} notation<input name="latex" value={latex} onChange={event => setLatex(event.target.value)} placeholder={extraBlock === 'chemistry' ? '\\ce{2H2 + O2 -> 2H2O}' : '\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}'} className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-mono text-sm font-normal" /></label>{extraBlock === 'equation' && <p className="mt-1 text-xs text-[#77727e]">For example, use <code>v = f \\lambda</code> to display v = f λ.</p>}{latex.trim() && <div className="mt-3"><span className="text-xs font-semibold uppercase tracking-wider text-[#77727e]">Student preview</span><ScientificBlock block={{ type: extraBlock, latex }} /></div>}</>}</div></details>
         {type === 'mcq' && <fieldset><legend className="text-sm font-semibold text-[#3b3742]">Answer options</legend><p className="mt-1 text-xs text-[#77727e]">Select the circle beside the correct answer.</p><div className="mt-3 space-y-2">{options.map((option, index) => <div key={index} className="flex items-center gap-3"><input type="radio" name="correct" checked={correctOption === index} onChange={() => setCorrectOption(index)} aria-label={`Mark option ${index + 1} as correct`} className="h-4 w-4 accent-[#2e2877]" /><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#f0edeb] text-xs font-bold text-[#58535e]">{String.fromCharCode(65 + index)}</span><input value={option} onChange={event => setOptions(values => values.map((value, position) => position === index ? event.target.value : value))} placeholder={`Option ${String.fromCharCode(65 + index)}`} className="h-10 min-w-0 flex-1 rounded-lg border border-[#cbc7c4] px-3 text-sm" /></div>)}</div></fieldset>}
-        <div className="grid gap-4 sm:grid-cols-3"><label className="text-sm font-semibold text-[#3b3742]">Programme subject<select name="course_id" onChange={event => { const selected = courses.find(course => course.id === event.target.value); if (selected) setExamSubject(selected.name) }} className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-normal"><option value="">No programme subject yet</option>{courses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}</select></label><label className="text-sm font-semibold text-[#3b3742]">Exam subject<input name="subject_name" value={examSubject} onChange={event => setExamSubject(event.target.value)} placeholder="e.g. Physics" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label><label className="text-sm font-semibold text-[#3b3742]">Topic<input name="topic" placeholder="e.g. Motion" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label></div>
-        <label className="block text-sm font-semibold text-[#3b3742]">Answer explanation <span className="font-normal text-[#77727e]">(optional)</span><textarea name="explanation" rows={3} placeholder="Students may see this after results are released." className="mt-2 w-full rounded-lg border border-[#cbc7c4] px-3 py-2 font-normal" /></label>
+        <details className="rounded-lg border border-[#dfdbd8] bg-[#faf8f6]"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#2e2877] marker:content-none">Classification, marks and explanation <span className="font-normal text-[#77727e]">(optional)</span></summary><div className="grid gap-4 border-t border-[#dfdbd8] p-4 sm:grid-cols-2"><label className="text-sm font-semibold text-[#3b3742]">Programme subject<select name="course_id" value={courseId} onChange={event => { const value = event.target.value; setCourseId(value); const selected = courses.find(course => course.id === value); setExamSubject(selected?.name || '') }} className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-normal"><option value="">Not linked to a programme</option>{courses.map(course => <option key={course.id} value={course.id}>{courseOptionLabel(course)}</option>)}</select></label>{!courseId && <label className="text-sm font-semibold text-[#3b3742]">Exam subject<input value={examSubject} onChange={event => setExamSubject(event.target.value)} placeholder="e.g. Physics" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label>}<input type="hidden" name="subject_name" value={examSubject} /><label className="text-sm font-semibold text-[#3b3742]">Topic<input name="topic" placeholder="e.g. Motion" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label><label className="text-sm font-semibold text-[#3b3742]">Marks<input name="marks" type="number" min="0.01" max="10000" step="0.01" defaultValue="1" required className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label><label className="block text-sm font-semibold text-[#3b3742] sm:col-span-2">Answer explanation<textarea name="explanation" rows={3} placeholder="Students may see this after results are released." className="mt-2 w-full rounded-lg border border-[#cbc7c4] px-3 py-2 font-normal" /></label></div></details>
       </div>
       <div className="sticky bottom-0 flex justify-end gap-3 border-t border-[#e5e1de] bg-white px-5 py-4 md:px-7"><button type="button" onClick={onClose} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69]">Cancel</button><button disabled={isSaving} className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{isSaving ? (imageFile ? 'Uploading and saving…' : 'Saving…') : 'Save question'}</button></div>
     </form>
