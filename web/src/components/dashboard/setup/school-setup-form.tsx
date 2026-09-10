@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { PUBLIC_APP_HOST } from '@/config/app'
 import { getApiUrl } from '@/config/api'
 import { createClient } from '@/lib/supabase/client'
+import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 
 export function slugifyCentreName(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64)
@@ -14,24 +15,6 @@ export function withCacheVersion(url: string, version = Date.now()) {
   if (!url) return url
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}v=${version}`
-}
-
-export function uploadFileWithProgress(url: string, file: File, onProgress: (progress: number | null) => void) {
-  return new Promise<void>((resolve, reject) => {
-    const request = new XMLHttpRequest()
-    request.open('PUT', url)
-    request.setRequestHeader('Content-Type', file.type)
-    request.upload.addEventListener('progress', (event) => {
-      onProgress(event.lengthComputable && event.total > 0 ? Math.round((event.loaded / event.total) * 100) : null)
-    })
-    request.addEventListener('load', () => {
-      if (request.status >= 200 && request.status < 300) resolve()
-      else reject(new Error('Could not upload file to storage'))
-    })
-    request.addEventListener('error', () => reject(new Error('The upload was interrupted by a network error')))
-    request.addEventListener('abort', () => reject(new Error('The upload was cancelled')))
-    request.send(file)
-  })
 }
 
 function UploadStatus({ label, progress }: { label: string, progress: number | null }) {
