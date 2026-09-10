@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole, Variables } from '../middleware/auth'
 import { generateInviteToken } from '../lib/invites'
 import { sendTutorInvitation } from '../emails/send-tutor-invitation'
-import { normalizeSchoolProfileUpdate, SchoolProfileValidationError } from '../lib/school-profile'
+import { normalizeSchoolProfileUpdate, schoolSlugCandidates, SchoolProfileValidationError } from '../lib/school-profile'
 import type { TablesUpdate } from '../lib/database.types'
 
 export const schoolsRouter = new Hono<{ Variables: Variables }>()
@@ -40,8 +40,9 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     return c.json({ error: 'Centre name is required', code: 'INVALID_NAME' }, 400)
   }
 
-  const slug = String(body.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
-    .replace(/^-+|-+$/g, '')
+  const requestedSlug = body.slug === undefined || body.slug === null ? undefined : body.slug
+  const slugCandidates = schoolSlugCandidates(name, requestedSlug)
+  const slug = slugCandidates[0]
 
   if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     return c.json({
@@ -54,23 +55,36 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     return c.json({ error: 'Centre description cannot exceed 500 characters', code: 'DESCRIPTION_TOO_LONG' }, 400)
   }
 
-  // Create school
-  const { data: school, error: schoolError } = await supabase
-    .from('schools')
-    .insert({
-      name,
-      slug: slug,
-      description: body.description,
-      contact_email: body.contact_email,
-      contact_phone: body.contact_phone,
-    })
-    .select()
-    .single()
+  // Generated links should never turn a common centre name into onboarding
+  // work. The unique database constraint remains the source of truth and makes
+  // these retries safe even when two admins create similarly named centres at
+  // the same time. A deliberately customised link still fails explicitly.
+  let school: any = null
+  let schoolError: any = null
+  for (const candidate of slugCandidates) {
+    const result = await supabase
+      .from('schools')
+      .insert({
+        name,
+        slug: candidate,
+        description: body.description,
+        contact_email: body.contact_email,
+        contact_phone: body.contact_phone,
+      })
+      .select()
+      .single()
+
+    school = result.data
+    schoolError = result.error
+    if (!schoolError || schoolError.code !== '23505' || requestedSlug !== undefined) break
+  }
 
   if (schoolError) {
     if (schoolError.code === '23505') {
       return c.json({
-        error: 'That student page link is already in use. Choose another one.',
+        error: requestedSlug === undefined
+          ? 'We could not generate an available student page link. Please try again.'
+          : 'That student page link is already in use. Choose another one.',
         code: 'SLUG_TAKEN',
       }, 409)
     }

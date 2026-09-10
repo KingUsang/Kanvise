@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeSchoolProfileUpdate, SchoolProfileValidationError } from './school-profile'
+import { normalizeSchoolProfileUpdate, normalizeSchoolSlug, schoolSlugCandidates, SchoolProfileValidationError } from './school-profile'
 
 describe('school profile normalization', () => {
   it('accepts handles and legitimate platform URL variations', () => {
@@ -35,5 +35,17 @@ describe('school profile normalization', () => {
 
   it('only returns fields present in a partial update', () => {
     expect(normalizeSchoolProfileUpdate({ name: '  Kanvise Academy  ' })).toEqual({ name: 'Kanvise Academy' })
+  })
+
+  it('generates bounded fallback slugs when a centre name is already taken', () => {
+    expect(normalizeSchoolSlug(' Emmanuel’s JAMB & WAEC Centre ')).toBe('emmanuel-s-jamb-waec-centre')
+    expect(schoolSlugCandidates('Bright Future', undefined, 4)).toEqual([
+      'bright-future',
+      'bright-future-2',
+      'bright-future-3',
+      'bright-future-4',
+    ])
+    expect(schoolSlugCandidates('Bright Future', 'my-centre')).toEqual(['my-centre'])
+    expect(schoolSlugCandidates('A'.repeat(80), undefined, 2).every((slug) => slug.length <= 64)).toBe(true)
   })
 })

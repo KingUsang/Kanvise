@@ -3,7 +3,7 @@
 import { Suspense, useState, type FormEvent, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
+import { Building2, Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { safeRedirectPath } from '@/lib/safe-redirect'
 import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, PASSWORD_REQUIREMENTS } from '@/lib/password-policy'
@@ -26,6 +26,7 @@ function RegisterContent() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [centreName, setCentreName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -37,6 +38,10 @@ function RegisterContent() {
 
   const handleRegister = async (event: FormEvent) => {
     event.preventDefault();
+    if (!isStudentFlow && !centreName.trim()) {
+      setError("Enter your centre name");
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -44,7 +49,11 @@ function RegisterContent() {
       email,
       password,
       options: {
-        data: { first_name: firstName, last_name: lastName },
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          ...(!isStudentFlow && { centre_name: centreName.trim() }),
+        },
       },
     });
 
@@ -80,9 +89,29 @@ function RegisterContent() {
       throw new Error("Your account was created, but the dashboard session could not be refreshed. Please sign in again.");
     }
 
-    const destination = flow === "centre"
-      ? "/dashboard/school-setup"
-      : redirectParam || "/dashboard/student";
+    if (flow === "centre") {
+      const centreResponse = await fetch(`${apiUrl}/schools`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${refreshed.session.access_token}`,
+        },
+        body: JSON.stringify({ name: centreName.trim() }),
+      });
+      const centreBody = await centreResponse.json().catch(() => null);
+      if (!centreResponse.ok && centreBody?.code !== "SCHOOL_ALREADY_CONFIGURED") {
+        throw new Error(centreBody?.error || "Your account was created, but your centre could not be set up");
+      }
+
+      // Creating a centre updates app_metadata. Refresh once more so route
+      // middleware sees the trusted school_id instead of locking navigation.
+      const { data: centreSession, error: centreRefreshError } = await supabase.auth.refreshSession();
+      if (centreRefreshError || !centreSession.session?.user.app_metadata?.school_id) {
+        throw new Error("Your centre was created, but the dashboard session could not be refreshed. Please sign in again.");
+      }
+    }
+
+    const destination = flow === "centre" ? "/dashboard" : redirectParam || "/dashboard/student";
     window.location.assign(destination);
   };
 
@@ -134,11 +163,14 @@ function RegisterContent() {
             {error && <div className="mb-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
             <form onSubmit={handleRegister} className="space-y-5">
+              {!isStudentFlow && (
+                <Field id="centre-name" label="Centre name" icon={<Building2 size={18} />} value={centreName} onChange={setCentreName} placeholder="Bright Future Tutorials" autoComplete="organization" />
+              )}
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="First name" icon={<User size={18} />} value={firstName} onChange={setFirstName} placeholder="John" />
-                <Field label="Last name" icon={<User size={18} />} value={lastName} onChange={setLastName} placeholder="Doe" />
+                <Field id="first-name" label="First name" icon={<User size={18} />} value={firstName} onChange={setFirstName} placeholder="John" autoComplete="given-name" />
+                <Field id="last-name" label="Last name" icon={<User size={18} />} value={lastName} onChange={setLastName} placeholder="Doe" autoComplete="family-name" />
               </div>
-              <Field label="Email address" icon={<Mail size={18} />} type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
+              <Field id="email" label="Email address" icon={<Mail size={18} />} type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
               <div>
                 <label htmlFor="password" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">Password</label>
                 <div className="relative">
@@ -180,13 +212,13 @@ function RegisterContent() {
   );
 }
 
-function Field({ label, icon, type = "text", value, onChange, placeholder }: { label: string; icon: ReactNode; type?: string; value: string; onChange: (value: string) => void; placeholder: string }) {
+function Field({ id, label, icon, type = "text", value, onChange, placeholder, autoComplete }: { id: string; label: string; icon: ReactNode; type?: string; value: string; onChange: (value: string) => void; placeholder: string; autoComplete?: string }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">{label}</label>
       <div className="relative">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9b98a3]">{icon}</span>
-        <input type={type} required value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full rounded-lg border border-[#c8c5d2] py-3.5 pl-11 pr-4 text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]/30" />
+        <input id={id} type={type} required autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full rounded-lg border border-[#c8c5d2] py-3.5 pl-11 pr-4 text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]/30" />
       </div>
     </div>
   );

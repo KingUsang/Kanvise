@@ -5,6 +5,30 @@ export class SchoolProfileValidationError extends Error {
   }
 }
 
+const MAX_SCHOOL_SLUG_LENGTH = 64
+
+export function normalizeSchoolSlug(value: unknown) {
+  return String(value ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, MAX_SCHOOL_SLUG_LENGTH)
+    .replace(/-+$/g, '')
+}
+
+export function schoolSlugCandidates(name: string, requestedSlug?: unknown, limit = 20) {
+  const explicitSlug = requestedSlug !== undefined && requestedSlug !== null
+  const base = explicitSlug ? String(requestedSlug).trim() : normalizeSchoolSlug(name)
+  if (explicitSlug || limit <= 1) return [base]
+
+  return Array.from({ length: limit }, (_, index) => {
+    if (index === 0) return base
+    const suffix = `-${index + 1}`
+    return `${base.slice(0, MAX_SCHOOL_SLUG_LENGTH - suffix.length).replace(/-+$/g, '')}${suffix}`
+  })
+}
+
 function optionalText(value: unknown) {
   const text = String(value ?? '').trim()
   return text || null
