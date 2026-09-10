@@ -24,7 +24,23 @@ It contains the three server checkouts (including Git metadata, untracked files 
 
 This is a recovery copy, not an off-device backup. Because it contains production secrets and is not encrypted, copy it only into encrypted storage and never commit or upload it as ordinary cloud-drive data.
 
-## Recommended replacement
+## Tonight's replacement
+
+Startup-program approval is useful runway but is not part of the immediate cutover. The overnight target is a self-hosted OCI Always Free VM. LiveKit Cloud is not an acceptable substitute for Kanvise live classes.
+
+Create one Ubuntu ARM64 `VM.Standard.A1.Flex` instance with **2 OCPUs and 12 GB RAM**, a public IPv4 address and at least a 50 GB boot volume. Open TCP `22`, `80`, `443`, `7881` and UDP `7882` in its VCN security list. The current LiveKit configuration uses UDP mux on `7882`, so it does not need the default `50000-60000/UDP` range.
+
+Choose the home region carefully because Oracle does not allow it to be changed. Frankfurt or London offers three availability domains, which gives more places to try when an Always Free A1 shape reports no host capacity. Region latency still needs a real classroom test from Nigeria before production cutover.
+
+The restore scripts are:
+
+- `scripts/operations/restore-kanvise-host.sh`
+- `scripts/operations/verify-kanvise-host.sh`
+- `scripts/operations/finalize-kanvise-cutover.sh`
+
+They preserve the current single-VM architecture and pin LiveKit `1.13.4`, Redis `7.4.11` and PM2 `7.0.3`. The restore script supports both ARM64 and AMD64 and verifies the downloaded LiveKit binary checksum.
+
+## Credit options after the immediate migration
 
 ### First choice: one credited Azure VM
 
@@ -41,15 +57,15 @@ Google's Start tier currently offers early-stage, non-funded startups up to **$2
 
 - Programme and requirements: [Google for Startups Cloud Program](https://startup.google.com/cloud/)
 
-### Zero-cost fallback: Oracle Always Free ARM VM
+### Zero-cost host: Oracle Always Free ARM VM
 
-OCI Always Free presently includes Ampere A1 capacity totalling up to 4 OCPUs and 24 GB RAM plus 10 TB/month outbound transfer. On paper this is substantially more capacity and transfer than the current Scaleway VM and is the strongest no-credit fallback for self-hosted LiveKit.
+OCI Always Free presently includes Ampere A1 capacity totalling up to 2 OCPUs and 12 GB RAM plus 10 TB/month outbound transfer. On paper this is substantially more memory and transfer than the current Scaleway VM and is the strongest no-credit fallback for self-hosted LiveKit.
 
 Risks must be tested before relying on it: A1 capacity can be unavailable in the chosen home region, the target is ARM64, and free accounts offer weaker operational guarantees. Build the API and run the exact LiveKit ARM64 release in a disposable instance before changing DNS.
 
 - Compute and transfer allowances: [Oracle Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
 
-### Emergency video bridge: LiveKit Cloud free plan
+### Rejected for live classes: LiveKit Cloud free plan
 
 LiveKit Cloud's free Build plan supports up to 100 simultaneous participants, but its monthly hard caps are only 5,000 WebRTC participant-minutes and 50 GB downstream transfer. A one-hour class with one tutor and 20 students consumes 1,260 participant-minutes before considering transfer, so the minute allowance covers fewer than four such classes. It is useful for migration testing or a short outage, not the whole pilot.
 
@@ -59,8 +75,8 @@ DigitalOcean Hatch advertises much larger credits for selected startups, but acc
 
 ## Migration sequence
 
-1. Apply to Microsoft and Google now; try to reserve an Oracle A1 instance in parallel.
-2. Restore the backup into a temporary VM and keep DNS unchanged.
+1. Reserve an Oracle A1 instance. If Oracle has no capacity tonight, use a new-customer GCP Compute Engine trial VM as the temporary AMD64 target; the ordinary free `e2-micro` is too small for LiveKit.
+2. Restore the backup into the replacement VM and keep DNS unchanged.
 3. Replace/regenerate server secrets where practical; do not reuse TLS private state when Caddy can issue fresh certificates.
 4. Restore Redis, Caddy routes, systemd and PM2 definitions; install the exact Node and LiveKit versions recorded in the manifest.
 5. Point staging API and staging LiveKit at the new host first. Verify health, auth email hooks, mock imports, R2 uploads, scheduled jobs and a real mobile LiveKit room.
