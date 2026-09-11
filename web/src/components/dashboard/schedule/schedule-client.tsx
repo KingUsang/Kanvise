@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
+import { TimetableManager } from './timetable-manager'
 
 interface Capabilities {
   isAdmin: boolean
@@ -38,6 +39,7 @@ interface LiveClass {
 interface Course {
   id: string
   name: string
+  tutor_ids?: string[]
 }
 
 interface Programme {
@@ -58,6 +60,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   
   const [classes, setClasses] = useState<LiveClass[]>([])
   const [programmes, setProgrammes] = useState<Programme[]>([])
+  const [standaloneCourses, setStandaloneCourses] = useState<Course[]>([])
   const [tutors, setTutors] = useState<Tutor[]>([])
   const [assignedTutorIds, setAssignedTutorIds] = useState<string[]>([])
   
@@ -69,6 +72,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const [duration, setDuration] = useState('60')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formMode, setFormMode] = useState<'now' | 'later' | null>(() => searchParams.get('mode') === 'now' ? 'now' : null)
+  const [activeView, setActiveView] = useState<'classes' | 'timetable'>('classes')
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false)
   
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -93,6 +97,12 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         if (!programmesRes.ok) throw new Error('Could not load programmes')
         const programmesData = await programmesRes.json()
 
+        const standaloneRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses?standalone=true`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (!standaloneRes.ok) throw new Error('Could not load standalone courses')
+        const standaloneData = await standaloneRes.json()
+
         let tutorsData = { data: [] }
         if (capabilities.isAdmin) {
           // Admins can teach too. This list must use profile IDs because that
@@ -107,6 +117,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
         setClasses(classesData.data || [])
         setProgrammes(programmesData.data || [])
+        setStandaloneCourses(standaloneData.data || [])
         if (capabilities.isAdmin) setTutors(tutorsData.data || [])
 
       } catch (err) {
@@ -122,7 +133,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     fetchData()
   }, [token, capabilities.isAdmin])
 
-  const selectedCourse = programmes.flatMap(programme => programme.courses).find(course => course.id === courseId)
+  const selectedCourse = [...programmes.flatMap(programme => programme.courses), ...standaloneCourses].find(course => course.id === courseId)
 
   useEffect(() => {
     if (!capabilities.isAdmin || !courseId) return
@@ -278,19 +289,29 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex">
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#994704] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(153,71,4,0.22)]"
-            onClick={() => setFormMode('now')}
+            onClick={() => { setActiveView('classes'); setFormMode('now') }}
           >
             <span aria-hidden="true" className="material-symbols-outlined text-[19px]">videocam</span>Start now
           </button>
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#2e2877] bg-white px-4 text-sm font-semibold text-[#2e2877]"
-            onClick={() => setFormMode('later')}
+            onClick={() => { setActiveView('classes'); setFormMode('later') }}
           >
             <span aria-hidden="true" className="material-symbols-outlined text-[19px]">calendar_add_on</span>Schedule
           </button>
         </div>
       </div>
 
+      {capabilities.isAdmin && (
+        <nav aria-label="Class views" className="mb-6 flex gap-1 rounded-xl bg-[#efebe8] p-1">
+          <button type="button" onClick={() => setActiveView('classes')} className={`min-h-10 flex-1 rounded-lg px-4 text-sm font-semibold ${activeView === 'classes' ? 'bg-white text-[#2e2877] shadow-sm' : 'text-[#625d67]'}`}>Upcoming</button>
+          <button type="button" onClick={() => setActiveView('timetable')} className={`min-h-10 flex-1 rounded-lg px-4 text-sm font-semibold ${activeView === 'timetable' ? 'bg-white text-[#2e2877] shadow-sm' : 'text-[#625d67]'}`}>Timetable</button>
+        </nav>
+      )}
+
+      {activeView === 'timetable' ? (
+        <TimetableManager token={token} programmes={programmes} standaloneCourses={standaloneCourses} tutors={tutors} />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column */}
         <div className="lg:col-span-4 flex flex-col gap-6">
@@ -321,6 +342,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         {programme.courses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}
                       </optgroup>
                     ))}
+                    {!!standaloneCourses.length && <optgroup label="Standalone courses">{standaloneCourses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}</optgroup>}
                   </select>
                   {!programmes.length && <p className="text-xs leading-5 text-[#994704]">Create a course with at least one subject first.</p>}
                 </div>
@@ -639,6 +661,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           
         </div>
       </div>
+      )}
     </div>
   )
 }
