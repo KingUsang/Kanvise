@@ -91,4 +91,16 @@ describe('POST /schools', () => {
       app_metadata: { role: 'admin', school_id: 'school-1' },
     })
   })
+
+  it('rejects a customised link that belongs to the application', async () => {
+    const response = await schoolsRouter.request('/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'My Centre', slug: 'dashboard' }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'RESERVED_SLUG' })
+    expect(mocks.insertedSlugs).toEqual([])
+  })
 })

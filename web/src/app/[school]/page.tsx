@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { buildWhatsAppHref } from "@/lib/contact-links";
 
@@ -11,18 +11,20 @@ async function getSchool(slug: string) {
     if (res.status === 404) return null;
     throw new Error("Failed to fetch school");
   }
-  const json = await res.json();
-  return json.data;
+  return res.json();
 }
 
 export default async function SchoolStorefrontPage({ params }: { params: Promise<{ school: string }> }) {
   const resolvedParams = await params;
-  const data = await getSchool(resolvedParams.school);
+  const response = await getSchool(resolvedParams.school);
   
-  if (!data) {
+  if (!response) {
     notFound();
   }
 
+  if (response.redirect_slug) redirect(`/${response.redirect_slug}`);
+
+  const data = response.data;
   const { school, programmes, tutors } = data;
   const whatsappHref = buildWhatsAppHref(school.whatsapp_number);
 
