@@ -551,7 +551,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       skipEmptyLines: true,
       complete: (results) => {
         if (importGeneration !== importGenerationRef.current) return;
-        setImportProgress({ ...job, phase: "validating", percent: 90 });
+        setImportProgress({ ...job, phase: "validating", percent: null });
         const parsedQuestions: QuestionState[] = [];
         results.data.forEach((row: any) => {
           const qType = (row.Type || "").toLowerCase().trim();
@@ -598,7 +598,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       error: (error) => {
         if (importGeneration !== importGenerationRef.current) return;
         console.error(error);
-        setImportProgress({ ...job, phase: "error", percent: 0, message: "The CSV file could not be read." });
+        setImportProgress({ ...job, phase: "error", percent: null, message: "The CSV file could not be read." });
         toast.error("Could not read the CSV file");
         setIsUploading(false);
       }
@@ -614,7 +614,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     try {
       const mammoth = await import("mammoth");
       const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-      setImportProgress({ ...job, phase: "parsing", percent: 35 });
+      setImportProgress({ ...job, phase: "parsing", percent: null });
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/import/document-text`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-Import-Job-ID": job.id },
@@ -623,7 +623,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Could not import that Word document");
       if (importGeneration !== importGenerationRef.current) return;
-      setImportProgress({ ...job, phase: "validating", percent: 90 });
+      setImportProgress({ ...job, phase: "validating", percent: null });
       const imported = body?.data;
       const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => {
         const section = deliveryMode === "subject_combination" ? resolveSubjectSection(question.subject_name) : null;
@@ -657,7 +657,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     } catch (error) {
       if (importGeneration !== importGenerationRef.current) return;
       console.error("Could not read DOCX", error);
-      setImportProgress({ ...job, phase: "error", percent: 0, message: error instanceof Error ? error.message : "The Word document could not be parsed." });
+      setImportProgress({ ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The Word document could not be parsed." });
       toast.error("Could not import that Word document", { description: error instanceof Error ? error.message : "Please try again." });
     } finally {
       if (importGeneration === importGenerationRef.current) setIsUploading(false);
@@ -667,7 +667,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   const processPDF = async (file: File) => {
     const importGeneration = importGenerationRef.current;
     const job = newMockImportProgress(file.name);
-    setImportProgress({ ...job, phase: "extracting", percent: 15, message: "PDF text extraction and AI parsing run together on the server." });
+    setImportProgress({ ...job, phase: "extracting", percent: null, message: "Uploading the PDF, then extracting and parsing it on the server." });
     setIsUploading(true);
     setDocumentImportSummary(null);
     try {
@@ -681,7 +681,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Could not import that PDF");
       if (importGeneration !== importGenerationRef.current) return;
-      setImportProgress({ ...job, phase: "validating", percent: 90 });
+      setImportProgress({ ...job, phase: "validating", percent: null });
       const imported = body?.data;
       const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => {
         const section = deliveryMode === "subject_combination" ? resolveSubjectSection(question.subject_name) : null;
@@ -720,7 +720,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     } catch (error) {
       if (importGeneration !== importGenerationRef.current) return;
       console.error("Could not import PDF", error);
-      setImportProgress({ ...job, phase: "error", percent: 0, message: error instanceof Error ? error.message : "The PDF could not be parsed." });
+      setImportProgress({ ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The PDF could not be parsed." });
       toast.error("Could not import that PDF", { description: error instanceof Error ? error.message : "Please try again." });
     } finally {
       if (importGeneration === importGenerationRef.current) setIsUploading(false);

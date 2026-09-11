@@ -4,7 +4,7 @@ export type MockImportProgress = {
   id: string
   fileName: string
   phase: MockImportPhase
-  percent: number
+  percent: number | null
   message?: string
 }
 
@@ -27,7 +27,7 @@ export function MockImportProgressCard({ progress }: { progress: MockImportProgr
         <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-[#787582]">job {progress.id}</span>
       </div>
 
-      {progress.phase !== 'error' && <><div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e4e2f2]" role="progressbar" aria-label="Question parsing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent}><div className="h-full rounded-full bg-[#2e2877] transition-[width] duration-300" style={{ width: `${progress.percent}%` }} /></div><p className="mt-2 text-xs font-semibold text-[#474551]">{progress.percent}% complete</p>{progress.message && <p className="mt-1 text-xs leading-5 text-[#716c76]">{progress.message}</p>}</>}
+      {progress.phase !== 'error' && <>{progress.percent === null ? <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e4e2f2]" role="progressbar" aria-label="Question parsing progress"><div className="h-full w-1/3 animate-pulse rounded-full bg-[#2e2877]" /></div> : <><div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e4e2f2]" role="progressbar" aria-label="Question parsing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent}><div className="h-full rounded-full bg-[#2e2877] transition-[width] duration-300" style={{ width: `${progress.percent}%` }} /></div><p className="mt-2 text-xs font-semibold text-[#474551]">{progress.percent}% complete</p></>}{progress.message && <p className="mt-1 text-xs leading-5 text-[#716c76]">{progress.message}</p>}</>}
       {progress.phase === 'error' && <p className="mt-3 text-sm text-red-700">{progress.message || 'The document could not be parsed.'}</p>}
 
       <ol className="mt-4 space-y-2">
@@ -43,5 +43,5 @@ export function MockImportProgressCard({ progress }: { progress: MockImportProgr
 }
 
 export function newMockImportProgress(fileName: string): MockImportProgress {
-  return { id: crypto.randomUUID().replaceAll('-', '').slice(0, 8), fileName, phase: 'reading', percent: 5 }
+  return { id: crypto.randomUUID().replaceAll('-', '').slice(0, 8), fileName, phase: 'reading', percent: null }
 }
