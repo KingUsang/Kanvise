@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
+import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 import {
   clearProgrammeDraft,
   loadProgrammeDraft,
@@ -38,6 +40,8 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const [hydrated, setHydrated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveStage, setSaveStage] = useState<'idle' | 'saving' | 'uploading-cover' | 'publishing'>('idle')
+  const [coverUploadProgress, setCoverUploadProgress] = useState<number | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [savedProgramme, setSavedProgramme] = useState<SavedProgramme | null>(null)
   const [databaseSaved, setDatabaseSaved] = useState(false)
@@ -161,12 +165,28 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     const presign = await fetch(`${apiUrl}/storage/presign/public`, { method: 'POST', headers, body: JSON.stringify(metadata) })
     const presignBody = await presign.json()
     if (!presign.ok) throw new Error(presignBody.error || 'Could not prepare image upload')
-    const upload = await fetch(presignBody.data.presigned_url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
-    if (!upload.ok) throw new Error('Could not upload the cover image')
+    setCoverUploadProgress(0)
+    await uploadFileWithProgress(presignBody.data.presigned_url, file, setCoverUploadProgress)
     const confirm = await fetch(`${apiUrl}/storage/public/confirm`, { method: 'POST', headers, body: JSON.stringify({ ...metadata, file_key: presignBody.data.file_key }) })
     const confirmBody = await confirm.json()
     if (!confirm.ok) throw new Error(confirmBody.error || 'Could not attach the cover image')
     setCoverUploadError('')
+  }
+
+  async function retryCoverUpload() {
+    if (!savedProgramme || !coverFile) return
+    setSaving(true)
+    setSaveStage('uploading-cover')
+    try {
+      await uploadCover(savedProgramme, coverFile)
+      toast.success('Cover uploaded')
+    } catch (error) {
+      setCoverUploadError(error instanceof Error ? error.message : 'Cover upload failed')
+    } finally {
+      setSaving(false)
+      setSaveStage('idle')
+      setCoverUploadProgress(null)
+    }
   }
 
   async function createProgramme(accessToken: string) {
@@ -230,6 +250,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     if (isPaid && !payoutReady) return toast.error('Add a bank account before saving a paid programme', { description: 'Set up where your centre receives payments, then return here.' })
     if (publish && !tutorsReady) return toast.error('Assign at least one tutor to every subject before publishing')
     setSaving(true)
+    setSaveStage('saving')
     try {
       let uploadFailed = false
       const accessToken = await token()
@@ -238,6 +259,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       if (identity) clearProgrammeDraft(identity.school_id, identity.id, programmeId || 'new')
       setDatabaseSaved(true)
       if (coverFile) {
+        setSaveStage('uploading-cover')
         try { await uploadCover(programme, coverFile) }
         catch (error) {
           uploadFailed = true
@@ -246,6 +268,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         }
       }
       if (publish) {
+        setSaveStage('publishing')
         const response = await fetch(`${apiUrl}/programmes/${programme.id}/publish`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } })
         const body = await response.json()
         if (!response.ok) throw new Error(body.error || 'Programme is not ready to publish')
@@ -257,6 +280,8 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       toast.error(publish ? 'Could not publish programme' : 'Could not save programme', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setSaving(false)
+      setSaveStage('idle')
+      setCoverUploadProgress(null)
     }
   }
 
@@ -307,10 +332,11 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
               {step === 2 && <ReviewStep draft={draft} tutors={tutors} detailsReady={detailsReady} subjectsReady={subjectsReady} tutorsReady={tutorsReady} />}
 
               {coverUploadError && savedProgramme && (
-                <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Cover upload needs attention</p><p className="mt-1">{coverUploadError}</p><button disabled={!coverFile || saving} onClick={() => coverFile && uploadCover(savedProgramme, coverFile).then(() => toast.success('Cover uploaded')).catch(error => setCoverUploadError(error.message))} className="mt-3 rounded border border-amber-700 px-3 py-1.5 font-semibold disabled:opacity-50">Retry cover upload</button></div>
+                <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Cover upload needs attention</p><p className="mt-1">{coverUploadError}</p><button disabled={!coverFile || saving} onClick={() => void retryCoverUpload()} className="mt-3 rounded border border-amber-700 px-3 py-1.5 font-semibold disabled:opacity-50">Retry cover upload</button></div>
               )}
             </div>
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e4e2e1] bg-[#fbf9f8] px-5 py-4 sm:px-7">
+              {saving && <div className="basis-full"><UploadTaskStatus label={saveStage === 'uploading-cover' ? 'Uploading programme cover' : saveStage === 'publishing' ? 'Publishing programme' : 'Saving programme'} progress={saveStage === 'uploading-cover' ? coverUploadProgress : null} /></div>}
               <button disabled={step === 0} onClick={() => setStep(current => Math.max(current - 1, 0))} className="rounded border border-[#c8c5d2] bg-white px-4 py-2 text-sm font-semibold text-[#474551] disabled:opacity-40">Back</button>
               {step < steps.length - 1 ? <button onClick={nextStep} className="rounded bg-[#2e2877] px-5 py-2 text-sm font-semibold text-white">Continue</button> : <div className="flex flex-wrap gap-2"><button disabled={saving} onClick={() => void persist(false)} className="rounded border border-[#2e2877] bg-white px-4 py-2 text-sm font-semibold text-[#2e2877] disabled:opacity-50">{saving ? 'Saving…' : 'Save as draft'}</button><button disabled={saving || !tutorsReady} onClick={() => void persist(true)} className="rounded bg-[#994704] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Publishing…' : 'Publish programme'}</button></div>}
             </footer>
