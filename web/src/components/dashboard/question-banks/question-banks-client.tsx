@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 import { getApiUrl } from '@/config/api'
 import katex from 'katex'
 import 'katex/contrib/mhchem'
+import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
+import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 
 type Bank = {
   id: string
@@ -355,6 +357,8 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
   const [imageAltText, setImageAltText] = useState('')
   const [imagePreviewUrl, setImagePreviewUrl] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [saveStage, setSaveStage] = useState<'idle' | 'uploading' | 'saving'>('idle')
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [examSubject, setExamSubject] = useState('')
   const [courseId, setCourseId] = useState('')
 
@@ -394,10 +398,11 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
       }),
     })
     const presign = await responseBody<{ data: { presigned_url: string; file_key: string } }>(presignResponse)
-    const uploadResponse = await fetch(presign.data.presigned_url, {
-      method: 'PUT', headers: { 'Content-Type': imageFile.type }, body: imageFile,
-    })
-    if (!uploadResponse.ok) throw new Error('The image could not be uploaded to storage')
+    setSaveStage('uploading')
+    setUploadProgress(0)
+    await uploadFileWithProgress(presign.data.presigned_url, imageFile, setUploadProgress)
+    setSaveStage('saving')
+    setUploadProgress(null)
     const confirmResponse = await fetch(`${apiUrl}/question-banks/media/confirm`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -422,6 +427,8 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
     if (type === 'mcq' && nonEmptyOptionCount < 2) return toast.error('Add at least two answer options')
     if (type === 'mcq' && !options[correctOption]?.trim()) return toast.error('Choose a completed option as the correct answer')
     setIsSaving(true)
+    setSaveStage(imageFile ? 'uploading' : 'saving')
+    setUploadProgress(imageFile ? 0 : null)
     try {
       const contentBlocks = buildQuestionContent(plainText, extraBlock, normalizedLatex)
       const registeredImage = await uploadQuestionImage()
@@ -452,6 +459,8 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
       toast.error('Could not add the question', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setIsSaving(false)
+      setSaveStage('idle')
+      setUploadProgress(null)
     }
   }
 
@@ -474,7 +483,7 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
         {type === 'mcq' && <fieldset><legend className="text-sm font-semibold text-[#3b3742]">Answer options</legend><p className="mt-1 text-xs text-[#77727e]">Select the circle beside the correct answer.</p><div className="mt-3 space-y-2">{options.map((option, index) => <div key={index} className="flex items-center gap-3"><input type="radio" name="correct" checked={correctOption === index} onChange={() => setCorrectOption(index)} aria-label={`Mark option ${index + 1} as correct`} className="h-4 w-4 accent-[#2e2877]" /><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#f0edeb] text-xs font-bold text-[#58535e]">{String.fromCharCode(65 + index)}</span><input value={option} onChange={event => setOptions(values => values.map((value, position) => position === index ? event.target.value : value))} placeholder={`Option ${String.fromCharCode(65 + index)}`} className="h-10 min-w-0 flex-1 rounded-lg border border-[#cbc7c4] px-3 text-sm" /></div>)}</div></fieldset>}
         <details className="rounded-lg border border-[#dfdbd8] bg-[#faf8f6]"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#2e2877] marker:content-none">Classification, marks and explanation <span className="font-normal text-[#77727e]">(optional)</span></summary><div className="grid gap-4 border-t border-[#dfdbd8] p-4 sm:grid-cols-2"><label className="text-sm font-semibold text-[#3b3742]">Programme subject<select name="course_id" value={courseId} onChange={event => { const value = event.target.value; setCourseId(value); const selected = courses.find(course => course.id === value); setExamSubject(selected?.name || '') }} className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] bg-white px-3 font-normal"><option value="">Not linked to a programme</option>{courses.map(course => <option key={course.id} value={course.id}>{courseOptionLabel(course)}</option>)}</select></label>{!courseId && <label className="text-sm font-semibold text-[#3b3742]">Exam subject<input value={examSubject} onChange={event => setExamSubject(event.target.value)} placeholder="e.g. Physics" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label>}<input type="hidden" name="subject_name" value={examSubject} /><label className="text-sm font-semibold text-[#3b3742]">Topic<input name="topic" placeholder="e.g. Motion" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label><label className="text-sm font-semibold text-[#3b3742]">Marks<input name="marks" type="number" min="0.01" max="10000" step="0.01" defaultValue="1" required className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal" /></label><label className="block text-sm font-semibold text-[#3b3742] sm:col-span-2">Answer explanation<textarea name="explanation" rows={3} placeholder="Students may see this after results are released." className="mt-2 w-full rounded-lg border border-[#cbc7c4] px-3 py-2 font-normal" /></label></div></details>
       </div>
-      <div className="sticky bottom-0 flex justify-end gap-3 border-t border-[#e5e1de] bg-white px-5 py-4 md:px-7"><button type="button" onClick={onClose} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69]">Cancel</button><button disabled={isSaving} className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{isSaving ? (imageFile ? 'Uploading and saving…' : 'Saving…') : 'Save question'}</button></div>
+      <div className="sticky bottom-0 flex flex-wrap justify-end gap-3 border-t border-[#e5e1de] bg-white px-5 py-4 md:px-7">{isSaving && <div className="basis-full"><UploadTaskStatus label={saveStage === 'uploading' ? 'Uploading question image' : 'Saving question'} progress={saveStage === 'uploading' ? uploadProgress : null} /></div>}<button type="button" onClick={onClose} disabled={isSaving} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69] disabled:opacity-50">Cancel</button><button disabled={isSaving} className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{isSaving ? (saveStage === 'uploading' ? 'Uploading image…' : 'Saving question…') : 'Save question'}</button></div>
     </form>
   </div>
 }
