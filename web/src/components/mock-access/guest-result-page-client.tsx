@@ -21,7 +21,7 @@ export function GuestResultPageClient({ attemptId }: { attemptId: string }) {
         if (session) {
           const transfer = await authenticatedFetch(supabase, `${getApiUrl()}/guest/attempts/${attemptId}/transfer`, session.access_token, { method: 'POST', credentials: 'include' })
           const transferBody = await transfer.json().catch(() => null)
-          if (transfer.ok) { window.location.assign(`/result/${attemptId}`); return }
+          if (transfer.ok) { window.location.assign(`/dashboard/student/mocks/result/${attemptId}`); return }
           if (![403, 409].includes(transfer.status)) throw new Error(transferBody?.error || 'Could not save this result to your account')
           if (!cancelled) setError(transferBody?.error || 'This result could not be moved to that account.')
         }

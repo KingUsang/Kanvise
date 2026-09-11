@@ -66,7 +66,7 @@ describe('MockOfferActions student journeys', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Buy and attempt mock' }))
 
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/attempt/attempt-7'))
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/dashboard/student/mocks/attempt/attempt-7'))
     expect(mocks.authenticatedFetch).toHaveBeenCalledTimes(3)
     expect(String(mocks.authenticatedFetch.mock.calls[2][1])).toContain('/mock/offer-1/attempts')
   })
@@ -93,7 +93,7 @@ describe('MockOfferActions student journeys', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Attempt mock' }))
 
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/attempt/attempt-1'))
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/dashboard/student/mocks/attempt/attempt-1'))
     expect(String(mocks.authenticatedFetch.mock.calls[2][1])).toContain('/mock/offer-1/claim')
     expect(String(mocks.authenticatedFetch.mock.calls[3][1])).toContain('/mock/offer-1/attempts')
   })
@@ -107,7 +107,7 @@ describe('MockOfferActions student journeys', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Buy and attempt mock' }))
 
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/attempt/centre-attempt-1'))
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/dashboard/student/mocks/attempt/centre-attempt-1'))
     expect(String(mocks.authenticatedFetch.mock.calls[1][1])).toContain('/mocks/mock-1/preflight')
     expect(String(mocks.authenticatedFetch.mock.calls[2][1])).toContain('/mocks/mock-1/attempts')
     expect(mocks.authenticatedFetch.mock.calls.some(call => String(call[1]).includes('/claim') || String(call[1]).includes('/checkout'))).toBe(false)

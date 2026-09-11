@@ -23,7 +23,7 @@ export function GuestAttemptPageClient({ attemptId }: { attemptId: string }) {
           })
           const transferBody = await transfer.json().catch(() => null)
           if (transfer.ok) {
-            window.location.assign(`/attempt/${attemptId}`)
+            window.location.assign(`/dashboard/student/mocks/attempt/${attemptId}`)
             return
           }
           if (![403, 409].includes(transfer.status)) throw new Error(transferBody?.error || 'Could not save guest progress to your account')
