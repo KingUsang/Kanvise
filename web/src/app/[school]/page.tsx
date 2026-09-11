@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { buildWhatsAppHref } from "@/lib/contact-links";
 
 async function getSchool(slug: string) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -23,6 +24,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
   }
 
   const { school, programmes, tutors } = data;
+  const whatsappHref = buildWhatsAppHref(school.whatsapp_number);
 
   return (
     <div className="font-body-md bg-surface antialiased overflow-x-hidden min-h-screen text-on-surface">
@@ -100,8 +102,8 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
                 {school.instagram_url && <a aria-label="Instagram" className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={school.instagram_url} target="_blank" rel="noreferrer"><span className="material-symbols-outlined">photo_camera</span></a>}
                 {school.twitter_url && <a aria-label="X" className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={school.twitter_url} target="_blank" rel="noreferrer"><span className="text-xs font-bold">X</span></a>}
                 {school.facebook_url && <a aria-label="Facebook" className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={school.facebook_url} target="_blank" rel="noreferrer"><span className="text-sm font-bold">f</span></a>}
-                {school.whatsapp_number && (
-                    <a className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={`https://wa.me/${school.whatsapp_number}`}>
+                {whatsappHref && (
+                    <a aria-label="WhatsApp" className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary hover:bg-secondary hover:text-white transition-colors" href={whatsappHref} target="_blank" rel="noreferrer">
                     <span className="material-symbols-outlined">chat</span>
                     </a>
                 )}
