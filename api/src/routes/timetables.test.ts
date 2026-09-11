@@ -82,4 +82,15 @@ describe('timetable API', () => {
     })
     expect(await response.json()).toMatchObject({ message: 'Timetable published', generated_classes: 12 })
   })
+
+  it('opens draft changes without withdrawing the published timetable', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null })
+    const response = await timetablesRouter.request('/timetable-1/edit', { method: 'POST' })
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('unpublish_class_timetable', {
+      p_timetable_id: 'timetable-1', p_school_id: 'school-1', p_actor_id: 'admin-1',
+    })
+    expect(await response.json()).toEqual({ message: 'Draft changes opened; students still see the published timetable' })
+  })
 })

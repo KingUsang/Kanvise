@@ -7,6 +7,8 @@ CREATE TABLE public.class_timetables (
   programme_id uuid REFERENCES public.programmes(id) ON DELETE CASCADE,
   standalone_course_id uuid REFERENCES public.courses(id) ON DELETE CASCADE,
   status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+  has_unpublished_changes boolean NOT NULL DEFAULT false,
+  published_slots jsonb NOT NULL DEFAULT '[]'::jsonb,
   timezone text NOT NULL DEFAULT 'Africa/Lagos',
   published_at timestamptz,
   created_by uuid NOT NULL REFERENCES public.user_profiles(id),
@@ -34,6 +36,7 @@ CREATE TABLE public.class_timetable_slots (
   starts_on date NOT NULL,
   ends_on date,
   title text,
+  deleted_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT class_timetable_slot_date_check CHECK (ends_on IS NULL OR ends_on >= starts_on),
@@ -95,8 +98,17 @@ BEGIN
     slot.id,
     calendar.day
   FROM public.class_timetables AS timetable
-  JOIN public.class_timetable_slots AS slot
-    ON slot.timetable_id = timetable.id AND slot.school_id = timetable.school_id
+  CROSS JOIN LATERAL jsonb_to_recordset(timetable.published_slots) AS slot(
+    id uuid,
+    course_id uuid,
+    tutor_id uuid,
+    weekday smallint,
+    start_time time,
+    duration_minutes integer,
+    starts_on date,
+    ends_on date,
+    title text
+  )
   JOIN public.courses AS course
     ON course.id = slot.course_id AND course.school_id = timetable.school_id
   CROSS JOIN LATERAL (
@@ -141,7 +153,7 @@ BEGIN
 
   SELECT count(*) INTO slot_count
   FROM public.class_timetable_slots
-  WHERE timetable_id = p_timetable_id AND school_id = p_school_id;
+  WHERE timetable_id = p_timetable_id AND school_id = p_school_id AND deleted_at IS NULL;
 
   IF slot_count = 0 THEN
     RAISE EXCEPTION 'Add at least one class before publishing the timetable';
@@ -156,6 +168,7 @@ BEGIN
       AND assignment.tutor_id = slot.tutor_id
     WHERE slot.timetable_id = p_timetable_id
       AND slot.school_id = p_school_id
+      AND slot.deleted_at IS NULL
       AND assignment.id IS NULL
   ) THEN
     RAISE EXCEPTION 'Every timetable class must use an assigned tutor';
@@ -169,6 +182,7 @@ BEGIN
       ON course.id = slot.course_id AND course.school_id = slot.school_id
     WHERE slot.timetable_id = p_timetable_id
       AND slot.school_id = p_school_id
+      AND slot.deleted_at IS NULL
       AND (
         course.id IS NULL
         OR (timetable.programme_id IS NOT NULL AND course.programme_id IS DISTINCT FROM timetable.programme_id)
@@ -178,13 +192,70 @@ BEGIN
     RAISE EXCEPTION 'A timetable class is outside the selected course';
   END IF;
 
+  IF EXISTS (
+    SELECT 1
+    FROM public.class_timetable_slots AS first_slot
+    JOIN public.class_timetable_slots AS second_slot
+      ON second_slot.timetable_id = first_slot.timetable_id
+      AND second_slot.school_id = first_slot.school_id
+      AND second_slot.id > first_slot.id
+      AND second_slot.weekday = first_slot.weekday
+      AND second_slot.tutor_id = first_slot.tutor_id
+      AND second_slot.deleted_at IS NULL
+      AND first_slot.start_time < second_slot.start_time + make_interval(mins => second_slot.duration_minutes)
+      AND second_slot.start_time < first_slot.start_time + make_interval(mins => first_slot.duration_minutes)
+    WHERE first_slot.timetable_id = p_timetable_id
+      AND first_slot.school_id = p_school_id
+      AND first_slot.deleted_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'A tutor cannot teach overlapping timetable classes';
+  END IF;
+
+  -- Replace concrete future occurrences only when the administrator publishes.
+  -- Until this transaction commits, students and reminders continue to see the
+  -- previous published version.
+  DELETE FROM public.live_classes
+  WHERE timetable_slot_id IN (
+    SELECT id FROM public.class_timetable_slots
+    WHERE timetable_id = p_timetable_id AND school_id = p_school_id
+  )
+    AND status = 'scheduled'
+    AND scheduled_at > now();
+
   UPDATE public.class_timetables
-  SET status = 'published', published_at = now(), updated_at = now()
+  SET status = 'published',
+      has_unpublished_changes = false,
+      published_slots = (
+        SELECT COALESCE(jsonb_agg(jsonb_build_object(
+          'id', slot.id,
+          'course_id', slot.course_id,
+          'tutor_id', slot.tutor_id,
+          'weekday', slot.weekday,
+          'start_time', slot.start_time,
+          'duration_minutes', slot.duration_minutes,
+          'starts_on', slot.starts_on,
+          'ends_on', slot.ends_on,
+          'title', slot.title
+        ) ORDER BY slot.weekday, slot.start_time), '[]'::jsonb)
+        FROM public.class_timetable_slots AS slot
+        WHERE slot.timetable_id = p_timetable_id
+          AND slot.school_id = p_school_id
+          AND slot.deleted_at IS NULL
+      ),
+      published_at = now(),
+      updated_at = now()
   WHERE id = p_timetable_id AND school_id = p_school_id;
 
   IF NOT FOUND THEN RAISE EXCEPTION 'Timetable not found'; END IF;
 
-  RETURN public.materialize_class_timetable(p_timetable_id, p_school_id, 84);
+  slot_count := public.materialize_class_timetable(p_timetable_id, p_school_id, 84);
+
+  DELETE FROM public.class_timetable_slots
+  WHERE timetable_id = p_timetable_id
+    AND school_id = p_school_id
+    AND deleted_at IS NOT NULL;
+
+  RETURN slot_count;
 END;
 $$;
 
@@ -207,17 +278,9 @@ BEGIN
   END IF;
 
   UPDATE public.class_timetables
-  SET status = 'draft', published_at = NULL, updated_at = now()
+  SET has_unpublished_changes = true, updated_at = now()
   WHERE id = p_timetable_id AND school_id = p_school_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Timetable not found'; END IF;
-
-  DELETE FROM public.live_classes
-  WHERE timetable_slot_id IN (
-    SELECT id FROM public.class_timetable_slots
-    WHERE timetable_id = p_timetable_id AND school_id = p_school_id
-  )
-    AND status = 'scheduled'
-    AND scheduled_at > now();
 END;
 $$;
 

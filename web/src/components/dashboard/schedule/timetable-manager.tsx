@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarCheck, Loader2, Pencil, Plus, Send, Trash2 } from 'lucide-react'
+import { CalendarCheck, CopyPlus, Loader2, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getApiUrl } from '@/config/api'
 
@@ -25,6 +25,7 @@ type Timetable = {
   programme_id: string | null
   standalone_course_id: string | null
   status: 'draft' | 'published'
+  has_unpublished_changes: boolean
   timezone: string
   programme?: { id: string; name: string } | null
   standalone_course?: { id: string; name: string } | null
@@ -32,6 +33,28 @@ type Timetable = {
 }
 
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+function minutesFromTime(value: string) {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+export function timetableConflicts(slots: Slot[]) {
+  const conflicts: string[] = []
+  for (let firstIndex = 0; firstIndex < slots.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < slots.length; secondIndex += 1) {
+      const first = slots[firstIndex]
+      const second = slots[secondIndex]
+      if (first.weekday !== second.weekday || first.tutor_id !== second.tutor_id) continue
+      const firstStart = minutesFromTime(first.start_time)
+      const secondStart = minutesFromTime(second.start_time)
+      if (firstStart < secondStart + second.duration_minutes && secondStart < firstStart + first.duration_minutes) {
+        conflicts.push(`${first.tutor?.first_name || 'The tutor'} has overlapping classes on ${weekdays[first.weekday - 1]}.`)
+      }
+    }
+  }
+  return [...new Set(conflicts)]
+}
 
 export function currentWeekStart(now = new Date()) {
   const date = new Date(now)
@@ -59,6 +82,8 @@ export function TimetableManager({ token, programmes, standaloneCourses, tutors 
   const activeCourses = active?.programme_id
     ? programmes.find(programme => programme.id === active.programme_id)?.courses || []
     : standaloneCourses.filter(course => course.id === active?.standalone_course_id)
+  const isEditing = Boolean(active && (active.status === 'draft' || active.has_unpublished_changes))
+  const conflicts = active ? timetableConflicts(active.slots) : []
 
   async function load(preferredId?: string) {
     const response = await fetch(`${getApiUrl()}/timetables`, { headers: { Authorization: `Bearer ${token}` } })
@@ -164,6 +189,17 @@ export function TimetableManager({ token, programmes, standaloneCourses, tutors 
     }
   }
 
+  function addAnotherTime(slot: Slot) {
+    setCourseId(slot.course_id)
+    setTutorId(slot.tutor_id)
+    setAssignedTutorIds(activeCourses.find(course => course.id === slot.course_id)?.tutor_ids || [slot.tutor_id])
+    setWeekday(String(slot.weekday))
+    setDuration(String(slot.duration_minutes))
+    setRecurrence(slot.ends_on ? 'this_week' : 'ongoing')
+    setStartTime('')
+    requestAnimationFrame(() => document.getElementById('timetable-add-class')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
   async function changePublication(action: 'publish' | 'edit') {
     if (!active) return
     setWorking(true)
@@ -172,7 +208,7 @@ export function TimetableManager({ token, programmes, standaloneCourses, tutors 
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || `Could not ${action} timetable`)
       await load(active.id)
-      toast.success(action === 'publish' ? 'Timetable published to students' : 'Timetable is ready to edit')
+      toast.success(action === 'publish' ? 'Timetable published to students' : 'You can edit safely. Students still see the published timetable.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : `Could not ${action} timetable`)
     } finally {
@@ -196,17 +232,24 @@ export function TimetableManager({ token, programmes, standaloneCourses, tutors 
           <div className="mt-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div><p className="font-semibold text-[#1b1c1c]">{active.programme?.name || active.standalone_course?.name}</p><p className="mt-0.5 text-xs text-[#716c76]">{active.slots.length} {active.slots.length === 1 ? 'class' : 'classes'} in this timetable</p></div>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${active.status === 'published' ? 'bg-[#e7f5eb] text-[#196b37]' : 'bg-[#fff0e3] text-[#8a4307]'}`}>{active.status === 'published' ? 'Published' : 'Draft · students cannot see it'}</span>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${active.has_unpublished_changes ? 'bg-[#fff0e3] text-[#8a4307]' : active.status === 'published' ? 'bg-[#e7f5eb] text-[#196b37]' : 'bg-[#fff0e3] text-[#8a4307]'}`}>
+                {active.has_unpublished_changes ? 'Unpublished changes' : active.status === 'published' ? 'Published' : 'Draft · students cannot see it'}
+              </span>
             </div>
 
+            {active.has_unpublished_changes && <p className="mt-3 rounded-lg bg-[#f0edff] px-3 py-2 text-xs leading-5 text-[#2e2877]">Students still see the last published timetable until you publish these changes.</p>}
+
             <div className="mt-5 divide-y divide-[#ece7e3] rounded-xl border border-[#e3ded9]">
-              {active.slots.map(slot => <article key={slot.id} className="flex items-center gap-3 p-3.5"><div className="min-w-0 flex-1"><p className="font-medium text-[#1b1c1c]">{slot.course?.name || 'Subject'}</p><p className="mt-1 text-xs text-[#716c76]">{weekdays[slot.weekday - 1]} · {slot.start_time.slice(0, 5)} · {slot.duration_minutes} min · {slot.ends_on ? 'This week only' : 'Every week'}</p><p className="mt-1 text-xs text-[#716c76]">{slot.tutor?.first_name} {slot.tutor?.last_name}</p></div>{active.status === 'draft' && <button type="button" disabled={working} onClick={() => void removeSlot(slot.id)} aria-label={`Remove ${slot.course?.name || 'class'}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#a43a2a] hover:bg-[#fff0ed]"><Trash2 size={17} /></button>}</article>)}
+              {active.slots.map(slot => <article key={slot.id} className="flex items-center gap-2 p-3.5">
+                <div className="min-w-0 flex-1"><p className="font-medium text-[#1b1c1c]">{slot.course?.name || 'Subject'}</p><p className="mt-1 text-xs text-[#716c76]">{weekdays[slot.weekday - 1]} · {slot.start_time.slice(0, 5)} · {slot.duration_minutes} min · {slot.ends_on ? 'This week only' : 'Every week'}</p><p className="mt-1 text-xs text-[#716c76]">{slot.tutor?.first_name} {slot.tutor?.last_name}</p></div>
+                {isEditing && <><button type="button" disabled={working} onClick={() => addAnotherTime(slot)} aria-label={`Add another time for ${slot.course?.name || 'class'}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#2e2877] hover:bg-[#f0edff]"><CopyPlus size={17} /></button><button type="button" disabled={working} onClick={() => void removeSlot(slot.id)} aria-label={`Remove ${slot.course?.name || 'class'}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#a43a2a] hover:bg-[#fff0ed]"><Trash2 size={17} /></button></>}
+              </article>)}
               {!active.slots.length && <p className="p-5 text-center text-sm text-[#716c76]">Add the first class below.</p>}
             </div>
 
-            {active.status === 'published' ? <button type="button" disabled={working} onClick={() => void changePublication('edit')} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#2e2877] px-4 text-sm font-semibold text-[#2e2877]"><Pencil size={16} />Edit timetable</button> : (
+            {!isEditing ? <button type="button" disabled={working} onClick={() => void changePublication('edit')} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#2e2877] px-4 text-sm font-semibold text-[#2e2877]"><Pencil size={16} />Edit timetable</button> : (
               <>
-                <form onSubmit={addSlot} className="mt-6 space-y-4 rounded-xl bg-[#f8f6f4] p-4">
+                <form id="timetable-add-class" onSubmit={addSlot} className="mt-6 scroll-mt-4 space-y-4 rounded-xl bg-[#f8f6f4] p-4">
                   <h4 className="font-semibold text-[#1b1c1c]">Add a class</h4>
                   <label htmlFor="timetable-course" className="block text-sm font-medium">Subject<select id="timetable-course" required value={courseId} onChange={event => setCourseId(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-[#8b8580] bg-white px-3"><option value="" disabled>Choose a subject</option>{activeCourses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}</select></label>
                   {courseId && assignedTutorIds.length > 1 && <label htmlFor="timetable-tutor" className="block text-sm font-medium">Tutor<select id="timetable-tutor" required value={tutorId} onChange={event => setTutorId(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-[#8b8580] bg-white px-3"><option value="" disabled>Choose a tutor</option>{tutors.filter(tutor => assignedTutorIds.includes(tutor.id)).map(tutor => <option key={tutor.id} value={tutor.id}>{tutor.first_name} {tutor.last_name}</option>)}</select></label>}
@@ -216,7 +259,21 @@ export function TimetableManager({ token, programmes, standaloneCourses, tutors 
                   <details><summary className="cursor-pointer text-sm font-medium text-[#2e2877]">Change duration <span className="font-normal text-[#716c76]">(optional)</span></summary><select aria-label="Class duration" value={duration} onChange={event => setDuration(event.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-[#8b8580] bg-white px-3"><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option></select></details>
                   <button type="submit" disabled={working || !courseId || !tutorId || !startTime} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#2e2877] bg-white px-4 text-sm font-semibold text-[#2e2877] disabled:opacity-50"><Plus size={16} />{working ? 'Adding…' : 'Add class'}</button>
                 </form>
-                <button type="button" disabled={working || !active.slots.length} onClick={() => void changePublication('publish')} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50"><Send size={16} />{working ? 'Publishing…' : 'Publish timetable'}</button>
+
+                <section aria-labelledby="student-preview-title" className="mt-5 rounded-xl border border-[#d8d2cc] bg-white p-4">
+                  <p id="student-preview-title" className="text-sm font-semibold text-[#1b1c1c]">Student preview</p>
+                  <p className="mt-1 text-xs leading-5 text-[#716c76]">This is the weekly schedule students will see after you publish.</p>
+                  <div className="mt-3 space-y-2">
+                    {active.slots.map(slot => <div key={`preview-${slot.id}`} className="flex items-start justify-between gap-3 rounded-lg bg-[#f8f6f4] px-3 py-2.5 text-sm"><div className="min-w-0"><p className="truncate font-medium text-[#1b1c1c]">{slot.course?.name || 'Subject'}</p><p className="mt-0.5 text-xs text-[#716c76]">{slot.tutor?.first_name} {slot.tutor?.last_name}</p></div><p className="shrink-0 text-right font-medium text-[#2e2877]">{weekdays[slot.weekday - 1]}<br/><span className="text-xs font-normal">{slot.start_time.slice(0, 5)}</span></p></div>)}
+                    {!active.slots.length && <p className="rounded-lg bg-[#f8f6f4] px-3 py-3 text-sm text-[#716c76]">No classes to publish yet.</p>}
+                  </div>
+                </section>
+
+                {conflicts.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-[#efc3ba] bg-[#fff0ed] p-4 text-sm text-[#8d2f22]"><p className="font-semibold">Fix schedule conflicts before publishing</p><ul className="mt-2 list-disc space-y-1 pl-5">{conflicts.map(conflict => <li key={conflict}>{conflict}</li>)}</ul></div>}
+
+                <div className="sticky bottom-3 z-10 mt-4 rounded-xl border border-[#e3ded9] bg-white/95 p-3 shadow-lg backdrop-blur">
+                  <button type="button" disabled={working || !active.slots.length || conflicts.length > 0} onClick={() => void changePublication('publish')} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50"><Send size={16} />{working ? 'Publishing…' : active.has_unpublished_changes ? 'Publish changes' : `Publish ${active.slots.length} ${active.slots.length === 1 ? 'class' : 'classes'}`}</button>
+                </div>
               </>
             )}
           </div>

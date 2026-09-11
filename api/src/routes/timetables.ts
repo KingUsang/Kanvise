@@ -41,6 +41,7 @@ async function loadTimetables(schoolId: string) {
     db.from('class_timetable_slots')
       .select('*, course:courses(id, name, programme_id), tutor:user_profiles!class_timetable_slots_tutor_id_fkey(id, first_name, last_name)')
       .eq('school_id', schoolId)
+      .is('deleted_at', null)
       .order('weekday', { ascending: true })
       .order('start_time', { ascending: true }),
   ])
@@ -113,12 +114,12 @@ timetablesRouter.post('/:id/slots', async (c) => {
 
   const db = supabase as any
   const [{ data: timetable }, { data: course }, { data: assignment }] = await Promise.all([
-    db.from('class_timetables').select('id, status, programme_id, standalone_course_id').eq('id', timetableId).eq('school_id', user.school_id).maybeSingle(),
+    db.from('class_timetables').select('id, status, has_unpublished_changes, programme_id, standalone_course_id').eq('id', timetableId).eq('school_id', user.school_id).maybeSingle(),
     supabase.from('courses').select('id, programme_id').eq('id', courseId).eq('school_id', user.school_id).maybeSingle(),
     supabase.from('tutor_course_assignments').select('id').eq('course_id', courseId).eq('tutor_id', tutorId).eq('school_id', user.school_id).maybeSingle(),
   ])
   if (!timetable) return c.json({ error: 'Timetable not found', code: 'NOT_FOUND' }, 404)
-  if (timetable.status !== 'draft') return c.json({ error: 'Choose Edit timetable before changing published classes', code: 'TIMETABLE_PUBLISHED' }, 409)
+  if (timetable.status !== 'draft' && !timetable.has_unpublished_changes) return c.json({ error: 'Choose Edit timetable before changing published classes', code: 'TIMETABLE_PUBLISHED' }, 409)
   if (!course || !assignment) return c.json({ error: 'Use a subject and tutor already assigned to each other', code: 'INVALID_ASSIGNMENT' }, 403)
   if ((timetable.programme_id && course.programme_id !== timetable.programme_id) || (timetable.standalone_course_id && course.id !== timetable.standalone_course_id)) {
     return c.json({ error: 'That subject is outside this timetable', code: 'COURSE_OUTSIDE_TIMETABLE' }, 400)
@@ -146,10 +147,13 @@ timetablesRouter.post('/:id/slots', async (c) => {
 timetablesRouter.delete('/:id/slots/:slotId', async (c) => {
   const user = c.get('user')
   const db = supabase as any
-  const { data: timetable } = await db.from('class_timetables').select('status').eq('id', c.req.param('id')).eq('school_id', user.school_id).maybeSingle()
+  const { data: timetable } = await db.from('class_timetables').select('status, has_unpublished_changes').eq('id', c.req.param('id')).eq('school_id', user.school_id).maybeSingle()
   if (!timetable) return c.json({ error: 'Timetable not found', code: 'NOT_FOUND' }, 404)
-  if (timetable.status !== 'draft') return c.json({ error: 'Choose Edit timetable before removing a class', code: 'TIMETABLE_PUBLISHED' }, 409)
-  const { error } = await db.from('class_timetable_slots').delete().eq('id', c.req.param('slotId')).eq('timetable_id', c.req.param('id')).eq('school_id', user.school_id)
+  if (timetable.status !== 'draft' && !timetable.has_unpublished_changes) return c.json({ error: 'Choose Edit timetable before removing a class', code: 'TIMETABLE_PUBLISHED' }, 409)
+  const request = db.from('class_timetable_slots')
+  const { error } = timetable.status === 'published'
+    ? await request.update({ deleted_at: new Date().toISOString() }).eq('id', c.req.param('slotId')).eq('timetable_id', c.req.param('id')).eq('school_id', user.school_id)
+    : await request.delete().eq('id', c.req.param('slotId')).eq('timetable_id', c.req.param('id')).eq('school_id', user.school_id)
   if (error) return c.json({ error: 'Could not remove timetable class' }, 500)
   return c.json({ message: 'Timetable class removed' })
 })
@@ -169,5 +173,5 @@ timetablesRouter.post('/:id/edit', async (c) => {
     p_timetable_id: c.req.param('id'), p_school_id: user.school_id, p_actor_id: user.id,
   } as any)
   if (error) return c.json({ error: error.message || 'Could not reopen timetable', code: 'TIMETABLE_EDIT_FAILED' }, 400)
-  return c.json({ message: 'Timetable reopened for editing' })
+  return c.json({ message: 'Draft changes opened; students still see the published timetable' })
 })

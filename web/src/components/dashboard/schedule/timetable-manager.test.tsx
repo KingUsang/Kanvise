@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { TimetableManager, currentWeekStart } from './timetable-manager'
+import { TimetableManager, currentWeekStart, timetableConflicts } from './timetable-manager'
 import { toast } from 'sonner'
 
 vi.mock('@/config/api', () => ({ getApiUrl: () => 'https://api.example.test' }))
@@ -25,7 +25,7 @@ describe('mobile timetable setup', () => {
         loaded = true
         return response({ data: { id: 'timetable-1', status: 'draft' } }, 201)
       }
-      return response({ data: loaded ? [{ id: 'timetable-1', programme_id: 'programme-1', standalone_course_id: null, status: 'draft', timezone: 'Africa/Lagos', programme: { id: 'programme-1', name: 'JAMB Science' }, slots: [] }] : [] })
+      return response({ data: loaded ? [{ id: 'timetable-1', programme_id: 'programme-1', standalone_course_id: null, status: 'draft', has_unpublished_changes: false, timezone: 'Africa/Lagos', programme: { id: 'programme-1', name: 'JAMB Science' }, slots: [] }] : [] })
     }))
 
     render(<TimetableManager token="token" programmes={programmes} standaloneCourses={[]} tutors={tutors} />)
@@ -33,7 +33,7 @@ describe('mobile timetable setup', () => {
     await user.click(screen.getByRole('button', { name: 'Create timetable' }))
 
     expect(await screen.findByText('Draft · students cannot see it')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Publish timetable' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Publish 0 classes' })).toBeDisabled()
   })
 
   it('adds a weekly class by default and publishes only after explicit confirmation', async () => {
@@ -52,7 +52,7 @@ describe('mobile timetable setup', () => {
         return response({ message: 'Timetable published', generated_classes: 12 })
       }
       const slot = { id: 'slot-1', course_id: 'course-1', tutor_id: 'tutor-1', weekday: 4, start_time: '17:30:00', duration_minutes: 60, starts_on: currentWeekStart(), ends_on: null, course: { id: 'course-1', name: 'Mathematics' }, tutor: tutors[0] }
-      return response({ data: [{ id: 'timetable-1', programme_id: 'programme-1', standalone_course_id: null, status: published ? 'published' : 'draft', timezone: 'Africa/Lagos', programme: { id: 'programme-1', name: 'JAMB Science' }, slots: hasSlot ? [slot] : [] }] })
+      return response({ data: [{ id: 'timetable-1', programme_id: 'programme-1', standalone_course_id: null, status: published ? 'published' : 'draft', has_unpublished_changes: false, timezone: 'Africa/Lagos', programme: { id: 'programme-1', name: 'JAMB Science' }, slots: hasSlot ? [slot] : [] }] })
     }))
 
     render(<TimetableManager token="token" programmes={programmes} standaloneCourses={[]} tutors={tutors} />)
@@ -68,8 +68,37 @@ describe('mobile timetable setup', () => {
     const addCall = calls.find(call => call.url.endsWith('/slots') && call.options?.method === 'POST')
     expect(JSON.parse(addCall?.options?.body as string)).toMatchObject({ recurrence: 'ongoing', week_start: currentWeekStart() })
 
-    await user.click(screen.getByRole('button', { name: 'Publish timetable' }))
+    expect(screen.getByText('Student preview')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Publish 1 class' }))
     expect(await screen.findByText('Published')).toBeInTheDocument()
     expect(toast.success).toHaveBeenCalledWith('Timetable published to students')
+  })
+
+  it('keeps a published timetable visible while draft changes are edited', async () => {
+    const user = userEvent.setup()
+    let editing = false
+    const slot = { id: 'slot-1', course_id: 'course-1', tutor_id: 'tutor-1', weekday: 4, start_time: '17:30:00', duration_minutes: 60, starts_on: currentWeekStart(), ends_on: null, course: { id: 'course-1', name: 'Mathematics' }, tutor: tutors[0] }
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options?: RequestInit) => {
+      if (url.endsWith('/edit') && options?.method === 'POST') {
+        editing = true
+        return response({ message: 'Draft changes opened; students still see the published timetable' })
+      }
+      return response({ data: [{ id: 'timetable-1', programme_id: 'programme-1', standalone_course_id: null, status: 'published', has_unpublished_changes: editing, timezone: 'Africa/Lagos', programme: { id: 'programme-1', name: 'JAMB Science' }, slots: [slot] }] })
+    }))
+
+    render(<TimetableManager token="token" programmes={programmes} standaloneCourses={[]} tutors={tutors} />)
+    await user.click(await screen.findByRole('button', { name: 'Edit timetable' }))
+
+    expect(await screen.findByText('Unpublished changes')).toBeInTheDocument()
+    expect(screen.getByText(/Students still see the last published timetable/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Publish changes' })).toBeEnabled()
+  })
+
+  it('detects overlapping classes for the same tutor', () => {
+    const base = { course_id: 'course-1', tutor_id: 'tutor-1', weekday: 1, starts_on: '2026-09-07', ends_on: null, course: { id: 'course-1', name: 'Mathematics' }, tutor: tutors[0] }
+    expect(timetableConflicts([
+      { ...base, id: 'slot-1', start_time: '09:00:00', duration_minutes: 60 },
+      { ...base, id: 'slot-2', start_time: '09:30:00', duration_minutes: 60 },
+    ])).toEqual(['Ada has overlapping classes on Monday.'])
   })
 })
