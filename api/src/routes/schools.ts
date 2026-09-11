@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole, Variables } from '../middleware/auth'
 import { generateInviteToken } from '../lib/invites'
 import { sendTutorInvitation } from '../emails/send-tutor-invitation'
-import { normalizeSchoolProfileUpdate, schoolSlugCandidates, SchoolProfileValidationError } from '../lib/school-profile'
+import { isReservedSchoolSlug, normalizeSchoolProfileUpdate, schoolSlugCandidates, SchoolProfileValidationError } from '../lib/school-profile'
 import type { TablesUpdate } from '../lib/database.types'
 
 export const schoolsRouter = new Hono<{ Variables: Variables }>()
@@ -48,6 +48,13 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     return c.json({
       error: 'Portal URL must use lowercase letters, numbers, and single hyphens only',
       code: 'INVALID_SLUG',
+    }, 400)
+  }
+
+  if (requestedSlug !== undefined && isReservedSchoolSlug(slug)) {
+    return c.json({
+      error: 'That student page link is reserved by Kanvise. Choose another one.',
+      code: 'RESERVED_SLUG',
     }, 400)
   }
 

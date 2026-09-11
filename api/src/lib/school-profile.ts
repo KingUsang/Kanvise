@@ -6,6 +6,14 @@ export class SchoolProfileValidationError extends Error {
 }
 
 const MAX_SCHOOL_SLUG_LENGTH = 64
+const RESERVED_SCHOOL_SLUGS = new Set([
+  'account', 'api', 'attempt', 'auth', 'class', 'dashboard', 'join', 'mock',
+  'mocks', 'my-mocks', 'payment', 'result',
+])
+
+export function isReservedSchoolSlug(value: unknown) {
+  return RESERVED_SCHOOL_SLUGS.has(String(value ?? '').trim().toLowerCase())
+}
 
 export function normalizeSchoolSlug(value: unknown) {
   return String(value ?? '')
@@ -19,7 +27,10 @@ export function normalizeSchoolSlug(value: unknown) {
 
 export function schoolSlugCandidates(name: string, requestedSlug?: unknown, limit = 20) {
   const explicitSlug = requestedSlug !== undefined && requestedSlug !== null
-  const base = explicitSlug ? String(requestedSlug).trim() : normalizeSchoolSlug(name)
+  const candidateBase = explicitSlug ? String(requestedSlug).trim() : normalizeSchoolSlug(name)
+  const base = !explicitSlug && isReservedSchoolSlug(candidateBase)
+    ? `${candidateBase}-centre`
+    : candidateBase
   if (explicitSlug || limit <= 1) return [base]
 
   return Array.from({ length: limit }, (_, index) => {
@@ -100,6 +111,9 @@ export function normalizeSchoolProfileUpdate(body: Record<string, unknown>) {
     const slug = String(body.slug).trim()
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
       throw new SchoolProfileValidationError('slug', 'Student-page address must use lowercase letters, numbers and single hyphens only')
+    }
+    if (isReservedSchoolSlug(slug)) {
+      throw new SchoolProfileValidationError('slug', 'That student-page address is reserved by Kanvise. Choose another one')
     }
     result.slug = slug
   }

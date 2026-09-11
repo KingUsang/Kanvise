@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeSchoolProfileUpdate, normalizeSchoolSlug, schoolSlugCandidates, SchoolProfileValidationError } from './school-profile'
+import { isReservedSchoolSlug, normalizeSchoolProfileUpdate, normalizeSchoolSlug, schoolSlugCandidates, SchoolProfileValidationError } from './school-profile'
 
 describe('school profile normalization', () => {
   it('accepts handles and legitimate platform URL variations', () => {
@@ -47,5 +47,12 @@ describe('school profile normalization', () => {
     ])
     expect(schoolSlugCandidates('Bright Future', 'my-centre')).toEqual(['my-centre'])
     expect(schoolSlugCandidates('A'.repeat(80), undefined, 2).every((slug) => slug.length <= 64)).toBe(true)
+  })
+
+  it('keeps centre pages away from application routes', () => {
+    expect(isReservedSchoolSlug('Dashboard')).toBe(true)
+    expect(schoolSlugCandidates('Dashboard', undefined, 2)).toEqual(['dashboard-centre', 'dashboard-centre-2'])
+    expect(() => normalizeSchoolProfileUpdate({ slug: 'auth' })).toThrow(/reserved/i)
+    expect(normalizeSchoolProfileUpdate({ slug: 'bright-future' })).toEqual({ slug: 'bright-future' })
   })
 })
