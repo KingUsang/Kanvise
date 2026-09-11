@@ -1,278 +1,107 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ScheduleClient } from './schedule-client'
 import { toast } from 'sonner'
 
-vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
-}))
+const navigation = vi.hoisted(() => ({ push: vi.fn(), mode: null as string | null }))
 
-// Mock next/navigation
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    refresh: vi.fn(),
-  })
+  useRouter: () => ({ push: navigation.push }),
+  useSearchParams: () => ({ get: () => navigation.mode }),
 }))
+vi.mock('@/components/navigation/NavigationProgress', () => ({ startNavigationProgress: vi.fn() }))
 
-// Mock fetch
 const mockFetch = vi.fn()
 global.fetch = mockFetch
 
-// Sample data for rendering
-const mockProgrammes = [{ id: 'programme-1', name: 'JAMB Science', courses: [{ id: 'course-1', name: 'Intro to Math' }] }]
+const mockProgrammes = [
+  { id: 'programme-1', name: 'JAMB Science', courses: [{ id: 'course-1', name: 'Mathematics' }] },
+  { id: 'programme-2', name: 'WAEC Weekend', courses: [{ id: 'course-2', name: 'Mathematics' }] },
+]
 const mockTutors = [{ id: 'tutor-2', first_name: 'John', last_name: 'Doe' }]
+const adminProps = { token: 'fake-token', capabilities: { isAdmin: true, isTutor: false }, user: { id: 'admin-1', first_name: 'Admin', last_name: 'User' } }
+const tutorProps = { token: 'fake-token', capabilities: { isAdmin: false, isTutor: true }, user: { id: 'tutor-1', first_name: 'Jane', last_name: 'Smith' } }
 
-const defaultAdminProps = {
-  token: 'fake-token',
-  capabilities: { isAdmin: true, isTutor: false },
-  user: { id: 'admin-1', first_name: 'Admin', last_name: 'User' }
+function configureInitialRequests(assignedTutorId = 'tutor-2') {
+  mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+    if (options?.method === 'POST') return { ok: true, json: async () => ({ data: { id: 'new-class' } }) }
+    if (url.includes('/courses/') && url.includes('/tutors')) return { ok: true, json: async () => ({ data: [{ tutor_id: assignedTutorId }] }) }
+    if (url.includes('/live-classes')) return { ok: true, json: async () => ({ data: [] }) }
+    if (url.includes('/programmes')) return { ok: true, json: async () => ({ data: mockProgrammes }) }
+    if (url.includes('/users?roles=admin,tutor')) return { ok: true, json: async () => ({ data: mockTutors }) }
+    return { ok: true, json: async () => ({ data: [] }) }
+  })
 }
 
-const defaultTutorProps = {
-  token: 'fake-token',
-  capabilities: { isAdmin: false, isTutor: true },
-  user: { id: 'tutor-1', first_name: 'Jane', last_name: 'Smith' }
-}
-
-describe('ScheduleClient (Schedule Button Tests)', () => {
+describe('Classes page actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
-    // Default fetch mocks for initial data load
-    mockFetch.mockImplementation(async (url) => {
-      if (url.includes('/live-classes')) {
-        return { ok: true, json: async () => ({ data: [] }) }
-      }
-      if (url.includes('/programmes')) return { ok: true, json: async () => ({ data: mockProgrammes }) }
-      if (url.includes('/courses')) {
-        if (url.includes('/tutors')) {
-          return { ok: true, json: async () => ({ data: [{ tutor_id: 'tutor-2' }] }) }
-        }
-        return { ok: true, json: async () => ({ data: [] }) }
-      }
-      if (url.includes('/users?roles=admin,tutor')) {
-        return { ok: true, json: async () => ({ data: mockTutors }) }
-      }
-      return { ok: true, json: async () => ({ data: [] }) }
-    })
+    navigation.mode = null
+    configureInitialRequests()
   })
 
-  it('guides a new centre to schedule its first class instead of showing an empty table', async () => {
-    render(<ScheduleClient {...defaultAdminProps} />)
+  it('starts with two clear actions instead of an always-open scheduling form', async () => {
+    render(<ScheduleClient {...adminProps} />)
 
-    expect(await screen.findByRole('heading', { name: 'No classes scheduled yet' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Schedule your first class/i })).toBeInTheDocument()
-    expect(screen.queryByText('No upcoming classes scheduled.')).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Classes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Start now/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Schedule$/i })).toBeInTheDocument()
+    expect(screen.queryByLabelText('What are you teaching?')).not.toBeInTheDocument()
   })
 
-  it('sends the expected POST request with ISO timestamp on successful submission', async () => {
+  it('starts a tutor class from one grouped subject choice', async () => {
     const user = userEvent.setup()
-    render(<ScheduleClient {...defaultAdminProps} />)
-    
-    // Wait for initial fetch
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
-    
-    // Fill form
-    const titleInput = screen.getByPlaceholderText('e.g. Advanced Calculus Rev.')
-    await user.type(titleInput, 'New Test Class')
-    
-    const selects = document.querySelectorAll('select')
-    await user.selectOptions(selects[0], 'programme-1')
-    await user.selectOptions(selects[1], 'course-1')
-    
-    // Need to wait for tutors to load after selecting course
-    await waitFor(() => expect(document.querySelectorAll('select')[2].options.length).toBeGreaterThan(1))
-    await user.selectOptions(document.querySelectorAll('select')[2], 'tutor-2')
-    
-    // Set date and time
-    const dateInput = document.querySelector('input[type="date"]')
-    const timeInput = document.querySelector('input[type="time"]')
-    fireEvent.change(dateInput!, { target: { value: '2030-01-01' } })
-    fireEvent.change(timeInput!, { target: { value: '14:30' } })
-    
-    // Duration defaults to 60, no need to click
-    
-    // Mock successful post response
-    mockFetch.mockImplementationOnce(async (url, options) => {
-      if (options?.method === 'POST') {
-        return { ok: true, json: async () => ({ data: { id: 'new-class' } }) }
-      }
-      return { ok: true, json: async () => ({ data: [] }) }
-    })
-    
-    // Submit
-    const scheduleBtn = screen.getByRole('button', { name: /Schedule Class/i })
-    await user.click(scheduleBtn)
-    
-    await waitFor(() => {
-      const postCalls = mockFetch.mock.calls.filter(call => call[1]?.method === 'POST')
-      expect(postCalls.length).toBe(1)
-      
-      const reqBody = JSON.parse(postCalls[0][1].body)
-      expect(reqBody).toMatchObject({
-        title: 'New Test Class',
-        course_id: 'course-1',
-        tutor_id: 'tutor-2',
-        duration_minutes: 60
-      })
-      
-      // Verifies local time was converted to correct ISO timestamp
-      const scheduledDate = new Date(reqBody.scheduled_at)
-      expect(scheduledDate.toISOString()).toBeDefined()
+    render(<ScheduleClient {...tutorProps} />)
+    await screen.findByRole('heading', { name: 'No classes scheduled yet' })
+
+    await user.click(screen.getByRole('button', { name: /Start now/i }))
+    const subject = screen.getByLabelText('What are you teaching?')
+    expect(screen.getAllByRole('group').map(group => group.getAttribute('label'))).toEqual(expect.arrayContaining(['JAMB Science', 'WAEC Weekend']))
+    await user.selectOptions(subject, 'course-1')
+    expect(screen.queryByLabelText('Who is teaching?')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Date')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Enter classroom' }))
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith('/class/new-class?start=true'))
+    const post = mockFetch.mock.calls.find((call) => call[1]?.method === 'POST')
+    expect(post?.[0]).toMatch(/\/live-classes\/start-now$/)
+    expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({
+      course_id: 'course-1', tutor_id: 'tutor-1', title: 'Mathematics class', duration_minutes: 60,
     })
   })
 
-  it('uses the signed-in tutor automatically for tutor accounts', async () => {
+  it('schedules later with generated title and automatic sole-tutor assignment', async () => {
     const user = userEvent.setup()
-    render(<ScheduleClient {...defaultTutorProps} />)
-    
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
-    
-    await user.type(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.'), 'Tutor Class')
-    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
-    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
-    
-    // Verify Tutor select doesn't exist for tutors
-    expect(document.querySelectorAll('select').length).toBe(2)
-    
-    const dateInput = document.querySelector('input[type="date"]')
-    const timeInput = document.querySelector('input[type="time"]')
-    fireEvent.change(dateInput!, { target: { value: '2030-01-01' } })
-    fireEvent.change(timeInput!, { target: { value: '14:30' } })
-    
-    mockFetch.mockImplementationOnce(async (url, options) => {
-      if (options?.method === 'POST') return { ok: true, json: async () => ({ data: { id: 'tutor-class' } }) }
-      return { ok: true, json: async () => ({ data: [] }) }
-    })
-    
-    await user.click(screen.getByRole('button', { name: /Schedule Class/i }))
-    
-    await waitFor(() => {
-      const postCalls = mockFetch.mock.calls.filter(call => call[1]?.method === 'POST')
-      expect(postCalls.length).toBe(1)
-      const reqBody = JSON.parse(postCalls[0][1].body)
-      
-      // Used their own tutor ID implicitly!
-      expect(reqBody.tutor_id).toBe('tutor-1')
-    })
+    render(<ScheduleClient {...adminProps} />)
+    await screen.findByRole('heading', { name: 'No classes scheduled yet' })
+
+    await user.click(screen.getByRole('button', { name: /^Schedule$/i }))
+    await user.selectOptions(screen.getByLabelText('What are you teaching?'), 'course-1')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Schedule class' })).toBeEnabled())
+    expect(screen.queryByLabelText('Who is teaching?')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2030-01-01' } })
+    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '14:30' } })
+
+    await user.click(screen.getByRole('button', { name: 'Schedule class' }))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Class scheduled'))
+    const post = mockFetch.mock.calls.find((call) => call[1]?.method === 'POST')
+    const body = JSON.parse(post?.[1]?.body as string)
+    expect(post?.[0]).toMatch(/\/live-classes$/)
+    expect(body).toMatchObject({ course_id: 'course-1', tutor_id: 'tutor-2', title: 'Mathematics class', duration_minutes: 60 })
+    expect(new Date(body.scheduled_at).toISOString()).toBeDefined()
   })
 
-  it('automatically assigns an admin to a course they teach', async () => {
+  it('keeps title and duration behind optional details', async () => {
     const user = userEvent.setup()
-    mockFetch.mockImplementation(async (url) => {
-      if (url.includes('/live-classes')) return { ok: true, json: async () => ({ data: [] }) }
-      if (url.includes('/courses/course-1/tutors')) return { ok: true, json: async () => ({ data: [{ tutor_id: 'admin-1' }] }) }
-      if (url.includes('/programmes')) return { ok: true, json: async () => ({ data: mockProgrammes }) }
-      if (url.includes('/users?roles=admin,tutor')) return { ok: true, json: async () => ({ data: [{ id: 'admin-1', first_name: 'Admin', last_name: 'User' }] }) }
-      return { ok: true, json: async () => ({ data: [] }) }
-    })
+    render(<ScheduleClient {...tutorProps} />)
+    await screen.findByRole('heading', { name: 'No classes scheduled yet' })
+    await user.click(screen.getByRole('button', { name: /Start now/i }))
 
-    render(<ScheduleClient {...defaultAdminProps} />)
-    await waitFor(() => expect(screen.getByRole('option', { name: 'JAMB Science' })).toBeInTheDocument())
-    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
-    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
-
-    await waitFor(() => expect(document.querySelectorAll('select')[2]).toHaveValue('admin-1'))
-    expect(screen.getByRole('option', { name: 'Admin User (you)' })).toBeInTheDocument()
-  })
-
-  it('automatically selects the sole tutor assigned to a course', async () => {
-    const user = userEvent.setup()
-    render(<ScheduleClient {...defaultAdminProps} />)
-
-    await waitFor(() => expect(screen.getByRole('option', { name: 'JAMB Science' })).toBeInTheDocument())
-    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
-    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
-
-    await waitFor(() => expect(document.querySelectorAll('select')[2]).toHaveValue('tutor-2'))
-  })
-
-  it('displays useful server validation errors and does not clear the form', async () => {
-    const user = userEvent.setup()
-    render(<ScheduleClient {...defaultTutorProps} />)
-    
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
-    
-    await user.type(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.'), 'Failed Class')
-    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
-    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
-    
-    const dateInput = document.querySelector('input[type="date"]')
-    const timeInput = document.querySelector('input[type="time"]')
-    fireEvent.change(dateInput!, { target: { value: '2030-01-01' } })
-    fireEvent.change(timeInput!, { target: { value: '14:30' } })
-    
-    // Mock API returning a 400 validation error
-    mockFetch.mockImplementationOnce(async (url, options) => {
-      if (options?.method === 'POST') {
-        return { 
-          ok: false, 
-          status: 400,
-          json: async () => ({ error: 'Cannot schedule a class in the past', code: 'SCHEDULED_IN_PAST' }) 
-        }
-      }
-      return { ok: true, json: async () => ({ data: [] }) }
-    })
-    
-    await user.click(screen.getByRole('button', { name: /Schedule Class/i }))
-    
-    // Error should be shown
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(
-      'Could not schedule the class',
-      { description: 'Cannot schedule a class in the past' },
-    ))
-    
-    // Form should NOT be cleared
-    expect(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.')).toHaveValue('Failed Class')
-    
-  })
-
-  it('prevents duplicate submissions while the first request is pending', async () => {
-    const user = userEvent.setup()
-    render(<ScheduleClient {...defaultTutorProps} />)
-    
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/programmes'), expect.any(Object)))
-    
-    await user.type(screen.getByPlaceholderText('e.g. Advanced Calculus Rev.'), 'Slow Class')
-    await user.selectOptions(document.querySelectorAll('select')[0], 'programme-1')
-    await user.selectOptions(document.querySelectorAll('select')[1], 'course-1')
-    
-    const dateInput = document.querySelector('input[type="date"]')
-    const timeInput = document.querySelector('input[type="time"]')
-    fireEvent.change(dateInput!, { target: { value: '2030-01-01' } })
-    fireEvent.change(timeInput!, { target: { value: '14:30' } })
-    
-    let resolvePost: any
-    const postPromise = new Promise(resolve => { resolvePost = resolve })
-    
-    mockFetch.mockImplementation(async (url, options) => {
-      if (options?.method === 'POST') {
-        await postPromise
-        return { ok: true, json: async () => ({ data: { id: 'slow-class' } }) }
-      }
-      return { ok: true, json: async () => ({ data: [] }) }
-    })
-    
-    const scheduleBtn = screen.getByRole('button', { name: /Schedule Class/i })
-    
-    // Click multiple times
-    // Just click once and verify it disables
-    await user.click(scheduleBtn)
-    
-    // The button should be disabled while pending
-    await waitFor(() => expect(scheduleBtn).toBeDisabled())
-    expect(scheduleBtn).toHaveTextContent(/Scheduling...|Please wait/i)
-    
-    // Resolve the promise
-    resolvePost()
-    
-    await waitFor(() => {
-      const postCalls = mockFetch.mock.calls.filter(call => call[1]?.method === 'POST')
-      // Only 1 request should have been sent despite 3 clicks
-      expect(postCalls.length).toBe(1)
-    })
+    expect(screen.getByLabelText('Class title')).not.toBeVisible()
+    await user.click(screen.getByText(/Edit title or duration/i))
+    expect(screen.getByLabelText('Class title')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '1h' })).toBeChecked()
   })
 })

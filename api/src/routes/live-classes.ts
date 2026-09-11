@@ -170,6 +170,109 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   return c.json({ data }, 201)
 })
 
+// ── POST /live-classes/start-now — Create and start in one workflow ───────
+
+liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) => {
+  const user = c.get('user')
+  const body = await c.req.json()
+  const courseId = String(body.course_id || '')
+  const tutorId = String(body.tutor_id || user.id)
+  const durationMinutes = body.duration_minutes === undefined ? 60 : Number(body.duration_minutes)
+
+  if (!courseId) {
+    return c.json({ error: 'Choose what you are teaching', code: 'COURSE_REQUIRED' }, 400)
+  }
+  if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 240) {
+    return c.json({ error: 'Duration must be between 15 and 240 minutes', code: 'INVALID_DURATION' }, 400)
+  }
+  if (user.role === 'tutor' && tutorId !== user.id) {
+    return c.json({ error: 'Tutors can only start their own classes', code: 'FORBIDDEN' }, 403)
+  }
+
+  const [{ data: assignment, error: assignmentError }, { data: course, error: courseError }] = await Promise.all([
+    supabase.from('tutor_course_assignments')
+      .select('course_id')
+      .eq('tutor_id', tutorId)
+      .eq('course_id', courseId)
+      .eq('school_id', user.school_id)
+      .maybeSingle(),
+    supabase.from('courses')
+      .select('id, name')
+      .eq('id', courseId)
+      .eq('school_id', user.school_id)
+      .maybeSingle(),
+  ])
+
+  if (assignmentError || courseError || !assignment || !course) {
+    return c.json({ error: 'Choose a subject assigned to this tutor', code: 'INVALID_TUTOR_OR_COURSE' }, 403)
+  }
+
+  const title = String(body.title || '').trim() || `${course.name} class`
+  const startedAt = new Date().toISOString()
+  const { data: insertedClass, error: insertError } = await supabase.from('live_classes')
+    .insert({
+      school_id: user.school_id,
+      course_id: courseId,
+      tutor_id: tutorId,
+      title,
+      scheduled_at: startedAt,
+      duration_minutes: durationMinutes,
+      status: 'scheduled',
+      created_by: user.id,
+    })
+    .select('id, title, course_id, tutor_id, duration_minutes')
+    .single()
+
+  if (insertError || !insertedClass) {
+    return c.json({ error: 'Could not prepare the class', code: 'CLASS_CREATE_FAILED' }, 500)
+  }
+
+  const roomName = `kanvise-class-${insertedClass.id}`
+  let roomCreated = false
+  try {
+    const roomService = getRoomService()
+    await roomService.createRoom({ name: roomName, emptyTimeout: 300, maxParticipants: 200 })
+    roomCreated = true
+
+    const { data: liveClass, error: updateError } = await supabase.from('live_classes')
+      .update({ status: 'live', livekit_room_name: roomName, started_at: startedAt })
+      .eq('id', insertedClass.id)
+      .eq('school_id', user.school_id)
+      .select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, livekit_room_name')
+      .single()
+    if (updateError || !liveClass) throw new Error('CLASS_UPDATE_FAILED')
+
+    const displayName = await getParticipantDisplayName(user, 'Tutor')
+    const accessToken = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
+    const { wsUrl } = getLiveKitConfig()
+
+    return c.json({
+      data: {
+        ...liveClass,
+        access_token: accessToken,
+        livekit_url: wsUrl,
+        is_host: true,
+        class_title: liveClass.title,
+        course_name: course.name,
+      },
+    }, 201)
+  } catch (error) {
+    console.error('[live-classes] start-now failed:', error)
+    if (roomCreated) {
+      try {
+        await getRoomService().deleteRoom(roomName)
+      } catch {
+        // Continue with database compensation even if room cleanup fails.
+      }
+    }
+    await supabase.from('live_classes')
+      .delete()
+      .eq('id', insertedClass.id)
+      .eq('school_id', user.school_id)
+    return c.json({ error: 'Could not start the class. Nothing was scheduled.', code: 'CLASS_START_FAILED' }, 500)
+  }
+})
+
 // ── GET /live-classes — List classes (role-filtered) ───────────────────────
 
 liveClassesRouter.get('/', async (c) => {

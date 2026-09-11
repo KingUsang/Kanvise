@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 
@@ -54,6 +54,7 @@ interface Tutor {
 
 export function ScheduleClient({ token, capabilities, user }: ScheduleClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   
   const [classes, setClasses] = useState<LiveClass[]>([])
   const [programmes, setProgrammes] = useState<Programme[]>([])
@@ -61,13 +62,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const [assignedTutorIds, setAssignedTutorIds] = useState<string[]>([])
   
   const [title, setTitle] = useState('')
-  const [programmeId, setProgrammeId] = useState('')
   const [courseId, setCourseId] = useState('')
   const [tutorId, setTutorId] = useState(capabilities.isAdmin ? '' : user.id)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [duration, setDuration] = useState('60')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formMode, setFormMode] = useState<'now' | 'later' | null>(() => searchParams.get('mode') === 'now' ? 'now' : null)
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false)
   
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -121,8 +122,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     fetchData()
   }, [token, capabilities.isAdmin])
 
-  const selectedProgramme = programmes.find(programme => programme.id === programmeId)
-  const programmeSubjects = selectedProgramme?.courses || []
+  const selectedCourse = programmes.flatMap(programme => programme.courses).find(course => course.id === courseId)
 
   useEffect(() => {
     if (!capabilities.isAdmin || !courseId) return
@@ -151,19 +151,30 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
   const handleScheduleClass = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title || !courseId || !date || !time) return
+    if (!courseId || (formMode === 'later' && (!date || !time))) return
     if (capabilities.isAdmin && !tutorId) return
     setIsSubmitting(true)
-    const scheduledAt = new Date(`${date}T${time}`).toISOString()
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
+      const isStartingNow = formMode === 'now'
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes${isStartingNow ? '/start-now' : ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          title, course_id: courseId, tutor_id: tutorId, scheduled_at: scheduledAt, duration_minutes: parseInt(duration, 10)
+          title: title.trim() || `${selectedCourse?.name || 'Live'} class`,
+          course_id: courseId,
+          tutor_id: tutorId,
+          ...(!isStartingNow && { scheduled_at: new Date(`${date}T${time}`).toISOString() }),
+          duration_minutes: parseInt(duration, 10),
         })
       })
       if (res.ok) {
+        const responseBody = await res.json()
+        if (isStartingNow) {
+          toast.success('Class started')
+          startNavigationProgress()
+          router.push(`/class/${responseBody.data.id}?start=true`)
+          return
+        }
         const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -175,14 +186,15 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         setDate('')
         setTime('')
         setDuration('60')
+        setFormMode(null)
         toast.success('Class scheduled')
       } else {
         const errData = await res.json()
-        toast.error('Could not schedule the class', { description: errData.error })
+        toast.error(isStartingNow ? 'Could not start the class' : 'Could not schedule the class', { description: errData.error })
       }
     } catch (err) {
       console.error(err)
-      toast.error('Could not schedule the class', { description: 'Check your connection and try again.' })
+      toast.error(formMode === 'now' ? 'Could not start the class' : 'Could not schedule the class', { description: 'Check your connection and try again.' })
     } finally {
       setIsSubmitting(false)
     }
@@ -215,34 +227,6 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     const isStarting = user.id === classTutorId;
     startNavigationProgress();
     router.push(`/class/${classId}${isStarting ? '?start=true' : ''}`);
-  }
-
-  const handleDownloadSchedule = () => {
-    if (classes.length === 0) {
-      toast.info('There are no classes to download yet')
-      return
-    }
-
-    const escapeCsvCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
-    const rows = classes.map((item) => [
-      item.title,
-      item.course?.name || '',
-      `${item.tutor?.first_name || ''} ${item.tutor?.last_name || ''}`.trim(),
-      new Date(item.scheduled_at).toLocaleString(),
-      item.duration_minutes,
-      item.status,
-    ])
-    const csv = [
-      ['Class', 'Subject', 'Tutor', 'Date and time', 'Duration (minutes)', 'Status'],
-      ...rows,
-    ].map((row) => row.map(escapeCsvCell).join(',')).join('\n')
-
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'kanvise-class-schedule.csv'
-    link.click()
-    URL.revokeObjectURL(url)
   }
 
   const liveClasses = classes.filter(c => c.status === 'live')
@@ -283,27 +267,26 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
   return (
     <div className="w-full">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-[32px] leading-[40px] font-bold text-[#1b1c1c] tracking-tight">Schedule Manager</h2>
-          <p className="text-[16px] leading-[24px] text-[#474551] mt-1 max-w-2xl">
-            Plan live classes, assign tutors, and keep track of upcoming sessions.
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#994704]">Teaching</p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#1b1c1c] sm:text-3xl">Classes</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551]">
+            Start teaching now or plan a class for later.
           </p>
         </div>
-        <div className="flex gap-3 shrink-0">
-          <button 
-            className="h-10 px-4 rounded bg-[#fbf9f8] border border-[#2e2877] text-[#2e2877] text-[12px] leading-[16px] tracking-[0.05em] font-bold hover:bg-[#f5f3f2] transition-colors flex items-center gap-2"
-            onClick={handleDownloadSchedule}
+        <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#994704] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(153,71,4,0.22)]"
+            onClick={() => setFormMode('now')}
           >
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            Download Schedule
+            <span aria-hidden="true" className="material-symbols-outlined text-[19px]">videocam</span>Start now
           </button>
-          <button 
-            className="h-10 px-5 rounded bg-[#994704] text-white text-[12px] leading-[16px] tracking-[0.05em] font-bold hover:bg-[#a84e04] transition-colors shadow-[0_4px_14px_rgba(153,71,4,0.3)] flex items-center gap-2"
-            onClick={() => document.getElementById('class-title-input')?.focus()}
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#2e2877] bg-white px-4 text-sm font-semibold text-[#2e2877]"
+            onClick={() => setFormMode('later')}
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            New Class
+            <span aria-hidden="true" className="material-symbols-outlined text-[19px]">calendar_add_on</span>Schedule
           </button>
         </div>
       </div>
@@ -312,154 +295,68 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         {/* Left Column */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           
-          {/* Create Form Card */}
-          <div className="bg-white border border-[#C2B59B] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] p-6">
-            <div className="border-b border-[#C2B59B] pb-4 mb-6">
-              <h3 className="text-[20px] leading-[28px] font-bold text-[#180d62]">Schedule New Class</h3>
-              <p className="text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] mt-1">Choose when the class will hold and who will teach it</p>
-            </div>
-            
-            <form className="flex flex-col gap-5" onSubmit={handleScheduleClass}>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Class Title</label>
-                <input 
-                  id="class-title-input"
-                  type="text" 
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  required
-                  className="w-full h-10 px-3 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none" 
-                  placeholder="e.g. Advanced Calculus Rev." 
-                />
+          {formMode && (
+            <div id="class-action-form" className="rounded-2xl border border-[#C2B59B] bg-white p-5 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-6">
+              <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#e5dfda] pb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-[#180d62]">{formMode === 'now' ? 'Start a live class' : 'Schedule for later'}</h3>
+                  <p className="mt-1 text-sm leading-5 text-[#474551]">{formMode === 'now' ? 'Choose a subject and enter the classroom.' : 'Choose a subject, date and time.'}</p>
+                </div>
+                <button type="button" onClick={() => setFormMode(null)} aria-label="Close class form" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#716c76] hover:bg-[#f5f3f2]"><span className="material-symbols-outlined">close</span></button>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Programme</label>
-                <div className="relative">
-                  <select 
-                    value={programmeId}
-                    onChange={e => { setProgrammeId(e.target.value); setCourseId(''); setAssignedTutorIds([]); setTutorId(capabilities.isAdmin ? '' : user.id) }}
+              <form className="flex flex-col gap-5" onSubmit={handleScheduleClass}>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="class-course" className="text-sm font-semibold text-[#1b1c1c]">What are you teaching?</label>
+                  <select
+                    id="class-course"
+                    value={courseId}
+                    onChange={event => { setCourseId(event.target.value); setAssignedTutorIds([]); setTutorId(capabilities.isAdmin ? '' : user.id) }}
                     required
-                    className="w-full h-10 px-3 pr-10 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] appearance-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer"
+                    className="min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base text-[#1b1c1c] outline-none focus:border-[#2e2877] focus:ring-2 focus:ring-[#ded8ff]"
                   >
-                    <option value="" disabled>Select programme...</option>
+                    <option value="" disabled>Choose a subject</option>
                     {programmes.map(programme => (
-                      <option key={programme.id} value={programme.id}>{programme.name}</option>
+                      <optgroup key={programme.id} label={programme.name}>
+                        {programme.courses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}
+                      </optgroup>
                     ))}
                   </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#474551] pointer-events-none">arrow_drop_down</span>
+                  {!programmes.length && <p className="text-xs leading-5 text-[#994704]">Create a course with at least one subject first.</p>}
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Programme subject</label>
-                <div className="relative">
-                  <select
-                    value={courseId}
-                    onChange={e => setCourseId(e.target.value)}
-                    required
-                    disabled={!programmeId}
-                    className="w-full h-10 px-3 pr-10 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] appearance-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <option value="" disabled>{programmeId ? 'Select subject...' : 'Select a programme first'}</option>
-                    {programmeSubjects.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#474551] pointer-events-none">arrow_drop_down</span>
-                </div>
-              </div>
-
-              {capabilities.isAdmin && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Assigned Tutor</label>
-                  <div className="relative">
-                    <select 
-                      value={tutorId}
-                      onChange={e => setTutorId(e.target.value)}
-                      required
-                      className="w-full h-10 px-3 pr-10 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] appearance-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer"
-                    >
-                      <option value="" disabled>Select tutor...</option>
-                      {tutors.filter(t => !courseId || assignedTutorIds.includes(t.id)).map(tutor => (
-                        <option key={tutor.id} value={tutor.id}>
-                          {tutor.first_name} {tutor.last_name}{tutor.id === user.id ? ' (you)' : ''}
-                        </option>
-                      ))}
-                      {courseId && assignedTutorIds.length === 0 && (
-                        <option value="" disabled>No tutors are assigned to this subject yet.</option>
-                      )}
+                {capabilities.isAdmin && courseId && assignedTutorIds.length > 1 && (
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="class-tutor" className="text-sm font-semibold text-[#1b1c1c]">Who is teaching?</label>
+                    <select id="class-tutor" value={tutorId} onChange={event => setTutorId(event.target.value)} required className="min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base">
+                      <option value="" disabled>Choose a tutor</option>
+                      {tutors.filter(tutor => assignedTutorIds.includes(tutor.id)).map(tutor => <option key={tutor.id} value={tutor.id}>{tutor.first_name} {tutor.last_name}{tutor.id === user.id ? ' (you)' : ''}</option>)}
                     </select>
-                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#474551] pointer-events-none">arrow_drop_down</span>
                   </div>
-                </div>
-              )}
+                )}
+                {capabilities.isAdmin && courseId && assignedTutorIds.length === 0 && <p className="rounded-lg bg-[#fff3e8] px-3 py-2 text-xs leading-5 text-[#7a3903]">Assign a tutor to this subject before starting a class.</p>}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Date</label>
-                  <input 
-                    type="date" 
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    required
-                    className="w-full h-10 px-3 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Start Time</label>
-                  <input 
-                    type="time" 
-                    value={time}
-                    onChange={e => setTime(e.target.value)}
-                    required
-                    className="w-full h-10 px-3 bg-[#fbf9f8] border border-[#C2B59B] rounded text-[14px] leading-[20px] text-[#1b1c1c] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] transition-all outline-none cursor-pointer" 
-                  />
-                </div>
-              </div>
+                {formMode === 'later' && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <label htmlFor="class-date" className="text-sm font-semibold text-[#1b1c1c]">Date<input id="class-date" type="date" value={date} onChange={event => setDate(event.target.value)} required className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base" /></label>
+                    <label htmlFor="class-time" className="text-sm font-semibold text-[#1b1c1c]">Start time<input id="class-time" type="time" value={time} onChange={event => setTime(event.target.value)} required className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base" /></label>
+                  </div>
+                )}
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#1b1c1c]">Duration</label>
-                <div className="flex gap-2">
-                  {[ {l: '45m', v: '45'}, {l: '1h', v: '60'}, {l: '1.5h', v: '90'}, {l: '2h', v: '120'} ].map(opt => (
-                    <label key={opt.v} className="flex-1 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="duration" 
-                        value={opt.v}
-                        checked={duration === opt.v}
-                        onChange={e => setDuration(e.target.value)}
-                        className="peer sr-only" 
-                      />
-                      <div className="h-10 flex items-center justify-center border border-[#C2B59B] rounded bg-[#fbf9f8] text-[14px] leading-[20px] text-[#474551] peer-checked:bg-[#2e2877] peer-checked:border-[#2e2877] peer-checked:text-white transition-colors">
-                        {opt.l}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                <details className="rounded-xl border border-[#e3ded9]">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Edit title or duration <span className="font-normal text-[#716c76]">(optional)</span></summary>
+                  <div className="space-y-4 border-t border-[#e3ded9] px-4 py-4">
+                    <label htmlFor="class-title-input" className="block text-sm font-medium text-[#1b1c1c]">Class title<input id="class-title-input" type="text" value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedCourse ? `${selectedCourse.name} class` : 'Generated from the subject'} className="mt-1.5 min-h-11 w-full rounded-lg border border-[#8b8580] px-3" /></label>
+                    <div><p className="text-sm font-medium text-[#1b1c1c]">Duration</p><div className="mt-2 grid grid-cols-4 gap-2">{[{ l: '45m', v: '45' }, { l: '1h', v: '60' }, { l: '1.5h', v: '90' }, { l: '2h', v: '120' }].map(option => <label key={option.v} className="cursor-pointer"><input type="radio" name="duration" value={option.v} checked={duration === option.v} onChange={event => setDuration(event.target.value)} className="peer sr-only" /><span className="flex min-h-10 items-center justify-center rounded-lg border border-[#C2B59B] text-sm text-[#474551] peer-checked:border-[#2e2877] peer-checked:bg-[#2e2877] peer-checked:text-white">{option.l}</span></label>)}</div></div>
+                  </div>
+                </details>
 
-              <div className="pt-4 border-t border-[#C2B59B] mt-2 flex justify-end gap-3">
-                <button 
-                  type="button" 
-                  className="px-4 py-2 text-[12px] leading-[16px] tracking-[0.05em] font-bold text-[#3d3d3d] hover:bg-[#f5f3f2] rounded transition-colors"
-                  onClick={() => {
-                    setTitle('')
-                    setCourseId('')
-                    setDate('')
-                    setTime('')
-                  }}
-                >
-                  Reset
+                <button type="submit" disabled={isSubmitting || !courseId || (capabilities.isAdmin && !tutorId)} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                  {isSubmitting && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}{isSubmitting ? (formMode === 'now' ? 'Starting…' : 'Scheduling…') : (formMode === 'now' ? 'Enter classroom' : 'Schedule class')}
                 </button>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="px-6 py-2 bg-[#2e2877] text-white text-[12px] leading-[16px] tracking-[0.05em] font-bold rounded hover:bg-[#180d62] transition-colors disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Scheduling...' : 'Schedule Class'}
-                </button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
+          )}
           
           {/* Calendar Widget */}
           <div className="bg-white border border-[#C2B59B] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] p-6">
@@ -582,10 +479,10 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </p>
               <button
                 type="button"
-                onClick={() => document.getElementById('class-title-input')?.focus()}
+                onClick={() => setFormMode('later')}
                 className="mt-6 inline-flex items-center gap-2 rounded-md bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#7a3903]"
               >
-                <span className="material-symbols-outlined text-[18px]">add</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px]">add</span>
                 Schedule your first class
               </button>
               <div className="mt-8 grid w-full max-w-xl grid-cols-1 gap-3 border-t border-[#e4e2e1] pt-6 text-left sm:grid-cols-3">
@@ -626,7 +523,26 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </div>
             </div>
             
-            <div className="overflow-x-auto">
+            <div className="divide-y divide-[#e8e2dc] sm:hidden">
+              {scheduledClasses.length === 0 ? <p className="px-4 py-7 text-center text-sm text-[#474551]">No upcoming classes scheduled.</p> : scheduledClasses.map(cls => {
+                const dt = new Date(cls.scheduled_at)
+                return (
+                  <article key={cls.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#994704]">{cls.course?.name || 'Subject'}</p>
+                        <h4 className="mt-1 truncate font-semibold text-[#1b1c1c]">{cls.title}</h4>
+                      </div>
+                      <p className="shrink-0 text-right text-sm font-semibold text-[#2e2877]">{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}<span className="mt-0.5 block text-xs font-normal text-[#716c76]">{cls.duration_minutes} min</span></p>
+                    </div>
+                    <p className="mt-2 text-xs text-[#716c76]">{dt.toLocaleDateString()} · {cls.tutor?.first_name || 'Tutor'} {cls.tutor?.last_name || ''}</p>
+                    {cls.tutor_id === user.id && <button onClick={() => handleStartClass(cls.id)} className="mt-3 min-h-11 w-full rounded-xl bg-[#2e2877] px-4 text-sm font-semibold text-white">Start class</button>}
+                  </article>
+                )
+              })}
+            </div>
+
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#C2B59B]/10 text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] border-b border-[#C2B59B]">

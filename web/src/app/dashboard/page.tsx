@@ -61,11 +61,11 @@ export default async function DashboardHomePage() {
           <p className="mt-1 max-w-2xl text-[#474551]">{description}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href="/dashboard/mocks/builder" className="inline-flex items-center gap-2 rounded-lg bg-[#c26627] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#994704]">
-            <span className="material-symbols-outlined text-xl">quiz</span>Create Mock
+          <Link href="/dashboard/schedule?mode=now" className="inline-flex items-center gap-2 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7a3903]">
+            <span className="material-symbols-outlined text-xl">videocam</span>Start live class
           </Link>
-          <Link href="/dashboard/schedule" className="inline-flex items-center gap-2 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2877] transition-colors hover:bg-[#f5f3f2]">
-            <span className="material-symbols-outlined text-xl">calendar_add_on</span>Schedule Class
+          <Link href="/dashboard/mocks/builder" className="inline-flex items-center gap-2 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2877] transition-colors hover:bg-[#f5f3f2]">
+            <span className="material-symbols-outlined text-xl">quiz</span>Create mock
           </Link>
         </div>
       </header>
@@ -105,10 +105,11 @@ export default async function DashboardHomePage() {
           {schedule.length ? (
             <div className="divide-y divide-[#eae8e7]">
               {schedule.map((item) => (
-                <div key={item.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                <div key={item.id} className="flex flex-wrap items-center gap-4 py-4 first:pt-0 last:pb-0">
                   <div className="w-16 shrink-0 text-sm font-bold text-[#2e2877]">{new Date(item.scheduled_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}</div>
                   <div className="min-w-0 flex-1"><p className="truncate font-semibold text-[#1b1c1c]">{item.title}</p><p className="truncate text-sm text-[#474551]">{item.courses?.name || 'General class'}</p></div>
                   <span className="rounded-full bg-[#f0eded] px-3 py-1 text-xs text-[#474551]">{item.duration_minutes} min</span>
+                  {isTutor && <Link href={`/class/${item.id}?start=true`} className="ml-auto inline-flex min-h-10 items-center rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white">{item.status === 'live' ? 'Join' : 'Start'}</Link>}
                 </div>
               ))}
             </div>
