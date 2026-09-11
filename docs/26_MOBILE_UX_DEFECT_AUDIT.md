@@ -19,10 +19,11 @@ This ledger separates code completed in the root `staging` branch from work that
 | UX-11 scheduling/dashboard density | Implemented and code-verified | Compact dashboards and the Classes/start-now/timetable flows are covered by `7ea3d39`, `eb2f0cf`, `e504f5a`, `f9c7de6` and `7a66e78`. Runtime staging verification remains part of release testing. |
 | UX-12–14 centre reset, validation and activation | Implemented and code-verified | Dirty-only confirmed discard, server normalization/validation, short centre activation and registration centre-name capture are in `916ea0e` and `537a3f1`. |
 | UX-15 student access-code identity | Product decision still open | Invitation names were reduced (`de61942`), but a student-ID/PIN authentication and recovery model has not been approved or implemented. |
-| UX-16 form reductions | Implemented for confirmed root flows | Account setup, centre profile, programme, question bank, mock, schedule, learning material and waitlist reductions are committed. Student-profile/journey verification remains with the concurrent branch. |
+| UX-16 form reductions | Implemented for confirmed root flows; Google OAuth excluded | Account setup, centre profile, programme, question bank, mock, schedule, learning material and waitlist reductions are committed. Google-first authentication is not implemented or represented as available: the linked staging Auth settings reported Google disabled on 11 September. Student-profile/journey verification remains with the concurrent branch. |
 | UX-17 anonymous Supabase auth | No implementation intended | The audit concluded the present narrow guest pathway is defensible; switching auth models would not remove transfer/merge work. |
 | UX-18 mock creation | Implemented and code-verified | Audience separation, programme-qualified subjects, visible add feedback, stable mode switching, compact progress and honest import stages are covered by `a31c2d0`, `91aead2`, `4aa3b87`, `79c3c21` and `46c3d73`. |
 | UX-19–20 class start and timetable publishing | Implemented and code-verified | Start-now, recurring rules, draft publication and published-version preservation are covered by the scheduling commits above. Live classroom internals remain deferred. |
+| UX-21 numeric fields retain a forced zero | Implemented and code-verified | All production number inputs were re-audited on 11 September. Mock marks, duration, attempts and pass mark preserve an empty editing state (`f8d5d1b`); programme/mock prices and grading scores remain strings while edited; question-bank marks is uncontrolled and can be cleared normally. |
 
 Verification baseline: the root web workspace passed its complete Vitest suite (42 files, 128 tests) and a real Next.js production build on 11 September 2026. Poppins is now bundled locally (`fb6d390`), so that build and the app's primary typeface no longer depend on a Google Fonts request.
 
@@ -287,6 +288,16 @@ Recommended separation:
 - Cancellation is a separate explicit action and should notify affected students; it is not the same as deleting an unpublished draft.
 
 Recurring schedules should not be represented by pre-creating an unlimited number of `live_classes` rows. Store an ongoing timetable rule/series separately and create concrete class occurrences only within a bounded upcoming window or when needed. Store cancellations, moved times and substitute tutors as dated exceptions to that rule. When editing an occurrence, ask **This class only** or **This and future classes**; never silently rewrite past classes. Draft/publication metadata remains necessary so a partially edited timetable is not exposed to students.
+
+## UX-21 — Controlled number fields retain a forced zero
+
+Status: **resolved and re-audited in current production source**.
+
+- The reported failure came from converting the input value to a number on every keystroke. Clearing the field produced `Number("")`, which is `0`, so React immediately rendered the zero again.
+- Mock marks, duration, attempts and pass mark now represent a temporarily empty field with `Number.NaN` and render it as an empty string. Validation still prevents saving an invalid empty value.
+- Programme/mock prices and tutor grading scores retain the raw input string until submission, so they can be cleared and replaced naturally.
+- Question-bank marks uses `defaultValue` rather than a controlled numeric state and can also be cleared normally.
+- A complete search of production `type="number"` inputs on 11 September found no remaining field that coerces an empty edit back to zero.
 
 ## Pending audit areas
 
