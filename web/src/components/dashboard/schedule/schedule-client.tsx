@@ -27,6 +27,7 @@ interface LiveClass {
   id: string
   course_id: string
   tutor_id: string
+  timetable_slot_id?: string | null
   title: string
   scheduled_at: string
   duration_minutes: number
@@ -34,6 +35,7 @@ interface LiveClass {
   livekit_room_name?: string
   course?: { name: string }
   tutor?: { first_name: string, last_name: string }
+  series?: { source: 'timetable' | 'direct' } | null
 }
 
 interface Course {
@@ -70,6 +72,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [duration, setDuration] = useState('60')
+  const [recurrence, setRecurrence] = useState<'once' | 'weekly'>('once')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formMode, setFormMode] = useState<'now' | 'later' | null>(() => searchParams.get('mode') === 'now' ? 'now' : null)
   const [activeView, setActiveView] = useState<'classes' | 'timetable'>('classes')
@@ -167,6 +170,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     setIsSubmitting(true)
     try {
       const isStartingNow = formMode === 'now'
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos'
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes${isStartingNow ? '/start-now' : ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -174,7 +178,11 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           title: title.trim() || `${selectedCourse?.name || 'Live'} class`,
           course_id: courseId,
           tutor_id: tutorId,
-          ...(!isStartingNow && { scheduled_at: new Date(`${date}T${time}`).toISOString() }),
+          ...(!isStartingNow && {
+            scheduled_at: new Date(`${date}T${time}`).toISOString(),
+            recurrence: recurrence === 'weekly' ? 'weekly' : 'once',
+            ...(recurrence === 'weekly' && { starts_on: date, start_time: time, timezone }),
+          }),
           duration_minutes: parseInt(duration, 10),
         })
       })
@@ -197,8 +205,9 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         setDate('')
         setTime('')
         setDuration('60')
+        setRecurrence('once')
         setFormMode(null)
-        toast.success('Class scheduled')
+        toast.success(recurrence === 'weekly' ? 'Weekly class scheduled' : 'Class scheduled')
       } else {
         const errData = await res.json()
         toast.error(isStartingNow ? 'Could not start the class' : 'Could not schedule the class', { description: errData.error })
@@ -240,6 +249,21 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     router.push(`/class/${classId}${isStarting ? '?start=true' : ''}`);
   }
 
+  const handleEndSeries = async (seriesId: string) => {
+    if (!window.confirm('End this weekly class? Future occurrences will be removed.')) return
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/series/${seriesId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+      })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not end the weekly class')
+      setClasses(current => current.filter(item => item.timetable_slot_id !== seriesId || item.status !== 'scheduled'))
+      toast.success('Weekly class ended')
+    } catch (error) {
+      toast.error('Could not end the weekly class', { description: error instanceof Error ? error.message : 'Try again.' })
+    }
+  }
+
   const liveClasses = classes.filter(c => c.status === 'live')
   
   let scheduledClasses = classes.filter(c => c.status === 'scheduled')
@@ -249,6 +273,14 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
       return d.getFullYear() === selectedDate.getFullYear() &&
              d.getMonth() === selectedDate.getMonth() &&
              d.getDate() === selectedDate.getDate()
+    })
+  } else {
+    const visibleSeries = new Set<string>()
+    scheduledClasses = scheduledClasses.filter(cls => {
+      if (cls.series?.source !== 'direct' || !cls.timetable_slot_id) return true
+      if (visibleSeries.has(cls.timetable_slot_id)) return false
+      visibleSeries.add(cls.timetable_slot_id)
+      return true
     })
   }
 
@@ -359,10 +391,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                 {capabilities.isAdmin && courseId && assignedTutorIds.length === 0 && <p className="rounded-lg bg-[#fff3e8] px-3 py-2 text-xs leading-5 text-[#7a3903]">Assign a tutor to this subject before starting a class.</p>}
 
                 {formMode === 'later' && (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <label htmlFor="class-date" className="text-sm font-semibold text-[#1b1c1c]">Date<input id="class-date" type="date" value={date} onChange={event => setDate(event.target.value)} required className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base" /></label>
-                    <label htmlFor="class-time" className="text-sm font-semibold text-[#1b1c1c]">Start time<input id="class-time" type="time" value={time} onChange={event => setTime(event.target.value)} required className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base" /></label>
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label htmlFor="class-date" className="text-sm font-semibold text-[#1b1c1c]">{recurrence === 'weekly' ? 'First class' : 'Date'}<input id="class-date" type="date" value={date} onChange={event => setDate(event.target.value)} required className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base" /></label>
+                      <label htmlFor="class-time" className="text-sm font-semibold text-[#1b1c1c]">Start time<input id="class-time" type="time" value={time} onChange={event => setTime(event.target.value)} required className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base" /></label>
+                    </div>
+                    <fieldset><legend className="text-sm font-semibold text-[#1b1c1c]">Repeat</legend><div className="mt-2 grid grid-cols-2 gap-2"><label className="cursor-pointer"><input type="radio" name="class-recurrence" checked={recurrence === 'once'} onChange={() => setRecurrence('once')} className="peer sr-only" /><span className="flex min-h-11 items-center justify-center rounded-lg border border-[#c8c5d2] px-3 text-sm peer-checked:border-[#2e2877] peer-checked:bg-[#f0edff] peer-checked:font-semibold peer-checked:text-[#2e2877]">One time</span></label><label className="cursor-pointer"><input type="radio" name="class-recurrence" checked={recurrence === 'weekly'} onChange={() => setRecurrence('weekly')} className="peer sr-only" /><span className="flex min-h-11 items-center justify-center rounded-lg border border-[#c8c5d2] px-3 text-sm peer-checked:border-[#2e2877] peer-checked:bg-[#f0edff] peer-checked:font-semibold peer-checked:text-[#2e2877]">Every week</span></label></div>{recurrence === 'weekly' && <p className="mt-2 text-xs leading-5 text-[#716c76]">Repeats on this weekday until someone ends the series.</p>}</fieldset>
+                  </>
                 )}
 
                 <details className="rounded-xl border border-[#e3ded9]">
@@ -374,7 +409,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                 </details>
 
                 <button type="submit" disabled={isSubmitting || !courseId || (capabilities.isAdmin && !tutorId)} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                  {isSubmitting && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}{isSubmitting ? (formMode === 'now' ? 'Starting…' : 'Scheduling…') : (formMode === 'now' ? 'Enter classroom' : 'Schedule class')}
+                  {isSubmitting && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}{isSubmitting ? (formMode === 'now' ? 'Starting…' : 'Scheduling…') : (formMode === 'now' ? 'Enter classroom' : recurrence === 'weekly' ? 'Schedule weekly class' : 'Schedule class')}
                 </button>
               </form>
             </div>
@@ -554,11 +589,12 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                       <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-wide text-[#994704]">{cls.course?.name || 'Subject'}</p>
                         <h4 className="mt-1 truncate font-semibold text-[#1b1c1c]">{cls.title}</h4>
+                        {cls.series?.source === 'direct' && <span className="mt-1 inline-flex rounded-full bg-[#f0edff] px-2 py-0.5 text-[11px] font-semibold text-[#2e2877]">Every week</span>}
                       </div>
                       <p className="shrink-0 text-right text-sm font-semibold text-[#2e2877]">{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}<span className="mt-0.5 block text-xs font-normal text-[#716c76]">{cls.duration_minutes} min</span></p>
                     </div>
                     <p className="mt-2 text-xs text-[#716c76]">{dt.toLocaleDateString()} · {cls.tutor?.first_name || 'Tutor'} {cls.tutor?.last_name || ''}</p>
-                    {cls.tutor_id === user.id && <button onClick={() => handleStartClass(cls.id)} className="mt-3 min-h-11 w-full rounded-xl bg-[#2e2877] px-4 text-sm font-semibold text-white">Start class</button>}
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">{cls.tutor_id === user.id && <button onClick={() => handleStartClass(cls.id)} className="min-h-11 w-full rounded-xl bg-[#2e2877] px-4 text-sm font-semibold text-white">Start class</button>}{cls.series?.source === 'direct' && cls.timetable_slot_id && <button onClick={() => void handleEndSeries(cls.timetable_slot_id!)} className="min-h-11 w-full rounded-xl border border-[#a43a2a] px-4 text-sm font-semibold text-[#a43a2a]">End series</button>}</div>
                   </article>
                 )
               })}
@@ -591,6 +627,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                           <div className="flex flex-col">
                             <span className="text-[10px] leading-[16px] tracking-[0.05em] font-bold uppercase text-[#994704]">{cls.course?.name || 'Subject'}</span>
                             <span className="font-bold text-[#1b1c1c] truncate max-w-[250px]">{cls.title}</span>
+                            {cls.series?.source === 'direct' && <span className="mt-1 w-fit rounded-full bg-[#f0edff] px-2 py-0.5 text-[10px] font-semibold text-[#2e2877]">Every week</span>}
                           </div>
                         </td>
                         <td className="py-4 px-6 text-[#474551]">{cls.tutor?.first_name || 'Tutor'}</td>
@@ -604,6 +641,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                                 Start Class
                               </button>
                             )}
+                            {cls.series?.source === 'direct' && cls.timetable_slot_id && <button onClick={() => void handleEndSeries(cls.timetable_slot_id!)} className="rounded border border-[#a43a2a] px-3 py-1 text-[12px] font-bold text-[#a43a2a]">End series</button>}
                           </div>
                         </td>
                       </tr>

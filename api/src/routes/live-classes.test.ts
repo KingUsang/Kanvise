@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin', kanvise_user_id: 'KNV-ADM-1' } as any,
 }))
-vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
+vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
 
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
@@ -75,6 +76,30 @@ describe('live classes API - scheduling', () => {
     
     // Currently this will pass, but the test ensures it remains working once hardened
     expect(response.status).toBe(201)
+  })
+
+  it('creates a weekly server-side series instead of browser-generated classes', async () => {
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor', kanvise_user_id: 'KNV-TUT-1' }
+    mocks.from.mockReturnValue(builder({ data: { course_id: 'course-1' }, error: null }))
+    mocks.rpc.mockResolvedValue({ data: 'series-1', error: null })
+
+    const response = await liveClassesRouter.request('/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        course_id: 'course-1', tutor_id: 'tutor-1', title: 'Math 101',
+        scheduled_at: '2030-01-07T13:30:00.000Z', duration_minutes: 60,
+        recurrence: 'weekly', starts_on: '2030-01-07', start_time: '14:30', timezone: 'Africa/Lagos',
+      }),
+    })
+
+    expect(response.status).toBe(201)
+    expect(mocks.rpc).toHaveBeenCalledWith('create_recurring_live_class', {
+      p_school_id: 'school-1', p_actor_id: 'tutor-1', p_course_id: 'course-1', p_tutor_id: 'tutor-1',
+      p_title: 'Math 101', p_starts_on: '2030-01-07', p_start_time: '14:30', p_timezone: 'Africa/Lagos', p_duration_minutes: 60,
+    })
+    expect(await response.json()).toEqual({ data: { series_id: 'series-1', recurrence: 'weekly' } })
+    expect(mocks.from).not.toHaveBeenCalledWith('live_classes')
   })
 
   it('prevents a tutor from scheduling a class for another tutor', async () => {
@@ -239,6 +264,19 @@ describe('live classes API - editing', () => {
 
     expect(response.status).toBe(403)
     expect((await response.json() as any).code).toBe('NOT_CLASS_TUTOR')
+  })
+
+  it('ends a recurring series through the protected database operation', async () => {
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+    mocks.rpc.mockResolvedValue({ data: 12, error: null })
+
+    const response = await liveClassesRouter.request('/series/series-1', { method: 'DELETE' })
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('cancel_recurring_live_class', {
+      p_slot_id: 'series-1', p_school_id: 'school-1', p_actor_id: 'tutor-1',
+    })
+    expect(await response.json()).toEqual({ message: 'Recurring class ended', removed_classes: 12 })
   })
 })
 

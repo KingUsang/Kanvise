@@ -91,6 +91,27 @@ describe('Classes page actions', () => {
     expect(post?.[0]).toMatch(/\/live-classes$/)
     expect(body).toMatchObject({ course_id: 'course-1', tutor_id: 'tutor-2', title: 'Mathematics class', duration_minutes: 60 })
     expect(new Date(body.scheduled_at).toISOString()).toBeDefined()
+    expect(body.recurrence).toBe('once')
+  })
+
+  it('defaults to one time and can schedule a bounded weekly server series', async () => {
+    const user = userEvent.setup()
+    render(<ScheduleClient {...tutorProps} />)
+    await screen.findByRole('heading', { name: 'No classes scheduled yet' })
+
+    await user.click(screen.getByRole('button', { name: /^Schedule$/i }))
+    expect(screen.getByRole('radio', { name: 'One time' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Every week' }))
+    await user.selectOptions(screen.getByLabelText('What are you teaching?'), 'course-1')
+    fireEvent.change(screen.getByLabelText('First class'), { target: { value: '2030-01-07' } })
+    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '14:30' } })
+
+    await user.click(screen.getByRole('button', { name: 'Schedule weekly class' }))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Weekly class scheduled'))
+    const post = mockFetch.mock.calls.find((call) => call[1]?.method === 'POST')
+    expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({
+      recurrence: 'weekly', starts_on: '2030-01-07', start_time: '14:30',
+    })
   })
 
   it('keeps title and duration behind optional details', async () => {
@@ -103,5 +124,25 @@ describe('Classes page actions', () => {
     await user.click(screen.getByText(/Edit title or duration/i))
     expect(screen.getByLabelText('Class title')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: '1h' })).toBeChecked()
+  })
+
+  it('shows one next occurrence for a weekly series and lets its tutor end it', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const recurring = (id: string, scheduled_at: string) => ({ id, scheduled_at, title: `Weekly Mathematics ${id}`, duration_minutes: 60, status: 'scheduled', course_id: 'course-1', tutor_id: 'tutor-1', timetable_slot_id: 'series-1', series: { source: 'direct' }, course: { name: 'Mathematics' }, tutor: { first_name: 'Jane', last_name: 'Smith' } })
+    mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (options?.method === 'DELETE') return { ok: true, json: async () => ({ message: 'Recurring class ended' }) }
+      if (url.includes('/live-classes')) return { ok: true, json: async () => ({ data: [recurring('class-1', '2030-01-07T13:30:00Z'), recurring('class-2', '2030-01-14T13:30:00Z')] }) }
+      if (url.includes('/programmes')) return { ok: true, json: async () => ({ data: mockProgrammes }) }
+      return { ok: true, json: async () => ({ data: [] }) }
+    })
+
+    render(<ScheduleClient {...tutorProps} />)
+    expect((await screen.findAllByText('Weekly Mathematics class-1'))).toHaveLength(2)
+    expect(screen.queryByText('Weekly Mathematics class-2')).not.toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'End series' })[0])
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Weekly class ended'))
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringMatching(/\/live-classes\/series\/series-1$/), expect.objectContaining({ method: 'DELETE' }))
   })
 })
