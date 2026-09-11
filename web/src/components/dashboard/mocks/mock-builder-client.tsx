@@ -10,6 +10,7 @@ import { buildPrePublishReview, type PrePublishReview } from "./mock-builder-val
 import { MockDraftPreview, type DraftPreviewQuestion } from "./mock-draft-preview";
 import { MockImportProgressCard, newMockImportProgress, type MockImportProgress } from "./mock-import-progress";
 import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
+import { MockBuilderStepProgress } from "./mock-builder-step-progress";
 
 type Course = {
   id: string;
@@ -91,6 +92,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("fixed");
   const [accessMode, setAccessMode] = useState<AccessMode>("centre");
   const [builderStep, setBuilderStep] = useState<BuilderStep>("setup");
+  const [visitedBuilderSteps, setVisitedBuilderSteps] = useState<Set<BuilderStep>>(() => new Set(["setup"]));
   const [activeSubjectCourseId, setActiveSubjectCourseId] = useState("");
   const [subjectSections, setSubjectSections] = useState<SubjectSectionState[]>([]);
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -162,6 +164,15 @@ export function MockBuilderClient({ token }: { token: string }) {
       setLastAddedQuestionId(null);
     });
   }, [lastAddedQuestionId, questions]);
+
+  useEffect(() => {
+    setVisitedBuilderSteps((current) => {
+      if (current.has(builderStep)) return current;
+      const next = new Set(current);
+      next.add(builderStep);
+      return next;
+    });
+  }, [builderStep]);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -1089,8 +1100,8 @@ export function MockBuilderClient({ token }: { token: string }) {
       {/* Page Header */}
       <div className="mb-8 flex flex-col gap-4 border-b border-[#e4e2e1] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-[32px] font-bold text-[#1b1c1c] leading-tight">{isEditMode ? "Edit Mock" : "Build a Mock"}</h2>
-          <p className="text-[16px] text-[#474551] mt-1">Choose how the mock should work, then add or reuse questions for your students.</p>
+          <h2 className="text-2xl font-bold leading-tight text-[#1b1c1c] sm:text-[32px]">{isEditMode ? "Edit Mock" : "Build a Mock"}</h2>
+          <p className="mt-1 text-sm text-[#474551] sm:text-[16px]">Choose how the mock should work, then add or reuse questions for your students.</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={() => setIsPreviewOpen(true)} disabled={draftPreviewQuestions.length === 0} className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#2e2877] disabled:cursor-not-allowed disabled:opacity-45"><span className="material-symbols-outlined text-[18px]">preview</span>Preview as student</button>
@@ -1104,17 +1115,13 @@ export function MockBuilderClient({ token }: { token: string }) {
         </div>
       </div>
 
-      <nav aria-label="Mock builder steps" className="sticky top-16 z-20 -mx-4 mb-8 border-y border-[#e4e2e1] bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border sm:px-3">
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:grid" style={{ gridTemplateColumns: `repeat(${workflowSteps.length}, minmax(0, 1fr))` }}>
-          {workflowSteps.map((step, index) => (
-            <button key={step.id} type="button" onClick={() => index <= currentStepIndex && setBuilderStep(step.id)} disabled={isReadOnly || index > currentStepIndex} aria-current={builderStep === step.id ? "step" : undefined}
-              className={`flex min-w-max items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 sm:min-w-0 ${builderStep === step.id ? "bg-[#2e2877] text-white" : "text-[#5f5964] hover:bg-[#f5f3f8]"}`}>
-              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current text-[11px]">{index + 1}</span>
-              <span>{step.label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      <MockBuilderStepProgress
+        steps={workflowSteps}
+        currentStepId={builderStep}
+        visitedStepIds={visitedBuilderSteps}
+        disabled={isReadOnly}
+        onStepSelect={(stepId) => setBuilderStep(stepId as BuilderStep)}
+      />
 
       {builderStep === "questions" && (
       <div className={isMultiSubject ? "grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]" : "mx-auto max-w-5xl"}>
