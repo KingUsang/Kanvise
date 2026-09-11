@@ -6,6 +6,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
+import { UploadTaskStatus } from "@/components/uploads/upload-task-status";
+import { uploadFileWithProgress } from "@/lib/upload-with-progress";
 
 export default function AssignmentsPage() {
   const router = useRouter();
@@ -21,6 +23,8 @@ export default function AssignmentsPage() {
   // Status state
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [saveStage, setSaveStage] = useState<"idle" | "uploading" | "saving">("idle");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,6 +73,8 @@ export default function AssignmentsPage() {
     }
 
     setIsLoading(true);
+    setSaveStage(file ? "uploading" : "saving");
+    setUploadProgress(file ? 0 : null);
     try {
       const { data: session } = await supabase.auth.getSession();
       const token = session.session?.access_token;
@@ -100,19 +106,13 @@ export default function AssignmentsPage() {
         const presignData = await presignRes.json();
         
         // 2. Upload directly to Cloudflare R2
-        const uploadRes = await fetch(presignData.data.presigned_url, {
-          method: "PUT",
-          body: file,
-          headers: {
-            "Content-Type": file.type || "application/octet-stream"
-          }
-        });
-        
-        if (!uploadRes.ok) throw new Error("Failed to upload file to storage");
+        await uploadFileWithProgress(presignData.data.presigned_url, file, setUploadProgress);
         fileKey = presignData.data.file_key;
       }
 
       // 3. Create the Assignment Record
+      setSaveStage("saving");
+      setUploadProgress(null);
       const assignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments`, {
         method: "POST",
         headers: {
@@ -147,6 +147,8 @@ export default function AssignmentsPage() {
       toast.error("Could not save the assignment", { description: err.message });
     } finally {
       setIsLoading(false);
+      setSaveStage("idle");
+      setUploadProgress(null);
     }
   };
 
@@ -301,7 +303,7 @@ export default function AssignmentsPage() {
 
           {/* Card Footer Actions */}
           <div className="flex flex-col gap-4 rounded-b bg-surface-container-lowest p-4 md:flex-row md:items-center md:justify-between">
-            <p className="text-xs leading-5 text-on-surface-variant">Save a draft to finish later, or publish when students should receive it.</p>
+            <div className="min-w-0 flex-1">{isLoading ? <UploadTaskStatus label={saveStage === "uploading" ? "Uploading assignment file" : "Saving assignment"} progress={saveStage === "uploading" ? uploadProgress : null} /> : <p className="text-xs leading-5 text-on-surface-variant">Save a draft to finish later, or publish when students should receive it.</p>}</div>
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center justify-end gap-3">
