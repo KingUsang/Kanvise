@@ -33,8 +33,6 @@ export default function LandingPage() {
     contact_name: "",
     contact_email: "",
     centre_name: "",
-    contact_phone: "",
-    estimated_student_count: "",
     wants_beta_testing: false
   });
   const [waitlistSubmitStatus, setWaitlistSubmitStatus] = useState<"idle" | "loading" | "success" | "error" | "conflict">("idle");
@@ -479,18 +477,12 @@ export default function LandingPage() {
         <AnimatedSection className="bg-surface-container-high rounded-3xl p-10 md:p-20 text-center desk-mockup-shadow">
           <h2 className="text-[36px] md:text-[48px] font-bold mb-4">Join the movement.</h2>
           <p className="text-[18px] text-on-surface-variant mb-12 max-w-lg mx-auto">Sign up to be notified when Kanvise officially launches. Want early access? Opt into our private beta starting August 1st below.</p>
-          <form className="max-w-md mx-auto grid grid-cols-1 gap-6" onSubmit={handleWaitlistSubmit}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <input name="contact_name" value={waitlistData.contact_name} onChange={(e) => setWaitlistData({...waitlistData, contact_name: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Full Name *" required type="text" />
-              <input name="contact_email" value={waitlistData.contact_email} onChange={(e) => setWaitlistData({...waitlistData, contact_email: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Email Address *" required type="email" />
-            </div>
-            <input name="centre_name" value={waitlistData.centre_name} onChange={(e) => setWaitlistData({...waitlistData, centre_name: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Tutorial Centre Name *" required type="text" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <input name="contact_phone" value={waitlistData.contact_phone} onChange={(e) => setWaitlistData({...waitlistData, contact_phone: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Phone Number" type="tel" />
-              <input name="estimated_student_count" value={waitlistData.estimated_student_count} onChange={(e) => setWaitlistData({...waitlistData, estimated_student_count: e.target.value})} className="w-full px-6 py-4 rounded-xl border border-outline-variant focus:ring-2 focus:ring-primary focus:border-transparent bg-white outline-none" placeholder="Estimated Students" type="number" />
-            </div>
+          <form className="mx-auto grid max-w-md grid-cols-1 gap-5 text-left" onSubmit={handleWaitlistSubmit}>
+            <label className="text-sm font-semibold text-on-surface">Your name<input name="contact_name" autoComplete="name" value={waitlistData.contact_name} onChange={(e) => setWaitlistData({...waitlistData, contact_name: e.target.value})} className="mt-1.5 w-full rounded-xl border border-outline-variant bg-white px-4 py-3.5 font-normal outline-none focus:border-transparent focus:ring-2 focus:ring-primary" required type="text" /></label>
+            <label className="text-sm font-semibold text-on-surface">Work email<input name="contact_email" autoComplete="email" value={waitlistData.contact_email} onChange={(e) => setWaitlistData({...waitlistData, contact_email: e.target.value})} className="mt-1.5 w-full rounded-xl border border-outline-variant bg-white px-4 py-3.5 font-normal outline-none focus:border-transparent focus:ring-2 focus:ring-primary" required type="email" /></label>
+            <label className="text-sm font-semibold text-on-surface">Centre name<input name="centre_name" autoComplete="organization" value={waitlistData.centre_name} onChange={(e) => setWaitlistData({...waitlistData, centre_name: e.target.value})} className="mt-1.5 w-full rounded-xl border border-outline-variant bg-white px-4 py-3.5 font-normal outline-none focus:border-transparent focus:ring-2 focus:ring-primary" required type="text" /></label>
             
-            <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-outline-variant text-left">
+            <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-outline-variant">
               <input 
                 type="checkbox" 
                 id="wants_beta" 
