@@ -55,8 +55,6 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
       const options = question.options.filter((option) => option.option_text.trim());
       if (options.length < 2) errors.push(`${label} needs at least two options.`);
       if (options.filter((option) => option.is_correct).length !== 1) errors.push(`${label} needs exactly one correct answer.`);
-    } else if (!question.review_reasons?.length && !question.question_text.trim()) {
-      warnings.push(`${label} may need a marking guide.`);
     }
     for (const reason of question.review_reasons || []) warnings.push(`${label}: ${reason}`);
   });
