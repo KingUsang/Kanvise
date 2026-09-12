@@ -1,7 +1,7 @@
 # Kanvise Live Class Workspace: Code Audit and UX Recommendation
 
-**Status:** Research and implementation brief  
-**Date:** 10 September 2026  
+**Status:** Research and implementation brief
+**Date:** 10 September 2026
 **Scope:** Whiteboard/presentation switching, realtime state, reconnection, and weak-network UX. This document does not implement changes.
 
 ## Executive decision
