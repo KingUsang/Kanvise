@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { titleFromFileName, uploadFileWithProgress } from "@/lib/upload-with-progress"
 import { Session } from "@supabase/supabase-js"
 import { toast } from "sonner"
 
@@ -67,7 +68,10 @@ export function NotesClient({ session }: NotesClientProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [file, setFile] = useState<File | null>(null)
+  const [titleEdited, setTitleEdited] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [uploadStage, setUploadStage] = useState<"uploading" | "saving" | null>(null)
   const [isLoadingNotes, setIsLoadingNotes] = useState(true)
   const [isDragActive, setIsDragActive] = useState(false)
   const [loadError, setLoadError] = useState("")
@@ -192,6 +196,7 @@ export function NotesClient({ session }: NotesClientProps) {
       return
     }
     setFile(nextFile)
+    if (!titleEdited) setTitle(titleFromFileName(nextFile.name))
   }
 
   const formatFileSize = (bytes: number) => {
@@ -212,10 +217,12 @@ export function NotesClient({ session }: NotesClientProps) {
 
   const handleUpload = async () => {
     if (!selectedCourse) return toast.error("Choose the subject that should receive this material.")
-    if (!title.trim()) return toast.error("Enter a title students will recognise.")
     if (!file) return toast.error("Choose a file to upload.")
+    if (!title.trim()) return toast.error("Enter a title students will recognise.")
 
     setIsUploading(true)
+    setUploadProgress(0)
+    setUploadStage("uploading")
 
     try {
       // 1. Get presigned URL
@@ -243,17 +250,10 @@ export function NotesClient({ session }: NotesClientProps) {
       const { data: { presigned_url, file_key } } = await presignRes.json()
 
       // 2. Upload file to R2 directly
-      const uploadRes = await fetch(presigned_url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type
-        },
-        body: file
-      })
-
-      if (!uploadRes.ok) throw new Error("Failed to upload file to storage")
+      await uploadFileWithProgress(presigned_url, file, setUploadProgress)
 
       // 3. Record note in database
+      setUploadStage("saving")
       const recordToken = await getAccessToken()
       const recordRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${selectedCourse}`, {
         method: "POST",
@@ -280,6 +280,7 @@ export function NotesClient({ session }: NotesClientProps) {
       
       // Reset form
       setTitle("")
+      setTitleEdited(false)
       setDescription("")
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ""
@@ -292,6 +293,8 @@ export function NotesClient({ session }: NotesClientProps) {
       toast.error(errorMessage(error, "An error occurred during upload"))
     } finally {
       setIsUploading(false)
+      setUploadProgress(null)
+      setUploadStage(null)
     }
   }
 
@@ -367,28 +370,6 @@ export function NotesClient({ session }: NotesClientProps) {
                   )}
                 </div>
                 
-                <div>
-                  <label className="block text-label-md font-label-md text-on-surface mb-2">Document Title *</label>
-                  <input 
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full border border-outline-variant rounded bg-surface py-2.5 px-3 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container" 
-                    placeholder="e.g., Week 3 algebra revision notes"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-label-md font-label-md text-on-surface mb-2">Note for students <span className="font-normal text-on-surface-variant">(optional)</span></label>
-                  <textarea 
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full border border-outline-variant rounded bg-surface py-2.5 px-3 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container resize-none" 
-                    placeholder="Tell students what this material covers or how to use it."
-                    rows={3}
-                  />
-                </div>
-
                 {/* Drag & Drop Zone */}
                 <div>
                   <label className="block text-label-md font-label-md text-on-surface mb-2">Upload File *</label>
@@ -422,13 +403,75 @@ export function NotesClient({ session }: NotesClientProps) {
                   </div>
                 </div>
 
+                <details className="rounded-lg border border-outline-variant bg-surface-container-lowest">
+                  <summary className="cursor-pointer px-4 py-3 text-body-sm font-semibold text-on-surface">
+                    Edit title or add a note <span className="font-normal text-on-surface-variant">(optional)</span>
+                  </summary>
+                  <div className="space-y-4 border-t border-outline-variant px-4 py-4">
+                    <div>
+                      <label className="mb-2 block text-label-md font-label-md text-on-surface">Title</label>
+                      <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => {
+                          setTitle(e.target.value)
+                          setTitleEdited(true)
+                        }}
+                        className="w-full rounded border border-outline-variant bg-surface px-3 py-2.5 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container"
+                        placeholder="Filled from the filename"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-label-md font-label-md text-on-surface">Note for students</label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full resize-none rounded border border-outline-variant bg-surface px-3 py-2.5 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container"
+                        placeholder="What does this cover?"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                </details>
+
+                {isUploading && (
+                  <div className="rounded-lg bg-surface-container-low px-4 py-3" aria-live="polite">
+                    <div className="mb-2 flex items-center justify-between gap-3 text-body-sm">
+                      <span className="font-semibold text-on-surface">
+                        {uploadStage === "saving" ? "Saving material…" : "Uploading material…"}
+                      </span>
+                      {uploadStage === "uploading" && uploadProgress !== null && (
+                        <span className="tabular-nums text-on-surface-variant">{uploadProgress}%</span>
+                      )}
+                    </div>
+                    {uploadStage === "uploading" && uploadProgress !== null && (
+                      <div
+                        role="progressbar"
+                        aria-label="Material upload progress"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={uploadProgress}
+                        className="h-2 overflow-hidden rounded-full bg-outline-variant"
+                      >
+                        <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="pt-4 border-t border-outline-variant">
                   <button 
                     onClick={handleUpload}
                     disabled={isUploading || courses.length === 0}
                     className="w-full bg-secondary text-on-secondary py-3 px-4 rounded text-body-md font-headline-md font-bold hover:bg-on-secondary-fixed-variant transition-colors shadow-sm disabled:opacity-50"
                   >
-                    {isUploading ? "Sharing..." : "Share material"}
+                    {uploadStage === "saving"
+                      ? "Saving material…"
+                      : uploadStage === "uploading" && uploadProgress !== null
+                        ? `Uploading ${uploadProgress}%`
+                        : isUploading
+                          ? "Uploading…"
+                          : "Share material"}
                   </button>
                 </div>
               </div>

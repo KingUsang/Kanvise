@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildQuestionContent, buildQuestionOptions } from './question-banks-client'
+import { buildQuestionBankCreatePayload, buildQuestionContent, buildQuestionOptions, courseOptionLabel } from './question-banks-client'
 import { canAccessDashboardPath, getDashboardAccess, getDashboardNavItems } from '@/config/dashboard-navigation'
 
 describe('question-bank authoring helpers', () => {
@@ -27,6 +27,18 @@ describe('question-bank authoring helpers', () => {
       type: 'chemistry', latex: String.raw`\ce{H2 + O2 -> H2O}`,
     })
     expect(buildQuestionContent('', 'none', '')).toEqual([])
+  })
+
+  it('creates a private-by-default bank using only its required name', () => {
+    const form = new FormData()
+    form.set('name', '  JAMB Physics  ')
+    form.set('description', 'Ignored optional setup field')
+    expect(buildQuestionBankCreatePayload(form)).toEqual({ name: 'JAMB Physics' })
+  })
+
+  it('disambiguates duplicate subjects with their parent programme', () => {
+    expect(courseOptionLabel({ id: '1', name: 'Mathematics', programme: { name: 'JAMB 2027' } })).toBe('JAMB 2027 — Mathematics')
+    expect(courseOptionLabel({ id: '2', name: 'Mathematics' })).toBe('Mathematics')
   })
 
   it('shows question banks to admins, tutors, and combined admin-tutors', () => {

@@ -1,12 +1,13 @@
 import cron, { type ScheduledTask } from 'node-cron'
 import { isTelegramEnabled } from '../config/runtime-env'
-import { createGuardedJob, runAssignmentDeadlineJob, runLiveClassReminderJob, runMockPublicationJob, runTelegramAttendanceCloseJob } from './runners'
+import { createGuardedJob, runAssignmentDeadlineJob, runLiveClassReminderJob, runMockPublicationJob, runTelegramAttendanceCloseJob, runTimetableMaterializationJob } from './runners'
 
 export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
   const jobs = [
     { expression: '* * * * *', guarded: createGuardedJob('mock_publication', () => runMockPublicationJob()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('live_class_reminder', () => runLiveClassReminderJob()) },
     { expression: '*/30 * * * *', guarded: createGuardedJob('assignment_deadline', () => runAssignmentDeadlineJob()) },
+    { expression: '17 */6 * * *', guarded: createGuardedJob('timetable_materialization', () => runTimetableMaterializationJob()) },
   ]
   if (isTelegramEnabled(env)) {
     jobs.push({ expression: '* * * * *', guarded: createGuardedJob('telegram_attendance_close', () => runTelegramAttendanceCloseJob()) })

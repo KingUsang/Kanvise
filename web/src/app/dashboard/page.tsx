@@ -53,19 +53,19 @@ export default async function DashboardHomePage() {
       : 'See your classes, subjects and assessment work in one place.'
 
   return (
-    <div className="animate-in fade-in space-y-8 duration-500">
+    <div className="animate-in fade-in space-y-6 duration-500 sm:space-y-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#994704]">Dashboard</p>
-          <h1 className="mt-2 text-3xl font-bold text-[#1b1c1c]">{heading}</h1>
-          <p className="mt-1 max-w-2xl text-[#474551]">{description}</p>
+          <h1 className="mt-2 text-2xl font-bold text-[#1b1c1c] sm:text-3xl">{heading}</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551] sm:text-base">{description}</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/dashboard/mocks/builder" className="inline-flex items-center gap-2 rounded-lg bg-[#c26627] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#994704]">
-            <span className="material-symbols-outlined text-xl">quiz</span>Create Mock
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+          <Link href="/dashboard/schedule?mode=now" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7a3903] sm:px-4">
+            <span className="material-symbols-outlined text-xl">videocam</span>Start live class
           </Link>
-          <Link href="/dashboard/schedule" className="inline-flex items-center gap-2 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2877] transition-colors hover:bg-[#f5f3f2]">
-            <span className="material-symbols-outlined text-xl">calendar_add_on</span>Schedule Class
+          <Link href="/dashboard/mocks/builder" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#2e2877] bg-white px-3 py-2.5 text-sm font-semibold text-[#2e2877] transition-colors hover:bg-[#f5f3f2] sm:px-4">
+            <span className="material-symbols-outlined text-xl">quiz</span>Create mock
           </Link>
         </div>
       </header>
@@ -73,7 +73,7 @@ export default async function DashboardHomePage() {
       {isAdmin && (
         <section aria-labelledby="centre-summary">
           {isAdminTutor && <h2 id="centre-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">Centre overview</h2>}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
             <StatCard title="Enrolled Students" value={admin.total_students} icon="groups" subtitle="Across the centre" />
             <StatCard title="Classes Today" value={admin.upcoming_classes} icon="event" subtitle="Scheduled centre-wide" />
             <StatCard title="Earnings This Month" value={formatCurrency(admin.mtd_revenue)} icon="payments" subtitle={`${admin.successful_payments || 0} successful payments`} isRevenue />
@@ -87,7 +87,7 @@ export default async function DashboardHomePage() {
       {isTutor && (
         <section aria-labelledby="teaching-summary">
           {isAdminTutor && <h2 id="teaching-summary" className="mb-4 text-lg font-semibold text-[#1b1c1c]">My teaching</h2>}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
             <StatCard title="My Classes Today" value={tutor.classes_today} icon="laptop_chromebook" subtitle="Sessions assigned to you" />
             <StatCard title="Assignment Submissions to Grade" value={tutor.pending_submissions} icon="assignment_late" subtitle="Waiting for your review" />
             <StatCard title="Mock Answers to Grade" value={tutor.mocks?.pending_count || 0} icon="quiz" subtitle={`${tutor.mocks?.active_count || 0} active mocks`} />
@@ -97,7 +97,7 @@ export default async function DashboardHomePage() {
       )}
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        <section className="flex-1 rounded-lg border border-[#c8c5d2] bg-white p-6 shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
+        <section className="flex-1 rounded-lg border border-[#c8c5d2] bg-white p-4 shadow-[0_4px_20px_rgba(61,61,61,0.08)] sm:p-6">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div><h2 className="text-lg font-semibold text-[#1b1c1c]">{isTutor ? 'My Schedule Today' : "Today's Centre Schedule"}</h2><p className="mt-1 text-sm text-[#474551]">{schedule.length} {schedule.length === 1 ? 'session' : 'sessions'} today</p></div>
             <Link href="/dashboard/schedule" className="flex items-center text-sm font-semibold text-[#c26627] hover:text-[#994704]">Full Schedule<span className="material-symbols-outlined ml-1 text-base">arrow_forward</span></Link>
@@ -105,27 +105,22 @@ export default async function DashboardHomePage() {
           {schedule.length ? (
             <div className="divide-y divide-[#eae8e7]">
               {schedule.map((item) => (
-                <div key={item.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                <div key={item.id} className="flex flex-wrap items-center gap-4 py-4 first:pt-0 last:pb-0">
                   <div className="w-16 shrink-0 text-sm font-bold text-[#2e2877]">{new Date(item.scheduled_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}</div>
                   <div className="min-w-0 flex-1"><p className="truncate font-semibold text-[#1b1c1c]">{item.title}</p><p className="truncate text-sm text-[#474551]">{item.courses?.name || 'General class'}</p></div>
                   <span className="rounded-full bg-[#f0eded] px-3 py-1 text-xs text-[#474551]">{item.duration_minutes} min</span>
+                  {isTutor && <Link href={`/class/${item.id}?start=true`} className="ml-auto inline-flex min-h-10 items-center rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white">{item.status === 'live' ? 'Join' : 'Start'}</Link>}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#eae8e7] py-12 text-center"><span className="material-symbols-outlined mb-3 text-4xl text-[#c8c5d2]">event_available</span><h3 className="text-lg font-medium text-[#1b1c1c]">No classes today</h3><p className="mt-1 text-sm text-[#474551]">Your next scheduled class will appear here.</p></div>
+            <div className="rounded-lg border-2 border-dashed border-[#eae8e7] px-4 py-6 text-center sm:py-10"><h3 className="font-medium text-[#1b1c1c]">No classes today</h3><p className="mt-1 text-sm text-[#474551]">Your next class will appear here.</p></div>
           )}
         </section>
 
         <div className="w-full shrink-0 lg:w-[420px]"><NeedsGradingCard items={gradingItems} /></div>
       </div>
 
-      {isAdmin && !isAdminTutor && (
-        <section className="flex flex-col gap-4 rounded-lg bg-[#2e2877] p-6 text-white sm:flex-row sm:items-center sm:justify-between">
-          <div><h2 className="text-lg font-semibold">Run an exam-ready mock</h2><p className="mt-1 text-sm text-[#d9d6ff]">Create practice for JAMB, WAEC, NECO, post-UTME or your next revision test.</p></div>
-          <Link href="/dashboard/mocks/builder" className="shrink-0 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2877]">Build a Mock</Link>
-        </section>
-      )}
     </div>
   )
 }

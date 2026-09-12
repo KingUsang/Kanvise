@@ -12,7 +12,7 @@ import {
 } from "../domain/mock-assembly";
 import { canReadQuestionBank } from "../domain/question-bank";
 import { createPresignedDownload } from "../storage/r2";
-import { REVIEWABLE_ATTEMPT_STATUSES } from "../domain/mock-results";
+import { expectedAnswerFromBlocks, REVIEWABLE_ATTEMPT_STATUSES } from "../domain/mock-results";
 import { parseMockDistributionMode } from "../domain/mock-distribution";
 import {
   canCreateMockForAudience,
@@ -210,6 +210,8 @@ mocksRouter.get("/ungraded-count", requireTutorOrAdmin, async (c) => {
 // This deliberately returns a draft for tutor review; it never publishes or
 // persists imported questions by itself.
 mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
+  const jobId = /^[a-zA-Z0-9_-]{6,64}$/.test(c.req.header("x-import-job-id") || "") ? c.req.header("x-import-job-id")! : crypto.randomUUID();
+  c.header("X-Import-Job-ID", jobId);
   const contentLength = Number(c.req.header("content-length") || 0);
   if (contentLength > MAX_MOCK_PDF_SIZE_BYTES + 1024 * 1024) {
     return c.json({ error: "PDFs must be 15 MB or smaller", code: "PDF_TOO_LARGE" }, 413);
@@ -229,6 +231,7 @@ mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
       return c.json({ error: "Only PDF files can be imported here", code: "INVALID_PDF_TYPE" }, 400);
     }
 
+    console.info("[mocks] PDF import started", { job_id: jobId, file_size_bytes: file.size });
     const result = await importQuestionsFromPdf(new Uint8Array(await file.arrayBuffer()));
     if (result.questions.length === 0) {
       return c.json({
@@ -236,7 +239,8 @@ mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
         code: "NO_QUESTIONS_FOUND",
       }, 422);
     }
-    return c.json({ data: result });
+    console.info("[mocks] PDF import completed", { job_id: jobId, question_count: result.questions.length });
+    return c.json({ data: { ...result, job_id: jobId } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not read this PDF";
     const expected = /scanned images|no more than|Invalid PDF|PasswordException|password/i.test(message);
@@ -254,16 +258,20 @@ mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
 // The browser only extracts the document's readable text; Gemini decides how
 // questions, options, answer keys, and rubrics are organised.
 mocksRouter.post("/import/document-text", requireTutorOrAdmin, async (c) => {
+  const jobId = /^[a-zA-Z0-9_-]{6,64}$/.test(c.req.header("x-import-job-id") || "") ? c.req.header("x-import-job-id")! : crypto.randomUUID();
+  c.header("X-Import-Job-ID", jobId);
   try {
     const body = await c.req.json<{ document_text?: unknown; file_name?: unknown }>();
     if (typeof body.document_text !== "string" || !body.document_text.trim()) {
       return c.json({ error: "The Word document did not contain readable text", code: "DOCUMENT_TEXT_REQUIRED" }, 400);
     }
+    console.info("[mocks] document import started", { job_id: jobId, character_count: body.document_text.length });
     const result = await importQuestionsFromDocumentText(body.document_text, typeof body.file_name === "string" ? body.file_name : undefined);
     if (result.questions.length === 0) {
       return c.json({ error: result.warnings[0] || "No questions could be recognised in this document", code: "NO_QUESTIONS_FOUND" }, 422);
     }
-    return c.json({ data: result });
+    console.info("[mocks] document import completed", { job_id: jobId, question_count: result.questions.length });
+    return c.json({ data: { ...result, job_id: jobId } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not read this Word document";
     if (!/AI document import|Word document|No questions|too large/i.test(message)) console.error("[mocks] document import failed", error);
@@ -294,7 +302,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
     ? await supabase.from("mock_answers")
       .select(`id, attempt_id, theory_answer_text, is_correct, tutor_score, tutor_feedback,
         question:mock_version_questions(id, marks, order_index,
-          version:bank_question_versions(plain_text, content_blocks,
+          version:bank_question_versions(plain_text, content_blocks, grading_rubric_blocks,
           ${BANK_QUESTION_TYPE_RELATION}
           )
         )`)
@@ -336,6 +344,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
         question_type: snapshot?.version?.question?.question_type,
         marks: snapshot?.marks,
         order_index: snapshot?.order_index,
+        expected_answer: expectedAnswerFromBlocks(snapshot?.version?.grading_rubric_blocks),
       },
     });
     answersByAttempt.set(answer.attempt_id, current);

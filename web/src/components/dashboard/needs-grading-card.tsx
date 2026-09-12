@@ -15,8 +15,8 @@ export function NeedsGradingCard({ items }: { items: GradingItem[] }) {
   return (
     <div className="bg-white rounded-lg border border-[#c8c5d2] shadow-[0_4px_20px_rgba(61,61,61,0.08)] overflow-hidden flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-[#f0eded]">
-        <h3 className="text-[#1b1c1c] font-semibold text-[20px]">Waiting for you to grade</h3>
+      <div className="flex items-center justify-between gap-3 border-b border-[#f0eded] p-4 sm:p-6">
+        <h3 className="text-base font-semibold text-[#1b1c1c] sm:text-[20px]">Waiting for you to grade</h3>
         <span className="bg-[#2e2877] text-white text-[12px] font-semibold px-3 py-1 rounded-full">
           {items.reduce((sum, item) => sum + (item.pending_count || 0), 0)} waiting
         </span>
@@ -25,12 +25,12 @@ export function NeedsGradingCard({ items }: { items: GradingItem[] }) {
       {/* List */}
       <div className="flex-1 flex flex-col">
         {items.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 py-16">
-            <div className="w-16 h-16 bg-[#eae8e7] rounded-full flex items-center justify-center mb-4">
+          <div className="flex flex-1 flex-col items-center justify-center p-5 py-7 text-center sm:p-8 sm:py-12">
+            <div className="mb-3 hidden h-14 w-14 items-center justify-center rounded-full bg-[#eae8e7] sm:flex">
               <span className="material-symbols-outlined text-[32px] text-[#787582]">assignment_turned_in</span>
             </div>
-            <h4 className="text-[#1b1c1c] font-semibold text-[16px] mb-1">All caught up!</h4>
-            <p className="text-[#474551] text-[14px]">You have no pending assignments to grade right now.</p>
+            <h4 className="mb-1 font-semibold text-[#1b1c1c]">All caught up</h4>
+            <p className="text-sm text-[#474551]">Nothing needs grading right now.</p>
           </div>
         ) : (
           items.map((item, index) => (

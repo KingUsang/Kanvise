@@ -66,9 +66,11 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
   });
   const validationErrors = normalizedRows.flatMap((row) => {
     const errors: string[] = [];
-    if (!row.first_name || !row.last_name) errors.push('First name and last name are required');
+    if ((!row.first_name || !row.last_name) && !sendInvitations) {
+      errors.push('First name and last name are required when no activation email will be sent');
+    }
     if (row.email && !EMAIL_PATTERN.test(row.email)) errors.push('Email address is invalid');
-    if (!row.email && !row.phone) errors.push('Provide an email address or phone number');
+    if (!row.email) errors.push('Email address is required');
     if (!row.programme_id) errors.push('Choose a programme');
     return errors.length ? [{ row: row.row, errors }] : [];
   });
@@ -100,7 +102,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
     const emails = [...new Set(normalizedRows.map((row) => row.email).filter((email): email is string => Boolean(email)))];
     const { data: existingProfiles, error: existingError } = emails.length ? await supabase
       .from('user_profiles')
-      .select('id, supabase_auth_id, school_id, role, kanvise_user_id, email, onboarding_status')
+      .select('id, supabase_auth_id, school_id, role, kanvise_user_id, email, first_name, last_name, onboarding_status')
       .in('email', emails) : { data: [], error: null };
 
     if (existingError) throw existingError;
@@ -118,7 +120,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
           if (student.role !== 'student') throw new Error('Email already belongs to a staff account');
           if (student.school_id && student.school_id !== admin.school_id) throw new Error('Student already belongs to another centre');
           if (!student.school_id) {
-            const { data, error } = await supabase.from('user_profiles').update({ school_id: admin.school_id }).eq('id', student.id).select('id, supabase_auth_id, school_id, role, kanvise_user_id, email, onboarding_status').single();
+            const { data, error } = await supabase.from('user_profiles').update({ school_id: admin.school_id }).eq('id', student.id).select('id, supabase_auth_id, school_id, role, kanvise_user_id, email, first_name, last_name, onboarding_status').single();
             if (error) throw error;
             student = data;
           }
@@ -128,7 +130,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
             supabase_auth_id: null, school_id: admin.school_id, role: 'student', kanvise_user_id: kanviseUserId,
             first_name: row.first_name, last_name: row.last_name, email: row.email, phone: row.phone,
             onboarding_status: 'not_invited', onboarding_source: 'admin_import', added_by: admin.id,
-          } as any).select('id, supabase_auth_id, school_id, role, kanvise_user_id, email, onboarding_status').single();
+          } as any).select('id, supabase_auth_id, school_id, role, kanvise_user_id, email, first_name, last_name, onboarding_status').single();
           if (error || !data) throw error || new Error('Could not create student roster record');
           student = data;
           if (row.email) profilesByEmail.set(row.email, data);
@@ -146,17 +148,16 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
         if (sendInvitations && row.email && student.onboarding_status !== 'active') {
           const programmeName = programmeNames.get(row.programme_id) || 'your programme';
           const invitationData = {
-            first_name: row.first_name,
-            last_name: row.last_name,
+            first_name: row.first_name || student.first_name || '',
+            last_name: row.last_name || student.last_name || '',
             school_name: school.name,
             programme_name: programmeName,
             invited_by_name: invitedByName,
             app_url: frontendUrl,
           };
           const { data: invite, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(row.email, {
-            // Admin invites do not support PKCE. The email template sends the
-            // invite token hash to this review page, where an explicit user
-            // action verifies it before password setup.
+            // Admin invites do not support PKCE. Send the token hash to the
+            // review route, which verifies it before password setup.
             redirectTo: `${frontendUrl}/auth/invitation`,
             data: invitationData,
           });

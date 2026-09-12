@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole, Variables } from '../middleware/auth'
 import { generateInviteToken } from '../lib/invites'
 import { sendTutorInvitation } from '../emails/send-tutor-invitation'
+import { isReservedSchoolSlug, normalizeSchoolProfileUpdate, schoolSlugCandidates, SchoolProfileValidationError } from '../lib/school-profile'
+import type { TablesUpdate } from '../lib/database.types'
 
 export const schoolsRouter = new Hono<{ Variables: Variables }>()
 
@@ -38,8 +40,9 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     return c.json({ error: 'Centre name is required', code: 'INVALID_NAME' }, 400)
   }
 
-  const slug = String(body.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
-    .replace(/^-+|-+$/g, '')
+  const requestedSlug = body.slug === undefined || body.slug === null ? undefined : body.slug
+  const slugCandidates = schoolSlugCandidates(name, requestedSlug)
+  const slug = slugCandidates[0]
 
   if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     return c.json({
@@ -48,27 +51,47 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     }, 400)
   }
 
+  if (requestedSlug !== undefined && isReservedSchoolSlug(slug)) {
+    return c.json({
+      error: 'That student page link is reserved by Kanvise. Choose another one.',
+      code: 'RESERVED_SLUG',
+    }, 400)
+  }
+
   if (body.description !== undefined && String(body.description).length > 500) {
     return c.json({ error: 'Centre description cannot exceed 500 characters', code: 'DESCRIPTION_TOO_LONG' }, 400)
   }
 
-  // Create school
-  const { data: school, error: schoolError } = await supabase
-    .from('schools')
-    .insert({
-      name,
-      slug: slug,
-      description: body.description,
-      contact_email: body.contact_email,
-      contact_phone: body.contact_phone,
-    })
-    .select()
-    .single()
+  // Generated links should never turn a common centre name into onboarding
+  // work. The unique database constraint remains the source of truth and makes
+  // these retries safe even when two admins create similarly named centres at
+  // the same time. A deliberately customised link still fails explicitly.
+  let school: any = null
+  let schoolError: any = null
+  for (const candidate of slugCandidates) {
+    const result = await supabase
+      .from('schools')
+      .insert({
+        name,
+        slug: candidate,
+        description: body.description,
+        contact_email: body.contact_email,
+        contact_phone: body.contact_phone,
+      })
+      .select()
+      .single()
+
+    school = result.data
+    schoolError = result.error
+    if (!schoolError || schoolError.code !== '23505' || requestedSlug !== undefined) break
+  }
 
   if (schoolError) {
     if (schoolError.code === '23505') {
       return c.json({
-        error: 'That student page link is already in use. Choose another one.',
+        error: requestedSlug === undefined
+          ? 'We could not generate an available student page link. Please try again.'
+          : 'That student page link is already in use. Choose another one.',
         code: 'SLUG_TAKEN',
       }, 409)
     }
@@ -138,35 +161,23 @@ schoolsRouter.patch('/me', requireRole('admin'), async (c) => {
 
   const body = await c.req.json()
 
-  if (body.name !== undefined && !String(body.name).trim()) {
-    return c.json({ error: 'Centre name is required', code: 'INVALID_NAME' }, 400)
-  }
-  if (body.slug !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(body.slug))) {
-    return c.json({ error: 'Portal URL must use lowercase letters, numbers, and single hyphens only', code: 'INVALID_SLUG' }, 400)
-  }
-  if (body.description !== undefined && String(body.description).length > 500) {
-    return c.json({ error: 'Centre description cannot exceed 500 characters', code: 'DESCRIPTION_TOO_LONG' }, 400)
+  let updatePayload: Record<string, string | boolean | null>
+  try {
+    updatePayload = normalizeSchoolProfileUpdate(body)
+  } catch (error) {
+    if (error instanceof SchoolProfileValidationError) {
+      return c.json({ error: error.message, code: 'INVALID_PROFILE_FIELD', field: error.field }, 400)
+    }
+    throw error
   }
 
-  // Prepare update payload according to Api spec.md
-  const updatePayload: any = {}
-  
-  if (body.name !== undefined) updatePayload.name = body.name
-  if (body.slug !== undefined) updatePayload.slug = body.slug
-  if (body.description !== undefined) updatePayload.description = body.description
-  if (body.contact_email !== undefined) updatePayload.contact_email = body.contact_email
-  if (body.contact_phone !== undefined) updatePayload.contact_phone = body.contact_phone
-  if (body.website_url !== undefined) updatePayload.website_url = body.website_url
-  if (body.instagram_url !== undefined) updatePayload.instagram_url = body.instagram_url
-  if (body.twitter_url !== undefined) updatePayload.twitter_url = body.twitter_url
-  if (body.facebook_url !== undefined) updatePayload.facebook_url = body.facebook_url
-  if (body.whatsapp_number !== undefined) updatePayload.whatsapp_number = body.whatsapp_number
-  if (body.is_active !== undefined) updatePayload.is_active = body.is_active
-  // Note: Skipping logo_key, banner_key, video_intro_key for now as requested by user
+  if (Object.keys(updatePayload).length === 0) {
+    return c.json({ error: 'No profile changes were provided', code: 'NO_CHANGES' }, 400)
+  }
 
   const { data: school, error } = await supabase
     .from('schools')
-    .update(updatePayload)
+    .update(updatePayload as TablesUpdate<'schools'>)
     .eq('id', schoolId)
     .select()
     .single()

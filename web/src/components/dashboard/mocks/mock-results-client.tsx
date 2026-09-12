@@ -10,7 +10,7 @@ type MockAnswer = {
   theory_answer_text: string | null
   tutor_score: number | null
   tutor_feedback: string | null
-  question: { id: string; question_text: string; content_blocks: ContentBlock[]; question_type: string; marks: number; order_index: number }
+  question: { id: string; question_text: string; content_blocks: ContentBlock[]; question_type: string; marks: number; order_index: number; expected_answer?: string }
 }
 
 type Attempt = {
@@ -240,6 +240,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
                 <div className="flex flex-1 flex-col">
                   <div className="flex-1 space-y-5 p-6">
                     <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold text-on-surface-variant">Written question {selectedQuestionIndex + 1} of {selectedTheoryAnswers.length}</p><div className="mt-2 max-w-3xl font-semibold leading-6 text-on-surface"><QuestionContent plainText={selectedAnswer.question.question_text} blocks={selectedAnswer.question.content_blocks} /></div></div><span className="shrink-0 text-xs font-semibold text-on-surface-variant">{selectedAnswer.question.marks} marks</span></div>
+                    {selectedAnswer.question.expected_answer && <div className="rounded-lg border border-[#e8d7a5] bg-[#fffaf0] p-4"><p className="text-xs font-semibold uppercase tracking-wider text-[#7a4b00]">Expected answer · private</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#5f4718]">{selectedAnswer.question.expected_answer}</p></div>}
                     <div className="rounded-lg bg-surface-container-low p-5 text-sm leading-7 text-on-surface whitespace-pre-wrap">{selectedAnswer.theory_answer_text || 'No answer provided.'}</div>
                     <div className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)]">
                       <label className="text-sm font-semibold text-on-surface">Score<input type="number" min="0" max={selectedAnswer.question.marks} value={currentDraft.score} onChange={(event) => setDrafts((current) => ({ ...current, [selectedAnswer.id]: { ...currentDraft, score: event.target.value } }))} className="mt-2 w-full rounded-md border border-outline-variant px-3 py-2.5 focus:border-primary focus:outline-none" /></label>

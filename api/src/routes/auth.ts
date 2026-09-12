@@ -264,8 +264,15 @@ authRouter.post('/profile/activate', async (c) => {
     return c.json({ error: 'Only student profiles can be activated', code: 'FORBIDDEN' }, 403)
   }
 
+  const body = await c.req.json().catch(() => ({}))
+  const firstName = String(body.first_name || '').trim()
+  const lastName = String(body.last_name || '').trim()
+  if (!firstName || !lastName) {
+    return c.json({ error: 'Enter your first and last name', code: 'VALIDATION_ERROR' }, 400)
+  }
+
   const { error } = await supabase.from('user_profiles')
-    .update({ onboarding_status: 'active', activated_at: new Date().toISOString() } as any)
+    .update({ first_name: firstName, last_name: lastName, onboarding_status: 'active', activated_at: new Date().toISOString() } as any)
     .eq('id', user.id)
     .eq('role', 'student')
 

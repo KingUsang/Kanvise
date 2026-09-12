@@ -19,6 +19,23 @@ publicRouter.get('/schools/:slug', async (c) => {
       .single()
 
     if (schoolError || !school) {
+      const { data: historicalSlug } = await supabase
+        .from('school_slug_redirects')
+        .select('school_id')
+        .eq('old_slug', slug)
+        .maybeSingle()
+
+      if (historicalSlug) {
+        const { data: currentSchool } = await supabase
+          .from('schools')
+          .select('slug')
+          .eq('id', historicalSlug.school_id)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (currentSchool) return c.json({ redirect_slug: currentSchool.slug })
+      }
+
       return c.json({ error: 'School not found' }, 404)
     }
 

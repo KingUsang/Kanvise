@@ -8,6 +8,7 @@ export type DueLiveClass = { id: string; schoolId: string; courseId: string; tit
 export type DueAssignment = { id: string; schoolId: string; courseId: string; title: string; courseName: string; deadlineAt: string; recipientIds: string[] }
 
 export type JobsRepository = {
+  materializeTimetableClasses(horizonDays: number): Promise<number>
   claimDueMocks(now: Date, limit: number): Promise<DueMock[]>
   markMockPublicationNotified(id: string): Promise<void>
   findDueLiveClasses(windowStart: Date, windowEnd: Date, limit: number): Promise<DueLiveClass[]>
@@ -16,6 +17,14 @@ export type JobsRepository = {
 }
 
 export const jobsRepository: JobsRepository = {
+  async materializeTimetableClasses(horizonDays) {
+    const { data, error } = await supabase.rpc('materialize_published_class_timetables' as any, {
+      p_horizon_days: horizonDays,
+    } as any)
+    if (error) throw error
+    return Number(data || 0)
+  },
+
   async claimDueMocks(now, limit) {
     const { data: candidates, error } = await supabase.from('mock_exams')
       .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, direct_link_enabled, direct_link_access_mode, direct_link_price_kobo, direct_link_slug, course:courses(name), programme:programmes(name)')

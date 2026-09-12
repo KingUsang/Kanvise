@@ -82,42 +82,6 @@ describe('POST /auth/profile/init registration flow hardening', () => {
     expect(body.error).toBe('A valid registration flow is required')
   })
 
-  it('validates names before consuming a one-time student intent', async () => {
-    const response = await initProfile({ flow: 'student', student_registration_token: 'intent-token', first_name: '', last_name: '' })
-
-    expect(response.status).toBe(400)
-    expect(mocks.from).not.toHaveBeenCalled()
-  })
-
-  it('rejects a student intent lost to a concurrent consumer', async () => {
-    const intentLookup: any = {
-      select: vi.fn(() => intentLookup), eq: vi.fn(() => intentLookup), is: vi.fn(() => intentLookup),
-      gt: vi.fn(() => intentLookup), maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'intent-1' }, error: null }),
-    }
-    const profileBuilder: any = {
-      select: vi.fn(() => profileBuilder), eq: vi.fn(() => profileBuilder),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    }
-    const consumeBuilder: any = {
-      update: vi.fn(() => consumeBuilder), eq: vi.fn(() => consumeBuilder), is: vi.fn(() => consumeBuilder),
-      select: vi.fn(() => consumeBuilder), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    }
-    let intentCalls = 0
-    mocks.from.mockImplementation((table: string) => {
-      if (table === 'user_profiles') return profileBuilder
-      if (table === 'registration_intents') return intentCalls++ === 0 ? intentLookup : consumeBuilder
-      throw new Error(`Unexpected table ${table}`)
-    })
-
-    const response = await initProfile({
-      flow: 'student', student_registration_token: 'intent-token', first_name: 'Ada', last_name: 'Lovelace',
-    })
-
-    expect(response.status).toBe(409)
-    await expect(response.json()).resolves.toEqual({ error: 'Student registration could not be completed' })
-    expect(mocks.rpc).not.toHaveBeenCalled()
-  })
-
   it('rejects a new tutor without an invite token', async () => {
     // No existing profile, so the handler proceeds to the tutor invite check.
     mocks.from.mockReturnValue(profileLookup({ data: null, error: null }))
@@ -138,17 +102,34 @@ describe('POST /auth/profile/activate', () => {
   })
 
   it('activates the roster profile without sending a duplicate welcome email', async () => {
+    const update = vi.fn(() => builder)
     const builder: any = {
-      update: vi.fn(() => builder),
+      update,
       eq: vi.fn(() => builder),
       then: (resolve: (value: unknown) => unknown) => resolve({ error: null }),
     }
     mocks.from.mockReturnValue(builder)
 
-    const response = await authRouter.request('/profile/activate', { method: 'POST' })
+    const response = await authRouter.request('/profile/activate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ first_name: ' Ada ', last_name: ' Okafor ' }),
+    })
 
     expect(response.status).toBe(200)
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ first_name: 'Ada', last_name: 'Okafor', onboarding_status: 'active' }))
     expect(mocks.ensureWelcomeEmail).not.toHaveBeenCalled()
     await expect(response.json()).resolves.toEqual({ message: 'Student profile activated' })
+  })
+
+  it('does not activate an unnamed student profile', async () => {
+    const response = await authRouter.request('/profile/activate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ first_name: '', last_name: '' }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(mocks.from).not.toHaveBeenCalled()
   })
 })

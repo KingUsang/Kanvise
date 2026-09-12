@@ -1,57 +1,106 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import React from 'react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import RegisterPage from './page'
 
-const mocks = vi.hoisted(() => ({
-  signInWithPassword: vi.fn(),
+const auth = vi.hoisted(() => ({
   signUp: vi.fn(),
   verifyOtp: vi.fn(),
   refreshSession: vi.fn(),
-  signOut: vi.fn(),
+  resend: vi.fn(),
+}))
+
+const navigation = vi.hoisted(() => ({ pathname: '/auth/register' }))
+
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({ auth }),
 }))
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/auth/register/student',
+  usePathname: () => navigation.pathname,
   useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams('intent=student-intent&return_to=%2Fmock%2Fbiology'),
+  useSearchParams: () => new URLSearchParams(),
 }))
-vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ auth: mocks }) }))
-vi.mock('@/config/api', () => ({ getApiUrl: () => 'https://api.example.test' }))
 
-async function completeForm() {
-  const user = userEvent.setup()
-  await user.type(screen.getByPlaceholderText('John'), 'Ada')
-  await user.type(screen.getByPlaceholderText('Doe'), 'Lovelace')
-  await user.type(screen.getByPlaceholderText('you@example.com'), 'ADA@Example.com ')
-  await user.type(screen.getByLabelText('Password'), 'StrongPass1!')
-  await user.click(screen.getByRole('button', { name: 'Create account' }))
-}
+import RegisterPage from './page'
 
-describe('student registration identity handling', () => {
+describe('centre registration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.signInWithPassword.mockResolvedValue({ data: { session: null }, error: { code: 'invalid_credentials' } })
+    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://api.example.test')
+    navigation.pathname = '/auth/register'
+    auth.signUp.mockResolvedValue({ error: null })
+    auth.verifyOtp.mockResolvedValue({
+      data: {
+        session: { access_token: 'verified-token' },
+        user: { email: 'owner@example.com' },
+      },
+      error: null,
+    })
+    auth.refreshSession
+      .mockResolvedValueOnce({
+        data: { session: { access_token: 'profile-token', user: { app_metadata: {} } } },
+        error: null,
+      })
+      // Keep the test on-page after centre creation so jsdom does not need to
+      // emulate a full browser navigation.
+      .mockResolvedValueOnce({
+        data: { session: { access_token: 'centre-token', user: { app_metadata: {} } } },
+        error: null,
+      })
+
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ profile: { id: 'profile-1' } }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ school: { id: 'school-1' } }), { status: 200 })))
   })
 
-  it('does not wait for a nonexistent email when Supabase conceals a duplicate account', async () => {
-    mocks.signUp.mockResolvedValue({ data: { user: { identities: [] } }, error: null })
+  it('collects the centre name and creates the centre after email verification', async () => {
+    const user = userEvent.setup()
     render(<RegisterPage />)
 
-    await completeForm()
+    fireEvent.change(screen.getByLabelText('Centre name'), { target: { value: 'Bright Future Tutorials' } })
+    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Emmanuel' } })
+    fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Usang' } })
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'owner@example.com' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'SecurePass1!' } })
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
 
-    expect(await screen.findByText(/An account already uses this email/)).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Check your email' })).not.toBeInTheDocument()
-    expect(mocks.signInWithPassword).toHaveBeenCalledWith({ email: 'ada@example.com', password: 'StrongPass1!' })
+    expect(auth.signUp).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'owner@example.com',
+      options: {
+        data: {
+          first_name: 'Emmanuel',
+          last_name: 'Usang',
+          centre_name: 'Bright Future Tutorials',
+        },
+      },
+    }))
+
+    fireEvent.change(await screen.findByLabelText('Verification code'), { target: { value: '123456' } })
+    await user.click(screen.getByRole('button', { name: 'Verify email' }))
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    const fetchMock = vi.mocked(fetch)
+    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/auth\/profile\/init$/)
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      flow: 'centre',
+      first_name: 'Emmanuel',
+      last_name: 'Usang',
+    })
+    expect(fetchMock.mock.calls[1]?.[0]).toMatch(/\/schools$/)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer profile-token' }),
+      body: JSON.stringify({ name: 'Bright Future Tutorials' }),
+    })
+    expect(await screen.findByText(/centre was created, but the dashboard session could not be refreshed/i)).toBeInTheDocument()
   })
 
-  it('sends a verification code for a genuinely new student identity', async () => {
-    mocks.signUp.mockResolvedValue({ data: { user: { identities: [{ id: 'identity-1' }] } }, error: null })
+  it('does not add centre setup fields to student registration', () => {
+    navigation.pathname = '/auth/register/student'
     render(<RegisterPage />)
 
-    await completeForm()
-
-    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument()
-    await waitFor(() => expect(mocks.signUp).toHaveBeenCalledWith(expect.objectContaining({ email: 'ada@example.com' })))
+    expect(screen.queryByLabelText('Centre name')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Join your programme' })).toBeInTheDocument()
   })
 })
