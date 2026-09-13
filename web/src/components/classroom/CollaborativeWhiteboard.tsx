@@ -3,7 +3,7 @@
 
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import dynamic from "next/dynamic";
-import { Eraser, MousePointer2, Pencil, Redo2, Undo2 } from "lucide-react";
+import { Eraser, Hand, Pencil, Redo2, Undo2 } from "lucide-react";
 
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then(({ Excalidraw: Canvas }) => {
@@ -29,6 +29,7 @@ import { ConnectionState } from "livekit-client";
 
 export interface WhiteboardRef {
   setSlide: (imageUrl: string) => Promise<void>;
+  placePdfPage: () => Promise<void>;
 }
 
 export type BoardPdfDocument = {
@@ -40,13 +41,15 @@ export type BoardPdfDocument = {
 
 const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardPdfDocument }>(({ pdfDocument }, ref) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
-  const [activeTool, setActiveTool] = useState<"selection" | "freedraw" | "eraser">("freedraw");
+  const [activeTool, setActiveTool] = useState<"hand" | "freedraw" | "eraser">("hand");
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromRemote = useRef(false);
   const lastBroadcastRef = useRef<number>(0);
   const redoStackRef = useRef<any[]>([]);
   const localPdfElementsRef = useRef<any[]>([]);
   const pendingPdfPagesRef = useRef(new Set<string>());
+  const pdfDocumentRef = useRef<BoardPdfDocument | undefined>(pdfDocument);
+  const addPdfPageToBoardRef = useRef<((source: BoardPdfDocument, page: number, position?: { x: number; y: number }) => Promise<{ x: number; y: number } | undefined>) | null>(null);
   const slideElementRef = useRef<any>(null);
   const room = useRoomContext();
 
@@ -67,6 +70,23 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
       if (data.type === "SLIDE_CHANGE") {
         isUpdatingFromRemote.current = true;
         void loadSlideToCanvas(data.imageUrl);
+      }
+
+      if (data.type === "PDF_PAGE_PLACED") {
+        const source = pdfDocumentRef.current;
+        if (source?.materialId === data.materialId) {
+          void addPdfPageToBoardRef.current?.(source, data.page, { x: data.x, y: data.y });
+        }
+      }
+
+      if (data.type === "PDF_PAGES_SYNC") {
+        const source = pdfDocumentRef.current;
+        if (source?.materialId === data.materialId) {
+          void data.pages.reduce(
+            (chain: Promise<unknown>, page: { page: number; x: number; y: number }) => chain.then(() => addPdfPageToBoardRef.current?.(source, page.page, page)),
+            Promise.resolve(),
+          );
+        }
       }
 
       if (data.type === "REQUEST_SCENE") {
@@ -92,6 +112,19 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
                 });
                 const p = send(new TextEncoder().encode(slidePayload), { reliable: true });
                 if (p) p.catch(() => {});
+              }
+              const source = pdfDocumentRef.current;
+              if (source) {
+                const prefix = `pdf-page-${source.materialId}-`;
+                const pages = localPdfElementsRef.current
+                  .filter((element) => element.id.startsWith(prefix))
+                  .map((element) => ({ page: Number(element.id.slice(prefix.length)), x: element.x, y: element.y }))
+                  .filter((page) => Number.isInteger(page.page));
+                if (pages.length) {
+                  const pdfPayload = JSON.stringify({ type: "PDF_PAGES_SYNC", materialId: source.materialId, pages });
+                  const p = send(new TextEncoder().encode(pdfPayload), { reliable: true });
+                  if (p) p.catch(() => {});
+                }
               }
           }
         } catch {
@@ -211,10 +244,11 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
     }
   };
 
-  const addPdfPageToBoard = useCallback(async (source: BoardPdfDocument, pageNumber: number) => {
-    if (!excalidrawAPI || pageNumber < 1 || pageNumber > source.pageCount) return;
+  const addPdfPageToBoard = useCallback(async (source: BoardPdfDocument, pageNumber: number, position?: { x: number; y: number }) => {
+    if (!excalidrawAPI || pageNumber < 1 || pageNumber > source.pageCount) return undefined;
     const elementId = `pdf-page-${source.materialId}-${pageNumber}`;
-    if (localPdfElementsRef.current.some((element) => element.id === elementId) || pendingPdfPagesRef.current.has(elementId)) return;
+    const existing = localPdfElementsRef.current.find((element) => element.id === elementId);
+    if (existing || pendingPdfPagesRef.current.has(elementId)) return existing ? { x: existing.x, y: existing.y } : undefined;
     pendingPdfPagesRef.current.add(elementId);
 
     try {
@@ -227,39 +261,41 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
       const context = canvas.getContext('2d', { alpha: false });
-      if (!context) return;
+      if (!context) return undefined;
       await page.render({ canvas, canvasContext: context, viewport }).promise;
       const fileId = `pdf-file-${source.materialId}-${pageNumber}`;
       const dataURL = canvas.toDataURL('image/jpeg', 0.9);
       excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
+      // A page is placed in the tutor's current viewport. The tutor can pan to
+      // any empty part of the infinite board before pressing "Place page".
+      // We never invent a fixed-sized solution area between PDF pages.
+      const appState = excalidrawAPI.getAppState();
+      const zoom = appState.zoom?.value || 1;
+      const pagePosition = position || {
+        x: -appState.scrollX + appState.width / (2 * zoom) - viewport.width / 2,
+        y: -appState.scrollY + appState.height / (2 * zoom) - viewport.height / 2,
+      };
       const element = {
         type: 'image', version: 1, versionNonce: Date.now(), isDeleted: false, id: elementId,
         fillStyle: 'solid', strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100, angle: 0,
-        // Leave a generous work area below each page. The canvas itself is
-        // still infinite, so a tutor can pan anywhere for a longer solution.
-        x: 0, y: (pageNumber - 1) * 2600, strokeColor: 'transparent', backgroundColor: 'transparent',
+        x: pagePosition.x, y: pagePosition.y,
+        strokeColor: 'transparent', backgroundColor: 'transparent',
         width: viewport.width, height: viewport.height, seed: pageNumber, groupIds: [], boundElements: [],
         updated: Date.now(), fileId, scale: [1, 1], locked: true,
       };
       localPdfElementsRef.current = [...localPdfElementsRef.current, element];
       isUpdatingFromRemote.current = true;
       excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements(), element] });
+      return pagePosition;
     } finally {
       pendingPdfPagesRef.current.delete(elementId);
     }
   }, [excalidrawAPI]);
 
   useEffect(() => {
-    if (!pdfDocument || !excalidrawAPI) return;
-    // Keep mobile memory bounded: render the current page and only one page
-    // on either side. More pages appear as the tutor navigates the document.
-    void Promise.all([pdfDocument.page - 1, pdfDocument.page, pdfDocument.page + 1].map((page) => addPdfPageToBoard(pdfDocument, page)))
-      .then(() => {
-        const currentPage = localPdfElementsRef.current.find((element) => element.id === `pdf-page-${pdfDocument.materialId}-${pdfDocument.page}`);
-        if (currentPage) excalidrawAPI.scrollToContent(currentPage, { fitToContent: true, animate: true });
-      })
-      .catch((error) => console.error('Could not place PDF page on board', error));
-  }, [addPdfPageToBoard, excalidrawAPI, pdfDocument?.materialId, pdfDocument?.page, pdfDocument?.pageCount, pdfDocument?.url]);
+    pdfDocumentRef.current = pdfDocument;
+    addPdfPageToBoardRef.current = addPdfPageToBoard;
+  }, [addPdfPageToBoard, pdfDocument]);
 
   useImperativeHandle(ref, () => ({
     setSlide: async (imageUrl: string) => {
@@ -270,8 +306,16 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
       const payload = JSON.stringify({ type: "SLIDE_CHANGE", imageUrl });
       const promise = send(new TextEncoder().encode(payload), { reliable: true });
       if (promise) promise.catch(() => {});
-    }
-  }));
+    },
+    placePdfPage: async () => {
+      if (!pdfDocument) return;
+      const position = await addPdfPageToBoard(pdfDocument, pdfDocument.page);
+      if (!position) return;
+      const payload = JSON.stringify({ type: "PDF_PAGE_PLACED", materialId: pdfDocument.materialId, page: pdfDocument.page, ...position });
+      const promise = send(new TextEncoder().encode(payload), { reliable: true });
+      if (promise) promise.catch(() => {});
+    },
+  }), [addPdfPageToBoard, pdfDocument, send]);
 
   // When mounting, ask the room if anyone has the current scene
   useEffect(() => {
@@ -291,7 +335,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
   }
 
   useEffect(() => {
-    if (excalidrawAPI && isHost) excalidrawAPI.setActiveTool({ type: "freedraw" });
+    if (excalidrawAPI && isHost) excalidrawAPI.setActiveTool({ type: "hand" });
   }, [excalidrawAPI, isHost]);
 
   const handleChange = useCallback((elements: readonly any[]) => {
@@ -321,7 +365,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
     }
   }, [send, connectionState]);
 
-  const setTool = (type: "selection" | "freedraw" | "eraser") => {
+  const setTool = (type: "hand" | "freedraw" | "eraser") => {
     excalidrawAPI?.setActiveTool({ type });
     setActiveTool(type);
   };
@@ -353,13 +397,13 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
   };
 
   return (
-    <div ref={boardContainerRef} className="absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-white">
+    <div ref={boardContainerRef} className="kanvise-teaching-board absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-white">
       <Excalidraw
         excalidrawAPI={(api) => setExcalidrawAPI(api)}
         onChange={handleChange}
         theme="light"
-        // Hide Excalidraw's desktop-first chrome. Kanvise supplies the small,
-        // touch-friendly teaching toolbar below instead.
+        // The stock UI is visually suppressed by the scoped classroom CSS.
+        // Kanvise supplies the one touch-oriented toolbar below.
         zenModeEnabled
         viewModeEnabled={!isHost} // Only Host can draw on the whiteboard
         detectScroll={false}
@@ -378,7 +422,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
       />
       {isHost && (
         <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
-          <button onClick={() => setTool("selection")} className={`rounded-xl p-3 ${activeTool === "selection" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Move around board" title="Move around board"><MousePointer2 size={19} /></button>
+          <button onClick={() => setTool("hand")} className={`rounded-xl p-3 ${activeTool === "hand" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pan board" title="Pan board"><Hand size={19} /></button>
           <button onClick={() => setTool("freedraw")} className={`rounded-xl p-3 ${activeTool === "freedraw" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pen" title="Pen"><Pencil size={19} /></button>
           <button onClick={() => setTool("eraser")} className={`rounded-xl p-3 ${activeTool === "eraser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Eraser" title="Eraser"><Eraser size={19} /></button>
           <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />

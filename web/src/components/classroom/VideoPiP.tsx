@@ -84,7 +84,9 @@ export default function VideoPiP() {
   };
 
   // We ALWAYS show the PiP container as long as we know who the tutor is, matching the "teacher is always at the front" design.
-  if (!tutor) return null;
+  // A video bubble without video is noise. When the tutor turns their camera
+  // off, remove it for everyone instead of replacing it with initials.
+  if (!tutor || !tutor.isCameraEnabled || !tutorTrack) return null;
 
   return (
     <div
@@ -104,14 +106,8 @@ export default function VideoPiP() {
       )}
 
       {/* Primary PiP: Permanent Pinned Tutor */}
-      <div className={`relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 bg-[#1b1c1c] shadow-xl shadow-black/20 pointer-events-auto md:h-24 md:w-24 ${tutor.isSpeaking ? "border-green-400 ring-2 ring-green-400/30" : "border-white"}`}>
-        {tutor.isCameraEnabled && tutorTrack ? (
-          <VideoTrack trackRef={tutorTrack} className="w-full h-full object-cover" />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2e2877] text-lg font-bold text-white shadow-inner md:h-12 md:w-12 md:text-xl">
-            {(tutor.name || tutor.identity).slice(0, 2).toUpperCase()}
-          </div>
-        )}
+      <div className={`relative flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-full border-2 bg-[#1b1c1c] shadow-xl shadow-black/20 pointer-events-auto md:h-[120px] md:w-[120px] ${tutor.isSpeaking ? "border-green-400 ring-2 ring-green-400/30" : "border-white"}`}>
+        <VideoTrack trackRef={tutorTrack} className="w-full h-full object-cover" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent pt-5 pb-1.5 text-center text-white text-[10px] font-semibold">
           Tutor
         </div>

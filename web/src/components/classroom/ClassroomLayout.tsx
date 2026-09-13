@@ -248,7 +248,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
         {/* Chat/People always overlay the stage and remain mounted but inert while closed. */}
         {openSidebar && (
           <div
-            className="absolute inset-0 z-40 bg-black/40 md:hidden"
+            className="absolute inset-0 z-40 bg-black/40"
             onClick={() => closeSidebar()}
             aria-hidden
           />
