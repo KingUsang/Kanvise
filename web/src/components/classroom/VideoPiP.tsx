@@ -104,7 +104,7 @@ export default function VideoPiP() {
       )}
 
       {/* Primary PiP: Permanent Pinned Tutor */}
-      <div className={`relative flex h-[68px] w-[108px] items-center justify-center overflow-hidden rounded-xl border-2 bg-[#1b1c1c] shadow-xl shadow-black/20 pointer-events-auto md:h-20 md:w-32 ${tutor.isSpeaking ? "border-green-400 ring-2 ring-green-400/30" : "border-white"}`}>
+      <div className={`relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 bg-[#1b1c1c] shadow-xl shadow-black/20 pointer-events-auto md:h-24 md:w-24 ${tutor.isSpeaking ? "border-green-400 ring-2 ring-green-400/30" : "border-white"}`}>
         {tutor.isCameraEnabled && tutorTrack ? (
           <VideoTrack trackRef={tutorTrack} className="w-full h-full object-cover" />
         ) : (

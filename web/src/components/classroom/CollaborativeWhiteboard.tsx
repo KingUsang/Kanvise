@@ -3,11 +3,12 @@
 
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import dynamic from "next/dynamic";
+import { Eraser, MousePointer2, Pencil, Redo2, Undo2 } from "lucide-react";
 
 const Excalidraw = dynamic(
-  () => import("@excalidraw/excalidraw").then(({ Excalidraw: Canvas, MainMenu }) => {
+  () => import("@excalidraw/excalidraw").then(({ Excalidraw: Canvas }) => {
     function TeachingCanvas(props: React.ComponentProps<typeof Canvas>) {
-      return <Canvas {...props}><MainMenu /></Canvas>;
+      return <Canvas {...props} />;
     }
     return TeachingCanvas;
   }),
@@ -30,11 +31,22 @@ export interface WhiteboardRef {
   setSlide: (imageUrl: string) => Promise<void>;
 }
 
-const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
+export type BoardPdfDocument = {
+  materialId: string;
+  url: string;
+  page: number;
+  pageCount: number;
+};
+
+const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardPdfDocument }>(({ pdfDocument }, ref) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
+  const [activeTool, setActiveTool] = useState<"selection" | "freedraw" | "eraser">("freedraw");
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromRemote = useRef(false);
   const lastBroadcastRef = useRef<number>(0);
+  const redoStackRef = useRef<any[]>([]);
+  const localPdfElementsRef = useRef<any[]>([]);
+  const pendingPdfPagesRef = useRef(new Set<string>());
   const slideElementRef = useRef<any>(null);
   const room = useRoomContext();
 
@@ -48,7 +60,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
         // The slide file is loaded locally on every client. Only annotations
         // travel over LiveKit, avoiding broken image file references.
         excalidrawAPI.updateScene({
-          elements: [slideElementRef.current, ...data.elements].filter(Boolean),
+          elements: [slideElementRef.current, ...localPdfElementsRef.current, ...data.elements].filter(Boolean),
         });
       }
 
@@ -63,7 +75,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
           if (meta.isHost) {
               const elements = excalidrawAPI
                 .getSceneElements()
-                .filter((element: any) => element.id !== "slide-element");
+                .filter((element: any) => element.id !== "slide-element" && !element.id.startsWith("pdf-page-"));
               if (elements.length > 0) {
                 const payload = JSON.stringify({
                   type: "SYNC_SCENE",
@@ -199,6 +211,56 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
     }
   };
 
+  const addPdfPageToBoard = useCallback(async (source: BoardPdfDocument, pageNumber: number) => {
+    if (!excalidrawAPI || pageNumber < 1 || pageNumber > source.pageCount) return;
+    const elementId = `pdf-page-${source.materialId}-${pageNumber}`;
+    if (localPdfElementsRef.current.some((element) => element.id === elementId) || pendingPdfPagesRef.current.has(elementId)) return;
+    pendingPdfPagesRef.current.add(elementId);
+
+    try {
+      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
+      const loaded = await pdfjs.getDocument({ url: source.url }).promise;
+      const page = await loaded.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = window.document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext('2d', { alpha: false });
+      if (!context) return;
+      await page.render({ canvas, canvasContext: context, viewport }).promise;
+      const fileId = `pdf-file-${source.materialId}-${pageNumber}`;
+      const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+      excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
+      const element = {
+        type: 'image', version: 1, versionNonce: Date.now(), isDeleted: false, id: elementId,
+        fillStyle: 'solid', strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100, angle: 0,
+        // Leave a generous work area below each page. The canvas itself is
+        // still infinite, so a tutor can pan anywhere for a longer solution.
+        x: 0, y: (pageNumber - 1) * 2600, strokeColor: 'transparent', backgroundColor: 'transparent',
+        width: viewport.width, height: viewport.height, seed: pageNumber, groupIds: [], boundElements: [],
+        updated: Date.now(), fileId, scale: [1, 1], locked: true,
+      };
+      localPdfElementsRef.current = [...localPdfElementsRef.current, element];
+      isUpdatingFromRemote.current = true;
+      excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements(), element] });
+    } finally {
+      pendingPdfPagesRef.current.delete(elementId);
+    }
+  }, [excalidrawAPI]);
+
+  useEffect(() => {
+    if (!pdfDocument || !excalidrawAPI) return;
+    // Keep mobile memory bounded: render the current page and only one page
+    // on either side. More pages appear as the tutor navigates the document.
+    void Promise.all([pdfDocument.page - 1, pdfDocument.page, pdfDocument.page + 1].map((page) => addPdfPageToBoard(pdfDocument, page)))
+      .then(() => {
+        const currentPage = localPdfElementsRef.current.find((element) => element.id === `pdf-page-${pdfDocument.materialId}-${pdfDocument.page}`);
+        if (currentPage) excalidrawAPI.scrollToContent(currentPage, { fitToContent: true, animate: true });
+      })
+      .catch((error) => console.error('Could not place PDF page on board', error));
+  }, [addPdfPageToBoard, excalidrawAPI, pdfDocument?.materialId, pdfDocument?.page, pdfDocument?.pageCount, pdfDocument?.url]);
+
   useImperativeHandle(ref, () => ({
     setSlide: async (imageUrl: string) => {
       // Discard previous drawings and load new slide
@@ -228,6 +290,10 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
     // ignore
   }
 
+  useEffect(() => {
+    if (excalidrawAPI && isHost) excalidrawAPI.setActiveTool({ type: "freedraw" });
+  }, [excalidrawAPI, isHost]);
+
   const handleChange = useCallback((elements: readonly any[]) => {
     // If this onChange was triggered programmatically by updateScene,
     // clear the guard flag and DO NOT broadcast to prevent infinite loops!
@@ -236,12 +302,14 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
       return;
     }
 
+    redoStackRef.current = [];
+
     const now = Date.now();
     // Throttle broadcasts slightly to avoid flooding LiveKit DataChannels
     if (now - lastBroadcastRef.current > 50 && connectionState === ConnectionState.Connected) {
       lastBroadcastRef.current = now;
 
-      const annotations = elements.filter((element: any) => element.id !== "slide-element");
+      const annotations = elements.filter((element: any) => element.id !== "slide-element" && !element.id.startsWith("pdf-page-"));
       const payload = JSON.stringify({
         type: "SYNC_SCENE",
         elements: annotations,
@@ -253,14 +321,46 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
     }
   }, [send, connectionState]);
 
+  const setTool = (type: "selection" | "freedraw" | "eraser") => {
+    excalidrawAPI?.setActiveTool({ type });
+    setActiveTool(type);
+  };
+
+  // Mobile tutors need a dependable one-tap undo. Excalidraw's public API
+  // exposes no undo action, so keep this deliberately scoped to the latest
+  // complete annotation rather than trying to mirror its internal history.
+  const undoLastStroke = () => {
+    if (!excalidrawAPI || !isHost) return;
+    const elements = excalidrawAPI.getSceneElements();
+    const last = [...elements].reverse().find((element: any) => element.id !== "slide-element" && !element.id.startsWith("pdf-page-") && !element.isDeleted);
+    if (!last) return;
+    redoStackRef.current.push(last);
+    isUpdatingFromRemote.current = true;
+    excalidrawAPI.updateScene({ elements: elements.filter((element: any) => element.id !== last.id) });
+    const payload = JSON.stringify({ type: "SYNC_SCENE", elements: elements.filter((element: any) => element.id !== "slide-element" && !element.id.startsWith("pdf-page-") && element.id !== last.id) });
+    void send(new TextEncoder().encode(payload), { reliable: true }).catch(() => undefined);
+  };
+
+  const redoLastStroke = () => {
+    if (!excalidrawAPI || !isHost) return;
+    const stroke = redoStackRef.current.pop();
+    if (!stroke) return;
+    const elements = excalidrawAPI.getSceneElements();
+    isUpdatingFromRemote.current = true;
+    excalidrawAPI.updateScene({ elements: [...elements, stroke] });
+    const payload = JSON.stringify({ type: "SYNC_SCENE", elements: [...elements.filter((element: any) => element.id !== "slide-element" && !element.id.startsWith("pdf-page-")), stroke] });
+    void send(new TextEncoder().encode(payload), { reliable: true }).catch(() => undefined);
+  };
+
   return (
     <div ref={boardContainerRef} className="absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-white">
-      {/* Excalidraw dynamically imports itself, works fine in Next.js CSR */}
       <Excalidraw
         excalidrawAPI={(api) => setExcalidrawAPI(api)}
         onChange={handleChange}
         theme="light"
-        zenModeEnabled={!isHost}
+        // Hide Excalidraw's desktop-first chrome. Kanvise supplies the small,
+        // touch-friendly teaching toolbar below instead.
+        zenModeEnabled
         viewModeEnabled={!isHost} // Only Host can draw on the whiteboard
         detectScroll={false}
         handleKeyboardGlobally={false}
@@ -268,7 +368,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
         UIOptions={{
           canvasActions: {
             changeViewBackgroundColor: false,
-            clearCanvas: true,
+            clearCanvas: false,
             loadScene: false,
             saveToActiveFile: false,
             export: false,
@@ -276,6 +376,16 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef>((props, ref) => {
           }
         }}
       />
+      {isHost && (
+        <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
+          <button onClick={() => setTool("selection")} className={`rounded-xl p-3 ${activeTool === "selection" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Move around board" title="Move around board"><MousePointer2 size={19} /></button>
+          <button onClick={() => setTool("freedraw")} className={`rounded-xl p-3 ${activeTool === "freedraw" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pen" title="Pen"><Pencil size={19} /></button>
+          <button onClick={() => setTool("eraser")} className={`rounded-xl p-3 ${activeTool === "eraser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Eraser" title="Eraser"><Eraser size={19} /></button>
+          <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />
+          <button onClick={undoLastStroke} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Undo last stroke" title="Undo last stroke"><Undo2 size={19} /></button>
+          <button onClick={redoLastStroke} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Redo last stroke" title="Redo last stroke"><Redo2 size={19} /></button>
+        </div>
+      )}
     </div>
   );
 });
