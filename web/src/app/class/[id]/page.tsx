@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ClientClassroom from './ClientClassroom'
+import PreparingClassroom from './PreparingClassroom'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -54,6 +55,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     course_name: string | null
   }
   let errorMessage: string | null = null
+  let preparing: { retry_after_seconds?: number } | null = null
 
   try {
     const response = await fetch(endpoint, {
@@ -68,7 +70,9 @@ export default async function Page({ params, searchParams }: PageProps) {
 
     const json = await response.json()
 
-    if (!response.ok) {
+    if (response.status === 202 && json.data?.state === 'preparing') {
+      preparing = json.data
+    } else if (!response.ok) {
       errorMessage = json.error || `Failed to ${isStarting ? 'start' : 'join'} class (${response.status})`
     } else {
       classData = json.data
@@ -78,6 +82,10 @@ export default async function Page({ params, searchParams }: PageProps) {
   }
 
   // ── 3. Render ──────────────────────────────────────────────────────────────
+
+  if (preparing) {
+    return <PreparingClassroom retryAfterSeconds={preparing.retry_after_seconds || 4} />
+  }
 
   if (errorMessage || !classData!) {
     return (

@@ -189,7 +189,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
       if (res.ok) {
         const responseBody = await res.json()
         if (isStartingNow) {
-          toast.success('Class started')
+          toast.success(res.status === 202 ? 'Preparing your classroom' : 'Class started')
           startNavigationProgress()
           router.push(`/class/${responseBody.data.id}?start=true`)
           return

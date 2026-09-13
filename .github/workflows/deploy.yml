@@ -130,6 +130,10 @@ jobs:
             if test -d "$DEPLOY_DIRECTORY/api/dist"; then
               sudo mv "$DEPLOY_DIRECTORY/api/dist" "$DEPLOY_DIRECTORY/api/dist.previous"
             fi
+            # An older broken deployment could leave api/dist/dist behind.
+            # Ensure the target itself is absent so mv performs a rename rather
+            # than nesting the new artifact inside an existing directory.
+            sudo rm -rf "$DEPLOY_DIRECTORY/api/dist"
             sudo mv "$RELEASE_DIRECTORY/dist" "$DEPLOY_DIRECTORY/api/dist"
             if ! sudo systemctl restart "$SYSTEMD_SERVICE" || ! curl --fail --show-error --silent --retry 8 --retry-connrefused --retry-delay 2 "http://127.0.0.1:${APP_PORT}/health"; then
               sudo rm -rf "$DEPLOY_DIRECTORY/api/dist"
