@@ -131,12 +131,15 @@ export async function deallocateIdleLiveKitWorker(now = new Date()) {
   const recentCutoff = new Date(now.getTime() - 15 * 60_000).toISOString()
   const guardMinutes = positiveMinutes(process.env.LIVEKIT_WORKER_UPCOMING_GUARD_MINUTES, DEFAULT_UPCOMING_GUARD_MINUTES)
   const upcomingCutoff = new Date(now.getTime() + guardMinutes * 60_000).toISOString()
-  const [{ count: upcomingCount, error: upcomingError }, { count: recentCount, error: recentError }] = await Promise.all([
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'scheduled').gte('scheduled_at', now.toISOString()).lte('scheduled_at', upcomingCutoff),
+  const [{ count: scheduledCount, error: scheduledError }, { count: recentLiveCount, error: recentLiveError }, { count: recentCount, error: recentError }] = await Promise.all([
+    // Include a recent "start now" row while its room is being created. This
+    // closes the narrow race between the tutor's click and listRooms().
+    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'scheduled').gte('scheduled_at', recentCutoff).lte('scheduled_at', upcomingCutoff),
+    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'live').gte('started_at', recentCutoff),
     supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('ended_at', recentCutoff),
   ])
-  if (upcomingError || recentError) throw upcomingError || recentError
-  if (upcomingCount || recentCount) return { state: 'busy' as const }
+  if (scheduledError || recentLiveError || recentError) throw scheduledError || recentLiveError || recentError
+  if (scheduledCount || recentLiveCount || recentCount) return { state: 'busy' as const }
 
   const apiKey = process.env.LIVEKIT_API_KEY
   const apiSecret = process.env.LIVEKIT_API_SECRET
