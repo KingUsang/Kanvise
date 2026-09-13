@@ -6,7 +6,7 @@
 - A scheduled class warms the worker 12 minutes before its start time.
 - "Start now" and "Start class" are also wake-up triggers. The API returns HTTP 202 while Azure starts the VM; the classroom page shows a preparing state and retries automatically.
 - Access tokens and the `live` database state are withheld until the public LiveKit health endpoint responds successfully.
-- The idle job checks every five minutes. It refuses to stop the VM while a database class is live, a class starts in the next 20 minutes, a class ended within 15 minutes, or LiveKit still reports any room.
+- The idle job checks every five minutes. It refuses to stop the VM while a class starts in the next 20 minutes, a class ended within 15 minutes, or LiveKit reports any actual room. The room query fails closed. LiveKit is authoritative because old missed webhooks have left stale database rows marked `live` even though no room exists.
 - Automatic deallocation has a separate feature flag so wake-up can be proven in production before shutdown is enabled.
 
 ## Required API environment

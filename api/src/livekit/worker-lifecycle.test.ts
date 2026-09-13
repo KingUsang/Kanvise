@@ -10,6 +10,7 @@ describe('LiveKit worker lifecycle', () => {
     const fetcher = vi.fn().mockResolvedValue(new Response('OK', { status: 200 })) as any
     await expect(ensureLiveKitWorkerReady(fetcher)).resolves.toEqual({ state: 'ready' })
     expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(String(fetcher.mock.calls[0][0])).toContain('kanvise_health=')
   })
 
   it('starts the VM and reports preparing when health is down', async () => {

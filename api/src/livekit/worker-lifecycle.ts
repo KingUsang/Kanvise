@@ -36,7 +36,13 @@ export async function isLiveKitHealthy(fetcher: Fetch = fetch, env = process.env
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 2_500)
   try {
-    const response = await fetcher(liveKitHttpUrl(env), { signal: controller.signal })
+    const healthUrl = new URL(liveKitHttpUrl(env))
+    healthUrl.searchParams.set('kanvise_health', String(Date.now()))
+    const response = await fetcher(healthUrl, {
+      signal: controller.signal,
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' },
+    })
     return response.ok
   } catch {
     return false
@@ -116,18 +122,21 @@ export async function deallocateIdleLiveKitWorker(now = new Date()) {
 
   const recentCutoff = new Date(now.getTime() - 15 * 60_000).toISOString()
   const upcomingCutoff = new Date(now.getTime() + 20 * 60_000).toISOString()
-  const [{ count: liveCount, error: liveError }, { count: upcomingCount, error: upcomingError }, { count: recentCount, error: recentError }] = await Promise.all([
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'live'),
+  const [{ count: upcomingCount, error: upcomingError }, { count: recentCount, error: recentError }] = await Promise.all([
     supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'scheduled').gte('scheduled_at', now.toISOString()).lte('scheduled_at', upcomingCutoff),
     supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('ended_at', recentCutoff),
   ])
-  if (liveError || upcomingError || recentError) throw liveError || upcomingError || recentError
-  if (liveCount || upcomingCount || recentCount) return { state: 'busy' as const }
+  if (upcomingError || recentError) throw upcomingError || recentError
+  if (upcomingCount || recentCount) return { state: 'busy' as const }
 
   const apiKey = process.env.LIVEKIT_API_KEY
   const apiSecret = process.env.LIVEKIT_API_SECRET
   if (!apiKey || !apiSecret) throw new Error('LiveKit credentials are not configured')
   const rooms = await new RoomServiceClient(liveKitHttpUrl(), apiKey, apiSecret).listRooms()
+  // Actual LiveKit rooms are authoritative here. Historical deployments can
+  // leave database rows marked `live` after a missed room-finished webhook;
+  // using those rows as a hard guard would prevent idle shutdown forever.
+  // A LiveKit API failure throws and therefore fails closed.
   if (rooms.length > 0) return { state: 'rooms_present' as const }
 
   await azureVmAction('deallocate')
