@@ -55,3 +55,17 @@ jobs:
       - run: npm run type-check --workspace=web
       - run: npm test --workspace=web
       - run: npm run build --workspace=web
+
+  migrations:
+    name: Migration file checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require unique, timestamped migration filenames
+        run: |
+          set -eu
+          names="$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n')"
+          invalid="$(printf '%s\n' "$names" | grep -Ev '^[0-9]{14}_[a-z0-9_]+\.sql$' || true)"
+          test -z "$invalid" || { echo "Invalid migration filename(s):"; printf '%s\n' "$invalid"; exit 1; }
+          duplicates="$(printf '%s\n' "$names" | cut -d_ -f1 | sort | uniq -d)"
+          test -z "$duplicates" || { echo "Duplicate migration timestamp(s):"; printf '%s\n' "$duplicates"; exit 1; }
