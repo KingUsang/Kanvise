@@ -10,7 +10,14 @@ export type WorkerReadiness = {
 type Fetch = typeof fetch
 
 const ARM_API_VERSION = '2024-07-01'
+const DEFAULT_PREWARM_MINUTES = 5
+const DEFAULT_UPCOMING_GUARD_MINUTES = 7
 let startInFlight: Promise<void> | null = null
+
+function positiveMinutes(value: string | undefined, fallback: number) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
 
 function enabled(env = process.env) {
   return env.LIVEKIT_WORKER_CONTROL_ENABLED === 'true'
@@ -105,7 +112,8 @@ export async function ensureLiveKitWorkerReady(fetcher: Fetch = fetch, env = pro
 
 export async function warmLiveKitWorkerForUpcomingClasses(now = new Date()) {
   if (!enabled()) return { state: 'disabled' as const }
-  const until = new Date(now.getTime() + 12 * 60_000).toISOString()
+  const prewarmMinutes = positiveMinutes(process.env.LIVEKIT_WORKER_PREWARM_MINUTES, DEFAULT_PREWARM_MINUTES)
+  const until = new Date(now.getTime() + prewarmMinutes * 60_000).toISOString()
   const { count, error } = await supabase.from('live_classes')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'scheduled')
@@ -121,7 +129,8 @@ export async function deallocateIdleLiveKitWorker(now = new Date()) {
   if (!(await isLiveKitHealthy())) return { state: 'already_off' as const }
 
   const recentCutoff = new Date(now.getTime() - 15 * 60_000).toISOString()
-  const upcomingCutoff = new Date(now.getTime() + 20 * 60_000).toISOString()
+  const guardMinutes = positiveMinutes(process.env.LIVEKIT_WORKER_UPCOMING_GUARD_MINUTES, DEFAULT_UPCOMING_GUARD_MINUTES)
+  const upcomingCutoff = new Date(now.getTime() + guardMinutes * 60_000).toISOString()
   const [{ count: upcomingCount, error: upcomingError }, { count: recentCount, error: recentError }] = await Promise.all([
     supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'scheduled').gte('scheduled_at', now.toISOString()).lte('scheduled_at', upcomingCutoff),
     supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('ended_at', recentCutoff),
