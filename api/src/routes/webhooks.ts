@@ -36,10 +36,9 @@ webhooksRouter.post('/livekit', async (c) => {
   }
 
   const roomName = event.room?.name
-  const identity = event.participant?.identity // This is the Kanvise user_id (set during token creation)
 
-  if (!roomName || !identity) {
-    // Not an event we care about (e.g. room_started without a participant)
+  if (!roomName) {
+    // Not an event we care about (for example a server health event).
     return c.text('OK', 200)
   }
 
@@ -55,6 +54,42 @@ webhooksRouter.post('/livekit', async (c) => {
     console.warn(`[webhook/livekit] No live_class found for room: ${roomName}`)
     return c.text('OK', 200)
   }
+
+  if (event.event === 'room_finished') {
+    // A tutor can lose power, close a browser, or leave without pressing End
+    // class. LiveKit's room lifecycle is authoritative in those cases.
+    const endedAt = new Date()
+    const { data: openRecords, error: recordsError } = await supabase
+      .from('attendance_records')
+      .select('id, joined_at')
+      .eq('live_class_id', liveClass.id)
+      .is('left_at', null)
+
+    if (recordsError) {
+      console.error('[webhook/livekit] Failed to load open attendance records:', recordsError)
+    } else {
+      await Promise.all((openRecords || []).map((record) => supabase
+        .from('attendance_records')
+        .update({
+          left_at: endedAt.toISOString(),
+          duration_seconds: Math.max(0, Math.round((endedAt.getTime() - new Date(record.joined_at).getTime()) / 1000)),
+        })
+        .eq('id', record.id)))
+    }
+
+    const { error: completionError } = await supabase
+      .from('live_classes')
+      .update({ status: 'completed', ended_at: endedAt.toISOString() })
+      .eq('id', liveClass.id)
+      .neq('status', 'completed')
+
+    if (completionError) console.error('[webhook/livekit] Failed to complete finished room:', completionError)
+    else console.log(`[livekit] Room finished and class completed: ${liveClass.id}`)
+    return c.text('OK', 200)
+  }
+
+  const identity = event.participant?.identity // This is the Kanvise user_id (set during token creation)
+  if (!identity) return c.text('OK', 200)
 
   if (event.event === 'participant_joined') {
     const { error } = await supabase.from('attendance_records').insert({

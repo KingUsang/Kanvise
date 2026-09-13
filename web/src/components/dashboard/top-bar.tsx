@@ -68,12 +68,12 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
       
       {/* Search & Mobile Menu */}
       <div className="flex-1 flex items-center gap-4 max-w-md">
-        <button 
+        {onMenuClick && <button
           className="md:hidden text-[#474551] flex items-center"
           onClick={onMenuClick}
         >
           <span className="material-symbols-outlined text-[24px]">menu</span>
-        </button>
+        </button>}
         <div className="relative flex-1 hidden sm:block">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#474551] text-[20px]">
             search

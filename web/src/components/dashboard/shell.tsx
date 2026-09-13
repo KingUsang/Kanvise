@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from './sidebar'
 import { TopBar } from './top-bar'
+import { MobileBottomNav } from './mobile-bottom-nav'
 import { canAccessDashboardPath, type DashboardCapabilities } from '@/config/dashboard-navigation'
 
 interface DashboardShellProps {
@@ -17,7 +18,6 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ children, user, capabilities }: DashboardShellProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const canAccessCurrentPath = canAccessDashboardPath(pathname, capabilities)
@@ -36,20 +36,16 @@ export function DashboardShell({ children, user, capabilities }: DashboardShellP
 
   return (
     <div className="min-h-screen bg-[#fbf9f8] font-sans relative">
-      <Sidebar 
-        capabilities={capabilities} 
-        isMobileOpen={isMobileMenuOpen} 
-        onCloseMobile={() => setIsMobileMenuOpen(false)} 
-      />
+      <Sidebar capabilities={capabilities} />
       <TopBar 
         user={user} 
         capabilities={capabilities}
-        onMenuClick={() => setIsMobileMenuOpen(true)} 
       />
+      <MobileBottomNav capabilities={capabilities} />
       
       {/* Main Content Area */}
       <main className="md:ml-[280px] pt-16 min-h-screen flex flex-col">
-        <div className="p-4 md:p-10 w-full flex-1">
+        <div className="w-full flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-10">
           {children}
         </div>
       </main>

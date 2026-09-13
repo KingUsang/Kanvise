@@ -13,6 +13,7 @@ import { Suspense } from "react";
 import NavigationProgress from "@/components/navigation/NavigationProgress";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -47,7 +48,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>
-        {children}
+        <QueryProvider>{children}</QueryProvider>
         <ServiceWorkerRegistration />
         <InstallPrompt />
         <Toaster position="bottom-right" richColors />

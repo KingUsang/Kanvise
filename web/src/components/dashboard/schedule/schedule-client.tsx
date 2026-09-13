@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import { TimetableManager } from './timetable-manager'
 import { markInstallEligible } from '@/lib/pwa/install-eligibility'
@@ -60,12 +62,7 @@ interface Tutor {
 export function ScheduleClient({ token, capabilities, user }: ScheduleClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  
-  const [classes, setClasses] = useState<LiveClass[]>([])
-  const [programmes, setProgrammes] = useState<Programme[]>([])
-  const [standaloneCourses, setStandaloneCourses] = useState<Course[]>([])
-  const [tutors, setTutors] = useState<Tutor[]>([])
-  const [assignedTutorIds, setAssignedTutorIds] = useState<string[]>([])
+  const queryClient = useQueryClient()
   
   const [title, setTitle] = useState('')
   const [courseId, setCourseId] = useState('')
@@ -81,88 +78,77 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadFailed, setLoadFailed] = useState(false)
+  const authHeaders = { Authorization: `Bearer ${token}` }
+  const classesQuery = useQuery({
+    queryKey: ['live-classes', user.id],
+    queryFn: async () => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, { headers: authHeaders })
+      if (!response.ok) throw new Error('Could not load classes')
+      const body = await response.json()
+      return (body.data || []) as LiveClass[]
+    },
+    staleTime: 15_000,
+  })
+  const programmesQuery = useQuery({
+    queryKey: ['programmes', user.id],
+    queryFn: async () => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, { headers: authHeaders })
+      if (!response.ok) throw new Error('Could not load programmes')
+      const body = await response.json()
+      return (body.data || []) as Programme[]
+    },
+    staleTime: 5 * 60_000,
+  })
+  const standaloneSubjectsQuery = useQuery({
+    queryKey: ['standalone-subjects', user.id],
+    queryFn: async () => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses?standalone=true`, { headers: authHeaders })
+      if (!response.ok) throw new Error('Could not load standalone subjects')
+      const body = await response.json()
+      return (body.data || []) as Course[]
+    },
+    staleTime: 5 * 60_000,
+  })
+  const tutorsQuery = useQuery({
+    queryKey: ['teaching-tutors', user.id],
+    queryFn: async () => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?roles=admin,tutor`, { headers: authHeaders })
+      if (!response.ok) throw new Error('Could not load tutors')
+      const body = await response.json()
+      return (body.data || []) as Tutor[]
+    },
+    enabled: capabilities.isAdmin,
+    staleTime: 5 * 60_000,
+  })
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setLoadFailed(false)
-        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (!classesRes.ok) throw new Error('Could not load scheduled classes')
-        const classesData = await classesRes.json()
-        
-        const programmesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (!programmesRes.ok) throw new Error('Could not load programmes')
-        const programmesData = await programmesRes.json()
-
-        const standaloneRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses?standalone=true`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (!standaloneRes.ok) throw new Error('Could not load standalone courses')
-        const standaloneData = await standaloneRes.json()
-
-        let tutorsData = { data: [] }
-        if (capabilities.isAdmin) {
-          // Admins can teach too. This list must use profile IDs because that
-          // is what tutor_course_assignments and live_classes store.
-          const tutorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?roles=admin,tutor`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          if (tutorsRes.ok) {
-            tutorsData = await tutorsRes.json()
-          }
-        }
-
-        setClasses(classesData.data || [])
-        setProgrammes(programmesData.data || [])
-        setStandaloneCourses(standaloneData.data || [])
-        if (capabilities.isAdmin) setTutors(tutorsData.data || [])
-
-      } catch (err) {
-        console.error('Error fetching schedule data:', err)
-        setLoadFailed(true)
-        toast.error('Could not load the class schedule', {
-          description: 'Check your connection and try again.',
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [token, capabilities.isAdmin])
+  const classes = classesQuery.data || []
+  const programmes = programmesQuery.data || []
+  const standaloneCourses = standaloneSubjectsQuery.data || []
+  const tutors = tutorsQuery.data || []
+  const loading = classesQuery.isLoading || programmesQuery.isLoading || standaloneSubjectsQuery.isLoading || (capabilities.isAdmin && tutorsQuery.isLoading)
+  const loadFailed = classesQuery.isError || programmesQuery.isError || standaloneSubjectsQuery.isError || (capabilities.isAdmin && tutorsQuery.isError)
 
   const selectedCourse = [...programmes.flatMap(programme => programme.courses), ...standaloneCourses].find(course => course.id === courseId)
 
+  const courseTutorsQuery = useQuery({
+    queryKey: ['subject-tutors', user.id, courseId],
+    queryFn: async () => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/tutors`, { headers: authHeaders })
+      if (!response.ok) throw new Error('Could not load subject tutors')
+      const body = await response.json()
+      return body.data.map((assignment: { tutor_id: string }) => assignment.tutor_id) as string[]
+    },
+    enabled: capabilities.isAdmin && !!courseId,
+    staleTime: 5 * 60_000,
+  })
+  const assignedTutorIds = courseTutorsQuery.data || []
+
   useEffect(() => {
-    if (!capabilities.isAdmin || !courseId) return
-    const fetchCourseTutors = async () => {
-      try {
-        setAssignedTutorIds([])
-        setTutorId('')
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/tutors`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (res.ok) {
-          const { data } = await res.json()
-          const tutorIds = data.map((assignment: { tutor_id: string }) => assignment.tutor_id)
-          setAssignedTutorIds(tutorIds)
-          // A sole assignment makes the choice unambiguous. If several
-          // people teach the course, prefer the signed-in admin when assigned.
-          if (tutorIds.length === 1) setTutorId(tutorIds[0])
-          else if (tutorIds.includes(user.id)) setTutorId(user.id)
-        }
-      } catch (err) {
-        console.error('Failed to fetch assigned tutors:', err)
-      }
-    }
-    fetchCourseTutors()
-  }, [courseId, token, capabilities.isAdmin, user.id])
+    if (!capabilities.isAdmin || !courseTutorsQuery.data) return
+    const tutorIds = courseTutorsQuery.data
+    if (tutorIds.length === 1) setTutorId(tutorIds[0])
+    else if (tutorIds.includes(user.id)) setTutorId(user.id)
+  }, [capabilities.isAdmin, courseTutorsQuery.data, user.id])
 
   const handleScheduleClass = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -196,11 +182,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           router.push(`/class/${responseBody.data.id}?start=true`)
           return
         }
-        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        const classesData = await classesRes.json()
-        if (classesRes.ok) setClasses(classesData.data || [])
+        await queryClient.invalidateQueries({ queryKey: ['live-classes', user.id] })
         setTitle('')
         setCourseId('')
         if (capabilities.isAdmin) setTutorId('')
@@ -231,12 +213,10 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
       })
       if (res.ok) {
         markInstallEligible()
-        toast.success('Class started')
-        const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        const classesData = await classesRes.json()
-        if (classesRes.ok) setClasses(classesData.data || [])
+        toast.success(res.status === 202 ? 'Preparing your classroom' : 'Class started')
+        await queryClient.invalidateQueries({ queryKey: ['live-classes', user.id] })
+        startNavigationProgress()
+        router.push(`/class/${classId}?start=true`)
       } else {
         const errData = await res.json()
         toast.error('Could not start the class', { description: errData.error })
@@ -261,7 +241,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not end the weekly class')
-      setClasses(current => current.filter(item => item.timetable_slot_id !== seriesId || item.status !== 'scheduled'))
+      queryClient.setQueryData<LiveClass[]>(['live-classes', user.id], current => current?.filter(item => item.timetable_slot_id !== seriesId || item.status !== 'scheduled') || [])
       toast.success('Weekly class ended')
     } catch (error) {
       toast.error('Could not end the weekly class', { description: error instanceof Error ? error.message : 'Try again.' })
@@ -321,6 +301,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551]">
             Start teaching now or plan a class for later.
           </p>
+          <Link href="/dashboard/attendance" className="mt-2 inline-flex text-sm font-semibold text-[#2e2877] hover:underline">Attendance insights</Link>
         </div>
         <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex">
           <button
@@ -368,7 +349,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                   <select
                     id="class-course"
                     value={courseId}
-                    onChange={event => { setCourseId(event.target.value); setAssignedTutorIds([]); setTutorId(capabilities.isAdmin ? '' : user.id) }}
+                    onChange={event => { setCourseId(event.target.value); setTutorId(capabilities.isAdmin ? '' : user.id) }}
                     required
                     className="min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base text-[#1b1c1c] outline-none focus:border-[#2e2877] focus:ring-2 focus:ring-[#ded8ff]"
                   >
@@ -378,9 +359,9 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                         {programme.courses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}
                       </optgroup>
                     ))}
-                    {!!standaloneCourses.length && <optgroup label="Standalone courses">{standaloneCourses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}</optgroup>}
+                    {!!standaloneCourses.length && <optgroup label="Standalone subjects">{standaloneCourses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}</optgroup>}
                   </select>
-                  {!programmes.length && <p className="text-xs leading-5 text-[#994704]">Create a course with at least one subject first.</p>}
+                  {!programmes.length && <p className="text-xs leading-5 text-[#994704]">Create a programme with at least one subject first.</p>}
                 </div>
 
                 {capabilities.isAdmin && courseId && assignedTutorIds.length > 1 && (
@@ -392,7 +373,8 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                     </select>
                   </div>
                 )}
-                {capabilities.isAdmin && courseId && assignedTutorIds.length === 0 && <p className="rounded-lg bg-[#fff3e8] px-3 py-2 text-xs leading-5 text-[#7a3903]">Assign a tutor to this subject before starting a class.</p>}
+                {capabilities.isAdmin && courseId && courseTutorsQuery.isLoading && <p className="text-xs text-[#716c76]">Checking who can teach this subject…</p>}
+                {capabilities.isAdmin && courseId && courseTutorsQuery.isSuccess && assignedTutorIds.length === 0 && <p className="rounded-lg bg-[#fff3e8] px-3 py-2 text-xs leading-5 text-[#7a3903]">Assign a tutor to this subject before starting a class.</p>}
 
                 {formMode === 'later' && (
                   <>
