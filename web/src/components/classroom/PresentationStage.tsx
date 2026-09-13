@@ -1,186 +1,19 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Eraser, Expand,
-  FileText, Loader2, Minus, Pencil, Plus, Trash2, Upload, X,
+  ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Expand,
+  FileText, Loader2, Trash2, Upload, X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import CollaborativeWhiteboard from './CollaborativeWhiteboard'
-import { AnnotationPoint, AnnotationStroke, usePresentationSession } from './presentation-session'
-import { nextLocalZoom } from './presentation-state'
+import { usePresentationSession } from './presentation-session'
 
-type PdfModule = typeof import('pdfjs-dist/legacy/build/pdf.mjs')
-type PdfDocument = Awaited<ReturnType<PdfModule['getDocument']>['promise']>
-
+// Kept as a small pure helper for the presentation-state tests. The board now
+// owns zooming, rather than a separate PDF scroll view.
 export function pdfRenderScale(scrollAreaWidth: number, naturalPageWidth: number, zoom: number) {
   const availableWidth = Math.max(280, scrollAreaWidth - 32)
   return (availableWidth / naturalPageWidth) * zoom
-}
-
-function PdfPage({ url, pageNumber, zoom, onSize }: {
-  url: string
-  pageNumber: number
-  zoom: number
-  onSize: (size: { width: number; height: number }) => void
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const textRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [document, setDocument] = useState<PdfDocument | null>(null)
-  const [containerWidth, setContainerWidth] = useState(0)
-
-  useEffect(() => {
-    // The page is inside a `w-fit` wrapper, which grows as the user zooms.
-    // Observing that wrapper fed the zoomed width back into the next render
-    // (130% → 169% → 220%…). Only the fixed scroll viewport is a valid
-    // fit-to-width baseline.
-    const element = containerRef.current?.closest<HTMLElement>('[data-pdf-scroll-area]')
-    if (!element) return
-    const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width))
-    observer.observe(element)
-    setContainerWidth(element.clientWidth)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    let loadingTask: ReturnType<PdfModule['getDocument']> | null = null
-    void (async () => {
-      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString()
-      loadingTask = pdfjs.getDocument({ url })
-      const next = await loadingTask.promise
-      if (!cancelled) setDocument(next)
-    })().catch((error) => {
-      if (!cancelled) toast.error('Could not render this PDF', { description: error instanceof Error ? error.message : undefined })
-    })
-    return () => {
-      cancelled = true
-      setDocument(null)
-      void loadingTask?.destroy()
-    }
-  }, [url])
-
-  useEffect(() => {
-    if (!document || !containerWidth || !canvasRef.current || !textRef.current) return
-    let cancelled = false
-    let renderTask: { cancel: () => void; promise: Promise<unknown> } | null = null
-    let textLayer: { cancel: () => void } | null = null
-    void (async () => {
-      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-      const page = await document.getPage(pageNumber)
-      const natural = page.getViewport({ scale: 1 })
-      const scale = pdfRenderScale(containerWidth, natural.width, zoom)
-      const viewport = page.getViewport({ scale })
-      const canvas = canvasRef.current!
-      const textContainer = textRef.current!
-      const dpr = Math.min(window.devicePixelRatio || 1, 2.5)
-      canvas.width = Math.floor(viewport.width * dpr)
-      canvas.height = Math.floor(viewport.height * dpr)
-      canvas.style.width = `${viewport.width}px`
-      canvas.style.height = `${viewport.height}px`
-      const context = canvas.getContext('2d', { alpha: false })!
-      renderTask = page.render({ canvas, canvasContext: context, viewport, transform: [dpr, 0, 0, dpr, 0, 0] })
-      textContainer.replaceChildren()
-      textContainer.style.width = `${viewport.width}px`
-      textContainer.style.height = `${viewport.height}px`
-      textContainer.style.setProperty('--total-scale-factor', String(scale))
-      const content = await page.getTextContent()
-      const layer = new pdfjs.TextLayer({ textContentSource: content, container: textContainer, viewport })
-      textLayer = layer
-      await Promise.all([renderTask.promise, layer.render()])
-      if (!cancelled) onSize({ width: viewport.width, height: viewport.height })
-    })().catch((error) => {
-      if (error?.name !== 'RenderingCancelledException') console.error('PDF page render failed', error)
-    })
-    return () => { cancelled = true; renderTask?.cancel(); textLayer?.cancel() }
-  }, [containerWidth, document, onSize, pageNumber, zoom])
-
-  return (
-    <div ref={containerRef} className="relative isolate bg-white shadow-[0_12px_42px_rgba(0,0,0,0.22)]">
-      <canvas ref={canvasRef} className="block" aria-label={`PDF page ${pageNumber}`} />
-      <div ref={textRef} className="kanvise-pdf-text-layer" />
-    </div>
-  )
-}
-
-function AnnotationLayer({ isHost, page, width, height }: {
-  isHost: boolean
-  page: number
-  width: number
-  height: number
-}) {
-  const { active, remotePointer, saveAnnotations, clearAnnotations, sendPointer } = usePresentationSession()
-  const [drawing, setDrawing] = useState<AnnotationStroke | null>(null)
-  const [penEnabled, setPenEnabled] = useState(false)
-  const layerRef = useRef<SVGSVGElement>(null)
-  const lastPointerSent = useRef(0)
-  const annotations = active?.annotations[String(page)] || []
-
-  const pointFromEvent = (event: React.PointerEvent<SVGSVGElement>): AnnotationPoint => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    return {
-      x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
-      y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
-    }
-  }
-  const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!isHost || !penEnabled) return
-    event.currentTarget.setPointerCapture(event.pointerId)
-    setDrawing({ id: crypto.randomUUID(), color: '#d97706', width: 0.0035, points: [pointFromEvent(event)] })
-  }
-  const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
-    const point = pointFromEvent(event)
-    if (isHost && Date.now() - lastPointerSent.current > 45) {
-      lastPointerSent.current = Date.now()
-      sendPointer(page, point)
-    }
-    if (drawing && drawing.points.length < 250) setDrawing({ ...drawing, points: [...drawing.points, point] })
-  }
-  const finish = () => {
-    if (!drawing) return
-    const finished = drawing
-    setDrawing(null)
-    if (finished.points.length > 1) void saveAnnotations(page, [...annotations, finished], finished)
-  }
-  const paths = drawing ? [...annotations, drawing] : annotations
-  const toPath = (stroke: AnnotationStroke) => stroke.points.map((point, index) => `${index ? 'L' : 'M'} ${point.x * width} ${point.y * height}`).join(' ')
-
-  return (
-    <>
-      <svg
-        ref={layerRef}
-        viewBox={`0 0 ${width} ${height}`}
-        className={`absolute inset-0 z-20 h-full w-full touch-none ${isHost && penEnabled ? 'cursor-crosshair pointer-events-auto' : 'pointer-events-none'}`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={finish}
-        onPointerCancel={finish}
-        aria-label="Tutor PDF annotations"
-      >
-        {paths.map((stroke) => (
-          <path key={stroke.id} d={toPath(stroke)} fill="none" stroke={stroke.color} strokeWidth={Math.max(1.5, stroke.width * width)} strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-        {!isHost && remotePointer?.page === page && (
-          <g transform={`translate(${remotePointer.x * width} ${remotePointer.y * height})`}>
-            <circle r={7} fill="#d97706" stroke="white" strokeWidth={2} />
-            <text x={10} y={4} fontSize={12} fill="#1b1c1c" stroke="white" strokeWidth={3} paintOrder="stroke">Tutor</text>
-          </g>
-        )}
-      </svg>
-      {isHost && (
-        <div className="absolute left-3 top-3 z-30 flex gap-1 rounded-xl border border-black/10 bg-white/95 p-1 shadow-lg backdrop-blur">
-          <button onClick={() => setPenEnabled((value) => !value)} className={`rounded-lg p-2 ${penEnabled ? 'bg-[#180d62] text-white' : 'text-[#52505b] hover:bg-[#f1eff4]'}`} title="Annotate PDF" aria-pressed={penEnabled}>
-            <Pencil size={16} />
-          </button>
-          <button onClick={() => void clearAnnotations(page)} disabled={!annotations.length} className="rounded-lg p-2 text-[#52505b] hover:bg-[#f1eff4] disabled:opacity-35" title="Clear page annotations">
-            <Eraser size={16} />
-          </button>
-        </div>
-      )}
-    </>
-  )
 }
 
 function MaterialsDrawer() {
@@ -209,7 +42,7 @@ function MaterialsDrawer() {
   }
 
   return (
-    <aside className="absolute inset-y-3 left-3 z-40 flex w-[min(360px,calc(100%-24px))] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-2xl" aria-label="Presentation materials">
+    <aside className="absolute inset-x-2 bottom-2 z-40 flex max-h-[min(58dvh,480px)] flex-col overflow-hidden rounded-t-3xl border border-black/10 bg-white shadow-2xl sm:inset-y-3 sm:left-3 sm:right-auto sm:max-h-none sm:w-[min(360px,calc(100%-24px))] sm:rounded-2xl" aria-label="Presentation materials">
       <div className="flex h-14 items-center justify-between border-b border-[#e5e3e8] px-4">
         <div><h2 className="font-bold text-[#180d62]">Materials</h2><p className="text-[11px] text-[#716e79]">PDFs for this class</p></div>
         <button onClick={() => setMaterialsOpen(false)} className="rounded-lg p-2 text-[#716e79] hover:bg-[#f2f0f4]" aria-label="Close materials"><X size={18} /></button>
@@ -245,16 +78,12 @@ function MaterialsDrawer() {
 export default function PresentationStage({ isHost }: { isHost: boolean }) {
   const { mode, active, legacySlides, loading, changePage, closePresentation, getViewUrl } = usePresentationSession()
   const [url, setUrl] = useState('')
-  const [zoom, setZoom] = useState(1)
-  const [size, setSize] = useState({ width: 0, height: 0 })
   const stageRef = useRef<HTMLDivElement>(null)
-  const onSize = useCallback((next: { width: number; height: number }) => setSize(next), [])
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
 
   useEffect(() => {
     setUrl('')
-    setZoom(1)
     if (!activeId) return
     let cancelled = false
     void getViewUrl(activeId).then((next) => { if (!cancelled) setUrl(next) }).catch((error) => {
@@ -280,22 +109,19 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
         </select>
         <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count || !isHost} className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-35" title="Next page"><ChevronRight size={17} /></button>
         <span className="mx-1 h-5 w-px bg-white/15" />
-        <button onClick={() => setZoom((value) => nextLocalZoom(value, -.1))} className="rounded-lg p-2 hover:bg-white/10" title="Zoom out"><Minus size={15} /></button>
-        <button onClick={() => setZoom(1)} className="min-w-12 rounded-lg px-1 py-2 text-[11px] font-bold hover:bg-white/10" title="Fit to width">{Math.round(zoom * 100)}%</button>
-        <button onClick={() => setZoom((value) => nextLocalZoom(value, .1))} className="rounded-lg p-2 hover:bg-white/10" title="Zoom in"><Plus size={15} /></button>
         <button onClick={() => void stageRef.current?.requestFullscreen()} className="rounded-lg p-2 hover:bg-white/10" title="Fullscreen"><Expand size={15} /></button>
         {isHost && <button onClick={() => void closePresentation()} className="rounded-lg p-2 text-red-300 hover:bg-white/10" title="Close presentation"><X size={16} /></button>}
       </div>
 
-      <div className="flex-1 overflow-auto px-4 pb-4 pt-16" data-pdf-scroll-area>
-        <div className="mx-auto w-fit">
-          {!url ? <div className="flex h-72 w-64 items-center justify-center text-white"><Loader2 className="animate-spin" /></div> : (
-            <div className="relative">
-              <PdfPage url={url} pageNumber={active.current_page} zoom={zoom} onSize={onSize} />
-              {size.width > 0 && <AnnotationLayer isHost={isHost} page={active.current_page} width={size.width} height={size.height} />}
-            </div>
-          )}
-        </div>
+      <div className="absolute inset-0 pt-16">
+        {!url ? <div className="flex h-full items-center justify-center text-white"><Loader2 className="animate-spin" /></div> : (
+          <CollaborativeWhiteboard pdfDocument={{
+            materialId: active.id,
+            url,
+            page: active.current_page,
+            pageCount: active.page_count,
+          }} />
+        )}
       </div>
       <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 max-w-[60%] -translate-x-1/2 truncate rounded-full bg-black/65 px-3 py-1.5 text-[11px] font-medium text-white/90">{active.filename}</div>
       {legacySlides.length > 0 && <span className="sr-only">Legacy slide materials remain available for this class.</span>}

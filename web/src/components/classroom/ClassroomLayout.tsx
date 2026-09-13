@@ -253,11 +253,12 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
             aria-hidden
           />
         )}
-        <div className={`absolute inset-y-0 right-0 z-50 w-full sm:w-[360px] lg:w-[380px]
-          flex flex-col bg-white transition-[transform,visibility] duration-300 overflow-hidden shadow-2xl border-l border-[#e4e2e1]
+        <div className={`absolute inset-x-0 bottom-0 z-50 h-[min(58dvh,480px)]
+          flex flex-col overflow-hidden rounded-t-3xl border border-b-0 border-[#e4e2e1] bg-white shadow-2xl transition-[transform,visibility] duration-300
+          md:inset-y-0 md:left-auto md:right-0 md:h-auto md:w-[360px] md:rounded-none md:border-y-0 md:border-r-0 lg:w-[380px]
           ${openSidebar
-            ? "visible translate-x-0 pointer-events-auto"
-            : "invisible translate-x-full pointer-events-none"}`}
+            ? "visible translate-y-0 pointer-events-auto md:translate-x-0"
+            : "invisible translate-y-full pointer-events-none md:translate-x-full md:translate-y-0"}`}
           aria-hidden={!openSidebar}
           inert={!openSidebar}
         >
