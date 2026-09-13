@@ -11,6 +11,7 @@ import type { TenantVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
+import { ensureLiveKitWorkerReady } from '../livekit/worker-lifecycle'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -271,6 +272,11 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   const roomName = `kanvise-class-${insertedClass.id}`
   let roomCreated = false
   try {
+    const worker = await ensureLiveKitWorkerReady()
+    if (worker.state === 'preparing') {
+      return c.json({ data: { ...insertedClass, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds } }, 202)
+    }
+    if (worker.state !== 'ready') throw new Error(worker.message || 'LIVEKIT_WORKER_UNAVAILABLE')
     const roomService = getRoomService()
     await roomService.createRoom({ name: roomName, emptyTimeout: 300, maxParticipants: 200 })
     roomCreated = true
@@ -486,6 +492,14 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   }
 
   const roomName = `kanvise-class-${id}`
+
+  const worker = await ensureLiveKitWorkerReady()
+  if (worker.state === 'preparing') {
+    return c.json({ data: { id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds } }, 202)
+  }
+  if (worker.state !== 'ready') {
+    return c.json({ error: worker.message || 'The classroom server is unavailable', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
+  }
 
   try {
     const roomService = getRoomService()
