@@ -42,7 +42,9 @@ function MaterialsDrawer() {
   }
 
   return (
-    <aside className="absolute inset-x-2 bottom-2 z-40 flex max-h-[min(58dvh,480px)] flex-col overflow-hidden rounded-t-3xl border border-black/10 bg-white shadow-2xl sm:inset-y-3 sm:left-3 sm:right-auto sm:max-h-none sm:w-[min(360px,calc(100%-24px))] sm:rounded-2xl" aria-label="Presentation materials">
+    <>
+      <button className="absolute inset-0 z-30 cursor-default bg-black/30" aria-label="Close materials" onClick={() => setMaterialsOpen(false)} />
+      <aside className="absolute inset-x-2 bottom-2 z-40 flex max-h-[min(58dvh,480px)] flex-col overflow-hidden rounded-t-3xl border border-black/10 bg-white shadow-2xl sm:inset-y-3 sm:left-3 sm:right-auto sm:max-h-none sm:w-[min(360px,calc(100%-24px))] sm:rounded-2xl" aria-label="Presentation materials">
       <div className="flex h-14 items-center justify-between border-b border-[#e5e3e8] px-4">
         <div><h2 className="font-bold text-[#180d62]">Materials</h2><p className="text-[11px] text-[#716e79]">PDFs for this class</p></div>
         <button onClick={() => setMaterialsOpen(false)} className="rounded-lg p-2 text-[#716e79] hover:bg-[#f2f0f4]" aria-label="Close materials"><X size={18} /></button>
@@ -71,14 +73,17 @@ function MaterialsDrawer() {
           {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}{uploading ? `Uploading ${uploadProgress}%` : 'Add PDF'}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 
 export default function PresentationStage({ isHost }: { isHost: boolean }) {
   const { mode, active, legacySlides, loading, changePage, closePresentation, getViewUrl } = usePresentationSession()
   const [url, setUrl] = useState('')
+  const [placingPage, setPlacingPage] = useState(false)
   const stageRef = useRef<HTMLDivElement>(null)
+  const boardRef = useRef<import('./CollaborativeWhiteboard').WhiteboardRef>(null)
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
 
@@ -93,7 +98,7 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
   }, [activeId, activeUpdatedAt, getViewUrl])
 
   if (mode === 'whiteboard' || (!active && !loading)) {
-    return <div className="absolute inset-0"><CollaborativeWhiteboard /><MaterialsDrawer /></div>
+    return <div className="absolute inset-0"><CollaborativeWhiteboard ref={boardRef} /><MaterialsDrawer /></div>
   }
 
   if (!active || active.processing_status !== 'ready' || !active.page_count) {
@@ -109,13 +114,21 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
         </select>
         <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count || !isHost} className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-35" title="Next page"><ChevronRight size={17} /></button>
         <span className="mx-1 h-5 w-px bg-white/15" />
+        {isHost && <button onClick={() => {
+          const placement = boardRef.current?.placePdfPage()
+          if (!placement) return
+          setPlacingPage(true)
+          void placement.finally(() => setPlacingPage(false))
+        }} disabled={placingPage || !url} className="flex items-center gap-1 rounded-lg bg-white/15 px-2 py-2 text-[11px] font-bold hover:bg-white/25 disabled:opacity-50" title="Place this page on the board">
+          {placingPage && <Loader2 size={13} className="animate-spin" />}Place page
+        </button>}
         <button onClick={() => void stageRef.current?.requestFullscreen()} className="rounded-lg p-2 hover:bg-white/10" title="Fullscreen"><Expand size={15} /></button>
         {isHost && <button onClick={() => void closePresentation()} className="rounded-lg p-2 text-red-300 hover:bg-white/10" title="Close presentation"><X size={16} /></button>}
       </div>
 
       <div className="absolute inset-0 pt-16">
         {!url ? <div className="flex h-full items-center justify-center text-white"><Loader2 className="animate-spin" /></div> : (
-          <CollaborativeWhiteboard pdfDocument={{
+          <CollaborativeWhiteboard ref={boardRef} pdfDocument={{
             materialId: active.id,
             url,
             page: active.current_page,
