@@ -3,6 +3,7 @@
 import { Download, Share2, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { INSTALL_ELIGIBLE_EVENT, isInstallEligible } from '@/lib/pwa/install-eligibility'
 
 type InstallPromptEvent = Event & {
   prompt(): Promise<void>
@@ -11,7 +12,8 @@ type InstallPromptEvent = Event & {
 
 const DISMISSED_KEY = 'kanvise-install-dismissed-at'
 const DISMISS_MS = 30 * 24 * 60 * 60 * 1000
-const ENTRY_PATHS = new Set(['/', '/auth/login', '/dashboard', '/dashboard/student'])
+// Never interrupt auth, payment, form-building, mock attempts, or a class.
+const SAFE_DASHBOARD_PATHS = new Set(['/dashboard', '/dashboard/schedule', '/dashboard/student', '/dashboard/student/classes'])
 
 function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
@@ -24,24 +26,30 @@ export function InstallPrompt() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (!ENTRY_PATHS.has(pathname) || isStandalone()) return
-    const dismissedAt = Number(localStorage.getItem(DISMISSED_KEY) || 0)
-    if (Date.now() - dismissedAt < DISMISS_MS) return
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    const frame = ios ? window.requestAnimationFrame(() => {
-      setIsIos(true)
-      setVisible(true)
-    }) : 0
     const capture = (event: Event) => {
       event.preventDefault()
       setInstallEvent(event as InstallPromptEvent)
-      setVisible(true)
     }
     window.addEventListener('beforeinstallprompt', capture)
     return () => {
-      if (frame) window.cancelAnimationFrame(frame)
       window.removeEventListener('beforeinstallprompt', capture)
     }
+  }, [])
+
+  useEffect(() => {
+    const refresh = () => {
+      const dismissedAt = Number(localStorage.getItem(DISMISSED_KEY) || 0)
+      setIsIos(/iphone|ipad|ipod/i.test(navigator.userAgent))
+      setVisible(
+        SAFE_DASHBOARD_PATHS.has(pathname)
+        && isInstallEligible()
+        && !isStandalone()
+        && Date.now() - dismissedAt >= DISMISS_MS,
+      )
+    }
+    refresh()
+    window.addEventListener(INSTALL_ELIGIBLE_EVENT, refresh)
+    return () => window.removeEventListener(INSTALL_ELIGIBLE_EVENT, refresh)
   }, [pathname])
 
   function dismiss() {

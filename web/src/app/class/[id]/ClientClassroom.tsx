@@ -4,6 +4,7 @@ import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant } from "@livekit/co
 import { useEffect, useRef } from "react";
 import ClassroomLayout from "@/components/classroom/ClassroomLayout";
 import { CLASSROOM_ROOM_OPTIONS } from "@/components/classroom/livekit-room-options";
+import { markInstallEligible } from "@/lib/pwa/install-eligibility";
 
 interface ClientClassroomProps {
   token: string;
@@ -62,6 +63,7 @@ export default function ClientClassroom({
       options={CLASSROOM_ROOM_OPTIONS}
       data-lk-theme="default"
       className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
+      onConnected={markInstallEligible}
       onDisconnected={leaveClassroom}
     >
       <MuteStudentOnJoin isHost={isHost} />

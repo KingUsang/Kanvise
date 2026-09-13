@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import { TimetableManager } from './timetable-manager'
+import { markInstallEligible } from '@/lib/pwa/install-eligibility'
 
 interface Capabilities {
   isAdmin: boolean
@@ -189,6 +190,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
       if (res.ok) {
         const responseBody = await res.json()
         if (isStartingNow) {
+          markInstallEligible()
           toast.success(res.status === 202 ? 'Preparing your classroom' : 'Class started')
           startNavigationProgress()
           router.push(`/class/${responseBody.data.id}?start=true`)
@@ -207,6 +209,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         setDuration('60')
         setRecurrence('once')
         setFormMode(null)
+        markInstallEligible()
         toast.success(recurrence === 'weekly' ? 'Weekly class scheduled' : 'Class scheduled')
       } else {
         const errData = await res.json()
@@ -227,6 +230,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
+        markInstallEligible()
         toast.success('Class started')
         const classesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes`, {
           headers: { 'Authorization': `Bearer ${token}` }
