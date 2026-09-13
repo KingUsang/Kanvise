@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 
 interface MockExam {
@@ -53,40 +54,26 @@ interface MocksManagementClientProps {
 
 export function MocksManagementClient({ token, capabilities, user }: MocksManagementClientProps) {
   const router = useRouter()
-  const [mocks, setMocks] = useState<MockExam[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterCourse, setFilterCourse] = useState<string>('all')
-  const [apiError, setApiError] = useState<string | null>(null)
   const [mockToArchive, setMockToArchive] = useState<MockExam | null>(null)
   const [isArchiving, setIsArchiving] = useState(false)
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
-  const fetchMocks = useCallback(async () => {
-    setIsLoading(true)
-    setApiError(null)
-    try {
+  const mocksQuery = useQuery({
+    queryKey: ['mocks', user.id],
+    queryFn: async () => {
       const res = await fetch(`${baseUrl}/mocks`, { headers: { Authorization: `Bearer ${token}` } })
-      if (res.ok) {
-        const { data } = await res.json()
-        setMocks(data || [])
-      } else {
-        const errJson = await res.json()
-        console.error('API Error:', errJson)
-        setApiError(errJson.error || `HTTP Error ${res.status}`)
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch mocks:', err)
-      setApiError(err.message || 'Network error')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [baseUrl, token])
-
-  useEffect(() => {
-    fetchMocks()
-  }, [fetchMocks])
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.error || `HTTP error ${res.status}`)
+      return (body?.data || []) as MockExam[]
+    },
+    staleTime: 30_000,
+  })
+  const mocks = mocksQuery.data || []
+  const apiError = mocksQuery.error instanceof Error ? mocksQuery.error.message : null
 
   const archiveMock = async () => {
     if (!mockToArchive) return
@@ -100,7 +87,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       if (!response.ok) throw new Error(body?.error || 'Failed to archive mock')
       toast.success('Mock archived', { description: 'Its attempts and results are still available.' })
       setMockToArchive(null)
-      await fetchMocks()
+      await queryClient.invalidateQueries({ queryKey: ['mocks', user.id] })
     } catch (error) {
       toast.error('Could not archive the mock', {
         description: error instanceof Error ? error.message : 'Please try again.'
@@ -224,7 +211,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                       <p className="text-[14px] mt-1">{apiError}</p>
                       <button
                         type="button"
-                        onClick={fetchMocks}
+                        onClick={() => void mocksQuery.refetch()}
                         className="mt-4 rounded-md border border-[#994704] px-4 py-2 text-sm font-semibold text-[#994704] hover:bg-[#994704]/5"
                       >
                         Try again
@@ -232,7 +219,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                     </div>
                   </td>
                 </tr>
-              ) : isLoading ? (
+              ) : mocksQuery.isLoading ? (
                 <tr>
                   <td colSpan={4} className="py-16 text-center text-[#474551]">
                     <div className="flex justify-center"><div className="animate-spin h-8 w-8 border-b-2 border-[#180d62] rounded-full"></div></div>
