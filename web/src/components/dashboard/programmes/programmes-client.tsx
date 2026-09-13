@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
 
@@ -23,19 +24,15 @@ type Programme = {
 
 export function ProgrammesClient() {
   const supabase = useMemo(() => createClient(), [])
-  const [programmes, setProgrammes] = useState<Programme[]>([])
-  const [schoolSlug, setSchoolSlug] = useState('')
-  const [hasLocalDraft, setHasLocalDraft] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
+  const queryClient = useQueryClient()
   const [publishingId, setPublishingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    setLoadError('')
-    try {
+  const programmesQuery = useQuery({
+    queryKey: ['programmes'],
+    queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      if (!session) throw new Error('Your session has ended. Please sign in again.')
       const headers = { Authorization: `Bearer ${session.access_token}` }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       const [programmesResponse, schoolResponse, profileResponse] = await Promise.all([
@@ -47,18 +44,14 @@ export function ProgrammesClient() {
       const [{ data }, { data: school }, { user }] = await Promise.all([
         programmesResponse.json(), schoolResponse.json(), profileResponse.json(),
       ])
-      setProgrammes(data || [])
-      setSchoolSlug(school?.slug || '')
-      if (school?.id && user?.id) setHasLocalDraft(Boolean(loadProgrammeDraft(school.id, user.id)))
-    } catch (error) {
-      console.error(error)
-      setLoadError('We could not load your programmes. Check your connection and try again.')
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase])
-
-  useEffect(() => { void load() }, [load])
+      return { programmes: (data || []) as Programme[], schoolSlug: school?.slug || '', schoolId: school?.id as string | undefined, userId: user?.id as string | undefined }
+    },
+    staleTime: 60_000,
+  })
+  const programmes = programmesQuery.data?.programmes || []
+  const schoolSlug = programmesQuery.data?.schoolSlug || ''
+  const hasLocalDraft = Boolean(programmesQuery.data?.schoolId && programmesQuery.data?.userId && loadProgrammeDraft(programmesQuery.data.schoolId, programmesQuery.data.userId))
+  const loadError = programmesQuery.error ? 'We could not load your programmes. Check your connection and try again.' : ''
 
   const copyLink = async (programme: Programme) => {
     try {
@@ -82,7 +75,7 @@ export function ProgrammesClient() {
         throw new Error(missing ? `Assign tutors to: ${missing}` : body.error)
       }
       toast.success('Programme published')
-      await load()
+      await queryClient.invalidateQueries({ queryKey: ['programmes'] })
     } catch (error) {
       toast.error('Programme is not ready', { description: error instanceof Error ? error.message : 'Please review its setup.' })
     } finally {
@@ -103,7 +96,7 @@ export function ProgrammesClient() {
         ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
         : body?.error || 'Could not delete programme')
       toast.success('Programme deleted')
-      await load()
+      await queryClient.invalidateQueries({ queryKey: ['programmes'] })
     } catch (error) {
       toast.error('Could not delete programme', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
@@ -142,10 +135,10 @@ export function ProgrammesClient() {
       )}
 
       {loadError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void load()} className="ml-2 font-semibold underline">Try again</button></div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
       )}
 
-      {loading ? (
+      {programmesQuery.isLoading ? (
         <div className="rounded-lg border border-[#c2b59b] bg-white p-12 text-center text-sm text-[#474551]">Loading programmes…</div>
       ) : programmes.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-16 text-center">
