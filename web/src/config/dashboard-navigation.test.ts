@@ -14,6 +14,11 @@ describe('dashboard workspaces', () => {
       .toEqual(['Home', 'Classes', 'Mocks', 'Centre'])
   })
 
+  it('shows only the truthful setup destination until a new centre exists', () => {
+    expect(getDashboardWorkspaces({ isAdmin: true, isTutor: false, setupRequired: true }))
+      .toEqual([expect.objectContaining({ label: 'Set up centre', href: '/dashboard/school-setup', area: 'centre' })])
+  })
+
   it('keeps secondary pages inside their parent workspace', () => {
     expect(getDashboardWorkspaceForPath('/dashboard/attendance')).toBe('classes')
     expect(getDashboardWorkspaceForPath('/dashboard/question-banks')).toBe('mocks')

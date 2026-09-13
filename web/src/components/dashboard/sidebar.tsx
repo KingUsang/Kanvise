@@ -59,7 +59,7 @@ export function Sidebar({ capabilities }: SidebarProps) {
         <ul className="space-y-4">
           {workspaces.map((workspace) => {
             const isWorkspaceActive = activeWorkspace === workspace.area
-            const children = navItems.filter((item) => item.area === workspace.area && item.href !== workspace.href)
+            const children = capabilities.setupRequired ? [] : navItems.filter((item) => item.area === workspace.area && item.href !== workspace.href)
             const workspaceLocked = capabilities.setupRequired && workspace.href !== '/dashboard/school-setup'
             return <li key={workspace.href}>
               <Link

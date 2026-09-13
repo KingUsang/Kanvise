@@ -62,6 +62,12 @@ export function getDashboardNavItems(capabilities: DashboardCapabilities) {
 }
 
 export function getDashboardWorkspaces(capabilities: DashboardCapabilities) {
+  // A new centre admin has exactly one available task. Showing the usual tabs
+  // only to redirect every tap back here makes the mobile navigation feel
+  // broken, so represent setup as its own truthful destination.
+  if (capabilities.setupRequired) {
+    return [{ label: 'Set up centre', href: '/dashboard/school-setup', icon: 'storefront', area: 'centre' as const, access: 'admin' as const }]
+  }
   return dashboardWorkspaces.filter((workspace) => canAccessDashboardItem(workspace, capabilities))
 }
 
