@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 interface Tutor {
   id: string
@@ -41,15 +42,9 @@ interface CourseAssignmentOverview {
 }
 
 export function TutorsClient() {
-  const supabase = createClient()
-  const [tutors, setTutors] = useState<Tutor[]>([])
-  const [invites, setInvites] = useState<Invite[]>([])
-  const [assignmentPeople, setAssignmentPeople] = useState<AssignmentPerson[]>([])
-  const [courseAssignments, setCourseAssignments] = useState<CourseAssignmentOverview[]>([])
-  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null)
+  const supabase = useMemo(() => createClient(), [])
+  const queryClient = useQueryClient()
   const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
   const [confirmation, setConfirmation] = useState<null | { type: 'revoke'; id: string; email: string } | { type: 'remove'; id: string; name: string }>(null)
 
   // Invite state
@@ -66,14 +61,12 @@ export function TutorsClient() {
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true)
-    setLoadError('')
-    try {
+  const tutorsQuery = useQuery({
+    queryKey: ['tutors'],
+    queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
-      if (!token) return
-      setCurrentProfileId(typeof session.user.app_metadata?.profile_id === 'string' ? session.user.app_metadata.profile_id : null)
+      if (!token) throw new Error('Your session has ended. Please sign in again.')
 
       const headers = { 'Authorization': `Bearer ${token}` }
 
@@ -88,19 +81,23 @@ export function TutorsClient() {
       const { data: inviteData } = await invitesRes.json()
       const { data: peopleData } = await peopleRes.json()
       const { data: assignmentsData } = await assignmentsRes.json()
-      setTutors(tutorData || [])
-      setInvites(inviteData || [])
-      setAssignmentPeople(peopleData || [])
-      setCourseAssignments(assignmentsData || [])
-    } catch (err) {
-      console.error('Failed to fetch data', err)
-      setLoadError('We could not load your tutors and invitations. Please check your connection and try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [baseUrl, supabase.auth])
-
-  useEffect(() => { fetchData() }, [fetchData])
+      return {
+        tutors: (tutorData || []) as Tutor[],
+        invites: (inviteData || []) as Invite[],
+        assignmentPeople: (peopleData || []) as AssignmentPerson[],
+        courseAssignments: (assignmentsData || []) as CourseAssignmentOverview[],
+        currentProfileId: typeof session.user.app_metadata?.profile_id === 'string' ? session.user.app_metadata.profile_id : null,
+      }
+    },
+    staleTime: 60_000,
+  })
+  const tutors = tutorsQuery.data?.tutors || []
+  const invites = tutorsQuery.data?.invites || []
+  const assignmentPeople = tutorsQuery.data?.assignmentPeople || []
+  const courseAssignments = tutorsQuery.data?.courseAssignments || []
+  const currentProfileId = tutorsQuery.data?.currentProfileId || null
+  const isLoading = tutorsQuery.isLoading
+  const loadError = tutorsQuery.error ? 'We could not load your tutors and invitations. Please check your connection and try again.' : ''
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -125,7 +122,7 @@ export function TutorsClient() {
       if (!res.ok) throw new Error(json.error || 'Failed to generate invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteEmail('') // Clear input on success
-      await fetchData() // Refresh invites list
+      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
       toast.success(json.data.email_sent ? 'Invitation emailed to the tutor' : 'Invitation link created', {
         description: json.data.email_sent ? 'They can use the email to join your centre.' : 'The email could not be sent. Copy and share the link yourself.'
       })
@@ -154,7 +151,7 @@ export function TutorsClient() {
       if (!res.ok) throw new Error(json.error || 'Failed to resend invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteError('')
-      await fetchData() // Refresh invites list
+      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
       toast.success('Invitation resent')
     } catch (err: any) {
       toast.error('Could not resend the invitation', { description: err.message })
@@ -194,7 +191,7 @@ export function TutorsClient() {
         const json = await res.json()
         toast.error('Could not revoke the invitation', { description: json.error || 'Please try again.' })
       } else {
-        await fetchData()
+        await queryClient.invalidateQueries({ queryKey: ['tutors'] })
         toast.success('Invitation revoked')
       }
     } finally {
@@ -216,7 +213,7 @@ export function TutorsClient() {
         const json = await res.json()
         toast.error('Could not remove the tutor', { description: json.error || 'Please try again.' })
       } else {
-        await fetchData()
+        await queryClient.invalidateQueries({ queryKey: ['tutors'] })
         toast.success('Tutor removed')
       }
     } finally {
@@ -241,7 +238,7 @@ export function TutorsClient() {
       )
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not update the Subject assignment')
-      await fetchData()
+      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
       toast.success(isAssigned ? 'Tutor removed from Subject' : 'Tutor assigned to Subject')
     } catch (error) {
       toast.error('Could not update the Subject assignment', { description: error instanceof Error ? error.message : 'Please try again.' })
@@ -309,7 +306,7 @@ export function TutorsClient() {
                       </td>
                     </tr>
                   ) : loadError ? (
-                    <tr><td colSpan={3} className="px-6 py-12 text-center"><p className="text-sm text-[#474551]">{loadError}</p><button type="button" onClick={fetchData} className="mt-4 rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></td></tr>
+                    <tr><td colSpan={3} className="px-6 py-12 text-center"><p className="text-sm text-[#474551]">{loadError}</p><button type="button" onClick={() => void tutorsQuery.refetch()} className="mt-4 rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></td></tr>
                   ) : tutors.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="py-12 text-center text-[#474551]">
