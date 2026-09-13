@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
+import "@fontsource/poppins/latin-300.css";
+import "@fontsource/poppins/latin-400.css";
+import "@fontsource/poppins/latin-500.css";
+import "@fontsource/poppins/latin-600.css";
+import "@fontsource/poppins/latin-700.css";
 import "@livekit/components-styles";
 import "@excalidraw/excalidraw/index.css";
 import "./globals.css";
@@ -9,12 +13,6 @@ import { Suspense } from "react";
 import NavigationProgress from "@/components/navigation/NavigationProgress";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -41,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${poppins.variable} no-scrollbar`}>
+    <html lang="en" className="no-scrollbar">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@300,1,0,24&display=swap" rel="stylesheet" />
       </head>

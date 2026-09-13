@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   loadProgrammeDraft,
+  programmeBuilderStep,
   PROGRAMME_DRAFT_TTL_MS,
   programmeDraftKey,
   saveProgrammeDraft,
@@ -41,5 +42,12 @@ describe('programme drafts', () => {
     const restored = loadProgrammeDraft('school-1', 'admin-1', 'new', storage as any, 2000)
     expect(restored?.data.coverFileName).toBe('chemistry.webp')
     expect(restored?.data).not.toHaveProperty('coverFile')
+  })
+
+  it('maps drafts from the former four-step builder without losing their content', () => {
+    expect(programmeBuilderStep({ ...data, step: 0 })).toBe(0)
+    expect(programmeBuilderStep({ ...data, step: 2 })).toBe(1)
+    expect(programmeBuilderStep({ ...data, step: 3 })).toBe(2)
+    expect(programmeBuilderStep({ ...data, builderVersion: 2, step: 2 })).toBe(2)
   })
 })

@@ -31,7 +31,7 @@ describe('student import access and validation', () => {
     expect(mocks.from).not.toHaveBeenCalled()
   })
 
-  it('requires a programme and a contact method before querying the database', async () => {
+  it('requires a programme and an email before querying the database', async () => {
     const response = await usersRouter.request('/students/import', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ students: [{ first_name: 'Ada', last_name: 'Okafor' }] }),
@@ -40,5 +40,27 @@ describe('student import access and validation', () => {
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
     expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('allows the invited student to supply their own name later', async () => {
+    const response = await usersRouter.request('/students/import', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ students: [{ email: 'student@example.test' }] }),
+    })
+
+    expect(response.status).toBe(400)
+    const body = await response.json() as any
+    expect(body.errors[0].errors).toEqual(['Choose a programme'])
+  })
+
+  it('does not treat a phone number as an activation method', async () => {
+    const response = await usersRouter.request('/students/import', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ students: [{ phone: '+2348012345678', programme_id: 'programme-1' }] }),
+    })
+
+    expect(response.status).toBe(400)
+    const body = await response.json() as any
+    expect(body.errors[0].errors).toContain('Email address is required')
   })
 })

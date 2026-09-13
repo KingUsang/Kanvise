@@ -10,12 +10,20 @@ export type ProgrammeDraftSubject = {
 }
 
 export type ProgrammeDraftData = {
+  builderVersion?: number
   name: string
   description: string
   price: string
   subjects: ProgrammeDraftSubject[]
   coverFileName?: string
   step: number
+}
+
+export function programmeBuilderStep(data: ProgrammeDraftData) {
+  if (data.builderVersion === 2) return Math.min(Math.max(data.step || 0, 0), 2)
+  if (data.step >= 3) return 2
+  if (data.step === 2) return 1
+  return Math.min(Math.max(data.step || 0, 0), 1)
 }
 
 type StoredProgrammeDraft = {

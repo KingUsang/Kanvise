@@ -74,6 +74,7 @@
 /* ── Kanvise Brand Tokens ── */
 :root {
   /* Existing app tokens */
+  --font-poppins: "Poppins";
   --background: #fbf9f8;
   --foreground: #1b1c1c;
   --primary: #2e2877;

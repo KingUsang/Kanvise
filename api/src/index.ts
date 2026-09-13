@@ -52,12 +52,14 @@ import { studentMembershipsRouter } from "./routes/student-memberships";
 import { guestMocksRouter } from './routes/guest-mocks';
 import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
+import { timetablesRouter } from './routes/timetables';
 
 app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
 app.route("/avatars", avatarsRouter);
 app.route("/schools", schoolsRouter);
 app.route("/live-classes", liveClassesRouter);
+app.route("/timetables", timetablesRouter);
 app.route("/live-classes", slidesRouter);
 app.route("/webhooks", webhooksRouter);
 app.route("/dashboard", dashboardRouter);

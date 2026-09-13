@@ -3084,6 +3084,32 @@ export type Database = {
           },
         ]
       }
+      school_slug_redirects: {
+        Row: {
+          created_at: string
+          old_slug: string
+          school_id: string
+        }
+        Insert: {
+          created_at?: string
+          old_slug: string
+          school_id: string
+        }
+        Update: {
+          created_at?: string
+          old_slug?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_slug_redirects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           banner_url: string | null

@@ -48,15 +48,17 @@ describe('AI mock document import route', () => {
 
     const response = await mocksRouter.request('/import/document-text', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-import-job-id': '9147c666' },
       body: JSON.stringify({ document_text: '1. What is 2 + 2?', file_name: 'maths.docx' }),
     })
 
     expect(response.status).toBe(200)
+    expect(response.headers.get('x-import-job-id')).toBe('9147c666')
     expect(mocks.importQuestionsFromDocumentText).toHaveBeenCalledWith('1. What is 2 + 2?', 'maths.docx')
     expect(await response.json()).toMatchObject({
       data: {
         page_count: 2,
+        job_id: '9147c666',
         questions: [{ question_text: 'What is 2 + 2?' }],
       },
     })

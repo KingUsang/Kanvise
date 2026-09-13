@@ -58,6 +58,18 @@ export async function runMockPublicationJob(now = new Date(), dependencies = def
   return result
 }
 
+export async function runTimetableMaterializationJob(dependencies = defaults) {
+  try {
+    const created = await dependencies.repository.materializeTimetableClasses(84)
+    const result = summary('timetable_materialization', created, 0)
+    dependencies.logger.info('job.timetable_materialization.complete', result)
+    return result
+  } catch (error) {
+    dependencies.logger.error('job.timetable_materialization.failed', { error })
+    return summary('timetable_materialization', 0, 1)
+  }
+}
+
 export async function runLiveClassReminderJob(now = new Date(), dependencies = defaults) {
   const start = new Date(now.getTime() + 10 * 60_000)
   const end = new Date(now.getTime() + 15 * 60_000)

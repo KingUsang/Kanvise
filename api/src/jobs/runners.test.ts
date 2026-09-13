@@ -5,11 +5,13 @@ import {
   runAssignmentDeadlineJob,
   runLiveClassReminderJob,
   runMockPublicationJob,
+  runTimetableMaterializationJob,
   type JobsDependencies,
 } from './runners'
 
 function dependencies(overrides: Partial<JobsRepository> = {}): JobsDependencies {
   const repository: JobsRepository = {
+    async materializeTimetableClasses() { return 0 },
     async claimDueMocks() { return [] },
     async markMockPublicationNotified() {},
     async findDueLiveClasses() { return [] },
@@ -60,6 +62,19 @@ describe('scheduled notification jobs', () => {
     const result = await runLiveClassReminderJob(now, deps)
     expect(result.failures).toBe(1)
     expect(mark).not.toHaveBeenCalled()
+  })
+
+  it('keeps published weekly timetables materialized 12 weeks ahead', async () => {
+    const materialize = vi.fn(async (horizonDays: number) => {
+      expect(horizonDays).toBe(84)
+      return 3
+    })
+    const deps = dependencies({ materializeTimetableClasses: materialize })
+
+    await expect(runTimetableMaterializationJob(deps)).resolves.toEqual({
+      name: 'timetable_materialization', processed: 3, failures: 0,
+    })
+    expect(materialize).toHaveBeenCalledOnce()
   })
 
   it('uses the 24–25 hour assignment window and skips submitted/empty recipients supplied by the repository', async () => {

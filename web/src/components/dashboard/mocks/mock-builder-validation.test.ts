@@ -22,6 +22,11 @@ describe("buildPrePublishReview", () => {
     expect(review.errors).toEqual([]);
   });
 
+  it("does not require an optional expected answer for a written question", () => {
+    const review = buildPrePublishReview({ ...base, questions: [{ question_type: "theory", question_text: "Explain osmosis.", marks: 5, options: [] }] });
+    expect(review).toEqual({ errors: [], warnings: [] });
+  });
+
   it("blocks incomplete MCQs and flags imported review warnings", () => {
     const review = buildPrePublishReview({ ...base, questions: [{ ...base.questions[0], options: [{ option_text: "Only one", is_correct: false }], review_reasons: ["Check the diagram"] }] });
     expect(review.errors).toContain("Question 1 needs at least two options.");

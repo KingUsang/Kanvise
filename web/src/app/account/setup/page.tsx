@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AvatarBuilder, AvatarConfig } from "@/components/avatar/AvatarBuilder";
-import { Loader2, CheckCircle2, User, ArrowRight, Info } from "lucide-react";
+import { Loader2, ArrowRight, UserRound } from "lucide-react";
+import { accountDashboardPath, optionalProfileChanged } from "@/lib/profile-setup";
 
 export default function AccountSetupPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,6 +28,7 @@ export default function AccountSetupPage() {
     face_shape: "Oval",
     outfit_colour: "#2563EB"
   });
+  const [savedAvatarConfig, setSavedAvatarConfig] = useState<AvatarConfig>(avatarConfig);
 
   useEffect(() => {
     async function loadData() {
@@ -57,6 +59,7 @@ export default function AccountSetupPage() {
         const avatarData = await avatarRes.json();
         if (avatarData.avatar) {
           setAvatarConfig(avatarData.avatar);
+          setSavedAvatarConfig(avatarData.avatar);
         }
       } catch (err) {
         console.error("Failed to load account data:", err);
@@ -94,22 +97,20 @@ export default function AccountSetupPage() {
         });
       }
 
-      // Save avatar via PUT /avatars/me
-      const avatarSaveRes = await fetch(`${honoApiUrl}/avatars/me`, {
-        method: "PUT",
-        headers: { 
-          "Authorization": `Bearer ${sessionToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(avatarConfig)
-      });
-      if (!avatarSaveRes.ok) {
-        throw new Error("Failed to save avatar");
+      if (JSON.stringify(avatarConfig) !== JSON.stringify(savedAvatarConfig)) {
+        const avatarSaveRes = await fetch(`${honoApiUrl}/avatars/me`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${sessionToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(avatarConfig)
+        });
+        if (!avatarSaveRes.ok) throw new Error("Failed to save avatar");
       }
 
       // Redirect to correct dashboard based on role
-      if (profile?.role === "admin" || profile?.role === "tutor") router.push("/dashboard");
-      else router.push("/dashboard/student");
+      router.push(accountDashboardPath(profile?.role));
       
       router.refresh();
     } catch (err) {
@@ -127,43 +128,17 @@ export default function AccountSetupPage() {
     );
   }
 
+  const hasProfileChanges = optionalProfileChanged(bio, profile?.bio || "", avatarConfig, savedAvatarConfig);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-kv-soft relative font-sans text-kv-dark">
-      {/* Background Decorative Elements */}
-      <div className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none opacity-5 overflow-hidden">
-        <div className="absolute top-[10%] left-[5%] w-64 h-64 border-[40px] border-kv-blue rounded-full blur-3xl"></div>
-        <div className="absolute bottom-[10%] right-[5%] w-96 h-96 border-[60px] border-kv-brown rounded-full blur-3xl"></div>
-      </div>
-
       {/* Main Container */}
-      <main className="w-full max-w-[640px] bg-white shadow-[0px_4px_20px_rgba(61,61,61,0.08)] rounded-2xl overflow-hidden z-10 animate-fade-up">
-        {/* Header / Logo Section */}
-        <div className="bg-kv-blue p-8 text-center">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Kanvise</h1>
-          <p className="text-kv-blue-100 font-semibold text-xs uppercase tracking-widest mt-2 text-white/80">
-            Account Setup
-          </p>
-        </div>
-
-        {/* 2-Step Indicator */}
-        <nav className="flex w-full bg-gray-50 border-b border-gray-100">
-          <div className="flex-1 py-4 text-center text-kv-blue border-b-2 border-transparent flex items-center justify-center gap-2 opacity-60">
-            <CheckCircle2 className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">Account Created</span>
-          </div>
-          <div className="flex-1 py-4 text-center text-kv-brown border-b-2 border-kv-brown flex items-center justify-center gap-2">
-            <User className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">Profile Setup</span>
-          </div>
-        </nav>
-
-        {/* Content Area */}
-        <div className="p-8 md:p-10 space-y-8">
-          <header className="text-center mb-2">
-            <h2 className="text-2xl font-bold text-kv-blue">Welcome, {profile?.first_name}!</h2>
-            <p className="text-sm text-gray-500 mt-2">
-              Let's personalize your Kanvise profile before you join your institution.
-            </p>
+      <main className="z-10 w-full max-w-[640px] overflow-hidden rounded-2xl bg-white shadow-[0px_4px_20px_rgba(61,61,61,0.08)] animate-fade-up">
+        <div className="space-y-7 p-5 sm:p-8">
+          <header>
+            <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-kv-soft text-kv-blue"><UserRound className="h-5 w-5" /></div>
+            <h1 className="text-2xl font-bold text-kv-blue">You’re ready, {profile?.first_name}</h1>
+            <p className="mt-2 text-sm leading-6 text-gray-600">Your account is set up. Continue to Kanvise now, or personalise your profile if you want.</p>
           </header>
 
           {error && (
@@ -172,38 +147,21 @@ export default function AccountSetupPage() {
             </div>
           )}
 
-          <form onSubmit={handleSave} className="space-y-8">
-            
-            {/* Avatar Builder Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Your Digital Identity</h3>
-                <span className="text-[10px] bg-kv-soft text-kv-blue px-2 py-1 rounded font-bold uppercase">Avatar</span>
+          <form onSubmit={handleSave}>
+            <details className="rounded-xl border border-gray-200 bg-gray-50/60">
+              <summary className="cursor-pointer list-none px-4 py-4 text-sm font-semibold text-kv-blue marker:content-none">Personalise my profile <span className="font-normal text-gray-500">(optional)</span></summary>
+              <div className="space-y-6 border-t border-gray-200 p-4 sm:p-5">
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white p-4">
+                  <AvatarBuilder config={avatarConfig} onChange={handleAvatarChange} />
+                </div>
+                <label className="block text-sm font-semibold text-gray-700">About you <span className="font-normal text-gray-500">(optional)</span>
+                  <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="A short introduction" className="mt-2 min-h-[96px] w-full resize-y rounded-xl border border-gray-200 bg-white px-4 py-3 font-normal outline-none transition focus:border-kv-blue" />
+                </label>
               </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 overflow-hidden">
-                {/* Embedded Avatar Builder */}
-                <AvatarBuilder config={avatarConfig} onChange={handleAvatarChange} />
-              </div>
-            </div>
-
-            {/* Bio Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">About You</h3>
-                <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded font-bold uppercase">Optional</span>
-              </div>
-              <div className="relative">
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell your peers a little bit about yourself..."
-                  className="w-full px-4 py-4 bg-gray-50/50 border border-gray-200 rounded-xl font-medium focus:ring-0 focus:border-kv-blue focus:outline-none transition-all min-h-[120px] resize-y placeholder:text-gray-400"
-                />
-              </div>
-            </div>
+            </details>
 
             {/* CTA Button */}
-            <div className="pt-4">
+            <div className="pt-6">
               <button
                 type="submit"
                 disabled={saving}
@@ -216,28 +174,14 @@ export default function AccountSetupPage() {
                   </>
                 ) : (
                   <>
-                    <span>Complete Setup & Join</span>
+                    <span>{hasProfileChanges ? 'Save and continue' : 'Continue to dashboard'}</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
-              <p className="text-center mt-6 text-xs text-gray-400">
-                By joining, you agree to our <a href="#" className="text-kv-blue font-bold hover:underline">Terms of Service</a>
-              </p>
             </div>
           </form>
         </div>
-
-        {/* Support Footer */}
-        <footer className="bg-gray-50 p-4 flex justify-between items-center px-8 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-gray-500">
-            <Info className="w-4 h-4" />
-            <span className="text-xs font-semibold">Need help setting up?</span>
-          </div>
-          <button className="text-kv-blue text-xs font-bold uppercase tracking-wider hover:text-kv-brown transition-colors">
-            Contact Support
-          </button>
-        </footer>
       </main>
     </div>
   );

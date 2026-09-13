@@ -36,4 +36,15 @@ describe('StudentMocksClient', () => {
     expect(screen.getByText('No unlocked mocks match your search')).toBeInTheDocument()
     expect(screen.getByText('Try a different mock or tutorial name.')).toBeInTheDocument()
   })
+
+  it('shows every programme status without a horizontally scrolling tab strip', () => {
+    render(<StudentMocksClient groups={emptyGroups} unlocked={[]} initialView="programme" />)
+
+    const filters = screen.getByRole('group', { name: 'Filter mock exams by status' })
+    expect(filters).toHaveClass('grid', 'grid-cols-2')
+    expect(filters).not.toHaveClass('overflow-x-auto')
+    for (const label of ['Available', 'Continue', 'Upcoming', 'Completed']) {
+      expect(screen.getByRole('button', { name: new RegExp(label) })).toBeVisible()
+    }
+  })
 })

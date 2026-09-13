@@ -24,4 +24,15 @@ describe("assignmentStatus", () => {
     expect(screen.getByText("Choose an assignment")).toBeInTheDocument();
     expect(screen.queryByLabelText("Close assignment")).not.toBeInTheDocument();
   });
+
+  it("shows every status without a horizontally scrolling filter strip", () => {
+    render(<StudentAssignmentsClient assignments={[base]} />);
+
+    const filters = screen.getByRole("group", { name: "Filter assignments by status" });
+    expect(filters).toHaveClass("grid", "grid-cols-3");
+    expect(filters).not.toHaveClass("overflow-x-auto");
+    for (const label of ["all", "pending", "submitted", "graded", "overdue"]) {
+      expect(screen.getByRole("button", { name: label })).toBeVisible();
+    }
+  });
 });

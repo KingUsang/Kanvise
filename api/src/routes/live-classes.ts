@@ -135,12 +135,14 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
   const { course_id, tutor_id, title, scheduled_at, duration_minutes } = body
+  const isRecurring = body.recurrence === 'weekly'
 
-  if (!course_id || !tutor_id || !title || !scheduled_at || !duration_minutes) {
+  if (!course_id || !tutor_id || !title || !scheduled_at || !duration_minutes || (isRecurring && (!body.starts_on || !body.start_time))) {
     return c.json({ error: 'Missing required fields', code: 'MISSING_FIELDS' }, 400)
   }
 
-  if (new Date(scheduled_at) < new Date()) {
+  const scheduledDate = new Date(scheduled_at)
+  if (!Number.isFinite(scheduledDate.getTime()) || scheduledDate < new Date()) {
     return c.json({ error: 'Cannot schedule a class in the past', code: 'SCHEDULED_IN_PAST' }, 400)
   }
 
@@ -163,6 +165,26 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
 
   if (assignmentError || !assignment) {
     return c.json({ error: 'Tutor is not assigned to this course or course does not exist', code: 'INVALID_TUTOR_OR_COURSE' }, 403)
+  }
+
+  if (isRecurring) {
+    const timezone = typeof body.timezone === 'string' && body.timezone ? body.timezone : 'Africa/Lagos'
+    const { data: seriesId, error: recurringError } = await supabase.rpc('create_recurring_live_class' as any, {
+      p_school_id: user.school_id,
+      p_actor_id: user.id,
+      p_course_id: course_id,
+      p_tutor_id: tutor_id,
+      p_title: title,
+      p_starts_on: body.starts_on,
+      p_start_time: body.start_time,
+      p_timezone: timezone,
+      p_duration_minutes: duration_minutes,
+    } as any)
+    if (recurringError) {
+      console.error('[live-classes] recurring insert error:', recurringError)
+      return c.json({ error: recurringError.message || 'Failed to schedule recurring class', code: 'RECURRING_CLASS_FAILED' }, 400)
+    }
+    return c.json({ data: { series_id: seriesId, recurrence: 'weekly' } }, 201)
   }
 
 
@@ -189,6 +211,109 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   return c.json({ data }, 201)
 })
 
+// ── POST /live-classes/start-now — Create and start in one workflow ───────
+
+liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) => {
+  const user = c.get('user')
+  const body = await c.req.json()
+  const courseId = String(body.course_id || '')
+  const tutorId = String(body.tutor_id || user.id)
+  const durationMinutes = body.duration_minutes === undefined ? 60 : Number(body.duration_minutes)
+
+  if (!courseId) {
+    return c.json({ error: 'Choose what you are teaching', code: 'COURSE_REQUIRED' }, 400)
+  }
+  if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 240) {
+    return c.json({ error: 'Duration must be between 15 and 240 minutes', code: 'INVALID_DURATION' }, 400)
+  }
+  if (user.role === 'tutor' && tutorId !== user.id) {
+    return c.json({ error: 'Tutors can only start their own classes', code: 'FORBIDDEN' }, 403)
+  }
+
+  const [{ data: assignment, error: assignmentError }, { data: course, error: courseError }] = await Promise.all([
+    supabase.from('tutor_course_assignments')
+      .select('course_id')
+      .eq('tutor_id', tutorId)
+      .eq('course_id', courseId)
+      .eq('school_id', user.school_id)
+      .maybeSingle(),
+    supabase.from('courses')
+      .select('id, name')
+      .eq('id', courseId)
+      .eq('school_id', user.school_id)
+      .maybeSingle(),
+  ])
+
+  if (assignmentError || courseError || !assignment || !course) {
+    return c.json({ error: 'Choose a subject assigned to this tutor', code: 'INVALID_TUTOR_OR_COURSE' }, 403)
+  }
+
+  const title = String(body.title || '').trim() || `${course.name} class`
+  const startedAt = new Date().toISOString()
+  const { data: insertedClass, error: insertError } = await supabase.from('live_classes')
+    .insert({
+      school_id: user.school_id,
+      course_id: courseId,
+      tutor_id: tutorId,
+      title,
+      scheduled_at: startedAt,
+      duration_minutes: durationMinutes,
+      status: 'scheduled',
+      created_by: user.id,
+    })
+    .select('id, title, course_id, tutor_id, duration_minutes')
+    .single()
+
+  if (insertError || !insertedClass) {
+    return c.json({ error: 'Could not prepare the class', code: 'CLASS_CREATE_FAILED' }, 500)
+  }
+
+  const roomName = `kanvise-class-${insertedClass.id}`
+  let roomCreated = false
+  try {
+    const roomService = getRoomService()
+    await roomService.createRoom({ name: roomName, emptyTimeout: 300, maxParticipants: 200 })
+    roomCreated = true
+
+    const { data: liveClass, error: updateError } = await supabase.from('live_classes')
+      .update({ status: 'live', livekit_room_name: roomName, started_at: startedAt })
+      .eq('id', insertedClass.id)
+      .eq('school_id', user.school_id)
+      .select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, livekit_room_name')
+      .single()
+    if (updateError || !liveClass) throw new Error('CLASS_UPDATE_FAILED')
+
+    const displayName = await getParticipantDisplayName(user, 'Tutor')
+    const accessToken = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
+    const { wsUrl } = getLiveKitConfig()
+
+    return c.json({
+      data: {
+        ...liveClass,
+        access_token: accessToken,
+        livekit_url: wsUrl,
+        is_host: true,
+        class_title: liveClass.title,
+        course_name: course.name,
+      },
+    }, 201)
+  } catch (error) {
+    console.error('[live-classes] start-now failed:', error)
+    if (roomCreated) {
+      try {
+        await getRoomService().deleteRoom(roomName)
+      } catch {
+        // Continue with database compensation even if room cleanup fails.
+      }
+    }
+    await supabase.from('live_classes')
+      .delete()
+      .eq('id', insertedClass.id)
+      .eq('school_id', user.school_id)
+    return c.json({ error: 'Could not start the class. Nothing was scheduled.', code: 'CLASS_START_FAILED' }, 500)
+  }
+})
+
 // ── GET /live-classes — List classes (role-filtered) ───────────────────────
 
 liveClassesRouter.get('/', async (c) => {
@@ -197,7 +322,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(source)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
 
@@ -230,6 +355,19 @@ liveClassesRouter.get('/', async (c) => {
   }
 
   return c.json({ data })
+})
+
+// ── DELETE /live-classes/series/:seriesId — End a direct weekly series ───
+
+liveClassesRouter.delete('/series/:seriesId', requireRole('admin', 'tutor'), async (c) => {
+  const user = c.get('user')
+  const { data, error } = await supabase.rpc('cancel_recurring_live_class' as any, {
+    p_slot_id: c.req.param('seriesId'),
+    p_school_id: user.school_id,
+    p_actor_id: user.id,
+  } as any)
+  if (error) return c.json({ error: error.message || 'Could not end recurring class', code: 'RECURRING_CLASS_CANCEL_FAILED' }, 400)
+  return c.json({ message: 'Recurring class ended', removed_classes: data })
 })
 
 // ── GET /live-classes/:id — Get single class ───────────────────────────────

@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  PaymentsMockup, 
-  ScheduleMockup, 
-  MockExamsMockup, 
-  LiveClassesMockup, 
-  MaterialsMockup 
+import {
+  PaymentsMockup,
+  ScheduleMockup,
+  MockExamsMockup,
+  LiveClassesMockup,
+  MaterialsMockup
 } from '@/components/landing/ImagineMockups';
 import { AnimatedSection } from '@/components/landing/AnimatedSection';
 
@@ -59,7 +59,7 @@ export default function LandingPage() {
         const duration = 2000;
         const range = end - start;
         const stepTime = Math.abs(Math.floor(duration / range));
-        
+
         const timer = setInterval(() => {
           start += 1;
           setTutorsCount(start);
@@ -120,13 +120,13 @@ export default function LandingPage() {
           {/* Hero mockup */}
         <AnimatedSection delay={100} className="relative w-full max-w-[1080px] mx-auto animate-float">
           <div className="desk-mockup-shadow rounded-xl overflow-hidden border border-outline-variant bg-white p-4">
-            <img 
-              alt="Kanvise App Mockup" 
-              className="w-full rounded-lg h-auto object-cover aspect-video" 
+            <img
+              alt="Kanvise App Mockup"
+              className="w-full rounded-lg h-auto object-cover aspect-video"
               src="/shirt_design.png"
             />
           </div>
-          
+
           {/* Live status */}
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-4 w-full md:w-auto">
             <div className="bg-white px-6 py-4 rounded-xl border border-outline-variant flex flex-col items-center min-w-[140px] desk-mockup-shadow">
@@ -253,9 +253,9 @@ export default function LandingPage() {
       {/* Imagine a Better Way (Real Mockups) */}
       <section className="py-24 px-6 md:px-12 max-w-[1120px] mx-auto">
         <h2 className="text-[32px] font-semibold text-center mb-20 italic">Imagine a better way...</h2>
-        
+
         <div className="space-y-24">
-          
+
           {/* 1. Receive Payments */}
           <AnimatedSection className="flex flex-col md:flex-row items-center gap-12">
             <PaymentsMockup />
@@ -314,20 +314,20 @@ export default function LandingPage() {
         <AnimatedSection className="max-w-xl w-full sticky-note p-10 md:p-16 rounded-sm">
           <h3 className="text-[24px] font-semibold mb-4">What&apos;s missing?</h3>
           <p className="mb-8 text-on-surface-variant">We&apos;re building for you. Tell us the feature that would save you 5 hours a week.</p>
-          <textarea 
-            className="w-full bg-transparent border-b-2 border-on-surface/20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:border-primary min-h-[120px] text-[18px] outline-none" 
+          <textarea
+            className="w-full bg-transparent border-b-2 border-on-surface/20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:border-primary min-h-[120px] text-[18px] outline-none"
             placeholder="Type your idea here..."
             value={suggestionText}
             onChange={(e) => setSuggestionText(e.target.value)}
             disabled={suggestionStatus === "loading"}
           ></textarea>
-          
+
           <div className="mt-8 flex justify-between items-center">
             <span className="text-[14px] font-medium">
               {suggestionStatus === "success" && <span className="text-green-700">Thank you! Added to our roadmap.</span>}
               {suggestionStatus === "error" && <span className="text-red-600">Failed to send. Try again.</span>}
             </span>
-            <button 
+            <button
               onClick={handleSuggestionSubmit}
               disabled={suggestionStatus === "loading" || !suggestionText.trim()}
               className="px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"

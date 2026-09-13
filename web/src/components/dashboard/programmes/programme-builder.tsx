@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
+import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 import {
   clearProgrammeDraft,
   loadProgrammeDraft,
   ProgrammeDraftData,
   ProgrammeDraftSubject,
+  programmeBuilderStep,
   saveProgrammeDraft,
 } from '@/lib/programme-draft'
 
@@ -18,14 +21,13 @@ type Identity = { id: string; school_id: string }
 type SavedProgramme = { id: string; slug: string; is_published: boolean }
 
 const steps = [
-  { title: 'Programme details', short: 'Details', icon: 'edit_note' },
-  { title: 'Subjects offered', short: 'Subjects', icon: 'library_books' },
-  { title: 'Assign tutors', short: 'Tutors', icon: 'group' },
+  { title: 'Programme basics', short: 'Basics', icon: 'edit_note' },
+  { title: 'Subjects and tutors', short: 'Subjects', icon: 'library_books' },
   { title: 'Review', short: 'Review', icon: 'fact_check' },
 ]
 
-const emptyDraft = (): ProgrammeDraftData => ({ name: '', description: '', price: '', subjects: [], step: 0 })
-const newSubject = (): ProgrammeDraftSubject => ({ clientId: crypto.randomUUID(), name: '', description: '', tutorIds: [] })
+const emptyDraft = (): ProgrammeDraftData => ({ builderVersion: 2, name: '', description: '', price: '0', subjects: [], step: 0 })
+const newSubject = (defaultTutorId = ''): ProgrammeDraftSubject => ({ clientId: crypto.randomUUID(), name: '', description: '', tutorIds: defaultTutorId ? [defaultTutorId] : [] })
 
 export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const router = useRouter()
@@ -38,6 +40,8 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const [hydrated, setHydrated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveStage, setSaveStage] = useState<'idle' | 'saving' | 'uploading-cover' | 'publishing'>('idle')
+  const [coverUploadProgress, setCoverUploadProgress] = useState<number | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [savedProgramme, setSavedProgramme] = useState<SavedProgramme | null>(null)
   const [databaseSaved, setDatabaseSaved] = useState(false)
@@ -77,7 +81,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         const local = loadProgrammeDraft(currentIdentity.school_id, currentIdentity.id, programmeId || 'new')
         if (local) {
           setDraft(local.data)
-          setStep(Math.min(Math.max(local.data.step || 0, 0), 3))
+          setStep(programmeBuilderStep(local.data))
           setSavedAt(local.savedAt)
           if (programmeBody?.data) {
             initialSubjects.current = new Map((programmeBody.data.courses || []).map((subject: any) => [subject.id, subject.tutor_ids || []]))
@@ -109,7 +113,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   useEffect(() => {
     if (!hydrated || !identity || databaseSaved || savedProgramme?.is_published) return
     const timer = window.setTimeout(() => {
-      const value = { ...draft, step }
+      const value = { ...draft, builderVersion: 2, step }
       saveProgrammeDraft(identity.school_id, identity.id, value, programmeId || 'new')
       setSavedAt(Date.now())
     }, 500)
@@ -145,7 +149,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const nextStep = () => {
     if (step === 0 && !detailsReady) return toast.error('Add a programme name and valid fee')
     if (step === 1 && !subjectsReady) return toast.error('Add at least one uniquely named subject')
-    setStep(current => Math.min(current + 1, 3))
+    setStep(current => Math.min(current + 1, steps.length - 1))
   }
 
   async function token() {
@@ -161,12 +165,28 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     const presign = await fetch(`${apiUrl}/storage/presign/public`, { method: 'POST', headers, body: JSON.stringify(metadata) })
     const presignBody = await presign.json()
     if (!presign.ok) throw new Error(presignBody.error || 'Could not prepare image upload')
-    const upload = await fetch(presignBody.data.presigned_url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
-    if (!upload.ok) throw new Error('Could not upload the cover image')
+    setCoverUploadProgress(0)
+    await uploadFileWithProgress(presignBody.data.presigned_url, file, setCoverUploadProgress)
     const confirm = await fetch(`${apiUrl}/storage/public/confirm`, { method: 'POST', headers, body: JSON.stringify({ ...metadata, file_key: presignBody.data.file_key }) })
     const confirmBody = await confirm.json()
     if (!confirm.ok) throw new Error(confirmBody.error || 'Could not attach the cover image')
     setCoverUploadError('')
+  }
+
+  async function retryCoverUpload() {
+    if (!savedProgramme || !coverFile) return
+    setSaving(true)
+    setSaveStage('uploading-cover')
+    try {
+      await uploadCover(savedProgramme, coverFile)
+      toast.success('Cover uploaded')
+    } catch (error) {
+      setCoverUploadError(error instanceof Error ? error.message : 'Cover upload failed')
+    } finally {
+      setSaving(false)
+      setSaveStage('idle')
+      setCoverUploadProgress(null)
+    }
   }
 
   async function createProgramme(accessToken: string) {
@@ -230,6 +250,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     if (isPaid && !payoutReady) return toast.error('Add a bank account before saving a paid programme', { description: 'Set up where your centre receives payments, then return here.' })
     if (publish && !tutorsReady) return toast.error('Assign at least one tutor to every subject before publishing')
     setSaving(true)
+    setSaveStage('saving')
     try {
       let uploadFailed = false
       const accessToken = await token()
@@ -238,6 +259,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       if (identity) clearProgrammeDraft(identity.school_id, identity.id, programmeId || 'new')
       setDatabaseSaved(true)
       if (coverFile) {
+        setSaveStage('uploading-cover')
         try { await uploadCover(programme, coverFile) }
         catch (error) {
           uploadFailed = true
@@ -246,6 +268,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         }
       }
       if (publish) {
+        setSaveStage('publishing')
         const response = await fetch(`${apiUrl}/programmes/${programme.id}/publish`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } })
         const body = await response.json()
         if (!response.ok) throw new Error(body.error || 'Programme is not ready to publish')
@@ -257,6 +280,8 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       toast.error(publish ? 'Could not publish programme' : 'Could not save programme', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setSaving(false)
+      setSaveStage('idle')
+      setCoverUploadProgress(null)
     }
   }
 
@@ -282,8 +307,8 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       </div>
 
       <div className="mb-4 rounded-lg border border-[#c8c5d2] bg-white p-3 lg:hidden">
-        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#474551]"><span>Step {step + 1} of 4</span><span>{steps[step].short}</span></div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e4e2e1]"><div className="h-full bg-[#2e2877] transition-all" style={{ width: `${(step + 1) * 25}%` }} /></div>
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#474551]"><span>Step {step + 1} of {steps.length}</span><span>{steps[step].short}</span></div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e4e2e1]"><div className="h-full bg-[#2e2877] transition-all" style={{ width: `${((step + 1) / steps.length) * 100}%` }} /></div>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
@@ -303,17 +328,17 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
             <header className="border-b border-[#e4e2e1] px-5 py-4 sm:px-7"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#994704]">Step {step + 1}</p><h2 className="mt-1 text-xl font-bold text-[#1b1c1c]">{steps[step].title}</h2></header>
             <div className="p-5 sm:p-7">
               {step === 0 && <DetailsStep draft={draft} coverFile={coverFile} payoutReady={payoutReady} updateDraft={updateDraft} setCoverFile={file => { setCoverFile(file); updateDraft('coverFileName', file?.name) }} />}
-              {step === 1 && <SubjectsStep subjects={draft.subjects} onChange={subjects => updateDraft('subjects', subjects)} updateSubject={updateSubject} moveSubject={moveSubject} />}
-              {step === 2 && <TutorsStep subjects={draft.subjects} tutors={tutors} selfId={identity?.id || ''} updateSubject={updateSubject} />}
-              {step === 3 && <ReviewStep draft={draft} tutors={tutors} detailsReady={detailsReady} subjectsReady={subjectsReady} tutorsReady={tutorsReady} />}
+              {step === 1 && <SubjectsStep subjects={draft.subjects} tutors={tutors} selfId={identity?.id || ''} onChange={subjects => updateDraft('subjects', subjects)} updateSubject={updateSubject} moveSubject={moveSubject} />}
+              {step === 2 && <ReviewStep draft={draft} tutors={tutors} detailsReady={detailsReady} subjectsReady={subjectsReady} tutorsReady={tutorsReady} />}
 
               {coverUploadError && savedProgramme && (
-                <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Cover upload needs attention</p><p className="mt-1">{coverUploadError}</p><button disabled={!coverFile || saving} onClick={() => coverFile && uploadCover(savedProgramme, coverFile).then(() => toast.success('Cover uploaded')).catch(error => setCoverUploadError(error.message))} className="mt-3 rounded border border-amber-700 px-3 py-1.5 font-semibold disabled:opacity-50">Retry cover upload</button></div>
+                <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Cover upload needs attention</p><p className="mt-1">{coverUploadError}</p><button disabled={!coverFile || saving} onClick={() => void retryCoverUpload()} className="mt-3 rounded border border-amber-700 px-3 py-1.5 font-semibold disabled:opacity-50">Retry cover upload</button></div>
               )}
             </div>
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e4e2e1] bg-[#fbf9f8] px-5 py-4 sm:px-7">
+              {saving && <div className="basis-full"><UploadTaskStatus label={saveStage === 'uploading-cover' ? 'Uploading programme cover' : saveStage === 'publishing' ? 'Publishing programme' : 'Saving programme'} progress={saveStage === 'uploading-cover' ? coverUploadProgress : null} /></div>}
               <button disabled={step === 0} onClick={() => setStep(current => Math.max(current - 1, 0))} className="rounded border border-[#c8c5d2] bg-white px-4 py-2 text-sm font-semibold text-[#474551] disabled:opacity-40">Back</button>
-              {step < 3 ? <button onClick={nextStep} className="rounded bg-[#2e2877] px-5 py-2 text-sm font-semibold text-white">Continue</button> : <div className="flex flex-wrap gap-2"><button disabled={saving} onClick={() => void persist(false)} className="rounded border border-[#2e2877] bg-white px-4 py-2 text-sm font-semibold text-[#2e2877] disabled:opacity-50">{saving ? 'Saving…' : 'Save as draft'}</button><button disabled={saving || !tutorsReady} onClick={() => void persist(true)} className="rounded bg-[#994704] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Publishing…' : 'Publish programme'}</button></div>}
+              {step < steps.length - 1 ? <button onClick={nextStep} className="rounded bg-[#2e2877] px-5 py-2 text-sm font-semibold text-white">Continue</button> : <div className="flex flex-wrap gap-2"><button disabled={saving} onClick={() => void persist(false)} className="rounded border border-[#2e2877] bg-white px-4 py-2 text-sm font-semibold text-[#2e2877] disabled:opacity-50">{saving ? 'Saving…' : 'Save as draft'}</button><button disabled={saving || !tutorsReady} onClick={() => void persist(true)} className="rounded bg-[#994704] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Publishing…' : 'Publish programme'}</button></div>}
             </footer>
           </section>
           {savedProgramme && schoolSlug && <div className="mt-4 text-right"><a href={`/${schoolSlug}/${savedProgramme.slug}${savedProgramme.is_published ? '' : `?preview=${savedProgramme.id}`}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#2e2877] hover:underline">Preview programme page</a></div>}
@@ -328,24 +353,30 @@ function FieldLabel({ children }: { children: React.ReactNode }) { return <label
 function DetailsStep({ draft, coverFile, payoutReady, updateDraft, setCoverFile }: { draft: ProgrammeDraftData; coverFile: File | null; payoutReady: boolean | null; updateDraft: <K extends keyof ProgrammeDraftData>(key: K, value: ProgrammeDraftData[K]) => void; setCoverFile: (file: File | null) => void }) {
   return <div className="grid grid-cols-12 gap-5">
     <div className="col-span-12"><FieldLabel>Programme name</FieldLabel><input value={draft.name} onChange={event => updateDraft('name', event.target.value)} placeholder="e.g. JAMB Chemistry" className="w-full rounded border border-[#c8c5d2] px-3.5 py-3 text-sm outline-none focus:border-[#2e2877]" /></div>
-    <div className="col-span-12"><FieldLabel>Description</FieldLabel><textarea value={draft.description} onChange={event => updateDraft('description', event.target.value)} rows={4} placeholder="Tell students what they will learn and who this programme is for." className="w-full rounded border border-[#c8c5d2] px-3.5 py-3 text-sm outline-none focus:border-[#2e2877]" /></div>
-    <div className="col-span-12 md:col-span-5"><FieldLabel>Programme fee (NGN)</FieldLabel><div className="flex rounded border border-[#c8c5d2] focus-within:border-[#2e2877]"><span className="border-r border-[#c8c5d2] bg-[#f5f3f2] px-3 py-3 text-sm">₦</span><input type="number" min="0" disabled={draft.price.trim() === '0'} value={draft.price} onChange={event => updateDraft('price', event.target.value)} className="min-w-0 flex-1 rounded-r px-3 py-3 text-sm outline-none disabled:bg-[#f5f3f2]" /></div><label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[#474551]"><input type="checkbox" checked={draft.price.trim() === '0'} onChange={event => updateDraft('price', event.target.checked ? '0' : '')} className="h-4 w-4 accent-[#2e2877]" />Offer this programme for free</label><p className="mt-1 text-xs leading-5 text-[#787582]">Free programmes show “Enrol for free” to students and do not open payment checkout.</p>{Number(draft.price) > 0 && <p className={`mt-3 text-xs leading-5 ${payoutReady ? 'text-green-700' : 'text-amber-800'}`}>{payoutReady ? 'Your payout bank account is ready.' : <>Add your payout bank account before you can save this paid programme. <Link href="/dashboard/payments" className="font-semibold underline">Set up bank account</Link></>}</p>}</div>
-    <div className="col-span-12 md:col-span-7"><FieldLabel>Cover image (optional)</FieldLabel><label className="flex cursor-pointer items-center gap-3 rounded border border-dashed border-[#c2b59b] bg-[#fbf9f8] p-3 text-sm text-[#474551]"><span className="material-symbols-outlined text-[#2e2877]">add_photo_alternate</span><span>{coverFile?.name || draft.coverFileName || 'Choose a JPG, PNG or WebP image'}</span><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event => setCoverFile(event.target.files?.[0] || null)} /></label>{draft.coverFileName && !coverFile && <p className="mt-2 text-xs text-amber-700">Select this image again before saving; files are kept only for this browser session.</p>}</div>
+    <fieldset className="col-span-12"><legend className="text-xs font-semibold uppercase tracking-[0.1em] text-[#474551]">Access</legend><div className="mt-2 grid gap-3 sm:grid-cols-2"><label className={`cursor-pointer rounded-lg border p-4 ${draft.price.trim() === '0' ? 'border-[#2e2877] bg-[#f0efff]' : 'border-[#c8c5d2]'}`}><input type="radio" name="programme-access" checked={draft.price.trim() === '0'} onChange={() => updateDraft('price', '0')} className="mr-2 accent-[#2e2877]" /><strong className="text-sm">Free</strong><span className="mt-1 block pl-6 text-xs text-[#716c76]">Students enrol without checkout.</span></label><label className={`cursor-pointer rounded-lg border p-4 ${draft.price.trim() !== '0' ? 'border-[#2e2877] bg-[#f0efff]' : 'border-[#c8c5d2]'}`}><input type="radio" name="programme-access" checked={draft.price.trim() !== '0'} onChange={() => updateDraft('price', '')} className="mr-2 accent-[#2e2877]" /><strong className="text-sm">Paid</strong><span className="mt-1 block pl-6 text-xs text-[#716c76]">Charge once for enrolment.</span></label></div></fieldset>
+    {draft.price.trim() !== '0' && <div className="col-span-12 sm:max-w-sm"><FieldLabel>Programme fee (NGN)</FieldLabel><div className="flex rounded border border-[#c8c5d2] focus-within:border-[#2e2877]"><span className="border-r border-[#c8c5d2] bg-[#f5f3f2] px-3 py-3 text-sm">₦</span><input type="number" min="1" inputMode="numeric" value={draft.price} onChange={event => updateDraft('price', event.target.value)} className="min-w-0 flex-1 rounded-r px-3 py-3 text-sm outline-none" placeholder="e.g. 15000" /></div>{Number(draft.price) > 0 && <p className={`mt-3 text-xs leading-5 ${payoutReady ? 'text-green-700' : 'text-amber-800'}`}>{payoutReady ? 'Your payout bank account is ready.' : <>Add your payout bank account before publishing. <Link href="/dashboard/payments" className="font-semibold underline">Set up bank account</Link></>}</p>}</div>}
+    <details className="col-span-12 rounded-lg border border-[#e4e2e1] bg-[#fbf9f8]"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#2e2877] marker:content-none">Add description or cover image <span className="font-normal text-[#716c76]">(optional)</span></summary><div className="grid gap-5 border-t border-[#e4e2e1] p-4"><div><FieldLabel>Description</FieldLabel><textarea value={draft.description} onChange={event => updateDraft('description', event.target.value)} rows={3} placeholder="Tell students what they will learn and who this programme is for." className="w-full rounded border border-[#c8c5d2] px-3.5 py-3 text-sm outline-none focus:border-[#2e2877]" /></div><div><FieldLabel>Cover image</FieldLabel><label className="flex cursor-pointer items-center gap-3 rounded border border-dashed border-[#c2b59b] bg-white p-3 text-sm text-[#474551]"><span className="material-symbols-outlined text-[#2e2877]">add_photo_alternate</span><span className="min-w-0 truncate">{coverFile?.name || draft.coverFileName || 'Choose a JPG, PNG or WebP image'}</span><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event => setCoverFile(event.target.files?.[0] || null)} /></label>{draft.coverFileName && !coverFile && <p className="mt-2 text-xs text-amber-700">Select this image again before saving; files are kept only for this browser session.</p>}</div></div></details>
   </div>
 }
 
-function SubjectsStep({ subjects, onChange, updateSubject, moveSubject }: { subjects: ProgrammeDraftSubject[]; onChange: (subjects: ProgrammeDraftSubject[]) => void; updateSubject: (id: string, changes: Partial<ProgrammeDraftSubject>) => void; moveSubject: (index: number, offset: number) => void }) {
-  return <div><div className="mb-4 flex items-center justify-between gap-3"><p className="text-sm text-[#474551]">Add the teaching units included in this programme.</p><button onClick={() => onChange([...subjects, newSubject()])} className="inline-flex items-center gap-1 rounded border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-[18px]">add</span> Add subject</button></div>
+function SubjectsStep({ subjects, tutors, selfId, onChange, updateSubject, moveSubject }: { subjects: ProgrammeDraftSubject[]; tutors: Tutor[]; selfId: string; onChange: (subjects: ProgrammeDraftSubject[]) => void; updateSubject: (id: string, changes: Partial<ProgrammeDraftSubject>) => void; moveSubject: (index: number, offset: number) => void }) {
+  const tutorNames = new Map(tutors.map(tutor => [tutor.id, [tutor.first_name, tutor.last_name].filter(Boolean).join(' ') || tutor.email || 'Tutor']))
+  const [actionMessage, setActionMessage] = useState('')
+  const addSubject = () => {
+    const subject = newSubject(selfId)
+    onChange([...subjects, subject])
+    setActionMessage(`Subject ${subjects.length + 1} added and ready to name.`)
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.getElementById(`programme-subject-${subject.clientId}`)?.focus()))
+  }
+  return <div><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-[#474551]">Add the subjects students receive.</p><button type="button" onClick={addSubject} className="inline-flex shrink-0 items-center gap-1 rounded border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-[18px]">add</span> Add subject</button>{actionMessage && <p role="status" aria-live="polite" className="basis-full text-xs font-medium text-green-700">{actionMessage}</p>}</div>
     {subjects.length === 0 ? <div className="rounded-lg border border-dashed border-[#c2b59b] p-10 text-center text-sm text-[#474551]">No subjects yet. Add at least one to continue.</div> : <div className="space-y-3">{subjects.map((subject, index) => <div key={subject.clientId} className="grid grid-cols-12 gap-3 rounded-lg border border-[#c8c5d2] p-4">
-      <div className="col-span-12 md:col-span-4"><FieldLabel>Subject name</FieldLabel><input value={subject.name} onChange={event => updateSubject(subject.clientId, { name: event.target.value })} placeholder="e.g. Chemistry" className="w-full rounded border border-[#c8c5d2] px-3 py-2.5 text-sm outline-none focus:border-[#2e2877]" /></div>
-      <div className="col-span-12 md:col-span-6"><FieldLabel>Short description</FieldLabel><input value={subject.description} onChange={event => updateSubject(subject.clientId, { description: event.target.value })} placeholder="Optional" className="w-full rounded border border-[#c8c5d2] px-3 py-2.5 text-sm outline-none focus:border-[#2e2877]" /></div>
-      <div className="col-span-12 flex items-end justify-end gap-1 md:col-span-2"><button aria-label="Move subject up" disabled={index === 0} onClick={() => moveSubject(index, -1)} className="rounded border border-[#c8c5d2] p-2 disabled:opacity-30"><span className="material-symbols-outlined text-[18px]">arrow_upward</span></button><button aria-label="Move subject down" disabled={index === subjects.length - 1} onClick={() => moveSubject(index, 1)} className="rounded border border-[#c8c5d2] p-2 disabled:opacity-30"><span className="material-symbols-outlined text-[18px]">arrow_downward</span></button><button aria-label="Remove subject" onClick={() => onChange(subjects.filter(item => item.clientId !== subject.clientId))} className="rounded border border-red-200 p-2 text-red-700"><span className="material-symbols-outlined text-[18px]">delete</span></button></div>
+      <div className="col-span-12 sm:col-span-8"><FieldLabel>Subject name</FieldLabel><input id={`programme-subject-${subject.clientId}`} value={subject.name} onChange={event => updateSubject(subject.clientId, { name: event.target.value })} placeholder="e.g. Chemistry" className="w-full scroll-mt-32 rounded border border-[#c8c5d2] px-3 py-2.5 text-sm outline-none focus:border-[#2e2877]" /></div>
+      <div className="col-span-12 flex items-end justify-end gap-1 sm:col-span-4"><button aria-label="Move subject up" disabled={index === 0} onClick={() => moveSubject(index, -1)} className="rounded border border-[#c8c5d2] p-2 disabled:opacity-30"><span className="material-symbols-outlined text-[18px]">arrow_upward</span></button><button aria-label="Move subject down" disabled={index === subjects.length - 1} onClick={() => moveSubject(index, 1)} className="rounded border border-[#c8c5d2] p-2 disabled:opacity-30"><span className="material-symbols-outlined text-[18px]">arrow_downward</span></button><button aria-label="Remove subject" onClick={() => onChange(subjects.filter(item => item.clientId !== subject.clientId))} className="rounded border border-red-200 p-2 text-red-700"><span className="material-symbols-outlined text-[18px]">delete</span></button></div>
+      <div className="col-span-12 text-xs text-[#716c76]">Tutor: <strong className="text-[#474551]">{subject.tutorIds.map(id => tutorNames.get(id)).filter(Boolean).join(', ') || 'Not assigned'}</strong></div>
+      {(tutors.length > 1 || subject.tutorIds.length === 0) && <details className="col-span-12 rounded border border-[#e4e2e1] bg-[#fbf9f8]" open={subject.tutorIds.length === 0 || undefined}><summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-[#2e2877] marker:content-none">{subject.tutorIds.length ? 'Change tutor' : 'Choose a tutor'}</summary><div className="grid gap-2 border-t border-[#e4e2e1] p-3 sm:grid-cols-2">{tutors.map(tutor => { const checked = subject.tutorIds.includes(tutor.id); const name = tutorNames.get(tutor.id); return <label key={tutor.id} className={`flex cursor-pointer items-center gap-2 rounded border p-2 text-sm ${checked ? 'border-[#2e2877] bg-[#f0efff]' : 'border-[#e4e2e1] bg-white'}`}><input type="checkbox" checked={checked} onChange={() => updateSubject(subject.clientId, { tutorIds: checked ? subject.tutorIds.filter(id => id !== tutor.id) : [...subject.tutorIds, tutor.id] })} /><span>{name}{tutor.id === selfId ? ' (you)' : ''}</span></label>})}{tutors.length === 0 && <p className="text-sm text-[#716c76]">Invite a tutor before publishing this programme.</p>}</div></details>}
+      <details className="col-span-12"><summary className="cursor-pointer text-xs font-semibold text-[#716c76]">Add subject description <span className="font-normal">(optional)</span></summary><input value={subject.description} onChange={event => updateSubject(subject.clientId, { description: event.target.value })} placeholder="What will students learn?" className="mt-2 w-full rounded border border-[#c8c5d2] px-3 py-2.5 text-sm outline-none focus:border-[#2e2877]" /></details>
     </div>)}</div>}
   </div>
-}
-
-function TutorsStep({ subjects, tutors, selfId, updateSubject }: { subjects: ProgrammeDraftSubject[]; tutors: Tutor[]; selfId: string; updateSubject: (id: string, changes: Partial<ProgrammeDraftSubject>) => void }) {
-  return <div className="space-y-4"><p className="text-sm text-[#474551]">Tutor assignments can be completed later for a draft, but every subject needs one before publishing.</p>{subjects.map(subject => <div key={subject.clientId} className="rounded-lg border border-[#c8c5d2] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-[#1b1c1c]">{subject.name}</h3><button onClick={() => updateSubject(subject.clientId, { tutorIds: subject.tutorIds.includes(selfId) ? subject.tutorIds : [...subject.tutorIds, selfId] })} className="text-xs font-semibold text-[#2e2877] hover:underline">I will teach this subject</button></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{tutors.map(tutor => { const checked = subject.tutorIds.includes(tutor.id); const name = [tutor.first_name, tutor.last_name].filter(Boolean).join(' ') || tutor.email || 'Tutor'; return <label key={tutor.id} className={`flex cursor-pointer items-center gap-3 rounded border p-3 text-sm ${checked ? 'border-[#2e2877] bg-[#f0efff]' : 'border-[#e4e2e1]'}`}><input type="checkbox" checked={checked} onChange={() => updateSubject(subject.clientId, { tutorIds: checked ? subject.tutorIds.filter(id => id !== tutor.id) : [...subject.tutorIds, tutor.id] })} /><span><strong>{name}</strong>{tutor.id === selfId && <span className="ml-1 text-xs text-[#474551]">(you)</span>}</span></label>})}</div>{tutors.length === 0 && <p className="mt-3 rounded bg-[#f5f3f2] p-3 text-sm text-[#474551]">Invite a tutor from the Tutors page, or assign yourself.</p>}</div>)}</div>
 }
 
 function ReviewStep({ draft, tutors, detailsReady, subjectsReady, tutorsReady }: { draft: ProgrammeDraftData; tutors: Tutor[]; detailsReady: boolean; subjectsReady: boolean; tutorsReady: boolean }) {
