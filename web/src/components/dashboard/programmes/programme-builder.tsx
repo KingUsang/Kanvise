@@ -292,7 +292,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     router.push('/dashboard/programmes')
   }
 
-  if (loading) return <div className="mx-auto max-w-[1440px] rounded-lg border border-[#c2b59b] bg-white p-12 text-center text-sm text-[#474551]">Loading programme setup…</div>
+  if (loading) return <div className="mx-auto max-w-[1440px] rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading programme setup…</div>
 
   return (
     <div className="mx-auto w-full max-w-[1440px]">
@@ -324,7 +324,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         </aside>
 
         <main className="col-span-12 lg:col-span-9">
-          <section className="rounded-lg border border-[#c2b59b] bg-white shadow-sm">
+          <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
             <header className="border-b border-[#e4e2e1] px-5 py-4 sm:px-7"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#994704]">Step {step + 1}</p><h2 className="mt-1 text-xl font-bold text-[#1b1c1c]">{steps[step].title}</h2></header>
             <div className="p-5 sm:p-7">
               {step === 0 && <DetailsStep draft={draft} coverFile={coverFile} payoutReady={payoutReady} updateDraft={updateDraft} setCoverFile={file => { setCoverFile(file); updateDraft('coverFileName', file?.name) }} />}

@@ -273,8 +273,8 @@ export function TutorsClient() {
         
         {/* Main Tutors List (Spans 8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="bg-white rounded-lg border border-[#c2b59b] shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-[#c2b59b] flex justify-between items-center bg-[#fbf9f8]">
+          <div className="flex flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
+            <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded bg-[#2e2877]/10 flex items-center justify-center text-[#2e2877]">
                   <span className="material-symbols-outlined icon-fill">school</span>
@@ -286,7 +286,7 @@ export function TutorsClient() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
-                  <tr className="bg-[#f5f3f2] text-[#474551] border-b border-[#c2b59b]">
+                  <tr className="border-b border-dashboard-outline bg-dashboard-surface-subtle text-dashboard-muted">
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Tutor</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Assigned Subjects</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider text-right">Actions</th>
@@ -317,7 +317,7 @@ export function TutorsClient() {
                       const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase()
                       const isRemoving = removingId === tutor.id
                       return (
-                        <tr key={tutor.id} className={`border-b border-[#c2b59b] hover:bg-[#2e2877]/5 transition-colors group ${isRemoving ? 'opacity-40' : ''}`}>
+                        <tr key={tutor.id} className={`group border-b border-dashboard-outline/50 transition-colors hover:bg-dashboard-primary/5 ${isRemoving ? 'opacity-40' : ''}`}>
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded bg-[#e4e2e1] border border-[#c8c5d2] flex items-center justify-center text-[#474551] font-bold flex-shrink-0">

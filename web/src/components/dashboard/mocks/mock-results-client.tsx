@@ -189,7 +189,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
     : null
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-16">
+    <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-8">
       <DashboardPageHeader
         breadcrumb={<><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</>}
         title="Mock results"
@@ -206,7 +206,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
       </section>
 
       {data.attempts.length === 0 ? (
-        <section className="rounded-xl border border-dashed border-outline-variant bg-white px-6 py-20 text-center"><h2 className="text-xl font-semibold text-on-surface">No submissions yet</h2><p className="mt-2 text-on-surface-variant">Student submissions will appear here.</p></section>
+        <section className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-20 text-center"><h2 className="text-xl font-semibold text-dashboard-foreground">No submissions yet</h2><p className="mt-2 text-dashboard-muted">Student submissions will appear here.</p></section>
       ) : (
         <div className="grid min-h-[620px] gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="overflow-hidden rounded-lg border border-outline-variant bg-white">
@@ -223,7 +223,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
           </aside>
 
           {selectedAttempt && (
-            <main className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-outline-variant bg-white">
+            <main className="flex min-w-0 flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               <div className="flex flex-col gap-4 border-b border-outline-variant p-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white">{studentName(selectedAttempt).split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</div><div><h2 className="font-semibold text-on-surface">{studentName(selectedAttempt)}</h2><p className="text-xs text-on-surface-variant">Submitted {selectedAttempt.submitted_at ? new Date(selectedAttempt.submitted_at).toLocaleString('en-NG') : '—'}</p></div></div>
                 <div className="flex flex-wrap items-center justify-end gap-4 text-right">
