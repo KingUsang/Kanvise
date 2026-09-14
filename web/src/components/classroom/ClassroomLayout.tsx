@@ -31,9 +31,10 @@ interface ClassroomLayoutProps {
   classId: string
   classTitle: string
   courseName: string | null
+  onExit?: () => void
 }
 
-function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLayoutProps) {
+function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: ClassroomLayoutProps) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const participants = useParticipants();
@@ -65,6 +66,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || 'Could not end the class');
+      onExit?.()
       room.disconnect();
     } catch (e) {
       console.error('Failed to end class', e);
@@ -78,6 +80,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
     if (isHost) {
       setShowLeaveModal(true);
     } else {
+      onExit?.()
       room.disconnect();
     }
   };
@@ -386,7 +389,10 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
             </p>
             <div className="flex flex-col gap-3 w-full">
               <button
-                onClick={() => room.disconnect()}
+                onClick={() => {
+                  onExit?.()
+                  room.disconnect()
+                }}
                 className="w-full py-2.5 bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] font-semibold rounded-lg transition-colors"
               >
                 Leave Class

@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CLASSROOM_ROOM_OPTIONS } from "@/components/classroom/livekit-room-options";
 import ClientClassroom from "./ClientClassroom";
@@ -8,6 +8,7 @@ const liveKitRoom = vi.fn(({ children }: { children: React.ReactNode }) => <div>
 vi.mock("@livekit/components-react", () => ({
   LiveKitRoom: (props: { children: React.ReactNode }) => liveKitRoom(props),
   RoomAudioRenderer: () => <div data-testid="room-audio" />,
+  useConnectionState: () => 'connected',
   useLocalParticipant: () => ({ localParticipant: null }),
 }));
 
@@ -59,4 +60,16 @@ describe("ClientClassroom", () => {
       video: false,
     }));
   });
+
+  it("keeps an initial connection failure on a recoverable classroom screen", () => {
+    render(
+      <ClientClassroom token="token" serverUrl="wss://livekit.example.com" roomName="room" classId="class" isHost classTitle="Physics" courseName="Science" />,
+    )
+
+    const props = liveKitRoom.mock.calls[0]?.[0] as { onDisconnected: () => void }
+    act(() => props.onDisconnected())
+
+    expect(screen.getByRole('heading', { name: "We couldn't join the classroom" })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
 });

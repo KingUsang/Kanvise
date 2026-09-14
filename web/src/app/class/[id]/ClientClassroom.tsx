@@ -1,7 +1,9 @@
 "use client";
 
-import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant } from "@livekit/components-react";
-import { useEffect, useRef } from "react";
+import { LiveKitRoom, RoomAudioRenderer, useConnectionState, useLocalParticipant } from "@livekit/components-react";
+import { ConnectionState } from "livekit-client";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import ClassroomLayout from "@/components/classroom/ClassroomLayout";
 import { CLASSROOM_ROOM_OPTIONS } from "@/components/classroom/livekit-room-options";
 import { markInstallEligible } from "@/lib/pwa/install-eligibility";
@@ -32,6 +34,44 @@ function MuteStudentOnJoin({ isHost }: { isHost: boolean }) {
   return null;
 }
 
+function ClassroomConnectionGate({
+  issue,
+  onRetry,
+  children,
+}: {
+  issue: string | null
+  onRetry: () => void
+  children: React.ReactNode
+}) {
+  const connectionState = useConnectionState()
+
+  if (issue) {
+    return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
+      <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 text-center shadow-sm">
+        <span className="material-symbols-outlined text-3xl text-[#994704]" aria-hidden="true">wifi_off</span>
+        <h1 className="mt-3 text-xl font-bold text-[#180d62]">We couldn&apos;t join the classroom</h1>
+        <p className="mt-2 text-sm leading-6 text-[#66616c]">{issue}</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button type="button" onClick={onRetry} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button>
+          <Link href="/dashboard/schedule" className="rounded-lg border border-[#c8c5d2] px-4 py-2 text-sm font-semibold text-[#2e2877]">Back to classes</Link>
+        </div>
+      </section>
+    </main>
+  }
+
+  if (connectionState !== ConnectionState.Connected) {
+    return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
+      <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 text-center shadow-sm">
+        <span className="material-symbols-outlined animate-spin text-3xl text-[#2e2877]" aria-hidden="true">progress_activity</span>
+        <h1 className="mt-3 text-xl font-bold text-[#180d62]">Joining your classroom</h1>
+        <p className="mt-2 text-sm leading-6 text-[#66616c]">Getting everything ready for your class…</p>
+      </section>
+    </main>
+  }
+
+  return <>{children}</>
+}
+
 export default function ClientClassroom({
   token,
   serverUrl,
@@ -42,15 +82,21 @@ export default function ClientClassroom({
   courseName,
 }: ClientClassroomProps) {
   const isLeavingClassroom = useRef(false);
+  const [connectionIssue, setConnectionIssue] = useState<string | null>(null)
   const dashboardPath = isHost ? "/dashboard" : "/dashboard/student/classes";
 
-  const leaveClassroom = () => {
-    if (isLeavingClassroom.current) return;
+  const markLeavingClassroom = () => {
     isLeavingClassroom.current = true;
-    // LiveKit disconnects after the room closes. A document navigation ensures
-    // the dashboard shell is rebuilt instead of retaining the classroom's
-    // client-side navigation state.
-    window.location.assign(dashboardPath);
+  }
+
+  const handleDisconnected = () => {
+    if (isLeavingClassroom.current) {
+      window.location.assign(dashboardPath)
+      return
+    }
+    // Initial connection failures used to redirect people away before they
+    // could read or recover from the problem.
+    setConnectionIssue('Check your connection, then try joining the class again.')
   };
 
   return (
@@ -63,20 +109,26 @@ export default function ClientClassroom({
       options={CLASSROOM_ROOM_OPTIONS}
       data-lk-theme="default"
       className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
-      onConnected={markInstallEligible}
-      onDisconnected={leaveClassroom}
+      onConnected={() => {
+        setConnectionIssue(null)
+        markInstallEligible()
+      }}
+      onDisconnected={handleDisconnected}
+      onError={() => setConnectionIssue('Check your connection, then try joining the class again.')}
     >
       <MuteStudentOnJoin isHost={isHost} />
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
-
-      {/* Main classroom UI */}
-      <ClassroomLayout
-        isHost={isHost}
-        classId={classId}
-        classTitle={classTitle}
-        courseName={courseName}
-      />
+      <ClassroomConnectionGate issue={connectionIssue} onRetry={() => window.location.reload()}>
+        {/* Main classroom UI only appears once the room connection succeeds. */}
+        <ClassroomLayout
+          isHost={isHost}
+          classId={classId}
+          classTitle={classTitle}
+          courseName={courseName}
+          onExit={markLeavingClassroom}
+        />
+      </ClassroomConnectionGate>
     </LiveKitRoom>
   );
 }
