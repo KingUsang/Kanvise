@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
@@ -76,6 +77,7 @@ type SelectedBankQuestion = {
 
 export function MockBuilderClient({ token }: { token: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const editMockId = searchParams.get("id");
   const isEditMode = !!editMockId;
@@ -980,6 +982,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         ? (publishMessage || (publishMode === "scheduled" ? "Mock scheduled" : "Mock published"))
         : "Draft saved";
       toast.success(publicationMessage);
+      await queryClient.invalidateQueries({ queryKey: ["mocks"] });
       startNavigationProgress();
       router.push("/dashboard/mocks");
     } catch (err) {

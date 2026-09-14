@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
@@ -32,6 +33,7 @@ const newSubject = (defaultTutorId = ''): ProgrammeDraftSubject => ({ clientId: 
 
 export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const supabase = useMemo(() => createClient(), [])
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [tutors, setTutors] = useState<Tutor[]>([])
@@ -276,7 +278,11 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         setSavedProgramme(current => current ? { ...current, is_published: true } : current)
         toast.success('Programme published')
       } else toast.success('Programme saved as a draft')
-      if (!uploadFailed) router.push('/dashboard/programmes')
+      if (!uploadFailed) {
+        await queryClient.invalidateQueries({ queryKey: ['programmes'] })
+        router.refresh()
+        router.push('/dashboard/programmes')
+      }
     } catch (error) {
       toast.error(publish ? 'Could not publish programme' : 'Could not save programme', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
