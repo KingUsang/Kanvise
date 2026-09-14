@@ -110,8 +110,8 @@ export default function PaymentsPage() {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Payment Setup Card */}
-        <section className="bg-[#fbf9f8] border border-[#c8c5d2] rounded flex flex-col shadow-[0px_4px_20px_rgba(61,61,61,0.08)] col-span-1 xl:col-span-2 relative overflow-hidden">
-          <div className="p-6 pb-4 border-b border-[#c8c5d2] flex justify-between items-center bg-[#ffffff]">
+        <section className="bg-[#fbf9f8] border border-[#C2B59B] rounded flex flex-col shadow-[0px_4px_20px_rgba(61,61,61,0.08)] col-span-1 xl:col-span-2 relative overflow-hidden">
+          <div className="p-6 pb-4 border-b border-[#C2B59B] flex justify-between items-center bg-[#ffffff]">
             <div>
               <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Bank account for payouts</h3>
               <p className="text-[12px] font-semibold tracking-wider text-[#474551] mt-1">
@@ -178,8 +178,8 @@ export default function PaymentsPage() {
       </div>
 
       {/* Transaction List Data Table */}
-      <section className="bg-[#fbf9f8] border border-[#c8c5d2] rounded flex flex-col shadow-[0px_4px_20px_rgba(61,61,61,0.08)] mt-[32px] overflow-hidden">
-        <div className="p-6 border-b border-[#c8c5d2] flex justify-between items-center bg-[#ffffff]">
+      <section className="bg-[#fbf9f8] border border-[#C2B59B] rounded flex flex-col shadow-[0px_4px_20px_rgba(61,61,61,0.08)] mt-[32px] overflow-hidden">
+        <div className="p-6 border-b border-[#C2B59B] flex justify-between items-center bg-[#ffffff]">
           <div>
             <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Payments received</h3>
             <p className="text-[12px] font-semibold tracking-wider text-[#474551] mt-1">Successful student payments to your school</p>
@@ -187,7 +187,7 @@ export default function PaymentsPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="bg-[#f5f0e6] border-b border-[#c8c5d2]">
+            <thead className="bg-[#f5f0e6] border-b border-[#C2B59B]">
               <tr>
                 <th className="py-3 px-6 text-[12px] font-semibold tracking-wider text-[#474551] uppercase">Date</th>
                 <th className="py-3 px-6 text-[12px] font-semibold tracking-wider text-[#474551] uppercase">Student</th>
@@ -204,7 +204,7 @@ export default function PaymentsPage() {
                   <td colSpan={7} className="py-8 text-center text-[#474551]">No successful student payments yet.</td>
                 </tr>
               ) : payments.map((payment) => (
-                <tr key={payment.id} className="border-b border-[#c8c5d2] hover:bg-[#180d62]/5 transition-colors">
+                <tr key={payment.id} className="border-b border-[#C2B59B] hover:bg-[#180d62]/5 transition-colors">
                   <td className="py-4 px-6 text-[#474551]">{new Date(payment.paid_at || payment.created_at).toLocaleDateString()}</td>
                   <td className="py-4 px-6 font-semibold text-[#1b1c1c]">
                     {payment.user_profiles?.first_name} {payment.user_profiles?.last_name}

@@ -276,8 +276,8 @@ export function TutorsClient() {
         
         {/* Main Tutors List (Spans 8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="bg-white rounded-lg border border-[#c8c5d2] shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-[#c8c5d2] flex justify-between items-center bg-[#fbf9f8]">
+          <div className="bg-white rounded-lg border border-[#c2b59b] shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col overflow-hidden">
+            <div className="p-6 border-b border-[#c2b59b] flex justify-between items-center bg-[#fbf9f8]">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded bg-[#2e2877]/10 flex items-center justify-center text-[#2e2877]">
                   <span className="material-symbols-outlined icon-fill">school</span>
@@ -289,7 +289,7 @@ export function TutorsClient() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
-                  <tr className="bg-[#f5f3f2] text-[#474551] border-b border-[#c8c5d2]">
+                  <tr className="bg-[#f5f3f2] text-[#474551] border-b border-[#c2b59b]">
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Tutor</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Assigned Subjects</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider text-right">Actions</th>
@@ -320,7 +320,7 @@ export function TutorsClient() {
                       const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase()
                       const isRemoving = removingId === tutor.id
                       return (
-                        <tr key={tutor.id} className={`border-b border-[#c8c5d2] hover:bg-[#2e2877]/5 transition-colors group ${isRemoving ? 'opacity-40' : ''}`}>
+                        <tr key={tutor.id} className={`border-b border-[#c2b59b] hover:bg-[#2e2877]/5 transition-colors group ${isRemoving ? 'opacity-40' : ''}`}>
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded bg-[#e4e2e1] border border-[#c8c5d2] flex items-center justify-center text-[#474551] font-bold flex-shrink-0">
@@ -364,14 +364,14 @@ export function TutorsClient() {
               </table>
             </div>
             {!isLoading && tutors.length > 0 && (
-              <div className="p-4 border-t border-[#c8c5d2] bg-[#fbf9f8] flex justify-between items-center text-[14px]">
+              <div className="p-4 border-t border-[#c2b59b] bg-[#fbf9f8] flex justify-between items-center text-[14px]">
                 <span className="text-[#474551]">Total: {tutors.length} tutor{tutors.length !== 1 ? 's' : ''}</span>
               </div>
             )}
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-[#c8c5d2] bg-white shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
-            <div className="border-b border-[#c8c5d2] bg-[#fbf9f8] p-6">
+          <div className="overflow-hidden rounded-lg border border-[#c2b59b] bg-white shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
+            <div className="border-b border-[#c2b59b] bg-[#fbf9f8] p-6">
               <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Teaching assignments</h3>
               <p className="mt-1 text-sm text-[#474551]">Choose who teaches each Subject. A published Subject must always have at least one tutor.</p>
             </div>
@@ -496,15 +496,15 @@ export function TutorsClient() {
           </div>
 
           {/* Pending Invites List */}
-          <div className="bg-white rounded-lg border border-[#c8c5d2] shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col">
-            <div className="p-4 border-b border-[#c8c5d2] bg-[#f5f3f2]">
+          <div className="bg-white rounded-lg border border-[#c2b59b] shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col">
+            <div className="p-4 border-b border-[#c2b59b] bg-[#f5f3f2]">
               <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#474551] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">pending_actions</span>
                 Invitations awaiting response
               </h3>
             </div>
             
-            <div className="flex flex-col divide-y divide-[#c8c5d2]">
+            <div className="flex flex-col divide-y divide-[#c2b59b]">
               {isLoading ? (
                 <div className="p-6 text-center text-[#474551] text-[14px]">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2e2877] mx-auto mb-2" />

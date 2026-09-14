@@ -1151,7 +1151,7 @@ export function MockBuilderClient({ token }: { token: string }) {
             </div>
           )}
           {!isReadOnly && questions.length === 0 && selectedBankQuestions.length === 0 && !showImportPanel && !showBankPicker && (
-            <div className="rounded-lg border border-dashed border-[#c8c5d2] bg-white px-6 py-10 text-center shadow-sm">
+            <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
                 <span className="material-symbols-outlined text-[28px]">quiz</span>
               </div>

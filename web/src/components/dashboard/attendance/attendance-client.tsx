@@ -114,12 +114,12 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       </div>
 
       {/* Filters Grid */}
-      <div className="bg-white border border-[#c8c5d2] p-6 rounded-lg mb-8 shadow-sm">
+      <div className="bg-white border border-[#c2b59b] p-6 rounded-lg mb-8 shadow-sm">
         <h3 className="text-[12px] font-semibold text-[#474551] mb-4 uppercase tracking-wider">Filter attendance</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Programme</label>
-            <select value={programmeId} onChange={handleProgrammeChange} className="w-full border border-[#c8c5d2] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none">
+            <select value={programmeId} onChange={handleProgrammeChange} className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none">
               <option value="">All Programmes</option>
               {availableProgrammes?.map(p => (
                  <option key={p.id} value={p.id}>{p.name}</option>
@@ -128,7 +128,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Specific Class</label>
-            <select value={classId} onChange={(e) => { setClassId(e.target.value); setPage(1) }} className="w-full border border-[#c8c5d2] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none">
+            <select value={classId} onChange={(e) => { setClassId(e.target.value); setPage(1) }} className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none">
               <option value="">All Classes</option>
               {filteredClasses?.map(c => (
                  <option key={c.id} value={c.id}>{c.title}</option>
@@ -137,7 +137,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">From date</label>
-            <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1) }} className="w-full border border-[#c8c5d2] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none" />
+            <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1) }} className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none" />
           </div>
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Until date</label>
@@ -146,7 +146,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
               value={endDate}
               min={startDate || undefined}
               onChange={(e) => { setEndDate(e.target.value); setPage(1) }}
-              className="w-full border border-[#c8c5d2] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none"
+              className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none"
             />
           </div>
         </div>
@@ -154,7 +154,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
 
       {/* Summary Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-[#c8c5d2] p-6 rounded-lg shadow-sm relative overflow-hidden">
+        <div className="bg-white border border-[#c2b59b] p-6 rounded-lg shadow-sm relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-[#2e2877]/5 rounded-bl-full -mr-4 -mt-4"></div>
           <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">Average Attendance</p>
           <div className="flex items-baseline gap-2">
@@ -166,7 +166,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
         </div>
         
-        <div className="bg-white border border-[#c8c5d2] p-6 rounded-lg shadow-sm relative overflow-hidden">
+        <div className="bg-white border border-[#c2b59b] p-6 rounded-lg shadow-sm relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-[#c26627]/10 rounded-bl-full -mr-4 -mt-4"></div>
           <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">Completed Classes</p>
           <div className="flex items-baseline gap-2">
@@ -177,7 +177,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
         </div>
 
-        <div className="bg-white border border-[#c8c5d2] p-6 rounded-lg shadow-sm relative overflow-hidden">
+        <div className="bg-white border border-[#c2b59b] p-6 rounded-lg shadow-sm relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-[#ba1a1a]/10 rounded-bl-full -mr-4 -mt-4"></div>
           <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">At-Risk Students</p>
           <div className="flex items-baseline gap-2">
@@ -191,8 +191,8 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       </div>
 
       {/* Detailed Records Table */}
-      <div className="bg-white border border-[#c8c5d2] rounded-lg shadow-sm overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-[#c8c5d2] flex justify-between items-center bg-[#fbf9f8]">
+      <div className="bg-white border border-[#c2b59b] rounded-lg shadow-sm overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-[#c2b59b] flex justify-between items-center bg-[#fbf9f8]">
           <div>
             <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Class attendance</h3>
             <p className="text-[14px] text-[#474551]">Student arrival times and time spent in completed classes.</p>
@@ -202,7 +202,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-[#f5f3f2] border-b border-[#c8c5d2]">
+              <tr className="bg-[#f5f3f2] border-b border-[#c2b59b]">
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Student Name</th>
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Class / Cohort</th>
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Join Time</th>
@@ -227,7 +227,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
                   </td>
                 </tr>
               ) : records?.map((r: any) => (
-                <tr key={r.id} className="border-b border-[#c8c5d2] hover:bg-[#2e2877]/5 transition-colors">
+                <tr key={r.id} className="border-b border-[#c2b59b] hover:bg-[#2e2877]/5 transition-colors">
                   <td className="p-4 flex items-center gap-3">
                     {r.avatar_url ? (
                       <div className="w-8 h-8 rounded-full bg-[#e4e2e1] overflow-hidden">
@@ -266,7 +266,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
         
         {/* Pagination Footer */}
         {!isLoading && meta && meta.total > 0 && (
-          <div className="p-4 border-t border-[#c8c5d2] bg-[#fbf9f8] flex items-center justify-between text-[14px]">
+          <div className="p-4 border-t border-[#c2b59b] bg-[#fbf9f8] flex items-center justify-between text-[14px]">
             <span className="text-[#474551]">
               Showing {((meta.page - 1) * meta.limit) + 1}-{Math.min(meta.page * meta.limit, meta.total)} of {meta.total} records
             </span>
@@ -274,7 +274,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
               <button 
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={meta.page <= 1}
-                className="px-3 py-1 border border-[#c8c5d2] rounded-sm transition-colors disabled:opacity-50 disabled:pointer-events-none hover:bg-[#f5f3f2]"
+                className="px-3 py-1 border border-[#c2b59b] rounded-sm transition-colors disabled:opacity-50 disabled:pointer-events-none hover:bg-[#f5f3f2]"
               >
                 Prev
               </button>
@@ -282,7 +282,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
               <button 
                 onClick={() => setPage(p => Math.min(meta.total_pages, p + 1))}
                 disabled={meta.page >= meta.total_pages}
-                className="px-3 py-1 border border-[#c8c5d2] rounded-sm transition-colors disabled:opacity-50 disabled:pointer-events-none hover:bg-[#f5f3f2]"
+                className="px-3 py-1 border border-[#c2b59b] rounded-sm transition-colors disabled:opacity-50 disabled:pointer-events-none hover:bg-[#f5f3f2]"
               >
                 Next
               </button>

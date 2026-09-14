@@ -190,11 +190,11 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       </div>
 
       {/* Data Table */}
-      <div className="bg-white border border-[#c8c5d2] rounded-xl shadow-[0px_4px_20px_rgba(61,61,61,0.08)] overflow-hidden mb-12">
+      <div className="bg-white border border-[#c2b59b] rounded-xl shadow-[0px_4px_20px_rgba(61,61,61,0.08)] overflow-hidden mb-12">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-[#f5f3ed] border-b border-[#c8c5d2]">
+              <tr className="bg-[#f5f3ed] border-b border-[#c2b59b]">
                 <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">Mock Details</th>
                 <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">Status</th>
                 <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest text-right">Metrics</th>
