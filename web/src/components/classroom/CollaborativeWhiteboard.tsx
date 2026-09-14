@@ -418,15 +418,18 @@ const CollaborativeWhiteboard = ({
         handleKeyboardGlobally={false}
         aiEnabled={false}
         UIOptions={{
+          tools: { image: false },
           canvasActions: {
             changeViewBackgroundColor: false,
             clearCanvas: false,
             loadScene: false,
             saveToActiveFile: false,
             export: false,
-            toggleTheme: false
+            toggleTheme: false,
+            saveAsImage: false
           }
         }}
+        renderTopRightUI={() => null}
       />
       {isHost && (
         <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">

@@ -309,11 +309,11 @@ function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: Cla
       </div>
 
       {/* ── BOTTOM TOOLBAR (Solid, Pinned) ─────────── */}
-      <footer className="flex-shrink-0 h-16 bg-white border-t border-[#e4e2e1] flex items-center justify-between px-2 sm:px-4 md:px-5 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
+      <footer className="flex-shrink-0 h-16 min-w-0 overflow-x-auto no-scrollbar bg-white border-t border-[#e4e2e1] flex items-center justify-start gap-2 px-2 sm:justify-between sm:px-4 md:px-5 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
         <div className="hidden flex-1 lg:block" />
 
         {/* Centre: Media Controls */}
-        <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           {isHost && (
             <PresentationControls />
           )}
@@ -339,7 +339,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: Cla
         </div>
 
         {/* Right: Sidebar Toggles */}
-        <div className="flex items-center gap-1 sm:gap-2 lg:flex-1 justify-end">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:flex-1 lg:justify-end">
           <button
             onClick={() => toggleSidebar("chat")}
             className={`flex items-center gap-1.5 px-2.5 py-2 sm:px-3 sm:py-2.5 rounded-lg text-[13px] font-semibold transition-all border

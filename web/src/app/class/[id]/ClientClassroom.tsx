@@ -38,15 +38,20 @@ function MuteStudentOnJoin({ isHost }: { isHost: boolean }) {
 function ClassroomConnectionGate({
   issue,
   onRetry,
+  hasEverConnected,
   children,
 }: {
   issue: string | null
   onRetry: () => void
+  hasEverConnected: boolean
   children: React.ReactNode
 }) {
   const connectionState = useConnectionState()
 
-  if (issue) {
+  // Once the room has connected, keep the classroom mounted while LiveKit
+  // reconnects. Replacing the whole classroom with a join/error page loses
+  // the tutor's context and falsely reports a healthy network as offline.
+  if (issue && !hasEverConnected) {
     return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
       <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 text-center shadow-sm">
         <span className="material-symbols-outlined text-3xl text-[#994704]" aria-hidden="true">wifi_off</span>
@@ -60,7 +65,7 @@ function ClassroomConnectionGate({
     </main>
   }
 
-  if (connectionState !== ConnectionState.Connected) {
+  if (!hasEverConnected && connectionState !== ConnectionState.Connected) {
     return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
       <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 text-center shadow-sm">
         <span className="material-symbols-outlined animate-spin text-3xl text-[#2e2877]" aria-hidden="true">progress_activity</span>
@@ -125,6 +130,10 @@ export default function ClientClassroom({
       }
     }
 
+    // A connected room can briefly enter Reconnecting/Disconnected while the
+    // SDK recovers. Keep the classroom mounted; the header reflects the
+    // transient state and LiveKit will restore the tracks when ready.
+    if (hasConnected.current) return
     setConnectionIssue('Check your connection, then try joining the class again.')
   };
 
@@ -151,7 +160,7 @@ export default function ClientClassroom({
       <MuteStudentOnJoin isHost={isHost} />
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
-      <ClassroomConnectionGate issue={connectionIssue} onRetry={retryConnection}>
+      <ClassroomConnectionGate issue={connectionIssue} onRetry={retryConnection} hasEverConnected={hasConnected.current}>
         {/* Main classroom UI only appears once the room connection succeeds. */}
         <ClassroomLayout
           isHost={isHost}
