@@ -1,5 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLASSROOM_ROOM_OPTIONS } from "@/components/classroom/livekit-room-options";
 import ClientClassroom from "./ClientClassroom";
 
@@ -19,7 +19,10 @@ vi.mock("@/components/classroom/ClassroomLayout", () => ({
 describe("ClientClassroom", () => {
   beforeEach(() => {
     liveKitRoom.mockClear();
+    vi.useFakeTimers()
   });
+
+  afterEach(() => vi.useRealTimers())
 
   it("starts students muted with camera off and the bandwidth-optimized room options", () => {
     render(
@@ -61,13 +64,20 @@ describe("ClientClassroom", () => {
     }));
   });
 
-  it("keeps an initial connection failure on a recoverable classroom screen", () => {
+  it("retries the first transient classroom connection failure before showing an error", () => {
     render(
       <ClientClassroom token="token" serverUrl="wss://livekit.example.com" roomName="room" classId="class" isHost classTitle="Physics" courseName="Science" />,
     )
 
     const props = liveKitRoom.mock.calls[0]?.[0] as unknown as { onDisconnected: () => void }
     act(() => props.onDisconnected())
+
+    expect(screen.queryByRole('heading', { name: "We couldn't join the classroom" })).not.toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(1_200))
+    expect(liveKitRoom).toHaveBeenCalledTimes(2)
+
+    const retryProps = liveKitRoom.mock.calls[1]?.[0] as unknown as { onDisconnected: () => void }
+    act(() => retryProps.onDisconnected())
 
     expect(screen.getByRole('heading', { name: "We couldn't join the classroom" })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()

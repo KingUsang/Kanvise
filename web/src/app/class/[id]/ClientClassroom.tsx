@@ -82,11 +82,28 @@ export default function ClientClassroom({
   courseName,
 }: ClientClassroomProps) {
   const isLeavingClassroom = useRef(false);
+  const hasConnected = useRef(false)
+  const failureHandledForAttempt = useRef<number | null>(null)
+  const retryTimer = useRef<number | null>(null)
   const [connectionIssue, setConnectionIssue] = useState<string | null>(null)
+  const [connectionAttempt, setConnectionAttempt] = useState(0)
   const dashboardPath = isHost ? "/dashboard" : "/dashboard/student/classes";
+
+  useEffect(() => () => {
+    if (retryTimer.current) window.clearTimeout(retryTimer.current)
+  }, [])
 
   const markLeavingClassroom = () => {
     isLeavingClassroom.current = true;
+  }
+
+  const retryConnection = () => {
+    if (retryTimer.current) window.clearTimeout(retryTimer.current)
+    retryTimer.current = null
+    failureHandledForAttempt.current = null
+    hasConnected.current = false
+    setConnectionIssue(null)
+    setConnectionAttempt((attempt) => attempt + 1)
   }
 
   const handleDisconnected = () => {
@@ -94,13 +111,24 @@ export default function ClientClassroom({
       window.location.assign(dashboardPath)
       return
     }
-    // Initial connection failures used to redirect people away before they
-    // could read or recover from the problem.
+
+    // The Azure VM can report healthy just before its WebSocket listener is
+    // ready. Do one quiet, fresh connection attempt instead of falsely
+    // blaming the student's network on their first visit.
+    if (!hasConnected.current && failureHandledForAttempt.current !== connectionAttempt) {
+      failureHandledForAttempt.current = connectionAttempt
+      if (connectionAttempt === 0) {
+        retryTimer.current = window.setTimeout(retryConnection, 1_200)
+        return
+      }
+    }
+
     setConnectionIssue('Check your connection, then try joining the class again.')
   };
 
   return (
     <LiveKitRoom
+      key={connectionAttempt}
       video={false}
       audio={isHost}
       token={token}
@@ -110,16 +138,18 @@ export default function ClientClassroom({
       data-lk-theme="default"
       className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
       onConnected={() => {
+        hasConnected.current = true
+        failureHandledForAttempt.current = null
         setConnectionIssue(null)
         markInstallEligible()
       }}
       onDisconnected={handleDisconnected}
-      onError={() => setConnectionIssue('Check your connection, then try joining the class again.')}
+      onError={handleDisconnected}
     >
       <MuteStudentOnJoin isHost={isHost} />
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
-      <ClassroomConnectionGate issue={connectionIssue} onRetry={() => window.location.reload()}>
+      <ClassroomConnectionGate issue={connectionIssue} onRetry={retryConnection}>
         {/* Main classroom UI only appears once the room connection succeeds. */}
         <ClassroomLayout
           isHost={isHost}
