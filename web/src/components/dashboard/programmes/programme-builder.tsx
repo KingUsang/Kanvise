@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import {
   clearProgrammeDraft,
   loadProgrammeDraft,
@@ -295,16 +296,15 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
 
   return (
     <div className="mx-auto w-full max-w-[1440px]">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link href="/dashboard/programmes" className="inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-[18px]">arrow_back</span> Programmes</Link>
-          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">{isEditing ? 'Manage programme' : 'Create programme'}</h1>
-        </div>
-        <div className="text-right">
+      <DashboardPageHeader
+        className="mb-5"
+        breadcrumb={<Link href="/dashboard/programmes" className="inline-flex items-center gap-1 font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-[18px]">arrow_back</span> Programmes</Link>}
+        title={isEditing ? 'Manage programme' : 'Create programme'}
+        actions={<div className="text-right">
           {savedAt && <p className="text-xs font-medium text-[#474551]"><span className="mr-1 inline-block h-2 w-2 rounded-full bg-green-600" />Draft saved on this device</p>}
           {!savedProgramme?.is_published && <button onClick={discard} className="mt-1 text-xs font-semibold text-[#994704] hover:underline">Discard draft</button>}
-        </div>
-      </div>
+        </div>}
+      />
 
       <div className="mb-4 rounded-lg border border-[#c8c5d2] bg-white p-3 lg:hidden">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#474551]"><span>Step {step + 1} of {steps.length}</span><span>{steps[step].short}</span></div>

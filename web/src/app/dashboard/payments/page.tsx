@@ -102,7 +102,7 @@ export default function PaymentsPage() {
     <div className="flex flex-col gap-6 max-w-[1440px]">
       {/* Page Header */}
       <DashboardPageHeader
-        className="border-b border-[#c8c5d2] pb-4"
+        className="border-b border-dashboard-outline pb-4"
         title="Payments"
         description="See student payments, where your money will be sent, and your Kanvise plan."
       />
@@ -110,37 +110,37 @@ export default function PaymentsPage() {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Payment Setup Card */}
-        <section className="bg-[#fbf9f8] border border-[#C2B59B] rounded flex flex-col shadow-[0px_4px_20px_rgba(61,61,61,0.08)] col-span-1 xl:col-span-2 relative overflow-hidden">
-          <div className="p-6 pb-4 border-b border-[#C2B59B] flex justify-between items-center bg-[#ffffff]">
+        <section className="relative col-span-1 flex flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card xl:col-span-2">
+          <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6 pb-4">
             <div>
               <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Bank account for payouts</h3>
               <p className="text-[12px] font-semibold tracking-wider text-[#474551] mt-1">
-                Status: <span className="text-[#994704] font-bold">{subaccount ? "Configured" : "Pending Setup"}</span>
+                Status: <span className="font-bold text-dashboard-primary">{subaccount ? "Configured" : "Pending Setup"}</span>
               </p>
             </div>
             <Landmark className="text-[#787582]" size={30} />
           </div>
-          <div className="p-6 flex-1 flex flex-col justify-center items-center text-center bg-[#f5f3f2]/30 min-h-[200px]">
+          <div className="flex min-h-[200px] flex-1 flex-col items-center justify-center bg-dashboard-surface p-6 text-center">
             {subaccount ? (
               <>
-                <Wallet className="text-[#994704] mb-4 opacity-80" size={48} />
+                <Wallet className="mb-4 text-dashboard-primary opacity-80" size={48} />
                 <h4 className="text-[18px] font-bold text-[#1b1c1c] mb-2">Bank account added</h4>
                 <p className="text-[14px] text-[#474551] max-w-md mb-6">{subaccount.business_name} - {subaccount.account_number}</p>
                 <button 
                   onClick={() => setIsEditModalOpen(true)}
-                  className="bg-[#fbf9f8] border border-[#c8c5d2] text-[#474551] px-6 py-3 rounded text-[12px] font-semibold tracking-wider hover:bg-[#f5f3f2] transition-colors shadow-sm flex items-center gap-2"
+                  className="flex items-center gap-2 rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-6 py-3 text-[12px] font-semibold tracking-wider text-dashboard-foreground shadow-sm transition-colors hover:bg-dashboard-surface-subtle"
                 >
                   Change bank details
                 </button>
               </>
             ) : (
               <>
-                <Wallet className="text-[#994704] mb-4 opacity-80" size={48} />
+                <Wallet className="mb-4 text-dashboard-primary opacity-80" size={48} />
                 <h4 className="text-[18px] font-bold text-[#1b1c1c] mb-2">Add the account where you receive payments</h4>
                 <p className="text-[14px] text-[#474551] max-w-md mb-6">Student payments cannot be sent to your school until you add a Nigerian bank account.</p>
                 <button 
                   onClick={() => setIsEditModalOpen(true)}
-                  className="bg-[#994704] text-white px-6 py-3 rounded text-[12px] font-semibold tracking-wider hover:bg-[#ff9653] transition-colors shadow-sm flex items-center gap-2"
+                  className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-primary px-6 py-3 text-[12px] font-semibold tracking-wider text-white shadow-sm transition-colors hover:bg-dashboard-primary/90"
                 >
                   <Plus size={18} />
                   Add bank details
@@ -151,7 +151,7 @@ export default function PaymentsPage() {
         </section>
 
         {/* Subscription Status Card */}
-        <section className="bg-[#2e2877] text-white rounded flex flex-col shadow-[0px_4px_20px_rgba(61,61,61,0.08)] col-span-1">
+        <section className="col-span-1 flex flex-col rounded-dashboard-panel bg-dashboard-primary text-white shadow-dashboard-card">
           <div className="p-6 pb-4 border-b border-[#180d62] flex justify-between items-center">
             <h3 className="text-[20px] font-semibold">Kanvise Subscription</h3>
             <BadgeCheck className="text-[#c4c0ff]" size={24} />
@@ -178,8 +178,8 @@ export default function PaymentsPage() {
       </div>
 
       {/* Transaction List Data Table */}
-      <section className="bg-[#fbf9f8] border border-[#C2B59B] rounded flex flex-col shadow-[0px_4px_20px_rgba(61,61,61,0.08)] mt-[32px] overflow-hidden">
-        <div className="p-6 border-b border-[#C2B59B] flex justify-between items-center bg-[#ffffff]">
+      <section className="mt-8 flex flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
+        <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6">
           <div>
             <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Payments received</h3>
             <p className="text-[12px] font-semibold tracking-wider text-[#474551] mt-1">Successful student payments to your school</p>
@@ -187,7 +187,7 @@ export default function PaymentsPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="bg-[#f5f0e6] border-b border-[#C2B59B]">
+            <thead className="border-b border-dashboard-outline bg-dashboard-surface-subtle">
               <tr>
                 <th className="py-3 px-6 text-[12px] font-semibold tracking-wider text-[#474551] uppercase">Date</th>
                 <th className="py-3 px-6 text-[12px] font-semibold tracking-wider text-[#474551] uppercase">Student</th>
@@ -204,7 +204,7 @@ export default function PaymentsPage() {
                   <td colSpan={7} className="py-8 text-center text-[#474551]">No successful student payments yet.</td>
                 </tr>
               ) : payments.map((payment) => (
-                <tr key={payment.id} className="border-b border-[#C2B59B] hover:bg-[#180d62]/5 transition-colors">
+                <tr key={payment.id} className="border-b border-dashboard-outline/50 transition-colors hover:bg-dashboard-primary/5">
                   <td className="py-4 px-6 text-[#474551]">{new Date(payment.paid_at || payment.created_at).toLocaleDateString()}</td>
                   <td className="py-4 px-6 font-semibold text-[#1b1c1c]">
                     {payment.user_profiles?.first_name} {payment.user_profiles?.last_name}

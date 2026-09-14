@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Download, Edit, Search, FileText, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -122,15 +123,14 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
   return (
     <div className="flex flex-col animate-in fade-in duration-500">
       {/* Context Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 pb-6">
-        <div>
-          <h1 className="mb-2 text-2xl font-bold leading-tight tracking-tight text-[#180d62] sm:text-3xl">Submission Review</h1>
-          <p className="text-gray-600 flex items-center gap-2">
+      <DashboardPageHeader
+        className="mb-8 border-b border-dashboard-outline pb-6"
+        title="Submission review"
+        description={<span className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             {summary.total_reviewed} of {summary.total_submitted} submissions reviewed
-          </p>
-        </div>
-      </div>
+          </span>}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Student List */}

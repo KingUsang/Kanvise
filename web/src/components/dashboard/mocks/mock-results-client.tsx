@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { QuestionContent, type ContentBlock } from '@/components/questions/question-content'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 type MockAnswer = {
   id: string
@@ -189,16 +190,14 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
 
   return (
     <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-16">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs text-on-surface-variant"><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</p>
-          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-on-surface sm:text-3xl">Mock results</h1>
-          <p className="mt-1 text-sm text-on-surface-variant">Review scores and mark written answers for {data.mock.course?.name || 'this subject'}.</p>
-        </div>
-        <button type="button" onClick={exportCsv} disabled={data.attempts.length === 0} className="inline-flex items-center justify-center gap-2 rounded-md border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-50">
+      <DashboardPageHeader
+        breadcrumb={<><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</>}
+        title="Mock results"
+        description={`Review scores and mark written answers for ${data.mock.course?.name || 'this subject'}.`}
+        actions={<button type="button" onClick={exportCsv} disabled={data.attempts.length === 0} className="inline-flex items-center justify-center gap-2 rounded-md border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-50">
           <span className="material-symbols-outlined text-lg">download</span> Export CSV
-        </button>
-      </header>
+        </button>}
+      />
 
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-outline-variant bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Total submissions</p><p className="mt-3 text-3xl font-bold text-on-surface">{data.attempts.length}</p></div>

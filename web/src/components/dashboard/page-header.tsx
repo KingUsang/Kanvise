@@ -4,6 +4,7 @@ type DashboardPageHeaderProps = {
   title: ReactNode
   description?: ReactNode
   eyebrow?: ReactNode
+  breadcrumb?: ReactNode
   actions?: ReactNode
   supportingAction?: ReactNode
   className?: string
@@ -17,6 +18,7 @@ export function DashboardPageHeader({
   title,
   description,
   eyebrow,
+  breadcrumb,
   actions,
   supportingAction,
   className = '',
@@ -24,7 +26,8 @@ export function DashboardPageHeader({
   return (
     <header className={`flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between ${className}`.trim()}>
       <div>
-        {eyebrow ? <p className="text-dashboard-eyebrow font-bold uppercase text-dashboard-accent">{eyebrow}</p> : null}
+        {breadcrumb ? <div className="mb-2 text-sm text-dashboard-muted">{breadcrumb}</div> : null}
+        {eyebrow ? <p className="text-dashboard-eyebrow font-bold uppercase text-dashboard-muted">{eyebrow}</p> : null}
         <h1 className={`text-dashboard-page-title font-bold text-dashboard-foreground sm:text-dashboard-page-title-desktop ${eyebrow ? 'mt-2' : ''}`}>{title}</h1>
         {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-dashboard-muted sm:text-base">{description}</p> : null}
         {supportingAction ? <div className="mt-2">{supportingAction}</div> : null}

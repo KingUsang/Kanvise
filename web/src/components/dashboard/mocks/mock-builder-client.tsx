@@ -11,6 +11,7 @@ import { MockDraftPreview, type DraftPreviewQuestion } from "./mock-draft-previe
 import { MockImportProgressCard, newMockImportProgress, type MockImportProgress } from "./mock-import-progress";
 import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 import { MockBuilderStepProgress } from "./mock-builder-step-progress";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 type Course = {
   id: string;
@@ -1101,12 +1102,11 @@ export function MockBuilderClient({ token }: { token: string }) {
       {isPreviewOpen && <MockDraftPreview title={title} description={description} questions={draftPreviewQuestions} onClose={() => setIsPreviewOpen(false)} />}
 
       {/* Page Header */}
-      <div className="mb-8 flex flex-col gap-4 border-b border-[#e4e2e1] pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">{isEditMode ? "Edit Mock" : "Build a Mock"}</h1>
-          <p className="mt-1 text-sm text-[#474551] sm:text-[16px]">Choose how the mock should work, then add or reuse questions for your students.</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      <DashboardPageHeader
+        className="mb-8 border-b border-[#e4e2e1] pb-4"
+        title={isEditMode ? "Edit Mock" : "Build a Mock"}
+        description="Choose how the mock should work, then add or reuse questions for your students."
+        actions={<>
           <button type="button" onClick={() => setIsPreviewOpen(true)} disabled={draftPreviewQuestions.length === 0} className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#2e2877] disabled:cursor-not-allowed disabled:opacity-45"><span className="material-symbols-outlined text-[18px]">preview</span>Preview as student</button>
           <button 
             onClick={() => handleSave(false)}
@@ -1115,8 +1115,8 @@ export function MockBuilderClient({ token }: { token: string }) {
           >
             {isSaving ? "Saving…" : "Save as Draft"}
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       <MockBuilderStepProgress
         steps={workflowSteps}
