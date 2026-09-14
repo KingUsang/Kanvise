@@ -34,7 +34,13 @@ export type BoardPdfDocument = {
   pageCount: number;
 };
 
-const CollaborativeWhiteboard = ({ pdfDocument }: { pdfDocument?: BoardPdfDocument }) => {
+const CollaborativeWhiteboard = ({
+  pdfDocument,
+  onPdfRenderStateChange,
+}: {
+  pdfDocument?: BoardPdfDocument
+  onPdfRenderStateChange?: (rendering: boolean) => void
+}) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const [activeTool, setActiveTool] = useState<"hand" | "freedraw" | "eraser">("hand");
   const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -303,6 +309,7 @@ const CollaborativeWhiteboard = ({ pdfDocument }: { pdfDocument?: BoardPdfDocume
     const pageKey = `${pdfDocument.materialId}:${pdfDocument.page}:${pdfDocument.url}`;
     if (displayedPdfPageRef.current === pageKey) return;
 
+    onPdfRenderStateChange?.(true)
     void addPdfPageToBoard(pdfDocument, pdfDocument.page)
       .then((position) => {
         // Only mark it displayed after PDF.js has actually rendered it, so a
@@ -312,8 +319,11 @@ const CollaborativeWhiteboard = ({ pdfDocument }: { pdfDocument?: BoardPdfDocume
       })
       .catch((error) => {
         console.error('Failed to render presentation PDF page', error);
+      })
+      .finally(() => {
+        onPdfRenderStateChange?.(false)
       });
-  }, [addPdfPageToBoard, excalidrawAPI, pdfDocument]);
+  }, [addPdfPageToBoard, excalidrawAPI, onPdfRenderStateChange, pdfDocument]);
 
   // When mounting, ask the room if anyone has the current scene
   useEffect(() => {

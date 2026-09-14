@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Expand,
   FileText, Loader2, Trash2, Upload, X,
@@ -81,9 +81,11 @@ function MaterialsDrawer() {
 export default function PresentationStage({ isHost }: { isHost: boolean }) {
   const { mode, active, legacySlides, loading, changePage, closePresentation, getViewUrl } = usePresentationSession()
   const [url, setUrl] = useState('')
+  const [isRenderingPage, setIsRenderingPage] = useState(false)
   const stageRef = useRef<HTMLDivElement>(null)
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
+  const handlePdfRenderStateChange = useCallback((rendering: boolean) => setIsRenderingPage(rendering), [])
 
   useEffect(() => {
     setUrl('')
@@ -123,9 +125,14 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
             url,
             page: active.current_page,
             pageCount: active.page_count,
-          }} />
+          }} onPdfRenderStateChange={handlePdfRenderStateChange} />
         )}
       </div>
+      {isRenderingPage && <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/35" role="status" aria-live="polite">
+        <div className="flex items-center gap-3 rounded-xl bg-[#292a2d]/95 px-4 py-3 text-sm font-semibold text-white shadow-xl">
+          <Loader2 size={18} className="animate-spin" /> Rendering page {active.current_page} of {active.page_count}…
+        </div>
+      </div>}
       <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 max-w-[60%] -translate-x-1/2 truncate rounded-full bg-black/65 px-3 py-1.5 text-[11px] font-medium text-white/90">{active.filename}</div>
       {legacySlides.length > 0 && <span className="sr-only">Legacy slide materials remain available for this class.</span>}
       {isHost && <MaterialsDrawer />}
