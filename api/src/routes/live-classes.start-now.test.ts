@@ -136,7 +136,7 @@ describe('POST /live-classes/start-now', () => {
 
     expect(response.status).toBe(201)
     expect(body.data).toMatchObject({ id: 'class-shared', class_title: 'Revision class', course_name: null, is_host: true })
-    expect(body.data.share_token).toMatch(/^[A-Za-z0-9_-]{40,}$/)
+    expect(body.data.share_token).toMatch(/^[A-Za-z0-9_-]{10,24}$/)
     expect(mocks.from).not.toHaveBeenCalledWith('tutor_course_assignments')
   })
 

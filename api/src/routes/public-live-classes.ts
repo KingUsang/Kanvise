@@ -29,10 +29,10 @@ function writeGuestCookie(c: any, token: string) {
 }
 
 async function findClass(shareToken: string) {
-  if (!/^[A-Za-z0-9_-]{40,}$/.test(shareToken)) return null
+  if (!/^[A-Za-z0-9_-]{10,24}$/.test(shareToken)) return null
   const { data, error } = await db.from('live_classes')
-    .select('id, school_id, title, status, scheduled_at, livekit_room_name, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
-    .eq('share_token_hash', tokenHash(shareToken)).eq('access_mode', 'anyone_with_link').maybeSingle()
+    .select('id, school_id, course_id, title, status, scheduled_at, livekit_room_name, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
+    .eq('share_token_hash', tokenHash(shareToken)).maybeSingle()
   if (error) throw error
   return data
 }
@@ -44,6 +44,7 @@ function publicClassData(liveClass: any) {
     scheduled_at: liveClass.scheduled_at,
     centre_name: liveClass.school?.name || 'Kanvise centre',
     centre_logo_url: liveClass.school?.logo_url || null,
+    access_mode: liveClass.access_mode,
   }
 }
 
@@ -67,13 +68,19 @@ async function currentGuest(classId: string, c: any) {
   return data
 }
 
-async function recognisedMember(c: any, schoolId: string) {
+async function recognisedMember(c: any, liveClass: any) {
   const header = c.req.header('Authorization')
   if (!header?.startsWith('Bearer ')) return null
   const { data: auth, error: authError } = await supabase.auth.getUser(header.slice(7))
   if (authError || !auth.user) return null
-  const { data } = await db.from('user_profiles').select('id, school_id, first_name, last_name, kanvise_user_id')
-    .eq('supabase_auth_id', auth.user.id).eq('school_id', schoolId).maybeSingle()
+  const { data } = await db.from('user_profiles').select('id, school_id, role, first_name, last_name, kanvise_user_id')
+    .eq('supabase_auth_id', auth.user.id).eq('school_id', liveClass.school_id).maybeSingle()
+  if (!data) return null
+  if (liveClass.access_mode === 'enrolled_learners') {
+    if (data.role !== 'student' || !liveClass.course_id) return null
+    const { data: enrolment } = await db.from('enrolments').select('id').eq('student_id', data.id).eq('course_id', liveClass.course_id).eq('school_id', liveClass.school_id).maybeSingle()
+    if (!enrolment) return null
+  }
   return data || null
 }
 
@@ -101,10 +108,14 @@ publicLiveClassesRouter.post('/:shareToken/join', async c => {
     if (!liveClass || liveClass.share_link_revoked_at) return c.json({ error: 'This class link is unavailable', code: 'LINK_UNAVAILABLE' }, 404)
     if (liveClass.status !== 'live' || !liveClass.livekit_room_name) return c.json({ error: liveClass.status === 'completed' ? 'This class has ended' : 'Your tutor has not started this class yet', code: liveClass.status === 'completed' ? 'CLASS_ENDED' : 'CLASS_NOT_LIVE' }, 409)
 
-    const member = await recognisedMember(c, liveClass.school_id)
+    const member = await recognisedMember(c, liveClass)
     let identity: string
     let displayName: string
     let attendanceKind: 'member' | 'guest'
+    if (liveClass.access_mode === 'enrolled_learners' && !member) {
+      const hasAuth = c.req.header('Authorization')?.startsWith('Bearer ')
+      return c.json({ error: hasAuth ? 'You are not enrolled in this class' : 'Sign in with your learner account to join this class', code: hasAuth ? 'NOT_ENROLLED' : 'AUTH_REQUIRED' }, 403)
+    }
     if (member) {
       identity = member.id
       displayName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.kanvise_user_id || 'Learner'
@@ -144,7 +155,7 @@ publicLiveClassesRouter.get('/:shareToken/presentations', async c => {
   try {
     const liveClass = await findClass(c.req.param('shareToken')!)
     if (!liveClass || liveClass.share_link_revoked_at || liveClass.status !== 'live') return c.json({ error: 'This class is unavailable', code: 'CLASS_UNAVAILABLE' }, 404)
-    const [guest, member] = await Promise.all([currentGuest(liveClass.id, c), recognisedMember(c, liveClass.school_id)])
+    const [guest, member] = await Promise.all([currentGuest(liveClass.id, c), recognisedMember(c, liveClass)])
     if (!guest && !member) return c.json({ error: 'Join this class before viewing its materials', code: 'GUEST_SESSION_REQUIRED' }, 401)
     const { data, error } = await db.from('live_class_presentations').select('*').eq('live_class_id', liveClass.id).order('sort_order', { ascending: true }).order('created_at', { ascending: true })
     if (error) throw error
@@ -159,7 +170,7 @@ publicLiveClassesRouter.get('/:shareToken/presentations/:presentationId/view', a
   try {
     const liveClass = await findClass(c.req.param('shareToken')!)
     if (!liveClass || liveClass.share_link_revoked_at || liveClass.status !== 'live') return c.json({ error: 'This class is unavailable', code: 'CLASS_UNAVAILABLE' }, 404)
-    const [guest, member] = await Promise.all([currentGuest(liveClass.id, c), recognisedMember(c, liveClass.school_id)])
+    const [guest, member] = await Promise.all([currentGuest(liveClass.id, c), recognisedMember(c, liveClass)])
     if (!guest && !member) return c.json({ error: 'Join this class before viewing its materials', code: 'GUEST_SESSION_REQUIRED' }, 401)
     const { data, error } = await db.from('live_class_presentations').select('file_key, processing_status').eq('id', c.req.param('presentationId')!).eq('live_class_id', liveClass.id).maybeSingle()
     if (error || !data || data.processing_status !== 'ready') return c.json({ error: 'Material is not ready', code: 'MATERIAL_NOT_READY' }, 409)

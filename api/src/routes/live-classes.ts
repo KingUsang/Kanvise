@@ -196,7 +196,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   }
 
 
-  const shareToken = accessMode === 'anyone_with_link' ? randomBytes(32).toString('base64url') : null
+  const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
   const { data, error } = await (supabase.from('live_classes') as any)
     .insert({
       school_id: user.school_id,
@@ -260,7 +260,7 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   }
 
   const title = String(body.title || '').trim().slice(0, 160) || (course ? `${course.name} class` : 'Live class')
-  const shareToken = accessMode === 'anyone_with_link' ? randomBytes(32).toString('base64url') : null
+  const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
   const startedAt = new Date().toISOString()
   const { data: insertedClass, error: insertError } = await (supabase.from('live_classes') as any)
     .insert({
@@ -678,7 +678,7 @@ liveClassesRouter.post('/:id/regenerate-link', requireRole('tutor', 'admin'), as
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
   if (liveClass.access_mode !== 'anyone_with_link') return c.json({ error: 'Only shared classes have a link to regenerate', code: 'NOT_SHARED_CLASS' }, 400)
-  const shareToken = randomBytes(32).toString('base64url')
+  const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
   const now = new Date().toISOString()
   const { error } = await (supabase.from('live_classes') as any).update({
     share_token_hash: createHash('sha256').update(shareToken).digest('hex'), share_link_revoked_at: null,
