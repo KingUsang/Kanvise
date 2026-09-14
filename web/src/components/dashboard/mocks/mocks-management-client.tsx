@@ -138,7 +138,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
         className="mb-8 border-b border-dashboard-outline pb-6"
         title="Mocks"
         description="Create practice exams, publish them to students, and review their results."
-        actions={<Link href="/dashboard/mocks/builder" className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-primary px-6 py-3 text-sm font-semibold text-white shadow-dashboard-card transition-colors hover:bg-dashboard-primary/90">
+        actions={<Link href="/dashboard/mocks/builder" className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-6 py-3 text-sm font-semibold text-white shadow-dashboard-card transition-colors hover:bg-dashboard-accent/90">
             <span className="material-symbols-outlined text-[20px]">add</span>
             Create Mock
         </Link>}

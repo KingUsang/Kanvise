@@ -233,7 +233,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
         className="mb-7 border-b border-dashboard-outline pb-6"
         title="Question Banks"
         description="Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks."
-        actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-dashboard-primary/90">
+        actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-dashboard-accent/90">
           <span className="material-symbols-outlined text-xl">create_new_folder</span>Create a bank
         </button>}
       />

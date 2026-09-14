@@ -116,7 +116,7 @@ export function ProgrammesClient() {
               <span className="material-symbols-outlined text-[19px]">storefront</span> Preview centre page
             </a>
           )}
-          <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-dashboard-primary/90">
+          <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-dashboard-accent/90">
             <span className="material-symbols-outlined text-[19px]">add</span> Create programme
           </Link>
         </>}

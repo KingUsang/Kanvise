@@ -184,7 +184,7 @@ export default function StudentsPage() {
           <button
             type="button"
             onClick={() => { setAddStudentError(null); setImportSummary(null); setAddingStudent(true); }}
-            className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-white transition-colors hover:bg-dashboard-primary/90"
+            className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-4 py-2 text-white transition-colors hover:bg-dashboard-accent/90"
           >
             <UserPlus size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">Add student</span>
