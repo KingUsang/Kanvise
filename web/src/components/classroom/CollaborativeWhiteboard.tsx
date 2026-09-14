@@ -74,16 +74,18 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
 
       if (data.type === "PDF_PAGE_PLACED") {
         const source = pdfDocumentRef.current;
-        if (source?.materialId === data.materialId) {
-          void addPdfPageToBoardRef.current?.(source, data.page, { x: data.x, y: data.y });
+        const addPage = addPdfPageToBoardRef.current;
+        if (source && addPage && source.materialId === data.materialId) {
+          void addPage(source, data.page, { x: data.x, y: data.y });
         }
       }
 
       if (data.type === "PDF_PAGES_SYNC") {
         const source = pdfDocumentRef.current;
-        if (source?.materialId === data.materialId) {
+        const addPage = addPdfPageToBoardRef.current;
+        if (source && addPage && source.materialId === data.materialId) {
           void data.pages.reduce(
-            (chain: Promise<unknown>, page: { page: number; x: number; y: number }) => chain.then(() => addPdfPageToBoardRef.current?.(source, page.page, page)),
+            (chain: Promise<unknown>, page: { page: number; x: number; y: number }) => chain.then(() => addPage(source, page.page, page)),
             Promise.resolve(),
           );
         }
