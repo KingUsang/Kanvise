@@ -109,7 +109,7 @@ export function ProgrammesClient() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#474551]">What you teach</p>
-          <h1 className="mt-2 text-3xl font-bold text-[#1b1c1c]">Programmes</h1>
+          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Programmes</h1>
           <p className="mt-1 max-w-2xl text-sm text-[#474551]">Create enrolment packages and organise the subjects students receive.</p>
         </div>
         <div className="flex flex-wrap gap-3">

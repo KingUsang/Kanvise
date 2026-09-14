@@ -133,9 +133,9 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
         </div>
       )}
       {/* Header Section */}
-      <div className="flex justify-between items-end mb-8 border-b border-[#e4e2e1] pb-6">
+      <div className="mb-8 flex flex-col gap-4 border-b border-[#e4e2e1] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[32px] leading-[40px] tracking-tight font-bold text-[#1b1c1c] mb-2">Mocks</h1>
+          <h1 className="mb-2 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Mocks</h1>
           <p className="text-[16px] text-[#474551]">Create practice exams, publish them to students, and review their results.</p>
         </div>
         <Link href="/dashboard/mocks/builder" className="bg-[#994704] text-white text-[14px] font-semibold px-6 py-3 rounded-lg hover:bg-[#7a3903] transition-colors flex items-center gap-2 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">

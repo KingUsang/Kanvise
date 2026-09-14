@@ -336,10 +336,10 @@ export function NotesClient({ session }: NotesClientProps) {
   const filteredNotes = filterCourse ? notes.filter(n => n.course_id === filterCourse) : notes
 
   return (
-    <div className="flex-1 p-6 md:p-margin-desktop overflow-y-auto">
-      <div className="max-w-[1440px] mx-auto">
+    <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-[1440px]">
         <div className="mb-8">
-          <h2 className="text-headline-lg font-headline-lg text-primary mb-2">Learning materials</h2>
+          <h1 className="mb-2 text-2xl font-bold leading-tight tracking-tight text-primary sm:text-3xl">Learning materials</h1>
           <p className="text-body-md font-body-md text-on-surface-variant">Share notes, slides, and helpful documents with students in a subject.</p>
         </div>
 

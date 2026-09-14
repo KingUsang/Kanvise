@@ -227,11 +227,11 @@ export function QuestionBanksClient({ token }: { token: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 bg-[#fbf9f8] p-4 md:p-8 lg:p-10">
+    <main className="mx-auto w-full max-w-[1440px] flex-1 bg-[#fbf9f8]">
       <header className="mb-7 flex flex-col gap-4 border-b border-[#e4e2e1] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#994704]">Mock preparation</p>
-          <h1 className="text-[30px] font-bold leading-tight tracking-tight text-[#1b1c1c] md:text-[34px]">Question Banks</h1>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Question Banks</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f5c67] md:text-base">Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks.</p>
         </div>
         <button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#7a3903]">

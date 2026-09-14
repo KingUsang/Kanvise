@@ -108,7 +108,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Attendance Records</h2>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Attendance</h1>
           <p className="text-[16px] text-[#474551] mt-1">See who attended completed classes and how long they stayed.</p>
         </div>
       </div>

@@ -264,7 +264,7 @@ export function TutorsClient() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your teaching team</span>
-          <h2 className="mt-2 text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Tutors</h2>
+          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Tutors</h1>
           <p className="text-[16px] text-[#474551] mt-1">
             Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself.
           </p>

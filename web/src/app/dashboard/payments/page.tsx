@@ -102,7 +102,7 @@ export default function PaymentsPage() {
       {/* Page Header */}
       <header className="flex justify-between items-end border-b border-[#c8c5d2] pb-4">
         <div>
-          <h2 className="text-[#180d62] text-[32px] leading-[40px] tracking-[-0.01em] font-bold mb-1">Payments</h2>
+          <h1 className="mb-1 text-2xl font-bold leading-tight tracking-tight text-[#180d62] sm:text-3xl">Payments</h1>
           <p className="text-[#474551] text-[16px] leading-[24px]">See student payments, where your money will be sent, and your Kanvise plan.</p>
         </div>
       </header>

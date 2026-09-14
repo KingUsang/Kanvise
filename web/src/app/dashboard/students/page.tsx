@@ -179,7 +179,7 @@ export default function StudentsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your learners</span>
-          <h1 className="mt-2 text-[32px] leading-[40px] tracking-[-0.01em] font-bold text-kv-dark">Students</h1>
+          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-kv-dark sm:text-3xl">Students</h1>
           <p className="text-base leading-6 text-gray-500 mt-1 max-w-2xl">
             Add learners to your centre, see what they can access, and review their successful payment history.
           </p>
