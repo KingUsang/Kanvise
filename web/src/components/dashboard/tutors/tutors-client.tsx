@@ -282,7 +282,13 @@ export function TutorsClient() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="divide-y divide-dashboard-outline/50 sm:hidden">
+              {isLoading ? <p className="p-6 text-center text-sm text-[#474551]">Loading tutors…</p>
+                : loadError ? <div className="p-6 text-center text-sm text-[#474551]"><p>{loadError}</p><button type="button" onClick={() => void tutorsQuery.refetch()} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button></div>
+                : tutors.length === 0 ? <p className="p-6 text-center text-sm text-[#474551]">No tutors yet.</p>
+                : tutors.map((tutor) => { const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase(); const isRemoving = removingId === tutor.id; return <article key={tutor.id} className={`p-4 ${isRemoving ? 'opacity-40' : ''}`}><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#e4e2e1] font-bold text-[#474551]">{initials}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-[#1b1c1c]">{tutor.first_name} {tutor.last_name}</h2><p className="truncate text-xs text-[#474551]">{tutor.email}</p><p className="mt-2 text-xs text-[#474551]">{tutor.courses.length ? tutor.courses.map(course => course.name).join(', ') : 'No assigned subjects'}</p></div><button onClick={() => setConfirmation({ type: 'remove', id: tutor.id, name: `${tutor.first_name} ${tutor.last_name}` })} disabled={isRemoving} className="shrink-0 rounded p-2 text-[#ba1a1a] disabled:opacity-30" aria-label={`Remove ${tutor.first_name} ${tutor.last_name}`}><span className="material-symbols-outlined">person_remove</span></button></div></article> })}
+            </div>
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="border-b border-dashboard-outline bg-dashboard-surface-subtle text-dashboard-muted">

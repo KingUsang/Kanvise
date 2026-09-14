@@ -504,7 +504,13 @@ export function NotesClient({ session }: NotesClientProps) {
               </div>
 
               <div className="flex-1 overflow-auto">
-                <table className="w-full text-left border-collapse">
+                <div className="divide-y divide-dashboard-outline sm:hidden">
+                  {isLoadingNotes ? <p className="p-6 text-center text-sm text-dashboard-muted">Loading materials…</p>
+                    : loadError ? <div className="p-6 text-center text-sm text-dashboard-muted"><p>{loadError}</p><button type="button" onClick={() => void fetchAllNotes()} className="mt-3 rounded-dashboard-control bg-dashboard-primary px-3 py-2 font-semibold text-white">Try again</button></div>
+                    : filteredNotes.length === 0 ? <p className="p-6 text-center text-sm text-dashboard-muted">{filterCourse ? 'No materials in this subject yet.' : 'Share your first learning material.'}</p>
+                    : filteredNotes.map(note => { const style = getFileIcon(note.file_type); const course = courses.find(c => c.id === note.course_id); return <article key={note.id} className="p-4"><div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded ${style.bg} ${style.color}`}><span className="material-symbols-outlined">{style.icon}</span></div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{note.title}</h2><p className="mt-1 truncate text-xs text-dashboard-muted">{course?.name || 'Unknown subject'} · {formatFileSize(note.file_size_bytes)} · {new Date(note.created_at).toLocaleDateString()}</p></div><button onClick={() => handleDownload(note.download_url, note.file_name)} className="shrink-0 rounded border border-dashboard-outline px-3 py-1.5 text-xs font-semibold text-dashboard-primary">Open</button></div>{(role === 'admin' || currentProfileId === note.tutor_id) && <button onClick={() => setNoteToDelete(note)} className="mt-3 text-xs font-semibold text-dashboard-danger">Remove material</button>}</article> })}
+                </div>
+                <table className="hidden w-full text-left border-collapse sm:table">
                   <thead className="sticky top-0 z-10 border-b border-dashboard-outline bg-dashboard-surface-subtle">
                     <tr>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-dashboard-muted sm:px-6">Document</th>

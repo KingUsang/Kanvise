@@ -199,7 +199,12 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
         </div>
         
-        <div className="overflow-x-auto">
+        <div className="divide-y divide-[#c2b59b] sm:hidden">
+          {isLoading ? <p className="p-6 text-center text-sm text-[#474551]">Loading records…</p>
+            : records?.length === 0 ? <p className="p-6 text-center text-sm text-[#474551]">No attendance records found for the selected criteria.</p>
+            : records?.map((r: any) => <article key={r.id} className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-semibold text-[#1b1c1c]">{r.student_name}</h2><p className="mt-1 truncate text-xs text-[#716c76]">{r.course_name} · {r.class_title}</p></div><span className={`shrink-0 rounded px-2 py-1 text-[10px] font-bold uppercase ${r.status === 'Present' ? 'bg-[#b5f299]/30 text-[#386a1f]' : r.status === 'Late' ? 'bg-[#ffeb99]/40 text-[#7a5c00]' : 'bg-[#ffdad6] text-[#ba1a1a]'}`}>{r.status}</span></div><div className="mt-3 flex gap-5 text-xs text-[#474551]"><span><b>Joined</b> {r.join_time}</span><span><b>Stayed</b> {r.duration}</span></div></article>)}
+        </div>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-[#f5f3f2] border-b border-[#c2b59b]">

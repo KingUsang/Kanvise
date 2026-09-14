@@ -90,8 +90,14 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
       </div>
 
       {/* Data Table */}
-      <div className="overflow-x-auto rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
-        <table className="w-full min-w-[900px] text-left border-collapse">
+      <div className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
+        <div className="divide-y divide-dashboard-outline/50 sm:hidden">
+          {paginatedStudents.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">No students found matching filters.</p> : paginatedStudents.map((student) => <article key={student.id} onClick={() => setSelectedStudent(student)} className="cursor-pointer p-4 active:bg-dashboard-primary/5">
+            <div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-dashboard-primary text-xs font-bold text-white`}>{student.profile_photo_url ? <img src={student.profile_photo_url} alt="" className="h-full w-full object-cover" /> : <>{student.first_name?.[0] || ''}{student.last_name?.[0] || ''}</>}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{student.first_name} {student.last_name}</h2><p className="truncate text-xs text-gray-500">{student.email || student.kanvise_user_id || 'No contact detail'}</p></div><button onClick={(event) => { event.stopPropagation(); setSelectedStudent(student) }} className="shrink-0 rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877]">Details</button></div>
+            <div className="mt-3 flex flex-wrap gap-1">{student.enrolments?.length ? student.enrolments.map((enr: any) => <span key={enr.id} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-600">{enr.programmes?.name || enr.sub_programmes?.name || enr.courses?.name || 'Unknown'}</span>) : <span className="text-xs text-gray-400">No enrolments</span>}</div>
+          </article>)}
+        </div>
+        <div className="hidden overflow-x-auto sm:block"><table className="w-full min-w-[900px] text-left border-collapse">
           <thead>
             <tr className="border-b border-dashboard-outline bg-dashboard-surface-subtle">
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student Info</th>
@@ -166,7 +172,7 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
               })
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {selectedStudent && (

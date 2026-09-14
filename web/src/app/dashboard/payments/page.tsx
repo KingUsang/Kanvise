@@ -185,7 +185,10 @@ export default function PaymentsPage() {
             <p className="text-[12px] font-semibold tracking-wider text-[#474551] mt-1">Successful student payments to your school</p>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="divide-y divide-dashboard-outline/50 sm:hidden">
+          {payments.length === 0 ? <p className="p-6 text-center text-sm text-[#474551]">No successful student payments yet.</p> : payments.map((payment) => <article key={payment.id} className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-semibold text-[#1b1c1c]">{payment.user_profiles?.first_name} {payment.user_profiles?.last_name}</h2><p className="mt-1 truncate text-xs text-[#716c76]">{resolveItemName(payment)} · {new Date(payment.paid_at || payment.created_at).toLocaleDateString()}</p></div>{getStatusBadge(payment.status)}</div><div className="mt-3 flex items-end justify-between text-sm"><span className="text-[#716c76]">Student paid ₦{payment.amount?.toLocaleString()}</span><span className="font-semibold text-[#166534]">You receive ₦{payment.centre_amount?.toLocaleString()}</span></div></article>)}
+        </div>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead className="border-b border-dashboard-outline bg-dashboard-surface-subtle">
               <tr>
