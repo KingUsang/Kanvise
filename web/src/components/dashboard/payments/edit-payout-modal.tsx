@@ -120,7 +120,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1b1c1c]/50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-        <div className="flex justify-between items-center p-6 border-b border-[#C2B59B] bg-[#fbf9f8]">
+        <div className="flex justify-between items-center p-6 border-b border-[#c8c5d2] bg-[#fbf9f8]">
           <h2 className="text-[20px] font-semibold text-[#1b1c1c]">Configure Payout Account</h2>
           <button onClick={onClose} className="text-[#474551] hover:text-[#1b1c1c]">
             <X size={24} />

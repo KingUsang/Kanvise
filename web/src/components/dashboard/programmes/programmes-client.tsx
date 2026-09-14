@@ -139,9 +139,9 @@ export function ProgrammesClient() {
       )}
 
       {programmesQuery.isLoading ? (
-        <div className="rounded-lg border border-[#c2b59b] bg-white p-12 text-center text-sm text-[#474551]">Loading programmes…</div>
+        <div className="rounded-lg border border-[#c8c5d2] bg-white p-12 text-center text-sm text-[#474551]">Loading programmes…</div>
       ) : programmes.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-16 text-center">
+        <div className="rounded-lg border border-dashed border-[#c8c5d2] bg-white px-6 py-16 text-center">
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
           <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first programme</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Bundle at least one subject into a programme students can enrol in.</p>
@@ -150,7 +150,7 @@ export function ProgrammesClient() {
       ) : (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {programmes.map(programme => (
-            <article key={programme.id} className="overflow-hidden rounded-lg border border-[#c2b59b] bg-white shadow-sm">
+            <article key={programme.id} className="overflow-hidden rounded-lg border border-[#c8c5d2] bg-white shadow-sm">
               <div className="flex gap-4 p-5">
                 <div className="flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-[#c8c5d2] bg-[#f2ebd9]">
                   {programme.thumbnail_url ? <img src={programme.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <span className="material-symbols-outlined text-3xl text-[#994704]">menu_book</span>}

@@ -124,7 +124,7 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
       {/* Context Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 pb-6">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-[#180d62] mb-2 font-poppins">Submission Review</h2>
+          <h1 className="mb-2 text-2xl font-bold leading-tight tracking-tight text-[#180d62] sm:text-3xl">Submission Review</h1>
           <p className="text-gray-600 flex items-center gap-2">
             <FileText className="w-5 h-5" />
             {summary.total_reviewed} of {summary.total_submitted} submissions reviewed

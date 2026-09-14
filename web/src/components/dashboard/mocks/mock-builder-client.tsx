@@ -1103,7 +1103,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       {/* Page Header */}
       <div className="mb-8 flex flex-col gap-4 border-b border-[#e4e2e1] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold leading-tight text-[#1b1c1c] sm:text-[32px]">{isEditMode ? "Edit Mock" : "Build a Mock"}</h2>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">{isEditMode ? "Edit Mock" : "Build a Mock"}</h1>
           <p className="mt-1 text-sm text-[#474551] sm:text-[16px]">Choose how the mock should work, then add or reuse questions for your students.</p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -1151,7 +1151,7 @@ export function MockBuilderClient({ token }: { token: string }) {
             </div>
           )}
           {!isReadOnly && questions.length === 0 && selectedBankQuestions.length === 0 && !showImportPanel && !showBankPicker && (
-            <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
+            <div className="rounded-lg border border-dashed border-[#c8c5d2] bg-white px-6 py-10 text-center shadow-sm">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
                 <span className="material-symbols-outlined text-[28px]">quiz</span>
               </div>

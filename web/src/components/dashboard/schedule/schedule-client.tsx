@@ -297,7 +297,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#994704]">Teaching</p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#1b1c1c] sm:text-3xl">Classes</h2>
+          <h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Classes</h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551]">
             Start teaching now or plan a class for later.
           </p>
@@ -334,7 +334,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         <div className="lg:col-span-4 flex flex-col gap-6">
           
           {formMode && (
-            <div id="class-action-form" className="rounded-2xl border border-[#C2B59B] bg-white p-5 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-6">
+            <div id="class-action-form" className="rounded-2xl border border-[#c8c5d2] bg-white p-5 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-6">
               <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#e5dfda] pb-4">
                 <div>
                   <h3 className="text-xl font-bold text-[#180d62]">{formMode === 'now' ? 'Start a live class' : 'Schedule for later'}</h3>
@@ -390,7 +390,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                   <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Edit title or duration <span className="font-normal text-[#716c76]">(optional)</span></summary>
                   <div className="space-y-4 border-t border-[#e3ded9] px-4 py-4">
                     <label htmlFor="class-title-input" className="block text-sm font-medium text-[#1b1c1c]">Class title<input id="class-title-input" type="text" value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedCourse ? `${selectedCourse.name} class` : 'Generated from the subject'} className="mt-1.5 min-h-11 w-full rounded-lg border border-[#8b8580] px-3" /></label>
-                    <div><p className="text-sm font-medium text-[#1b1c1c]">Duration</p><div className="mt-2 grid grid-cols-4 gap-2">{[{ l: '45m', v: '45' }, { l: '1h', v: '60' }, { l: '1.5h', v: '90' }, { l: '2h', v: '120' }].map(option => <label key={option.v} className="cursor-pointer"><input type="radio" name="duration" value={option.v} checked={duration === option.v} onChange={event => setDuration(event.target.value)} className="peer sr-only" /><span className="flex min-h-10 items-center justify-center rounded-lg border border-[#C2B59B] text-sm text-[#474551] peer-checked:border-[#2e2877] peer-checked:bg-[#2e2877] peer-checked:text-white">{option.l}</span></label>)}</div></div>
+                    <div><p className="text-sm font-medium text-[#1b1c1c]">Duration</p><div className="mt-2 grid grid-cols-4 gap-2">{[{ l: '45m', v: '45' }, { l: '1h', v: '60' }, { l: '1.5h', v: '90' }, { l: '2h', v: '120' }].map(option => <label key={option.v} className="cursor-pointer"><input type="radio" name="duration" value={option.v} checked={duration === option.v} onChange={event => setDuration(event.target.value)} className="peer sr-only" /><span className="flex min-h-10 items-center justify-center rounded-lg border border-[#c8c5d2] text-sm text-[#474551] peer-checked:border-[#2e2877] peer-checked:bg-[#2e2877] peer-checked:text-white">{option.l}</span></label>)}</div></div>
                   </div>
                 </details>
 
@@ -402,7 +402,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           )}
           
           {/* Calendar Widget */}
-          <div className="bg-white border border-[#C2B59B] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] p-6">
+          <div className="bg-white border border-[#c8c5d2] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-[16px] leading-[24px] font-bold text-[#1b1c1c]">{monthName}</h3>
               <div className="flex gap-1">
@@ -469,7 +469,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               
               <div className="p-6 flex flex-col gap-4">
                 {liveClasses.map(cls => (
-                  <div key={cls.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-[#C2B59B] rounded relative overflow-hidden group">
+                  <div key={cls.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-[#c8c5d2] rounded relative overflow-hidden group">
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#994704]"></div>
                     <div className="flex-1 pl-2">
                       <div className="flex items-center gap-2 mb-1">
@@ -512,7 +512,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </button>
             </div>
           ) : !loading && classes.length === 0 ? (
-            <div className="flex min-h-[430px] flex-col items-center justify-center rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-12 text-center shadow-[0px_4px_20px_rgba(61,61,61,0.06)]">
+            <div className="flex min-h-[430px] flex-col items-center justify-center rounded-lg border border-dashed border-[#c8c5d2] bg-white px-6 py-12 text-center shadow-[0px_4px_20px_rgba(61,61,61,0.06)]">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
                 <span className="material-symbols-outlined text-[32px]">calendar_add_on</span>
               </div>
@@ -542,8 +542,8 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </div>
             </div>
           ) : (
-          <div className="bg-white border border-[#C2B59B] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] flex flex-col">
-            <div className="px-6 py-4 border-b border-[#C2B59B] flex justify-between items-center">
+          <div className="bg-white border border-[#c8c5d2] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] flex flex-col">
+            <div className="px-6 py-4 border-b border-[#c8c5d2] flex justify-between items-center">
               <div>
                 <h3 className="text-[20px] leading-[28px] font-bold text-[#180d62]">Scheduled Classes</h3>
                 <p className="text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] mt-1">
@@ -589,14 +589,14 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#C2B59B]/10 text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] border-b border-[#C2B59B]">
+                  <tr className="bg-[#c8c5d2]/10 text-[12px] leading-[16px] tracking-[0.05em] font-semibold text-[#474551] border-b border-[#c8c5d2]">
                     <th className="py-3 px-6 font-bold w-[120px]">Time</th>
                     <th className="py-3 px-6 font-bold">Subject / Title</th>
                     <th className="py-3 px-6 font-bold w-[150px]">Tutor</th>
                     <th className="py-3 px-6 font-bold text-right w-[200px]">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="text-[14px] leading-[20px] divide-y divide-[#C2B59B]/50">
+                <tbody className="text-[14px] leading-[20px] divide-y divide-[#c8c5d2]/50">
                   {loading ? (
                     <tr><td colSpan={4} className="text-center py-8 text-[#474551]">Loading...</td></tr>
                   ) : scheduledClasses.length === 0 ? (
@@ -641,7 +641,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
           {/* Completed Classes (Simplified) */}
           {completedClasses.length > 0 && (
-            <div className="bg-white border border-[#C2B59B] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] overflow-hidden transition-opacity">
+            <div className="bg-white border border-[#c8c5d2] rounded shadow-[0px_4px_20px_rgba(61,61,61,0.08)] overflow-hidden transition-opacity">
               <button 
                 onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}
                 className={`w-full px-6 py-4 flex justify-between items-center focus:outline-none hover:bg-[#f5f3f2] transition-colors ${!isCompletedExpanded ? 'opacity-80 hover:opacity-100' : ''}`}
@@ -657,9 +657,9 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
               </button>
               
               {isCompletedExpanded && (
-                <div className="border-t border-[#C2B59B] p-6 flex flex-col gap-4 bg-[#fbf9f8]">
+                <div className="border-t border-[#c8c5d2] p-6 flex flex-col gap-4 bg-[#fbf9f8]">
                   {completedClasses.map(cls => (
-                    <div key={cls.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-[#C2B59B] rounded relative overflow-hidden group opacity-80">
+                    <div key={cls.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-[#c8c5d2] rounded relative overflow-hidden group opacity-80">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#787582]"></div>
                       <div className="flex-1 pl-2">
                         <div className="flex items-center gap-2 mb-1">
