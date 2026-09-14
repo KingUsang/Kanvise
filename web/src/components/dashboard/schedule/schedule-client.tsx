@@ -303,13 +303,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         supportingAction={<Link href="/dashboard/attendance" className="inline-flex text-sm font-semibold text-[#2e2877] hover:underline">Attendance insights</Link>}
         actions={<>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#994704] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(153,71,4,0.22)]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-4 text-sm font-semibold text-white shadow-dashboard-card"
             onClick={() => { setActiveView('classes'); setFormMode('now') }}
           >
             <span aria-hidden="true" className="material-symbols-outlined text-[19px]">videocam</span>Start now
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#2e2877] bg-white px-4 text-sm font-semibold text-[#2e2877]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control border border-dashboard-primary bg-dashboard-surface px-4 text-sm font-semibold text-dashboard-primary"
             onClick={() => { setActiveView('classes'); setFormMode('later') }}
           >
             <span aria-hidden="true" className="material-symbols-outlined text-[19px]">calendar_add_on</span>Schedule

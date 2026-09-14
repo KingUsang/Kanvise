@@ -117,7 +117,7 @@ export function ProgrammesClient() {
               <span className="material-symbols-outlined text-[19px]">storefront</span> Preview centre page
             </a>
           )}
-          <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#753400]">
+          <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-dashboard-primary/90">
             <span className="material-symbols-outlined text-[19px]">add</span> Create programme
           </Link>
         </>}
@@ -138,18 +138,18 @@ export function ProgrammesClient() {
       )}
 
       {programmesQuery.isLoading ? (
-        <div className="rounded-lg border border-[#c2b59b] bg-white p-12 text-center text-sm text-[#474551]">Loading programmes…</div>
+        <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading programmes…</div>
       ) : programmes.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-16 text-center">
+        <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-16 text-center">
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
           <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first programme</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Bundle at least one subject into a programme students can enrol in.</p>
-          <Link href="/dashboard/programmes/new" className="mt-5 inline-flex rounded bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white">Create programme</Link>
+          <Link href="/dashboard/programmes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create programme</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {programmes.map(programme => (
-            <article key={programme.id} className="overflow-hidden rounded-lg border border-[#c2b59b] bg-white shadow-sm">
+            <article key={programme.id} className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               <div className="flex gap-4 p-5">
                 <div className="flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-[#c8c5d2] bg-[#f2ebd9]">
                   {programme.thumbnail_url ? <img src={programme.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <span className="material-symbols-outlined text-3xl text-[#994704]">menu_book</span>}

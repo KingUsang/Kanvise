@@ -135,10 +135,10 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       )}
       {/* Header Section */}
       <DashboardPageHeader
-        className="mb-8 border-b border-[#e4e2e1] pb-6"
+        className="mb-8 border-b border-dashboard-outline pb-6"
         title="Mocks"
         description="Create practice exams, publish them to students, and review their results."
-        actions={<Link href="/dashboard/mocks/builder" className="flex items-center gap-2 rounded-lg bg-[#994704] px-6 py-3 text-sm font-semibold text-white shadow-[0px_4px_20px_rgba(61,61,61,0.08)] transition-colors hover:bg-[#7a3903]">
+        actions={<Link href="/dashboard/mocks/builder" className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-primary px-6 py-3 text-sm font-semibold text-white shadow-dashboard-card transition-colors hover:bg-dashboard-primary/90">
             <span className="material-symbols-outlined text-[20px]">add</span>
             Create Mock
         </Link>}

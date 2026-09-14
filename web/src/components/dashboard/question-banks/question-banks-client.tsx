@@ -228,19 +228,19 @@ export function QuestionBanksClient({ token }: { token: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 bg-[#fbf9f8]">
+    <main className="mx-auto w-full max-w-[1440px] flex-1">
       <DashboardPageHeader
-        className="mb-7 border-b border-[#e4e2e1] pb-6"
+        className="mb-7 border-b border-dashboard-outline pb-6"
         eyebrow="Mock preparation"
         title="Question Banks"
         description="Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks."
-        actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#7a3903]">
+        actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-dashboard-primary/90">
           <span className="material-symbols-outlined text-xl">create_new_folder</span>Create a bank
         </button>}
       />
 
       <div className="grid min-h-[620px] gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="rounded-xl border border-[#dedbd8] bg-white p-3 shadow-[0_4px_20px_rgba(61,61,61,0.05)]">
+        <aside className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card">
           <div className="flex items-center justify-between px-2 pb-3 pt-1">
             <h2 className="text-sm font-semibold text-[#1b1c1c]">Your collections</h2>
             <span className="rounded-full bg-[#f3eee9] px-2 py-1 text-xs font-semibold text-[#744018]">{banks.length}</span>
@@ -266,7 +266,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
           </div>
         </aside>
 
-        <section className="min-w-0 rounded-xl border border-[#dedbd8] bg-white shadow-[0_4px_20px_rgba(61,61,61,0.05)]">
+        <section className="min-w-0 rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
           {!selectedBank ? (
             <div className="flex min-h-[520px] flex-col items-center justify-center px-6 text-center">
               <span className="material-symbols-outlined rounded-full bg-[#f3efec] p-4 text-4xl text-[#77727e]">library_add</span>
