@@ -629,21 +629,28 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
   }
-  try {
-    const roomService = getRoomService()
-    await roomService.deleteRoom(liveClass.livekit_room_name)
-  } catch (e) {
-    // Room may have already been deleted (e.g. everyone left) — log and continue
-    console.warn('[live-classes] deleteRoom warning (may already be gone):', e)
-  }
-
   const { error: updateError } = await supabase
     .from('live_classes')
     .update({ status: 'completed', ended_at: new Date().toISOString() })
     .eq('id', liveClass.id)
+    .eq('school_id', user.school_id)
+    .eq('status', 'live')
   if (updateError) {
-    return c.json({ error: 'The room closed, but the class record could not be completed', code: 'CLASS_END_UPDATE_FAILED' }, 500)
+    return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
   }
+
+  // Ending the class must feel immediate to the tutor. Mark it completed
+  // first, then ask LiveKit to close every participant connection without
+  // holding the browser hostage to a remote room-service round trip.
+  void (async () => {
+    try {
+      await getRoomService().deleteRoom(liveClass.livekit_room_name)
+    } catch (error) {
+      // New joins are already denied by the completed class status. Existing
+      // participants will leave naturally if this best-effort disconnect fails.
+      console.warn('[live-classes] background deleteRoom warning:', error)
+    }
+  })()
 
   return c.json({ message: 'Live class ended' })
 })
