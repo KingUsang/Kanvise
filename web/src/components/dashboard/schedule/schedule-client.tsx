@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -79,6 +79,8 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   })
   const [activeView, setActiveView] = useState<'classes' | 'timetable'>('classes')
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false)
+  const classActionFormRef = useRef<HTMLDivElement>(null)
+  const subjectSelectRef = useRef<HTMLSelectElement>(null)
   
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -153,6 +155,15 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     if (tutorIds.length === 1) setTutorId(tutorIds[0])
     else if (tutorIds.includes(user.id)) setTutorId(user.id)
   }, [capabilities.isAdmin, courseTutorsQuery.data, user.id])
+
+  useEffect(() => {
+    if (!formMode || activeView !== 'classes') return
+    const frame = window.requestAnimationFrame(() => {
+      classActionFormRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+      subjectSelectRef.current?.focus()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeView, formMode])
 
   const handleScheduleClass = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -334,7 +345,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         <div className="lg:col-span-4 flex flex-col gap-6">
           
           {formMode && (
-            <div id="class-action-form" className="rounded-2xl border border-[#C2B59B] bg-white p-5 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-6">
+            <div ref={classActionFormRef} id="class-action-form" className="rounded-2xl border border-[#C2B59B] bg-white p-5 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-6">
               <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#e5dfda] pb-4">
                 <div>
                   <h3 className="text-xl font-bold text-[#180d62]">{formMode === 'now' ? 'Start a live class' : 'Schedule for later'}</h3>
@@ -348,6 +359,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                   <label htmlFor="class-course" className="text-sm font-semibold text-[#1b1c1c]">What are you teaching?</label>
                   <select
                     id="class-course"
+                    ref={subjectSelectRef}
                     value={courseId}
                     onChange={event => { setCourseId(event.target.value); setTutorId(capabilities.isAdmin ? '' : user.id) }}
                     required
