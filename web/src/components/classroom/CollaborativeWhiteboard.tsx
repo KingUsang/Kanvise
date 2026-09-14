@@ -48,6 +48,10 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
   const redoStackRef = useRef<any[]>([]);
   const localPdfElementsRef = useRef<any[]>([]);
   const pendingPdfPagesRef = useRef(new Set<string>());
+  // A presentation must show its current page as soon as it opens. Previously
+  // the PDF was only rasterised after the tutor pressed "Place page", leaving
+  // the presentation surface as an empty board.
+  const displayedPdfPageRef = useRef<string | null>(null);
   const pdfDocumentRef = useRef<BoardPdfDocument | undefined>(pdfDocument);
   const addPdfPageToBoardRef = useRef<((source: BoardPdfDocument, page: number, position?: { x: number; y: number }) => Promise<{ x: number; y: number } | undefined>) | null>(null);
   const slideElementRef = useRef<any>(null);
@@ -318,6 +322,23 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
       if (promise) promise.catch(() => {});
     },
   }), [addPdfPageToBoard, pdfDocument, send]);
+
+  useEffect(() => {
+    if (!pdfDocument || !excalidrawAPI) return;
+    const pageKey = `${pdfDocument.materialId}:${pdfDocument.page}:${pdfDocument.url}`;
+    if (displayedPdfPageRef.current === pageKey) return;
+
+    void addPdfPageToBoard(pdfDocument, pdfDocument.page)
+      .then((position) => {
+        // Only mark it displayed after PDF.js has actually rendered it, so a
+        // transient signed-URL/network failure can be retried on the next
+        // state refresh.
+        if (position) displayedPdfPageRef.current = pageKey;
+      })
+      .catch((error) => {
+        console.error('Failed to render presentation PDF page', error);
+      });
+  }, [addPdfPageToBoard, excalidrawAPI, pdfDocument]);
 
   // When mounting, ask the room if anyone has the current scene
   useEffect(() => {
