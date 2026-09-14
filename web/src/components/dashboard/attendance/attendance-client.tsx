@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 interface AttendanceClientProps {
   token: string
@@ -106,12 +107,11 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
   return (
     <div className="animate-in fade-in duration-500">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Attendance</h1>
-          <p className="text-[16px] text-[#474551] mt-1">See who attended completed classes and how long they stayed.</p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        className="mb-8"
+        title="Attendance"
+        description="See who attended completed classes and how long they stayed."
+      />
 
       {/* Filters Grid */}
       <div className="bg-white border border-[#c2b59b] p-6 rounded-lg mb-8 shadow-sm">

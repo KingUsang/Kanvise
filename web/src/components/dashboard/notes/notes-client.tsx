@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { titleFromFileName, uploadFileWithProgress } from "@/lib/upload-with-progress"
 import { Session } from "@supabase/supabase-js"
 import { toast } from "sonner"
+import { DashboardPageHeader } from "@/components/dashboard/page-header"
 
 interface NotesClientProps {
   session: Session
@@ -338,10 +339,12 @@ export function NotesClient({ session }: NotesClientProps) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-[1440px]">
-        <div className="mb-8">
-          <h1 className="mb-2 text-2xl font-bold leading-tight tracking-tight text-primary sm:text-3xl">Learning materials</h1>
-          <p className="text-body-md font-body-md text-on-surface-variant">Share notes, slides, and helpful documents with students in a subject.</p>
-        </div>
+        <DashboardPageHeader
+          className="mb-8"
+          title="Learning materials"
+          titleClassName="text-primary"
+          description="Share notes, slides, and helpful documents with students in a subject."
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
           

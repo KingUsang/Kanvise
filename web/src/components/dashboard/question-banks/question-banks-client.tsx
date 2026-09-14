@@ -8,6 +8,7 @@ import katex from 'katex'
 import 'katex/contrib/mhchem'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 type Bank = {
   id: string
@@ -228,16 +229,15 @@ export function QuestionBanksClient({ token }: { token: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 bg-[#fbf9f8]">
-      <header className="mb-7 flex flex-col gap-4 border-b border-[#e4e2e1] pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#994704]">Mock preparation</p>
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Question Banks</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f5c67] md:text-base">Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks.</p>
-        </div>
-        <button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#7a3903]">
+      <DashboardPageHeader
+        className="mb-7 border-b border-[#e4e2e1] pb-6"
+        eyebrow="Mock preparation"
+        title="Question Banks"
+        description="Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks."
+        actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#7a3903]">
           <span className="material-symbols-outlined text-xl">create_new_folder</span>Create a bank
-        </button>
-      </header>
+        </button>}
+      />
 
       <div className="grid min-h-[620px] gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
         <aside className="rounded-xl border border-[#dedbd8] bg-white p-3 shadow-[0_4px_20px_rgba(61,61,61,0.05)]">

@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 interface Tutor {
   id: string
@@ -261,15 +262,11 @@ export function TutorsClient() {
     <div className="space-y-8 animate-in fade-in duration-500">
 
       {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your teaching team</span>
-          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Tutors</h1>
-          <p className="text-[16px] text-[#474551] mt-1">
-            Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself.
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        eyebrow="Your teaching team"
+        title="Tutors"
+        description="Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself."
+      />
 
       {/* ── Bento Grid Layout ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

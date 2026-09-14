@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
 type Programme = {
@@ -106,13 +107,11 @@ export function ProgrammesClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#474551]">What you teach</p>
-          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Programmes</h1>
-          <p className="mt-1 max-w-2xl text-sm text-[#474551]">Create enrolment packages and organise the subjects students receive.</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      <DashboardPageHeader
+        eyebrow="What you teach"
+        title="Programmes"
+        description="Create enrolment packages and organise the subjects students receive."
+        actions={<>
           {schoolSlug && (
             <a href={`/${schoolSlug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] bg-white px-4 py-2.5 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2]">
               <span className="material-symbols-outlined text-[19px]">storefront</span> Preview centre page
@@ -121,8 +120,8 @@ export function ProgrammesClient() {
           <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#753400]">
             <span className="material-symbols-outlined text-[19px]">add</span> Create programme
           </Link>
-        </div>
-      </header>
+        </>}
+      />
 
       {hasLocalDraft && (
         <div className="flex flex-col gap-3 rounded-lg border border-[#2e2877]/25 bg-[#f0efff] p-4 sm:flex-row sm:items-center sm:justify-between">
