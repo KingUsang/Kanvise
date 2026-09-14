@@ -342,7 +342,6 @@ export function NotesClient({ session }: NotesClientProps) {
         <DashboardPageHeader
           className="mb-8"
           title="Learning materials"
-          titleClassName="text-primary"
           description="Share notes, slides, and helpful documents with students in a subject."
         />
 

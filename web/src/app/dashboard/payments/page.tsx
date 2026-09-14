@@ -104,7 +104,6 @@ export default function PaymentsPage() {
       <DashboardPageHeader
         className="border-b border-[#c8c5d2] pb-4"
         title="Payments"
-        titleClassName="text-[#180d62]"
         description="See student payments, where your money will be sent, and your Kanvise plan."
       />
 

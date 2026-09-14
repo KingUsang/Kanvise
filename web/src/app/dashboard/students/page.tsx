@@ -180,7 +180,6 @@ export default function StudentsPage() {
       <DashboardPageHeader
         eyebrow="Your learners"
         title="Students"
-        titleClassName="text-kv-dark"
         description="Add learners to your centre, see what they can access, and review their successful payment history."
         actions={<>
           <button
