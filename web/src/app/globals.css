@@ -320,6 +320,9 @@ html {
 /* The classroom owns its board controls. Excalidraw still mounts its generic
    menu and drawing UI in zen mode, so hide that stock chrome only in Kanvise's
    teaching board; dialogs and the canvas remain unaffected. */
-.kanvise-teaching-board .layer-ui__wrapper {
-  display: none;
+.kanvise-teaching-board .excalidraw .layer-ui__wrapper {
+  /* Excalidraw's own selector is equally specific and its stylesheet can be
+     emitted after globals.css by Next. This is a deliberate, local override:
+     the classroom supplies its own touch toolbar. */
+  display: none !important;
 }

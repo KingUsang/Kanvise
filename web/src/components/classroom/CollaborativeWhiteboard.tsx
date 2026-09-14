@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any -- Excalidraw's imperative scene objects are intentionally passed through unchanged. */
 
-import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Eraser, Hand, Pencil, Redo2, Undo2 } from "lucide-react";
 
@@ -27,11 +27,6 @@ const Excalidraw = dynamic(
 import { useDataChannel, useRoomContext, useConnectionState } from "@livekit/components-react";
 import { ConnectionState } from "livekit-client";
 
-export interface WhiteboardRef {
-  setSlide: (imageUrl: string) => Promise<void>;
-  placePdfPage: () => Promise<void>;
-}
-
 export type BoardPdfDocument = {
   materialId: string;
   url: string;
@@ -39,7 +34,7 @@ export type BoardPdfDocument = {
   pageCount: number;
 };
 
-const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardPdfDocument }>(({ pdfDocument }, ref) => {
+const CollaborativeWhiteboard = ({ pdfDocument }: { pdfDocument?: BoardPdfDocument }) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const [activeTool, setActiveTool] = useState<"hand" | "freedraw" | "eraser">("hand");
   const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -303,26 +298,6 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
     addPdfPageToBoardRef.current = addPdfPageToBoard;
   }, [addPdfPageToBoard, pdfDocument]);
 
-  useImperativeHandle(ref, () => ({
-    setSlide: async (imageUrl: string) => {
-      // Discard previous drawings and load new slide
-      isUpdatingFromRemote.current = true;
-      await loadSlideToCanvas(imageUrl);
-      // Send the URL so every participant loads the image file locally.
-      const payload = JSON.stringify({ type: "SLIDE_CHANGE", imageUrl });
-      const promise = send(new TextEncoder().encode(payload), { reliable: true });
-      if (promise) promise.catch(() => {});
-    },
-    placePdfPage: async () => {
-      if (!pdfDocument) return;
-      const position = await addPdfPageToBoard(pdfDocument, pdfDocument.page);
-      if (!position) return;
-      const payload = JSON.stringify({ type: "PDF_PAGE_PLACED", materialId: pdfDocument.materialId, page: pdfDocument.page, ...position });
-      const promise = send(new TextEncoder().encode(payload), { reliable: true });
-      if (promise) promise.catch(() => {});
-    },
-  }), [addPdfPageToBoard, pdfDocument, send]);
-
   useEffect(() => {
     if (!pdfDocument || !excalidrawAPI) return;
     const pageKey = `${pdfDocument.materialId}:${pdfDocument.page}:${pdfDocument.url}`;
@@ -455,7 +430,7 @@ const CollaborativeWhiteboard = forwardRef<WhiteboardRef, { pdfDocument?: BoardP
       )}
     </div>
   );
-});
+};
 
 CollaborativeWhiteboard.displayName = "CollaborativeWhiteboard";
 
