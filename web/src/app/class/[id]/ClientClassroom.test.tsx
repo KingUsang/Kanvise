@@ -66,7 +66,7 @@ describe("ClientClassroom", () => {
       <ClientClassroom token="token" serverUrl="wss://livekit.example.com" roomName="room" classId="class" isHost classTitle="Physics" courseName="Science" />,
     )
 
-    const props = liveKitRoom.mock.calls[0]?.[0] as { onDisconnected: () => void }
+    const props = liveKitRoom.mock.calls[0]?.[0] as unknown as { onDisconnected: () => void }
     act(() => props.onDisconnected())
 
     expect(screen.getByRole('heading', { name: "We couldn't join the classroom" })).toBeInTheDocument()
