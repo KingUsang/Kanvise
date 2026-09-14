@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, Download, UserPlus, X, Upload } from "lucide-reac
 import Papa from "papaparse";
 import { createClient } from "@/lib/supabase/client";
 import StudentsTable from "@/components/dashboard/students/students-table";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 function exportToCSV(students: any[]) {
   if (students.length === 0) return;
@@ -176,16 +177,12 @@ export default function StudentsPage() {
   return (
     <div className="mx-auto max-w-[1440px] space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your learners</span>
-          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-kv-dark sm:text-3xl">Students</h1>
-          <p className="text-base leading-6 text-gray-500 mt-1 max-w-2xl">
-            Add learners to your centre, see what they can access, and review their successful payment history.
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap gap-3">
+      <DashboardPageHeader
+        eyebrow="Your learners"
+        title="Students"
+        titleClassName="text-kv-dark"
+        description="Add learners to your centre, see what they can access, and review their successful payment history."
+        actions={<>
           <button
             type="button"
             onClick={() => { setAddStudentError(null); setImportSummary(null); setAddingStudent(true); }}
@@ -206,8 +203,8 @@ export default function StudentsPage() {
             <Download size={18} />
             <span className="text-xs font-bold tracking-widest uppercase">Export students</span>
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Content */}
       {loading ? (

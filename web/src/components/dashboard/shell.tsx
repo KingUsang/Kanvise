@@ -35,7 +35,7 @@ export function DashboardShell({ children, user, capabilities }: DashboardShellP
   }
 
   return (
-    <div className="min-h-dvh bg-[#fbf9f8] font-sans relative">
+    <div className="relative min-h-dvh bg-dashboard-page font-sans">
       <Sidebar capabilities={capabilities} />
       <TopBar 
         user={user} 
@@ -45,7 +45,7 @@ export function DashboardShell({ children, user, capabilities }: DashboardShellP
       
       {/* Main Content Area */}
       <main className="md:ml-[280px] pt-16 min-h-dvh flex flex-col">
-        <div className="w-full flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-10">
+        <div className="w-full flex-1 p-dashboard-page-mobile pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-dashboard-page-desktop">
           {children}
         </div>
       </main>

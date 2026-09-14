@@ -98,6 +98,21 @@
   --kv-rodeo-dust-15: rgba(194, 181, 155, 0.15);
   --kv-shadow-card: 0 2px 12px rgba(46, 40, 119, 0.08);
   --kv-shadow-hero: 0 8px 40px rgba(46, 40, 119, 0.24);
+
+  /* Canonical dashboard tokens. Dashboard components must use these semantic
+     roles rather than selecting a raw brand value per page. */
+  --dashboard-page: #fbf9f8;
+  --dashboard-surface: #ffffff;
+  --dashboard-surface-subtle: #f5f3f2;
+  --dashboard-foreground: #1b1c1c;
+  --dashboard-muted: #474551;
+  --dashboard-outline: #c8c5d2;
+  --dashboard-primary: #2e2877;
+  --dashboard-accent: #994704;
+  --dashboard-danger: #ba1a1a;
+  --dashboard-radius-control: 0.5rem;
+  --dashboard-radius-panel: 0.75rem;
+  --dashboard-shadow-card: 0 4px 20px rgba(61, 61, 61, 0.08);
 }
 
 @theme inline {
@@ -122,6 +137,31 @@
   --color-kv-dark: #3C3027;
   --color-kv-dust: #C2B59B;
   --color-kv-soft: #F7F5F2;
+
+  /* Dashboard semantic utilities */
+  --color-dashboard-page: var(--dashboard-page);
+  --color-dashboard-surface: var(--dashboard-surface);
+  --color-dashboard-surface-subtle: var(--dashboard-surface-subtle);
+  --color-dashboard-foreground: var(--dashboard-foreground);
+  --color-dashboard-muted: var(--dashboard-muted);
+  --color-dashboard-outline: var(--dashboard-outline);
+  --color-dashboard-primary: var(--dashboard-primary);
+  --color-dashboard-accent: var(--dashboard-accent);
+  --color-dashboard-danger: var(--dashboard-danger);
+  --radius-dashboard-control: var(--dashboard-radius-control);
+  --radius-dashboard-panel: var(--dashboard-radius-panel);
+  --shadow-dashboard-card: var(--dashboard-shadow-card);
+  --spacing-dashboard-page-mobile: 16px;
+  --spacing-dashboard-page-desktop: 40px;
+  --spacing-dashboard-section: 32px;
+  --text-dashboard-page-title: 24px;
+  --text-dashboard-page-title--line-height: 30px;
+  --text-dashboard-page-title--letter-spacing: -0.01em;
+  --text-dashboard-page-title-desktop: 30px;
+  --text-dashboard-page-title-desktop--line-height: 38px;
+  --text-dashboard-eyebrow: 12px;
+  --text-dashboard-eyebrow--line-height: 16px;
+  --text-dashboard-eyebrow--letter-spacing: 0.14em;
 
   /* Stitch Design System Additions */
   --color-surface-container-high: #eae8e7;

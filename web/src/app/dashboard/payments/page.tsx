@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, Landmark, Wallet, Plus, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import EditPayoutModal from "@/components/dashboard/payments/edit-payout-modal";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
@@ -100,12 +101,12 @@ export default function PaymentsPage() {
   return (
     <div className="flex flex-col gap-6 max-w-[1440px]">
       {/* Page Header */}
-      <header className="flex justify-between items-end border-b border-[#c8c5d2] pb-4">
-        <div>
-          <h1 className="mb-1 text-2xl font-bold leading-tight tracking-tight text-[#180d62] sm:text-3xl">Payments</h1>
-          <p className="text-[#474551] text-[16px] leading-[24px]">See student payments, where your money will be sent, and your Kanvise plan.</p>
-        </div>
-      </header>
+      <DashboardPageHeader
+        className="border-b border-[#c8c5d2] pb-4"
+        title="Payments"
+        titleClassName="text-[#180d62]"
+        description="See student payments, where your money will be sent, and your Kanvise plan."
+      />
 
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

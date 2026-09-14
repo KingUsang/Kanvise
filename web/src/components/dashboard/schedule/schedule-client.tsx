@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import { TimetableManager } from './timetable-manager'
 import { markInstallEligible } from '@/lib/pwa/install-eligibility'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 interface Capabilities {
   isAdmin: boolean
@@ -294,16 +295,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
 
   return (
     <div className="w-full">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#994704]">Teaching</p>
-          <h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight text-[#1b1c1c] sm:text-3xl">Classes</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551]">
-            Start teaching now or plan a class for later.
-          </p>
-          <Link href="/dashboard/attendance" className="mt-2 inline-flex text-sm font-semibold text-[#2e2877] hover:underline">Attendance insights</Link>
-        </div>
-        <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+      <DashboardPageHeader
+        className="mb-8"
+        eyebrow="Teaching"
+        title="Classes"
+        description="Start teaching now or plan a class for later."
+        supportingAction={<Link href="/dashboard/attendance" className="inline-flex text-sm font-semibold text-[#2e2877] hover:underline">Attendance insights</Link>}
+        actions={<>
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#994704] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(153,71,4,0.22)]"
             onClick={() => { setActiveView('classes'); setFormMode('now') }}
@@ -316,8 +314,8 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           >
             <span aria-hidden="true" className="material-symbols-outlined text-[19px]">calendar_add_on</span>Schedule
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       {capabilities.isAdmin && (
         <nav aria-label="Class views" className="mb-6 flex gap-1 rounded-xl bg-[#efebe8] p-1">
