@@ -274,7 +274,14 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   try {
     const worker = await ensureLiveKitWorkerReady()
     if (worker.state === 'preparing') {
-      return c.json({ data: { ...insertedClass, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds } }, 202)
+      return c.json({ data: {
+        ...insertedClass,
+        state: 'preparing',
+        retry_after_seconds: worker.retryAfterSeconds,
+        class_title: insertedClass.title,
+        course_name: course.name,
+        is_host: true,
+      } }, 202)
     }
     if (worker.state !== 'ready') throw new Error(worker.message || 'LIVEKIT_WORKER_UNAVAILABLE')
     const roomService = getRoomService()
@@ -472,6 +479,20 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   const liveClass = access.liveClass as any
 
   if (liveClass.status === 'live') {
+    const worker = await ensureLiveKitWorkerReady()
+    if (worker.state === 'preparing') {
+      return c.json({ data: {
+        id,
+        state: 'preparing',
+        retry_after_seconds: worker.retryAfterSeconds,
+        class_title: liveClass.title,
+        course_name: (liveClass.courses as any)?.name || null,
+        is_host: true,
+      } }, 202)
+    }
+    if (worker.state !== 'ready') {
+      return c.json({ error: 'Could not prepare this classroom right now', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
+    }
     // If the tutor refreshes the page, the class is already live. Just let them back in!
     const roomName = liveClass.livekit_room_name || `kanvise-class-${id}`
     const displayName = await getParticipantDisplayName(user, 'Tutor')
@@ -495,7 +516,14 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   const worker = await ensureLiveKitWorkerReady()
   if (worker.state === 'preparing') {
-    return c.json({ data: { id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds } }, 202)
+    return c.json({ data: {
+      id,
+      state: 'preparing',
+      retry_after_seconds: worker.retryAfterSeconds,
+      class_title: liveClass.title,
+      course_name: (liveClass.courses as any)?.name || null,
+      is_host: true,
+    } }, 202)
   }
   if (worker.state !== 'ready') {
     return c.json({ error: worker.message || 'The classroom server is unavailable', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
@@ -546,6 +574,23 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
+  }
+
+  // A room can still be marked live after the classroom service has been
+  // paused. Prepare it before handing the browser a token it cannot use.
+  const worker = await ensureLiveKitWorkerReady()
+  if (worker.state === 'preparing') {
+    return c.json({ data: {
+      id: liveClass.id,
+      state: 'preparing',
+      retry_after_seconds: worker.retryAfterSeconds,
+      class_title: liveClass.title,
+      course_name: (liveClass.courses as any)?.name || null,
+      is_host: access.isHost,
+    } }, 202)
+  }
+  if (worker.state !== 'ready') {
+    return c.json({ error: 'Could not prepare this classroom right now', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
   }
 
   // Only the assigned tutor gets host permissions. School admins may join as

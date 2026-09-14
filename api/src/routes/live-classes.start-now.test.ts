@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   } as any,
   createRoom: vi.fn(),
   deleteRoom: vi.fn(),
+  ensureWorker: vi.fn(),
   deletedClassIds: [] as string[],
 }))
 
@@ -25,6 +26,10 @@ vi.mock('../middleware/auth', () => ({
   },
   tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
+}))
+
+vi.mock('../livekit/worker-lifecycle', () => ({
+  ensureLiveKitWorkerReady: mocks.ensureWorker,
 }))
 
 vi.mock('livekit-server-sdk', () => ({
@@ -73,6 +78,7 @@ describe('POST /live-classes/start-now', () => {
     vi.stubEnv('LIVEKIT_API_SECRET', 'test-secret')
     mocks.createRoom.mockResolvedValue({ name: 'kanvise-class-class-1' })
     mocks.deleteRoom.mockResolvedValue(undefined)
+    mocks.ensureWorker.mockResolvedValue({ state: 'ready' })
   })
 
   function configureDatabase(updateResult: any) {
@@ -123,5 +129,29 @@ describe('POST /live-classes/start-now', () => {
     expect(mocks.deleteRoom).toHaveBeenCalledWith('kanvise-class-class-1')
     expect(mocks.deletedClassIds).toContain('class-1')
     expect((await response.json() as any).error).toMatch(/Nothing was scheduled/)
+  })
+
+  it('keeps the created class and returns classroom details while preparation continues', async () => {
+    configureDatabase({ data: null, error: null })
+    mocks.ensureWorker.mockResolvedValue({ state: 'preparing', retryAfterSeconds: 4 })
+
+    const response = await liveClassesRouter.request('/start-now', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ course_id: 'course-1' }),
+    })
+
+    expect(response.status).toBe(202)
+    expect(await response.json()).toMatchObject({
+      data: {
+        id: 'class-1',
+        state: 'preparing',
+        retry_after_seconds: 4,
+        class_title: 'Mathematics class',
+        course_name: 'Mathematics',
+        is_host: true,
+      },
+    })
+    expect(mocks.createRoom).not.toHaveBeenCalled()
   })
 })

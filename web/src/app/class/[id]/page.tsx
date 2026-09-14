@@ -55,7 +55,12 @@ export default async function Page({ params, searchParams }: PageProps) {
     course_name: string | null
   }
   let errorMessage: string | null = null
-  let preparing: { retry_after_seconds?: number } | null = null
+  let preparing: {
+    retry_after_seconds?: number
+    class_title?: string
+    course_name?: string | null
+    is_host?: boolean
+  } | null = null
 
   try {
     const response = await fetch(endpoint, {
@@ -84,7 +89,12 @@ export default async function Page({ params, searchParams }: PageProps) {
   // ── 3. Render ──────────────────────────────────────────────────────────────
 
   if (preparing) {
-    return <PreparingClassroom retryAfterSeconds={preparing.retry_after_seconds || 4} />
+    return <PreparingClassroom
+      retryAfterSeconds={preparing.retry_after_seconds || 4}
+      classTitle={preparing.class_title || 'Your live class'}
+      courseName={preparing.course_name || null}
+      isHost={preparing.is_host ?? isStarting}
+    />
   }
 
   if (errorMessage || !classData!) {
