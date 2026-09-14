@@ -194,7 +194,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
         <div className="divide-y divide-[#e4e2e1] sm:hidden">
           {apiError ? <div className="p-6 text-center text-sm text-[#ba1a1a]">{apiError}<button type="button" onClick={() => void mocksQuery.refetch()} className="mt-3 block w-full rounded-lg border border-[#994704] px-3 py-2 font-semibold text-[#994704]">Try again</button></div>
             : mocksQuery.isLoading ? <div className="p-8 text-center text-sm text-[#474551]">Loading mocks…</div>
-            : filteredMocks.length === 0 ? <div className="p-8 text-center text-sm text-[#474551]">{filterStatus === 'all' ? 'No mocks yet.' : `No ${filterStatus} mocks found.`}</div>
+            : filteredMocks.length === 0 ? filterStatus === 'all' ? <div className="flex flex-col items-center p-10 text-center"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#787582]"><span className="material-symbols-outlined text-[30px]">quiz</span></div><h2 className="text-lg font-semibold text-[#1b1c1c]">No mocks yet</h2><p className="mt-2 max-w-[280px] text-sm leading-6 text-[#474551]">Create your first mock exam to start assessing your students&apos; progress.</p><Link href="/dashboard/mocks/builder" className="mt-5 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white">Create first mock</Link></div> : <div className="p-8 text-center text-sm text-[#474551]">No {filterStatus} mocks found.</div>
             : filteredMocks.map((mock) => {
               const questions = mock.total_mcq_questions + mock.total_theory_questions
               return <article key={mock.id} className={`p-4 ${mock.status === 'archived' ? 'opacity-60' : ''}`}>
