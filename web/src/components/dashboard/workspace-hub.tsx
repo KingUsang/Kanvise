@@ -8,7 +8,7 @@ export type WorkspaceLink = {
   icon: string
 }
 
-export function WorkspaceHub({ eyebrow, title, description, sections }: {
+export function WorkspaceHub({ title, description, sections }: {
   title: string
   description: string
   sections: Array<{ title: string; links: WorkspaceLink[] }>
