@@ -15,7 +15,7 @@ export function MobileBottomNav({ capabilities }: { capabilities: DashboardCapab
       {items.map((item) => {
         const isActive = activeArea === item.area
         return (
-          <Link key={item.href} href={item.href} aria-current={isActive ? 'page' : undefined} className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold transition-colors ${isActive ? 'bg-[#eeeafe] text-[#2e2877]' : 'text-[#c8c5ef] hover:text-white'}`}>
+          <Link key={item.href} href={item.href} aria-current={isActive ? 'page' : undefined} className={`flex min-h-12 flex-col items-center justify-center gap-0.5 border-b-2 px-1 text-[10px] font-semibold transition-colors ${isActive ? 'border-[#c26627] text-white' : 'border-transparent text-[#c8c5ef] hover:text-white'}`}>
             <span className="material-symbols-outlined text-[21px]">{item.icon}</span>
             <span className="max-w-full truncate">{item.label}</span>
           </Link>
