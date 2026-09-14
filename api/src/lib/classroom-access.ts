@@ -14,7 +14,7 @@ export type ClassroomUser = { id: string; school_id: string; role: string }
 export type ClassroomRecord = {
   id: string
   school_id: string
-  course_id: string
+  course_id: string | null
   tutor_id: string
   status: string
   livekit_room_name?: string | null
@@ -52,9 +52,9 @@ export async function resolveClassroomAccess(
   const liveClass = data as ClassroomRecord
   if (liveClass.school_id !== user.school_id) return { reason: 'wrong_school' }
 
-  if (user.role === 'student') {
+  if (user.role === 'student' && liveClass.access_mode !== 'anyone_with_link') {
     const courseIds = await loadStudentCourseIds(user.id, user.school_id)
-    if (!courseIds.includes(liveClass.course_id)) return { reason: 'not_enrolled' }
+    if (!liveClass.course_id || !courseIds.includes(liveClass.course_id)) return { reason: 'not_enrolled' }
   }
 
   // An admin can observe any classroom in their centre. A tutor can access

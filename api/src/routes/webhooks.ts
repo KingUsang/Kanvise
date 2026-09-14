@@ -77,6 +77,23 @@ webhooksRouter.post('/livekit', async (c) => {
         .eq('id', record.id)))
     }
 
+    const { data: openGuestRecords, error: guestRecordsError } = await (supabase as any)
+      .from('guest_live_class_attendance')
+      .select('id, joined_at')
+      .eq('live_class_id', liveClass.id)
+      .is('left_at', null)
+    if (guestRecordsError) {
+      console.error('[webhook/livekit] Failed to load open guest attendance:', guestRecordsError)
+    } else {
+      await Promise.all((openGuestRecords || []).map((record: any) => (supabase as any)
+        .from('guest_live_class_attendance')
+        .update({
+          left_at: endedAt.toISOString(),
+          duration_seconds: Math.max(0, Math.round((endedAt.getTime() - new Date(record.joined_at).getTime()) / 1000)),
+        })
+        .eq('id', record.id)))
+    }
+
     const { error: completionError } = await supabase
       .from('live_classes')
       .update({ status: 'completed', ended_at: endedAt.toISOString() })
@@ -90,8 +107,23 @@ webhooksRouter.post('/livekit', async (c) => {
 
   const identity = event.participant?.identity // This is the Kanvise user_id (set during token creation)
   if (!identity) return c.text('OK', 200)
+  const guestId = identity.startsWith('guest:') ? identity.slice('guest:'.length) : null
 
   if (event.event === 'participant_joined') {
+    if (guestId) {
+      const { data: existing } = await (supabase as any).from('guest_live_class_attendance').select('id')
+        .eq('live_class_id', liveClass.id).eq('guest_id', guestId).is('left_at', null).maybeSingle()
+      if (!existing) {
+        const { error } = await (supabase as any).from('guest_live_class_attendance').insert({
+          school_id: liveClass.school_id,
+          live_class_id: liveClass.id,
+          guest_id: guestId,
+          joined_at: new Date(Number(event.participant?.joinedAt) * 1000 || Date.now()).toISOString(),
+        })
+        if (error) console.error('[webhook/livekit] Failed to insert guest attendance:', error)
+      }
+      return c.text('OK', 200)
+    }
     const { error } = await supabase.from('attendance_records').insert({
       school_id: liveClass.school_id,
       live_class_id: liveClass.id,
@@ -108,6 +140,24 @@ webhooksRouter.post('/livekit', async (c) => {
 
   if (event.event === 'participant_left') {
     const leftAt = new Date()
+
+    if (guestId) {
+      const { data: record } = await (supabase as any).from('guest_live_class_attendance')
+        .select('id, joined_at')
+        .eq('live_class_id', liveClass.id)
+        .eq('guest_id', guestId)
+        .is('left_at', null)
+        .order('joined_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (record) {
+        await (supabase as any).from('guest_live_class_attendance').update({
+          left_at: leftAt.toISOString(),
+          duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(record.joined_at).getTime()) / 1000)),
+        }).eq('id', record.id)
+      }
+      return c.text('OK', 200)
+    }
 
     // Find the most recent open attendance record for this participant
     const { data: record, error: fetchError } = await supabase

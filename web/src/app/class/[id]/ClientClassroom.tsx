@@ -16,6 +16,7 @@ interface ClientClassroomProps {
   isHost: boolean;
   classTitle: string;
   courseName: string | null;
+  guestShareToken?: string;
 }
 
 function MuteStudentOnJoin({ isHost }: { isHost: boolean }) {
@@ -80,6 +81,7 @@ export default function ClientClassroom({
   isHost,
   classTitle,
   courseName,
+  guestShareToken,
 }: ClientClassroomProps) {
   const isLeavingClassroom = useRef(false);
   const hasConnected = useRef(false)
@@ -87,7 +89,7 @@ export default function ClientClassroom({
   const retryTimer = useRef<number | null>(null)
   const [connectionIssue, setConnectionIssue] = useState<string | null>(null)
   const [connectionAttempt, setConnectionAttempt] = useState(0)
-  const dashboardPath = isHost ? "/dashboard" : "/dashboard/student/classes";
+  const dashboardPath = isHost ? "/dashboard" : guestShareToken ? "/" : "/dashboard/student/classes";
 
   useEffect(() => () => {
     if (retryTimer.current) window.clearTimeout(retryTimer.current)
@@ -156,6 +158,7 @@ export default function ClientClassroom({
           classId={classId}
           classTitle={classTitle}
           courseName={courseName}
+          guestShareToken={guestShareToken}
           onExit={markLeavingClassroom}
         />
       </ClassroomConnectionGate>

@@ -73,9 +73,10 @@ function participantIsHost(participant: Participant | undefined, tutorIdentity: 
   return Boolean(participant && tutorIdentity && participant.identity === tutorIdentity)
 }
 
-export function PresentationSessionProvider({ classId, isHost, children }: {
+export function PresentationSessionProvider({ classId, isHost, guestShareToken, children }: {
   classId: string
   isHost: boolean
+  guestShareToken?: string
   children: React.ReactNode
 }) {
   const room = useRoomContext()
@@ -97,6 +98,16 @@ export function PresentationSessionProvider({ classId, isHost, children }: {
   ), [])
 
   const request = useCallback(async <T,>(path: string, init?: RequestInit): Promise<T> => {
+    if (guestShareToken) {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/live-classes/${guestShareToken}/presentations${path === '/presentations' ? '' : path.replace('/presentations', '')}`, {
+        ...init, credentials: 'include',
+        headers: { ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}), ...(init?.headers || {}) },
+      })
+      const body = response.status === 204 ? null : await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Classroom request failed')
+      return body?.data as T
+    }
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Your classroom session has expired')
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}${path}`, {
@@ -106,7 +117,7 @@ export function PresentationSessionProvider({ classId, isHost, children }: {
     const body = response.status === 204 ? null : await response.json().catch(() => null)
     if (!response.ok) throw new Error(body?.error || 'Classroom request failed')
     return body?.data as T
-  }, [classId, supabase])
+  }, [classId, guestShareToken, supabase])
 
   const publish = useCallback((event: PresentationEvent, topic: string, reliable: boolean) => {
     if (connectionState !== ConnectionState.Connected) return

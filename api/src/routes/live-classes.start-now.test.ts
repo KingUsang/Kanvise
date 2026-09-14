@@ -116,6 +116,30 @@ describe('POST /live-classes/start-now', () => {
     expect(mocks.deletedClassIds).toEqual([])
   })
 
+  it('starts a shared class without requiring a subject assignment', async () => {
+    let liveClassCall = 0
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'avatar_configs') return chain({ data: null, error: null })
+      if (table === 'live_classes') {
+        liveClassCall += 1
+        if (liveClassCall === 1) return chain({ data: { id: 'class-shared', title: 'Revision class', course_id: null, tutor_id: 'tutor-1', duration_minutes: 60, access_mode: 'anyone_with_link' }, error: null })
+        return chain({ data: { id: 'class-shared', title: 'Revision class', course_id: null, tutor_id: 'tutor-1', duration_minutes: 60, status: 'live', livekit_room_name: 'kanvise-class-class-shared' }, error: null })
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const response = await liveClassesRouter.request('/start-now', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ access_mode: 'anyone_with_link', title: 'Revision class' }),
+    })
+    const body = await response.json() as any
+
+    expect(response.status).toBe(201)
+    expect(body.data).toMatchObject({ id: 'class-shared', class_title: 'Revision class', course_name: null, is_host: true })
+    expect(body.data.share_token).toMatch(/^[A-Za-z0-9_-]{40,}$/)
+    expect(mocks.from).not.toHaveBeenCalledWith('tutor_course_assignments')
+  })
+
   it('removes the room and inserted class when activation fails', async () => {
     configureDatabase({ data: null, error: { message: 'database unavailable' } })
 

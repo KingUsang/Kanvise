@@ -32,6 +32,7 @@ interface ClassroomLayoutProps {
   classTitle: string
   courseName: string | null
   onExit?: () => void
+  guestShareToken?: string
 }
 
 function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: ClassroomLayoutProps) {
@@ -421,7 +422,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: Cla
 
 export default function ClassroomLayout(props: ClassroomLayoutProps) {
   return (
-    <PresentationSessionProvider classId={props.classId} isHost={props.isHost}>
+    <PresentationSessionProvider classId={props.classId} isHost={props.isHost} guestShareToken={props.guestShareToken}>
       <ClassroomShell {...props} />
     </PresentationSessionProvider>
   );
