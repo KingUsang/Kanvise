@@ -2,7 +2,6 @@ import { WorkspaceHub } from '@/components/dashboard/workspace-hub'
 
 export default function CentrePage() {
   return <WorkspaceHub
-    eyebrow="Centre"
     title="Run your centre"
     description="Set up learning, support your people, and keep the centre running."
     sections={[

@@ -56,7 +56,6 @@ export default async function DashboardHomePage() {
   return (
     <div className="animate-in fade-in space-y-6 duration-500 sm:space-y-8">
       <DashboardPageHeader
-        eyebrow="Dashboard"
         title={heading}
         description={description}
         actions={<>

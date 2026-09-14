@@ -231,7 +231,6 @@ export function QuestionBanksClient({ token }: { token: string }) {
     <main className="mx-auto w-full max-w-[1440px] flex-1">
       <DashboardPageHeader
         className="mb-7 border-b border-dashboard-outline pb-6"
-        eyebrow="Mock preparation"
         title="Question Banks"
         description="Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks."
         actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-dashboard-primary/90">

@@ -9,14 +9,13 @@ export type WorkspaceLink = {
 }
 
 export function WorkspaceHub({ eyebrow, title, description, sections }: {
-  eyebrow: string
   title: string
   description: string
   sections: Array<{ title: string; links: WorkspaceLink[] }>
 }) {
   return (
     <section className="mx-auto w-full max-w-[1120px] animate-in fade-in duration-300">
-      <DashboardPageHeader eyebrow={eyebrow} title={title} description={description} />
+      <DashboardPageHeader title={title} description={description} />
       <div className="mt-7 space-y-7">
         {sections.map(section => (
           <section key={section.title}>

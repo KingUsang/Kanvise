@@ -297,7 +297,6 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     <div className="w-full">
       <DashboardPageHeader
         className="mb-8"
-        eyebrow="Teaching"
         title="Classes"
         description="Start teaching now or plan a class for later."
         supportingAction={<Link href="/dashboard/attendance" className="inline-flex text-sm font-semibold text-[#2e2877] hover:underline">Attendance insights</Link>}

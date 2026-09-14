@@ -263,7 +263,6 @@ export function TutorsClient() {
 
       {/* ── Page Header ── */}
       <DashboardPageHeader
-        eyebrow="Your teaching team"
         title="Tutors"
         description="Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself."
       />

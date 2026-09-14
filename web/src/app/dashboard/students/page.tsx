@@ -178,7 +178,6 @@ export default function StudentsPage() {
     <div className="mx-auto max-w-[1440px] space-y-8 animate-fade-in">
       {/* Header */}
       <DashboardPageHeader
-        eyebrow="Your learners"
         title="Students"
         description="Add learners to your centre, see what they can access, and review their successful payment history."
         actions={<>

@@ -108,7 +108,6 @@ export function ProgrammesClient() {
   return (
     <div className="flex flex-col gap-6">
       <DashboardPageHeader
-        eyebrow="What you teach"
         title="Programmes"
         description="Create enrolment packages and organise the subjects students receive."
         actions={<>

@@ -2,7 +2,6 @@ import { WorkspaceHub } from '@/components/dashboard/workspace-hub'
 
 export default function TeachingPage() {
   return <WorkspaceHub
-    eyebrow="Teaching"
     title="Plan and follow up"
     description="Prepare materials, set work, and see how your learners are doing."
     sections={[
