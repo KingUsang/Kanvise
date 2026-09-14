@@ -15,9 +15,9 @@ export function WorkspaceHub({ eyebrow, title, description, sections }: {
 }) {
   return (
     <section className="mx-auto w-full max-w-[1120px] animate-in fade-in duration-300">
-      <p className="text-sm font-semibold text-[#994704]">{eyebrow}</p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#1b1c1c] sm:text-3xl">{title}</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">{description}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#994704]">{eyebrow}</p>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#1b1c1c] sm:text-3xl">{title}</h1>
+      <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551]">{description}</p>
       <div className="mt-7 space-y-7">
         {sections.map(section => (
           <section key={section.title}>

@@ -178,7 +178,7 @@ export default function AssignmentsPage() {
       {/* Left Column: Assignment Creator Form */}
       <div className="w-full xl:w-7/12 flex flex-col gap-6">
         <div className="flex flex-col gap-1">
-          <h2 className="text-2xl font-semibold text-on-background">Create Assignment</h2>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-on-background sm:text-3xl">Create Assignment</h1>
           <p className="text-sm font-light text-on-surface-variant">
             Write the question or task, set a deadline, and optionally attach supporting material.
           </p>
@@ -341,7 +341,7 @@ export default function AssignmentsPage() {
       {/* Right Column: Recent Assignments List */}
       <div className="w-full xl:w-5/12 flex flex-col gap-6">
         <div className="flex flex-col gap-1 flex-shrink-0">
-          <h2 className="text-2xl font-semibold text-on-background">Recent Assignments</h2>
+          <h2 className="text-lg font-semibold text-on-background">Recent Assignments</h2>
           <p className="text-sm font-light text-on-surface-variant">
             Track upcoming deadlines and student submissions.
           </p>
