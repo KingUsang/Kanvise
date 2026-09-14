@@ -16,7 +16,7 @@ export function MobileBottomNav({ capabilities }: { capabilities: DashboardCapab
         const isActive = activeArea === item.area
         return (
           <Link key={item.href} href={item.href} aria-current={isActive ? 'page' : undefined} className={`flex min-h-12 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-semibold transition-colors ${isActive ? 'text-[#2e2877]' : 'text-[#77747e] hover:text-[#2e2877]'}`}>
-            <span className={`material-symbols-outlined flex h-8 w-14 items-center justify-center rounded-full text-[21px] ${isActive ? 'icon-fill bg-[#eeecfa] text-[#2e2877]' : ''}`}>{item.icon}</span>
+            <span className={`material-symbols-outlined inline-grid h-8 w-14 place-items-center rounded-full text-[21px] leading-none ${isActive ? 'icon-fill bg-[#eeecfa] text-[#2e2877]' : ''}`}>{item.icon}</span>
             <span className="max-w-full truncate">{item.label}</span>
           </Link>
         )
