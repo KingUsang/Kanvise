@@ -326,3 +326,10 @@ html {
      the classroom supplies its own touch toolbar. */
   display: none !important;
 }
+
+/* Mobile Excalidraw mounts its drawing toolbar in FixedSideContainer rather
+   than layer-ui__wrapper. Keep Kanvise's small classroom toolbar in control
+   at every viewport size. */
+.kanvise-teaching-board .excalidraw .FixedSideContainer {
+  display: none !important;
+}

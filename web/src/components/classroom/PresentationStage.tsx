@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Expand,
-  FileText, Loader2, Trash2, Upload, X,
+  ChevronDown, ChevronUp, FileText, Loader2, Trash2, Upload, X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import CollaborativeWhiteboard from './CollaborativeWhiteboard'
@@ -79,10 +78,9 @@ function MaterialsDrawer() {
 }
 
 export default function PresentationStage({ isHost }: { isHost: boolean }) {
-  const { mode, active, legacySlides, loading, changePage, closePresentation, getViewUrl } = usePresentationSession()
+  const { mode, active, legacySlides, loading, getViewUrl } = usePresentationSession()
   const [url, setUrl] = useState('')
   const [isRenderingPage, setIsRenderingPage] = useState(false)
-  const stageRef = useRef<HTMLDivElement>(null)
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
   const handlePdfRenderStateChange = useCallback((rendering: boolean) => setIsRenderingPage(rendering), [])
@@ -106,19 +104,8 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
   }
 
   return (
-    <div ref={stageRef} className="absolute inset-0 flex flex-col bg-[#202124]" data-presentation-stage>
-      <div className="absolute left-1/2 top-3 z-30 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-1 rounded-xl border border-white/10 bg-[#292a2d]/95 p-1 text-white shadow-xl backdrop-blur">
-        <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1 || !isHost} className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-35" title="Previous page"><ChevronLeft size={17} /></button>
-        <select value={active.current_page} onChange={(event) => void changePage(Number(event.target.value))} disabled={!isHost} className="rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold outline-none">
-          {Array.from({ length: active.page_count }, (_, index) => <option className="text-black" key={index + 1} value={index + 1}>Page {index + 1} / {active.page_count}</option>)}
-        </select>
-        <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count || !isHost} className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-35" title="Next page"><ChevronRight size={17} /></button>
-        <span className="mx-1 h-5 w-px bg-white/15" />
-        <button onClick={() => void stageRef.current?.requestFullscreen()} className="rounded-lg p-2 hover:bg-white/10" title="Fullscreen"><Expand size={15} /></button>
-        {isHost && <button onClick={() => void closePresentation()} className="rounded-lg p-2 text-red-300 hover:bg-white/10" title="Close presentation"><X size={16} /></button>}
-      </div>
-
-      <div className="absolute inset-0 pt-16">
+    <div className="absolute inset-0 flex flex-col bg-[#202124]" data-presentation-stage>
+      <div className="absolute inset-0">
         {!url ? <div className="flex h-full items-center justify-center text-white"><Loader2 className="animate-spin" /></div> : (
           <CollaborativeWhiteboard pdfDocument={{
             materialId: active.id,
