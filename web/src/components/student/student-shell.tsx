@@ -84,8 +84,8 @@ export function StudentShell({ children, studentName, schoolName, hasCentreLearn
       <div className="min-w-0">{children}</div>
     </div>
     <nav aria-label="Student navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#ded9d4] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(35,31,38,0.06)] backdrop-blur lg:hidden">
-      <div className={`mx-auto grid max-w-lg ${hasCentreLearning ? "grid-cols-4" : "grid-cols-2"}`}>
-        {mobileNavigation.map(item => { const active = isActive(item.activeHref || item.href.split('?')[0] || item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-medium ${active ? "bg-[#eeeafe] text-[#2e2877]" : "text-[#716c76]"}`}><item.icon size={19} strokeWidth={active ? 2.5 : 2} /><span>{item.label}</span></Link> })}
+      <div className={`mx-auto grid h-14 max-w-lg ${hasCentreLearning ? "grid-cols-4" : "grid-cols-2"}`}>
+        {mobileNavigation.map(item => { const active = isActive(item.activeHref || item.href.split('?')[0] || item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`flex h-14 min-w-0 flex-col items-center justify-center gap-0 px-1 text-[10px] font-semibold leading-none ${active ? "text-[#2e2877]" : "text-[#716c76]"}`}><span className={`flex h-7 w-7 items-center justify-center rounded-full ${active ? "bg-[#eeeafe]" : ""}`}><item.icon size={19} strokeWidth={active ? 2.5 : 2} /></span><span className="mt-0.5 h-4 w-full truncate text-center text-[10px] leading-4">{item.label}</span></Link> })}
       </div>
     </nav>
   </div>;
