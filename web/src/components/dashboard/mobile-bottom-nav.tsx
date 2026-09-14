@@ -15,9 +15,10 @@ export function MobileBottomNav({ capabilities }: { capabilities: DashboardCapab
       {items.map((item) => {
         const isActive = activeArea === item.area
         return (
-          <Link key={item.href} href={item.href} aria-current={isActive ? 'page' : undefined} className={`flex min-h-12 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-semibold transition-colors ${isActive ? 'text-white' : 'text-[#c8c5ef] hover:text-white'}`}>
-            <span className="material-symbols-outlined relative text-[21px]">{item.icon}{isActive ? <span aria-hidden className="absolute -bottom-1.5 left-1/2 h-[3px] w-7 -translate-x-1/2 rounded-full bg-[#c26627]" /> : null}</span>
+          <Link key={item.href} href={item.href} aria-current={isActive ? 'page' : undefined} className={`relative flex min-h-12 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-semibold transition-colors ${isActive ? 'text-white' : 'text-[#c8c5ef] hover:text-white'}`}>
+            <span className="material-symbols-outlined text-[21px]">{item.icon}</span>
             <span className="max-w-full truncate">{item.label}</span>
+            {isActive ? <span aria-hidden className="absolute bottom-0 left-1/2 h-[3px] w-7 -translate-x-1/2 rounded-t-full bg-[#c26627]" /> : null}
           </Link>
         )
       })}
