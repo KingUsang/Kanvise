@@ -79,6 +79,9 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   })
   const [activeView, setActiveView] = useState<'classes' | 'timetable'>('classes')
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [shareClassId, setShareClassId] = useState<string | null>(null)
+  const [shareAccessMode, setShareAccessMode] = useState<'anyone_with_link' | 'enrolled_learners'>('enrolled_learners')
   const classActionFormRef = useRef<HTMLDivElement>(null)
   const subjectSelectRef = useRef<HTMLSelectElement>(null)
   
@@ -192,9 +195,16 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         const responseBody = await res.json()
         if (isStartingNow) {
           markInstallEligible()
-          toast.success(res.status === 202 ? 'Preparing your classroom' : 'Class started')
-          startNavigationProgress()
-          router.push(`/class/${responseBody.data.id}?start=true`)
+          if (responseBody.data.share_token) {
+            setShareUrl(`${window.location.origin}/live/${responseBody.data.share_token}`)
+            setShareClassId(responseBody.data.id)
+            setShareAccessMode(responseBody.data.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners')
+            toast.success('Your learner link is ready')
+          } else {
+            toast.success(res.status === 202 ? 'Preparing your classroom' : 'Class started')
+            startNavigationProgress()
+            router.push(`/class/${responseBody.data.id}?start=true`)
+          }
           return
         }
         await queryClient.invalidateQueries({ queryKey: ['live-classes', user.id] })
@@ -336,6 +346,12 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
           <button type="button" onClick={() => setActiveView('timetable')} className={`min-h-10 flex-1 rounded-lg px-4 text-sm font-semibold ${activeView === 'timetable' ? 'bg-white text-[#2e2877] shadow-sm' : 'text-[#625d67]'}`}>Timetable</button>
         </nav>
       )}
+
+      {shareUrl && shareClassId && <div role="dialog" aria-modal="true" aria-labelledby="class-link-title" className="mb-6 rounded-2xl border border-[#d8d3d0] bg-white p-5 shadow-dashboard-card sm:p-6">
+        <div className="flex items-start justify-between gap-4"><div><h2 id="class-link-title" className="text-lg font-bold text-[#180d62]">Your class is ready</h2><p className="mt-1 text-sm leading-5 text-[#66616c]">{shareAccessMode === 'anyone_with_link' ? 'Anyone with this link can join while the class is live.' : 'Share this with enrolled learners. They will sign in before joining.'}</p></div><button type="button" aria-label="Close" onClick={() => setShareUrl(null)} className="flex h-9 w-9 items-center justify-center rounded-full text-[#66616c] hover:bg-[#f5f3f2]"><span className="material-symbols-outlined">close</span></button></div>
+        <input readOnly value={shareUrl.replace('https://', '').replace('http://', '')} className="mt-4 min-h-12 w-full rounded-lg border border-[#8b8580] bg-[#fbf9f8] px-3 text-sm" />
+        <div className="mt-4 grid grid-cols-2 gap-3"><button type="button" onClick={() => void navigator.clipboard.writeText(shareUrl.replace('https://', '').replace('http://', '')).then(() => toast.success('Class link copied'))} className="min-h-11 rounded-lg border border-[#2e2877] px-3 text-sm font-semibold text-[#2e2877]">Copy link</button><button type="button" onClick={() => { startNavigationProgress(); router.push(`/class/${shareClassId}?start=true`) }} className="min-h-11 rounded-lg bg-[#994704] px-3 text-sm font-semibold text-white">Enter class</button></div>
+      </div>}
 
       {activeView === 'timetable' ? (
         <TimetableManager token={token} programmes={programmes} standaloneCourses={standaloneCourses} tutors={tutors} />
