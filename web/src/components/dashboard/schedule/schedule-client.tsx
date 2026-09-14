@@ -73,7 +73,10 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const [duration, setDuration] = useState('60')
   const [recurrence, setRecurrence] = useState<'once' | 'weekly'>('once')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formMode, setFormMode] = useState<'now' | 'later' | null>(() => searchParams.get('mode') === 'now' ? 'now' : null)
+  const [formMode, setFormMode] = useState<'now' | 'later' | null>(() => {
+    const mode = searchParams.get('mode')
+    return mode === 'now' || mode === 'later' ? mode : null
+  })
   const [activeView, setActiveView] = useState<'classes' | 'timetable'>('classes')
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false)
   

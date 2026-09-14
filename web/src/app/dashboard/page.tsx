@@ -6,6 +6,7 @@ import { NeedsGradingCard, type GradingItem } from '@/components/dashboard/needs
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import { resolveDashboardPersona } from '@/lib/dashboard-persona'
 import { getApiUrl } from '@/config/api'
+import { DashboardClassLauncher } from '@/components/dashboard/dashboard-class-launcher'
 
 type ScheduleItem = {
   id: string
@@ -59,9 +60,11 @@ export default async function DashboardHomePage() {
         title={heading}
         description={description}
         actions={<>
-          <Link href="/dashboard/schedule?mode=now" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7a3903] sm:px-4">
-            <span className="material-symbols-outlined text-xl">videocam</span>Start live class
-          </Link>
+          <DashboardClassLauncher token={token} isAdmin={isAdmin} user={{
+            id: typeof sessionData.session?.user.app_metadata?.profile_id === 'string' ? sessionData.session.user.app_metadata.profile_id : sessionData.session!.user.id,
+            firstName: sessionData.session?.user.user_metadata?.first_name || '',
+            lastName: sessionData.session?.user.user_metadata?.last_name || '',
+          }} />
           <Link href="/dashboard/mocks/builder" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#2e2877] bg-white px-3 py-2.5 text-sm font-semibold text-[#2e2877] transition-colors hover:bg-[#f5f3f2] sm:px-4">
             <span className="material-symbols-outlined text-xl">quiz</span>Create mock
           </Link>
