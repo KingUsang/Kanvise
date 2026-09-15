@@ -3,7 +3,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Eraser, Hand, Pencil, Redo2, Undo2 } from "lucide-react";
+import { Eraser, Hand, Pencil, Redo2, Undo2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then(({ Excalidraw: Canvas }) => {
@@ -291,9 +291,10 @@ const CollaborativeWhiteboard = ({
         );
       }
       const { dataURL, width, height } = await imagePromise;
-      // Reuse one Excalidraw file slot per material so changing pages does not
-      // accumulate decoded image files in the scene's file store.
-      const fileId = `pdf-file-${source.materialId}`;
+      // Excalidraw does not replace an existing file when addFiles receives
+      // the same ID. Include the page so navigation cannot keep rendering the
+      // first decoded bitmap while the scene element changes.
+      const fileId = `pdf-file-${source.materialId}-${pageNumber}`;
       excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
       // A page is placed in the tutor's current viewport. The tutor can pan to
       // any empty part of the infinite board before pressing "Place page".
@@ -308,7 +309,7 @@ const CollaborativeWhiteboard = ({
         type: 'image', version: 1, versionNonce: Date.now(), isDeleted: false, id: elementId,
         fillStyle: 'solid', strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100, angle: 0,
         x: pagePosition.x, y: pagePosition.y,
-        strokeColor: 'transparent', backgroundColor: 'transparent',
+        strokeColor: '#d6d1cd', backgroundColor: '#ffffff',
         width, height, seed: pageNumber, groupIds: [], boundElements: [],
         updated: Date.now(), fileId, scale: [1, 1], locked: true,
       };
@@ -404,6 +405,18 @@ const CollaborativeWhiteboard = ({
     setActiveTool(type);
   };
 
+  const adjustZoom = (delta: number) => {
+    if (!excalidrawAPI) return;
+    const current = excalidrawAPI.getAppState().zoom?.value || 1;
+    const next = Math.min(2.5, Math.max(0.5, Math.round((current + delta) * 10) / 10));
+    excalidrawAPI.updateScene({ appState: { zoom: { value: next } } });
+  };
+
+  const fitPage = () => {
+    const page = localPdfElementsRef.current[0];
+    if (page && excalidrawAPI) excalidrawAPI.scrollToContent(page, { fitToContent: true, animate: false });
+  };
+
   // Mobile tutors need a dependable one-tap undo. Excalidraw's public API
   // exposes no undo action, so keep this deliberately scoped to the latest
   // complete annotation rather than trying to mirror its internal history.
@@ -436,6 +449,7 @@ const CollaborativeWhiteboard = ({
         excalidrawAPI={(api) => setExcalidrawAPI(api)}
         onChange={handleChange}
         theme="light"
+        initialData={{ appState: { viewBackgroundColor: "#e8e6e4" } }}
         // The stock UI is visually suppressed by the scoped classroom CSS.
         // Kanvise supplies the one touch-oriented toolbar below.
         zenModeEnabled
@@ -457,16 +471,22 @@ const CollaborativeWhiteboard = ({
         }}
         renderTopRightUI={() => null}
       />
-      {isHost && (
-        <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
+      <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
+        {pdfDocument && <>
+          <button onClick={() => adjustZoom(-0.1)} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Zoom out" title="Zoom out"><ZoomOut size={19} /></button>
+          <button onClick={() => adjustZoom(0.1)} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Zoom in" title="Zoom in"><ZoomIn size={19} /></button>
+          <button onClick={fitPage} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Fit page" title="Fit page"><Maximize2 size={19} /></button>
+          {isHost && <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />}
+        </>}
+        {isHost && <>
           <button onClick={() => setTool("hand")} className={`rounded-xl p-3 ${activeTool === "hand" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pan board" title="Pan board"><Hand size={19} /></button>
           <button onClick={() => setTool("freedraw")} className={`rounded-xl p-3 ${activeTool === "freedraw" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pen" title="Pen"><Pencil size={19} /></button>
           <button onClick={() => setTool("eraser")} className={`rounded-xl p-3 ${activeTool === "eraser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Eraser" title="Eraser"><Eraser size={19} /></button>
           <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />
           <button onClick={undoLastStroke} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Undo last stroke" title="Undo last stroke"><Undo2 size={19} /></button>
           <button onClick={redoLastStroke} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Redo last stroke" title="Redo last stroke"><Redo2 size={19} /></button>
-        </div>
-      )}
+        </>}
+      </div>
     </div>
   );
 };
