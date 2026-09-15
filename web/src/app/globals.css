@@ -334,7 +334,11 @@ html {
 .kanvise-teaching-board .excalidraw .undo-redo-buttons,
 .kanvise-teaching-board .excalidraw .FixedSideContainer,
 .kanvise-teaching-board .excalidraw--mobile .App-menu_bottom,
-.kanvise-teaching-board .excalidraw--mobile .undo-redo-buttons {
+.kanvise-teaching-board .excalidraw--mobile .undo-redo-buttons,
+.kanvise-teaching-board .excalidraw .App-top-bar,
+.kanvise-teaching-board .excalidraw .App-bottom-bar,
+.kanvise-teaching-board .excalidraw .App-bottom-bar .App-toolbar,
+.kanvise-teaching-board .excalidraw .mobile-misc-tools-container {
   display: none !important;
 }
 
