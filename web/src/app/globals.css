@@ -327,6 +327,17 @@ html {
   display: none !important;
 }
 
+/* Excalidraw renders the undo/redo footer through a separate mobile path in
+   some releases. Keep its native action bar out of the classroom at every
+   breakpoint; Kanvise owns the compact tutor toolbar. */
+.kanvise-teaching-board .excalidraw .App-menu_bottom,
+.kanvise-teaching-board .excalidraw .undo-redo-buttons,
+.kanvise-teaching-board .excalidraw .FixedSideContainer,
+.kanvise-teaching-board .excalidraw--mobile .App-menu_bottom,
+.kanvise-teaching-board .excalidraw--mobile .undo-redo-buttons {
+  display: none !important;
+}
+
 /* Mobile Excalidraw mounts its drawing toolbar in FixedSideContainer rather
    than layer-ui__wrapper. Keep Kanvise's small classroom toolbar in control
    at every viewport size. */
