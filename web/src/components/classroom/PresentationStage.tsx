@@ -52,15 +52,29 @@ function MaterialsDrawer() {
         {!materials.length && <div className="rounded-xl border border-dashed border-[#cbc7d2] p-6 text-center text-sm text-[#716e79]">Add the first PDF for this lesson.</div>}
         {materials.map((material, index) => (
           <div key={material.id} className={`rounded-xl border p-3 ${active?.id === material.id ? 'border-[#2e2877] bg-[#f2f0ff]' : 'border-[#e5e3e8]'}`}>
-            <button onClick={() => void activate(material.id)} className="flex w-full items-start gap-3 text-left">
+            <button
+              onClick={() => {
+                if (material.processing_status === 'failed') {
+                  toast.error('This teaching material could not be prepared', { description: material.processing_error || 'Replace the PDF and try again.' })
+                  return
+                }
+                if (material.processing_status !== 'ready') {
+                  toast.message('This teaching material is still being prepared', { description: 'You can open it as soon as its pages are ready.' })
+                  return
+                }
+                void activate(material.id)
+              }}
+              disabled={material.processing_status !== 'ready'}
+              className="flex w-full items-start gap-3 text-left disabled:cursor-not-allowed disabled:opacity-70"
+            >
               <span className="rounded-lg bg-white p-2 text-[#994704] shadow-sm"><FileText size={18} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#24212b]">{material.filename}</span><span className="text-[11px] text-[#716e79]">{material.processing_status === 'ready' ? `${material.page_count} pages` : material.processing_status === 'failed' ? material.processing_error || 'Could not read PDF' : material.processing_status === 'processing' ? 'Checking PDF…' : 'Waiting for upload…'}</span></span>
             </button>
             <div className="mt-2 flex justify-end gap-1 border-t border-black/5 pt-2">
               <button disabled={index === 0} onClick={() => void reorder(material.id, -1)} className="rounded p-1.5 hover:bg-white disabled:opacity-30" title="Move up"><ChevronUp size={14} /></button>
               <button disabled={index === materials.length - 1} onClick={() => void reorder(material.id, 1)} className="rounded p-1.5 hover:bg-white disabled:opacity-30" title="Move down"><ChevronDown size={14} /></button>
-              <button onClick={() => { const next = window.prompt('Material name', material.filename); if (next?.trim()) void rename(material.id, next.trim()) }} className="rounded px-2 py-1 text-[11px] font-semibold hover:bg-white">Rename</button>
-              <button onClick={() => { setReplaceTarget(material.id); inputRef.current?.click() }} className="rounded px-2 py-1 text-[11px] font-semibold hover:bg-white">Replace</button>
+              <button onClick={() => { const next = window.prompt('Material name', material.filename); if (next?.trim()) void rename(material.id, next.trim()) }} className="rounded px-2 py-1 text-[11px] font-semibold text-[#180d62] hover:bg-white">Rename</button>
+              <button onClick={() => { setReplaceTarget(material.id); inputRef.current?.click() }} className="rounded px-2 py-1 text-[11px] font-semibold text-[#180d62] hover:bg-white">Replace</button>
               <button onClick={() => { if (window.confirm(`Remove ${material.filename}?`)) void remove(material.id) }} className="rounded p-1.5 text-red-700 hover:bg-red-50" title="Remove"><Trash2 size={14} /></button>
             </div>
           </div>
