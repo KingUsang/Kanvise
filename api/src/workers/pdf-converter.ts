@@ -18,7 +18,7 @@ const loadPdfJs = new Function(
 
 export type PdfConversionMessage =
   | { type: 'start', numPages: number }
-  | { type: 'page', pageNumber: number, buffer: Buffer, width?: number, height?: number }
+  | { type: 'page', pageNumber: number, buffer: Uint8Array, width?: number, height?: number }
   | { type: 'complete' }
 
 export async function convertPdfToImages(
@@ -30,8 +30,13 @@ export async function convertPdfToImages(
   const pdfjsRoot = path.dirname(require.resolve('pdfjs-dist/package.json'));
   const standardFontDataUrl = path.join(pdfjsRoot, 'standard_fonts/');
 
+  // PDF.js may pass the input through a Node worker. A Buffer-backed view can
+  // fail Node's structured-clone transfer on some PDFs/Node versions, so give
+  // it an ordinary standalone Uint8Array with its own ArrayBuffer.
+  const pdfData = new Uint8Array(pdfBuffer.byteLength)
+  pdfData.set(pdfBuffer)
   const loadingTask = pdfjsLib.getDocument({
-    data: pdfBuffer,
+    data: pdfData,
     // Disable font face because we don't have DOM
     disableFontFace: true,
     standardFontDataUrl: standardFontDataUrl,
@@ -64,7 +69,9 @@ export async function convertPdfToImages(
     
     // Encode as JPEG (85% quality by default in napi-rs/canvas if we don't specify, or we can just use 'jpeg')
     const jpegBuffer = await canvas.encode('jpeg');
-    await emit({ type: 'page', pageNumber: i, buffer: jpegBuffer, width: viewport.width, height: viewport.height });
+    const jpegData = new Uint8Array(jpegBuffer.byteLength)
+    jpegData.set(jpegBuffer)
+    await emit({ type: 'page', pageNumber: i, buffer: jpegData, width: viewport.width, height: viewport.height });
     
     // Clean up page resources
     page.cleanup();
