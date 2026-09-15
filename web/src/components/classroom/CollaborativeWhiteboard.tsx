@@ -258,20 +258,36 @@ const CollaborativeWhiteboard = ({
     if (existing || pendingPdfPagesRef.current.has(elementId)) return existing ? { x: existing.x, y: existing.y } : undefined;
     pendingPdfPagesRef.current.add(elementId);
 
+    let loaded: any = null;
+    let page: any = null;
+    let canvas: HTMLCanvasElement | null = null;
     try {
       const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
       pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
-      const loaded = await pdfjs.getDocument({ url: source.url }).promise;
-      const page = await loaded.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = window.document.createElement('canvas');
+      loaded = await pdfjs.getDocument({ url: source.url }).promise;
+      page = await loaded.getPage(pageNumber);
+      const naturalViewport = page.getViewport({ scale: 1 });
+      // Cap raster memory on mobile. A large PDF page at 1.5x can consume
+      // tens of megabytes before Excalidraw even receives the JPEG.
+      const maxPixels = 2_000_000;
+      const scale = Math.min(1.5, Math.sqrt(maxPixels / (naturalViewport.width * naturalViewport.height)));
+      const viewport = page.getViewport({ scale: Math.max(0.5, scale) });
+      canvas = window.document.createElement('canvas');
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
       const context = canvas.getContext('2d', { alpha: false });
       if (!context) return undefined;
       await page.render({ canvas, canvasContext: context, viewport }).promise;
       const fileId = `pdf-file-${source.materialId}-${pageNumber}`;
-      const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+      const dataURL = canvas.toDataURL('image/jpeg', 0.82);
+      // PDF.js and the browser retain the canvas backing store until it is
+      // explicitly released. The data URL is now the only representation we
+      // need for this page.
+      canvas.width = 1;
+      canvas.height = 1;
+      page.cleanup();
+      await loaded.destroy();
+      loaded = null;
       excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
       // A page is placed in the tutor's current viewport. The tutor can pan to
       // any empty part of the infinite board before pressing "Place page".
@@ -290,11 +306,21 @@ const CollaborativeWhiteboard = ({
         width: viewport.width, height: viewport.height, seed: pageNumber, groupIds: [], boundElements: [],
         updated: Date.now(), fileId, scale: [1, 1], locked: true,
       };
-      localPdfElementsRef.current = [...localPdfElementsRef.current, element];
+      // Page navigation should replace the rendered PDF page. Keeping every
+      // previous page in the Excalidraw scene was the primary mobile memory
+      // leak and made Chrome crash after a few page changes.
+      const previousPdfIds = new Set(localPdfElementsRef.current.map((item: any) => item.id));
+      localPdfElementsRef.current = localPdfElementsRef.current.filter((item: any) => item.id === elementId);
       isUpdatingFromRemote.current = true;
-      excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements(), element] });
+      excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements().filter((item: any) => !previousPdfIds.has(item.id)), element] });
       return pagePosition;
     } finally {
+      if (canvas) {
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+      page?.cleanup?.();
+      if (loaded) void loaded.destroy().catch(() => undefined);
       pendingPdfPagesRef.current.delete(elementId);
     }
   }, [excalidrawAPI]);
