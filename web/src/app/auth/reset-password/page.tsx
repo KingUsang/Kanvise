@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getUser().then((result) => {
+    supabase.auth.getUser().then((result: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
       const user = result.data.user
       if (!active) return;
       if (!user) {

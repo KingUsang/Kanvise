@@ -21,7 +21,7 @@ function CompleteTutorInviteContent() {
 
   useEffect(() => {
     let live = true
-    void supabase.auth.getUser().then((result) => {
+    void supabase.auth.getUser().then((result: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
       const user = result.data.user
       const userError = result.error
       if (!live) return

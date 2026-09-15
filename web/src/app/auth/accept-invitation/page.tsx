@@ -20,7 +20,7 @@ export default function AcceptInvitationPage() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then((result) => {
+    supabase.auth.getUser().then((result: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
       const user = result.data.user
       if (!mounted) return;
       if (!user) {
