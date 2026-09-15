@@ -21,7 +21,7 @@ vi.mock('@livekit/components-react', () => ({
 vi.mock('./AudioVideoControls', () => ({ default: () => null }))
 vi.mock('./ChatBox', () => ({ default: () => null }))
 vi.mock('./ParticipantsPanel', () => ({ default: () => null }))
-vi.mock('./PresentationControls', () => ({ default: () => null }))
+vi.mock('./PresentationControls', () => ({ default: () => null, PresentationPageControls: () => null }))
 vi.mock('./PresentationStage', () => ({ default: () => <div data-testid="teaching-stage" /> }))
 vi.mock('./VideoPiP', () => ({ default: () => null }))
 vi.mock('./presentation-session', () => ({
