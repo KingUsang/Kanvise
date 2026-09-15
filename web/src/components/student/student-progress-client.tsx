@@ -1,6 +1,12 @@
+'use client'
+
 import { BookOpenCheck, CalendarCheck2, CheckCircle2, ChevronRight, ClipboardCheck } from 'lucide-react'
 import Link from 'next/link'
 import type { ProgressMetrics, StudentProgress } from '@/lib/student-progress'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { getApiUrl } from '@/config/api'
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 function Metric({ label, value, detail, icon: Icon }: { label: string; value: string; detail: string; icon: typeof CalendarCheck2 }) {
   return <article className="rounded-2xl border border-[#e3ded9] bg-white p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#716c76]">{label}</p><p className="mt-2 text-3xl font-semibold text-[#2e2877]">{value}</p></div><span className="rounded-xl bg-[#f0edff] p-2.5 text-[#2e2877]"><Icon size={20} /></span></div><p className="mt-3 text-xs leading-5 text-[#716c76]">{detail}</p></article>
@@ -18,7 +24,20 @@ function CourseProgress({ course }: { course: ProgressMetrics & { id: string; na
   ].map(([label, value, detail]) => <div key={String(label)}><div className="flex justify-between text-xs"><span>{label}</span><span className="font-semibold">{value === null ? '—' : `${value}%`}</span></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#eeeae6]"><div className="h-full rounded-full bg-[#2e2877]" style={{ width: `${value || 0}%` }} /></div><p className="mt-1 text-[11px] text-[#8b858f]">{detail}</p></div>)}</div></article>
 }
 
-export function StudentProgressClient({ progress }: { progress: StudentProgress }) {
+export function StudentProgressClient() {
+  const progressQuery = useQuery<StudentProgress>({
+    queryKey: ['student-progress'],
+    queryFn: async () => {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/dashboard/student/progress`, { cache: 'no-store' })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not load your progress')
+      return body.data
+    },
+  })
+  if (progressQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your progress…</main>
+  if (progressQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{progressQuery.error.message}</p><button type="button" onClick={() => void progressQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>
+  const progress = progressQuery.data
+  if (!progress) return null
   const overall = progress.overall
   return <main className="mx-auto max-w-[1440px] px-4 py-7 pb-24 sm:px-6 lg:px-10 lg:py-10">
     <header><p className="text-sm font-medium text-[#994704]">Your learning record</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">My progress</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">See what Kanvise has actually recorded from your classes, assignments, and mocks. Missing activity is shown as missing—not estimated.</p></header>
