@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { assignmentStatus, StudentAssignmentsClient } from "./student-assignments-client";
 import type { StudentAssignment } from "@/lib/student-assignments";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const base: StudentAssignment = { id: "a1", title: "Essay", description: "Write", deadline_at: "2026-07-23T12:00:00Z", created_at: "2026-07-20T12:00:00Z", attachment_file_name: null, attachment_download_url: null, course: null, submission: null };
 const now = new Date("2026-07-22T12:00:00Z").getTime();
 
 describe("assignmentStatus", () => {
+  function renderAssignments(assignments: StudentAssignment[]) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(<QueryClientProvider client={queryClient}><StudentAssignmentsClient assignments={assignments} /></QueryClientProvider>);
+  }
   it("distinguishes pending and overdue work", () => {
     expect(assignmentStatus(base, now)).toBe("pending");
     expect(assignmentStatus({ ...base, deadline_at: "2026-07-21T12:00:00Z" }, now)).toBe("overdue");
@@ -19,14 +24,14 @@ describe("assignmentStatus", () => {
   });
 
   it("does not open an assignment when the page first loads", () => {
-    render(<StudentAssignmentsClient assignments={[base]} />);
+    renderAssignments([base]);
 
     expect(screen.getByText("Choose an assignment")).toBeInTheDocument();
     expect(screen.queryByLabelText("Close assignment")).not.toBeInTheDocument();
   });
 
   it("shows every status without a horizontally scrolling filter strip", () => {
-    render(<StudentAssignmentsClient assignments={[base]} />);
+    renderAssignments([base]);
 
     const filters = screen.getByRole("group", { name: "Filter assignments by status" });
     expect(filters).toHaveClass("grid", "grid-cols-3");
