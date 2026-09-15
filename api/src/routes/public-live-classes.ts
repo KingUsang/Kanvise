@@ -49,11 +49,13 @@ function publicClassData(liveClass: any) {
 }
 
 function publicPresentation(row: any) {
+  const pageImageKeys = row.page_image_keys && typeof row.page_image_keys === 'object' ? row.page_image_keys : {}
   return {
     id: row.id, filename: row.filename, file_size_bytes: row.file_size_bytes,
     page_count: row.page_count, processing_status: row.processing_status || 'ready',
     processing_error: row.processing_error || null, sort_order: row.sort_order,
     current_page: row.current_page, is_active: row.is_active, annotations: row.annotations || {},
+    page_images_ready: Object.keys(pageImageKeys).length,
     created_at: row.created_at, updated_at: row.updated_at,
   }
 }
@@ -178,5 +180,29 @@ publicLiveClassesRouter.get('/:shareToken/presentations/:presentationId/view', a
   } catch (error) {
     console.error('[public-live-class] presentation view failed', error)
     return c.json({ error: 'Could not load this material', code: 'MATERIAL_VIEW_FAILED' }, 500)
+  }
+})
+
+publicLiveClassesRouter.get('/:shareToken/presentations/:presentationId/pages/:page/view', async c => {
+  try {
+    const liveClass = await findClass(c.req.param('shareToken')!)
+    if (!liveClass || liveClass.share_link_revoked_at || liveClass.status !== 'live') return c.json({ error: 'This class is unavailable', code: 'CLASS_UNAVAILABLE' }, 404)
+    const [guest, member] = await Promise.all([currentGuest(liveClass.id, c), recognisedMember(c, liveClass)])
+    if (!guest && !member) return c.json({ error: 'Join this class before viewing its materials', code: 'GUEST_SESSION_REQUIRED' }, 401)
+    const { data, error } = await db.from('live_class_presentations')
+      .select('page_count, page_image_keys, processing_status')
+      .eq('id', c.req.param('presentationId')).eq('live_class_id', liveClass.id).maybeSingle()
+    if (error || !data || data.processing_status !== 'ready') return c.json({ error: 'Material is not ready', code: 'MATERIAL_NOT_READY' }, 409)
+    const page = Number(c.req.param('page'))
+    if (!Number.isInteger(page) || page < 1 || page > data.page_count) return c.json({ error: 'Page is outside this document', code: 'INVALID_PAGE' }, 400)
+    const pageImageKey = data.page_image_keys?.[String(page)]
+    if (!pageImageKey) return c.json({ error: 'This page is still being prepared', code: 'PAGE_NOT_READY' }, 409)
+    return c.json({ data: {
+      url: await createPresignedDownload(pageImageKey, liveClass.school_id, 3600, { responseCacheControl: 'private, max-age=3300, immutable' }),
+      page, expires_in_seconds: 3600,
+    } })
+  } catch (error) {
+    console.error('[public-live-class] presentation page view failed', error)
+    return c.json({ error: 'Could not load this page', code: 'PAGE_VIEW_FAILED' }, 500)
   }
 })

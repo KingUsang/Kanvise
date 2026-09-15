@@ -37,9 +37,11 @@ export type BoardPdfDocument = {
 const CollaborativeWhiteboard = ({
   pdfDocument,
   onPdfRenderStateChange,
+  onPdfRenderError,
 }: {
   pdfDocument?: BoardPdfDocument
   onPdfRenderStateChange?: (rendering: boolean) => void
+  onPdfRenderError?: (error: Error) => void
 }) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const [activeTool, setActiveTool] = useState<"hand" | "freedraw" | "eraser">("hand");
@@ -49,6 +51,9 @@ const CollaborativeWhiteboard = ({
   const redoStackRef = useRef<any[]>([]);
   const localPdfElementsRef = useRef<any[]>([]);
   const pendingPdfPagesRef = useRef(new Set<string>());
+  // Cache only in-flight image decodes. Once displayed, the browser's HTTP
+  // cache owns the compressed bytes and Excalidraw owns the current file.
+  const pdfImageCacheRef = useRef(new Map<string, Promise<{ dataURL: string; width: number; height: number }>>());
   // A presentation must show its current page as soon as it opens. Previously
   // the PDF was only rasterised after the tutor pressed "Place page", leaving
   // the presentation surface as an empty board.
@@ -258,36 +263,37 @@ const CollaborativeWhiteboard = ({
     if (existing || pendingPdfPagesRef.current.has(elementId)) return existing ? { x: existing.x, y: existing.y } : undefined;
     pendingPdfPagesRef.current.add(elementId);
 
-    let loaded: any = null;
-    let page: any = null;
-    let canvas: HTMLCanvasElement | null = null;
     try {
-      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
-      loaded = await pdfjs.getDocument({ url: source.url }).promise;
-      page = await loaded.getPage(pageNumber);
-      const naturalViewport = page.getViewport({ scale: 1 });
-      // Cap raster memory on mobile. A large PDF page at 1.5x can consume
-      // tens of megabytes before Excalidraw even receives the JPEG.
-      const maxPixels = 2_000_000;
-      const scale = Math.min(1.5, Math.sqrt(maxPixels / (naturalViewport.width * naturalViewport.height)));
-      const viewport = page.getViewport({ scale: Math.max(0.5, scale) });
-      canvas = window.document.createElement('canvas');
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      const context = canvas.getContext('2d', { alpha: false });
-      if (!context) return undefined;
-      await page.render({ canvas, canvasContext: context, viewport }).promise;
-      const fileId = `pdf-file-${source.materialId}-${pageNumber}`;
-      const dataURL = canvas.toDataURL('image/jpeg', 0.82);
-      // PDF.js and the browser retain the canvas backing store until it is
-      // explicitly released. The data URL is now the only representation we
-      // need for this page.
-      canvas.width = 1;
-      canvas.height = 1;
-      page.cleanup();
-      await loaded.destroy();
-      loaded = null;
+      let imagePromise = pdfImageCacheRef.current.get(source.url);
+      if (!imagePromise) {
+        imagePromise = (async () => {
+          const response = await fetch(source.url, { cache: 'force-cache' });
+          if (!response.ok) throw new Error(`Page image request failed (${response.status})`);
+          const blob = await response.blob();
+          const dataURL = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error || new Error('Could not read page image'));
+            reader.readAsDataURL(blob);
+          });
+          const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+            image.onerror = () => reject(new Error('Could not decode page image'));
+            image.src = dataURL;
+          });
+          return { dataURL, ...dimensions };
+        })();
+        pdfImageCacheRef.current.set(source.url, imagePromise);
+        imagePromise.then(
+          () => pdfImageCacheRef.current.delete(source.url),
+          () => pdfImageCacheRef.current.delete(source.url),
+        );
+      }
+      const { dataURL, width, height } = await imagePromise;
+      // Reuse one Excalidraw file slot per material so changing pages does not
+      // accumulate decoded image files in the scene's file store.
+      const fileId = `pdf-file-${source.materialId}`;
       excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
       // A page is placed in the tutor's current viewport. The tutor can pan to
       // any empty part of the infinite board before pressing "Place page".
@@ -295,32 +301,26 @@ const CollaborativeWhiteboard = ({
       const appState = excalidrawAPI.getAppState();
       const zoom = appState.zoom?.value || 1;
       const pagePosition = position || {
-        x: -appState.scrollX + appState.width / (2 * zoom) - viewport.width / 2,
-        y: -appState.scrollY + appState.height / (2 * zoom) - viewport.height / 2,
+        x: -appState.scrollX + appState.width / (2 * zoom) - width / 2,
+        y: -appState.scrollY + appState.height / (2 * zoom) - height / 2,
       };
       const element = {
         type: 'image', version: 1, versionNonce: Date.now(), isDeleted: false, id: elementId,
         fillStyle: 'solid', strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100, angle: 0,
         x: pagePosition.x, y: pagePosition.y,
         strokeColor: 'transparent', backgroundColor: 'transparent',
-        width: viewport.width, height: viewport.height, seed: pageNumber, groupIds: [], boundElements: [],
+        width, height, seed: pageNumber, groupIds: [], boundElements: [],
         updated: Date.now(), fileId, scale: [1, 1], locked: true,
       };
       // Page navigation should replace the rendered PDF page. Keeping every
       // previous page in the Excalidraw scene was the primary mobile memory
       // leak and made Chrome crash after a few page changes.
       const previousPdfIds = new Set(localPdfElementsRef.current.map((item: any) => item.id));
-      localPdfElementsRef.current = localPdfElementsRef.current.filter((item: any) => item.id === elementId);
+      localPdfElementsRef.current = [element];
       isUpdatingFromRemote.current = true;
       excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements().filter((item: any) => !previousPdfIds.has(item.id)), element] });
       return pagePosition;
     } finally {
-      if (canvas) {
-        canvas.width = 1;
-        canvas.height = 1;
-      }
-      page?.cleanup?.();
-      if (loaded) void loaded.destroy().catch(() => undefined);
       pendingPdfPagesRef.current.delete(elementId);
     }
   }, [excalidrawAPI]);
@@ -338,18 +338,18 @@ const CollaborativeWhiteboard = ({
     onPdfRenderStateChange?.(true)
     void addPdfPageToBoard(pdfDocument, pdfDocument.page)
       .then((position) => {
-        // Only mark it displayed after PDF.js has actually rendered it, so a
-        // transient signed-URL/network failure can be retried on the next
-        // state refresh.
+        // Only mark it displayed after the page image has decoded, so a
+        // transient signed-URL/network failure can be retried safely.
         if (position) displayedPdfPageRef.current = pageKey;
       })
       .catch((error) => {
         console.error('Failed to render presentation PDF page', error);
+        onPdfRenderError?.(error instanceof Error ? error : new Error('Could not load this page'));
       })
       .finally(() => {
         onPdfRenderStateChange?.(false)
       });
-  }, [addPdfPageToBoard, excalidrawAPI, onPdfRenderStateChange, pdfDocument]);
+  }, [addPdfPageToBoard, excalidrawAPI, onPdfRenderError, onPdfRenderStateChange, pdfDocument]);
 
   // When mounting, ask the room if anyone has the current scene
   useEffect(() => {

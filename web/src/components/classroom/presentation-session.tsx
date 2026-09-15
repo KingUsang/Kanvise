@@ -5,7 +5,7 @@ import { ConnectionState, Participant, RoomEvent } from 'livekit-client'
 import { useConnectionState, useRoomContext } from '@livekit/components-react'
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { activateMaterial, closeMaterials, synchronizePage } from './presentation-state'
+import { activateMaterial, synchronizePage } from './presentation-state'
 
 export type TeachingMode = 'whiteboard' | 'presentation'
 export type AnnotationPoint = { x: number; y: number }
@@ -54,6 +54,7 @@ type Session = {
   setMaterialsOpen: (open: boolean) => void
   remotePointer: Pointer
   getViewUrl: (materialId: string) => Promise<string>
+  getPageViewUrl: (materialId: string, page: number) => Promise<string>
   upload: (file: File, onProgress?: (progress: number) => void) => Promise<void>
   replace: (materialId: string, file: File) => Promise<void>
   activate: (materialId: string) => Promise<void>
@@ -90,6 +91,8 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
   const tutorIdentityRef = useRef('')
   const pointerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const materialsRef = useRef(materials)
+  const pageUrlCacheRef = useRef(new Map<string, { url: string; expiresAt: number }>())
+  const activatingRef = useRef(new Map<string, Promise<void>>())
   useEffect(() => { materialsRef.current = materials }, [materials])
 
   const supabase = useMemo(() => createBrowserClient(
@@ -168,7 +171,7 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
       if (event.type === 'STATE_RECOVERY_REQUEST') {
         if (!isHost) return
         const active = materialsRef.current.find((item) => item.is_active)
-        if (active) publish({ type: 'ACTIVE_MATERIAL', material: active }, STATE_TOPIC, true)
+        if (mode === 'presentation' && active) publish({ type: 'ACTIVE_MATERIAL', material: active }, STATE_TOPIC, true)
         else publish({ type: 'PRESENTATION_CLOSE' }, STATE_TOPIC, true)
         return
       }
@@ -182,7 +185,6 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
         setMaterials((items) => synchronizePage(items, event.materialId, event.page))
       } else if (event.type === 'PRESENTATION_CLOSE') {
         setMode('whiteboard')
-        setMaterials(closeMaterials)
       } else if (event.type === 'ANNOTATION_ADD') {
         setMaterials((items) => items.map((item) => item.id !== event.materialId ? item : {
           ...item,
@@ -206,7 +208,7 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
       room.off(RoomEvent.DataReceived, onData)
       if (pointerTimer.current) clearTimeout(pointerTimer.current)
     }
-  }, [isHost, publish, room])
+  }, [isHost, mode, publish, room])
 
   const active = materials.find((item) => item.is_active) || null
 
@@ -215,11 +217,39 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
     return data.url
   }, [request])
 
+  const getPageViewUrl = useCallback(async (materialId: string, page: number) => {
+    const key = `${materialId}:${page}`
+    const cached = pageUrlCacheRef.current.get(key)
+    if (cached && cached.expiresAt > Date.now() + 60_000) return cached.url
+    const data = await request<{ url: string; expires_in_seconds?: number }>(`/presentations/${materialId}/pages/${page}/view`)
+    pageUrlCacheRef.current.set(key, { url: data.url, expiresAt: Date.now() + (data.expires_in_seconds || 3600) * 1000 })
+    return data.url
+  }, [request])
+
   const activate = useCallback(async (materialId: string) => {
-    const material = await request<PresentationMaterial>(`/presentations/${materialId}/activate`, { method: 'POST' })
-    setMode('presentation')
-    setMaterials((items) => activateMaterial(items, material))
-    publish({ type: 'ACTIVE_MATERIAL', material }, STATE_TOPIC, true)
+    setMaterialsOpen(false)
+    const alreadyActive = materialsRef.current.find((item) => item.id === materialId)?.is_active
+    if (alreadyActive) {
+      setMode('presentation')
+      return
+    }
+    const pending = activatingRef.current.get(materialId)
+    if (pending) return pending
+    const operation = (async () => {
+      try {
+        const material = await request<PresentationMaterial>(`/presentations/${materialId}/activate`, { method: 'POST' })
+        setMode('presentation')
+        setMaterials((items) => activateMaterial(items, material))
+        publish({ type: 'ACTIVE_MATERIAL', material }, STATE_TOPIC, true)
+      } catch (error) {
+        setMaterialsOpen(true)
+        throw error
+      } finally {
+        activatingRef.current.delete(materialId)
+      }
+    })()
+    activatingRef.current.set(materialId, operation)
+    return operation
   }, [publish, request])
 
   const upload = useCallback(async (file: File, onProgress?: (progress: number) => void) => {
@@ -261,7 +291,6 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
   const closePresentation = useCallback(async () => {
     await request('/presentations/close', { method: 'POST' })
     setMode('whiteboard')
-    setMaterials(closeMaterials)
     publish({ type: 'PRESENTATION_CLOSE' }, STATE_TOPIC, true)
   }, [publish, request])
 
@@ -318,7 +347,7 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
 
   const value: Session = {
     mode, materials, active, legacySlides, loading, materialsOpen, setMaterialsOpen, remotePointer,
-    getViewUrl, upload, replace, activate, changePage, closePresentation, rename, reorder, remove,
+    getViewUrl, getPageViewUrl, upload, replace, activate, changePage, closePresentation, rename, reorder, remove,
     saveAnnotations, clearAnnotations, sendPointer,
   }
   return <PresentationContext.Provider value={value}>{children}</PresentationContext.Provider>

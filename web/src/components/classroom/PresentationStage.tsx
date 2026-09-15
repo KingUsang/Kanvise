@@ -78,22 +78,40 @@ function MaterialsDrawer() {
 }
 
 export default function PresentationStage({ isHost }: { isHost: boolean }) {
-  const { mode, active, legacySlides, loading, getViewUrl } = usePresentationSession()
+  const { mode, active, legacySlides, loading, getPageViewUrl } = usePresentationSession()
   const [url, setUrl] = useState('')
+  const [displayedPage, setDisplayedPage] = useState<number | null>(null)
+  const displayedMaterialIdRef = useRef<string | null>(null)
+  const [isLoadingPage, setIsLoadingPage] = useState(false)
   const [isRenderingPage, setIsRenderingPage] = useState(false)
+  const [pageError, setPageError] = useState<string | null>(null)
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
+  const activePage = active?.current_page
   const handlePdfRenderStateChange = useCallback((rendering: boolean) => setIsRenderingPage(rendering), [])
 
   useEffect(() => {
-    setUrl('')
+    setPageError(null)
     if (!activeId) return
     let cancelled = false
-    void getViewUrl(activeId).then((next) => { if (!cancelled) setUrl(next) }).catch((error) => {
+    if (!activePage) return
+    const materialChanged = displayedMaterialIdRef.current !== activeId
+    if (materialChanged) {
+      setUrl('')
+      setDisplayedPage(null)
+      displayedMaterialIdRef.current = activeId
+    }
+    setIsLoadingPage(true)
+    void getPageViewUrl(activeId, activePage).then((next) => {
+      if (cancelled) return
+      setUrl(next)
+      setDisplayedPage(activePage)
+      displayedMaterialIdRef.current = activeId
+    }).catch((error) => {
       if (!cancelled) toast.error('Could not open teaching material', { description: error instanceof Error ? error.message : undefined })
-    })
+    }).finally(() => { if (!cancelled) setIsLoadingPage(false) })
     return () => { cancelled = true }
-  }, [activeId, activeUpdatedAt, getViewUrl])
+  }, [activeId, activePage, activeUpdatedAt, getPageViewUrl])
 
   if (mode === 'whiteboard' || (!active && !loading)) {
     return <div className="absolute inset-0"><CollaborativeWhiteboard /><MaterialsDrawer /></div>
@@ -110,14 +128,26 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
           <CollaborativeWhiteboard pdfDocument={{
             materialId: active.id,
             url,
-            page: active.current_page,
+            page: displayedPage || active.current_page,
             pageCount: active.page_count,
-          }} onPdfRenderStateChange={handlePdfRenderStateChange} />
+          }} onPdfRenderStateChange={handlePdfRenderStateChange} onPdfRenderError={(error) => setPageError(error.message)} />
         )}
       </div>
-      {isRenderingPage && <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/35" role="status" aria-live="polite">
+      {(isRenderingPage || isLoadingPage) && <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/35" role="status" aria-live="polite">
         <div className="flex items-center gap-3 rounded-xl bg-[#292a2d]/95 px-4 py-3 text-sm font-semibold text-white shadow-xl">
           <Loader2 size={18} className="animate-spin" /> Rendering page {active.current_page} of {active.page_count}…
+        </div>
+      </div>}
+      {pageError && <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#202124]/80 p-6" role="alert">
+        <div className="max-w-sm rounded-2xl bg-white p-5 text-center shadow-2xl">
+          <p className="font-semibold text-[#180d62]">This page could not be displayed</p>
+          <p className="mt-1 text-sm text-[#716e79]">Check the connection and try again. Your annotations are still safe.</p>
+          <button className="mt-4 rounded-xl bg-[#180d62] px-4 py-2 text-sm font-bold text-white" onClick={() => {
+            setPageError(null)
+            if (activeId && activePage) void getPageViewUrl(activeId, activePage).then(setUrl).catch((error) => setPageError(error instanceof Error ? error.message : 'Could not load this page'))
+          }}>
+            Try again
+          </button>
         </div>
       </div>}
       <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 max-w-[60%] -translate-x-1/2 truncate rounded-full bg-black/65 px-3 py-1.5 text-[11px] font-medium text-white/90">{active.filename}</div>

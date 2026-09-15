@@ -50,6 +50,7 @@ async function requireClass(c: any, manage = false) {
 }
 
 function publicPresentation(row: any) {
+  const pageImageKeys = row.page_image_keys && typeof row.page_image_keys === 'object' ? row.page_image_keys : {}
   return {
     id: row.id,
     filename: row.filename,
@@ -61,6 +62,7 @@ function publicPresentation(row: any) {
     current_page: row.current_page,
     is_active: row.is_active,
     annotations: row.annotations || {},
+    page_images_ready: Object.keys(pageImageKeys).length,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
@@ -81,6 +83,15 @@ async function findPresentation(classId: string, presentationId: string) {
   const { data } = await db.from('live_class_presentations').select('*')
     .eq('id', presentationId).eq('live_class_id', classId).maybeSingle()
   return data
+}
+
+async function deletePageImages(presentation: any, schoolId: string) {
+  const keys = presentation?.page_image_keys && typeof presentation.page_image_keys === 'object'
+    ? Object.values(presentation.page_image_keys).filter((key): key is string => typeof key === 'string')
+    : []
+  await Promise.all(keys.map((key) => deletePrivateObject(key, schoolId).catch((error) => {
+    console.error('[presentations] page image cleanup failed', { key, error })
+  })))
 }
 
 // State recovery endpoint. It is intentionally API-backed because LiveKit data
@@ -174,6 +185,31 @@ slidesRouter.get('/:id/presentations/:presentationId/view', async (c) => {
   return c.json({ data: { url: viewUrl, expires_in_seconds: 600 } })
 })
 
+slidesRouter.get('/:id/presentations/:presentationId/pages/:page/view', async (c) => {
+  const access = await requireClass(c)
+  if ('response' in access) return access.response
+  const presentation = await findPresentation(access.liveClass.id, c.req.param('presentationId'))
+  if (!presentation) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
+  if (presentation.processing_status === 'ready' && !Object.keys(presentation.page_image_keys || {}).length) {
+    const { data: queued } = await db.from('live_class_presentations').update({
+      processing_status: 'processing', processing_started_at: new Date().toISOString(), processing_error: null,
+    }).eq('id', presentation.id).eq('processing_status', 'ready').select('id').maybeSingle()
+    if (queued) enqueuePresentationProcessing(presentation.id)
+    return c.json({ error: 'Material pages are being prepared', code: 'MATERIAL_NOT_READY' }, 409)
+  }
+  if (presentation.processing_status !== 'ready') return c.json({ error: 'Material is still being prepared', code: 'MATERIAL_NOT_READY' }, 409)
+  const page = Number(c.req.param('page'))
+  if (!Number.isInteger(page) || page < 1 || page > presentation.page_count) {
+    return c.json({ error: 'Page is outside this document', code: 'INVALID_PAGE' }, 400)
+  }
+  const pageImageKey = presentation.page_image_keys?.[String(page)]
+  if (!pageImageKey) return c.json({ error: 'This page is still being prepared', code: 'PAGE_NOT_READY' }, 409)
+  const imageUrl = await createPresignedDownload(pageImageKey, access.user.school_id, 3600, {
+    responseCacheControl: 'private, max-age=3300, immutable',
+  })
+  return c.json({ data: { url: imageUrl, page, expires_in_seconds: 3600 } })
+})
+
 slidesRouter.post('/:id/presentations/:presentationId/replace', async (c) => {
   const access = await requireClass(c, true)
   if ('response' in access) return access.response
@@ -201,11 +237,18 @@ slidesRouter.post('/:id/presentations/:presentationId/replace', async (c) => {
       file_key: fileKey,
       filename: file.name.slice(0, 255),
       file_size_bytes: file.size,
-      page_count: pageCount,
+      page_count: null,
+      processing_status: 'processing',
+      processing_error: null,
+      processing_started_at: new Date().toISOString(),
+      page_image_keys: {},
+      page_image_dimensions: {},
       current_page: 1,
       annotations: {},
     }).eq('id', presentation.id).eq('live_class_id', access.liveClass.id).select('*').single()
     if (error) throw error
+    await deletePageImages(presentation, access.user.school_id)
+    enqueuePresentationProcessing(presentation.id)
     await deletePrivateObject(presentation.file_key, access.user.school_id).catch((error) => {
       console.error('[presentations] old replacement object cleanup failed', error)
     })
@@ -293,7 +336,6 @@ slidesRouter.patch('/:id/presentations/:presentationId', async (c) => {
 slidesRouter.post('/:id/presentations/close', async (c) => {
   const access = await requireClass(c, true)
   if ('response' in access) return access.response
-  await db.from('live_class_presentations').update({ is_active: false }).eq('live_class_id', access.liveClass.id)
   const { error } = await db.from('live_classes').update({ teaching_mode: 'whiteboard' }).eq('id', access.liveClass.id)
   if (error) return c.json({ error: 'Could not close presentation' }, 500)
   return c.json({ data: { teaching_mode: 'whiteboard' } })
@@ -305,6 +347,7 @@ slidesRouter.delete('/:id/presentations/:presentationId', async (c) => {
   const presentation = await findPresentation(access.liveClass.id, c.req.param('presentationId'))
   if (!presentation) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
   await deletePrivateObject(presentation.file_key, access.user.school_id)
+  await deletePageImages(presentation, access.user.school_id)
   const { error } = await db.from('live_class_presentations').delete().eq('id', presentation.id).eq('live_class_id', access.liveClass.id)
   if (error) return c.json({ error: 'Could not remove material' }, 500)
   if (presentation.is_active) {
