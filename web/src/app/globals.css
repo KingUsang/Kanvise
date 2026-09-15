@@ -338,7 +338,8 @@ html {
 .kanvise-teaching-board .excalidraw .App-top-bar,
 .kanvise-teaching-board .excalidraw .App-bottom-bar,
 .kanvise-teaching-board .excalidraw .App-bottom-bar .App-toolbar,
-.kanvise-teaching-board .excalidraw .mobile-misc-tools-container {
+.kanvise-teaching-board .excalidraw .mobile-misc-tools-container,
+.kanvise-teaching-board .excalidraw .main-menu-trigger {
   display: none !important;
 }
 
