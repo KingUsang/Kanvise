@@ -51,7 +51,7 @@ Vercel is the natural deployment target — zero-configuration deployment, autom
 **Constraints:**
 
 - Developers must correctly distinguish Server Components from Client Components. `useState` and `useEffect` only appear in Client Components
-- API calls to Hono always go through Next.js route handlers or directly from Client Components — never from Server Components
+- Public-page API calls may originate in Server Components; authenticated dashboard API calls originate in Client Components through TanStack Query and the shared authenticated request helper. Server Components never pass dashboard JWTs to Client Components.
 - `NEXT_PUBLIC_` prefix only for variables safe to expose to the browser. Never for secrets
 
 ---

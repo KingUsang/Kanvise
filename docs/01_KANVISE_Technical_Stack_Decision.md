@@ -46,7 +46,7 @@ The App Router is used — not the Pages Router. The App Router's layout system 
 
 Route groups are used to separate the public layer, the auth layer, and each role's dashboard without affecting the URL structure.
 
-Server Components handle data fetching for public pages. Client Components handle all interactive dashboard elements.
+Server Components handle data fetching for public pages. Client Components handle all interactive dashboard elements and load authenticated dashboard data through TanStack Query. Server Components only enforce the session and render the dashboard shell; they do not pass dashboard JWTs into Client Components.
 
 **Constraints this choice imposes:**
 

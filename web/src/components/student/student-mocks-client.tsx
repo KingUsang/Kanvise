@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import { BookOpen, Calculator, CheckCircle2, Clock3, PlayCircle, Search, SearchX } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { getApiUrl } from '@/config/api'
 import type { StudentMockCard, StudentMockGroups, UnlockedMock } from '@/lib/student-mocks'
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 type Tab = keyof StudentMockGroups
 
@@ -44,7 +46,33 @@ function Card({ item, state }: { item: StudentMockCard; state: Tab }) {
   </article>
 }
 
-export function StudentMocksClient({ groups, unlocked, initialView }: { groups: StudentMockGroups; unlocked: UnlockedMock[]; initialView: 'programme' | 'unlocked' }) {
+export function StudentMocksClient({ initialView, initialGroups, initialUnlocked, groups: legacyGroups, unlocked: legacyUnlocked }: { initialView: 'programme' | 'unlocked'; initialGroups?: StudentMockGroups; initialUnlocked?: UnlockedMock[]; groups?: StudentMockGroups; unlocked?: UnlockedMock[] }) {
+  const seededGroups = initialGroups || legacyGroups
+  const seededUnlocked = initialUnlocked || legacyUnlocked
+  const groupsQuery = useQuery<StudentMockGroups>({
+    queryKey: ['student-mocks'],
+    initialData: seededGroups,
+    queryFn: async () => {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/students/me/mocks`, { cache: 'no-store' })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not load your mocks')
+      return body.data
+    },
+  })
+  const unlockedQuery = useQuery<UnlockedMock[]>({
+    queryKey: ['student-unlocked-mocks'],
+    initialData: seededUnlocked,
+    queryFn: async () => {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/my-mocks`, { cache: 'no-store' })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not load your unlocked mocks')
+      return body.data || []
+    },
+  })
+  if (groupsQuery.isPending || unlockedQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading mocks…</main>
+  if (groupsQuery.isError || unlockedQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{(groupsQuery.error || unlockedQuery.error)?.message}</p><button type="button" onClick={() => { void groupsQuery.refetch(); void unlockedQuery.refetch() }} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>
+  const groups = groupsQuery.data || { available: [], in_progress: [], upcoming: [], completed: [] }
+  const unlocked = unlockedQuery.data || []
   const router = useRouter()
   const programmeCount = Object.values(groups).reduce((total, group) => total + group.length, 0)
   const [view, setView] = useState<'programme' | 'unlocked'>(initialView === 'programme' && !programmeCount && unlocked.length ? 'unlocked' : initialView)
@@ -74,7 +102,7 @@ export function StudentMocksClient({ groups, unlocked, initialView }: { groups: 
     try {
       const { data: { session } } = await createClient().auth.getSession()
       if (!session) return router.push('/auth/login?redirect=%2Fdashboard%2Fstudent%2Fmocks%3Fview%3Dunlocked')
-      const response = await fetch(`${getApiUrl()}/mock/${item.offer.id}/attempts`, { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` } })
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/mock/${item.offer.id}/attempts`, { method: 'POST' })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not start this mock')
       router.push(`/dashboard/student/mocks/attempt/${body.data.attempt_id}`)

@@ -2,6 +2,10 @@
 
 import { Download, File, FileImage, FileText, Presentation, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { getApiUrl } from '@/config/api'
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
 import type { StudentMaterial } from '@/lib/student-materials'
 
 function fileSize(bytes: number) {
@@ -26,17 +30,27 @@ export function filterMaterials(materials: StudentMaterial[], query: string, cou
       || item.course?.name.toLowerCase().includes(normalized)))
 }
 
-export function StudentMaterialsClient({ materials }: { materials: StudentMaterial[] }) {
+export function StudentMaterialsClient() {
   const [query, setQuery] = useState('')
   const [course, setCourse] = useState('')
   const [type, setType] = useState('')
+  const materialsQuery = useQuery<StudentMaterial[]>({
+    queryKey: ['student-materials'],
+    queryFn: async () => {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/notes/me`, { cache: 'no-store' })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not load learning materials')
+      return body.data || []
+    },
+  })
+  const materials = materialsQuery.data ?? []
   const courses = useMemo(() => [...new Map(materials.flatMap(item => item.course ? [[item.course.id, item.course] as const] : [])).values()], [materials])
   const visible = useMemo(() => filterMaterials(materials, query, course, type), [course, materials, query, type])
 
   return <main className="mx-auto max-w-[1440px] px-4 py-7 pb-24 sm:px-6 lg:px-10 lg:py-10">
     <header><p className="text-sm font-medium text-[#994704]">Study resources</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Materials</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Find notes, slides, and documents shared for the subjects you can access.</p></header>
     <section className="mt-6 grid gap-3 rounded-2xl border border-[#e3ded9] bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1fr)_220px_180px]"><label className="relative"><span className="sr-only">Search materials</span><Search className="absolute left-3 top-3 text-[#8b858f]" size={17} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search title or file name" className="min-h-11 w-full rounded-xl border border-[#ddd7d2] pl-10 pr-3 text-sm outline-none focus:border-[#2e2877]" /></label><label><span className="sr-only">Filter by subject</span><select value={course} onChange={event => setCourse(event.target.value)} className="min-h-11 w-full rounded-xl border border-[#ddd7d2] bg-white px-3 text-sm"><option value="">All subjects</option>{courses.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label><span className="sr-only">Filter by file type</span><select value={type} onChange={event => setType(event.target.value)} className="min-h-11 w-full rounded-xl border border-[#ddd7d2] bg-white px-3 text-sm"><option value="">All file types</option><option value="pdf">PDF</option><option value="docx">Word</option><option value="pptx">PowerPoint</option><option value="image">Image</option></select></label></section>
-    {visible.length ? <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visible.map(item => <article key={item.id} className="flex rounded-2xl border border-[#e3ded9] bg-white p-5"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#f0edff] text-[#2e2877]"><FileIcon type={item.file_type} /></span><div className="ml-4 min-w-0 flex-1"><p className="text-[11px] font-semibold uppercase tracking-wide text-[#994704]">{item.course?.name || 'Subject'}</p><h2 className="mt-1 line-clamp-2 font-semibold leading-5">{item.title}</h2>{item.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#716c76]">{item.description}</p>}<p className="mt-3 truncate text-xs text-[#8b858f]">{item.file_name} · {fileSize(item.file_size_bytes)}</p><p className="mt-1 text-xs text-[#8b858f]">Shared {new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(item.created_at))}</p>{item.download_available && item.download_url ? <a href={item.download_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white"><Download size={16} />Download</a> : <p className="mt-4 text-xs font-medium text-[#994704]">Download temporarily unavailable. Please ask your tutor to upload this file again.</p>}</div></article>)}</section>
+    {materialsQuery.isPending ? <section className="mt-6 rounded-2xl border border-[#e3ded9] bg-white py-14 text-center"><p className="text-sm text-[#716c76]">Loading materials…</p></section> : materialsQuery.isError ? <section className="mt-6 rounded-2xl border border-red-200 bg-red-50 py-14 text-center"><p className="text-sm text-red-800">{materialsQuery.error.message}</p><button type="button" onClick={() => void materialsQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></section> : visible.length ? <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visible.map(item => <article key={item.id} className="flex rounded-2xl border border-[#e3ded9] bg-white p-5"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#f0edff] text-[#2e2877]"><FileIcon type={item.file_type} /></span><div className="ml-4 min-w-0 flex-1"><p className="text-[11px] font-semibold uppercase tracking-wide text-[#994704]">{item.course?.name || 'Subject'}</p><h2 className="mt-1 line-clamp-2 font-semibold leading-5">{item.title}</h2>{item.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#716c76]">{item.description}</p>}<p className="mt-3 truncate text-xs text-[#8b858f]">{item.file_name} · {fileSize(item.file_size_bytes)}</p><p className="mt-1 text-xs text-[#8b858f]">Shared {new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(item.created_at))}</p>{item.download_available && item.download_url ? <a href={item.download_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white"><Download size={16} />Download</a> : <p className="mt-4 text-xs font-medium text-[#994704]">Download temporarily unavailable. Please ask your tutor to upload this file again.</p>}</div></article>)}</section>
       : <section className="mt-6 rounded-2xl border border-[#e3ded9] bg-white py-14 text-center"><FileText className="mx-auto text-[#aaa4ad]" /><h2 className="mt-4 text-lg font-semibold">No materials found</h2><p className="mt-1 text-sm text-[#716c76]">Try another filter, or check back after your tutor shares a resource.</p></section>}
   </main>
 }

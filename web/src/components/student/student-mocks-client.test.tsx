@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { StudentMocksClient } from './student-mocks-client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { StudentMockGroups, UnlockedMock } from '@/lib/student-mocks'
 
 const mocks = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }))
@@ -22,15 +23,20 @@ const unlocked: UnlockedMock = {
 describe('StudentMocksClient', () => {
   beforeEach(() => vi.clearAllMocks())
 
+  function renderMocks(groups: StudentMockGroups, unlocked: UnlockedMock[], initialView: 'programme' | 'unlocked') {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return render(<QueryClientProvider client={queryClient}><StudentMocksClient groups={groups} unlocked={unlocked} initialView={initialView} /></QueryClientProvider>)
+  }
+
   it('lets a student continue an active attempt even when its allowance is consumed', () => {
-    render(<StudentMocksClient groups={emptyGroups} unlocked={[unlocked]} initialView="unlocked" />)
+    renderMocks(emptyGroups, [unlocked], 'unlocked')
 
     expect(screen.getByRole('link', { name: 'Continue mock' })).toHaveAttribute('href', '/attempt/attempt-1')
     expect(screen.queryByRole('button', { name: 'Attempts used' })).not.toBeInTheDocument()
   })
 
   it('distinguishes an empty library from a search with no matches', () => {
-    render(<StudentMocksClient groups={emptyGroups} unlocked={[unlocked]} initialView="unlocked" />)
+    renderMocks(emptyGroups, [unlocked], 'unlocked')
     fireEvent.change(screen.getByPlaceholderText('Search mocks or subjects'), { target: { value: 'Physics' } })
 
     expect(screen.getByText('No unlocked mocks match your search')).toBeInTheDocument()
@@ -38,7 +44,7 @@ describe('StudentMocksClient', () => {
   })
 
   it('shows every programme status without a horizontally scrolling tab strip', () => {
-    render(<StudentMocksClient groups={emptyGroups} unlocked={[]} initialView="programme" />)
+    renderMocks(emptyGroups, [], 'programme')
 
     const filters = screen.getByRole('group', { name: 'Filter mock exams by status' })
     expect(filters).toHaveClass('grid', 'grid-cols-2')

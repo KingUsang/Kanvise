@@ -4,6 +4,8 @@ import { Bell, BellOff, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { disableBrowserPush, enableBrowserPush, getBrowserPushState, type BrowserPushState } from '@/lib/push-notifications'
+import { createClient } from '@/lib/supabase/client'
+import { getCurrentAccessToken } from '@/lib/auth-session'
 
 const descriptions: Record<BrowserPushState, string> = {
   loading: 'Checking this device…',
@@ -14,13 +16,20 @@ const descriptions: Record<BrowserPushState, string> = {
   unavailable: 'Browser notifications are temporarily unavailable.',
 }
 
-export function BrowserPushSettings({ token }: { token: string }) {
+export function BrowserPushSettings({ token: initialToken }: { token?: string }) {
+  const [token, setToken] = useState(initialToken || '')
   const [state, setState] = useState<BrowserPushState>('loading')
   const [working, setWorking] = useState(false)
 
   useEffect(() => {
-    void getBrowserPushState(token).then(setState).catch(() => setState('unavailable'))
-  }, [token])
+    let active = true
+    void (initialToken ? Promise.resolve(initialToken) : getCurrentAccessToken(createClient())).then(nextToken => {
+      if (!active || !nextToken) return setState('unavailable')
+      setToken(nextToken)
+      return getBrowserPushState(nextToken).then(setState)
+    }).catch(() => { if (active) setState('unavailable') })
+    return () => { active = false }
+  }, [initialToken])
 
   async function toggle() {
     setWorking(true)

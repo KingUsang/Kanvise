@@ -1,9 +1,11 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+"use client";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, BookOpen, CalendarDays, ClipboardCheck, Clock3, FileText, Video } from "lucide-react";
-import { getStudentDashboard, type StudentDashboardData } from "@/lib/student-dashboard";
+import type { StudentDashboardData } from "@/lib/student-dashboard";
+import { getApiUrl } from '@/config/api';
+import { createClient } from '@/lib/supabase/client';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 
 function formatTime(value: string) { return new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit" }).format(new Date(value)); }
 function formatDate(value: string) { return new Intl.DateTimeFormat("en-NG", { weekday: "short", day: "numeric", month: "short" }).format(new Date(value)); }
@@ -14,16 +16,20 @@ function relativeDate(value: string) {
   return formatDate(value);
 }
 
-async function loadDashboard(): Promise<StudentDashboardData> {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { cookies: { getAll: () => cookieStore.getAll() } });
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
-  return getStudentDashboard(session.access_token);
-}
-
-export default async function StudentDashboardPage() {
-  const data = await loadDashboard();
+export default function StudentDashboardPage() {
+  const dashboardQuery = useQuery<StudentDashboardData>({
+    queryKey: ['student-dashboard'],
+    queryFn: async () => {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/dashboard/student`, { cache: 'no-store' });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Failed to load student dashboard');
+      return body.data;
+    },
+  });
+  if (dashboardQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your dashboard…</main>;
+  if (dashboardQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{dashboardQuery.error.message}</p><button type="button" onClick={() => void dashboardQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>;
+  const data = dashboardQuery.data;
+  if (!data) return null;
   const firstName = data.student.first_name || "there";
   const nextClass = data.next_class;
 
