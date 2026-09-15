@@ -24,7 +24,8 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then((result) => {
+      const user = result.data.user
       if (!active) return;
       if (!user) {
         setError("Enter the reset code from your email before choosing a new password.");
