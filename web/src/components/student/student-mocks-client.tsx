@@ -69,11 +69,9 @@ export function StudentMocksClient({ initialView, initialGroups, initialUnlocked
       return body.data || []
     },
   })
-  if (groupsQuery.isPending || unlockedQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading mocks…</main>
-  if (groupsQuery.isError || unlockedQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{(groupsQuery.error || unlockedQuery.error)?.message}</p><button type="button" onClick={() => { void groupsQuery.refetch(); void unlockedQuery.refetch() }} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>
+  const router = useRouter()
   const groups = groupsQuery.data || { available: [], in_progress: [], upcoming: [], completed: [] }
   const unlocked = unlockedQuery.data || []
-  const router = useRouter()
   const programmeCount = Object.values(groups).reduce((total, group) => total + group.length, 0)
   const [view, setView] = useState<'programme' | 'unlocked'>(initialView === 'programme' && !programmeCount && unlocked.length ? 'unlocked' : initialView)
   const initial = groups.in_progress.length ? 'in_progress' : groups.available.length ? 'available' : 'completed'
@@ -90,6 +88,9 @@ export function StudentMocksClient({ initialView, initialGroups, initialUnlocked
     const mock = item.offer?.mock
     return mock && (!value || mock.title.toLowerCase().includes(value) || mock.school?.name?.toLowerCase().includes(value))
   }), [search, unlocked])
+
+  if (groupsQuery.isPending || unlockedQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading mocks…</main>
+  if (groupsQuery.isError || unlockedQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{(groupsQuery.error || unlockedQuery.error)?.message}</p><button type="button" onClick={() => { void groupsQuery.refetch(); void unlockedQuery.refetch() }} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>
 
   function changeView(next: 'programme' | 'unlocked') {
     setView(next)
