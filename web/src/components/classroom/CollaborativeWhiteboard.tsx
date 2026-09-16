@@ -66,6 +66,7 @@ const CollaborativeWhiteboard = ({
   const slideElementRef = useRef<any>(null);
   const slideFileIdRef = useRef<string | null>(null);
   const room = useRoomContext();
+  const presentationLocked = Boolean(pdfDocument);
 
   const { send } = useDataChannel("whiteboard", (msg) => {
     if (!excalidrawAPI) return;
@@ -312,7 +313,7 @@ const CollaborativeWhiteboard = ({
       // store. Without this, every page navigation retains a base64 image
       // and its decoded bitmap, eventually making the tab unresponsive.
       const files = excalidrawAPI.getFiles() as Record<string, unknown>;
-      const pdfPrefix = `pdf-file-${source.materialId}-`;
+      const pdfPrefix = 'pdf-file-';
       for (const existingFileId of Object.keys(files)) {
         if (existingFileId.startsWith(pdfPrefix)) delete files[existingFileId];
       }
@@ -466,6 +467,24 @@ const CollaborativeWhiteboard = ({
     void send(new TextEncoder().encode(payload), { reliable: true }).catch(() => undefined);
   };
 
+  const constrainPresentationViewport = useCallback((scrollX: number, scrollY: number, zoom: { value: number }) => {
+    if (!presentationLocked || !excalidrawAPI || !localPdfElementsRef.current[0]) return;
+    const page = localPdfElementsRef.current[0];
+    const nextZoom = Math.min(3, Math.max(0.5, zoom.value));
+    const state = excalidrawAPI.getAppState();
+    const viewportWidth = state.width / nextZoom;
+    const viewportHeight = state.height / nextZoom;
+    const clampScroll = (scroll: number, start: number, end: number, viewport: number) => {
+      if (end - start <= viewport) return -(start + (end - start - viewport) / 2);
+      return Math.min(-start, Math.max(-(end - viewport), scroll));
+    };
+    const nextScrollX = clampScroll(scrollX, page.x, page.x + page.width, viewportWidth);
+    const nextScrollY = clampScroll(scrollY, page.y, page.y + page.height, viewportHeight);
+    if (Math.abs(nextScrollX - scrollX) > 0.5 || Math.abs(nextScrollY - scrollY) > 0.5 || nextZoom !== zoom.value) {
+      excalidrawAPI.updateScene({ appState: { scrollX: nextScrollX, scrollY: nextScrollY, zoom: { value: nextZoom } } });
+    }
+  }, [excalidrawAPI, presentationLocked]);
+
   return (
     <div ref={boardContainerRef} className="kanvise-teaching-board absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-white">
       <Excalidraw
@@ -493,6 +512,7 @@ const CollaborativeWhiteboard = ({
           }
         }}
         renderTopRightUI={() => null}
+        onScrollChange={constrainPresentationViewport}
       />
       <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
         {pdfDocument && <>
