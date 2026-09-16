@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChevronDown, ChevronUp, FileText, Loader2, Trash2, Upload, X,
 } from 'lucide-react'
@@ -103,6 +103,11 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
   const activeUpdatedAt = active?.updated_at
   const activePage = active?.current_page
   const handlePdfRenderStateChange = useCallback((rendering: boolean) => setIsRenderingPage(rendering), [])
+  const handlePdfRenderError = useCallback((error: Error) => setPageError(error.message), [])
+  const pdfDocument = useMemo(() => {
+    if (!active || !url || !active.page_count) return undefined
+    return { materialId: active.id, url, page: displayedPage || active.current_page, pageCount: active.page_count }
+  }, [active, displayedPage, url])
 
   useEffect(() => {
     setPageError(null)
@@ -139,12 +144,7 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
     <div className="absolute inset-0 flex flex-col bg-[#202124]" data-presentation-stage>
       <div className="absolute inset-0">
         {!url ? <div className="flex h-full items-center justify-center text-white"><Loader2 className="animate-spin" /></div> : (
-          <CollaborativeWhiteboard pdfDocument={{
-            materialId: active.id,
-            url,
-            page: displayedPage || active.current_page,
-            pageCount: active.page_count,
-          }} onPdfRenderStateChange={handlePdfRenderStateChange} onPdfRenderError={(error) => setPageError(error.message)} />
+          <CollaborativeWhiteboard pdfDocument={pdfDocument} onPdfRenderStateChange={handlePdfRenderStateChange} onPdfRenderError={handlePdfRenderError} />
         )}
       </div>
       {(isRenderingPage || isLoadingPage) && <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/35" role="status" aria-live="polite">
