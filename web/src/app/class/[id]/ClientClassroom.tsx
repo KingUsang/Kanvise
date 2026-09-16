@@ -39,11 +39,13 @@ function ClassroomConnectionGate({
   issue,
   onRetry,
   hasEverConnected,
+  offline,
   children,
 }: {
   issue: string | null
   onRetry: () => void
   hasEverConnected: boolean
+  offline: boolean
   children: React.ReactNode
 }) {
   const connectionState = useConnectionState()
@@ -51,6 +53,10 @@ function ClassroomConnectionGate({
   // Once the room has connected, keep the classroom mounted while LiveKit
   // reconnects. Replacing the whole classroom with a join/error page loses
   // the tutor's context and falsely reports a healthy network as offline.
+  if (offline && !hasEverConnected) {
+    return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans"><section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 text-center shadow-sm"><span className="material-symbols-outlined text-3xl text-[#994704]" aria-hidden="true">wifi_off</span><h1 className="mt-3 text-xl font-bold text-[#180d62]">You&apos;re offline</h1><p className="mt-2 text-sm leading-6 text-[#66616c]">We&apos;ll reconnect automatically when your connection returns.</p><div className="mt-6 flex justify-center gap-3"><button type="button" onClick={onRetry} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button><Link href="/dashboard/schedule" className="rounded-lg border border-[#c8c5d2] px-4 py-2 text-sm font-semibold text-[#2e2877]">Back to classes</Link></div></section></main>
+  }
+
   if (issue && !hasEverConnected) {
     return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
       <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 text-center shadow-sm">
@@ -75,6 +81,10 @@ function ClassroomConnectionGate({
     </main>
   }
 
+  if (hasEverConnected && (offline || connectionState === ConnectionState.Reconnecting)) {
+    return <><>{children}</><div className="pointer-events-none fixed left-1/2 top-16 z-[60] -translate-x-1/2 rounded-full bg-[#292a2d]/95 px-4 py-2 text-xs font-semibold text-white shadow-lg" role="status">Connection interrupted. Reconnecting…</div></>
+  }
+
   return <>{children}</>
 }
 
@@ -89,15 +99,24 @@ export default function ClientClassroom({
   guestShareToken,
 }: ClientClassroomProps) {
   const isLeavingClassroom = useRef(false);
-  const hasConnected = useRef(false)
+  const [hasConnected, setHasConnected] = useState(false)
   const failureHandledForAttempt = useRef<number | null>(null)
   const retryTimer = useRef<number | null>(null)
   const [connectionIssue, setConnectionIssue] = useState<string | null>(null)
+  const [offline, setOffline] = useState(false)
   const [connectionAttempt, setConnectionAttempt] = useState(0)
   const dashboardPath = isHost ? "/dashboard" : guestShareToken ? "/" : "/dashboard/student/classes";
 
   useEffect(() => () => {
     if (retryTimer.current) window.clearTimeout(retryTimer.current)
+  }, [])
+
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine)
+    update()
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update) }
   }, [])
 
   const markLeavingClassroom = () => {
@@ -108,7 +127,7 @@ export default function ClientClassroom({
     if (retryTimer.current) window.clearTimeout(retryTimer.current)
     retryTimer.current = null
     failureHandledForAttempt.current = null
-    hasConnected.current = false
+    setHasConnected(false)
     setConnectionIssue(null)
     setConnectionAttempt((attempt) => attempt + 1)
   }
@@ -122,7 +141,7 @@ export default function ClientClassroom({
     // The Azure VM can report healthy just before its WebSocket listener is
     // ready. Do one quiet, fresh connection attempt instead of falsely
     // blaming the student's network on their first visit.
-    if (!hasConnected.current && failureHandledForAttempt.current !== connectionAttempt) {
+    if (!hasConnected && failureHandledForAttempt.current !== connectionAttempt) {
       failureHandledForAttempt.current = connectionAttempt
       if (connectionAttempt === 0) {
         retryTimer.current = window.setTimeout(retryConnection, 1_200)
@@ -133,7 +152,7 @@ export default function ClientClassroom({
     // A connected room can briefly enter Reconnecting/Disconnected while the
     // SDK recovers. Keep the classroom mounted; the header reflects the
     // transient state and LiveKit will restore the tracks when ready.
-    if (hasConnected.current) return
+    if (hasConnected) return
     setConnectionIssue('Check your connection, then try joining the class again.')
   };
 
@@ -149,7 +168,7 @@ export default function ClientClassroom({
       data-lk-theme="default"
       className="h-screen h-dvh w-full flex flex-col bg-background text-foreground overflow-hidden"
       onConnected={() => {
-        hasConnected.current = true
+        setHasConnected(true)
         failureHandledForAttempt.current = null
         setConnectionIssue(null)
         markInstallEligible()
@@ -160,7 +179,7 @@ export default function ClientClassroom({
       <MuteStudentOnJoin isHost={isHost} />
       {/* Renders audio tracks of other participants */}
       <RoomAudioRenderer />
-      <ClassroomConnectionGate issue={connectionIssue} onRetry={retryConnection} hasEverConnected={hasConnected.current}>
+      <ClassroomConnectionGate issue={connectionIssue} onRetry={retryConnection} hasEverConnected={hasConnected} offline={offline}>
         {/* Main classroom UI only appears once the room connection succeeds. */}
         <ClassroomLayout
           isHost={isHost}
