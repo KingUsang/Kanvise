@@ -309,14 +309,9 @@ const CollaborativeWhiteboard = ({
       // the same ID. Include the page so navigation cannot keep rendering the
       // first decoded bitmap while the scene element changes.
       const fileId = `pdf-file-${source.materialId}-${pageNumber}`;
-      // Keep only the currently displayed PDF bitmap in Excalidraw's file
-      // store. Without this, every page navigation retains a base64 image
-      // and its decoded bitmap, eventually making the tab unresponsive.
-      const files = excalidrawAPI.getFiles() as Record<string, unknown>;
-      const pdfPrefix = 'pdf-file-';
-      for (const existingFileId of Object.keys(files)) {
-        if (existingFileId.startsWith(pdfPrefix)) delete files[existingFileId];
-      }
+      // Add the replacement before removing stale files. Deleting first makes
+      // the current scene element briefly reference a missing bitmap, causing
+      // a visible blank flash during page navigation.
       excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
       // A page is placed in the tutor's current viewport. The tutor can pan to
       // any empty part of the infinite board before pressing "Place page".
@@ -343,6 +338,10 @@ const CollaborativeWhiteboard = ({
       localPdfElementsRef.current = [element];
       isUpdatingFromRemote.current = true;
       excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements().filter((item: any) => !previousPdfIds.has(item.id)), element] });
+      const files = excalidrawAPI.getFiles() as Record<string, unknown>;
+      for (const existingFileId of Object.keys(files)) {
+        if (existingFileId.startsWith('pdf-file-') && existingFileId !== fileId) delete files[existingFileId];
+      }
       if (shouldFitInitialPage) excalidrawAPI.scrollToContent(element, { fitToContent: true, animate: false });
       return pagePosition;
     } finally {
