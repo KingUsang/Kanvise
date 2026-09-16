@@ -339,9 +339,11 @@ const CollaborativeWhiteboard = ({
       // previous page in the Excalidraw scene was the primary mobile memory
       // leak and made Chrome crash after a few page changes.
       const previousPdfIds = new Set(localPdfElementsRef.current.map((item: any) => item.id));
+      const shouldFitInitialPage = localPdfElementsRef.current.length === 0 || !localPdfElementsRef.current[0].id.startsWith(`pdf-page-${source.materialId}-`);
       localPdfElementsRef.current = [element];
       isUpdatingFromRemote.current = true;
       excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements().filter((item: any) => !previousPdfIds.has(item.id)), element] });
+      if (shouldFitInitialPage) excalidrawAPI.scrollToContent(element, { fitToContent: true, animate: false });
       return pagePosition;
     } finally {
       pendingPdfPagesRef.current.delete(elementId);
