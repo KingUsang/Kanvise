@@ -131,6 +131,25 @@ liveClassesRouter.use(
   tenantMiddleware,
 )
 
+// ── GET /live-classes/:id/readiness — Check classroom readiness ───────────
+// This is intentionally side-effect free from the class perspective: it may
+// wake/check the LiveKit worker, but it does not create a room or issue a
+// participant token. The browser can safely call it after refresh/reconnect.
+liveClassesRouter.get('/:id/readiness', async (c) => {
+  const access = await requireClassroom(c, c.req.query('intent') === 'start' ? 'host' : 'view')
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
+  try {
+    const worker = await ensureLiveKitWorkerReady()
+    if (worker.state === 'preparing') return c.json({ data: { state: 'starting', retry_after_seconds: worker.retryAfterSeconds } })
+    if (worker.state !== 'ready') return c.json({ data: { state: 'unavailable', message: worker.message || 'The classroom is temporarily unavailable' } }, 503)
+    return c.json({ data: { state: 'ready', class_status: liveClass.status } })
+  } catch (error) {
+    console.error('[live-classes] readiness check failed:', error)
+    return c.json({ data: { state: 'unavailable', message: 'The classroom is temporarily unavailable' } }, 503)
+  }
+})
+
 // ── POST /live-classes — Schedule a class (Admin, Tutor) ───────────────────
 
 liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {

@@ -40,8 +40,13 @@ export default function PreparingClassroom({
   const check = useCallback(async (signal: AbortSignal) => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Your session has expired. Sign in again to enter this class.')
-    const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/${isStarting ? 'start' : 'join'}`
-    const response = await fetch(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, cache: 'no-store', signal })
+    const base = `${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}`
+    const readiness = await fetch(`${base}/readiness${isStarting ? '?intent=start' : ''}`, { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store', signal })
+    const readinessBody = await readiness.json().catch(() => null)
+    if (!readiness.ok && readiness.status !== 503) throw new Error(readinessBody?.error || 'We could not check the classroom yet.')
+    if (readinessBody?.data?.state === 'unavailable') throw new Error(readinessBody.data.message || 'The classroom is temporarily unavailable.')
+    if (readinessBody?.data?.state !== 'ready') return null
+    const response = await fetch(`${base}/${isStarting ? 'start' : 'join'}`, { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, cache: 'no-store', signal })
     const body = await response.json().catch(() => null)
     if (response.status === 202 && body?.data?.state === 'preparing') return null
     if (!response.ok) throw new Error(body?.error || 'We could not open the classroom.')
