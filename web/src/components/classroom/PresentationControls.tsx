@@ -28,13 +28,4 @@ export default function PresentationControls() {
   )
 }
 
-export function PresentationPageControls({ isHost }: { isHost: boolean }) {
-  const { mode, active, changePage } = usePresentationSession()
-  if (mode !== 'presentation' || !active?.page_count) return null
 
-  return <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-[#dedce2] bg-[#f4f2f5] p-1" aria-label="Presentation pages">
-    <button onClick={() => void changePage(active.current_page - 1)} disabled={!isHost || active.current_page === 1} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#180d62] hover:bg-white disabled:opacity-35" aria-label="Previous page"><ChevronLeft size={17} /></button>
-    <span className="min-w-9 px-1 text-center text-[11px] font-bold tabular-nums text-[#474551]">{active.current_page}/{active.page_count}</span>
-    <button onClick={() => void changePage(active.current_page + 1)} disabled={!isHost || active.current_page === active.page_count} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#180d62] hover:bg-white disabled:opacity-35" aria-label="Next page"><ChevronRight size={17} /></button>
-  </div>
-}

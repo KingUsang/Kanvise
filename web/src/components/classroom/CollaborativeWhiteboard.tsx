@@ -3,7 +3,8 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Eraser, Hand, Pencil, Redo2, Undo2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Eraser, Hand, Pencil, Redo2, Undo2, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
+import { usePresentationSession } from "./presentation-session";
 
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then(({ Excalidraw: Canvas }) => {
@@ -66,6 +67,13 @@ const CollaborativeWhiteboard = ({
   const slideElementRef = useRef<any>(null);
   const slideFileIdRef = useRef<string | null>(null);
   const room = useRoomContext();
+  let isHost = false;
+  try {
+    isHost = JSON.parse(room.localParticipant.metadata || "{}").isHost;
+  } catch {
+    // ignore
+  }
+  const { active, changePage } = usePresentationSession();
   const presentationLocked = Boolean(pdfDocument);
 
   const { send } = useDataChannel("whiteboard", (msg) => {
@@ -103,6 +111,33 @@ const CollaborativeWhiteboard = ({
             (chain: Promise<unknown>, page: { page: number; x: number; y: number }) => chain.then(() => addPage(source, page.page, page)),
             Promise.resolve(),
           );
+        }
+      }
+
+      if (data.type === "SYNC_VIEWPORT") {
+        const meta = JSON.parse(room.localParticipant.metadata || "{}");
+        if (!meta.isHost && excalidrawAPI) {
+          const { left, top, right, bottom } = data.bounds;
+          const targetWidth = right - left;
+          const targetHeight = bottom - top;
+          const state = excalidrawAPI.getAppState();
+          const studentWidth = state.width;
+          const studentHeight = state.height;
+          const scaleX = studentWidth / targetWidth;
+          const scaleY = studentHeight / targetHeight;
+          const nextZoom = Math.min(10, Math.max(0.1, Math.min(scaleX, scaleY)));
+          const centerX = (left + right) / 2;
+          const centerY = (top + bottom) / 2;
+          const nextScrollX = -centerX + (studentWidth / nextZoom) / 2;
+          const nextScrollY = -centerY + (studentHeight / nextZoom) / 2;
+          isUpdatingFromRemote.current = true;
+          excalidrawAPI.updateScene({
+            appState: {
+              scrollX: nextScrollX,
+              scrollY: nextScrollY,
+              zoom: { value: nextZoom }
+            }
+          });
         }
       }
 
@@ -342,7 +377,7 @@ const CollaborativeWhiteboard = ({
       for (const existingFileId of Object.keys(files)) {
         if (existingFileId.startsWith('pdf-file-') && existingFileId !== fileId) delete files[existingFileId];
       }
-      if (shouldFitInitialPage) excalidrawAPI.scrollToContent(element, { fitToContent: true, animate: false });
+      if (shouldFitInitialPage) fitPage();
       return pagePosition;
     } finally {
       pendingPdfPagesRef.current.delete(elementId);
@@ -386,13 +421,6 @@ const CollaborativeWhiteboard = ({
       if (promise) promise.catch(() => {}); // silent catch
     }
   }, [excalidrawAPI, send, connectionState]);
-
-  let isHost = false;
-  try {
-    isHost = JSON.parse(room.localParticipant.metadata || "{}").isHost;
-  } catch {
-    // ignore
-  }
 
   useEffect(() => {
     if (excalidrawAPI && isHost) excalidrawAPI.setActiveTool({ type: "hand" });
@@ -439,7 +467,17 @@ const CollaborativeWhiteboard = ({
 
   const fitPage = () => {
     const page = localPdfElementsRef.current[0];
-    if (page && excalidrawAPI) excalidrawAPI.scrollToContent(page, { fitToContent: true, animate: false });
+    if (page && excalidrawAPI) {
+      const state = excalidrawAPI.getAppState();
+      const fitZoomX = state.width / page.width;
+      const fitZoomY = state.height / page.height;
+      const minZoom = Math.min(fitZoomX, fitZoomY) * 0.95;
+      const centerX = page.x + page.width / 2;
+      const centerY = page.y + page.height / 2;
+      const nextScrollX = -centerX + (state.width / minZoom) / 2;
+      const nextScrollY = -centerY + (state.height / minZoom) / 2 - (30 / minZoom);
+      excalidrawAPI.updateScene({ appState: { zoom: { value: minZoom }, scrollX: nextScrollX, scrollY: nextScrollY } });
+    }
   };
 
   // Mobile tutors need a dependable one-tap undo. Excalidraw's public API
@@ -471,8 +509,11 @@ const CollaborativeWhiteboard = ({
   const constrainPresentationViewport = useCallback((scrollX: number, scrollY: number, zoom: { value: number }) => {
     if (!presentationLocked || !excalidrawAPI || !localPdfElementsRef.current[0]) return;
     const page = localPdfElementsRef.current[0];
-    const nextZoom = Math.min(3, Math.max(0.5, zoom.value));
     const state = excalidrawAPI.getAppState();
+    const fitZoomX = state.width / page.width;
+    const fitZoomY = state.height / page.height;
+    const minZoom = Math.min(fitZoomX, fitZoomY) * 0.95;
+    const nextZoom = Math.min(10, Math.max(minZoom, zoom.value));
     const viewportWidth = state.width / nextZoom;
     const viewportHeight = state.height / nextZoom;
     const clampScroll = (scroll: number, start: number, end: number, viewport: number) => {
@@ -481,10 +522,32 @@ const CollaborativeWhiteboard = ({
     };
     const nextScrollX = clampScroll(scrollX, page.x, page.x + page.width, viewportWidth);
     const nextScrollY = clampScroll(scrollY, page.y, page.y + page.height, viewportHeight);
+    let updated = false;
     if (Math.abs(nextScrollX - scrollX) > 0.5 || Math.abs(nextScrollY - scrollY) > 0.5 || nextZoom !== zoom.value) {
       excalidrawAPI.updateScene({ appState: { scrollX: nextScrollX, scrollY: nextScrollY, zoom: { value: nextZoom } } });
+      updated = true;
     }
-  }, [excalidrawAPI, presentationLocked]);
+    
+    if (isHost) {
+      const now = Date.now();
+      if (now - (lastBroadcastRef.current || 0) > 60 && connectionState === ConnectionState.Connected) {
+        lastBroadcastRef.current = now;
+        const currentScrollX = updated ? nextScrollX : scrollX;
+        const currentScrollY = updated ? nextScrollY : scrollY;
+        const payload = JSON.stringify({
+          type: "SYNC_VIEWPORT",
+          bounds: {
+            left: -currentScrollX,
+            top: -currentScrollY,
+            right: -currentScrollX + viewportWidth,
+            bottom: -currentScrollY + viewportHeight
+          }
+        });
+        const promise = send(new TextEncoder().encode(payload), { reliable: false });
+        if (promise) promise.catch(() => {});
+      }
+    }
+  }, [excalidrawAPI, presentationLocked, isHost, send, connectionState]);
 
   return (
     <div ref={boardContainerRef} className="kanvise-teaching-board absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-white">
@@ -523,6 +586,14 @@ const CollaborativeWhiteboard = ({
           {isHost && <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />}
         </>}
         {isHost && <>
+          {presentationLocked && active?.page_count ? (
+            <>
+              <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronLeft size={19} /></button>
+              <span className="text-[12px] font-bold px-2 tabular-nums text-[#180d62]">{active.current_page}/{active.page_count}</span>
+              <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronRight size={19} /></button>
+              <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />
+            </>
+          ) : null}
           <button onClick={() => setTool("hand")} className={`rounded-xl p-3 ${activeTool === "hand" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pan board" title="Pan board"><Hand size={19} /></button>
           <button onClick={() => setTool("freedraw")} className={`rounded-xl p-3 ${activeTool === "freedraw" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pen" title="Pen"><Pencil size={19} /></button>
           <button onClick={() => setTool("eraser")} className={`rounded-xl p-3 ${activeTool === "eraser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Eraser" title="Eraser"><Eraser size={19} /></button>

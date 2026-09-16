@@ -13,7 +13,7 @@ import AudioVideoControls from "./AudioVideoControls";
 import ChatBox from "./ChatBox";
 import VideoPiP from "./VideoPiP";
 import ParticipantsPanel from "./ParticipantsPanel";
-import PresentationControls, { PresentationPageControls } from "./PresentationControls";
+import PresentationControls from "./PresentationControls";
 import PresentationStage from "./PresentationStage";
 import { PresentationSessionProvider } from "./presentation-session";
 import { INITIAL_SIDEBAR_STATE, sidebarReducer } from "./sidebar-state";
@@ -317,7 +317,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: Cla
           {isHost && (
             <PresentationControls />
           )}
-          {isHost && <PresentationPageControls isHost={isHost} />}
+
           <AudioVideoControls />
 
           {/* Screen sharing is intentionally disabled. Slides are the only
