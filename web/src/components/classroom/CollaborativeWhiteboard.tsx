@@ -59,8 +59,12 @@ const CollaborativeWhiteboard = ({
   // the presentation surface as an empty board.
   const displayedPdfPageRef = useRef<string | null>(null);
   const pdfDocumentRef = useRef<BoardPdfDocument | undefined>(pdfDocument);
-  const addPdfPageToBoardRef = useRef<((source: BoardPdfDocument, page: number, position?: { x: number; y: number }) => Promise<{ x: number; y: number } | undefined>) | null>(null);
+  const addPdfPageToBoardRef = useRef<((source: BoardPdfDocument, page: number, position?: { x: number; y: number }, requestId?: number) => Promise<{ x: number; y: number } | undefined>) | null>(null);
+  // Invalidates an older page request when the tutor clicks back/forward
+  // quickly. Only the latest request is allowed to mutate the canvas.
+  const pdfRenderRequestRef = useRef(0);
   const slideElementRef = useRef<any>(null);
+  const slideFileIdRef = useRef<string | null>(null);
   const room = useRoomContext();
 
   const { send } = useDataChannel("whiteboard", (msg) => {
@@ -195,6 +199,14 @@ const CollaborativeWhiteboard = ({
         const mimeType = blob.type;
         const fileId = "slide-" + Date.now();
 
+        // Excalidraw's public API only adds files; it does not expose a
+        // removeFiles method. Prune the previous slide from its file map
+        // before adding the replacement so repeated slide changes cannot
+        // retain every decoded bitmap in memory.
+        const files = excalidrawAPI.getFiles() as Record<string, unknown>;
+        if (slideFileIdRef.current) delete files[slideFileIdRef.current];
+        slideFileIdRef.current = fileId;
+
         excalidrawAPI.addFiles([{
           id: fileId,
           dataURL: base64data,
@@ -256,7 +268,7 @@ const CollaborativeWhiteboard = ({
     }
   };
 
-  const addPdfPageToBoard = useCallback(async (source: BoardPdfDocument, pageNumber: number, position?: { x: number; y: number }) => {
+  const addPdfPageToBoard = useCallback(async (source: BoardPdfDocument, pageNumber: number, position?: { x: number; y: number }, requestId?: number) => {
     if (!excalidrawAPI || pageNumber < 1 || pageNumber > source.pageCount) return undefined;
     const elementId = `pdf-page-${source.materialId}-${pageNumber}`;
     const existing = localPdfElementsRef.current.find((element) => element.id === elementId);
@@ -291,10 +303,19 @@ const CollaborativeWhiteboard = ({
         );
       }
       const { dataURL, width, height } = await imagePromise;
+      if (requestId !== undefined && requestId !== pdfRenderRequestRef.current) return undefined;
       // Excalidraw does not replace an existing file when addFiles receives
       // the same ID. Include the page so navigation cannot keep rendering the
       // first decoded bitmap while the scene element changes.
       const fileId = `pdf-file-${source.materialId}-${pageNumber}`;
+      // Keep only the currently displayed PDF bitmap in Excalidraw's file
+      // store. Without this, every page navigation retains a base64 image
+      // and its decoded bitmap, eventually making the tab unresponsive.
+      const files = excalidrawAPI.getFiles() as Record<string, unknown>;
+      const pdfPrefix = `pdf-file-${source.materialId}-`;
+      for (const existingFileId of Object.keys(files)) {
+        if (existingFileId.startsWith(pdfPrefix)) delete files[existingFileId];
+      }
       excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
       // A page is placed in the tutor's current viewport. The tutor can pan to
       // any empty part of the infinite board before pressing "Place page".
@@ -332,12 +353,14 @@ const CollaborativeWhiteboard = ({
   }, [addPdfPageToBoard, pdfDocument]);
 
   useEffect(() => {
-    if (!pdfDocument || !excalidrawAPI) return;
+    if (!excalidrawAPI) return;
+    const requestId = ++pdfRenderRequestRef.current;
+    if (!pdfDocument) return;
     const pageKey = `${pdfDocument.materialId}:${pdfDocument.page}:${pdfDocument.url}`;
     if (displayedPdfPageRef.current === pageKey) return;
 
     onPdfRenderStateChange?.(true)
-    void addPdfPageToBoard(pdfDocument, pdfDocument.page)
+    void addPdfPageToBoard(pdfDocument, pdfDocument.page, undefined, requestId)
       .then((position) => {
         // Only mark it displayed after the page image has decoded, so a
         // transient signed-URL/network failure can be retried safely.
