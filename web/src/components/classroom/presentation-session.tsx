@@ -93,6 +93,10 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
   const materialsRef = useRef(materials)
   const pageUrlCacheRef = useRef(new Map<string, { url: string; expiresAt: number }>())
   const activatingRef = useRef(new Map<string, Promise<void>>())
+  // Serialize rapid Back/Next clicks so an older PATCH cannot overwrite a
+  // newer requested page when the network responses return out of order.
+  const pageChangeQueueRef = useRef(Promise.resolve())
+  const requestedPageRef = useRef<{ materialId: string; page: number } | null>(null)
   useEffect(() => { materialsRef.current = materials }, [materials])
 
   const supabase = useMemo(() => createBrowserClient(
@@ -281,11 +285,28 @@ export function PresentationSessionProvider({ classId, isHost, guestShareToken, 
   }, [publish, request])
 
   const changePage = useCallback(async (page: number) => {
-    if (!active || !active.page_count || page === active.current_page || page < 1 || page > active.page_count) return
-    setMaterials((items) => synchronizePage(items, active.id, page))
-    publish({ type: 'PAGE_CHANGE', materialId: active.id, page }, STATE_TOPIC, true)
-    try { await request(`/presentations/${active.id}/page`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page }) }) }
-    catch (error) { void loadState(); toast.error(error instanceof Error ? error.message : 'Could not change page') }
+    if (!active || !active.page_count || page < 1 || page > active.page_count) return
+    if (page === active.current_page && !requestedPageRef.current) return
+    const materialId = active.id
+    if (requestedPageRef.current?.materialId === materialId && requestedPageRef.current.page === page) return
+    requestedPageRef.current = { materialId, page }
+    const operation = pageChangeQueueRef.current.then(async () => {
+      if (requestedPageRef.current?.materialId !== materialId || requestedPageRef.current.page !== page) return
+      setMaterials((items) => synchronizePage(items, materialId, page))
+      publish({ type: 'PAGE_CHANGE', materialId, page }, STATE_TOPIC, true)
+      try {
+        await request(`/presentations/${materialId}/page`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page }) })
+      } catch (error) {
+        if (requestedPageRef.current?.materialId === materialId && requestedPageRef.current.page === page) {
+          void loadState()
+          toast.error(error instanceof Error ? error.message : 'Could not change page')
+        }
+      } finally {
+        if (requestedPageRef.current?.materialId === materialId && requestedPageRef.current.page === page) requestedPageRef.current = null
+      }
+    })
+    pageChangeQueueRef.current = operation.catch(() => undefined)
+    await operation
   }, [active, loadState, publish, request])
 
   const closePresentation = useCallback(async () => {
