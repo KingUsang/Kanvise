@@ -51,6 +51,7 @@ const CollaborativeWhiteboard = ({
   const redoStackRef = useRef<any[]>([]);
   const localPdfElementsRef = useRef<any[]>([]);
   const pendingPdfPagesRef = useRef(new Set<string>());
+  const pdfRequestIdRef = useRef(0);
   // Cache only in-flight image decodes. Once displayed, the browser's HTTP
   // cache owns the compressed bytes and Excalidraw owns the current file.
   const pdfImageCacheRef = useRef(new Map<string, Promise<{ dataURL: string; width: number; height: number }>>());
@@ -62,6 +63,7 @@ const CollaborativeWhiteboard = ({
   const addPdfPageToBoardRef = useRef<((source: BoardPdfDocument, page: number, position?: { x: number; y: number }) => Promise<{ x: number; y: number } | undefined>) | null>(null);
   const slideElementRef = useRef<any>(null);
   const room = useRoomContext();
+  const presentationLocked = Boolean(pdfDocument);
 
   const { send } = useDataChannel("whiteboard", (msg) => {
     if (!excalidrawAPI) return;
@@ -261,6 +263,7 @@ const CollaborativeWhiteboard = ({
     const elementId = `pdf-page-${source.materialId}-${pageNumber}`;
     const existing = localPdfElementsRef.current.find((element) => element.id === elementId);
     if (existing || pendingPdfPagesRef.current.has(elementId)) return existing ? { x: existing.x, y: existing.y } : undefined;
+    const requestId = ++pdfRequestIdRef.current;
     pendingPdfPagesRef.current.add(elementId);
 
     try {
@@ -291,9 +294,17 @@ const CollaborativeWhiteboard = ({
         );
       }
       const { dataURL, width, height } = await imagePromise;
-      // Reuse one Excalidraw file slot per material so changing pages does not
-      // accumulate decoded image files in the scene's file store.
-      const fileId = `pdf-file-${source.materialId}`;
+      // Excalidraw image elements require a local file-store entry, but that
+      // entry must never be sent over LiveKit or persisted in the workspace.
+      // Reuse one slot for the currently visible page so switching materials
+      // cannot grow the in-memory file store indefinitely.
+      if (requestId !== pdfRequestIdRef.current) return undefined;
+      const fileId = 'pdf-file-current';
+      // addFiles intentionally ignores an existing id. Remove only our
+      // previous local PDF entry before adding the replacement page; other
+      // Excalidraw files are left untouched.
+      const files = excalidrawAPI.getFiles?.();
+      if (files && files[fileId]) delete files[fileId];
       excalidrawAPI.addFiles([{ id: fileId, dataURL, mimeType: 'image/jpeg', created: Date.now(), lastRetrieved: Date.now() }]);
       // A page is placed in the tutor's current viewport. The tutor can pan to
       // any empty part of the infinite board before pressing "Place page".
@@ -312,6 +323,8 @@ const CollaborativeWhiteboard = ({
         width, height, seed: pageNumber, groupIds: [], boundElements: [],
         updated: Date.now(), fileId, scale: [1, 1], locked: true,
       };
+      // A slower request must never replace a page selected more recently.
+      if (requestId !== pdfRequestIdRef.current) return undefined;
       // Page navigation should replace the rendered PDF page. Keeping every
       // previous page in the Excalidraw scene was the primary mobile memory
       // leak and made Chrome crash after a few page changes.
@@ -430,6 +443,28 @@ const CollaborativeWhiteboard = ({
     void send(new TextEncoder().encode(payload), { reliable: true }).catch(() => undefined);
   };
 
+  const constrainPresentationViewport = useCallback((scrollX: number, scrollY: number, zoom: { value: number }) => {
+    if (!presentationLocked || !excalidrawAPI || !localPdfElementsRef.current[0]) return;
+    const page = localPdfElementsRef.current[0];
+    const nextZoom = Math.min(3, Math.max(0.5, zoom.value));
+    const state = excalidrawAPI.getAppState();
+    const viewportWidth = state.width / nextZoom;
+    const viewportHeight = state.height / nextZoom;
+    const pageLeft = page.x;
+    const pageTop = page.y;
+    const pageRight = page.x + page.width;
+    const pageBottom = page.y + page.height;
+    const clampScroll = (scroll: number, start: number, end: number, viewport: number) => {
+      if (end - start <= viewport) return -(start + (end - start - viewport) / 2);
+      return Math.min(-start, Math.max(-(end - viewport), scroll));
+    };
+    const nextScrollX = clampScroll(scrollX, pageLeft, pageRight, viewportWidth);
+    const nextScrollY = clampScroll(scrollY, pageTop, pageBottom, viewportHeight);
+    if (Math.abs(nextScrollX - scrollX) > 0.5 || Math.abs(nextScrollY - scrollY) > 0.5 || nextZoom !== zoom.value) {
+      excalidrawAPI.updateScene({ appState: { scrollX: nextScrollX, scrollY: nextScrollY, zoom: { value: nextZoom } } });
+    }
+  }, [excalidrawAPI, presentationLocked]);
+
   return (
     <div ref={boardContainerRef} className="kanvise-teaching-board absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-white">
       <Excalidraw
@@ -456,6 +491,7 @@ const CollaborativeWhiteboard = ({
           }
         }}
         renderTopRightUI={() => null}
+        onScrollChange={constrainPresentationViewport}
       />
       {isHost && (
         <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
