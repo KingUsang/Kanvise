@@ -4,6 +4,7 @@ import "@fontsource/poppins/latin-400.css";
 import "@fontsource/poppins/latin-500.css";
 import "@fontsource/poppins/latin-600.css";
 import "@fontsource/poppins/latin-700.css";
+import "@fontsource/material-symbols-outlined";
 import "@livekit/components-styles";
 import "@excalidraw/excalidraw/index.css";
 import "./globals.css";
@@ -41,9 +42,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="no-scrollbar">
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@300,1,0,24&display=swap" rel="stylesheet" />
-      </head>
       <body className="font-sans antialiased overflow-x-hidden no-scrollbar">
         <Suspense fallback={null}>
           <NavigationProgress />
