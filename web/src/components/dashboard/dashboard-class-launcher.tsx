@@ -98,7 +98,7 @@ export function DashboardClassLauncher({
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not start the class')
       if (body.data.share_token) {
-        setShareUrl(`${window.location.origin}/live/${body.data.share_token}`)
+        setShareUrl(`${window.location.origin}/class/${body.data.id}`)
         setShareClassId(body.data.id)
         setStarting(false)
         toast.success(accessMode === 'anyone_with_link' ? 'Your class is ready to share' : 'Your learner link is ready')

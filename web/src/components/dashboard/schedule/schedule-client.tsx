@@ -196,7 +196,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
         if (isStartingNow) {
           markInstallEligible()
           if (responseBody.data.share_token) {
-            setShareUrl(`${window.location.origin}/live/${responseBody.data.share_token}`)
+            setShareUrl(`${window.location.origin}/class/${responseBody.data.id}`)
             setShareClassId(responseBody.data.id)
             setShareAccessMode(responseBody.data.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners')
             toast.success('Your learner link is ready')

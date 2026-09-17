@@ -616,8 +616,8 @@ const CollaborativeWhiteboard = ({
         
         {/* BOTTOM TIER / RIGHT SIDE: Scrollable Drawing Tools */}
         {isHost && (
-          <div className="flex items-center justify-center overflow-x-auto pt-1 md:pt-0 md:pl-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <div className="inline-flex items-center gap-1">
+          <div className="flex w-full overflow-x-auto pt-1 md:pt-0 md:pl-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="mx-auto flex items-center gap-1 px-1">
               <button onClick={() => setTool("hand")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "hand" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pan board" title="Pan board"><Hand size={19} /></button>
               <button onClick={() => setTool("laser")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "laser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Laser Pointer" title="Laser Pointer"><Wand2 size={19} /></button>
               <button onClick={() => setTool("freedraw")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "freedraw" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pen" title="Pen"><Pencil size={19} /></button>
