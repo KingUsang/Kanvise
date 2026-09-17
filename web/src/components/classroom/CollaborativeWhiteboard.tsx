@@ -595,6 +595,7 @@ const CollaborativeWhiteboard = ({
               <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35" aria-label="Previous slide" title="Previous slide"><ChevronLeft size={19} /></button>
               <button 
                 onClick={() => {
+                  if (!active?.page_count || !active?.current_page) return;
                   const input = window.prompt(`Enter slide number (1-${active.page_count}):`, active.current_page.toString());
                   if (input !== null) {
                     const page = parseInt(input, 10);
