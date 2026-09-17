@@ -93,7 +93,69 @@ function liveKitToken(identity: string, name: string, room: string) {
   return token.toJwt()
 }
 
+async function findClassById(classId: string) {
+  if (!/^[0-9a-f-]{36}$/.test(classId) && !/^\d+$/.test(classId)) return null
+  const { data, error } = await db.from('live_classes')
+    .select('id, school_id, course_id, title, status, scheduled_at, livekit_room_name, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
+    .eq('id', classId).maybeSingle()
+  if (error) throw error
+  return data
+}
+
+// GET /public/live-classes/by-id/:classId — used when unauthenticated visitor lands on /class/:id
+publicLiveClassesRouter.get('/by-id/:classId', async c => {
+  try {
+    const liveClass = await findClassById(c.req.param('classId')!)
+    if (!liveClass) return c.json({ error: 'Class not found', code: 'CLASS_NOT_FOUND' }, 404)
+    return c.json({ data: publicClassData(liveClass) })
+  } catch (error) {
+    console.error('[public-live-class] by-id lookup failed', error)
+    return c.json({ error: 'Could not load this class', code: 'LOOKUP_FAILED' }, 500)
+  }
+})
+
+// POST /public/live-classes/by-id/:classId/join — guest join via class ID (only for anyone_with_link classes)
+publicLiveClassesRouter.post('/by-id/:classId/join', async c => {
+  try {
+    const liveClass = await findClassById(c.req.param('classId')!)
+    if (!liveClass) return c.json({ error: 'Class not found', code: 'CLASS_NOT_FOUND' }, 404)
+    if (liveClass.access_mode === 'enrolled_learners') return c.json({ error: 'This class is for enrolled learners only', code: 'ENROLLED_ONLY' }, 403)
+    if (liveClass.status !== 'live' || !liveClass.livekit_room_name) return c.json({ error: liveClass.status === 'completed' ? 'This class has ended' : 'Your tutor has not started this class yet', code: liveClass.status === 'completed' ? 'CLASS_ENDED' : 'CLASS_NOT_LIVE' }, 409)
+
+    const member = await recognisedMember(c, liveClass)
+    if (member) {
+      const identity = member.id
+      const displayName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.kanvise_user_id || 'Learner'
+      const { wsUrl } = getLiveKitConfig()
+      return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: liveKitToken(identity, displayName, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: 'member' } })
+    }
+
+    const body = await c.req.json().catch(() => ({}))
+    const requestedName = typeof body.display_name === 'string' ? body.display_name.trim().replace(/\s+/g, ' ') : ''
+    let guest = await currentGuest(liveClass.id, c)
+    if (!guest) {
+      if (requestedName.length < 2 || requestedName.length > 60) return c.json({ error: 'Enter a name between 2 and 60 characters', code: 'INVALID_DISPLAY_NAME' }, 400)
+      const sessionToken = randomBytes(32).toString('base64url')
+      const { data, error } = await db.from('live_class_guests').insert({
+        school_id: liveClass.school_id, live_class_id: liveClass.id, display_name: requestedName,
+        session_token_hash: tokenHash(sessionToken), expires_at: new Date(Date.now() + guestLifetimeSeconds * 1000).toISOString(),
+      }).select('id, display_name').single()
+      if (error || !data) throw error || new Error('Guest session creation failed')
+      guest = data
+      writeGuestCookie(c, sessionToken)
+    } else {
+      await db.from('live_class_guests').update({ last_seen_at: new Date().toISOString() }).eq('id', guest.id)
+    }
+    const { wsUrl } = getLiveKitConfig()
+    return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: liveKitToken(`guest:${guest.id}`, guest.display_name, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: 'guest' } })
+  } catch (error) {
+    console.error('[public-live-class] by-id join failed', error)
+    return c.json({ error: 'Could not join this class. Please try again.', code: 'JOIN_FAILED' }, 500)
+  }
+})
+
 publicLiveClassesRouter.get('/:shareToken', async c => {
+
   try {
     const liveClass = await findClass(c.req.param('shareToken')!)
     if (!liveClass) return c.json({ error: 'This class link is unavailable', code: 'LINK_UNAVAILABLE' }, 404)
