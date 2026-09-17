@@ -592,9 +592,23 @@ const CollaborativeWhiteboard = ({
           </div>
           {isHost && presentationLocked && active?.page_count && (
             <div className="flex items-center gap-1 md:ml-1">
-              <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronLeft size={19} /></button>
-              <span className="text-[12px] font-bold px-1 md:px-2 tabular-nums text-[#180d62]">{active.current_page}/{active.page_count}</span>
-              <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronRight size={19} /></button>
+              <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35" aria-label="Previous slide" title="Previous slide"><ChevronLeft size={19} /></button>
+              <button 
+                onClick={() => {
+                  const input = window.prompt(`Enter slide number (1-${active.page_count}):`, active.current_page.toString());
+                  if (input !== null) {
+                    const page = parseInt(input, 10);
+                    if (!isNaN(page) && page >= 1 && page <= active.page_count) {
+                      void changePage(page);
+                    }
+                  }
+                }}
+                className="text-[12px] font-bold px-1 md:px-2 tabular-nums text-[#180d62] hover:text-[#c26627] hover:underline active:scale-95 transition-all"
+                title="Jump to slide"
+              >
+                {active.current_page}/{active.page_count}
+              </button>
+              <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35" aria-label="Next slide" title="Next slide"><ChevronRight size={19} /></button>
             </div>
           )}
         </div>
