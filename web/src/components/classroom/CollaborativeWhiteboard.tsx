@@ -555,7 +555,7 @@ const CollaborativeWhiteboard = ({
         excalidrawAPI={(api) => setExcalidrawAPI(api)}
         onChange={handleChange}
         theme="light"
-        initialData={{ appState: { viewBackgroundColor: "#e8e6e4", activeTool: { type: "hand" } } }}
+        initialData={{ appState: { viewBackgroundColor: "#e8e6e4", activeTool: { type: "hand", lastActiveTool: null, locked: false, customType: null } } as any }}
         // The stock UI is visually suppressed by the scoped classroom CSS.
         // Kanvise supplies the one touch-oriented toolbar below.
         zenModeEnabled
