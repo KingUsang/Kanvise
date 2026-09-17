@@ -102,7 +102,15 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
   const activePage = active?.current_page
-  const handlePdfRenderStateChange = useCallback((rendering: boolean) => setIsRenderingPage(rendering), [])
+  const renderingTimeoutRef = useRef<number | null>(null)
+  const handlePdfRenderStateChange = useCallback((rendering: boolean) => {
+    if (renderingTimeoutRef.current) window.clearTimeout(renderingTimeoutRef.current)
+    if (rendering) {
+      renderingTimeoutRef.current = window.setTimeout(() => setIsRenderingPage(true), 250)
+    } else {
+      setIsRenderingPage(false)
+    }
+  }, [])
   const handlePdfRenderError = useCallback((error: Error) => setPageError(error.message), [])
   const pdfDocument = useMemo(() => {
     if (!active || !url || !active.page_count) return undefined

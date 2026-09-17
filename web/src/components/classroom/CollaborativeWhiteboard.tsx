@@ -3,7 +3,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Eraser, Hand, Pencil, Redo2, Undo2, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eraser, Hand, Pencil, Redo2, Undo2, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight, Wand2, ArrowUpRight, Type } from "lucide-react";
 import { usePresentationSession } from "./presentation-session";
 
 const Excalidraw = dynamic(
@@ -45,7 +45,7 @@ const CollaborativeWhiteboard = ({
   onPdfRenderError?: (error: Error) => void
 }) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
-  const [activeTool, setActiveTool] = useState<"hand" | "freedraw" | "eraser">("hand");
+  const [activeTool, setActiveTool] = useState<"hand" | "freedraw" | "eraser" | "arrow" | "text" | "laser">("hand");
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingFromRemote = useRef(false);
   const lastBroadcastRef = useRef<number>(0);
@@ -453,7 +453,7 @@ const CollaborativeWhiteboard = ({
     }
   }, [send, connectionState]);
 
-  const setTool = (type: "hand" | "freedraw" | "eraser") => {
+  const setTool = (type: "hand" | "freedraw" | "eraser" | "arrow" | "text" | "laser") => {
     excalidrawAPI?.setActiveTool({ type });
     setActiveTool(type);
   };
@@ -555,7 +555,7 @@ const CollaborativeWhiteboard = ({
         excalidrawAPI={(api) => setExcalidrawAPI(api)}
         onChange={handleChange}
         theme="light"
-        initialData={{ appState: { viewBackgroundColor: "#e8e6e4" } }}
+        initialData={{ appState: { viewBackgroundColor: "#e8e6e4", activeTool: { type: "hand" } } }}
         // The stock UI is visually suppressed by the scoped classroom CSS.
         // Kanvise supplies the one touch-oriented toolbar below.
         zenModeEnabled
@@ -578,29 +578,41 @@ const CollaborativeWhiteboard = ({
         renderTopRightUI={() => null}
         onScrollChange={constrainPresentationViewport}
       />
-      <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
-        {pdfDocument && <>
-          <button onClick={() => adjustZoom(-0.1)} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Zoom out" title="Zoom out"><ZoomOut size={19} /></button>
-          <button onClick={() => adjustZoom(0.1)} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Zoom in" title="Zoom in"><ZoomIn size={19} /></button>
-          <button onClick={fitPage} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Fit page" title="Fit page"><Maximize2 size={19} /></button>
-          {isHost && <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />}
-        </>}
-        {isHost && <>
-          {presentationLocked && active?.page_count ? (
-            <>
-              <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronLeft size={19} /></button>
-              <span className="text-[12px] font-bold px-2 tabular-nums text-[#180d62]">{active.current_page}/{active.page_count}</span>
-              <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronRight size={19} /></button>
-              <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />
-            </>
-          ) : null}
-          <button onClick={() => setTool("hand")} className={`rounded-xl p-3 ${activeTool === "hand" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pan board" title="Pan board"><Hand size={19} /></button>
-          <button onClick={() => setTool("freedraw")} className={`rounded-xl p-3 ${activeTool === "freedraw" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pen" title="Pen"><Pencil size={19} /></button>
-          <button onClick={() => setTool("eraser")} className={`rounded-xl p-3 ${activeTool === "eraser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Eraser" title="Eraser"><Eraser size={19} /></button>
-          <span className="mx-0.5 h-7 w-px bg-[#e4e2e1]" />
-          <button onClick={undoLastStroke} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Undo last stroke" title="Undo last stroke"><Undo2 size={19} /></button>
-          <button onClick={redoLastStroke} className="rounded-xl p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Redo last stroke" title="Redo last stroke"><Redo2 size={19} /></button>
-        </>}
+      <div className="absolute bottom-3 left-1/2 z-30 flex w-[calc(100%-24px)] md:w-auto md:max-w-none max-w-md -translate-x-1/2 flex-col md:flex-row md:items-center gap-1 md:gap-1 rounded-2xl border border-black/10 bg-white/95 p-1.5 shadow-xl backdrop-blur" aria-label="Board tools">
+        {/* TOP TIER / LEFT SIDE: Zoom & Pagination */}
+        <div className="flex items-center justify-between border-b border-[#e4e2e1] md:border-b-0 md:border-r md:pr-1.5 pb-1.5 md:pb-0">
+          <div className="flex items-center gap-1">
+            {pdfDocument && (
+              <>
+                <button onClick={() => adjustZoom(-0.1)} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Zoom out" title="Zoom out"><ZoomOut size={19} /></button>
+                <button onClick={() => adjustZoom(0.1)} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Zoom in" title="Zoom in"><ZoomIn size={19} /></button>
+                <button onClick={fitPage} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Fit page" title="Fit page"><Maximize2 size={19} /></button>
+              </>
+            )}
+          </div>
+          {isHost && presentationLocked && active?.page_count && (
+            <div className="flex items-center gap-1 md:ml-1">
+              <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronLeft size={19} /></button>
+              <span className="text-[12px] font-bold px-1 md:px-2 tabular-nums text-[#180d62]">{active.current_page}/{active.page_count}</span>
+              <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count} className="rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4] disabled:opacity-35"><ChevronRight size={19} /></button>
+            </div>
+          )}
+        </div>
+        
+        {/* BOTTOM TIER / RIGHT SIDE: Scrollable Drawing Tools */}
+        {isHost && (
+          <div className="flex items-center gap-1 overflow-x-auto pt-1 md:pt-0 md:pl-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <button onClick={() => setTool("hand")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "hand" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pan board" title="Pan board"><Hand size={19} /></button>
+            <button onClick={() => setTool("laser")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "laser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Laser Pointer" title="Laser Pointer"><Wand2 size={19} /></button>
+            <button onClick={() => setTool("freedraw")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "freedraw" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Pen" title="Pen"><Pencil size={19} /></button>
+            <button onClick={() => setTool("eraser")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "eraser" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Eraser" title="Eraser"><Eraser size={19} /></button>
+            <button onClick={() => setTool("arrow")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "arrow" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Arrow" title="Arrow"><ArrowUpRight size={19} /></button>
+            <button onClick={() => setTool("text")} className={`shrink-0 rounded-xl p-2.5 md:p-3 ${activeTool === "text" ? "bg-[#180d62] text-white shadow-sm" : "text-[#474551] hover:bg-[#f2f0f4]"}`} aria-label="Text" title="Text"><Type size={19} /></button>
+            <span className="mx-1 h-7 w-px shrink-0 bg-[#e4e2e1]" />
+            <button onClick={undoLastStroke} className="shrink-0 rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Undo last stroke" title="Undo last stroke"><Undo2 size={19} /></button>
+            <button onClick={redoLastStroke} className="shrink-0 rounded-xl p-2.5 md:p-3 text-[#474551] hover:bg-[#f2f0f4]" aria-label="Redo last stroke" title="Redo last stroke"><Redo2 size={19} /></button>
+          </div>
+        )}
       </div>
     </div>
   );
