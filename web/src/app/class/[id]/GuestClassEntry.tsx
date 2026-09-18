@@ -29,10 +29,17 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
         },
         body: JSON.stringify({ display_name: name }),
       })
-      const body = await response.json().catch(() => null)
-      if (!response.ok) { setError(body?.error || 'Could not join this class'); return }
+      const rawText = await response.text()
+      console.log('[GuestClassEntry] Join Response Status:', response.status)
+      console.log('[GuestClassEntry] Join Response Body:', rawText)
+      
+      let body
+      try { body = JSON.parse(rawText) } catch (e) { body = null }
+      
+      if (!response.ok) { setError(body?.error || `HTTP ${response.status}: Could not join this class`); return }
       setJoined(body.data)
-    } catch {
+    } catch (error) {
+      console.error('[GuestClassEntry] Catch block triggered:', error)
       setError('Could not reach Kanvise. Check your connection and try again.')
     } finally {
       setJoining(false)

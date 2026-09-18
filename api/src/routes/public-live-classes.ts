@@ -86,11 +86,11 @@ async function recognisedMember(c: any, liveClass: any) {
   return data || null
 }
 
-function liveKitToken(identity: string, name: string, room: string) {
+async function liveKitToken(identity: string, name: string, room: string) {
   const { apiKey, apiSecret } = getLiveKitConfig()
   const token = new AccessToken(apiKey, apiSecret, { identity, name, metadata: JSON.stringify({ isHost: false, guest: identity.startsWith('guest:') }) })
   token.addGrant({ roomJoin: true, room, canPublish: true, canPublishSources: [TrackSource.CAMERA, TrackSource.MICROPHONE], canSubscribe: true, canPublishData: true, canUpdateOwnMetadata: true, roomAdmin: false })
-  return token.toJwt()
+  return await token.toJwt()
 }
 
 async function findClassById(classId: string) {
@@ -116,6 +116,8 @@ publicLiveClassesRouter.get('/by-id/:classId', async c => {
 
 // POST /public/live-classes/by-id/:classId/join — guest join via class ID (only for anyone_with_link classes)
 publicLiveClassesRouter.post('/by-id/:classId/join', async c => {
+  console.log(`[public-live-class] JOIN hit for classId: ${c.req.param('classId')}`)
+  console.log(`[public-live-class] Auth header present:`, !!c.req.header('Authorization'))
   try {
     const liveClass = await findClassById(c.req.param('classId')!)
     if (!liveClass) return c.json({ error: 'Class not found', code: 'CLASS_NOT_FOUND' }, 404)
@@ -123,11 +125,12 @@ publicLiveClassesRouter.post('/by-id/:classId/join', async c => {
     if (liveClass.status !== 'live' || !liveClass.livekit_room_name) return c.json({ error: liveClass.status === 'completed' ? 'This class has ended' : 'Your tutor has not started this class yet', code: liveClass.status === 'completed' ? 'CLASS_ENDED' : 'CLASS_NOT_LIVE' }, 409)
 
     const member = await recognisedMember(c, liveClass)
+    console.log(`[public-live-class] recognisedMember result:`, member ? `Member ${member.id}` : 'null')
     if (member) {
       const identity = member.id
       const displayName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.kanvise_user_id || 'Learner'
       const { wsUrl } = getLiveKitConfig()
-      return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: liveKitToken(identity, displayName, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: 'member' } })
+      return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: await liveKitToken(identity, displayName, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: 'member' } })
     }
 
     const body = await c.req.json().catch(() => ({}))
@@ -147,7 +150,7 @@ publicLiveClassesRouter.post('/by-id/:classId/join', async c => {
       await db.from('live_class_guests').update({ last_seen_at: new Date().toISOString() }).eq('id', guest.id)
     }
     const { wsUrl } = getLiveKitConfig()
-    return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: liveKitToken(`guest:${guest.id}`, guest.display_name, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: 'guest' } })
+    return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: await liveKitToken(`guest:${guest.id}`, guest.display_name, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: 'guest' } })
   } catch (error) {
     console.error('[public-live-class] by-id join failed', error)
     return c.json({ error: 'Could not join this class. Please try again.', code: 'JOIN_FAILED' }, 500)
@@ -206,7 +209,7 @@ publicLiveClassesRouter.post('/:shareToken/join', async c => {
       attendanceKind = 'guest'
     }
     const { wsUrl } = getLiveKitConfig()
-    return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: liveKitToken(identity, displayName, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: attendanceKind } })
+    return c.json({ data: { livekit_room_name: liveClass.livekit_room_name, access_token: await liveKitToken(identity, displayName, liveClass.livekit_room_name), livekit_url: wsUrl, is_host: false, class_title: liveClass.title, course_name: null, attendance_kind: attendanceKind } })
   } catch (error) {
     console.error('[public-live-class] join failed', error)
     return c.json({ error: 'Could not join this class. Please try again.', code: 'JOIN_FAILED' }, 500)
