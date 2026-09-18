@@ -96,19 +96,19 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
   const [url, setUrl] = useState('')
   const [displayedPage, setDisplayedPage] = useState<number | null>(null)
   const displayedMaterialIdRef = useRef<string | null>(null)
-  const [isLoadingPage, setIsLoadingPage] = useState(false)
-  const [isRenderingPage, setIsRenderingPage] = useState(false)
+  const [showLoader, setShowLoader] = useState(false)
   const [pageError, setPageError] = useState<string | null>(null)
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
   const activePage = active?.current_page
-  const renderingTimeoutRef = useRef<number | null>(null)
+  const loaderTimeoutRef = useRef<number | null>(null)
+
   const handlePdfRenderStateChange = useCallback((rendering: boolean) => {
-    if (renderingTimeoutRef.current) window.clearTimeout(renderingTimeoutRef.current)
+    if (loaderTimeoutRef.current) window.clearTimeout(loaderTimeoutRef.current)
     if (rendering) {
-      renderingTimeoutRef.current = window.setTimeout(() => setIsRenderingPage(true), 250)
+      setShowLoader(true)
     } else {
-      setIsRenderingPage(false)
+      setShowLoader(false)
     }
   }, [])
   const handlePdfRenderError = useCallback((error: Error) => setPageError(error.message), [])
@@ -128,7 +128,7 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
       setDisplayedPage(null)
       displayedMaterialIdRef.current = activeId
     }
-    setIsLoadingPage(true)
+    setShowLoader(true)
     void getPageViewUrl(activeId, activePage).then((next) => {
       if (cancelled) return
       setUrl(next)
@@ -136,7 +136,11 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
       displayedMaterialIdRef.current = activeId
     }).catch((error) => {
       if (!cancelled) toast.error('Could not open teaching material', { description: error instanceof Error ? error.message : undefined })
-    }).finally(() => { if (!cancelled) setIsLoadingPage(false) })
+    }).finally(() => { 
+      if (!cancelled) {
+        loaderTimeoutRef.current = window.setTimeout(() => setShowLoader(false), 100)
+      }
+    })
     return () => { cancelled = true }
   }, [activeId, activePage, activeUpdatedAt, getPageViewUrl])
 
@@ -155,7 +159,7 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
           <CollaborativeWhiteboard pdfDocument={pdfDocument} onPdfRenderStateChange={handlePdfRenderStateChange} onPdfRenderError={handlePdfRenderError} />
         )}
       </div>
-      {(isRenderingPage || isLoadingPage) && <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/35" role="status" aria-live="polite">
+      {showLoader && <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/35" role="status" aria-live="polite">
         <div className="flex items-center gap-3 rounded-xl bg-[#292a2d]/95 px-4 py-3 text-sm font-semibold text-white shadow-xl">
           <Loader2 size={18} className="animate-spin" /> Rendering page {active.current_page} of {active.page_count}…
         </div>
