@@ -469,13 +469,15 @@ const CollaborativeWhiteboard = ({
     const page = localPdfElementsRef.current[0];
     if (page && excalidrawAPI) {
       const state = excalidrawAPI.getAppState();
+      const toolbarHeight = isHost ? 140 : 80;
+      const effectiveHeight = state.height - toolbarHeight;
       const fitZoomX = state.width / page.width;
-      const fitZoomY = state.height / page.height;
+      const fitZoomY = effectiveHeight / page.height;
       const minZoom = Math.min(fitZoomX, fitZoomY) * 0.95;
       const centerX = page.x + page.width / 2;
       const centerY = page.y + page.height / 2;
       const nextScrollX = -centerX + (state.width / minZoom) / 2;
-      const nextScrollY = -centerY + (state.height / minZoom) / 2 - (30 / minZoom);
+      const nextScrollY = -centerY + (effectiveHeight / minZoom) / 2;
       excalidrawAPI.updateScene({ appState: { zoom: { value: minZoom }, scrollX: nextScrollX, scrollY: nextScrollY } });
     }
   };
@@ -510,18 +512,21 @@ const CollaborativeWhiteboard = ({
     if (!presentationLocked || !excalidrawAPI || !localPdfElementsRef.current[0]) return;
     const page = localPdfElementsRef.current[0];
     const state = excalidrawAPI.getAppState();
+    const toolbarHeight = isHost ? 140 : 80;
+    const effectiveHeight = state.height - toolbarHeight;
     const fitZoomX = state.width / page.width;
-    const fitZoomY = state.height / page.height;
+    const fitZoomY = effectiveHeight / page.height;
     const minZoom = Math.min(fitZoomX, fitZoomY) * 0.95;
     const nextZoom = Math.min(10, Math.max(minZoom, zoom.value));
     const viewportWidth = state.width / nextZoom;
     const viewportHeight = state.height / nextZoom;
-    const clampScroll = (scroll: number, start: number, end: number, viewport: number) => {
-      if (end - start <= viewport) return -(start + (end - start - viewport) / 2);
-      return Math.min(-start, Math.max(-(end - viewport), scroll));
+    const clampScroll = (scroll: number, start: number, end: number, viewport: number, offset = 0) => {
+      const effectiveViewport = viewport - offset;
+      if (end - start <= effectiveViewport) return -(start + (end - start - effectiveViewport) / 2);
+      return Math.min(-start, Math.max(-(end - effectiveViewport), scroll));
     };
     const nextScrollX = clampScroll(scrollX, page.x, page.x + page.width, viewportWidth);
-    const nextScrollY = clampScroll(scrollY, page.y, page.y + page.height, viewportHeight);
+    const nextScrollY = clampScroll(scrollY, page.y, page.y + page.height, viewportHeight, toolbarHeight / nextZoom);
     let updated = false;
     if (Math.abs(nextScrollX - scrollX) > 0.5 || Math.abs(nextScrollY - scrollY) > 0.5 || nextZoom !== zoom.value) {
       excalidrawAPI.updateScene({ appState: { scrollX: nextScrollX, scrollY: nextScrollY, zoom: { value: nextZoom } } });
