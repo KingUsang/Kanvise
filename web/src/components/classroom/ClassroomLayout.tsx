@@ -72,7 +72,6 @@ function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: Cla
     } catch (e) {
       console.error('Failed to end class', e);
       toast.error('Could not end the class', { description: e instanceof Error ? e.message : 'Please try again.' });
-    } finally {
       setIsEnding(false);
     }
   };
@@ -395,20 +394,22 @@ function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: Cla
                   onExit?.()
                   room.disconnect()
                 }}
-                className="w-full py-2.5 bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] font-semibold rounded-lg transition-colors"
+                disabled={isEnding}
+                className="w-full py-2.5 bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Leave Class
               </button>
               <button
                 onClick={handleEndClass}
                 disabled={isEnding}
-                className="w-full py-2.5 bg-[#ba1a1a] hover:bg-[#ba1a1a]/90 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+                className="w-full py-2.5 bg-[#ba1a1a] hover:bg-[#ba1a1a]/90 text-white font-semibold rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isEnding ? "Ending..." : "End Class for All"}
               </button>
               <button
                 onClick={() => setShowLeaveModal(false)}
-                className="w-full py-2.5 text-[#787582] hover:text-[#1b1c1c] font-medium text-sm transition-colors mt-2"
+                disabled={isEnding}
+                className="w-full py-2.5 text-[#787582] hover:text-[#1b1c1c] font-medium text-sm transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
