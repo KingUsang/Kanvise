@@ -17,6 +17,7 @@ interface ClientClassroomProps {
   classTitle: string;
   courseName: string | null;
   guestShareToken?: string;
+  onLeave?: () => void;
 }
 
 function MuteStudentOnJoin({ isHost }: { isHost: boolean }) {
@@ -97,6 +98,7 @@ export default function ClientClassroom({
   classTitle,
   courseName,
   guestShareToken,
+  onLeave,
 }: ClientClassroomProps) {
   const isLeavingClassroom = useRef(false);
   const [hasConnected, setHasConnected] = useState(false)
@@ -134,7 +136,11 @@ export default function ClientClassroom({
 
   const handleDisconnected = () => {
     if (isLeavingClassroom.current) {
-      window.location.assign(dashboardPath)
+      if (onLeave) {
+        onLeave()
+      } else {
+        window.location.assign(dashboardPath)
+      }
       return
     }
 

@@ -12,6 +12,7 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [joined, setJoined] = useState<JoinData | null>(null)
+  const [hasLeft, setHasLeft] = useState(false)
   const apiUrl = process.env.NEXT_PUBLIC_API_URL!
   const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), [])
 
@@ -46,6 +47,31 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
     }
   }
 
+  if (hasLeft) {
+    return (
+      <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
+        <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f2f0f4] text-[#474551] mb-6">
+            <span className="material-symbols-outlined text-3xl">waving_hand</span>
+          </div>
+          <h1 className="text-2xl font-bold text-[#180d62] mb-3">You've left the class</h1>
+          <p className="text-[#66616c] mb-8 leading-relaxed">
+            Thank you for attending <strong>{classInfo.title}</strong> with {classInfo.centre_name}.
+          </p>
+          <div className="rounded-xl bg-[#fff8f3] p-5 text-left border border-[#f5e6dc]">
+            <h2 className="font-bold text-[#994704] mb-2">Want full access?</h2>
+            <p className="text-sm text-[#7a6b63] mb-4">
+              Sign up for a free Kanvise account to access past recordings, download materials, and easily join future classes.
+            </p>
+            <a href="/auth/register" className="inline-block w-full text-center rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#803a03]">
+              Create free account
+            </a>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   if (joined) {
     return (
       <ClientClassroom
@@ -57,6 +83,7 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
         classTitle={joined.class_title}
         courseName={null}
         guestShareToken={classId}
+        onLeave={() => setHasLeft(true)}
       />
     )
   }
