@@ -56,7 +56,7 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
         isHost={false}
         classTitle={joined.class_title}
         courseName={null}
-        guestShareToken={undefined}
+        guestShareToken={classId}
       />
     )
   }

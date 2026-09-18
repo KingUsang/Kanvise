@@ -28,11 +28,13 @@ function writeGuestCookie(c: any, token: string) {
   })
 }
 
-async function findClass(shareToken: string) {
-  if (!/^[A-Za-z0-9_-]{10,24}$/.test(shareToken)) return null
-  const { data, error } = await db.from('live_classes')
-    .select('id, school_id, course_id, title, status, scheduled_at, livekit_room_name, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
-    .eq('share_token_hash', tokenHash(shareToken)).maybeSingle()
+async function findClass(identifier: string) {
+  if (!identifier) return null
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
+  if (!isUUID && !/^[A-Za-z0-9_-]{10,24}$/.test(identifier)) return null
+  
+  const query = db.from('live_classes').select('id, school_id, course_id, title, status, scheduled_at, livekit_room_name, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
+  const { data, error } = await (isUUID ? query.eq('id', identifier) : query.eq('share_token_hash', tokenHash(identifier))).maybeSingle()
   if (error) throw error
   return data
 }
