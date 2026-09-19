@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Live Classroom (Mobile View)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#112233',
+              dark: '#0c1825',
+              deep: '#1b1b3a',
+              orange: '#e65c00',
+              accent: '#ff7722',
+            },
+            canvas: {
+              dot: '#d4dae2',
+              bg: '#fbfbfd',
+              surface: '#ffffff'
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    /* Blueprint dot matrix grid */
+    .dot-grid {
+      background-color: #f8fafc;
+      background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+      background-size: 20px 20px;
+    }
+    /* Hide scrollbar for clean tool strip */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Glassmorphism effects */
+    .glass-bar {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 10px 30px -4px rgba(17, 34, 51, 0.15), 0 2px 6px -1px rgba(17, 34, 51, 0.08);
+    }
+    .glass-dark {
+      background: rgba(17, 34, 51, 0.88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="bg-[#0b131d] font-sans antialiased text-slate-800 select-none overflow-hidden h-screen flex flex-col justify-center items-center p-0 sm:p-4">
+<!-- Mobile Device Shell Frame (390px x 844px typical iPhone / Modern Android proportion) -->
+<div class="relative w-full max-w-[412px] h-full sm:h-[870px] sm:max-h-[94vh] bg-[#fbfbfd] sm:rounded-[44px] overflow-hidden shadow-2xl flex flex-col border border-slate-700/30">
+<!-- Top Status Bar & Session Header -->
+<header class="relative z-30 bg-[#112233] text-white px-4 pt-3 pb-3 flex flex-col gap-2 shrink-0 border-b border-white/10 shadow-md">
+<!-- Device Notch/Island Spacer & Time on Mobile Preview -->
+<div class="flex items-center justify-between text-xs text-slate-300 font-medium pb-1 border-b border-white/5">
+<div class="flex items-center gap-1.5 font-bold tracking-tight text-white">
+<span>9:41</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping mr-1"></span> LIVE • 00:38:14
+          </span>
+<div class="flex items-center gap-1 text-[11px] text-slate-300 pl-1">
+<span class="material-symbols-outlined text-[14px]">wifi</span>
+<span class="material-symbols-outlined text-[15px]">battery_full</span>
+</div>
+</div>
+</div>
+<!-- Class Session Bar -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2.5 min-w-0">
+<button class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-200 active:scale-95 transition-transform" title="Back to Workspace">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<div class="truncate">
+<h1 class="text-sm font-bold text-white tracking-tight truncate flex items-center gap-1.5">
+<span>JAMB Math Intensive</span>
+<span class="text-[10px] font-semibold px-1.5 py-0.2 bg-white/15 text-slate-200 rounded">SS3</span>
+</h1>
+<p class="text-[11px] text-slate-300 truncate">Room 4B • Calculus &amp; Trigonometric Integrals</p>
+</div>
+</div>
+<!-- Quick Top Actions: Switch layout, Active Count & Exit -->
+<div class="flex items-center gap-1.5 shrink-0">
+<!-- Participants Pill Toggle -->
+<button class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all text-xs font-semibold border border-white/10" id="participantsPillBtn">
+<span class="material-symbols-outlined text-[16px] text-amber-300">group</span>
+<span>24</span>
+</button>
+<!-- End / More -->
+<button class="w-8 h-8 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 flex items-center justify-center active:scale-95 transition" title="Class Controls">
+<span class="material-symbols-outlined text-[18px]">call_end</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Workspace Stage (Whiteboard Canvas with Dot Matrix) -->
+<main class="relative flex-1 dot-grid overflow-hidden flex flex-col justify-start items-center">
+<!-- Whiteboard Stage Top Info Pill (Slide Metadata & Sync Status) -->
+<div class="absolute top-3 left-3 z-10 flex items-center gap-2">
+<div class="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm flex items-center gap-2 text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="font-bold text-[#112233]">Calculus_Lesson4.pdf</span>
+<span class="text-slate-400 text-[10px]">|</span>
+<span class="text-[11px] text-slate-500">Slide 4/15</span>
+</div>
+</div>
+<!-- Quick Canvas Action Anchors (Right side: Grid toggle, Clear, Redo) -->
+<div class="absolute top-3 right-3 z-10 flex flex-col gap-2">
+<button class="w-8 h-8 rounded-lg bg-white/90 backdrop-blur-md border border-slate-200 text-slate-600 shadow-sm flex items-center justify-center active:scale-95 hover:text-slate-900" title="Expand Stage to Fullscreen">
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-white/90 backdrop-blur-md border border-slate-200 text-slate-600 shadow-sm flex items-center justify-center active:scale-95 hover:text-slate-900" title="Laser Highlight Mode">
+<span class="material-symbols-outlined text-[18px] text-red-500">flare</span>
+</button>
+</div>
+<!-- PDF Slide / Whiteboard Graphic Content -->
+<div class="w-full h-full flex flex-col items-center justify-center px-4 pb-28 pt-8">
+<!-- Rendered Interactive Slide Container -->
+<div class="relative w-full max-w-[360px] bg-white rounded-2xl shadow-lg border border-slate-200/80 p-4 transition-all duration-300">
+<!-- Slide Title / Tag -->
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<span class="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+<span class="material-symbols-outlined text-[13px]">school</span> MODULE 03: INTEGRATION BY PARTS
+            </span>
+<span class="text-[11px] font-semibold text-slate-400">JAMB 2024 Exam Focus</span>
+</div>
+<!-- Slide Core Visual Math Content -->
+<div class="py-4 space-y-3">
+<div class="text-center font-serif text-lg font-bold text-slate-800 tracking-wide bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60 shadow-inner">
+<span class="text-amber-800">∫ u dv</span> = <span class="text-indigo-800">u · v</span> - <span class="text-emerald-800">∫ v du</span>
+</div>
+<!-- Tutor Annotations (Hand-drawn visual overlay simulation) -->
+<div class="relative p-2 bg-slate-50/80 rounded-xl border border-slate-100 min-h-[110px] flex flex-col justify-center">
+<!-- Handwritten notes overlay simulation -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" fill="none" viewbox="0 0 320 110">
+<!-- Underline curve -->
+<path d="M 28,48 Q 90,62 160,48 T 290,44" fill="none" stroke="#e65c00" stroke-dasharray="2 0" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- Callout arrow drawn by tutor -->
+<path d="M 125,75 Q 140,55 170,52" fill="none" marker-end="url(#blue-arrow)" stroke="#2563eb" stroke-width="2"></path>
+<!-- Laser pointer glowing dot simulation -->
+<circle cx="178" cy="48" fill="#ef4444" opacity="0.9" r="4.5">
+<animate attributename="r" dur="1.5s" repeatcount="indefinite" values="3.5;6.5;3.5"></animate>
+<animate attributename="opacity" dur="1.5s" repeatcount="indefinite" values="0.9;0.4;0.9"></animate>
+</circle>
+<circle cx="178" cy="48" fill="#ef4444" opacity="0.25" r="9"></circle>
+</svg>
+<div class="text-xs text-slate-600 font-mono space-y-1 relative z-10 pl-2">
+<p><span class="font-bold text-slate-800">Example 1:</span> Solve ∫ x · cos(x) dx</p>
+<p class="text-indigo-600 pl-3">Let <span class="font-bold">u = x</span>  →  du = dx</p>
+<p class="text-amber-700 pl-3">dv = cos(x) dx  →  <span class="font-bold">v = sin(x)</span></p>
+</div>
+<!-- Tutor Live Annotation Chip -->
+<div class="absolute bottom-1 right-2 inline-flex items-center gap-1 text-[10px] bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Dr. Ezekiel drawing
+              </div>
+</div>
+<!-- Slide Notes / Tips -->
+<div class="flex items-start gap-2 bg-blue-50/70 p-2 rounded-lg text-[11px] text-blue-900 border border-blue-100">
+<span class="material-symbols-outlined text-[15px] text-blue-600 shrink-0 mt-0.5">lightbulb</span>
+<p><span class="font-bold">Rule of Thumb (LIATE):</span> Logarithmic, Inverse trig, Algebraic, Trigonometric, Exponential.</p>
+</div>
+</div>
+<!-- Slide Footer Indicator -->
+<div class="flex items-center justify-between pt-1 border-t border-slate-100 text-[10px] text-slate-400 font-medium">
+<span>Kanvise Live Classroom v2.4</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-emerald-500">lock</span> Sync to 24 Learners
+            </span>
+</div>
+</div>
+</div>
+<!-- 1. PICTURE-IN-PICTURE (PiP) / FLOATING DRAGGABLE TUTOR VIDEO BOX -->
+<!-- Positioned top-right or lower-right relative to slide; draggable in real use -->
+<div class="absolute top-14 right-3 z-20 w-32 h-44 rounded-2xl overflow-hidden shadow-2xl border-2 border-white ring-1 ring-black/15 bg-slate-900 flex flex-col justify-between transition-all active:scale-95 duration-200" id="tutorPipBox">
+<!-- Live Tutor Video Stream Background Image -->
+<div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://www.gstatic.com/labs-code/stitch/stitch-placeholder-300x300.svg');">
+<!-- Gradient for readability -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
+</div>
+<!-- Video Header Indicators -->
+<div class="relative z-10 p-2 flex items-center justify-between text-white">
+<span class="inline-flex items-center gap-1 bg-red-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wider uppercase shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Host
+          </span>
+<div class="flex items-center gap-1">
+<button class="w-5 h-5 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white" title="Pin / Minimize">
+<span class="material-symbols-outlined text-[12px]">push_pin</span>
+</button>
+</div>
+</div>
+<!-- Tutor Identity & Mic Status at bottom of PiP -->
+<div class="relative z-10 p-2 text-white flex items-end justify-between">
+<div class="truncate pr-1">
+<p class="text-[11px] font-bold leading-tight truncate drop-shadow">Dr. Ezekiel O.</p>
+<p class="text-[9px] text-emerald-300 font-medium">Presenting</p>
+</div>
+<!-- Mic Wave Pulse -->
+<div class="w-5 h-5 rounded-full bg-emerald-500/90 flex items-center justify-center text-white shrink-0 shadow">
+<span class="material-symbols-outlined text-[12px] fill">mic</span>
+</div>
+</div>
+</div>
+<!-- 3. NEW HIGHLY RESPONSIVE TWO-TIER FLOATING BOTTOM TOOLBAR FOR THE TUTOR -->
+<div class="absolute bottom-4 inset-x-3 z-30 flex flex-col items-center">
+<div class="w-full max-w-[390px] glass-bar rounded-2xl border border-white/90 shadow-2xl overflow-hidden divide-y divide-slate-200/70">
+<!-- TIER 1 (TOP): Slide Pagination (Prev, 1/15, Next) & Stage Zoom (+, -, Fit) -->
+<div class="px-3 py-1.5 flex items-center justify-between bg-slate-50/80">
+<!-- Pagination Section -->
+<div class="flex items-center gap-1">
+<button class="w-7 h-7 rounded-lg hover:bg-slate-200/80 text-slate-700 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30" title="Previous Slide">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<div class="px-2.5 py-0.5 rounded-md bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-xs flex items-center gap-1">
+<span class="text-[#112233]">4</span>
+<span class="text-slate-400 font-normal">/</span>
+<span class="text-slate-500">15</span>
+</div>
+<button class="w-7 h-7 rounded-lg hover:bg-slate-200/80 text-slate-700 flex items-center justify-center active:scale-90 transition-transform" title="Next Slide">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- Center Divider Dot -->
+<span class="h-3.5 w-px bg-slate-300"></span>
+<!-- Zoom / Fit Controls Section -->
+<div class="flex items-center gap-1">
+<button class="w-7 h-7 rounded-lg hover:bg-slate-200/80 text-slate-700 flex items-center justify-center active:scale-90 transition-transform" title="Zoom Out (-)">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<span class="text-[11px] font-bold text-slate-600 px-1 font-mono">100%</span>
+<button class="w-7 h-7 rounded-lg hover:bg-slate-200/80 text-slate-700 flex items-center justify-center active:scale-90 transition-transform" title="Zoom In (+)">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+<button class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1 active:scale-95" title="Fit to Screen">
+<span class="material-symbols-outlined text-[12px]">aspect_ratio</span>
+<span>Fit</span>
+</button>
+</div>
+<!-- Quick Stage Minimizer / Toggle -->
+<button class="relative w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 flex items-center justify-center active:scale-90" id="toggleQuickChatBtn" title="Open Chat Sheet">
+<span class="material-symbols-outlined text-[16px]">forum</span>
+<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 border border-white"></span>
+</button>
+</div>
+<!-- TIER 2 (BOTTOM): Horizontally Scrollable List of Teaching Tools -->
+<!-- Tools: Pan, Laser Pointer, Pen, Eraser, Arrow, Text, Undo, Redo, Color Swatch -->
+<div class="px-2 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
+<!-- 1. Pan / Hand Tool -->
+<button class="flex flex-col items-center justify-center min-w-[42px] h-[46px] rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Pan Canvas">
+<span class="material-symbols-outlined text-[20px]">pan_tool</span>
+<span class="text-[9px] font-semibold text-slate-500">Pan</span>
+</button>
+<!-- 2. Laser Pointer Tool -->
+<button class="flex flex-col items-center justify-center min-w-[42px] h-[46px] rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Laser Pointer">
+<span class="material-symbols-outlined text-[20px] text-red-500">near_me</span>
+<span class="text-[9px] font-semibold text-slate-500">Laser</span>
+</button>
+<!-- 3. Pen Tool (Active Selected State) -->
+<button class="relative flex flex-col items-center justify-center min-w-[44px] h-[46px] rounded-xl bg-indigo-600 text-white shadow-md active:scale-95 transition-all" title="Drawing Pen (Active)">
+<span class="material-symbols-outlined text-[20px] fill">draw</span>
+<span class="text-[9px] font-bold text-white">Pen</span>
+<span class="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-white"></span>
+</button>
+<!-- 4. Eraser Tool -->
+<button class="flex flex-col items-center justify-center min-w-[42px] h-[46px] rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Eraser">
+<span class="material-symbols-outlined text-[20px]">ink_eraser</span>
+<span class="text-[9px] font-semibold text-slate-500">Eraser</span>
+</button>
+<!-- 5. Arrow / Pointer Tool -->
+<button class="flex flex-col items-center justify-center min-w-[42px] h-[46px] rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Arrow &amp; Line">
+<span class="material-symbols-outlined text-[20px]">arrow_outward</span>
+<span class="text-[9px] font-semibold text-slate-500">Arrow</span>
+</button>
+<!-- 6. Text Tool -->
+<button class="flex flex-col items-center justify-center min-w-[42px] h-[46px] rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Text Note">
+<span class="material-symbols-outlined text-[20px]">title</span>
+<span class="text-[9px] font-semibold text-slate-500">Text</span>
+</button>
+<!-- Separator between tools and history -->
+<span class="h-6 w-px bg-slate-200 shrink-0 mx-0.5"></span>
+<!-- 7. Color / Stroke Palette -->
+<button class="flex flex-col items-center justify-center min-w-[40px] h-[46px] rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Stroke Color">
+<div class="w-5 h-5 rounded-full border-2 border-white shadow-sm flex items-center justify-center" style="background-color: #e65c00;">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+</div>
+<span class="text-[9px] font-semibold text-slate-500">Color</span>
+</button>
+<!-- 8. Undo -->
+<button class="flex flex-col items-center justify-center min-w-[38px] h-[46px] rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Undo">
+<span class="material-symbols-outlined text-[20px]">undo</span>
+<span class="text-[9px] font-semibold text-slate-500">Undo</span>
+</button>
+<!-- 9. Redo -->
+<button class="flex flex-col items-center justify-center min-w-[38px] h-[46px] rounded-xl text-slate-400 hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-40" title="Redo">
+<span class="material-symbols-outlined text-[20px]">redo</span>
+<span class="text-[9px] font-semibold text-slate-500">Redo</span>
+</button>
+<!-- 10. Clear Whiteboard Action -->
+<button class="flex flex-col items-center justify-center min-w-[38px] h-[46px] rounded-xl text-rose-500 hover:bg-rose-50 active:scale-95 transition-all" title="Clear Canvas">
+<span class="material-symbols-outlined text-[20px]">delete_sweep</span>
+<span class="text-[9px] font-semibold text-rose-600">Clear</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- 4. EXPANDABLE CHAT & PARTICIPANTS BOTTOM SHEET OVERLAY (DRAWER) -->
+<!-- Can be toggled open/closed via JavaScript or tap on pill / button -->
+<div class="absolute inset-x-0 bottom-0 z-40 transition-transform duration-300 transform translate-y-[calc(100%-48px)] flex flex-col bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 max-h-[70%]" id="interactionDrawer">
+<!-- Drawer Handle & Header -->
+<div class="w-full pt-2 pb-2.5 px-4 cursor-pointer flex flex-col items-center shrink-0 bg-slate-50 rounded-t-3xl border-b border-slate-100 select-none" id="drawerHandle">
+<div class="w-10 h-1.5 bg-slate-300 rounded-full mb-1.5"></div>
+<div class="w-full flex items-center justify-between">
+<!-- Tab Navigation: Chat vs Participants -->
+<div class="flex items-center gap-2">
+<button class="px-3 py-1 rounded-full text-xs font-bold bg-[#112233] text-white flex items-center gap-1.5 shadow-sm" id="tabChat">
+<span class="material-symbols-outlined text-[14px]">chat_bubble</span>
+<span>Live Chat</span>
+<span class="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-black">3</span>
+</button>
+<button class="px-3 py-1 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-200/70 flex items-center gap-1.5" id="tabParticipants">
+<span class="material-symbols-outlined text-[14px]">groups</span>
+<span>Students</span>
+<span class="text-slate-400 font-mono">(24)</span>
+</button>
+</div>
+<!-- Drawer Action / Collapse Icon -->
+<div class="flex items-center gap-1 text-slate-500">
+<span class="text-[11px] font-medium text-slate-400">Swipe or tap</span>
+<span class="material-symbols-outlined text-[18px]" id="drawerToggleIcon">keyboard_arrow_up</span>
+</div>
+</div>
+</div>
+<!-- Drawer Body (Scrollable Chat Stream) -->
+<div class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8fafc] text-xs">
+<!-- System notification -->
+<div class="text-center">
+<span class="bg-slate-200/80 text-slate-600 text-[10px] font-medium px-2.5 py-0.5 rounded-full">
+            Whiteboard slide 4 synced with all students
+          </span>
+</div>
+<!-- Student Question Bubble -->
+<div class="flex items-start gap-2 max-w-[85%]">
+<div class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+            AO
+          </div>
+<div class="space-y-0.5">
+<div class="flex items-baseline gap-1.5">
+<span class="font-bold text-slate-800 text-[11px]">Adebayo O.</span>
+<span class="text-[9px] text-slate-400">09:39 AM</span>
+</div>
+<div class="bg-white p-2.5 rounded-2xl rounded-tl-none border border-slate-200 text-slate-700 shadow-2xs">
+              Sir, for the JAMB question, what if we chose u = cos(x) instead? Would it cause a circular loop?
+            </div>
+</div>
+</div>
+<!-- Tutor Voice / Answer Badge -->
+<div class="flex items-start gap-2 max-w-[88%] ml-auto flex-row-reverse">
+<div class="w-6 h-6 rounded-full bg-[#112233] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+            T
+          </div>
+<div class="space-y-0.5 text-right">
+<div class="flex items-baseline justify-end gap-1.5">
+<span class="font-bold text-[#112233] text-[11px]">Dr. Ezekiel (You)</span>
+<span class="text-[9px] text-slate-400">09:40 AM</span>
+</div>
+<div class="bg-indigo-600 text-white p-2.5 rounded-2xl rounded-tr-none text-left shadow-2xs">
+              Great question Adebayo! See the LIATE rule highlighted on the slide right now in blue. Algebraic comes before Trigonometric.
+            </div>
+</div>
+</div>
+<!-- Raised Hand Quick Alert -->
+<div class="flex items-center justify-between p-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-900">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-amber-600">front_hand</span>
+<div>
+<p class="font-bold text-[11px]">Chioma N. raised hand</p>
+<p class="text-[10px] text-amber-700">Wants to speak</p>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="px-2 py-1 rounded bg-amber-600 text-white font-bold text-[10px]">Allow Mic</button>
+<button class="p-1 text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</div>
+</div>
+</div>
+<!-- Quick Message Input Bar in Drawer -->
+<div class="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0">
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-full" title="Send Formula / Attachment">
+<span class="material-symbols-outlined text-[18px]">functions</span>
+</button>
+<input class="flex-1 bg-slate-100 border-none rounded-xl text-xs px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800 placeholder-slate-400" placeholder="Type a message or formula..." type="text"/>
+<button class="w-8 h-8 rounded-xl bg-[#112233] text-white flex items-center justify-center active:scale-95 shadow-sm" title="Send">
+<span class="material-symbols-outlined text-[16px]">send</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Interactive Demo Script to toggle drawer & show responsive behaviors -->
+<script>
+    const drawer = document.getElementById('interactionDrawer');
+    const drawerHandle = document.getElementById('drawerHandle');
+    const drawerToggleIcon = document.getElementById('drawerToggleIcon');
+    const participantsPillBtn = document.getElementById('participantsPillBtn');
+    const toggleQuickChatBtn = document.getElementById('toggleQuickChatBtn');
+    
+    let isExpanded = false;
+
+    function toggleDrawer() {
+      isExpanded = !isExpanded;
+      if (isExpanded) {
+        drawer.classList.remove('translate-y-[calc(100%-48px)]');
+        drawer.classList.add('translate-y-0');
+        drawerToggleIcon.innerText = 'keyboard_arrow_down';
+      } else {
+        drawer.classList.remove('translate-y-0');
+        drawer.classList.add('translate-y-[calc(100%-48px)]');
+        drawerToggleIcon.innerText = 'keyboard_arrow_up';
+      }
+    }
+
+    drawerHandle.addEventListener('click', toggleDrawer);
+    if (participantsPillBtn) participantsPillBtn.addEventListener('click', toggleDrawer);
+    if (toggleQuickChatBtn) toggleQuickChatBtn.addEventListener('click', toggleDrawer);
+
+    // Make tutor PIP draggable/touchable across screen corners
+    const pip = document.getElementById('tutorPipBox');
+    let isDown = false;
+    let startX, startY;
+
+    pip.addEventListener('click', () => {
+      // Toggle PIP size on tap
+      if (pip.classList.contains('w-32')) {
+        pip.classList.remove('w-32', 'h-44');
+        pip.classList.add('w-24', 'h-32');
+      } else {
+        pip.classList.remove('w-24', 'h-32');
+        pip.classList.add('w-32', 'h-44');
+      }
+    });
+  </script>
+</body>
+</html>

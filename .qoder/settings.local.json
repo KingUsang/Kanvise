@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(grep -rh \"PAYSTACK\" api/.env* .env* web/.env* 2>/dev/null | cut -d= -f1 | sort -u)",
+      "Bash(cd /home/kingusang/Kanvise && grep -hoP 'CREATE TABLE \\(IF NOT EXISTS \\)?\\\\K[a-z_]+' supabase/migrations/*.sql | sort -u)",
+      "Bash(cd /home/kingusang/Kanvise && git add api/src/index.ts && git commit -m \"$\\(cat <<'EOF'\nfeat\\(api\\): add public POST /suggestions endpoint for landing page idea form\n\nThe deployed production API runs this codebase but never had a /suggestions\nroute, so the landing page's idea form hit an authenticated catch-all and\nfailed with 401. Mirrors the public waitlist routes and inserts into the\nexisting feature_suggestions table via the service-role client.\nEOF\n\\)\" && git --no-pager log --oneline -3)",
+      "Bash(ls /home/kingusang/Kanvise/web/src/components/classroom/ 2>/dev/null; ls /home/kingusang/Kanvise/web/src/app 2>/dev/null | head -50)"
+    ]
+  }
+}
