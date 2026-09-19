@@ -1,6 +1,6 @@
 'use client'
 
-import { Calculator, CheckCircle2, ChevronLeft, Clock3, FileQuestion, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Calculator, CheckCircle2, ChevronLeft, Clock3, FileQuestion, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -59,6 +59,7 @@ export function MockPreflightClient({ data, token, startPath, backHref = '/dashb
           <p className="flex gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-[#29724b]" size={20} /><span>Your timer is controlled by the server. Closing or refreshing the page will not pause it.</span></p>
           <p className="flex gap-3"><CheckCircle2 className="mt-0.5 shrink-0 text-[#29724b]" size={20} /><span>Your answers save as you work. Check the save status before moving away from a question.</span></p>
           <p className="flex gap-3"><FileQuestion className="mt-0.5 shrink-0 text-[#29724b]" size={20} /><span>You can flag questions, review unanswered ones, and submit when you are ready.</span></p>
+          <p className="flex gap-3"><AlertTriangle className="mt-0.5 shrink-0 text-[#9b2f20]" size={20} /><span className="text-[#9b2f20] font-medium">Anti-Cheat Active: Copying text is disabled. If you leave the exam tab or switch apps for 2 minutes consecutively, your mock will be submitted automatically.</span></p>
         </div>
         {data.subject_combination && !data.resumable_attempt && <div className="mt-7 rounded-xl border border-[#ddd6f4] bg-[#faf9ff] p-4"><h3 className="font-semibold text-[#2e2877]">Your four JAMB subjects</h3><p className="mt-1 text-sm text-[#5f5964]">Choose the four subjects you take. This mock will include only these subject sections.</p><div className="mt-4 grid gap-2 sm:grid-cols-2">{data.subject_combination.courses.map(course => { const checked = subjectCourseIds.includes(course.id); return <label key={course.id} className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm"><input type="checkbox" checked={checked} onChange={() => setSubjectCourseIds(current => checked ? current.filter(id => id !== course.id) : current.length < data.subject_combination!.required_count ? [...current, course.id] : current)} className="h-4 w-4 accent-[#2e2877]" />{course.name}</label> })}</div><p className="mt-3 text-xs font-medium text-[#716c76]">{subjectCourseIds.length} of {data.subject_combination.required_count} selected</p></div>}
         {!data.resumable_attempt && canStart && <label className="mt-7 flex cursor-pointer items-start gap-3 rounded-xl bg-[#f7f4f1] p-4 text-sm"><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} className="mt-1 h-4 w-4 accent-[#2e2877]" /><span>I understand that starting begins my attempt and timer.</span></label>}</div>
