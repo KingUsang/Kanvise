@@ -291,7 +291,7 @@ mocksRouter.get("/:id/results", requireTutorOrAdmin, async (c) => {
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot access this mock" }, 403);
 
   const { data: attempts, error: attemptsError } = await supabase.from("mock_attempts")
-    .select("id, student_id, mock_exam_version_id, started_at, submitted_at, status, mcq_score, theory_score, total_score, total_marks, total_mcq_questions, correct_mcq_answers, student:user_profiles(first_name, last_name, email)")
+    .select("id, student_id, mock_exam_version_id, started_at, submitted_at, status, mcq_score, theory_score, total_score, total_marks, total_mcq_questions, correct_mcq_answers, guest_name, guest_email, guest_phone, student:user_profiles(first_name, last_name, email)")
     .eq("mock_exam_id", mockId).eq("school_id", user.school_id)
     .in("status", [...REVIEWABLE_ATTEMPT_STATUSES])
     .order("submitted_at", { ascending: false });
