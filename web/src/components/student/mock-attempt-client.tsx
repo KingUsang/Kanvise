@@ -10,6 +10,7 @@ import { ExamCalculator } from './exam-calculator'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import Link from 'next/link'
 import { loginHref } from '@/lib/auth-continuation'
+import { AntiCheatWrapper } from "./anti-cheat-wrapper"
 
 type SavedAnswer = {
   selected_option_version_id: string | null
@@ -58,6 +59,9 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [guestName, setGuestName] = useState("")
+  const [guestEmail, setGuestEmail] = useState("")
+  const [guestPhone, setGuestPhone] = useState("")
   const [now, setNow] = useState(() => Date.now())
   const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
   const [serverOffset] = useState(() => new Date(data.server_now).getTime() - Date.now())
@@ -131,7 +135,8 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
       const submitPath = guest ? `/guest/attempts/${data.attempt.id}/submit` : `/attempts/${data.attempt.id}/submit`
       const response = await fetch(`${getApiUrl()}${submitPath}`, {
         method: 'POST', credentials: guest ? 'include' : 'same-origin',
-        headers: guest ? {} : { Authorization: `Bearer ${token}` },
+        headers: { ...(guest ? {} : { Authorization: `Bearer ${token}` }), 'Content-Type': 'application/json' },
+        body: JSON.stringify(guest ? { guest_name: guestName, guest_email: guestEmail, guest_phone: guestPhone } : {})
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not submit mock')
@@ -143,7 +148,7 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
       return false
     }
     finally { setSubmitting(false); setConfirming(false) }
-  }, [answers, data.attempt.id, guest, router, save, timedOut, token])
+  }, [answers, data.attempt.id, guest, guestEmail, guestName, guestPhone, router, save, timedOut, token])
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000)
@@ -212,7 +217,8 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
   const answer = answers.get(active.id) || { selected_option_version_id: null, theory_answer_text: null, is_flagged: false }
   const saveState = saveStates.get(active.id) || 'idle'
 
-  return <main className="min-h-[calc(100vh-4rem)] bg-[#f8f7f5] pb-28 lg:pb-8">
+  return <AntiCheatWrapper onAutoSubmit={() => void submit()}>
+    <main className="min-h-[calc(100vh-4rem)] bg-[#f8f7f5] pb-28 lg:pb-8">
     {guest && <div className="border-b border-[#d7d1cc] bg-[#fff7ed] px-4 py-3 text-sm text-[#713f12] sm:px-6"><div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3"><p><strong>Guest attempt.</strong> Your work is saved on this browser.</p><Link href={loginHref({ redirect: `/guest/attempt/${data.attempt.id}`, flow: 'student' })} className="font-semibold text-[#2e2877] underline underline-offset-2">Sign in to save it to your account</Link></div></div>}
     <header className="sticky top-0 z-20 border-b border-[#dfdad5] bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{data.mock.title}</p><p className="truncate text-xs text-[#716c76]">{active.section_title}</p></div><div className="flex items-center gap-2">{data.mock.calculator_mode !== 'none' && <button onClick={() => setCalculatorOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm font-medium text-[#2e2877]"><Calculator size={16} /><span className="hidden sm:inline">Calculator</span></button>}<button onClick={() => setShortcutsOpen(true)} className="hidden min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm text-[#716c76] sm:inline-flex"><Keyboard size={16} />Shortcuts</button>{remaining !== null && <span className={`min-w-[78px] rounded-lg px-3 py-2 text-center font-mono text-sm font-semibold ${remaining < 300 ? 'bg-[#fde8e4] text-[#a43522]' : 'bg-[#eeeafe] text-[#2e2877]'}`}>{formatRemaining(remaining)}</span>}</div></div></header>
     {timedOut ? <div role="alert" className="border-b border-[#efb5aa] bg-[#fde8e4] px-4 py-3 text-sm text-[#87351f] sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-start gap-2"><AlertTriangle className="mt-0.5 shrink-0" size={17} /><p><strong>Time is up.</strong> Answers are now locked. {!isOnline ? 'Reconnect to finalize the mock; answers that were not received before the deadline cannot be counted.' : 'The mock is being finalized.'}</p></div></div>
@@ -232,6 +238,27 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
     {!timedOut && <button onClick={() => setConfirming(true)} className="fixed inset-x-4 bottom-4 z-20 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#994704] text-sm font-semibold text-white shadow-lg lg:hidden"><Send size={17} />Review and submit</button>}
     {calculatorOpen && <ExamCalculator mode={data.mock.calculator_mode === 'scientific' ? 'scientific' : 'basic'} onClose={() => setCalculatorOpen(false)} />}
     {shortcutsOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Close shortcuts" onClick={() => setShortcutsOpen(false)} className="absolute inset-0 bg-black/35" /><section className="relative w-full max-w-md rounded-2xl bg-white p-6"><h2 className="text-lg font-semibold">Keyboard shortcuts</h2><dl className="mt-4 grid grid-cols-[90px_1fr] gap-3 text-sm"><dt className="font-semibold">A–F</dt><dd>Choose an MCQ option</dd><dt className="font-semibold">N / →</dt><dd>Next question</dd><dt className="font-semibold">P / ←</dt><dd>Previous question</dd><dt className="font-semibold">?</dt><dd>Open this guide</dd></dl><p className="mt-4 text-xs leading-5 text-[#716c76]">Shortcuts pause while you type a theory answer.</p><button onClick={() => setShortcutsOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#2e2877] text-sm font-semibold text-white">Got it</button></section></div>}
-    {confirming && !timedOut && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Return to mock" onClick={() => !submitting && setConfirming(false)} className="absolute inset-0 bg-black/40" /><section className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-7"><h2 className="text-xl font-semibold">Submit your mock?</h2><p className="mt-2 text-sm leading-6 text-[#716c76]">You answered {answeredCount} of {questions.length} questions.{unanswered ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : ' Every question has an answer.'}</p>{unanswered > 0 && <button onClick={() => setConfirming(false)} className="mt-4 text-sm font-semibold text-[#2e2877]">Return and review unanswered questions</button>}<div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button disabled={submitting} onClick={() => setConfirming(false)} className="min-h-11 rounded-xl border border-[#d9d3cf] px-5 text-sm font-semibold">Keep working</button><button disabled={submitting} onClick={() => void submit()} className="min-h-11 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50">{submitting ? 'Submitting…' : 'Submit final answers'}</button></div></section></div>}
+    {confirming && !timedOut && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Return to mock" onClick={() => !submitting && setConfirming(false)} className="absolute inset-0 bg-black/40" />
+      <section className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold">Submit your mock?</h2>
+        <p className="mt-2 text-sm leading-6 text-[#716c76]">You answered {answeredCount} of {questions.length} questions.{unanswered ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : ' Every question has an answer.'}</p>
+        {unanswered > 0 && <button onClick={() => setConfirming(false)} className="mt-4 text-sm font-semibold text-[#2e2877]">Return and review unanswered questions</button>}
+        
+        {guest && (
+          <div className="mt-6 space-y-4 border-t border-[#eeeae6] pt-5">
+            <h3 className="text-sm font-semibold text-[#2e2877]">Enter your details to view results</h3>
+            <div><label className="text-xs font-semibold text-[#5f5964]">Full Name</label><input type="text" value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="John Doe" className="mt-1 w-full rounded-lg border border-[#d9d3cf] px-3 py-2 text-sm outline-none focus:border-[#2e2877]" /></div>
+            <div><label className="text-xs font-semibold text-[#5f5964]">Email Address</label><input type="email" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} placeholder="john@example.com" className="mt-1 w-full rounded-lg border border-[#d9d3cf] px-3 py-2 text-sm outline-none focus:border-[#2e2877]" /></div>
+            <div><label className="text-xs font-semibold text-[#5f5964]">Phone Number (Optional)</label><input type="tel" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="08012345678" className="mt-1 w-full rounded-lg border border-[#d9d3cf] px-3 py-2 text-sm outline-none focus:border-[#2e2877]" /></div>
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button disabled={submitting} onClick={() => setConfirming(false)} className="min-h-11 rounded-xl border border-[#d9d3cf] px-5 text-sm font-semibold">Keep working</button>
+          <button disabled={submitting || (guest && (!guestName.trim() || !guestEmail.includes('@')))} onClick={() => void submit()} className="min-h-11 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? 'Submitting…' : 'Submit final answers'}</button>
+        </div>
+      </section>
+    </div>}
   </main>
+  </AntiCheatWrapper>
 }

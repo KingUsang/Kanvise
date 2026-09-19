@@ -139,7 +139,6 @@ export default async function Page({ params, searchParams }: PageProps) {
 
   if (preparing) {
     return <PreparingClassroom
-      retryAfterSeconds={preparing.retry_after_seconds || 4}
       classId={classId}
       isStarting={isStarting}
       classTitle={preparing.class_title || 'Your live class'}

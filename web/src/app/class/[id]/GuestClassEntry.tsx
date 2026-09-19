@@ -1,4 +1,5 @@
 'use client'
+import Link from "next/link"
 
 import { useState, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
@@ -35,7 +36,7 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
       console.log('[GuestClassEntry] Join Response Body:', rawText)
       
       let body
-      try { body = JSON.parse(rawText) } catch (e) { body = null }
+      try { body = JSON.parse(rawText) } catch (_) { body = null }
       
       if (!response.ok) { setError(body?.error || `HTTP ${response.status}: Could not join this class`); return }
       setJoined(body.data)
@@ -63,9 +64,9 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
             <p className="text-sm text-[#7a6b63] mb-4">
               Sign up for a free Kanvise account to access past recordings, download materials, and easily join future classes.
             </p>
-            <a href="/auth/register" className="inline-block w-full text-center rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#803a03]">
+            <Link href="/auth/register" className="inline-block w-full text-center rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#803a03]">
               Create free account
-            </a>
+            </Link>
           </div>
         </section>
       </main>

@@ -157,10 +157,12 @@ guestMocksRouter.put('/guest/attempts/:attemptId/answers/:questionId', async c =
 
 guestMocksRouter.post('/guest/attempts/:attemptId/submit', async c => {
   try {
+    const body = await c.req.json().catch(() => ({}))
     const guest = await currentGuest(c)
     if (!guest) return c.json({ error: 'This guest session has expired.', code: 'GUEST_SESSION_NOT_FOUND' }, 401)
     const { data, error } = await db.rpc('submit_guest_mock_attempt', {
       p_guest_id: guest.id, p_attempt_id: c.req.param('attemptId')!, p_now: new Date().toISOString(), p_reason: 'student',
+      p_guest_name: body.guest_name || null, p_guest_email: body.guest_email || null, p_guest_phone: body.guest_phone || null
     })
     if (error) return guestError(c, error, 'Could not submit this mock')
     return c.json({ data: data?.[0] || data })

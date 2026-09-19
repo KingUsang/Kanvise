@@ -12,7 +12,7 @@ import type { TenantVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
-import { ensureLiveKitWorkerReady } from '../livekit/worker-lifecycle'
+import { ensureLiveKitWorkerReady, isLiveKitHealthy } from '../livekit/worker-lifecycle'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -130,6 +130,90 @@ liveClassesRouter.use(
   profileResolutionMiddleware,
   tenantMiddleware,
 )
+
+// ── GET /live-classes/:id/readiness/stream — SSE readiness feed ───────────
+// The browser opens one long-lived fetch connection. Hono streams Server-Sent
+// Events down as the classroom transitions through boot phases. This replaces
+// the fragile 4-second client polling loop. Using raw fetch (not EventSource)
+// on the client keeps the Authorization header available.
+liveClassesRouter.get('/:id/readiness/stream', async (c) => {
+  const isStarting = c.req.query('intent') === 'start'
+  const access = await requireClassroom(c, isStarting ? 'host' : 'view')
+  if ('response' in access) return access.response
+
+  const encode = (payload: Record<string, unknown>) =>
+    new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`)
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      let closed = false
+      const close = () => {
+        closed = true
+        try { controller.close() } catch { /* already closed */ }
+      }
+
+      try {
+        // Trigger VM start if needed — idempotent, safe to call when already running
+        const worker = await ensureLiveKitWorkerReady()
+
+        if (worker.state === 'unavailable') {
+          controller.enqueue(encode({ phase: 'unavailable', message: worker.message ?? 'The classroom server could not be started.' }))
+          return close()
+        }
+
+        if (worker.state === 'ready') {
+          controller.enqueue(encode({ phase: 'ready' }))
+          return close()
+        }
+
+        // VM is booting — stream progress phases to the browser
+        controller.enqueue(encode({ phase: 'starting_vm' }))
+
+        const MAX_WAIT_MS = 120_000   // 2 minute absolute ceiling
+        const POLL_INTERVAL_MS = 3_000
+        const started = Date.now()
+
+        const poll = async () => {
+          if (closed) return
+          const elapsed = Date.now() - started
+
+          if (elapsed >= MAX_WAIT_MS) {
+            controller.enqueue(encode({ phase: 'unavailable', message: 'The classroom server took too long to start. Please try again.' }))
+            return close()
+          }
+
+          const healthy = await isLiveKitHealthy()
+          if (healthy) {
+            controller.enqueue(encode({ phase: 'ready' }))
+            return close()
+          }
+
+          // Advance the visual phase on the client stepper
+          const phase = elapsed < 30_000 ? 'booting' : 'connecting'
+          controller.enqueue(encode({ phase, elapsed_ms: elapsed }))
+          setTimeout(poll, POLL_INTERVAL_MS)
+        }
+
+        setTimeout(poll, POLL_INTERVAL_MS)
+      } catch (error) {
+        console.error('[live-classes] readiness/stream failed:', error)
+        if (!closed) {
+          controller.enqueue(encode({ phase: 'unavailable', message: 'The classroom is temporarily unavailable.' }))
+          close()
+        }
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no', // Prevents Nginx/Caddy from buffering SSE
+    },
+  })
+})
 
 // ── GET /live-classes/:id/readiness — Check classroom readiness ───────────
 // This is intentionally side-effect free from the class perspective: it may

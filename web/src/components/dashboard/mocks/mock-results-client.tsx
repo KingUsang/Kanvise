@@ -23,6 +23,9 @@ type Attempt = {
   total_mcq_questions: number | null
   total_marks: number | null
   student: { first_name: string; last_name: string; email: string } | null
+  guest_name?: string | null
+  guest_email?: string | null
+  guest_phone?: string | null
   answers: MockAnswer[]
 }
 
@@ -32,7 +35,16 @@ type ResultsData = {
 }
 
 function studentName(attempt: Attempt) {
-  return [attempt.student?.first_name, attempt.student?.last_name].filter(Boolean).join(' ') || 'Student'
+  if (attempt.student) return [attempt.student.first_name, attempt.student.last_name].filter(Boolean).join(' ') || 'Student'
+  return attempt.guest_name ? `${attempt.guest_name} (Guest)` : 'Guest Student'
+}
+
+function studentEmail(attempt: Attempt) {
+  return attempt.student?.email || attempt.guest_email || ''
+}
+
+function studentPhone(attempt: Attempt) {
+  return attempt.guest_phone || ''
 }
 
 function theoryAnswers(attempt: Attempt) {
@@ -225,7 +237,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
           {selectedAttempt && (
             <main className="flex min-w-0 flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               <div className="flex flex-col gap-4 border-b border-outline-variant p-5 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white">{studentName(selectedAttempt).split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</div><div><h2 className="font-semibold text-on-surface">{studentName(selectedAttempt)}</h2><p className="text-xs text-on-surface-variant">Submitted {selectedAttempt.submitted_at ? new Date(selectedAttempt.submitted_at).toLocaleString('en-NG') : '—'}</p></div></div>
+                <div className="flex items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white">{studentName(selectedAttempt).split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</div><div><h2 className="font-semibold text-on-surface">{studentName(selectedAttempt)}</h2>{studentEmail(selectedAttempt) && <div className="mt-0.5 flex items-center gap-2 text-xs text-on-surface-variant"><span>{studentEmail(selectedAttempt)}</span>{studentPhone(selectedAttempt) && <><span className="text-outline-variant">•</span><span>{studentPhone(selectedAttempt)}</span></>}</div>}<p className="mt-0.5 text-xs text-on-surface-variant">Submitted {selectedAttempt.submitted_at ? new Date(selectedAttempt.submitted_at).toLocaleString('en-NG') : '—'}</p></div></div>
                 <div className="flex flex-wrap items-center justify-end gap-4 text-right">
                   <button type="button" onClick={() => void allowAnotherAttempt(selectedAttempt)} disabled={grantingAttemptId === selectedAttempt.id} className="rounded-md border border-outline-variant bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary-fixed disabled:opacity-50">
                     {grantingAttemptId === selectedAttempt.id ? 'Allowing…' : 'Allow another attempt'}

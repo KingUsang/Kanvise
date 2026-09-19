@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
+import { useUnsavedChanges } from "@/components/navigation/UnsavedChangesContext";
 import { QuestionContent, type ContentBlock } from "@/components/questions/question-content";
 import { buildPrePublishReview, type PrePublishReview } from "./mock-builder-validation";
 import { MockDraftPreview, type DraftPreviewQuestion } from "./mock-draft-preview";
@@ -23,7 +24,7 @@ type Course = {
 };
 type CentreAudienceScope = "course" | "combination" | "direct_link" | "programme" | "school";
 type DeliveryMode = "fixed" | "subject_combination";
-type AccessMode = "centre" | "direct" | "both";
+type AccessMode = "centre" | "direct" | "both" | "";
 type BuilderStep = "setup" | "subjects" | "questions" | "settings" | "review";
 const UNASSIGNED_SUBJECT_ID = "__unassigned__";
 
@@ -94,7 +95,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [programmeFilterId, setProgrammeFilterId] = useState("");
   const [audienceScope, setAudienceScope] = useState<CentreAudienceScope>("course");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("fixed");
-  const [accessMode, setAccessMode] = useState<AccessMode>("centre");
+  const [accessMode, setAccessMode] = useState<AccessMode>("");
   const [builderStep, setBuilderStep] = useState<BuilderStep>("setup");
   const [visitedBuilderSteps, setVisitedBuilderSteps] = useState<Set<BuilderStep>>(() => new Set(["setup"]));
   const [activeSubjectCourseId, setActiveSubjectCourseId] = useState("");
@@ -138,6 +139,8 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
+  const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
+  const [setupChangeToConfirm, setSetupChangeToConfirm] = useState<{ type: "access" | "delivery", value: AccessMode | DeliveryMode } | null>(null);
   const [publishReview, setPublishReview] = useState<PrePublishReview | null>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -145,6 +148,8 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [importProgress, setImportProgress] = useState<MockImportProgress | null>(null);
   const [builderActionMessage, setBuilderActionMessage] = useState("");
   const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
+  const [bulkMarks, setBulkMarks] = useState<string>("");
+  const [bulkMarkMode, setBulkMarkMode] = useState<"per_question" | "total">("per_question");
   const importedQuestionsRef = useRef<HTMLDivElement>(null);
   const importGenerationRef = useRef(0);
 
@@ -154,6 +159,31 @@ export function MockBuilderClient({ token }: { token: string }) {
   useEffect(() => {
     if (!linkSlugEdited) setLinkSlug(slugify(title) || "mock");
   }, [title, linkSlugEdited]);
+
+    const applyBulkMarks = () => {
+    const value = Number(bulkMarks);
+    if (!bulkMarks || isNaN(value) || value <= 0) {
+      toast.error("Enter a valid mark value");
+      return;
+    }
+    
+    const visibleQuestionIds = new Set(visibleQuestions.map(q => q.id));
+    if (visibleQuestionIds.size === 0) {
+      toast.error("No questions to apply marks to");
+      return;
+    }
+    
+    const marksPerQuestion = bulkMarkMode === "total" 
+      ? Number((value / visibleQuestionIds.size).toFixed(2)) 
+      : value;
+    
+    setQuestions(questions.map(q => 
+      visibleQuestionIds.has(q.id) ? { ...q, marks: marksPerQuestion } : q
+    ));
+    
+    toast.success(`Applied ${marksPerQuestion} mark${marksPerQuestion === 1 ? '' : 's'} each to ${visibleQuestionIds.size} question${visibleQuestionIds.size === 1 ? '' : 's'}`);
+    setBulkMarks("");
+  };
 
   const showImportedQuestions = () => {
     window.requestAnimationFrame(() => importedQuestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -356,7 +386,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     void load();
   }, [selectedBankId, showBankPicker, token]);
 
-  const changeAccessMode = (value: AccessMode) => {
+  const doChangeAccessMode = (value: AccessMode) => {
     setAccessMode(value);
     const isMulti = deliveryMode === "subject_combination";
     setAudienceScope(value === "direct" ? "direct_link" : isMulti ? "combination" : "course");
@@ -370,7 +400,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     }
   };
 
-  const changeDeliveryMode = (nextMode: DeliveryMode) => {
+  const doChangeDeliveryMode = (nextMode: DeliveryMode) => {
     if (nextMode === deliveryMode) return;
 
     // Imports are asynchronous. Do not let an import started for the previous
@@ -409,8 +439,6 @@ export function MockBuilderClient({ token }: { token: string }) {
       setActiveSubjectCourseId(section.id);
       setAudienceScope(accessMode === "direct" ? "direct_link" : "combination");
       setDeliveryMode(nextMode);
-      setBuilderStep("subjects");
-      toast.info("Moved your questions into a subject section", { description: "Add more subjects or adjust their assignments before publishing." });
       return;
     }
 
@@ -434,9 +462,39 @@ export function MockBuilderClient({ token }: { token: string }) {
     setActiveSubjectCourseId("");
     setAudienceScope(accessMode === "direct" ? "direct_link" : "course");
     setDeliveryMode(nextMode);
-    setBuilderStep("setup");
-    toast.info("Combined your questions into one subject", { description: "Check the subject and audience before publishing." });
   };
+
+  const changeAccessMode = (value: AccessMode) => {
+    if (value === accessMode) return;
+    if (questions.length > 0 || selectedBankQuestions.length > 0) {
+      setSetupChangeToConfirm({ type: "access", value });
+    } else {
+      doChangeAccessMode(value);
+    }
+  };
+
+  const changeDeliveryMode = (nextMode: DeliveryMode) => {
+    if (nextMode === deliveryMode) return;
+    if (deliveryMode === "subject_combination" && nextMode === "fixed" && (questions.length > 0 || selectedBankQuestions.length > 0)) {
+      setSetupChangeToConfirm({ type: "delivery", value: nextMode });
+    } else {
+      doChangeDeliveryMode(nextMode);
+    }
+  };
+
+  const confirmSetupChange = () => {
+    if (!setupChangeToConfirm) return;
+    if (setupChangeToConfirm.type === "access") {
+      doChangeAccessMode(setupChangeToConfirm.value as AccessMode);
+    } else {
+      doChangeDeliveryMode(setupChangeToConfirm.value as DeliveryMode);
+    }
+    setSetupChangeToConfirm(null);
+  };
+
+  // Unsaved changes tracking
+  const hasChanges = Boolean(title.trim() || questions.length > 0 || selectedBankQuestions.length > 0 || singleSubjectName.trim());
+  useUnsavedChanges(hasChanges && !isReadOnly && !isSaving);
 
   const centreAccessEnabled = accessMode !== "direct";
   const shareLinkEnabled = accessMode !== "centre";
@@ -453,8 +511,8 @@ export function MockBuilderClient({ token }: { token: string }) {
     ? courses.filter((course) => course.programme_id === programmeFilterId)
     : courses;
   const audienceSummary = centreAccessEnabled && shareLinkEnabled
-    ? "My students and anyone with the link"
-    : centreAccessEnabled ? "My students" : "Anyone with the link";
+    ? "Students enrolled in your programme on Kanvise and anyone with the link"
+    : centreAccessEnabled ? "Students enrolled in your programme on Kanvise" : "Anyone with the link";
   const selectedSubjectCourses = selectedSubjectSections.map((section) => {
     const linkedCourse = section.courseId ? courses.find((course) => course.id === section.courseId) : null;
     return { id: section.id, name: section.name, label: linkedCourse ? mockCourseLabel(linkedCourse) : section.name, course_id: section.courseId };
@@ -542,6 +600,19 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const updateQuestion = (id: string, updates: Partial<QuestionState>) => {
     setQuestions(questions.map(q => q.id === id ? { ...q, ...updates } : q));
+  };
+
+
+  const confirmRemoveSubject = (id: string) => {
+    setSubjectToDelete(id);
+  };
+
+  const executeRemoveSubject = () => {
+    if (!subjectToDelete) return;
+    setSubjectSections(current => current.filter(s => s.id !== subjectToDelete));
+    setQuestions(current => current.map(q => q.section_id === subjectToDelete ? { ...q, section_id: undefined, course_id: null, subject_name: undefined } : q));
+    setSelectedBankQuestions(current => current.map(q => q.sectionId === subjectToDelete ? { ...q, sectionId: undefined, courseId: null } : q));
+    setSubjectToDelete(null);
   };
 
   const confirmRemoveQuestion = (id: string) => {
@@ -1013,6 +1084,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     const target = workflowSteps[currentStepIndex + direction];
     if (!target) return;
     if (direction === 1 && builderStep === "setup") {
+      if (!accessMode) { toast.error("Choose who can take this mock before continuing"); return; }
       if (!title.trim()) {
         toast.error("Give this mock a title before continuing");
         return;
@@ -1064,6 +1136,40 @@ export function MockBuilderClient({ token }: { token: string }) {
         </div>
       )}
 
+            {subjectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+            <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#ba1a1a]">warning</span>
+              Delete Subject?
+            </h3>
+            <p className="text-[14px] text-[#474551] mb-6">Are you sure you want to delete this subject? Its questions will become unassigned.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setSubjectToDelete(null)} className="px-4 py-2 text-[14px] font-medium text-[#474551] hover:bg-gray-100 rounded transition-colors cursor-pointer">Cancel</button>
+              <button onClick={executeRemoveSubject} className="px-4 py-2 text-[14px] font-medium text-white bg-[#ba1a1a] hover:bg-[#931515] rounded transition-colors cursor-pointer">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+            {setupChangeToConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+            <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#ba1a1a]">warning</span>
+              Change setup?
+            </h3>
+            <p className="text-[14px] text-[#474551] mb-6">
+              {setupChangeToConfirm.type === "access" 
+                ? "Changing your audience will reset your selected subjects. Are you sure?" 
+                : "Changing to single-subject will combine all questions into one subject. Are you sure?"}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setSetupChangeToConfirm(null)} className="px-4 py-2 text-[14px] font-medium text-[#474551] hover:bg-gray-100 rounded transition-colors cursor-pointer">Cancel</button>
+              <button onClick={confirmSetupChange} className="px-4 py-2 text-[14px] font-medium text-white bg-[#ba1a1a] hover:bg-[#931515] rounded transition-colors cursor-pointer">Confirm change</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Delete Confirmation Modal */}
       {questionToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
@@ -1212,6 +1318,17 @@ export function MockBuilderClient({ token }: { token: string }) {
               {builderActionMessage && <span role="status" aria-live="polite" className="basis-full pt-1 text-xs font-medium text-[#166534]">{builderActionMessage}</span>}
             </div>
           )}
+                    {!isReadOnly && (questions.length > 0) && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+              <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
+              <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
+                <option value="per_question">Per question</option>
+                <option value="total">Divide total marks</option>
+              </select>
+              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder={bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"} className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
+              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply to {visibleQuestions.length}</button>
+            </div>
+          )}
           <div className="space-y-6">
             {visibleBankQuestions.map((question, index) => (
               <div key={question.questionId} className="rounded-lg border border-[#c8c5d2] bg-[#f8f6ff] p-5 shadow-sm">
@@ -1349,7 +1466,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                     </div>
                   )}
 
-                  {q.question_type === 'theory' && <details className="mt-4 rounded-lg border border-[#e4e2e1] bg-[#fbf9f8]"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Add an expected answer <span className="font-normal text-[#787582]">(optional)</span></summary><div className="border-t border-[#e4e2e1] p-4"><label className="block text-xs font-medium text-[#474551]">Private reference for this question<textarea value={q.grading_rubric || ""} disabled={isReadOnly} onChange={(event) => updateQuestion(q.id, { grading_rubric: event.target.value })} className="mt-2 min-h-[80px] w-full resize-y rounded border border-[#c8c5d2] bg-white px-4 py-3 text-[14px] font-normal text-[#474551] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]" placeholder="Example: Defines osmosis and mentions movement through a semi-permeable membrane." /></label><p className="mt-2 text-xs leading-5 text-[#787582]">Students do not see this note.</p></div></details>}
+                  
                 </div>
               </div>
             ))}
@@ -1443,10 +1560,34 @@ export function MockBuilderClient({ token }: { token: string }) {
       {builderStep === "subjects" && isMultiSubject && (
         <section className="mx-auto max-w-4xl">
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Choose the exact subjects for this mock, then add or import each subject’s questions separately.</p></div><button type="button" onClick={() => setBuilderStep("setup")} className="text-sm font-semibold text-[#2e2877]">Change setup</button></div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Choose the exact subjects for this mock, then add or import each subject’s questions separately.</p></div></div>
             <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"><p className="text-sm font-semibold text-[#1b1c1c]">Add a subject section</p><div className="mt-2">{centreAccessEnabled ? <select value="" disabled={isReadOnly || availableSubjectCourses.length === 0} onChange={(event) => { const course = availableSubjectCourses.find((item) => item.id === event.target.value); if (!course) return; const section = { id: `section-${Date.now()}`, name: course.name, courseId: course.id }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setBuilderActionMessage(`${course.name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"><option value="">Choose a programme subject</option>{availableSubjectCourses.map((course) => <option key={course.id} value={course.id}>{mockCourseLabel(course)}</option>)}</select> : <div className="flex gap-2"><input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} placeholder="e.g. Use of English" className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm" /><button type="button" disabled={isReadOnly || !newSubjectName.trim()} onClick={() => { const name = newSubjectName.trim(); const section = { id: `section-${Date.now()}`, name, courseId: null }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setNewSubjectName(""); setBuilderActionMessage(`${name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button></div>}</div>{builderActionMessage && <p role="status" aria-live="polite" className="mt-3 text-xs font-medium text-green-700">{builderActionMessage}</p>}<p className="mt-2 text-xs leading-5 text-[#716c76]">{centreAccessEnabled ? "Only students enrolled in every selected programme subject will receive this mock." : "Add the subjects in this exam yourself. They are not connected to your centre."}</p></div>
             {selectedSubjectCourses.length === 0 ? <div className="mt-4 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center text-sm text-[#716c76]">Add the subjects for this mock—for example, English, Physics, Chemistry and Biology.</div>
-              : <div className="mt-4 grid gap-3 sm:grid-cols-2">{selectedSubjectCourses.map((course, index) => { const authoredCount = questions.filter((question) => question.section_id === course.id).length; const bankCount = selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="group rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]"><span className="flex items-start justify-between gap-3"><span><span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span><strong className="mt-1 block text-base text-[#1b1c1c]">{course.label}</strong></span><span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} questions</span></span><span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></span></button> })}</div>}
+                            : <div className="mt-4 grid gap-3 sm:grid-cols-2">{selectedSubjectCourses.map((course, index) => { 
+                  const authoredCount = questions.filter((question) => question.section_id === course.id).length; 
+                  const bankCount = selectedBankQuestions.filter((question) => question.sectionId === course.id).length; 
+                  return (
+                    <div key={course.id} className="group relative rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span>
+                          {!centreAccessEnabled && !isReadOnly ? (
+                            <input type="text" className="mt-1 block w-full text-base font-bold text-[#1b1c1c] border-b border-dashed border-[#c8c5d2] bg-transparent focus:outline-none focus:border-[#2e2877]" value={course.label} onChange={(e) => setSubjectSections(current => current.map(s => s.id === course.id ? { ...s, name: e.target.value } : s))} />
+                          ) : (
+                            <strong className="mt-1 block truncate text-base text-[#1b1c1c]">{course.label}</strong>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} qs</span>
+                          {!isReadOnly && <button type="button" onClick={() => {
+                            confirmRemoveSubject(course.id)
+                          }} className="text-[#c8c5d2] hover:text-[#ba1a1a] p-1 rounded hover:bg-white"><span className="material-symbols-outlined text-sm">delete</span></button>}
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877] hover:underline">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></button>
+                    </div>
+                  ); 
+                })}</div>}
           </div>
         </section>
       )}
@@ -1468,7 +1609,18 @@ export function MockBuilderClient({ token }: { token: string }) {
               {builderStep === "setup" ? "Mock setup" : "Share & publish"}
             </h3>
             
-            <div className="space-y-6">
+                      {!isReadOnly && (questions.length > 0) && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+              <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
+              <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
+                <option value="per_question">Per question</option>
+                <option value="total">Divide total marks</option>
+              </select>
+              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder={bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"} className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
+              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply to {visibleQuestions.length}</button>
+            </div>
+          )}
+          <div className="space-y-6">
               {builderStep === "setup" && <>
               <section>
                 <p className="text-sm font-semibold text-[#1b1c1c]">What are you building?</p>
@@ -1504,13 +1656,13 @@ export function MockBuilderClient({ token }: { token: string }) {
               <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
                 <h4 className="text-sm font-semibold text-[#1b1c1c]">Share this mock with</h4>
                 <p className="mt-1 text-xs leading-5 text-[#716c76]">Turn on the channels you want to use. This determines the setup fields that follow.</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${centreAccessEnabled ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}>
-                    <input type="checkbox" checked={centreAccessEnabled} disabled={isReadOnly || (centreAccessEnabled && !shareLinkEnabled)} onChange={(event) => changeAccessMode(event.target.checked ? (shareLinkEnabled ? "both" : "centre") : "direct")} className="mt-0.5 rounded text-[#2e2877] focus:ring-[#2e2877]" />
-                    <span><strong className="block text-sm text-[#1b1c1c]">My students</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Assign it to students in a programme and its subject(s).</span></span>
+                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "centre" ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}>
+                    <input type="radio" name="audience" checked={accessMode === "centre"} disabled={isReadOnly} onChange={() => changeAccessMode("centre")} className="mt-0.5 rounded-full text-[#2e2877] focus:ring-[#2e2877]" />
+                    <span><strong className="block text-sm text-[#1b1c1c]">Students enrolled in your programme on Kanvise</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Assign it to students in a programme and its subject(s).</span></span>
                   </label>
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${shareLinkEnabled ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}>
-                    <input type="checkbox" checked={shareLinkEnabled} disabled={isReadOnly || (shareLinkEnabled && !centreAccessEnabled)} onChange={(event) => changeAccessMode(event.target.checked ? (centreAccessEnabled ? "both" : "direct") : "centre")} className="mt-0.5 rounded text-[#994704] focus:ring-[#994704]" />
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "direct" ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}>
+                    <input type="radio" name="audience" checked={accessMode === "direct"} disabled={isReadOnly} onChange={() => changeAccessMode("direct")} className="mt-0.5 rounded-full text-[#994704] focus:ring-[#994704]" />
                     <span><strong className="block text-sm text-[#1b1c1c]">Anyone with the link</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Share outside your centre, free or paid.</span></span>
                   </label>
                 </div>
@@ -1554,7 +1706,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                 )}
               </div>}
 
-              {deliveryMode === "subject_combination" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm leading-6 text-[#474551]"><strong className="block text-[#2e2877]">Build the exact combination</strong>Next, add only the subjects in this exam. Each becomes its own tab and keeps its questions while you switch between tabs.</div>}
+              
               </>}
 
               {builderStep === "settings" && <>
@@ -1674,11 +1826,12 @@ export function MockBuilderClient({ token }: { token: string }) {
                 <p className="mt-1 text-xs leading-5 text-[#787582]">Use this only when a published mock should open later or close automatically.</p>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
+                                <div>
                   <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Students can start from</label>
                   <input type="datetime-local" value={availableFrom} disabled={isReadOnly}
                     onChange={(event) => setAvailableFrom(event.target.value)}
                     className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
+                  <p className="mt-1 text-xs leading-5 text-[#787582]">Publishing makes the mock visible on the student dashboard, but they cannot start answering questions until this time.</p>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Mock closes</label>

@@ -23,3 +23,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *Zone.Identifier
+.integration-worktree
+.production-integration
+.release-worktree
+.student-journey-worktree
+.qoder
