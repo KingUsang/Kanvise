@@ -159,6 +159,20 @@ describe('private classroom presentations API', () => {
     expect(mocks.createDownload).not.toHaveBeenCalled()
   })
 
+  it('signs a rendered page image instead of exposing the PDF to the classroom viewer', async () => {
+    mocks.createDownload.mockResolvedValue('https://private.example/page-1.jpg')
+    queue(
+      { data: liveClass(), error: null },
+      { data: material({ page_count: 2, page_image_keys: { '1': 'schools/school-1/private/live_class_presentation/class-1/material-1-page-1.jpg' } }), error: null },
+    )
+    const response = await slidesRouter.request('/class-1/presentations/material-1/pages/1/view')
+    expect(response.status).toBe(200)
+    expect((await response.json() as any).data.url).toBe('https://private.example/page-1.jpg')
+    expect(mocks.createDownload).toHaveBeenCalledWith(expect.stringContaining('page-1.jpg'), 'school-1', 3600, {
+      responseCacheControl: 'private, max-age=3300, immutable',
+    })
+  })
+
   it('replaces the private object while preserving the material identity', async () => {
     queue(
       { data: liveClass(), error: null },

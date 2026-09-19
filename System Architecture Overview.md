@@ -65,7 +65,7 @@ Server Components rendering public pages call Hono during render on the server. 
 
 **Next.js Client Components → Hono API**
 
-Dashboard interactions use fetch from Client Components with the user's JWT in the Authorization header.
+Dashboard interactions use fetch from Client Components with the user's JWT in the Authorization header. TanStack Query owns authenticated dashboard reads and their invalidation. Server Components only enforce the session and render the shell; they do not fetch dashboard application data or pass JWTs to Client Components. The browser reuses the current Supabase Auth token and refreshes it only after Hono returns `401`.
 
 **Next.js Route Handlers → Hono API**
 

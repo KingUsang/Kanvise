@@ -1,0 +1,35 @@
+import type { ReactNode } from 'react'
+
+type DashboardPageHeaderProps = {
+  title: ReactNode
+  description?: ReactNode
+  breadcrumb?: ReactNode
+  actions?: ReactNode
+  supportingAction?: ReactNode
+  className?: string
+}
+
+/**
+ * The shared hierarchy for dashboard routes. The shell owns page gutters;
+ * this component deliberately owns only the header's internal rhythm.
+ */
+export function DashboardPageHeader({
+  title,
+  description,
+  breadcrumb,
+  actions,
+  supportingAction,
+  className = '',
+}: DashboardPageHeaderProps) {
+  return (
+    <header className={`flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between ${className}`.trim()}>
+      <div>
+        {breadcrumb ? <div className="mb-2 text-sm text-dashboard-muted">{breadcrumb}</div> : null}
+        <h1 className="text-dashboard-page-title font-bold text-dashboard-foreground sm:text-dashboard-page-title-desktop">{title}</h1>
+        {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-dashboard-muted sm:text-base">{description}</p> : null}
+        {supportingAction ? <div className="mt-2">{supportingAction}</div> : null}
+      </div>
+      {actions ? <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">{actions}</div> : null}
+    </header>
+  )
+}

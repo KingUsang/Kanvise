@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { titleFromFileName, uploadFileWithProgress } from "@/lib/upload-with-progress"
 import { Session } from "@supabase/supabase-js"
 import { toast } from "sonner"
+import { DashboardPageHeader } from "@/components/dashboard/page-header"
 
 interface NotesClientProps {
   session: Session
@@ -209,10 +210,10 @@ export function NotesClient({ session }: NotesClientProps) {
 
   const getFileIcon = (fileType: string) => {
     if (fileType.includes("pdf")) return { icon: "picture_as_pdf", color: "text-error", bg: "bg-error/10" }
-    if (fileType.includes("wordprocessing") || fileType.includes("msword")) return { icon: "description", color: "text-secondary", bg: "bg-secondary-container/20" }
-    if (fileType.includes("presentation")) return { icon: "slideshow", color: "text-primary-container", bg: "bg-primary-container/10" }
+    if (fileType.includes("wordprocessing") || fileType.includes("msword")) return { icon: "description", color: "text-dashboard-primary", bg: "bg-dashboard-primary/10" }
+    if (fileType.includes("presentation")) return { icon: "slideshow", color: "text-dashboard-primary", bg: "bg-dashboard-primary/10" }
     if (fileType.includes("image")) return { icon: "image", color: "text-green-600", bg: "bg-green-600/10" }
-    return { icon: "draft", color: "text-on-surface-variant", bg: "bg-surface-variant/20" }
+    return { icon: "draft", color: "text-dashboard-muted", bg: "bg-dashboard-surface-subtle" }
   }
 
   const handleUpload = async () => {
@@ -336,27 +337,28 @@ export function NotesClient({ session }: NotesClientProps) {
   const filteredNotes = filterCourse ? notes.filter(n => n.course_id === filterCourse) : notes
 
   return (
-    <div className="flex-1 p-6 md:p-margin-desktop overflow-y-auto">
-      <div className="max-w-[1440px] mx-auto">
-        <div className="mb-8">
-          <h2 className="text-headline-lg font-headline-lg text-primary mb-2">Learning materials</h2>
-          <p className="text-body-md font-body-md text-on-surface-variant">Share notes, slides, and helpful documents with students in a subject.</p>
-        </div>
+    <div className="flex-1">
+      <div className="mx-auto max-w-[1440px]">
+        <DashboardPageHeader
+          className="mb-8"
+          title="Learning materials"
+          description="Share notes, slides, and helpful documents with students in a subject."
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           
           {/* Upload Panel */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
-              <h3 className="text-headline-sm font-headline-sm text-on-surface mb-6 border-b border-outline-variant pb-4">Share a material</h3>
+            <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-5 shadow-dashboard-card sm:p-6">
+              <h3 className="mb-6 border-b border-dashboard-outline pb-4 text-lg font-semibold text-dashboard-foreground">Share a material</h3>
               
               <div className="space-y-5">
                 <div>
-                  <label className="block text-label-md font-label-md text-on-surface mb-2">Subject *</label>
+                  <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Subject *</label>
                   <select 
                     value={selectedCourse}
                     onChange={(e) => setSelectedCourse(e.target.value)}
-                    className="w-full border border-outline-variant rounded bg-surface py-2.5 px-3 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container"
+                    className="w-full rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-sm text-dashboard-foreground outline-none focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"
                   >
                     <option disabled value="">Choose a subject</option>
                     {courses.map(course => (
@@ -366,33 +368,33 @@ export function NotesClient({ session }: NotesClientProps) {
                     ))}
                   </select>
                   {courses.length === 0 && !loadError && (
-                    <p className="mt-2 text-label-md text-on-surface-variant">Create a subject or ask your centre admin to assign you to one first.</p>
+                    <p className="mt-2 text-sm text-dashboard-muted">Create a subject or ask your centre admin to assign you to one first.</p>
                   )}
                 </div>
                 
                 {/* Drag & Drop Zone */}
                 <div>
-                  <label className="block text-label-md font-label-md text-on-surface mb-2">Upload File *</label>
+                  <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Upload file *</label>
                   <div 
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed border-outline-variant rounded-lg p-8 text-center transition-colors cursor-pointer flex flex-col items-center justify-center
-                      ${isDragActive ? 'border-primary-container bg-surface-container-low/50' : 'hover:border-primary-container hover:bg-surface-container-low'}
-                      ${file ? 'border-secondary-container bg-surface-container-low' : ''}
+                    className={`flex cursor-pointer flex-col items-center justify-center rounded-dashboard-panel border-2 border-dashed border-dashboard-outline p-8 text-center transition-colors
+                      ${isDragActive ? 'border-dashboard-primary bg-dashboard-primary/5' : 'hover:border-dashboard-primary hover:bg-dashboard-surface-subtle'}
+                      ${file ? 'border-dashboard-primary bg-dashboard-surface-subtle' : ''}
                     `}
                   >
-                    <span className="material-symbols-outlined text-4xl text-outline mb-3">
+                    <span className="material-symbols-outlined mb-3 text-4xl text-dashboard-muted">
                       {file ? 'task' : 'cloud_upload'}
                     </span>
-                    <p className="text-body-md font-body-md text-on-surface mb-1">
+                    <p className="mb-1 text-sm font-medium text-dashboard-foreground">
                       {file ? file.name : 'Drag and drop file here'}
                     </p>
-                    <p className="text-label-md font-label-md text-on-surface-variant mb-4">
-                      {file ? formatFileSize(file.size) : <>or <span className="text-primary-container underline">browse files</span></>}
+                    <p className="mb-4 text-sm text-dashboard-muted">
+                      {file ? formatFileSize(file.size) : <>or <span className="text-dashboard-primary underline">browse files</span></>}
                     </p>
-                    {!file && <p className="text-label-md font-label-md text-outline">Supported: PDF, DOCX, PPTX, JPG, PNG (Max 50MB)</p>}
+                    {!file && <p className="text-xs text-dashboard-muted">Supported: PDF, DOCX, PPTX, JPG, PNG (Max 50MB)</p>}
                     <input 
                       ref={fileInputRef}
                       onChange={handleFileChange}
@@ -403,13 +405,13 @@ export function NotesClient({ session }: NotesClientProps) {
                   </div>
                 </div>
 
-                <details className="rounded-lg border border-outline-variant bg-surface-container-lowest">
-                  <summary className="cursor-pointer px-4 py-3 text-body-sm font-semibold text-on-surface">
-                    Edit title or add a note <span className="font-normal text-on-surface-variant">(optional)</span>
+                <details className="rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-dashboard-foreground">
+                    Edit title or add a note <span className="font-normal text-dashboard-muted">(optional)</span>
                   </summary>
-                  <div className="space-y-4 border-t border-outline-variant px-4 py-4">
+                  <div className="space-y-4 border-t border-dashboard-outline px-4 py-4">
                     <div>
-                      <label className="mb-2 block text-label-md font-label-md text-on-surface">Title</label>
+                      <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Title</label>
                       <input
                         type="text"
                         value={title}
@@ -417,16 +419,16 @@ export function NotesClient({ session }: NotesClientProps) {
                           setTitle(e.target.value)
                           setTitleEdited(true)
                         }}
-                        className="w-full rounded border border-outline-variant bg-surface px-3 py-2.5 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container"
+                        className="w-full rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-sm text-dashboard-foreground outline-none focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"
                         placeholder="Filled from the filename"
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-label-md font-label-md text-on-surface">Note for students</label>
+                      <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Note for students</label>
                       <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        className="w-full resize-none rounded border border-outline-variant bg-surface px-3 py-2.5 text-body-md font-body-md focus:border-primary-container focus:ring-1 focus:ring-primary-container"
+                        className="w-full resize-none rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-sm text-dashboard-foreground outline-none focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"
                         placeholder="What does this cover?"
                         rows={3}
                       />
@@ -435,13 +437,13 @@ export function NotesClient({ session }: NotesClientProps) {
                 </details>
 
                 {isUploading && (
-                  <div className="rounded-lg bg-surface-container-low px-4 py-3" aria-live="polite">
-                    <div className="mb-2 flex items-center justify-between gap-3 text-body-sm">
-                      <span className="font-semibold text-on-surface">
+                  <div className="rounded-dashboard-control bg-dashboard-surface-subtle px-4 py-3" aria-live="polite">
+                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                      <span className="font-semibold text-dashboard-foreground">
                         {uploadStage === "saving" ? "Saving material…" : "Uploading material…"}
                       </span>
                       {uploadStage === "uploading" && uploadProgress !== null && (
-                        <span className="tabular-nums text-on-surface-variant">{uploadProgress}%</span>
+                        <span className="tabular-nums text-dashboard-muted">{uploadProgress}%</span>
                       )}
                     </div>
                     {uploadStage === "uploading" && uploadProgress !== null && (
@@ -451,19 +453,19 @@ export function NotesClient({ session }: NotesClientProps) {
                         aria-valuemin={0}
                         aria-valuemax={100}
                         aria-valuenow={uploadProgress}
-                        className="h-2 overflow-hidden rounded-full bg-outline-variant"
+                        className="h-2 overflow-hidden rounded-full bg-dashboard-outline"
                       >
-                        <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${uploadProgress}%` }} />
+                        <div className="h-full rounded-full bg-dashboard-primary transition-[width]" style={{ width: `${uploadProgress}%` }} />
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-outline-variant">
+                <div className="border-t border-dashboard-outline pt-4">
                   <button 
                     onClick={handleUpload}
                     disabled={isUploading || courses.length === 0}
-                    className="w-full bg-secondary text-on-secondary py-3 px-4 rounded text-body-md font-headline-md font-bold hover:bg-on-secondary-fixed-variant transition-colors shadow-sm disabled:opacity-50"
+                    className="w-full rounded-dashboard-control bg-dashboard-primary px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-dashboard-primary/90 disabled:opacity-50"
                   >
                     {uploadStage === "saving"
                       ? "Saving material…"
@@ -480,18 +482,18 @@ export function NotesClient({ session }: NotesClientProps) {
 
           {/* Manage Uploads Panel */}
           <div className="lg:col-span-8">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col h-full min-h-[600px]">
+            <div className="flex min-h-[600px] h-full flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               
-              <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-[#fbf9f8]">
+              <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-5 sm:p-6">
                 <div>
-                  <h3 className="text-headline-sm font-headline-sm text-on-surface">Shared materials</h3>
-                  <p className="text-label-md font-label-md text-on-surface-variant mt-1">Open, download, or remove materials already shared with students.</p>
+                  <h3 className="text-lg font-semibold text-dashboard-foreground">Shared materials</h3>
+                  <p className="mt-1 text-sm text-dashboard-muted">Open, download, or remove materials already shared with students.</p>
                 </div>
                 <div className="flex gap-2">
                   <select 
                     value={filterCourse}
                     onChange={(e) => setFilterCourse(e.target.value)}
-                    className="border border-outline-variant rounded bg-surface py-1.5 px-3 text-body-sm font-body-sm focus:border-primary-container"
+                    className="rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-1.5 text-sm text-dashboard-foreground outline-none focus:border-dashboard-primary"
                   >
                     <option value="">All Subjects</option>
                     {courses.map(c => (
@@ -502,20 +504,26 @@ export function NotesClient({ session }: NotesClientProps) {
               </div>
 
               <div className="flex-1 overflow-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-tertiary-fixed-dim/20 border-b border-outline-variant sticky top-0 z-10">
+                <div className="divide-y divide-dashboard-outline sm:hidden">
+                  {isLoadingNotes ? <p className="p-6 text-center text-sm text-dashboard-muted">Loading materials…</p>
+                    : loadError ? <div className="p-6 text-center text-sm text-dashboard-muted"><p>{loadError}</p><button type="button" onClick={() => void fetchAllNotes()} className="mt-3 rounded-dashboard-control bg-dashboard-primary px-3 py-2 font-semibold text-white">Try again</button></div>
+                    : filteredNotes.length === 0 ? <div className="p-8 text-center text-dashboard-muted"><span className="material-symbols-outlined mb-2 text-4xl text-dashboard-outline">menu_book</span><p className="font-semibold text-dashboard-foreground">{filterCourse ? 'No materials in this subject yet' : 'Share your first learning material'}</p><p className="mt-1 text-sm">{filterCourse ? 'Choose another subject or use the form to add one.' : 'Choose a subject and upload notes, slides, or a document for your students.'}</p></div>
+                    : filteredNotes.map(note => { const style = getFileIcon(note.file_type); const course = courses.find(c => c.id === note.course_id); return <article key={note.id} className="p-4"><div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded ${style.bg} ${style.color}`}><span className="material-symbols-outlined">{style.icon}</span></div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{note.title}</h2><p className="mt-1 truncate text-xs text-dashboard-muted">{course?.name || 'Unknown subject'} · {formatFileSize(note.file_size_bytes)} · {new Date(note.created_at).toLocaleDateString()}</p></div><button onClick={() => handleDownload(note.download_url, note.file_name)} className="shrink-0 rounded border border-dashboard-outline px-3 py-1.5 text-xs font-semibold text-dashboard-primary">Open</button></div>{(role === 'admin' || currentProfileId === note.tutor_id) && <button onClick={() => setNoteToDelete(note)} className="mt-3 text-xs font-semibold text-dashboard-danger">Remove material</button>}</article> })}
+                </div>
+                <table className="hidden w-full text-left border-collapse sm:table">
+                  <thead className="sticky top-0 z-10 border-b border-dashboard-outline bg-dashboard-surface-subtle">
                     <tr>
-                      <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Document</th>
-                      <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Subject</th>
-                      <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Date</th>
-                      <th className="py-3 px-6 text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Size</th>
-                      <th className="py-3 px-6 text-right text-label-md font-label-md text-on-surface-variant font-bold uppercase tracking-wider">Actions</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-dashboard-muted sm:px-6">Document</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-dashboard-muted sm:px-6">Subject</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-dashboard-muted sm:px-6">Date</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-dashboard-muted sm:px-6">Size</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-dashboard-muted sm:px-6">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-outline-variant">
+                  <tbody className="divide-y divide-dashboard-outline">
                     {isLoadingNotes ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-on-surface-variant">
+                        <td colSpan={5} className="py-8 text-center text-dashboard-muted">
                            <span className="material-symbols-outlined animate-spin mb-2">progress_activity</span>
                            <p>Loading notes...</p>
                         </td>
@@ -524,17 +532,17 @@ export function NotesClient({ session }: NotesClientProps) {
                       <tr>
                         <td colSpan={5} className="px-6 py-14 text-center">
                           <span className="material-symbols-outlined text-4xl text-error">cloud_off</span>
-                          <p className="mt-3 font-semibold text-on-surface">Materials could not be loaded</p>
-                          <p className="mt-1 text-body-sm text-on-surface-variant">{loadError}</p>
-                          <button type="button" onClick={() => void fetchAllNotes()} className="mt-4 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary">Try again</button>
+                          <p className="mt-3 font-semibold text-dashboard-foreground">Materials could not be loaded</p>
+                          <p className="mt-1 text-sm text-dashboard-muted">{loadError}</p>
+                          <button type="button" onClick={() => void fetchAllNotes()} className="mt-4 rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white">Try again</button>
                         </td>
                       </tr>
                     ) : filteredNotes.length === 0 ? (
                        <tr>
-                         <td colSpan={5} className="py-14 px-6 text-center text-on-surface-variant">
-                            <span className="material-symbols-outlined text-4xl mb-2 text-outline-variant">menu_book</span>
-                            <p className="font-semibold text-on-surface">{filterCourse ? "No materials in this subject yet" : "Share your first learning material"}</p>
-                            <p className="mt-1 text-body-sm">{filterCourse ? "Choose another subject or use the form to add one." : "Choose a subject and upload notes, slides, or a document for your students."}</p>
+                         <td colSpan={5} className="px-6 py-14 text-center text-dashboard-muted">
+                            <span className="material-symbols-outlined mb-2 text-4xl text-dashboard-outline">menu_book</span>
+                            <p className="font-semibold text-dashboard-foreground">{filterCourse ? "No materials in this subject yet" : "Share your first learning material"}</p>
+                            <p className="mt-1 text-sm">{filterCourse ? "Choose another subject or use the form to add one." : "Choose a subject and upload notes, slides, or a document for your students."}</p>
                          </td>
                        </tr>
                     ) : (
@@ -542,28 +550,28 @@ export function NotesClient({ session }: NotesClientProps) {
                         const style = getFileIcon(note.file_type);
                         const course = courses.find(c => c.id === note.course_id);
                         return (
-                          <tr key={note.id} className="hover:bg-primary-fixed/5 transition-colors group">
-                            <td className="py-4 px-6">
+                          <tr key={note.id} className="group transition-colors hover:bg-dashboard-primary/5">
+                            <td className="px-4 py-4 sm:px-6">
                               <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded ${style.bg} flex items-center justify-center ${style.color}`}>
                                   <span className="material-symbols-outlined">{style.icon}</span>
                                 </div>
                                 <div>
-                                  <p className="text-body-md font-body-md font-semibold text-on-surface cursor-pointer hover:text-primary-container" onClick={() => handleDownload(note.download_url, note.file_name)}>{note.title}</p>
-                                  <p className="text-label-md font-label-md text-on-surface-variant">{note.file_name.split('.').pop()?.toUpperCase()} Document</p>
+                                  <p className="cursor-pointer text-sm font-semibold text-dashboard-foreground hover:text-dashboard-primary" onClick={() => handleDownload(note.download_url, note.file_name)}>{note.title}</p>
+                                  <p className="text-xs text-dashboard-muted">{note.file_name.split('.').pop()?.toUpperCase()} Document</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface">{course ? course.name : "Unknown Subject"}</td>
-                            <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{new Date(note.created_at).toLocaleDateString()}</td>
-                            <td className="py-4 px-6 text-body-sm font-body-sm text-on-surface-variant">{formatFileSize(note.file_size_bytes)}</td>
-                            <td className="py-4 px-6 text-right">
+                            <td className="px-4 py-4 text-sm text-dashboard-foreground sm:px-6">{course ? course.name : "Unknown Subject"}</td>
+                            <td className="px-4 py-4 text-sm text-dashboard-muted sm:px-6">{new Date(note.created_at).toLocaleDateString()}</td>
+                            <td className="px-4 py-4 text-sm text-dashboard-muted sm:px-6">{formatFileSize(note.file_size_bytes)}</td>
+                            <td className="px-4 py-4 text-right sm:px-6">
                               <div className="flex justify-end gap-2">
-                                <button onClick={() => handleDownload(note.download_url, note.file_name)} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors" title="Download">
+                                <button onClick={() => handleDownload(note.download_url, note.file_name)} className="p-1.5 text-dashboard-muted transition-colors hover:text-dashboard-primary" title="Download">
                                   <span className="material-symbols-outlined text-sm">download</span>
                                 </button>
                                 {(role === "admin" || currentProfileId === note.tutor_id) && (
-                                  <button onClick={() => setNoteToDelete(note)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors" title="Delete">
+                                <button onClick={() => setNoteToDelete(note)} className="p-1.5 text-dashboard-muted transition-colors hover:text-dashboard-danger" title="Delete">
                                     <span className="material-symbols-outlined text-sm">delete</span>
                                   </button>
                                 )}
@@ -577,8 +585,8 @@ export function NotesClient({ session }: NotesClientProps) {
                 </table>
               </div>
 
-              <div className="p-4 border-t border-outline-variant flex justify-between items-center bg-surface-bright">
-                <span className="text-label-md font-label-md text-on-surface-variant">Showing {filteredNotes.length} resources</span>
+              <div className="flex items-center justify-between border-t border-dashboard-outline bg-dashboard-surface-subtle p-4">
+                <span className="text-sm text-dashboard-muted">Showing {filteredNotes.length} resources</span>
               </div>
             </div>
           </div>
@@ -586,14 +594,14 @@ export function NotesClient({ session }: NotesClientProps) {
       </div>
       {noteToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-material-title">
-          <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
-            <h3 id="delete-material-title" className="text-xl font-bold text-on-surface">Remove this material?</h3>
-            <p className="mt-2 text-body-md text-on-surface-variant">
+          <div className="w-full max-w-md rounded-dashboard-panel bg-dashboard-surface p-6 shadow-xl">
+            <h3 id="delete-material-title" className="text-xl font-bold text-dashboard-foreground">Remove this material?</h3>
+            <p className="mt-2 text-sm text-dashboard-muted">
               Students will no longer see “{noteToDelete.title}”. This cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={() => setNoteToDelete(null)} className="rounded border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface">Keep material</button>
-              <button type="button" onClick={() => void handleDelete(noteToDelete.id)} className="rounded bg-error px-4 py-2 text-sm font-semibold text-on-error">Remove material</button>
+              <button type="button" onClick={() => setNoteToDelete(null)} className="rounded-dashboard-control border border-dashboard-outline px-4 py-2 text-sm font-semibold text-dashboard-foreground">Keep material</button>
+              <button type="button" onClick={() => void handleDelete(noteToDelete.id)} className="rounded-dashboard-control bg-dashboard-danger px-4 py-2 text-sm font-semibold text-white">Remove material</button>
             </div>
           </div>
         </div>

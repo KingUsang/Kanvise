@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
 type Programme = {
@@ -23,19 +25,15 @@ type Programme = {
 
 export function ProgrammesClient() {
   const supabase = useMemo(() => createClient(), [])
-  const [programmes, setProgrammes] = useState<Programme[]>([])
-  const [schoolSlug, setSchoolSlug] = useState('')
-  const [hasLocalDraft, setHasLocalDraft] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
+  const queryClient = useQueryClient()
   const [publishingId, setPublishingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    setLoadError('')
-    try {
+  const programmesQuery = useQuery({
+    queryKey: ['programmes'],
+    queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      if (!session) throw new Error('Your session has ended. Please sign in again.')
       const headers = { Authorization: `Bearer ${session.access_token}` }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       const [programmesResponse, schoolResponse, profileResponse] = await Promise.all([
@@ -47,18 +45,14 @@ export function ProgrammesClient() {
       const [{ data }, { data: school }, { user }] = await Promise.all([
         programmesResponse.json(), schoolResponse.json(), profileResponse.json(),
       ])
-      setProgrammes(data || [])
-      setSchoolSlug(school?.slug || '')
-      if (school?.id && user?.id) setHasLocalDraft(Boolean(loadProgrammeDraft(school.id, user.id)))
-    } catch (error) {
-      console.error(error)
-      setLoadError('We could not load your programmes. Check your connection and try again.')
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase])
-
-  useEffect(() => { void load() }, [load])
+      return { programmes: (data || []) as Programme[], schoolSlug: school?.slug || '', schoolId: school?.id as string | undefined, userId: user?.id as string | undefined }
+    },
+    staleTime: 60_000,
+  })
+  const programmes = programmesQuery.data?.programmes || []
+  const schoolSlug = programmesQuery.data?.schoolSlug || ''
+  const hasLocalDraft = Boolean(programmesQuery.data?.schoolId && programmesQuery.data?.userId && loadProgrammeDraft(programmesQuery.data.schoolId, programmesQuery.data.userId))
+  const loadError = programmesQuery.error ? 'We could not load your programmes. Check your connection and try again.' : ''
 
   const copyLink = async (programme: Programme) => {
     try {
@@ -82,7 +76,7 @@ export function ProgrammesClient() {
         throw new Error(missing ? `Assign tutors to: ${missing}` : body.error)
       }
       toast.success('Programme published')
-      await load()
+      await queryClient.invalidateQueries({ queryKey: ['programmes'] })
     } catch (error) {
       toast.error('Programme is not ready', { description: error instanceof Error ? error.message : 'Please review its setup.' })
     } finally {
@@ -103,7 +97,7 @@ export function ProgrammesClient() {
         ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
         : body?.error || 'Could not delete programme')
       toast.success('Programme deleted')
-      await load()
+      await queryClient.invalidateQueries({ queryKey: ['programmes'] })
     } catch (error) {
       toast.error('Could not delete programme', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
@@ -113,23 +107,20 @@ export function ProgrammesClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#474551]">What you teach</p>
-          <h1 className="mt-2 text-3xl font-bold text-[#1b1c1c]">Programmes</h1>
-          <p className="mt-1 max-w-2xl text-sm text-[#474551]">Create enrolment packages and organise the subjects students receive.</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      <DashboardPageHeader
+        title="Programmes"
+        description="Create enrolment packages and organise the subjects students receive."
+        actions={<>
           {schoolSlug && (
             <a href={`/${schoolSlug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] bg-white px-4 py-2.5 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2]">
               <span className="material-symbols-outlined text-[19px]">storefront</span> Preview centre page
             </a>
           )}
-          <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#753400]">
+          <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-dashboard-accent/90">
             <span className="material-symbols-outlined text-[19px]">add</span> Create programme
           </Link>
-        </div>
-      </header>
+        </>}
+      />
 
       {hasLocalDraft && (
         <div className="flex flex-col gap-3 rounded-lg border border-[#2e2877]/25 bg-[#f0efff] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -142,22 +133,22 @@ export function ProgrammesClient() {
       )}
 
       {loadError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void load()} className="ml-2 font-semibold underline">Try again</button></div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
       )}
 
-      {loading ? (
-        <div className="rounded-lg border border-[#c2b59b] bg-white p-12 text-center text-sm text-[#474551]">Loading programmes…</div>
+      {programmesQuery.isLoading ? (
+        <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading programmes…</div>
       ) : programmes.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-16 text-center">
+        <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-16 text-center">
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
           <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first programme</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Bundle at least one subject into a programme students can enrol in.</p>
-          <Link href="/dashboard/programmes/new" className="mt-5 inline-flex rounded bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white">Create programme</Link>
+          <Link href="/dashboard/programmes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create programme</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {programmes.map(programme => (
-            <article key={programme.id} className="overflow-hidden rounded-lg border border-[#c2b59b] bg-white shadow-sm">
+            <article key={programme.id} className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               <div className="flex gap-4 p-5">
                 <div className="flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-[#c8c5d2] bg-[#f2ebd9]">
                   {programme.thumbnail_url ? <img src={programme.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <span className="material-symbols-outlined text-3xl text-[#994704]">menu_book</span>}

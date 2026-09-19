@@ -1,10 +1,12 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
 import { CalendarDays, CheckCircle2, Download, FileText, Search, Send, UploadCloud, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getApiUrl } from "@/config/api";
+import { createClient } from "@/lib/supabase/client";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { StudentAssignment } from "@/lib/student-assignments";
 
 type Status = "all" | "pending" | "submitted" | "graded" | "overdue";
@@ -18,8 +20,19 @@ export function assignmentStatus(item: StudentAssignment, now = Date.now()): Exc
 
 function dateTime(value: string) { return new Intl.DateTimeFormat("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)); }
 
-export function StudentAssignmentsClient({ assignments: initialAssignments }: { assignments: StudentAssignment[] }) {
-  const [assignments, setAssignments] = useState(initialAssignments);
+export function StudentAssignmentsClient({ assignments: seededAssignments }: { assignments?: StudentAssignment[] } = {}) {
+  const queryClient = useQueryClient();
+  const assignmentsQuery = useQuery<StudentAssignment[]>({
+    queryKey: ["student-assignments"],
+    initialData: seededAssignments,
+    queryFn: async () => {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/assignments/me`, { cache: "no-store" });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || "Could not load assignments");
+      return body.data || [];
+    },
+  });
+  const assignments = assignmentsQuery.data ?? [];
   // Opening this page should show the assignment list first. On small screens a
   // selected assignment is presented as a full-screen sheet, so selecting the
   // first item here made that sheet appear as soon as the page loaded.
@@ -47,19 +60,17 @@ export function StudentAssignmentsClient({ assignments: initialAssignments }: { 
     if (!selected || !file) return;
     setSubmitting(true);
     try {
-      const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Your session has expired. Please sign in again.");
-      const headers = { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" };
-      const presign = await fetch(`${getApiUrl()}/storage/presign/upload`, { method: "POST", headers, body: JSON.stringify({ entity_type: "submission", assignment_id: selected.id, file_name: file.name, content_type: file.type, file_size_bytes: file.size }) });
+      const supabase = createClient();
+      const requestInit = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity_type: "submission", assignment_id: selected.id, file_name: file.name, content_type: file.type, file_size_bytes: file.size }) };
+      const presign = await authenticatedFetch(supabase, `${getApiUrl()}/storage/presign/upload`, requestInit);
       const presignBody = await presign.json();
       if (!presign.ok) throw new Error(presignBody.error || "Could not prepare your upload.");
       const upload = await fetch(presignBody.data.presigned_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       if (!upload.ok) throw new Error("The file upload failed. Please try again.");
-      const response = await fetch(`${getApiUrl()}/assignments/${selected.id}/submit`, { method: "POST", headers, body: JSON.stringify({ file_key: presignBody.data.file_key, file_name: file.name, file_type: file.type, file_size_bytes: file.size }) });
+      const response = await authenticatedFetch(supabase, `${getApiUrl()}/assignments/${selected.id}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file_key: presignBody.data.file_key, file_name: file.name, file_type: file.type, file_size_bytes: file.size }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not submit your assignment.");
-      setAssignments((items) => items.map((item) => item.id === selected.id ? { ...item, submission: body.data } : item));
+      queryClient.setQueryData<StudentAssignment[]>(["student-assignments"], (items = []) => items.map((item) => item.id === selected.id ? { ...item, submission: body.data } : item));
       setFile(null);
       toast.success("Assignment submitted successfully.");
     } catch (error) {
@@ -67,6 +78,8 @@ export function StudentAssignmentsClient({ assignments: initialAssignments }: { 
     } finally { setSubmitting(false); }
   }
 
+  if (assignmentsQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading assignments…</main>;
+  if (assignmentsQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{assignmentsQuery.error.message}</p><button type="button" onClick={() => void assignmentsQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>;
   return <main className="mx-auto max-w-[1440px] px-4 py-7 pb-24 sm:px-6 lg:px-10 lg:py-10">
     <header><p className="text-sm font-medium text-[#994704]">Coursework</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Assignments</h1><p className="mt-2 text-sm text-[#716c76]">Review the question, submit your work, and see feedback from your tutors.</p></header>
     <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div role="group" aria-label="Filter assignments by status" className="grid grid-cols-3 gap-1 rounded-xl bg-[#eeeae6] p-1 sm:flex">{(["all", "pending", "submitted", "graded", "overdue"] as Status[]).map((item) => <button type="button" key={item} aria-pressed={status === item} onClick={() => setStatus(item)} className={`min-h-10 min-w-0 rounded-lg px-2 py-2 text-xs font-medium capitalize sm:px-4 sm:text-sm ${status === item ? "bg-white text-[#2e2877] shadow-sm" : "text-[#716c76]"}`}>{item}</button>)}</div><label className="relative block lg:w-80"><Search className="absolute left-3 top-3 text-[#8b858f]" size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title or subject" className="w-full rounded-xl border border-[#ddd7d2] bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#2e2877]" /></label></div>

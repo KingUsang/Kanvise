@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { AccessToken, RoomServiceClient, TrackSource, WebhookReceiver } from 'livekit-server-sdk'
+import { createHash, randomBytes } from 'node:crypto'
 import { supabase } from '../lib/supabase'
 import {
   jwtVerificationMiddleware,
@@ -130,15 +131,35 @@ liveClassesRouter.use(
   tenantMiddleware,
 )
 
+// ── GET /live-classes/:id/readiness — Check classroom readiness ───────────
+// This is intentionally side-effect free from the class perspective: it may
+// wake/check the LiveKit worker, but it does not create a room or issue a
+// participant token. The browser can safely call it after refresh/reconnect.
+liveClassesRouter.get('/:id/readiness', async (c) => {
+  const access = await requireClassroom(c, c.req.query('intent') === 'start' ? 'host' : 'view')
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
+  try {
+    const worker = await ensureLiveKitWorkerReady()
+    if (worker.state === 'preparing') return c.json({ data: { state: 'starting', retry_after_seconds: worker.retryAfterSeconds } })
+    if (worker.state !== 'ready') return c.json({ data: { state: 'unavailable', message: worker.message || 'The classroom is temporarily unavailable' } }, 503)
+    return c.json({ data: { state: 'ready', class_status: liveClass.status } })
+  } catch (error) {
+    console.error('[live-classes] readiness check failed:', error)
+    return c.json({ data: { state: 'unavailable', message: 'The classroom is temporarily unavailable' } }, 503)
+  }
+})
+
 // ── POST /live-classes — Schedule a class (Admin, Tutor) ───────────────────
 
 liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
   const { course_id, tutor_id, title, scheduled_at, duration_minutes } = body
+  const accessMode = body.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners'
   const isRecurring = body.recurrence === 'weekly'
 
-  if (!course_id || !tutor_id || !title || !scheduled_at || !duration_minutes || (isRecurring && (!body.starts_on || !body.start_time))) {
+  if ((!course_id && accessMode === 'enrolled_learners') || !tutor_id || !title || !scheduled_at || !duration_minutes || (isRecurring && (!body.starts_on || !body.start_time))) {
     return c.json({ error: 'Missing required fields', code: 'MISSING_FIELDS' }, 400)
   }
 
@@ -155,16 +176,21 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
     return c.json({ error: 'Tutors can only schedule classes for themselves', code: 'FORBIDDEN' }, 403)
   }
 
-  // Ensure the tutor is assigned to the course and belongs to the school
-  const { data: assignment, error: assignmentError } = await supabase
+  if (accessMode === 'anyone_with_link' && isRecurring) {
+    return c.json({ error: 'Schedule each shared class separately so every session has its own private link', code: 'SHARED_RECURRING_UNSUPPORTED' }, 400)
+  }
+
+  // Structured classes keep the assignment requirement. A shared class is
+  // deliberately independent of a teaching group.
+  const { data: assignment, error: assignmentError } = accessMode === 'enrolled_learners' ? await supabase
     .from('tutor_course_assignments')
     .select('course_id')
     .eq('tutor_id', tutor_id)
     .eq('course_id', course_id)
     .eq('school_id', user.school_id)
-    .maybeSingle()
+    .maybeSingle() : { data: true, error: null }
 
-  if (assignmentError || !assignment) {
+  if (accessMode === 'enrolled_learners' && (assignmentError || !assignment)) {
     return c.json({ error: 'Tutor is not assigned to this course or course does not exist', code: 'INVALID_TUTOR_OR_COURSE' }, 403)
   }
 
@@ -189,17 +215,19 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   }
 
 
-  const { data, error } = await supabase
-    .from('live_classes')
+  const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
+  const { data, error } = await (supabase.from('live_classes') as any)
     .insert({
       school_id: user.school_id,
-      course_id,
+      course_id: accessMode === 'enrolled_learners' ? course_id : null,
       tutor_id,
       title,
       scheduled_at,
       duration_minutes,
       status: 'scheduled',
       created_by: user.id,
+      access_mode: accessMode,
+      share_token_hash: shareToken ? createHash('sha256').update(shareToken).digest('hex') : null,
     })
     .select()
     .single()
@@ -209,7 +237,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
     return c.json({ error: 'Failed to schedule class' }, 500)
   }
 
-  return c.json({ data }, 201)
+  return c.json({ data: { ...data, share_token: shareToken } }, 201)
 })
 
 // ── POST /live-classes/start-now — Create and start in one workflow ───────
@@ -219,9 +247,10 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   const body = await c.req.json()
   const courseId = String(body.course_id || '')
   const tutorId = String(body.tutor_id || user.id)
+  const accessMode = body.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners'
   const durationMinutes = body.duration_minutes === undefined ? 60 : Number(body.duration_minutes)
 
-  if (!courseId) {
+  if (accessMode === 'enrolled_learners' && !courseId) {
     return c.json({ error: 'Choose what you are teaching', code: 'COURSE_REQUIRED' }, 400)
   }
   if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 240) {
@@ -231,7 +260,7 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
     return c.json({ error: 'Tutors can only start their own classes', code: 'FORBIDDEN' }, 403)
   }
 
-  const [{ data: assignment, error: assignmentError }, { data: course, error: courseError }] = await Promise.all([
+  const [{ data: assignment, error: assignmentError }, { data: course, error: courseError }] = accessMode === 'enrolled_learners' ? await Promise.all([
     supabase.from('tutor_course_assignments')
       .select('course_id')
       .eq('tutor_id', tutorId)
@@ -243,26 +272,29 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
       .eq('id', courseId)
       .eq('school_id', user.school_id)
       .maybeSingle(),
-  ])
+  ]) : [{ data: null, error: null }, { data: null, error: null }]
 
-  if (assignmentError || courseError || !assignment || !course) {
+  if (accessMode === 'enrolled_learners' && (assignmentError || courseError || !assignment || !course)) {
     return c.json({ error: 'Choose a subject assigned to this tutor', code: 'INVALID_TUTOR_OR_COURSE' }, 403)
   }
 
-  const title = String(body.title || '').trim() || `${course.name} class`
+  const title = String(body.title || '').trim().slice(0, 160) || (course ? `${course.name} class` : 'Live class')
+  const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
   const startedAt = new Date().toISOString()
-  const { data: insertedClass, error: insertError } = await supabase.from('live_classes')
+  const { data: insertedClass, error: insertError } = await (supabase.from('live_classes') as any)
     .insert({
       school_id: user.school_id,
-      course_id: courseId,
+      course_id: accessMode === 'enrolled_learners' ? courseId : null,
       tutor_id: tutorId,
       title,
       scheduled_at: startedAt,
       duration_minutes: durationMinutes,
       status: 'scheduled',
       created_by: user.id,
+      access_mode: accessMode,
+      share_token_hash: shareToken ? createHash('sha256').update(shareToken).digest('hex') : null,
     })
-    .select('id, title, course_id, tutor_id, duration_minutes')
+    .select('id, title, course_id, tutor_id, duration_minutes, access_mode')
     .single()
 
   if (insertError || !insertedClass) {
@@ -274,14 +306,22 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   try {
     const worker = await ensureLiveKitWorkerReady()
     if (worker.state === 'preparing') {
-      return c.json({ data: { ...insertedClass, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds } }, 202)
+      return c.json({ data: {
+        ...insertedClass,
+        state: 'preparing',
+        retry_after_seconds: worker.retryAfterSeconds,
+        class_title: insertedClass.title,
+        course_name: course?.name || null,
+        share_token: shareToken,
+        is_host: true,
+      } }, 202)
     }
     if (worker.state !== 'ready') throw new Error(worker.message || 'LIVEKIT_WORKER_UNAVAILABLE')
     const roomService = getRoomService()
     await roomService.createRoom({ name: roomName, emptyTimeout: 300, maxParticipants: 200 })
     roomCreated = true
 
-    const { data: liveClass, error: updateError } = await supabase.from('live_classes')
+    const { data: liveClass, error: updateError } = await (supabase.from('live_classes') as any)
       .update({ status: 'live', livekit_room_name: roomName, started_at: startedAt })
       .eq('id', insertedClass.id)
       .eq('school_id', user.school_id)
@@ -300,7 +340,8 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
         livekit_url: wsUrl,
         is_host: true,
         class_title: liveClass.title,
-        course_name: course.name,
+        course_name: course?.name || null,
+        share_token: shareToken,
       },
     }, 201)
   } catch (error) {
@@ -472,6 +513,20 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   const liveClass = access.liveClass as any
 
   if (liveClass.status === 'live') {
+    const worker = await ensureLiveKitWorkerReady()
+    if (worker.state === 'preparing') {
+      return c.json({ data: {
+        id,
+        state: 'preparing',
+        retry_after_seconds: worker.retryAfterSeconds,
+        class_title: liveClass.title,
+        course_name: (liveClass.courses as any)?.name || null,
+        is_host: true,
+      } }, 202)
+    }
+    if (worker.state !== 'ready') {
+      return c.json({ error: 'Could not prepare this classroom right now', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
+    }
     // If the tutor refreshes the page, the class is already live. Just let them back in!
     const roomName = liveClass.livekit_room_name || `kanvise-class-${id}`
     const displayName = await getParticipantDisplayName(user, 'Tutor')
@@ -495,7 +550,14 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   const worker = await ensureLiveKitWorkerReady()
   if (worker.state === 'preparing') {
-    return c.json({ data: { id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds } }, 202)
+    return c.json({ data: {
+      id,
+      state: 'preparing',
+      retry_after_seconds: worker.retryAfterSeconds,
+      class_title: liveClass.title,
+      course_name: (liveClass.courses as any)?.name || null,
+      is_host: true,
+    } }, 202)
   }
   if (worker.state !== 'ready') {
     return c.json({ error: worker.message || 'The classroom server is unavailable', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
@@ -548,6 +610,23 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
   }
 
+  // A room can still be marked live after the classroom service has been
+  // paused. Prepare it before handing the browser a token it cannot use.
+  const worker = await ensureLiveKitWorkerReady()
+  if (worker.state === 'preparing') {
+    return c.json({ data: {
+      id: liveClass.id,
+      state: 'preparing',
+      retry_after_seconds: worker.retryAfterSeconds,
+      class_title: liveClass.title,
+      course_name: (liveClass.courses as any)?.name || null,
+      is_host: access.isHost,
+    } }, 202)
+  }
+  if (worker.state !== 'ready') {
+    return c.json({ error: 'Could not prepare this classroom right now', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
+  }
+
   // Only the assigned tutor gets host permissions. School admins may join as
   // non-host observers; unassigned tutors cannot enter another tutor's class.
   const isHost = access.isHost
@@ -584,23 +663,48 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
     return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
   }
-  try {
-    const roomService = getRoomService()
-    await roomService.deleteRoom(liveClass.livekit_room_name)
-  } catch (e) {
-    // Room may have already been deleted (e.g. everyone left) — log and continue
-    console.warn('[live-classes] deleteRoom warning (may already be gone):', e)
-  }
-
   const { error: updateError } = await supabase
     .from('live_classes')
     .update({ status: 'completed', ended_at: new Date().toISOString() })
     .eq('id', liveClass.id)
+    .eq('school_id', user.school_id)
+    .eq('status', 'live')
   if (updateError) {
-    return c.json({ error: 'The room closed, but the class record could not be completed', code: 'CLASS_END_UPDATE_FAILED' }, 500)
+    return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
   }
 
+  // Ending the class must feel immediate to the tutor. Mark it completed
+  // first, then ask LiveKit to close every participant connection without
+  // holding the browser hostage to a remote room-service round trip.
+  void (async () => {
+    try {
+      await getRoomService().deleteRoom(liveClass.livekit_room_name)
+    } catch (error) {
+      // New joins are already denied by the completed class status. Existing
+      // participants will leave naturally if this best-effort disconnect fails.
+      console.warn('[live-classes] background deleteRoom warning:', error)
+    }
+  })()
+
   return c.json({ message: 'Live class ended' })
+})
+
+// ── POST /live-classes/:id/regenerate-link — invalidate a leaked class link ─
+
+liveClassesRouter.post('/:id/regenerate-link', requireRole('tutor', 'admin'), async (c) => {
+  const user = c.get('user')
+  const access = await requireClassroom(c, 'host')
+  if ('response' in access) return access.response
+  const liveClass = access.liveClass as any
+  if (liveClass.access_mode !== 'anyone_with_link') return c.json({ error: 'Only shared classes have a link to regenerate', code: 'NOT_SHARED_CLASS' }, 400)
+  const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
+  const now = new Date().toISOString()
+  const { error } = await (supabase.from('live_classes') as any).update({
+    share_token_hash: createHash('sha256').update(shareToken).digest('hex'), share_link_revoked_at: null,
+  }).eq('id', liveClass.id).eq('school_id', user.school_id)
+  if (error) return c.json({ error: 'Could not create a new class link', code: 'LINK_REGENERATE_FAILED' }, 500)
+  await (supabase as any).from('live_class_guests').update({ revoked_at: now }).eq('live_class_id', liveClass.id).is('revoked_at', null)
+  return c.json({ data: { share_token: shareToken } })
 })
 
 // ── POST /live-classes/:id/host-action — Kick / Mute / Lower hand ─────────

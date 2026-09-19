@@ -20,7 +20,8 @@ export default function AcceptInvitationPage() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then((result: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
+      const user = result.data.user
       if (!mounted) return;
       if (!user) {
         setError("This invitation link has expired, was already used, or was opened in a different browser.");

@@ -9,8 +9,10 @@ export async function readPdfPageCount(buffer: Uint8Array, loader: () => Promise
   ;(globalThis as any).Path2D ??= Path2D
   const pdfjs = await loader()
   const pdfjsRoot = path.dirname(require.resolve('pdfjs-dist/package.json'))
+  const pdfData = new Uint8Array(buffer.byteLength)
+  pdfData.set(buffer)
   const task = pdfjs.getDocument({
-    data: buffer,
+    data: pdfData,
     disableFontFace: true,
     standardFontDataUrl: path.join(pdfjsRoot, 'standard_fonts/'),
   })

@@ -31,3 +31,28 @@ curl --fail https://livekit.kanvise.com
 ```
 
 Azure-deallocation stops compute billing, but attached disk and reserved public-IP charges continue. The static public IP keeps `livekit.kanvise.com` stable across starts.
+
+## Entry-link UX requirement
+
+The internal `/class/:id` address is an authenticated tutor/member entry point. A
+guest must use the public `/live/:shareToken` address. The two routes may render
+the same classroom after admission, but they must not silently fail into a
+login or generic network error when the wrong address is opened. If a guest
+opens the internal address, show a clear message asking the tutor for the class
+link. The tutor's share-link action should make the public address the obvious
+copy/share target.
+
+## Browser readiness transport (planned)
+
+The browser should not rely on a full `router.refresh()` loop to wait for the
+worker. Azure can notify the API, but that notification is server-to-server;
+it is not a browser webhook. The planned interface is a lightweight readiness
+endpoint polled by the browser with bounded backoff:
+
+```text
+starting_vm -> booting -> livekit_connecting -> ready | unavailable
+```
+
+Once `ready` is returned, the browser requests its LiveKit token and moves into
+the separate client connection states (`connecting`, `connected`,
+`reconnecting`, `failed`, `ended`).

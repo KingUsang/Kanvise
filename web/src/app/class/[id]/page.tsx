@@ -34,7 +34,56 @@ export default async function Page({ params, searchParams }: PageProps) {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect('/auth/login')
+    // ── No session: check if this class allows public access ──────────────────
+    const honoUrl = process.env.NEXT_PUBLIC_API_URL
+    let classInfo: { title: string; status: string; access_mode: string; centre_name: string; centre_logo_url: string | null } | null = null
+    try {
+      const res = await fetch(`${honoUrl}/public/live-classes/by-id/${classId}`, { cache: 'no-store' })
+      if (res.ok) classInfo = (await res.json()).data
+    } catch { /* classInfo stays null */ }
+
+    // Class not found at all
+    if (!classInfo) {
+      return (
+        <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
+          <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <span className="text-2xl">!</span>
+            </div>
+            <h1 className="text-xl font-bold text-[#180d62]">Class not found</h1>
+            <p className="mt-3 text-sm leading-6 text-[#66616c]">This class link is invalid or has been removed.</p>
+          </section>
+        </main>
+      )
+    }
+
+    // Class is for enrolled learners only — show friendly message, no login redirect
+    if (classInfo.access_mode === 'enrolled_learners') {
+      return (
+        <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
+          <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm">
+            <div className="flex items-center gap-3">
+              {classInfo.centre_logo_url
+                ? <img src={classInfo.centre_logo_url} alt="" className="h-11 w-11 rounded-xl object-cover" />
+                : <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eeeaff] text-[#2e2877]"><span className="material-symbols-outlined">school</span></div>
+              }
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[.12em] text-[#994704]">{classInfo.centre_name}</p>
+                <h1 className="text-xl font-bold text-[#180d62]">{classInfo.title}</h1>
+              </div>
+            </div>
+            <div className="mt-6 rounded-xl bg-[#fff8f0] border border-[#f5d9b8] p-4">
+              <p className="text-sm font-semibold text-[#7f3a03]">This class is for enrolled learners only</p>
+              <p className="mt-1 text-sm leading-6 text-[#66616c]">You need to be a registered student at <strong>{classInfo.centre_name}</strong> to join this class. Ask your tutor to add you to their school on Kanvise.</p>
+            </div>
+          </section>
+        </main>
+      )
+    }
+
+    // Class is open to anyone — render the guest join UI (client component)
+    const { GuestClassEntry } = await import('./GuestClassEntry')
+    return <GuestClassEntry classId={classId} classInfo={classInfo} />
   }
 
   // ── 2. Call Hono to get the LiveKit token ──────────────────────────────────
@@ -55,7 +104,12 @@ export default async function Page({ params, searchParams }: PageProps) {
     course_name: string | null
   }
   let errorMessage: string | null = null
-  let preparing: { retry_after_seconds?: number } | null = null
+  let preparing: {
+    retry_after_seconds?: number
+    class_title?: string
+    course_name?: string | null
+    is_host?: boolean
+  } | null = null
 
   try {
     const response = await fetch(endpoint, {
@@ -84,7 +138,14 @@ export default async function Page({ params, searchParams }: PageProps) {
   // ── 3. Render ──────────────────────────────────────────────────────────────
 
   if (preparing) {
-    return <PreparingClassroom retryAfterSeconds={preparing.retry_after_seconds || 4} />
+    return <PreparingClassroom
+      retryAfterSeconds={preparing.retry_after_seconds || 4}
+      classId={classId}
+      isStarting={isStarting}
+      classTitle={preparing.class_title || 'Your live class'}
+      courseName={preparing.course_name || null}
+      isHost={preparing.is_host ?? isStarting}
+    />
   }
 
   if (errorMessage || !classData!) {

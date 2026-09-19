@@ -6,6 +6,7 @@ import { PUBLIC_APP_HOST } from '@/config/app'
 import { getApiUrl } from '@/config/api'
 import { createClient } from '@/lib/supabase/client'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 export function slugifyCentreName(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64)
@@ -219,8 +220,10 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
           <div className="mb-7 flex h-11 w-11 items-center justify-center rounded-xl bg-[#f1efff] text-[#2e2877]">
             <span className="material-symbols-outlined">school</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#180d62] sm:text-3xl">Name your centre</h1>
-          <p className="mt-2 text-sm leading-6 text-[#5f5964]">This is the name students will recognise. You can add your logo, contact details and other information later.</p>
+          <DashboardPageHeader
+            title="Name your centre"
+            description="This is the name students will recognise. You can add your logo, contact details and other information later."
+          />
 
           <label htmlFor="name" className="mt-7 block text-sm font-semibold text-[#1b1c1c]">Centre name</label>
           <input
@@ -241,7 +244,7 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
             <p className="mt-1 text-xs leading-5 text-[#716c76]">We generate this automatically. You can customise it later.</p>
           </div>
 
-          <button type="submit" disabled={isSaving || !formData.name.trim()} className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#753400] disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="submit" disabled={isSaving || !formData.name.trim()} className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-dashboard-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
             {isSaving && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}
             {isSaving ? 'Creating your centre…' : 'Continue to dashboard'}
           </button>
@@ -253,12 +256,11 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
   return (
     <div className="mx-auto w-full max-w-[1440px]">
       {/* Page Header & Global Actions */}
-      <div className="mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#180d62] sm:text-3xl">Centre profile</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551]">Manage what students see on your public centre page.</p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        className="mb-6"
+        title="Centre profile"
+        description="Manage what students see on your public centre page."
+      />
 
       {/* Bento Grid Layout */}
       <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">

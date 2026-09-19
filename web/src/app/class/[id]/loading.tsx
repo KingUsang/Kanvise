@@ -10,9 +10,9 @@ export default function ClassroomLoading() {
       </header>
       <div className="flex flex-1 items-center justify-center p-5">
         <div className="flex w-full max-w-sm flex-col items-center rounded-2xl bg-white p-8 text-center shadow-[0_12px_36px_rgba(24,13,98,0.08)]">
-          <div className="mb-5 h-12 w-12 animate-spin rounded-full border-4 border-[#e4e2e1] border-t-[#180d62]" />
-          <h1 className="text-lg font-bold text-[#180d62]">Preparing your classroom</h1>
-          <p className="mt-2 text-sm leading-6 text-[#787582]">Checking your session and connecting to the live class…</p>
+          <div className="mb-5 h-2 w-16 animate-pulse rounded-full bg-[#ded8ff]" />
+          <h1 className="text-lg font-bold text-[#180d62]">Opening classroom</h1>
+          <p className="mt-2 text-sm leading-6 text-[#787582]">Checking your session…</p>
         </div>
       </div>
     </main>

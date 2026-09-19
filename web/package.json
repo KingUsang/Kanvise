@@ -14,11 +14,13 @@
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
+    "@fontsource/material-symbols-outlined": "^5.3.6",
     "@fontsource/poppins": "^5.3.0",
     "@livekit/components-react": "^2.9.21",
     "@livekit/components-styles": "^1.2.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
+    "@tanstack/react-query": "^5.66.0",
     "clsx": "^2.1.1",
     "katex": "0.16.47",
     "livekit-client": "^2.20.0",

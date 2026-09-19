@@ -114,6 +114,8 @@ Server Components that render public pages (centre page, programme page) call th
 
 Dashboard interactions (submitting an assignment, creating a mock, scheduling a class) are made from Client Components using fetch. These calls include the user's JWT in the Authorization header. Hono validates the JWT, resolves the tenant, checks the role, and processes the request.
 
+Authenticated dashboard application data follows the same browser-to-Hono boundary: the Server Component performs only the session gate and renders the dashboard shell; a Client Component loads data from Hono through TanStack Query. Server Components must not fetch authenticated dashboard data or pass a JWT as a client-component prop. The browser reuses the current Supabase Auth access token and refreshes it only after Hono returns `401`; it must not refresh Supabase before every request.
+
 ### 2.4 Next.js Route Handlers → Hono API
 
 Some Next.js route handlers act as a proxy to Hono — for example, the Paystack webhook handler receives the webhook on the Next.js side (because it needs to be on the main domain) and then forwards the relevant data to Hono for processing. This keeps business logic out of Next.js route handlers.

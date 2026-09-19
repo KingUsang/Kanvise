@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Expand,
-  FileText, Loader2, Trash2, Upload, X,
+  ChevronDown, ChevronUp, FileText, Loader2, Trash2, Upload, X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import CollaborativeWhiteboard from './CollaborativeWhiteboard'
@@ -53,15 +52,29 @@ function MaterialsDrawer() {
         {!materials.length && <div className="rounded-xl border border-dashed border-[#cbc7d2] p-6 text-center text-sm text-[#716e79]">Add the first PDF for this lesson.</div>}
         {materials.map((material, index) => (
           <div key={material.id} className={`rounded-xl border p-3 ${active?.id === material.id ? 'border-[#2e2877] bg-[#f2f0ff]' : 'border-[#e5e3e8]'}`}>
-            <button onClick={() => void activate(material.id)} className="flex w-full items-start gap-3 text-left">
+            <button
+              onClick={() => {
+                if (material.processing_status === 'failed') {
+                  toast.error('This teaching material could not be prepared', { description: material.processing_error || 'Replace the PDF and try again.' })
+                  return
+                }
+                if (material.processing_status !== 'ready') {
+                  toast.message('This teaching material is still being prepared', { description: 'You can open it as soon as its pages are ready.' })
+                  return
+                }
+                void activate(material.id)
+              }}
+              disabled={material.processing_status !== 'ready'}
+              className="flex w-full items-start gap-3 text-left disabled:cursor-not-allowed disabled:opacity-70"
+            >
               <span className="rounded-lg bg-white p-2 text-[#994704] shadow-sm"><FileText size={18} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#24212b]">{material.filename}</span><span className="text-[11px] text-[#716e79]">{material.processing_status === 'ready' ? `${material.page_count} pages` : material.processing_status === 'failed' ? material.processing_error || 'Could not read PDF' : material.processing_status === 'processing' ? 'Checking PDF…' : 'Waiting for upload…'}</span></span>
             </button>
             <div className="mt-2 flex justify-end gap-1 border-t border-black/5 pt-2">
               <button disabled={index === 0} onClick={() => void reorder(material.id, -1)} className="rounded p-1.5 hover:bg-white disabled:opacity-30" title="Move up"><ChevronUp size={14} /></button>
               <button disabled={index === materials.length - 1} onClick={() => void reorder(material.id, 1)} className="rounded p-1.5 hover:bg-white disabled:opacity-30" title="Move down"><ChevronDown size={14} /></button>
-              <button onClick={() => { const next = window.prompt('Material name', material.filename); if (next?.trim()) void rename(material.id, next.trim()) }} className="rounded px-2 py-1 text-[11px] font-semibold hover:bg-white">Rename</button>
-              <button onClick={() => { setReplaceTarget(material.id); inputRef.current?.click() }} className="rounded px-2 py-1 text-[11px] font-semibold hover:bg-white">Replace</button>
+              <button onClick={() => { const next = window.prompt('Material name', material.filename); if (next?.trim()) void rename(material.id, next.trim()) }} className="rounded px-2 py-1 text-[11px] font-semibold text-[#180d62] hover:bg-white">Rename</button>
+              <button onClick={() => { setReplaceTarget(material.id); inputRef.current?.click() }} className="rounded px-2 py-1 text-[11px] font-semibold text-[#180d62] hover:bg-white">Replace</button>
               <button onClick={() => { if (window.confirm(`Remove ${material.filename}?`)) void remove(material.id) }} className="rounded p-1.5 text-red-700 hover:bg-red-50" title="Remove"><Trash2 size={14} /></button>
             </div>
           </div>
@@ -79,26 +92,60 @@ function MaterialsDrawer() {
 }
 
 export default function PresentationStage({ isHost }: { isHost: boolean }) {
-  const { mode, active, legacySlides, loading, changePage, closePresentation, getViewUrl } = usePresentationSession()
+  const { mode, active, legacySlides, loading, getPageViewUrl } = usePresentationSession()
   const [url, setUrl] = useState('')
-  const [placingPage, setPlacingPage] = useState(false)
-  const stageRef = useRef<HTMLDivElement>(null)
-  const boardRef = useRef<import('./CollaborativeWhiteboard').WhiteboardRef>(null)
+  const [displayedPage, setDisplayedPage] = useState<number | null>(null)
+  const displayedMaterialIdRef = useRef<string | null>(null)
+  const [showLoader, setShowLoader] = useState(false)
+  const [pageError, setPageError] = useState<string | null>(null)
   const activeId = active?.id
   const activeUpdatedAt = active?.updated_at
+  const activePage = active?.current_page
+  const loaderTimeoutRef = useRef<number | null>(null)
+
+  const handlePdfRenderStateChange = useCallback((rendering: boolean) => {
+    if (loaderTimeoutRef.current) window.clearTimeout(loaderTimeoutRef.current)
+    if (rendering) {
+      setShowLoader(true)
+    } else {
+      setShowLoader(false)
+    }
+  }, [])
+  const handlePdfRenderError = useCallback((error: Error) => setPageError(error.message), [])
+  const pdfDocument = useMemo(() => {
+    if (!active || !url || !active.page_count) return undefined
+    return { materialId: active.id, url, page: displayedPage || active.current_page, pageCount: active.page_count }
+  }, [active, displayedPage, url])
 
   useEffect(() => {
-    setUrl('')
+    setPageError(null)
     if (!activeId) return
     let cancelled = false
-    void getViewUrl(activeId).then((next) => { if (!cancelled) setUrl(next) }).catch((error) => {
+    if (!activePage) return
+    const materialChanged = displayedMaterialIdRef.current !== activeId
+    if (materialChanged) {
+      setUrl('')
+      setDisplayedPage(null)
+      displayedMaterialIdRef.current = activeId
+    }
+    setShowLoader(true)
+    void getPageViewUrl(activeId, activePage).then((next) => {
+      if (cancelled) return
+      setUrl(next)
+      setDisplayedPage(activePage)
+      displayedMaterialIdRef.current = activeId
+    }).catch((error) => {
       if (!cancelled) toast.error('Could not open teaching material', { description: error instanceof Error ? error.message : undefined })
+    }).finally(() => { 
+      if (!cancelled) {
+        loaderTimeoutRef.current = window.setTimeout(() => setShowLoader(false), 100)
+      }
     })
     return () => { cancelled = true }
-  }, [activeId, activeUpdatedAt, getViewUrl])
+  }, [activeId, activePage, activeUpdatedAt, getPageViewUrl])
 
   if (mode === 'whiteboard' || (!active && !loading)) {
-    return <div className="absolute inset-0"><CollaborativeWhiteboard ref={boardRef} /><MaterialsDrawer /></div>
+    return <div className="absolute inset-0"><CollaborativeWhiteboard /><MaterialsDrawer /></div>
   }
 
   if (!active || active.processing_status !== 'ready' || !active.page_count) {
@@ -106,36 +153,29 @@ export default function PresentationStage({ isHost }: { isHost: boolean }) {
   }
 
   return (
-    <div ref={stageRef} className="absolute inset-0 flex flex-col bg-[#202124]" data-presentation-stage>
-      <div className="absolute left-1/2 top-3 z-30 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-1 rounded-xl border border-white/10 bg-[#292a2d]/95 p-1 text-white shadow-xl backdrop-blur">
-        <button onClick={() => void changePage(active.current_page - 1)} disabled={active.current_page === 1 || !isHost} className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-35" title="Previous page"><ChevronLeft size={17} /></button>
-        <select value={active.current_page} onChange={(event) => void changePage(Number(event.target.value))} disabled={!isHost} className="rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold outline-none">
-          {Array.from({ length: active.page_count }, (_, index) => <option className="text-black" key={index + 1} value={index + 1}>Page {index + 1} / {active.page_count}</option>)}
-        </select>
-        <button onClick={() => void changePage(active.current_page + 1)} disabled={active.current_page === active.page_count || !isHost} className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-35" title="Next page"><ChevronRight size={17} /></button>
-        <span className="mx-1 h-5 w-px bg-white/15" />
-        {isHost && <button onClick={() => {
-          const placement = boardRef.current?.placePdfPage()
-          if (!placement) return
-          setPlacingPage(true)
-          void placement.finally(() => setPlacingPage(false))
-        }} disabled={placingPage || !url} className="flex items-center gap-1 rounded-lg bg-white/15 px-2 py-2 text-[11px] font-bold hover:bg-white/25 disabled:opacity-50" title="Place this page on the board">
-          {placingPage && <Loader2 size={13} className="animate-spin" />}Place page
-        </button>}
-        <button onClick={() => void stageRef.current?.requestFullscreen()} className="rounded-lg p-2 hover:bg-white/10" title="Fullscreen"><Expand size={15} /></button>
-        {isHost && <button onClick={() => void closePresentation()} className="rounded-lg p-2 text-red-300 hover:bg-white/10" title="Close presentation"><X size={16} /></button>}
-      </div>
-
-      <div className="absolute inset-0 pt-16">
+    <div className="absolute inset-0 flex flex-col bg-[#202124]" data-presentation-stage>
+      <div className="absolute inset-0">
         {!url ? <div className="flex h-full items-center justify-center text-white"><Loader2 className="animate-spin" /></div> : (
-          <CollaborativeWhiteboard ref={boardRef} pdfDocument={{
-            materialId: active.id,
-            url,
-            page: active.current_page,
-            pageCount: active.page_count,
-          }} />
+          <CollaborativeWhiteboard pdfDocument={pdfDocument} onPdfRenderStateChange={handlePdfRenderStateChange} onPdfRenderError={handlePdfRenderError} />
         )}
       </div>
+      {showLoader && <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/35" role="status" aria-live="polite">
+        <div className="flex items-center gap-3 rounded-xl bg-[#292a2d]/95 px-4 py-3 text-sm font-semibold text-white shadow-xl">
+          <Loader2 size={18} className="animate-spin" /> Rendering page {active.current_page} of {active.page_count}…
+        </div>
+      </div>}
+      {pageError && <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#202124]/80 p-6" role="alert">
+        <div className="max-w-sm rounded-2xl bg-white p-5 text-center shadow-2xl">
+          <p className="font-semibold text-[#180d62]">This page could not be displayed</p>
+          <p className="mt-1 text-sm text-[#716e79]">Check the connection and try again. Your annotations are still safe.</p>
+          <button className="mt-4 rounded-xl bg-[#180d62] px-4 py-2 text-sm font-bold text-white" onClick={() => {
+            setPageError(null)
+            if (activeId && activePage) void getPageViewUrl(activeId, activePage).then(setUrl).catch((error) => setPageError(error instanceof Error ? error.message : 'Could not load this page'))
+          }}>
+            Try again
+          </button>
+        </div>
+      </div>}
       <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 max-w-[60%] -translate-x-1/2 truncate rounded-full bg-black/65 px-3 py-1.5 text-[11px] font-medium text-white/90">{active.filename}</div>
       {legacySlides.length > 0 && <span className="sr-only">Legacy slide materials remain available for this class.</span>}
       {isHost && <MaterialsDrawer />}

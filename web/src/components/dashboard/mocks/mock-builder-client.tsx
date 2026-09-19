@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
@@ -11,6 +12,7 @@ import { MockDraftPreview, type DraftPreviewQuestion } from "./mock-draft-previe
 import { MockImportProgressCard, newMockImportProgress, type MockImportProgress } from "./mock-import-progress";
 import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 import { MockBuilderStepProgress } from "./mock-builder-step-progress";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 type Course = {
   id: string;
@@ -75,6 +77,7 @@ type SelectedBankQuestion = {
 
 export function MockBuilderClient({ token }: { token: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const editMockId = searchParams.get("id");
   const isEditMode = !!editMockId;
@@ -88,6 +91,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [programmeFilterId, setProgrammeFilterId] = useState("");
   const [audienceScope, setAudienceScope] = useState<CentreAudienceScope>("course");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("fixed");
   const [accessMode, setAccessMode] = useState<AccessMode>("centre");
@@ -356,6 +360,14 @@ export function MockBuilderClient({ token }: { token: string }) {
     setAccessMode(value);
     const isMulti = deliveryMode === "subject_combination";
     setAudienceScope(value === "direct" ? "direct_link" : isMulti ? "combination" : "course");
+    if (value === "direct") {
+      setProgrammeFilterId("");
+      setCourseId("");
+      setSingleSubjectName("");
+      setSubjectSections((current) => current.map((section) => ({ ...section, courseId: null })));
+      setQuestions((current) => current.map((question) => ({ ...question, course_id: null })));
+      setSelectedBankQuestions((current) => current.map((question) => ({ ...question, courseId: null })));
+    }
   };
 
   const changeDeliveryMode = (nextMode: DeliveryMode) => {
@@ -426,12 +438,28 @@ export function MockBuilderClient({ token }: { token: string }) {
     toast.info("Combined your questions into one subject", { description: "Check the subject and audience before publishing." });
   };
 
+  const centreAccessEnabled = accessMode !== "direct";
+  const shareLinkEnabled = accessMode !== "centre";
   const selectedSubjectSections = subjectSections;
+  const programmeOptions = Array.from(new Map(courses
+    .filter((course) => Boolean(course.programme_id))
+    .map((course) => [course.programme_id!, {
+      id: course.programme_id!,
+      name: Array.isArray(course.programme) ? course.programme[0]?.name : course.programme?.name,
+    }]))
+    .values())
+    .filter((programme) => Boolean(programme.name)) as Array<{ id: string; name: string }>;
+  const coursesForSelectedProgramme = centreAccessEnabled && programmeFilterId
+    ? courses.filter((course) => course.programme_id === programmeFilterId)
+    : courses;
+  const audienceSummary = centreAccessEnabled && shareLinkEnabled
+    ? "My students and anyone with the link"
+    : centreAccessEnabled ? "My students" : "Anyone with the link";
   const selectedSubjectCourses = selectedSubjectSections.map((section) => {
     const linkedCourse = section.courseId ? courses.find((course) => course.id === section.courseId) : null;
     return { id: section.id, name: section.name, label: linkedCourse ? mockCourseLabel(linkedCourse) : section.name, course_id: section.courseId };
   });
-  const availableSubjectCourses = unusedMockCourses(courses, subjectSections.map((section) => section.courseId));
+  const availableSubjectCourses = unusedMockCourses(coursesForSelectedProgramme, subjectSections.map((section) => section.courseId));
   const resolveSubjectSection = (subjectName: string | undefined) => {
     const normalized = (subjectName || "").toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "");
     if (!normalized) return activeSubjectSection;
@@ -505,7 +533,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       questionType: question.question_type,
       marks: question.current_version.marks,
       bankName,
-      courseId: targetSection?.courseId || question.course_id || null,
+      courseId: centreAccessEnabled ? targetSection?.courseId || question.course_id || null : null,
       sectionId: targetSection?.id,
       options: (question.current_version.options || []).map((option) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })),
     }]);
@@ -784,7 +812,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const handleSave = async (shouldPublish: boolean) => {
     const hasCentreTarget = audienceScope === "combination" || (audienceScope === "course" && Boolean(courseId));
-    if (!title || ((accessMode === "centre" || accessMode === "both") && !hasCentreTarget)) {
+    if (!title || (centreAccessEnabled && programmeOptions.length > 0 && !programmeFilterId) || (centreAccessEnabled && !hasCentreTarget)) {
       toast.error("Add a mock title and choose who should receive it");
       return;
     }
@@ -954,6 +982,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         ? (publishMessage || (publishMode === "scheduled" ? "Mock scheduled" : "Mock published"))
         : "Draft saved";
       toast.success(publicationMessage);
+      await queryClient.invalidateQueries({ queryKey: ["mocks"] });
       startNavigationProgress();
       router.push("/dashboard/mocks");
     } catch (err) {
@@ -972,8 +1001,6 @@ export function MockBuilderClient({ token }: { token: string }) {
     ? selectedBankQuestions.filter((question) => question.sectionId === resolvedActiveSubjectCourseId)
     : selectedBankQuestions;
   const unassignedQuestionCount = questions.filter((question) => !question.section_id).length;
-  const centreAccessEnabled = accessMode !== "direct";
-  const shareLinkEnabled = accessMode !== "centre";
   const workflowSteps: Array<{ id: BuilderStep; label: string; icon: string }> = [
     { id: "setup", label: "Basics", icon: "edit_note" },
     ...(isMultiSubject ? [{ id: "subjects" as const, label: "Subjects", icon: "library_books" }] : []),
@@ -985,9 +1012,19 @@ export function MockBuilderClient({ token }: { token: string }) {
   const moveStep = (direction: -1 | 1) => {
     const target = workflowSteps[currentStepIndex + direction];
     if (!target) return;
-    if (direction === 1 && builderStep === "setup" && !title.trim()) {
-      toast.error("Give this mock a title before continuing");
-      return;
+    if (direction === 1 && builderStep === "setup") {
+      if (!title.trim()) {
+        toast.error("Give this mock a title before continuing");
+        return;
+      }
+      if (centreAccessEnabled && programmeOptions.length > 0 && !programmeFilterId) {
+        toast.error("Choose the programme this mock is for before continuing");
+        return;
+      }
+      if (centreAccessEnabled && deliveryMode === "fixed" && !courseId) {
+        toast.error("Choose the subject this mock is for before continuing");
+        return;
+      }
     }
     if (direction === 1 && builderStep === "subjects" && subjectSections.length === 0) {
       toast.error("Add at least one subject section");
@@ -998,6 +1035,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       return;
     }
     setBuilderStep(target.id);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   };
   const draftPreviewQuestions: DraftPreviewQuestion[] = [
     ...questions.map((question) => {
@@ -1069,7 +1107,7 @@ export function MockBuilderClient({ token }: { token: string }) {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Questions</p><p className="mt-1 text-lg font-bold text-[#1b1c1c]">{questions.length + selectedBankQuestions.length}</p></div>
-              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Audience</p><p className="mt-1 text-sm font-bold text-[#1b1c1c]">Centre students</p></div>
+              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Audience</p><p className="mt-1 text-sm font-bold text-[#1b1c1c]">{audienceSummary}</p></div>
               <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Timing</p><p className="mt-1 text-sm font-bold text-[#1b1c1c]">{isUntimed ? "Untimed" : `${timeLimit} minutes`}</p></div>
             </div>
 
@@ -1101,12 +1139,11 @@ export function MockBuilderClient({ token }: { token: string }) {
       {isPreviewOpen && <MockDraftPreview title={title} description={description} questions={draftPreviewQuestions} onClose={() => setIsPreviewOpen(false)} />}
 
       {/* Page Header */}
-      <div className="mb-8 flex flex-col gap-4 border-b border-[#e4e2e1] pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold leading-tight text-[#1b1c1c] sm:text-[32px]">{isEditMode ? "Edit Mock" : "Build a Mock"}</h2>
-          <p className="mt-1 text-sm text-[#474551] sm:text-[16px]">Choose how the mock should work, then add or reuse questions for your students.</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      <DashboardPageHeader
+        className="mb-8 border-b border-[#e4e2e1] pb-4"
+        title={isEditMode ? "Edit Mock" : "Build a Mock"}
+        description="Choose how the mock should work, then add or reuse questions for your students."
+        actions={<>
           <button type="button" onClick={() => setIsPreviewOpen(true)} disabled={draftPreviewQuestions.length === 0} className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#2e2877] disabled:cursor-not-allowed disabled:opacity-45"><span className="material-symbols-outlined text-[18px]">preview</span>Preview as student</button>
           <button 
             onClick={() => handleSave(false)}
@@ -1115,8 +1152,8 @@ export function MockBuilderClient({ token }: { token: string }) {
           >
             {isSaving ? "Saving…" : "Save as Draft"}
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       <MockBuilderStepProgress
         steps={workflowSteps}
@@ -1407,7 +1444,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         <section className="mx-auto max-w-4xl">
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Choose the exact subjects for this mock, then add or import each subject’s questions separately.</p></div><button type="button" onClick={() => setBuilderStep("setup")} className="text-sm font-semibold text-[#2e2877]">Change setup</button></div>
-            <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"><p className="text-sm font-semibold text-[#1b1c1c]">Add a subject section</p><div className="mt-2 grid gap-3 sm:grid-cols-2"><select value="" disabled={isReadOnly || availableSubjectCourses.length === 0} onChange={(event) => { const course = availableSubjectCourses.find((item) => item.id === event.target.value); if (!course) return; const section = { id: `section-${Date.now()}`, name: course.name, courseId: course.id }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setBuilderActionMessage(`${course.name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"><option value="">Use a centre subject (optional)</option>{availableSubjectCourses.map((course) => <option key={course.id} value={course.id}>{mockCourseLabel(course)}</option>)}</select><div className="flex gap-2"><input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} placeholder="e.g. Use of English" className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm" /><button type="button" disabled={isReadOnly || !newSubjectName.trim()} onClick={() => { const name = newSubjectName.trim(); const section = { id: `section-${Date.now()}`, name, courseId: null }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setNewSubjectName(""); setBuilderActionMessage(`${name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button></div></div>{builderActionMessage && <p role="status" aria-live="polite" className="mt-3 text-xs font-medium text-green-700">{builderActionMessage}</p>}<p className="mt-2 text-xs leading-5 text-[#716c76]">Create any exam subject. A centre subject is only needed when you want the centre dashboard to match students to it.</p></div>
+            <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"><p className="text-sm font-semibold text-[#1b1c1c]">Add a subject section</p><div className="mt-2">{centreAccessEnabled ? <select value="" disabled={isReadOnly || availableSubjectCourses.length === 0} onChange={(event) => { const course = availableSubjectCourses.find((item) => item.id === event.target.value); if (!course) return; const section = { id: `section-${Date.now()}`, name: course.name, courseId: course.id }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setBuilderActionMessage(`${course.name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"><option value="">Choose a programme subject</option>{availableSubjectCourses.map((course) => <option key={course.id} value={course.id}>{mockCourseLabel(course)}</option>)}</select> : <div className="flex gap-2"><input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} placeholder="e.g. Use of English" className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm" /><button type="button" disabled={isReadOnly || !newSubjectName.trim()} onClick={() => { const name = newSubjectName.trim(); const section = { id: `section-${Date.now()}`, name, courseId: null }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setNewSubjectName(""); setBuilderActionMessage(`${name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button></div>}</div>{builderActionMessage && <p role="status" aria-live="polite" className="mt-3 text-xs font-medium text-green-700">{builderActionMessage}</p>}<p className="mt-2 text-xs leading-5 text-[#716c76]">{centreAccessEnabled ? "Only students enrolled in every selected programme subject will receive this mock." : "Add the subjects in this exam yourself. They are not connected to your centre."}</p></div>
             {selectedSubjectCourses.length === 0 ? <div className="mt-4 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center text-sm text-[#716c76]">Add the subjects for this mock—for example, English, Physics, Chemistry and Biology.</div>
               : <div className="mt-4 grid gap-3 sm:grid-cols-2">{selectedSubjectCourses.map((course, index) => { const authoredCount = questions.filter((question) => question.section_id === course.id).length; const bankCount = selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="group rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]"><span className="flex items-start justify-between gap-3"><span><span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span><strong className="mt-1 block text-base text-[#1b1c1c]">{course.label}</strong></span><span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} questions</span></span><span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></span></button> })}</div>}
           </div>
@@ -1464,7 +1501,36 @@ export function MockBuilderClient({ token }: { token: string }) {
                 </div>
               </details>
 
-              {deliveryMode === "fixed" && <div>
+              <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
+                <h4 className="text-sm font-semibold text-[#1b1c1c]">Share this mock with</h4>
+                <p className="mt-1 text-xs leading-5 text-[#716c76]">Turn on the channels you want to use. This determines the setup fields that follow.</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${centreAccessEnabled ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}>
+                    <input type="checkbox" checked={centreAccessEnabled} disabled={isReadOnly || (centreAccessEnabled && !shareLinkEnabled)} onChange={(event) => changeAccessMode(event.target.checked ? (shareLinkEnabled ? "both" : "centre") : "direct")} className="mt-0.5 rounded text-[#2e2877] focus:ring-[#2e2877]" />
+                    <span><strong className="block text-sm text-[#1b1c1c]">My students</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Assign it to students in a programme and its subject(s).</span></span>
+                  </label>
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${shareLinkEnabled ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}>
+                    <input type="checkbox" checked={shareLinkEnabled} disabled={isReadOnly || (shareLinkEnabled && !centreAccessEnabled)} onChange={(event) => changeAccessMode(event.target.checked ? (centreAccessEnabled ? "both" : "direct") : "centre")} className="mt-0.5 rounded text-[#994704] focus:ring-[#994704]" />
+                    <span><strong className="block text-sm text-[#1b1c1c]">Anyone with the link</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Share outside your centre, free or paid.</span></span>
+                  </label>
+                </div>
+
+                {centreAccessEnabled && programmeOptions.length > 0 && <label className="mt-4 block text-xs font-semibold text-[#474551]">Programme<select value={programmeFilterId} disabled={isReadOnly} onChange={(event) => { const nextProgrammeId = event.target.value; setProgrammeFilterId(nextProgrammeId); if (courseId && nextProgrammeId && courses.find((course) => course.id === courseId)?.programme_id !== nextProgrammeId) { setCourseId(""); setSingleSubjectName(""); } }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal"><option value="">Choose a programme</option>{programmeOptions.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}</select><span className="mt-1 block font-normal leading-5 text-[#787582]">Then choose the subject or subjects for this mock.</span></label>}
+
+                {shareLinkEnabled && <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
+                  <p className="text-sm font-semibold text-[#1b1c1c]">Share link</p>
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                    <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "free_claim"} disabled={isReadOnly} onChange={() => setLinkAccessMode("free_claim")} />Free</label>
+                    <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "paid"} disabled={isReadOnly} onChange={() => setLinkAccessMode("paid")} />Paid</label>
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    {linkAccessMode === "paid" && <label className="text-xs font-semibold text-[#474551]">Price (₦)<input type="number" min="1" value={linkPrice} disabled={isReadOnly} onChange={(event) => setLinkPrice(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" placeholder="e.g. 1500" /></label>}
+                    <label className="min-w-0 text-xs font-semibold text-[#474551]">Link address<input value={linkSlug} disabled={isReadOnly} onChange={(event) => { setLinkSlugEdited(true); setLinkSlug(slugify(event.target.value)); }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" /><span className="mt-1 block font-normal leading-5 text-[#787582]">Generated from the title. Edit only if needed.</span></label>
+                  </div>
+                </div>}
+              </section>
+
+              {deliveryMode === "fixed" && centreAccessEnabled && <div>
                 <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Subject</label>
                 <select 
                   value={courseId}
@@ -1478,64 +1544,20 @@ export function MockBuilderClient({ token }: { token: string }) {
                     backgroundSize: '1.5em 1.5em',
                   }}
                 >
-                  <option value="">Use a custom subject</option>
-                  {courses.map(c => (
+                  <option value="">{centreAccessEnabled ? "Choose a programme subject" : "Use a custom subject"}</option>
+                  {coursesForSelectedProgramme.map(c => (
                     <option key={c.id} value={c.id}>{mockCourseLabel(c)}</option>
                   ))}
                 </select>
-                {courses.length === 0 && (
+                {coursesForSelectedProgramme.length === 0 && (
                   <p className="mt-2 text-xs leading-5 text-[#994704]">No Subjects are available. Ask the centre admin to create a Subject or assign one to you.</p>
                 )}
               </div>}
-
-              {deliveryMode === "fixed" && !courseId && <div><label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Custom subject name</label><input value={singleSubjectName} onChange={(event) => setSingleSubjectName(event.target.value)} placeholder="e.g. Mathematics" className="w-full rounded border border-[#c8c5d2] px-3.5 py-2.5 text-[15px]" /></div>}
 
               {deliveryMode === "subject_combination" && <div className="rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm leading-6 text-[#474551]"><strong className="block text-[#2e2877]">Build the exact combination</strong>Next, add only the subjects in this exam. Each becomes its own tab and keeps its questions while you switch between tabs.</div>}
               </>}
 
               {builderStep === "settings" && <>
-
-              <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
-                <h4 className="text-sm font-semibold text-[#1b1c1c]">Who can take this mock?</h4>
-                <p className="mt-1 text-xs leading-5 text-[#716c76]">Choose one or both. This does not change the subject or move questions.</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${centreAccessEnabled ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}>
-                    <input
-                      type="checkbox"
-                      checked={centreAccessEnabled}
-                      disabled={isReadOnly || (centreAccessEnabled && !shareLinkEnabled)}
-                      onChange={(event) => changeAccessMode(event.target.checked ? (shareLinkEnabled ? "both" : "centre") : "direct")}
-                      className="mt-0.5 rounded text-[#2e2877] focus:ring-[#2e2877]"
-                    />
-                    <span><strong className="block text-sm text-[#1b1c1c]">My centre students</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">{isMultiSubject ? "Students enrolled in every matched subject." : "Students enrolled in the selected centre subject."}</span></span>
-                  </label>
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${shareLinkEnabled ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}>
-                    <input
-                      type="checkbox"
-                      checked={shareLinkEnabled}
-                      disabled={isReadOnly || (shareLinkEnabled && !centreAccessEnabled)}
-                      onChange={(event) => changeAccessMode(event.target.checked ? (centreAccessEnabled ? "both" : "direct") : "centre")}
-                      className="mt-0.5 rounded text-[#994704] focus:ring-[#994704]"
-                    />
-                    <span><strong className="block text-sm text-[#1b1c1c]">Anyone with the link</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Share outside your centre, free or paid.</span></span>
-                  </label>
-                </div>
-
-                {shareLinkEnabled && (
-                  <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
-                    <p className="text-sm font-semibold text-[#1b1c1c]">Share link</p>
-                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                      <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "free_claim"} disabled={isReadOnly} onChange={() => setLinkAccessMode("free_claim")} />Free</label>
-                      <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "paid"} disabled={isReadOnly} onChange={() => setLinkAccessMode("paid")} />Paid</label>
-                    </div>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      {linkAccessMode === "paid" && <label className="text-xs font-semibold text-[#474551]">Price (₦)<input type="number" min="1" value={linkPrice} disabled={isReadOnly} onChange={(event) => setLinkPrice(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" placeholder="e.g. 1500" /></label>}
-                      <label className="min-w-0 text-xs font-semibold text-[#474551]">Link address<input value={linkSlug} disabled={isReadOnly} onChange={(event) => { setLinkSlugEdited(true); setLinkSlug(slugify(event.target.value)); }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" /><span className="mt-1 block font-normal leading-5 text-[#787582]">Generated from the title. Edit only if needed.</span></label>
-                    </div>
-                  </div>
-                )}
-              </section>
-
               <section className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4">
                 <p className="mb-3 text-[13px] font-semibold text-[#1b1c1c]">When should it become available?</p>
                 <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2">

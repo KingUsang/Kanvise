@@ -124,6 +124,57 @@ export async function warmLiveKitWorkerForUpcomingClasses(now = new Date()) {
   return ensureLiveKitWorkerReady()
 }
 
+/**
+ * Webhooks normally close a class the moment its room finishes. This is the
+ * fail-safe for missed webhooks and older deployments: never leave a database
+ * row live when LiveKit itself says that room no longer exists.
+ */
+export async function reconcileClosedLiveClasses(now = new Date()) {
+  const graceCutoff = new Date(now.getTime() - 10 * 60_000).toISOString()
+  const { data: liveClasses, error } = await supabase
+    .from('live_classes')
+    .select('id, livekit_room_name')
+    .eq('status', 'live')
+    .not('livekit_room_name', 'is', null)
+    .lt('started_at', graceCutoff)
+  if (error) throw error
+  if (!liveClasses?.length) return { state: 'no_live_classes' as const, completed: 0 }
+  if (!(await isLiveKitHealthy())) return { state: 'livekit_unavailable' as const, completed: 0 }
+
+  const apiKey = process.env.LIVEKIT_API_KEY
+  const apiSecret = process.env.LIVEKIT_API_SECRET
+  if (!apiKey || !apiSecret) throw new Error('LiveKit credentials are not configured')
+  const rooms = await new RoomServiceClient(liveKitHttpUrl(), apiKey, apiSecret).listRooms()
+  const activeRoomNames = new Set(rooms.map(room => room.name))
+  const missingRooms = liveClasses.filter(liveClass => !activeRoomNames.has(liveClass.livekit_room_name!))
+  const endedAt = now.toISOString()
+
+  for (const liveClass of missingRooms) {
+    const { data: openRecords, error: recordsError } = await supabase
+      .from('attendance_records')
+      .select('id, joined_at')
+      .eq('live_class_id', liveClass.id)
+      .is('left_at', null)
+    if (recordsError) throw recordsError
+    await Promise.all((openRecords || []).map(record => supabase
+      .from('attendance_records')
+      .update({
+        left_at: endedAt,
+        duration_seconds: Math.max(0, Math.round((now.getTime() - new Date(record.joined_at).getTime()) / 1000)),
+      })
+      .eq('id', record.id)))
+    const { error: completionError } = await supabase
+      .from('live_classes')
+      .update({ status: 'completed', ended_at: endedAt })
+      .eq('id', liveClass.id)
+      .eq('status', 'live')
+    if (completionError) throw completionError
+  }
+
+  if (missingRooms.length) console.info('livekit.closed_classes_reconciled', { count: missingRooms.length, at: endedAt })
+  return { state: 'reconciled' as const, completed: missingRooms.length }
+}
+
 export async function deallocateIdleLiveKitWorker(now = new Date()) {
   if (!enabled() || process.env.LIVEKIT_WORKER_AUTO_DEALLOCATE !== 'true') return { state: 'disabled' as const }
   if (!(await isLiveKitHealthy())) return { state: 'already_off' as const }

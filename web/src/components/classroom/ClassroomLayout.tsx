@@ -31,9 +31,11 @@ interface ClassroomLayoutProps {
   classId: string
   classTitle: string
   courseName: string | null
+  onExit?: () => void
+  guestShareToken?: string
 }
 
-function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLayoutProps) {
+function ClassroomShell({ isHost, classId, classTitle, courseName, onExit }: ClassroomLayoutProps) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const participants = useParticipants();
@@ -65,11 +67,11 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || 'Could not end the class');
+      onExit?.()
       room.disconnect();
     } catch (e) {
       console.error('Failed to end class', e);
       toast.error('Could not end the class', { description: e instanceof Error ? e.message : 'Please try again.' });
-    } finally {
       setIsEnding(false);
     }
   };
@@ -78,6 +80,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
     if (isHost) {
       setShowLeaveModal(true);
     } else {
+      onExit?.()
       room.disconnect();
     }
   };
@@ -305,14 +308,15 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
       </div>
 
       {/* ── BOTTOM TOOLBAR (Solid, Pinned) ─────────── */}
-      <footer className="flex-shrink-0 h-16 bg-white border-t border-[#e4e2e1] flex items-center justify-between px-2 sm:px-4 md:px-5 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
+      <footer className="flex-shrink-0 h-16 min-w-0 overflow-x-auto no-scrollbar bg-white border-t border-[#e4e2e1] flex items-center justify-start gap-2 px-2 sm:justify-between sm:px-4 md:px-5 shadow-[0_-4px_20px_rgba(24,13,98,0.03)] z-20">
         <div className="hidden flex-1 lg:block" />
 
         {/* Centre: Media Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           {isHost && (
             <PresentationControls />
           )}
+
           <AudioVideoControls />
 
           {/* Screen sharing is intentionally disabled. Slides are the only
@@ -334,7 +338,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
         </div>
 
         {/* Right: Sidebar Toggles */}
-        <div className="flex items-center gap-1 sm:gap-2 lg:flex-1 justify-end">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:flex-1 lg:justify-end">
           <button
             onClick={() => toggleSidebar("chat")}
             className={`flex items-center gap-1.5 px-2.5 py-2 sm:px-3 sm:py-2.5 rounded-lg text-[13px] font-semibold transition-all border
@@ -386,21 +390,26 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
             </p>
             <div className="flex flex-col gap-3 w-full">
               <button
-                onClick={() => room.disconnect()}
-                className="w-full py-2.5 bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] font-semibold rounded-lg transition-colors"
+                onClick={() => {
+                  onExit?.()
+                  room.disconnect()
+                }}
+                disabled={isEnding}
+                className="w-full py-2.5 bg-[#f5f3f2] hover:bg-[#e4e2e1] text-[#180d62] font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Leave Class
               </button>
               <button
                 onClick={handleEndClass}
                 disabled={isEnding}
-                className="w-full py-2.5 bg-[#ba1a1a] hover:bg-[#ba1a1a]/90 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+                className="w-full py-2.5 bg-[#ba1a1a] hover:bg-[#ba1a1a]/90 text-white font-semibold rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isEnding ? "Ending..." : "End Class for All"}
               </button>
               <button
                 onClick={() => setShowLeaveModal(false)}
-                className="w-full py-2.5 text-[#787582] hover:text-[#1b1c1c] font-medium text-sm transition-colors mt-2"
+                disabled={isEnding}
+                className="w-full py-2.5 text-[#787582] hover:text-[#1b1c1c] font-medium text-sm transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -414,7 +423,7 @@ function ClassroomShell({ isHost, classId, classTitle, courseName }: ClassroomLa
 
 export default function ClassroomLayout(props: ClassroomLayoutProps) {
   return (
-    <PresentationSessionProvider classId={props.classId} isHost={props.isHost}>
+    <PresentationSessionProvider classId={props.classId} isHost={props.isHost} guestShareToken={props.guestShareToken}>
       <ClassroomShell {...props} />
     </PresentationSessionProvider>
   );

@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 interface MockExam {
   id: string
@@ -53,40 +55,26 @@ interface MocksManagementClientProps {
 
 export function MocksManagementClient({ token, capabilities, user }: MocksManagementClientProps) {
   const router = useRouter()
-  const [mocks, setMocks] = useState<MockExam[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterCourse, setFilterCourse] = useState<string>('all')
-  const [apiError, setApiError] = useState<string | null>(null)
   const [mockToArchive, setMockToArchive] = useState<MockExam | null>(null)
   const [isArchiving, setIsArchiving] = useState(false)
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
-  const fetchMocks = useCallback(async () => {
-    setIsLoading(true)
-    setApiError(null)
-    try {
+  const mocksQuery = useQuery({
+    queryKey: ['mocks', user.id],
+    queryFn: async () => {
       const res = await fetch(`${baseUrl}/mocks`, { headers: { Authorization: `Bearer ${token}` } })
-      if (res.ok) {
-        const { data } = await res.json()
-        setMocks(data || [])
-      } else {
-        const errJson = await res.json()
-        console.error('API Error:', errJson)
-        setApiError(errJson.error || `HTTP Error ${res.status}`)
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch mocks:', err)
-      setApiError(err.message || 'Network error')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [baseUrl, token])
-
-  useEffect(() => {
-    fetchMocks()
-  }, [fetchMocks])
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.error || `HTTP error ${res.status}`)
+      return (body?.data || []) as MockExam[]
+    },
+    staleTime: 30_000,
+  })
+  const mocks = mocksQuery.data || []
+  const apiError = mocksQuery.error instanceof Error ? mocksQuery.error.message : null
 
   const archiveMock = async () => {
     if (!mockToArchive) return
@@ -100,7 +88,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       if (!response.ok) throw new Error(body?.error || 'Failed to archive mock')
       toast.success('Mock archived', { description: 'Its attempts and results are still available.' })
       setMockToArchive(null)
-      await fetchMocks()
+      await queryClient.invalidateQueries({ queryKey: ['mocks', user.id] })
     } catch (error) {
       toast.error('Could not archive the mock', {
         description: error instanceof Error ? error.message : 'Please try again.'
@@ -146,16 +134,15 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
         </div>
       )}
       {/* Header Section */}
-      <div className="flex justify-between items-end mb-8 border-b border-[#e4e2e1] pb-6">
-        <div>
-          <h1 className="text-[32px] leading-[40px] tracking-tight font-bold text-[#1b1c1c] mb-2">Mocks</h1>
-          <p className="text-[16px] text-[#474551]">Create practice exams, publish them to students, and review their results.</p>
-        </div>
-        <Link href="/dashboard/mocks/builder" className="bg-[#994704] text-white text-[14px] font-semibold px-6 py-3 rounded-lg hover:bg-[#7a3903] transition-colors flex items-center gap-2 shadow-[0px_4px_20px_rgba(61,61,61,0.08)]">
+      <DashboardPageHeader
+        className="mb-8 border-b border-dashboard-outline pb-6"
+        title="Mocks"
+        description="Create practice exams, publish them to students, and review their results."
+        actions={<Link href="/dashboard/mocks/builder" className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-6 py-3 text-sm font-semibold text-white shadow-dashboard-card transition-colors hover:bg-dashboard-accent/90">
             <span className="material-symbols-outlined text-[20px]">add</span>
             Create Mock
-        </Link>
-      </div>
+        </Link>}
+      />
 
       {/* Filters & Controls */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
@@ -204,7 +191,20 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
 
       {/* Data Table */}
       <div className="bg-white border border-[#c2b59b] rounded-xl shadow-[0px_4px_20px_rgba(61,61,61,0.08)] overflow-hidden mb-12">
-        <div className="overflow-x-auto">
+        <div className="divide-y divide-[#e4e2e1] sm:hidden">
+          {apiError ? <div className="p-6 text-center text-sm text-[#ba1a1a]">{apiError}<button type="button" onClick={() => void mocksQuery.refetch()} className="mt-3 block w-full rounded-lg border border-[#994704] px-3 py-2 font-semibold text-[#994704]">Try again</button></div>
+            : mocksQuery.isLoading ? <div className="p-8 text-center text-sm text-[#474551]">Loading mocks…</div>
+            : filteredMocks.length === 0 ? filterStatus === 'all' ? <div className="flex flex-col items-center p-10 text-center"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#787582]"><span className="material-symbols-outlined text-[30px]">quiz</span></div><h2 className="text-lg font-semibold text-[#1b1c1c]">No mocks yet</h2><p className="mt-2 max-w-[280px] text-sm leading-6 text-[#474551]">Create your first mock exam to start assessing your students&apos; progress.</p><Link href="/dashboard/mocks/builder" className="mt-5 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white">Create first mock</Link></div> : <div className="p-8 text-center text-sm text-[#474551]">No {filterStatus} mocks found.</div>
+            : filteredMocks.map((mock) => {
+              const questions = mock.total_mcq_questions + mock.total_theory_questions
+              return <article key={mock.id} className={`p-4 ${mock.status === 'archived' ? 'opacity-60' : ''}`}>
+                <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-semibold text-[#1b1c1c]">{mock.title}</h2><p className="mt-1 text-xs text-[#716c76]">{mock.course?.name || 'General mock'} · {questions} questions</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${mock.status === 'published' ? 'bg-[#e8f5e9] text-[#2e7d32]' : mock.status === 'draft' ? 'bg-[#f0eded] text-[#474551]' : 'bg-[#e4e2e1] text-[#787582]'}`}>{mock.status}</span></div>
+                <div className="mt-3 flex items-center justify-between text-xs text-[#716c76]"><span>{mock.status === 'draft' ? 'Not published' : `${mock.metrics.attempts} attempts`}</span>{mock.metrics.pending_grading > 0 && <span className="font-semibold text-[#ba1a1a]">{mock.metrics.pending_grading} to grade</span>}</div>
+                <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">{mock.status === 'published' && mock.direct_link_enabled && mock.direct_link_slug && <button onClick={() => void copyStudentLink(mock.direct_link_slug!)} className="text-[#2e2877]">Copy link</button>}{mock.status === 'draft' ? <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/builder?id=${mock.id}`) }} className="text-[#994704]">Edit mock</button> : <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#994704]">View results</button>}{mock.status === 'published' && <button onClick={() => setMockToArchive(mock)} className="text-[#716c76]">Archive</button>}</div>
+              </article>
+            })}
+        </div>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-[#f5f3ed] border-b border-[#c2b59b]">
@@ -224,7 +224,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                       <p className="text-[14px] mt-1">{apiError}</p>
                       <button
                         type="button"
-                        onClick={fetchMocks}
+                        onClick={() => void mocksQuery.refetch()}
                         className="mt-4 rounded-md border border-[#994704] px-4 py-2 text-sm font-semibold text-[#994704] hover:bg-[#994704]/5"
                       >
                         Try again
@@ -232,7 +232,7 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                     </div>
                   </td>
                 </tr>
-              ) : isLoading ? (
+              ) : mocksQuery.isLoading ? (
                 <tr>
                   <td colSpan={4} className="py-16 text-center text-[#474551]">
                     <div className="flex justify-center"><div className="animate-spin h-8 w-8 border-b-2 border-[#180d62] rounded-full"></div></div>

@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 interface Tutor {
   id: string
@@ -41,15 +43,9 @@ interface CourseAssignmentOverview {
 }
 
 export function TutorsClient() {
-  const supabase = createClient()
-  const [tutors, setTutors] = useState<Tutor[]>([])
-  const [invites, setInvites] = useState<Invite[]>([])
-  const [assignmentPeople, setAssignmentPeople] = useState<AssignmentPerson[]>([])
-  const [courseAssignments, setCourseAssignments] = useState<CourseAssignmentOverview[]>([])
-  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null)
+  const supabase = useMemo(() => createClient(), [])
+  const queryClient = useQueryClient()
   const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
   const [confirmation, setConfirmation] = useState<null | { type: 'revoke'; id: string; email: string } | { type: 'remove'; id: string; name: string }>(null)
 
   // Invite state
@@ -66,14 +62,12 @@ export function TutorsClient() {
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true)
-    setLoadError('')
-    try {
+  const tutorsQuery = useQuery({
+    queryKey: ['tutors'],
+    queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
-      if (!token) return
-      setCurrentProfileId(typeof session.user.app_metadata?.profile_id === 'string' ? session.user.app_metadata.profile_id : null)
+      if (!token) throw new Error('Your session has ended. Please sign in again.')
 
       const headers = { 'Authorization': `Bearer ${token}` }
 
@@ -88,19 +82,23 @@ export function TutorsClient() {
       const { data: inviteData } = await invitesRes.json()
       const { data: peopleData } = await peopleRes.json()
       const { data: assignmentsData } = await assignmentsRes.json()
-      setTutors(tutorData || [])
-      setInvites(inviteData || [])
-      setAssignmentPeople(peopleData || [])
-      setCourseAssignments(assignmentsData || [])
-    } catch (err) {
-      console.error('Failed to fetch data', err)
-      setLoadError('We could not load your tutors and invitations. Please check your connection and try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [baseUrl, supabase.auth])
-
-  useEffect(() => { fetchData() }, [fetchData])
+      return {
+        tutors: (tutorData || []) as Tutor[],
+        invites: (inviteData || []) as Invite[],
+        assignmentPeople: (peopleData || []) as AssignmentPerson[],
+        courseAssignments: (assignmentsData || []) as CourseAssignmentOverview[],
+        currentProfileId: typeof session.user.app_metadata?.profile_id === 'string' ? session.user.app_metadata.profile_id : null,
+      }
+    },
+    staleTime: 60_000,
+  })
+  const tutors = tutorsQuery.data?.tutors || []
+  const invites = tutorsQuery.data?.invites || []
+  const assignmentPeople = tutorsQuery.data?.assignmentPeople || []
+  const courseAssignments = tutorsQuery.data?.courseAssignments || []
+  const currentProfileId = tutorsQuery.data?.currentProfileId || null
+  const isLoading = tutorsQuery.isLoading
+  const loadError = tutorsQuery.error ? 'We could not load your tutors and invitations. Please check your connection and try again.' : ''
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -125,7 +123,7 @@ export function TutorsClient() {
       if (!res.ok) throw new Error(json.error || 'Failed to generate invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteEmail('') // Clear input on success
-      await fetchData() // Refresh invites list
+      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
       toast.success(json.data.email_sent ? 'Invitation emailed to the tutor' : 'Invitation link created', {
         description: json.data.email_sent ? 'They can use the email to join your centre.' : 'The email could not be sent. Copy and share the link yourself.'
       })
@@ -154,7 +152,7 @@ export function TutorsClient() {
       if (!res.ok) throw new Error(json.error || 'Failed to resend invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteError('')
-      await fetchData() // Refresh invites list
+      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
       toast.success('Invitation resent')
     } catch (err: any) {
       toast.error('Could not resend the invitation', { description: err.message })
@@ -194,7 +192,7 @@ export function TutorsClient() {
         const json = await res.json()
         toast.error('Could not revoke the invitation', { description: json.error || 'Please try again.' })
       } else {
-        await fetchData()
+        await queryClient.invalidateQueries({ queryKey: ['tutors'] })
         toast.success('Invitation revoked')
       }
     } finally {
@@ -216,7 +214,7 @@ export function TutorsClient() {
         const json = await res.json()
         toast.error('Could not remove the tutor', { description: json.error || 'Please try again.' })
       } else {
-        await fetchData()
+        await queryClient.invalidateQueries({ queryKey: ['tutors'] })
         toast.success('Tutor removed')
       }
     } finally {
@@ -241,7 +239,7 @@ export function TutorsClient() {
       )
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not update the Subject assignment')
-      await fetchData()
+      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
       toast.success(isAssigned ? 'Tutor removed from Subject' : 'Tutor assigned to Subject')
     } catch (error) {
       toast.error('Could not update the Subject assignment', { description: error instanceof Error ? error.message : 'Please try again.' })
@@ -264,23 +262,18 @@ export function TutorsClient() {
     <div className="space-y-8 animate-in fade-in duration-500">
 
       {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your teaching team</span>
-          <h2 className="mt-2 text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Tutors</h2>
-          <p className="text-[16px] text-[#474551] mt-1">
-            Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself.
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="Tutors"
+        description="Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself."
+      />
 
       {/* ── Bento Grid Layout ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Main Tutors List (Spans 8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="bg-white rounded-lg border border-[#c2b59b] shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-[#c2b59b] flex justify-between items-center bg-[#fbf9f8]">
+          <div className="flex flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
+            <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded bg-[#2e2877]/10 flex items-center justify-center text-[#2e2877]">
                   <span className="material-symbols-outlined icon-fill">school</span>
@@ -289,10 +282,16 @@ export function TutorsClient() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="divide-y divide-dashboard-outline/50 sm:hidden">
+              {isLoading ? <p className="p-6 text-center text-sm text-[#474551]">Loading tutors…</p>
+                : loadError ? <div className="p-6 text-center text-sm text-[#474551]"><p>{loadError}</p><button type="button" onClick={() => void tutorsQuery.refetch()} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button></div>
+                : tutors.length === 0 ? <div className="p-8 text-center text-[#474551]"><span className="material-symbols-outlined mb-2 text-[44px] text-[#c8c5d2]">group_off</span><p className="font-medium">No tutors yet</p><p className="mx-auto mt-1 max-w-sm text-sm">You are currently teaching on your own. Invite someone only when another tutor needs access to teach subjects in your centre.</p></div>
+                : tutors.map((tutor) => { const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase(); const isRemoving = removingId === tutor.id; return <article key={tutor.id} className={`p-4 ${isRemoving ? 'opacity-40' : ''}`}><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#e4e2e1] font-bold text-[#474551]">{initials}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-[#1b1c1c]">{tutor.first_name} {tutor.last_name}</h2><p className="truncate text-xs text-[#474551]">{tutor.email}</p><p className="mt-2 text-xs text-[#474551]">{tutor.courses.length ? tutor.courses.map(course => course.name).join(', ') : 'No assigned subjects'}</p></div><button onClick={() => setConfirmation({ type: 'remove', id: tutor.id, name: `${tutor.first_name} ${tutor.last_name}` })} disabled={isRemoving} className="shrink-0 rounded p-2 text-[#ba1a1a] disabled:opacity-30" aria-label={`Remove ${tutor.first_name} ${tutor.last_name}`}><span className="material-symbols-outlined">person_remove</span></button></div></article> })}
+            </div>
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
-                  <tr className="bg-[#f5f3f2] text-[#474551] border-b border-[#c2b59b]">
+                  <tr className="border-b border-dashboard-outline bg-dashboard-surface-subtle text-dashboard-muted">
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Tutor</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Assigned Subjects</th>
                     <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider text-right">Actions</th>
@@ -309,7 +308,7 @@ export function TutorsClient() {
                       </td>
                     </tr>
                   ) : loadError ? (
-                    <tr><td colSpan={3} className="px-6 py-12 text-center"><p className="text-sm text-[#474551]">{loadError}</p><button type="button" onClick={fetchData} className="mt-4 rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></td></tr>
+                    <tr><td colSpan={3} className="px-6 py-12 text-center"><p className="text-sm text-[#474551]">{loadError}</p><button type="button" onClick={() => void tutorsQuery.refetch()} className="mt-4 rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></td></tr>
                   ) : tutors.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="py-12 text-center text-[#474551]">
@@ -323,7 +322,7 @@ export function TutorsClient() {
                       const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase()
                       const isRemoving = removingId === tutor.id
                       return (
-                        <tr key={tutor.id} className={`border-b border-[#c2b59b] hover:bg-[#2e2877]/5 transition-colors group ${isRemoving ? 'opacity-40' : ''}`}>
+                        <tr key={tutor.id} className={`group border-b border-dashboard-outline/50 transition-colors hover:bg-dashboard-primary/5 ${isRemoving ? 'opacity-40' : ''}`}>
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded bg-[#e4e2e1] border border-[#c8c5d2] flex items-center justify-center text-[#474551] font-bold flex-shrink-0">

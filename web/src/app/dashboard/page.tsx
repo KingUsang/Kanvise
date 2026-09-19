@@ -3,8 +3,10 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { NeedsGradingCard, type GradingItem } from '@/components/dashboard/needs-grading-card'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import { resolveDashboardPersona } from '@/lib/dashboard-persona'
 import { getApiUrl } from '@/config/api'
+import { DashboardClassLauncher } from '@/components/dashboard/dashboard-class-launcher'
 
 type ScheduleItem = {
   id: string
@@ -54,21 +56,20 @@ export default async function DashboardHomePage() {
 
   return (
     <div className="animate-in fade-in space-y-6 duration-500 sm:space-y-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#994704]">Dashboard</p>
-          <h1 className="mt-2 text-2xl font-bold text-[#1b1c1c] sm:text-3xl">{heading}</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#474551] sm:text-base">{description}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-          <Link href="/dashboard/schedule?mode=now" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7a3903] sm:px-4">
-            <span className="material-symbols-outlined text-xl">videocam</span>Start live class
-          </Link>
+      <DashboardPageHeader
+        title={heading}
+        description={description}
+        actions={<>
+          <DashboardClassLauncher token={token} isAdmin={isAdmin} user={{
+            id: typeof sessionData.session?.user.app_metadata?.profile_id === 'string' ? sessionData.session.user.app_metadata.profile_id : sessionData.session!.user.id,
+            firstName: sessionData.session?.user.user_metadata?.first_name || '',
+            lastName: sessionData.session?.user.user_metadata?.last_name || '',
+          }} />
           <Link href="/dashboard/mocks/builder" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#2e2877] bg-white px-3 py-2.5 text-sm font-semibold text-[#2e2877] transition-colors hover:bg-[#f5f3f2] sm:px-4">
             <span className="material-symbols-outlined text-xl">quiz</span>Create mock
           </Link>
-        </div>
-      </header>
+        </>}
+      />
 
       {isAdmin && (
         <section aria-labelledby="centre-summary">

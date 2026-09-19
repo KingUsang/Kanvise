@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, Clock3, Radio, UserRound, Video } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
+import { getApiUrl } from "@/config/api";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { StudentClass } from "@/lib/student-classes";
 
 type View = "all" | "upcoming" | "past";
@@ -30,7 +34,17 @@ function tutorName(item: StudentClass) {
   return [item.tutor.first_name, item.tutor.last_name].filter(Boolean).join(" ") || "Your tutor";
 }
 
-export function StudentClassesClient({ classes }: { classes: StudentClass[] }) {
+export function StudentClassesClient() {
+  const classesQuery = useQuery<StudentClass[]>({
+    queryKey: ["student-classes"],
+    queryFn: async () => {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/live-classes`, { cache: "no-store" });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || "Failed to load student classes");
+      return body.data || [];
+    },
+  });
+  const classes = classesQuery.data ?? [];
   const [view, setView] = useState<View>("all");
   const [courseId, setCourseId] = useState("all");
   const now = Date.now();
@@ -41,6 +55,8 @@ export function StudentClassesClient({ classes }: { classes: StudentClass[] }) {
   const upcomingCount = classes.filter((item) => item.status === "scheduled" && new Date(item.scheduled_at).getTime() >= now).length;
   const completedCount = classes.filter((item) => item.status === "completed").length;
 
+  if (classesQuery.isPending) return <div className="rounded-2xl border border-[#e5e1dd] bg-white p-10 text-center text-sm text-[#716c76]">Loading classes…</div>;
+  if (classesQuery.isError) return <div className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-sm text-red-800"><p>{classesQuery.error.message}</p><button type="button" onClick={() => void classesQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></div>;
   return <>
     <section className="grid gap-3 sm:grid-cols-3">
       <div className="rounded-2xl border border-[#e5e1dd] bg-white p-4"><div className="flex items-center gap-2 text-[#994704]"><Radio size={18} /><span className="text-xs font-semibold uppercase tracking-wide">Live now</span></div><p className="mt-2 text-2xl font-semibold">{liveCount}</p></div>

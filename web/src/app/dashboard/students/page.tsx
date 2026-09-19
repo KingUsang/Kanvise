@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, Download, UserPlus, X, Upload } from "lucide-reac
 import Papa from "papaparse";
 import { createClient } from "@/lib/supabase/client";
 import StudentsTable from "@/components/dashboard/students/students-table";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 function exportToCSV(students: any[]) {
   if (students.length === 0) return;
@@ -176,43 +177,37 @@ export default function StudentsPage() {
   return (
     <div className="mx-auto max-w-[1440px] space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-[#474551]">Your learners</span>
-          <h1 className="mt-2 text-[32px] leading-[40px] tracking-[-0.01em] font-bold text-kv-dark">Students</h1>
-          <p className="text-base leading-6 text-gray-500 mt-1 max-w-2xl">
-            Add learners to your centre, see what they can access, and review their successful payment history.
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap gap-3">
+      <DashboardPageHeader
+        title="Students"
+        description="Add learners to your centre, see what they can access, and review their successful payment history."
+        actions={<>
           <button
             type="button"
             onClick={() => { setAddStudentError(null); setImportSummary(null); setAddingStudent(true); }}
-            className="flex items-center gap-2 rounded bg-kv-blue px-4 py-2 text-white transition-colors hover:bg-kv-blue/90"
+            className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-4 py-2 text-white transition-colors hover:bg-dashboard-accent/90"
           >
             <UserPlus size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">Add student</span>
           </button>
-          <label className="flex cursor-pointer items-center gap-2 rounded border border-kv-blue px-4 py-2 text-kv-blue transition-colors hover:bg-kv-blue/5">
+          <label className="flex cursor-pointer items-center gap-2 rounded-dashboard-control border border-dashboard-primary px-4 py-2 text-dashboard-primary transition-colors hover:bg-dashboard-primary/5">
             <Upload size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">Import CSV</span>
             <input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleCsvFile} />
           </label>
           <button 
             onClick={() => exportToCSV(students)}
-            className="flex items-center gap-2 px-4 py-2 border border-kv-blue text-kv-blue rounded hover:bg-kv-blue/5 transition-colors"
+            className="flex items-center gap-2 rounded-dashboard-control border border-dashboard-primary px-4 py-2 text-dashboard-primary transition-colors hover:bg-dashboard-primary/5"
           >
             <Download size={18} />
             <span className="text-xs font-bold tracking-widest uppercase">Export students</span>
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Content */}
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-kv-blue" />
+          <Loader2 className="w-8 h-8 animate-spin text-dashboard-primary" />
         </div>
       ) : error ? (
         <div className="bg-red-50 border border-red-100 text-red-600 p-6 rounded-xl flex items-start gap-3 shadow-sm">
@@ -231,13 +226,13 @@ export default function StudentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="add-student-title">
           <form onSubmit={addStudent} className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
-              <div><h2 id="add-student-title" className="text-xl font-bold text-kv-dark">Invite a student</h2><p className="mt-1 text-sm leading-6 text-gray-500">Choose what they can access. The student enters their own name and password from the email.</p></div>
+              <div><h2 id="add-student-title" className="text-xl font-bold text-dashboard-foreground">Invite a student</h2><p className="mt-1 text-sm leading-6 text-dashboard-muted">Choose what they can access. The student enters their own name and password from the email.</p></div>
               <button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} aria-label="Close" className="rounded p-1 text-gray-500 hover:bg-gray-100"><X size={20} /></button>
             </div>
             {addStudentError && <div className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{addStudentError}</div>}
-            <label className="mt-5 block text-sm font-semibold text-kv-dark">Email address<input required type="email" value={studentEmail} onChange={(event) => setStudentEmail(event.target.value)} className="mt-1.5 w-full rounded border border-kv-dust px-3 py-2.5 font-normal outline-none focus:border-kv-blue" /></label>
-            <label className="mt-4 block text-sm font-semibold text-kv-dark">Programme<select required value={programmeId} onChange={(event) => setProgrammeId(event.target.value)} className="mt-1.5 w-full rounded border border-kv-dust bg-white px-3 py-2.5 font-normal outline-none focus:border-kv-blue"><option value="">Choose a programme</option>{programmes.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}</select></label>
-            <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button><button disabled={submittingStudent} className="rounded bg-kv-blue px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submittingStudent ? "Sending…" : "Add & invite"}</button></div>
+            <label className="mt-5 block text-sm font-semibold text-dashboard-foreground">Email address<input required type="email" value={studentEmail} onChange={(event) => setStudentEmail(event.target.value)} className="mt-1.5 w-full rounded-dashboard-control border border-dashboard-outline px-3 py-2.5 font-normal outline-none focus:border-dashboard-primary" /></label>
+            <label className="mt-4 block text-sm font-semibold text-dashboard-foreground">Programme<select required value={programmeId} onChange={(event) => setProgrammeId(event.target.value)} className="mt-1.5 w-full rounded-dashboard-control border border-dashboard-outline bg-white px-3 py-2.5 font-normal outline-none focus:border-dashboard-primary"><option value="">Choose a programme</option>{programmes.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}</select></label>
+            <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button disabled={submittingStudent} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submittingStudent ? "Sending…" : "Add & invite"}</button></div>
           </form>
         </div>
       )}
@@ -245,13 +240,13 @@ export default function StudentsPage() {
       {(csvRows.length > 0 || csvError || importSummary) && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
           <div className="mx-auto my-8 w-full max-w-4xl rounded-xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-kv-dark">Review student import</h2><p className="mt-1 text-sm text-gray-500">Every student needs an email for their activation link. Names and phone numbers are optional; students can enter their own names during activation.</p></div><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded p-1 text-gray-500 hover:bg-gray-100"><X size={20} /></button></div>
-            <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={downloadTemplate} className="rounded border border-kv-dust px-3 py-2 text-sm font-semibold text-kv-blue">Download template</button><label className="cursor-pointer rounded border border-kv-dust px-3 py-2 text-sm font-semibold text-kv-blue">Choose another CSV<input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleCsvFile} /></label></div>
+            <div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-dashboard-foreground">Review student import</h2><p className="mt-1 text-sm text-dashboard-muted">Every student needs an email for their activation link. Names and phone numbers are optional; students can enter their own names during activation.</p></div><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded p-1 text-dashboard-muted hover:bg-dashboard-surface-subtle"><X size={20} /></button></div>
+            <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={downloadTemplate} className="rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Download template</button><label className="cursor-pointer rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Choose another CSV<input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleCsvFile} /></label></div>
             {csvError && <div className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">{csvError}</div>}
             {importSummary && <div className="mt-4 rounded bg-green-50 p-3 text-sm text-green-800">{importSummary}</div>}
-            {csvRows.length > 0 && <div className="mt-5 overflow-x-auto rounded border border-kv-dust"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-[#f9f7f4]"><tr><th className="p-3">Row</th><th className="p-3">Student</th><th className="p-3">Contact</th><th className="p-3">Programme</th><th className="p-3">Status</th></tr></thead><tbody>{csvRows.slice(0, 100).map((row) => <tr key={row.row} className="border-t border-kv-dust/40"><td className="p-3">{row.row}</td><td className="p-3">{row.first_name} {row.last_name}</td><td className="p-3">{row.email || row.phone || "—"}</td><td className="p-3">{programmes.find((programme) => programme.id === row.programme_id)?.name || "—"}</td><td className={`p-3 ${row.error ? "text-red-700" : "text-green-700"}`}>{row.error || "Ready"}</td></tr>)}</tbody></table></div>}
+            {csvRows.length > 0 && <div className="mt-5 overflow-x-auto rounded-dashboard-control border border-dashboard-outline"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-dashboard-surface-subtle"><tr><th className="p-3">Row</th><th className="p-3">Student</th><th className="p-3">Contact</th><th className="p-3">Programme</th><th className="p-3">Status</th></tr></thead><tbody>{csvRows.slice(0, 100).map((row) => <tr key={row.row} className="border-t border-dashboard-outline/50"><td className="p-3">{row.row}</td><td className="p-3">{row.first_name} {row.last_name}</td><td className="p-3">{row.email || row.phone || "—"}</td><td className="p-3">{programmes.find((programme) => programme.id === row.programme_id)?.name || "—"}</td><td className={`p-3 ${row.error ? "text-red-700" : "text-green-700"}`}>{row.error || "Ready"}</td></tr>)}</tbody></table></div>}
             {csvRows.length > 100 && <p className="mt-2 text-xs text-gray-500">Showing the first 100 of {csvRows.length} students.</p>}
-            <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button><button type="button" onClick={() => void importCsv()} disabled={importingCsv || !csvRows.length || csvRows.some((row) => row.error)} className="rounded bg-kv-blue px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{importingCsv ? "Importing…" : `Import ${csvRows.length} students`}</button></div>
+            <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button type="button" onClick={() => void importCsv()} disabled={importingCsv || !csvRows.length || csvRows.some((row) => row.error)} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{importingCsv ? "Importing…" : `Import ${csvRows.length} students`}</button></div>
           </div>
         </div>
       )}

@@ -1,23 +1,27 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 interface AttendanceClientProps {
   token: string
 }
 
+type AttendanceFilters = {
+  programmes: { id: string; name: string }[]
+  classes: { id: string; title: string; course_id: string }[]
+  courses: { id: string; programme_id: string | null }[]
+}
+
+type AttendanceRecords = {
+  metrics: Record<string, number> | null
+  records: any[]
+  meta: { page: number; limit: number; total: number; total_pages: number } | null
+}
+
 export function AttendanceClient({ token }: AttendanceClientProps) {
-  const [metrics, setMetrics] = useState<any>(null)
-  const [records, setRecords] = useState<any[]>([])
-  const [meta, setMeta] = useState<any>(null)
-  
-  const [availableProgrammes, setAvailableProgrammes] = useState<any[]>([])
-  const [availableClasses, setAvailableClasses] = useState<any[]>([])
-  const [courses, setCourses] = useState<any[]>([])
-  
-  const [isLoading, setIsLoading] = useState(true)
-  
   // Filters
   const [programmeId, setProgrammeId] = useState('')
   const [classId, setClassId] = useState('')
@@ -27,36 +31,28 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
 
-  // Fetch dropdown data on mount
-  useEffect(() => {
-    const fetchFilters = async () => {
-      try {
-        const headers = { 'Authorization': `Bearer ${token}` }
-        const [progRes, classRes, courseRes] = await Promise.all([
-          fetch(`${apiUrl}/programmes`, { headers }),
-          fetch(`${apiUrl}/live-classes`, { headers }),
-          fetch(`${apiUrl}/courses`, { headers })
-        ])
-        if (!progRes.ok || !classRes.ok || !courseRes.ok) throw new Error('Could not load attendance filters')
-        const [{ data: programmes }, { data: classes }, { data: courseData }] = await Promise.all([
-          progRes.json(),
-          classRes.json(),
-          courseRes.json(),
-        ])
-        setAvailableProgrammes(programmes || [])
-        setAvailableClasses(classes || [])
-        setCourses(courseData || [])
-      } catch (e) {
-        console.error('Failed to fetch filters', e)
-        toast.error('Could not load attendance filters', { description: 'Refresh the page and try again.' })
-      }
-    }
-    fetchFilters()
-  }, [apiUrl, token])
+  const filtersQuery = useQuery<AttendanceFilters>({
+    queryKey: ['attendance-filters', token],
+    queryFn: async () => {
+      const headers = { Authorization: `Bearer ${token}` }
+      const [progRes, classRes, courseRes] = await Promise.all([
+        fetch(`${apiUrl}/programmes`, { headers }),
+        fetch(`${apiUrl}/live-classes`, { headers }),
+        fetch(`${apiUrl}/courses`, { headers }),
+      ])
+      if (!progRes.ok || !classRes.ok || !courseRes.ok) throw new Error('Could not load attendance filters')
+      const [{ data: programmes }, { data: classes }, { data: courseData }] = await Promise.all([
+        progRes.json(), classRes.json(), courseRes.json(),
+      ])
+      return { programmes: programmes || [], classes: classes || [], courses: courseData || [] }
+    },
+    staleTime: 5 * 60_000,
+  })
 
-  const fetchRecords = useCallback(async () => {
-    setIsLoading(true)
-    try {
+  const filterKey = [programmeId, classId, startDate, endDate, page] as const
+  const recordsQuery = useQuery<AttendanceRecords>({
+    queryKey: ['attendance-records', token, ...filterKey],
+    queryFn: async () => {
       const query = new URLSearchParams()
       if (programmeId) query.append('programme_id', programmeId)
       if (classId) query.append('class_id', classId)
@@ -64,34 +60,33 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       if (endDate) query.append('end_date', `${endDate}T23:59:59.999`)
       query.append('page', String(page))
 
-      const headers = { 'Authorization': `Bearer ${token}` }
+      const headers = { Authorization: `Bearer ${token}` }
       const [metricsRes, recordsRes] = await Promise.all([
         fetch(`${apiUrl}/attendance/metrics?${query.toString()}`, { headers }),
-        fetch(`${apiUrl}/attendance/records?${query.toString()}`, { headers })
+        fetch(`${apiUrl}/attendance/records?${query.toString()}`, { headers }),
       ])
-
       if (!metricsRes.ok || !recordsRes.ok) throw new Error('Could not load attendance records')
-      const [{ data: metricData }, { data, meta: recordMeta }] = await Promise.all([
-        metricsRes.json(),
-        recordsRes.json(),
-      ])
-      setMetrics(metricData)
-      setRecords(data || [])
-      setMeta(recordMeta)
-    } catch (e) {
-      console.error('Failed to fetch records', e)
-      setMetrics(null)
-      setRecords([])
-      setMeta(null)
-      toast.error('Could not load attendance records', { description: 'Check your connection and try again.' })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [apiUrl, token, programmeId, classId, startDate, endDate, page])
+      const [{ data: metrics }, { data: records, meta }] = await Promise.all([metricsRes.json(), recordsRes.json()])
+      return { metrics, records: records || [], meta }
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  })
 
   useEffect(() => {
-    fetchRecords()
-  }, [fetchRecords])
+    if (filtersQuery.isError) toast.error('Could not load attendance filters', { description: 'Refresh the page and try again.' })
+  }, [filtersQuery.isError])
+  useEffect(() => {
+    if (recordsQuery.isError) toast.error('Could not load attendance records', { description: 'Check your connection and try again.' })
+  }, [recordsQuery.isError])
+
+  const availableProgrammes = filtersQuery.data?.programmes || []
+  const availableClasses = filtersQuery.data?.classes || []
+  const courses = filtersQuery.data?.courses || []
+  const metrics = recordsQuery.data?.metrics || null
+  const records = recordsQuery.data?.records || []
+  const meta = recordsQuery.data?.meta || null
+  const isLoading = recordsQuery.isLoading
 
   const handleProgrammeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setProgrammeId(e.target.value)
@@ -112,12 +107,11 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
   return (
     <div className="animate-in fade-in duration-500">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-        <div>
-          <h2 className="text-[32px] leading-[40px] font-bold tracking-tight text-[#1b1c1c]">Attendance Records</h2>
-          <p className="text-[16px] text-[#474551] mt-1">See who attended completed classes and how long they stayed.</p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        className="mb-8"
+        title="Attendance"
+        description="See who attended completed classes and how long they stayed."
+      />
 
       {/* Filters Grid */}
       <div className="bg-white border border-[#c2b59b] p-6 rounded-lg mb-8 shadow-sm">
@@ -205,7 +199,12 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
         </div>
         
-        <div className="overflow-x-auto">
+        <div className="divide-y divide-[#c2b59b] sm:hidden">
+          {isLoading ? <p className="p-6 text-center text-sm text-[#474551]">Loading records…</p>
+            : records?.length === 0 ? <p className="p-6 text-center text-sm text-[#474551]">No attendance records found for the selected criteria.</p>
+            : records?.map((r: any) => <article key={r.id} className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-semibold text-[#1b1c1c]">{r.student_name}</h2><p className="mt-1 truncate text-xs text-[#716c76]">{r.course_name} · {r.class_title}</p></div><span className={`shrink-0 rounded px-2 py-1 text-[10px] font-bold uppercase ${r.status === 'Present' ? 'bg-[#b5f299]/30 text-[#386a1f]' : r.status === 'Late' ? 'bg-[#ffeb99]/40 text-[#7a5c00]' : 'bg-[#ffdad6] text-[#ba1a1a]'}`}>{r.status}</span></div><div className="mt-3 flex gap-5 text-xs text-[#474551]"><span><b>Joined</b> {r.join_time}</span><span><b>Stayed</b> {r.duration}</span></div></article>)}
+        </div>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-[#f5f3f2] border-b border-[#c2b59b]">

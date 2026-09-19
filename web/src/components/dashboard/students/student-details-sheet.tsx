@@ -69,12 +69,12 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
         onClick={onClose}
       />
       
-      <div className="fixed top-0 right-0 h-full w-[400px] max-w-[90vw] bg-white shadow-2xl z-50 flex flex-col animate-slide-right border-l border-kv-dust/30">
-        <div className="flex items-center justify-between p-6 border-b border-kv-dust/30 bg-kv-soft/50">
-          <h2 className="text-xl font-bold text-kv-dark">Student Details</h2>
+      <div className="fixed top-0 right-0 z-50 flex h-full w-[400px] max-w-[90vw] flex-col animate-slide-right border-l border-dashboard-outline bg-dashboard-surface shadow-2xl">
+        <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6">
+          <h2 className="text-xl font-bold text-dashboard-foreground">Student Details</h2>
           <button 
             onClick={onClose}
-            className="p-2 text-gray-500 hover:text-kv-dark hover:bg-gray-100 rounded-full transition-colors"
+            className="rounded-full p-2 text-dashboard-muted transition-colors hover:bg-dashboard-surface hover:text-dashboard-foreground"
           >
             <X size={20} />
           </button>
@@ -82,11 +82,11 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
 
         <div className="flex-1 overflow-y-auto p-6">
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-16 h-16 rounded-full bg-kv-blue text-white flex items-center justify-center font-bold text-2xl shadow-sm">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-dashboard-primary text-2xl font-bold text-white shadow-sm">
               {student.first_name?.[0] || ""}{student.last_name?.[0] || ""}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-kv-dark leading-tight">
+              <h3 className="text-xl font-bold leading-tight text-dashboard-foreground">
                 {student.first_name} {student.last_name}
               </h3>
               <p className="text-gray-500 text-sm mt-0.5">{student.email}</p>
@@ -104,7 +104,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
             
             {loading ? (
               <div className="flex justify-center p-8">
-                <Loader2 className="w-6 h-6 animate-spin text-kv-blue" />
+                <Loader2 className="w-6 h-6 animate-spin text-dashboard-primary" />
               </div>
             ) : error ? (
               <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm flex items-start gap-2">
@@ -112,15 +112,15 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
                 <p>{error}</p>
               </div>
             ) : enrolments.length === 0 ? (
-              <div className="text-center p-6 border border-dashed border-kv-dust rounded-lg text-gray-500 text-sm">
+              <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline p-6 text-center text-sm text-dashboard-muted">
                 This student is not currently enrolled in any programmes or subjects.
               </div>
             ) : (
               <div className="space-y-3">
                 {enrolments.map((enrolment) => (
-                  <div key={enrolment.id} className="p-4 border border-kv-dust/40 rounded-lg hover:border-kv-blue/30 transition-colors bg-white shadow-sm">
+                  <div key={enrolment.id} className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-4 shadow-sm transition-colors hover:border-dashboard-primary/30">
                     <div className="flex justify-between items-start mb-1">
-                      <div className="font-semibold text-kv-dark">
+                      <div className="font-semibold text-dashboard-foreground">
                         {enrolment.programmes?.name || enrolment.sub_programmes?.name || enrolment.courses?.name || "Unknown"}
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700">
@@ -143,18 +143,18 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
               Payment history
             </h4>
             {payments.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-kv-dust p-6 text-center text-sm text-gray-500">No completed payment records found.</div>
+              <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline p-6 text-center text-sm text-dashboard-muted">No completed payment records found.</div>
             ) : (
               <div className="space-y-3">
                 {payments.map((payment) => {
                   const itemName = payment.programmes?.name || payment.sub_programmes?.name || payment.courses?.name || 'Enrolment'
                   return (
-                    <div key={payment.id} className="rounded-lg border border-kv-dust/40 bg-white p-4 shadow-sm">
+                    <div key={payment.id} className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
-                        <div><p className="font-semibold text-kv-dark">{itemName}</p><p className="mt-1 text-xs text-gray-500">{payment.paystack_reference}</p></div>
+                        <div><p className="font-semibold text-dashboard-foreground">{itemName}</p><p className="mt-1 text-xs text-dashboard-muted">{payment.paystack_reference}</p></div>
                         <span className="rounded bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700">Paid</span>
                       </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-gray-500"><span className="font-semibold text-kv-dark">₦{Number(payment.amount).toLocaleString()}</span><span>{new Date(payment.paid_at || payment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span></div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-dashboard-muted"><span className="font-semibold text-dashboard-foreground">₦{Number(payment.amount).toLocaleString()}</span><span>{new Date(payment.paid_at || payment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span></div>
                     </div>
                   )
                 })}
@@ -163,10 +163,10 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
           </div>
         </div>
         
-        <div className="p-6 border-t border-kv-dust/30 bg-gray-50 flex gap-3">
+        <div className="flex gap-3 border-t border-dashboard-outline bg-dashboard-surface-subtle p-6">
           <button 
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-white border border-kv-dust/50 text-kv-dark font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex-1 rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-4 py-2 font-semibold text-dashboard-foreground transition-colors hover:bg-dashboard-surface-subtle"
           >
             Close
           </button>
@@ -182,8 +182,8 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
       </div>
       {confirmRemoval && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-lg border border-kv-dust bg-white p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-kv-dark">Remove this student?</h3>
+          <div className="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-dashboard-foreground">Remove this student?</h3>
             <p className="mt-2 text-sm leading-6 text-gray-600">{student.first_name} {student.last_name} will lose access to this centre. Their enrolment and payment history will be retained.</p>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setConfirmRemoval(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep student</button>

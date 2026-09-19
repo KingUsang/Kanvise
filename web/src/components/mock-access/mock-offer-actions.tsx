@@ -31,7 +31,7 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
     }
     setLoading(true)
     try {
-      const profileResponse = await authenticatedFetch(supabase, `${getApiUrl()}/auth/me`, session.access_token)
+      const profileResponse = await authenticatedFetch(supabase, `${getApiUrl()}/auth/me`)
       const profile = await profileResponse.json().catch(() => null)
       if (!profileResponse.ok) throw new Error(profile?.error || 'Could not verify your account')
       if (profile?.user?.role !== 'student') throw new Error('Please use a student account to attempt this mock.')
@@ -40,13 +40,13 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
       // already receives it through their centre, preserve that one attempt
       // history and allowance instead of creating a second entitlement.
       if (profile.user.school_id) {
-        const centrePreflight = await authenticatedFetch(supabase, `${getApiUrl()}/mocks/${mockId}/preflight`, session.access_token, { cache: 'no-store' })
+        const centrePreflight = await authenticatedFetch(supabase, `${getApiUrl()}/mocks/${mockId}/preflight`, { cache: 'no-store' })
         const centreBody = await centrePreflight.json().catch(() => null)
         if (centrePreflight.ok) {
           if (!centreBody.data.resumable_attempt && centreBody.data.attempts_used >= centreBody.data.attempts_allowed) {
             throw new Error('You have used all attempts included with this mock.')
           }
-          const start = await authenticatedFetch(supabase, `${getApiUrl()}/mocks/${mockId}/attempts`, session.access_token, { method: 'POST' })
+          const start = await authenticatedFetch(supabase, `${getApiUrl()}/mocks/${mockId}/attempts`, { method: 'POST' })
           const attempt = await start.json().catch(() => null)
           if (!start.ok) throw new Error(attempt?.error || 'Could not open this mock')
           router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
@@ -55,13 +55,13 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
         if (centrePreflight.status !== 404) throw new Error(centreBody?.error || 'Could not check your programme access')
       }
 
-      const preflight = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/preflight`, session.access_token, { cache: 'no-store' })
+      const preflight = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/preflight`, { cache: 'no-store' })
       const preflightBody = await preflight.json().catch(() => null)
       if (preflight.ok) {
         if (!preflightBody.data.resumable_attempt && preflightBody.data.attempts_used >= preflightBody.data.attempts_allowed) {
           throw new Error('You have used all attempts included with this mock.')
         }
-        const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, session.access_token, { method: 'POST' })
+        const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, { method: 'POST' })
         const attempt = await start.json().catch(() => null)
         if (!start.ok) throw new Error(attempt?.error || 'Could not open this mock')
         router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
@@ -72,13 +72,13 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
       }
 
       if (accessMode === 'paid') {
-        const response = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/checkout`, session.access_token, { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } })
+        const response = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/checkout`, { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } })
         const body = await response.json().catch(() => null); if (!response.ok) throw new Error(body?.error || 'Could not start checkout')
         window.location.assign(body.data.payment_url); return
       }
-      const claim = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/claim`, session.access_token, { method: 'POST' })
+      const claim = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/claim`, { method: 'POST' })
       const body = await claim.json().catch(() => null); if (!claim.ok) throw new Error(body?.error || 'Could not unlock this mock')
-      const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, session.access_token, { method: 'POST' })
+      const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, { method: 'POST' })
       const attempt = await start.json().catch(() => null); if (!start.ok) throw new Error(attempt?.error || 'Mock unlocked — open My Mocks to start')
       router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not continue') } finally { setLoading(false) }

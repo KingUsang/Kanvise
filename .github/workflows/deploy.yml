@@ -5,6 +5,7 @@ on:
     branches: [main, staging]
     paths:
       - 'api/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -36,9 +37,54 @@ jobs:
           path: api/dist
           if-no-files-found: error
 
+  changes:
+    name: Detect database changes
+    runs-on: ubuntu-latest
+    outputs:
+      migrations: ${{ steps.filter.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            migrations:
+              - 'supabase/migrations/**'
+
+  migrations:
+    name: Apply database migrations
+    needs: [verify, changes]
+    if: needs.changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Preview is Kanvise's staging environment; Production is protected in
+    # GitHub and requires its configured reviewer approval before this runs.
+    environment: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
+    concurrency:
+      group: supabase-migrations-${{ github.ref_name }}
+      cancel-in-progress: false
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+      - name: Check pending migration plan
+        run: |
+          test -n "$SUPABASE_DB_URL"
+          supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
+      - name: Apply migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
+      - name: Record remote migration history
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"
+
   deploy:
     name: Deploy ${{ github.ref_name }}
-    needs: verify
+    needs: [verify, migrations]
+    # A skipped migration job means this commit has no database change; it must
+    # not prevent a normal API-only deployment.
+    if: >-
+      always() && needs.verify.result == 'success' &&
+      (needs.migrations.result == 'success' || needs.migrations.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}

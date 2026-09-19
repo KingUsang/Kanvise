@@ -241,7 +241,7 @@ export function buildPrivateFileKey(
   entityType: PrivateUploadType,
   contextId: string,
   extension: string,
-  id = crypto.randomUUID(),
+  id: string = crypto.randomUUID(),
 ) {
   if (!contextId || contextId.includes('/') || contextId.includes('..')) {
     throw new StorageError('Invalid upload context', 'INVALID_UPLOAD_CONTEXT')
@@ -349,10 +349,15 @@ export async function createPresignedDownload(
   fileKey: string,
   schoolId: string,
   expiresIn = 900,
+  options?: { responseCacheControl?: string },
 ) {
   assertPrivateFileKey(fileKey, schoolId)
   const { client, bucketName } = configuredClient()
-  const command = new GetObjectCommand({ Bucket: bucketName, Key: fileKey })
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: fileKey,
+    ResponseCacheControl: options?.responseCacheControl,
+  })
   return getSignedUrl(client, command, { expiresIn })
 }
 

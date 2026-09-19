@@ -47,17 +47,17 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
   return (
     <div>
       {/* Filters & Tools Bar */}
-      <div className="bg-white p-4 rounded-lg shadow-[0px_4px_20px_rgba(61,61,61,0.08)] border border-kv-dust/20 mb-4 flex flex-col gap-4 xl:flex-row xl:items-center">
+      <div className="mb-4 flex flex-col gap-4 rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-4 shadow-dashboard-card xl:flex-row xl:items-center">
         <div className="flex flex-1 flex-col gap-3 md:flex-row">
           <div className="relative min-w-[240px] flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-            <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} placeholder="Search name, email or student ID" className="w-full rounded border border-kv-dust bg-transparent py-2 pl-10 pr-3 text-sm outline-none focus:border-kv-blue" />
+            <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} placeholder="Search name, email or student ID" className="w-full rounded-dashboard-control border border-dashboard-outline bg-transparent py-2 pl-10 pr-3 text-sm outline-none focus:border-dashboard-primary" />
           </div>
           <div className="relative min-w-[200px]">
             <select 
               value={programmeFilter}
               onChange={(e) => { setProgrammeFilter(e.target.value); setCurrentPage(1); }}
-              className="w-full appearance-none pl-4 pr-10 py-2 border border-kv-dust rounded text-sm focus:outline-none focus:border-kv-blue bg-transparent cursor-pointer"
+              className="w-full cursor-pointer appearance-none rounded-dashboard-control border border-dashboard-outline bg-transparent py-2 pl-4 pr-10 text-sm focus:border-dashboard-primary focus:outline-none"
             >
               <option value="">All enrolments</option>
               {enrolmentOptions.map(p => (
@@ -70,7 +70,7 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
         
         <div className="flex items-center gap-2 text-gray-600 text-xs font-bold uppercase tracking-widest">
           <span>Showing {filteredStudents.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length}</span>
-          <div className="flex border border-kv-dust rounded overflow-hidden ml-2">
+          <div className="ml-2 flex overflow-hidden rounded-dashboard-control border border-dashboard-outline">
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
@@ -90,10 +90,16 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-lg shadow-[0px_4px_20px_rgba(61,61,61,0.08)] border border-kv-dust/20 overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left border-collapse">
+      <div className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
+        <div className="divide-y divide-dashboard-outline/50 sm:hidden">
+          {paginatedStudents.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">No students found matching filters.</p> : paginatedStudents.map((student) => <article key={student.id} onClick={() => setSelectedStudent(student)} className="cursor-pointer p-4 active:bg-dashboard-primary/5">
+            <div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-dashboard-primary text-xs font-bold text-white`}>{student.profile_photo_url ? <img src={student.profile_photo_url} alt="" className="h-full w-full object-cover" /> : <>{student.first_name?.[0] || ''}{student.last_name?.[0] || ''}</>}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{student.first_name} {student.last_name}</h2><p className="truncate text-xs text-gray-500">{student.email || student.kanvise_user_id || 'No contact detail'}</p></div><button onClick={(event) => { event.stopPropagation(); setSelectedStudent(student) }} className="shrink-0 rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877]">Details</button></div>
+            <div className="mt-3 flex flex-wrap gap-1">{student.enrolments?.length ? student.enrolments.map((enr: any) => <span key={enr.id} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-600">{enr.programmes?.name || enr.sub_programmes?.name || enr.courses?.name || 'Unknown'}</span>) : <span className="text-xs text-gray-400">No enrolments</span>}</div>
+          </article>)}
+        </div>
+        <div className="hidden overflow-x-auto sm:block"><table className="w-full min-w-[900px] text-left border-collapse">
           <thead>
-            <tr className="bg-[#F9F7F4] border-b border-kv-dust">
+            <tr className="border-b border-dashboard-outline bg-dashboard-surface-subtle">
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student Info</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student ID</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Enrolments</th>
@@ -109,13 +115,12 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
               </tr>
             ) : (
               paginatedStudents.map((student, i) => {
-                const avatarColors = ["bg-kv-blue text-white", "bg-kv-brown text-white", "bg-kv-dark text-white"];
-                const avatarColor = avatarColors[i % avatarColors.length];
+                const avatarColor = "bg-dashboard-primary text-white";
                 return (
                   <tr 
                     key={student.id} 
                     onClick={() => setSelectedStudent(student)}
-                    className="border-b border-kv-dust/30 hover:bg-kv-blue/5 transition-colors group cursor-pointer"
+                    className="group cursor-pointer border-b border-dashboard-outline/50 transition-colors hover:bg-dashboard-primary/5"
                   >
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
@@ -133,7 +138,7 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
                           </div>
                         )}
                         <div>
-                          <div className="font-bold text-kv-dark">{student.first_name} {student.last_name}</div>
+                          <div className="font-bold text-dashboard-foreground">{student.first_name} {student.last_name}</div>
                           <div className="text-gray-500 text-xs">{student.email}</div>
                         </div>
                       </div>
@@ -167,7 +172,7 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
               })
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {selectedStudent && (

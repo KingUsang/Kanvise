@@ -1,12 +1,14 @@
 'use client'
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getApiUrl } from '@/config/api'
 import katex from 'katex'
 import 'katex/contrib/mhchem'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 type Bank = {
   id: string
@@ -126,62 +128,66 @@ function imageDimensions(file: File) {
 export function QuestionBanksClient({ token }: { token: string }) {
   const apiUrl = getApiUrl()
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
-  const [banks, setBanks] = useState<Bank[]>([])
+  const queryClient = useQueryClient()
   const [selectedBankId, setSelectedBankId] = useState('')
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [courses, setCourses] = useState<Course[]>([])
-  const [isLoadingBanks, setIsLoadingBanks] = useState(true)
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [subjectFilter, setSubjectFilter] = useState('')
   const [showCreateBank, setShowCreateBank] = useState(false)
   const [showQuestionEditor, setShowQuestionEditor] = useState(false)
   const [bankToArchive, setBankToArchive] = useState<Bank | null>(null)
 
-  const selectedBank = banks.find(bank => bank.id === selectedBankId) || null
-
-  const loadBanks = useCallback(async () => {
-    setIsLoadingBanks(true)
-    try {
+  const banksQuery = useQuery({
+    queryKey: ['question-banks', token],
+    queryFn: async () => {
       const response = await fetch(`${apiUrl}/question-banks?page_size=100`, { headers })
       const body = await responseBody<{ data: Bank[] }>(response)
-      setBanks(body.data)
-      setSelectedBankId(current => body.data.some(bank => bank.id === current) ? current : body.data[0]?.id || '')
-    } catch (error) {
-      toast.error('Could not load question banks', { description: error instanceof Error ? error.message : 'Please try again.' })
-    } finally {
-      setIsLoadingBanks(false)
-    }
-  }, [apiUrl, headers])
+      return body.data
+    },
+    staleTime: 60_000,
+  })
+  const banks = banksQuery.data || []
+  const selectedBank = banks.find(bank => bank.id === selectedBankId) || null
 
-  const loadQuestions = useCallback(async () => {
-    if (!selectedBankId) {
-      setQuestions([])
-      return
-    }
-    setIsLoadingQuestions(true)
-    try {
+  const questionsQuery = useQuery({
+    queryKey: ['question-bank-questions', token, selectedBankId, debouncedSearch, subjectFilter],
+    enabled: !!selectedBankId,
+    queryFn: async () => {
       const params = new URLSearchParams({ page_size: '100' })
-      if (search.trim()) params.set('q', search.trim())
+      if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim())
       if (subjectFilter) params.set('subject_name', subjectFilter)
       const response = await fetch(`${apiUrl}/question-banks/${selectedBankId}/questions?${params}`, { headers })
       const body = await responseBody<{ data: Question[] }>(response)
-      setQuestions(body.data)
-    } catch (error) {
-      toast.error('Could not load questions', { description: error instanceof Error ? error.message : 'Please try again.' })
-    } finally {
-      setIsLoadingQuestions(false)
-    }
-  }, [apiUrl, headers, search, selectedBankId, subjectFilter])
+      return body.data
+    },
+    staleTime: 30_000,
+  })
+  const questions = questionsQuery.data || []
 
-  useEffect(() => { void loadBanks() }, [loadBanks])
+  const coursesQuery = useQuery({
+    queryKey: ['courses', token],
+    queryFn: async () => {
+      const response = await fetch(`${apiUrl}/courses`, { headers })
+      const body = await responseBody<{ data: Course[] }>(response)
+      return body.data || []
+    },
+    staleTime: 5 * 60_000,
+  })
+  const courses = coursesQuery.data || []
+
   useEffect(() => {
-    const timeout = window.setTimeout(() => { void loadQuestions() }, 250)
+    setSelectedBankId(current => banks.some(bank => bank.id === current) ? current : banks[0]?.id || '')
+  }, [banks])
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(search), 250)
     return () => window.clearTimeout(timeout)
-  }, [loadQuestions])
+  }, [search])
   useEffect(() => {
-    fetch(`${apiUrl}/courses`, { headers }).then(responseBody<{ data: Course[] }>).then(body => setCourses(body.data || [])).catch(() => undefined)
-  }, [apiUrl, headers])
+    if (banksQuery.isError) toast.error('Could not load question banks', { description: banksQuery.error instanceof Error ? banksQuery.error.message : 'Please try again.' })
+  }, [banksQuery.error, banksQuery.isError])
+  useEffect(() => {
+    if (questionsQuery.isError) toast.error('Could not load questions', { description: questionsQuery.error instanceof Error ? questionsQuery.error.message : 'Please try again.' })
+  }, [questionsQuery.error, questionsQuery.isError])
 
   const subjects = [...new Set(questions.map(question => question.subject_name).filter(Boolean))] as string[]
 
@@ -197,7 +203,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
       const body = await responseBody<{ data: Bank }>(response)
       toast.success('Question bank created')
       setShowCreateBank(false)
-      await loadBanks()
+      await queryClient.invalidateQueries({ queryKey: ['question-banks', token] })
       setSelectedBankId(body.data.id)
     } catch (error) {
       toast.error('Could not create the bank', { description: error instanceof Error ? error.message : 'Please try again.' })
@@ -215,33 +221,31 @@ export function QuestionBanksClient({ token }: { token: string }) {
       await responseBody(response)
       toast.success('Question bank archived', { description: 'Published mocks and their question versions remain unchanged.' })
       setBankToArchive(null)
-      await loadBanks()
+      await queryClient.invalidateQueries({ queryKey: ['question-banks', token] })
     } catch (error) {
       toast.error('Could not archive the bank', { description: error instanceof Error ? error.message : 'Please try again.' })
     }
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 bg-[#fbf9f8] p-4 md:p-8 lg:p-10">
-      <header className="mb-7 flex flex-col gap-4 border-b border-[#e4e2e1] pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#994704]">Mock preparation</p>
-          <h1 className="text-[30px] font-bold leading-tight tracking-tight text-[#1b1c1c] md:text-[34px]">Question Banks</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f5c67] md:text-base">Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks.</p>
-        </div>
-        <button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#7a3903]">
+    <main className="mx-auto w-full max-w-[1440px] flex-1">
+      <DashboardPageHeader
+        className="mb-7 border-b border-dashboard-outline pb-6"
+        title="Question Banks"
+        description="Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks."
+        actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-dashboard-accent/90">
           <span className="material-symbols-outlined text-xl">create_new_folder</span>Create a bank
-        </button>
-      </header>
+        </button>}
+      />
 
       <div className="grid min-h-[620px] gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="rounded-xl border border-[#dedbd8] bg-white p-3 shadow-[0_4px_20px_rgba(61,61,61,0.05)]">
+        <aside className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card">
           <div className="flex items-center justify-between px-2 pb-3 pt-1">
             <h2 className="text-sm font-semibold text-[#1b1c1c]">Your collections</h2>
             <span className="rounded-full bg-[#f3eee9] px-2 py-1 text-xs font-semibold text-[#744018]">{banks.length}</span>
           </div>
           <div className="space-y-2" aria-live="polite">
-            {isLoadingBanks ? [0, 1, 2].map(item => <div key={item} className="h-20 animate-pulse rounded-lg bg-[#f4f1ef]" />) : banks.length === 0 ? (
+            {banksQuery.isLoading ? [0, 1, 2].map(item => <div key={item} className="h-20 animate-pulse rounded-lg bg-[#f4f1ef]" />) : banks.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[#c8c5d2] px-4 py-8 text-center">
                 <span className="material-symbols-outlined text-3xl text-[#8b8792]">inventory_2</span>
                 <p className="mt-2 text-sm font-semibold text-[#33313a]">No question banks yet</p>
@@ -261,7 +265,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
           </div>
         </aside>
 
-        <section className="min-w-0 rounded-xl border border-[#dedbd8] bg-white shadow-[0_4px_20px_rgba(61,61,61,0.05)]">
+        <section className="min-w-0 rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
           {!selectedBank ? (
             <div className="flex min-h-[520px] flex-col items-center justify-center px-6 text-center">
               <span className="material-symbols-outlined rounded-full bg-[#f3efec] p-4 text-4xl text-[#77727e]">library_add</span>
@@ -297,7 +301,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
               </div>
 
               <div className="divide-y divide-[#ebe7e4]">
-                {isLoadingQuestions ? [0, 1, 2].map(item => <div key={item} className="m-5 h-24 animate-pulse rounded-lg bg-[#f5f2f0]" />) : questions.length === 0 ? (
+                {questionsQuery.isLoading ? [0, 1, 2].map(item => <div key={item} className="m-5 h-24 animate-pulse rounded-lg bg-[#f5f2f0]" />) : questions.length === 0 ? (
                   <div className="flex min-h-[340px] flex-col items-center justify-center px-6 text-center">
                     <span className="material-symbols-outlined text-4xl text-[#8a8590]">quiz</span>
                     <h3 className="mt-3 text-lg font-semibold text-[#2b2931]">{search || subjectFilter ? 'No matching questions' : 'This bank is ready for questions'}</h3>
@@ -330,7 +334,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
       </div>
 
       {showCreateBank && <BankDialog onClose={() => setShowCreateBank(false)} onSubmit={createBank} />}
-      {showQuestionEditor && selectedBank && <QuestionDialog bank={selectedBank} courses={courses} token={token} apiUrl={apiUrl} onClose={() => setShowQuestionEditor(false)} onCreated={async () => { setShowQuestionEditor(false); await Promise.all([loadBanks(), loadQuestions()]) }} />}
+      {showQuestionEditor && selectedBank && <QuestionDialog bank={selectedBank} courses={courses} token={token} apiUrl={apiUrl} onClose={() => setShowQuestionEditor(false)} onCreated={async () => { setShowQuestionEditor(false); await Promise.all([queryClient.invalidateQueries({ queryKey: ['question-banks', token] }), queryClient.invalidateQueries({ queryKey: ['question-bank-questions', token, selectedBankId] })]) }} />}
       {bankToArchive && <ConfirmDialog title="Archive this question bank?" description={`${bankToArchive.name} will leave the active list. Questions already used in published mocks stay unchanged.`} confirmLabel="Archive bank" onCancel={() => setBankToArchive(null)} onConfirm={archiveBank} />}
     </main>
   )

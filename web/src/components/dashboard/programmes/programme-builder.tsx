@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
+import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import {
   clearProgrammeDraft,
   loadProgrammeDraft,
@@ -31,6 +33,7 @@ const newSubject = (defaultTutorId = ''): ProgrammeDraftSubject => ({ clientId: 
 
 export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const supabase = useMemo(() => createClient(), [])
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [tutors, setTutors] = useState<Tutor[]>([])
@@ -275,7 +278,11 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         setSavedProgramme(current => current ? { ...current, is_published: true } : current)
         toast.success('Programme published')
       } else toast.success('Programme saved as a draft')
-      if (!uploadFailed) router.push('/dashboard/programmes')
+      if (!uploadFailed) {
+        await queryClient.invalidateQueries({ queryKey: ['programmes'] })
+        router.refresh()
+        router.push('/dashboard/programmes')
+      }
     } catch (error) {
       toast.error(publish ? 'Could not publish programme' : 'Could not save programme', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
@@ -291,20 +298,19 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     router.push('/dashboard/programmes')
   }
 
-  if (loading) return <div className="mx-auto max-w-[1440px] rounded-lg border border-[#c2b59b] bg-white p-12 text-center text-sm text-[#474551]">Loading programme setup…</div>
+  if (loading) return <div className="mx-auto max-w-[1440px] rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading programme setup…</div>
 
   return (
     <div className="mx-auto w-full max-w-[1440px]">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link href="/dashboard/programmes" className="inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-[18px]">arrow_back</span> Programmes</Link>
-          <h1 className="mt-2 text-2xl font-bold text-[#1b1c1c]">{isEditing ? 'Manage programme' : 'Create programme'}</h1>
-        </div>
-        <div className="text-right">
+      <DashboardPageHeader
+        className="mb-5"
+        breadcrumb={<Link href="/dashboard/programmes" className="inline-flex items-center gap-1 font-semibold text-[#2e2877]"><span className="material-symbols-outlined text-[18px]">arrow_back</span> Programmes</Link>}
+        title={isEditing ? 'Manage programme' : 'Create programme'}
+        actions={<div className="text-right">
           {savedAt && <p className="text-xs font-medium text-[#474551]"><span className="mr-1 inline-block h-2 w-2 rounded-full bg-green-600" />Draft saved on this device</p>}
           {!savedProgramme?.is_published && <button onClick={discard} className="mt-1 text-xs font-semibold text-[#994704] hover:underline">Discard draft</button>}
-        </div>
-      </div>
+        </div>}
+      />
 
       <div className="mb-4 rounded-lg border border-[#c8c5d2] bg-white p-3 lg:hidden">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#474551]"><span>Step {step + 1} of {steps.length}</span><span>{steps[step].short}</span></div>
@@ -324,7 +330,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         </aside>
 
         <main className="col-span-12 lg:col-span-9">
-          <section className="rounded-lg border border-[#c2b59b] bg-white shadow-sm">
+          <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
             <header className="border-b border-[#e4e2e1] px-5 py-4 sm:px-7"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#994704]">Step {step + 1}</p><h2 className="mt-1 text-xl font-bold text-[#1b1c1c]">{steps[step].title}</h2></header>
             <div className="p-5 sm:p-7">
               {step === 0 && <DetailsStep draft={draft} coverFile={coverFile} payoutReady={payoutReady} updateDraft={updateDraft} setCoverFile={file => { setCoverFile(file); updateDraft('coverFileName', file?.name) }} />}

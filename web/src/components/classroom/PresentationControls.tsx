@@ -1,6 +1,6 @@
 'use client'
 
-import { FileText, Presentation, SquarePen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FileText, Presentation, SquarePen } from 'lucide-react'
 import { usePresentationSession } from './presentation-session'
 
 export default function PresentationControls() {
@@ -18,6 +18,7 @@ export default function PresentationControls() {
         onClick={() => setMaterialsOpen(true)}
         className={`relative flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors ${mode === 'presentation' ? 'bg-[#180d62] text-white shadow-sm' : 'text-[#66636d] hover:bg-white/70'}`}
         title="Presentation materials"
+        aria-label="Open teaching materials"
       >
         {active ? <Presentation size={16} /> : <FileText size={16} />}
         <span className="hidden xl:inline">Materials</span>
@@ -26,3 +27,5 @@ export default function PresentationControls() {
     </div>
   )
 }
+
+

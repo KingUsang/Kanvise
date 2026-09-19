@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ScheduleClient } from './schedule-client'
 import { toast } from 'sonner'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), mode: null as string | null }))
 
@@ -24,6 +25,11 @@ const mockTutors = [{ id: 'tutor-2', first_name: 'John', last_name: 'Doe' }]
 const adminProps = { token: 'fake-token', capabilities: { isAdmin: true, isTutor: false }, user: { id: 'admin-1', first_name: 'Admin', last_name: 'User' } }
 const tutorProps = { token: 'fake-token', capabilities: { isAdmin: false, isTutor: true }, user: { id: 'tutor-1', first_name: 'Jane', last_name: 'Smith' } }
 
+function renderSchedule(props: typeof adminProps | typeof tutorProps) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(<QueryClientProvider client={queryClient}><ScheduleClient {...props} /></QueryClientProvider>)
+}
+
 function configureInitialRequests(assignedTutorId = 'tutor-2') {
   mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
     if (options?.method === 'POST') return { ok: true, json: async () => ({ data: { id: 'new-class' } }) }
@@ -43,7 +49,7 @@ describe('Classes page actions', () => {
   })
 
   it('starts with two clear actions instead of an always-open scheduling form', async () => {
-    render(<ScheduleClient {...adminProps} />)
+    renderSchedule(adminProps)
 
     expect(await screen.findByRole('heading', { name: 'Classes' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Start now/i })).toBeInTheDocument()
@@ -53,7 +59,7 @@ describe('Classes page actions', () => {
 
   it('starts a tutor class from one grouped subject choice', async () => {
     const user = userEvent.setup()
-    render(<ScheduleClient {...tutorProps} />)
+    renderSchedule(tutorProps)
     await screen.findByRole('heading', { name: 'No classes scheduled yet' })
 
     await user.click(screen.getByRole('button', { name: /Start now/i }))
@@ -74,7 +80,7 @@ describe('Classes page actions', () => {
 
   it('schedules later with generated title and automatic sole-tutor assignment', async () => {
     const user = userEvent.setup()
-    render(<ScheduleClient {...adminProps} />)
+    renderSchedule(adminProps)
     await screen.findByRole('heading', { name: 'No classes scheduled yet' })
 
     await user.click(screen.getByRole('button', { name: /^Schedule$/i }))
@@ -96,7 +102,7 @@ describe('Classes page actions', () => {
 
   it('defaults to one time and can schedule a bounded weekly server series', async () => {
     const user = userEvent.setup()
-    render(<ScheduleClient {...tutorProps} />)
+    renderSchedule(tutorProps)
     await screen.findByRole('heading', { name: 'No classes scheduled yet' })
 
     await user.click(screen.getByRole('button', { name: /^Schedule$/i }))
@@ -116,7 +122,7 @@ describe('Classes page actions', () => {
 
   it('keeps title and duration behind optional details', async () => {
     const user = userEvent.setup()
-    render(<ScheduleClient {...tutorProps} />)
+    renderSchedule(tutorProps)
     await screen.findByRole('heading', { name: 'No classes scheduled yet' })
     await user.click(screen.getByRole('button', { name: /Start now/i }))
 
@@ -137,7 +143,7 @@ describe('Classes page actions', () => {
       return { ok: true, json: async () => ({ data: [] }) }
     })
 
-    render(<ScheduleClient {...tutorProps} />)
+    renderSchedule(tutorProps)
     expect((await screen.findAllByText('Weekly Mathematics class-1'))).toHaveLength(2)
     expect(screen.queryByText('Weekly Mathematics class-2')).not.toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'End series' })[0])

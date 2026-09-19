@@ -39,4 +39,37 @@ describe('authenticatedFetch', () => {
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(refreshSession).not.toHaveBeenCalled()
   })
+
+  it('supports using the client-managed session without a token argument', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const getSession = vi.fn().mockResolvedValue({ data: { session: { access_token: 'current-token' } } })
+    const refreshSession = vi.fn()
+    const supabase = { auth: { getSession, onAuthStateChange: vi.fn(), refreshSession } } as any
+
+    const response = await authenticatedFetch(supabase, '/dashboard/student', { cache: 'no-store' })
+
+    expect(response.status).toBe(204)
+    expect(getSession).toHaveBeenCalledOnce()
+    expect(refreshSession).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith('/dashboard/student', expect.objectContaining({
+      headers: { Authorization: 'Bearer current-token' },
+    }))
+  })
+
+  it('shares one refresh when requests receive 401 together', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValue(new Response(null, { status: 200 }))
+    const refreshSession = vi.fn(() => new Promise(resolve => setTimeout(() => resolve({ data: { session: { access_token: 'fresh-token' } }, error: null }), 0)))
+    const supabase = { auth: { refreshSession, getSession: vi.fn().mockResolvedValue({ data: { session: null } }), onAuthStateChange: vi.fn() } } as any
+
+    const responses = await Promise.all([
+      authenticatedFetch(supabase, '/one', 'expired-one'),
+      authenticatedFetch(supabase, '/two', 'expired-two'),
+    ])
+
+    expect(responses.every(response => response.status === 200)).toBe(true)
+    expect(refreshSession).toHaveBeenCalledOnce()
+  })
 })

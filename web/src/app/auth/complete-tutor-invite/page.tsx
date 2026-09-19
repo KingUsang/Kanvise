@@ -21,7 +21,9 @@ function CompleteTutorInviteContent() {
 
   useEffect(() => {
     let live = true
-    void supabase.auth.getUser().then(({ data: { user }, error: userError }) => {
+    void supabase.auth.getUser().then((result: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
+      const user = result.data.user
+      const userError = result.error
       if (!live) return
       if (userError || !user?.email || !inviteToken) {
         setError("This invitation session has expired. Ask your administrator to send a new invitation.")

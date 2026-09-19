@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
@@ -64,16 +65,20 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   }
 
   return (
-    <header className="h-16 fixed top-0 right-0 left-0 md:left-[280px] bg-white/95 backdrop-blur-sm border-b border-[#c8c5d2] flex items-center justify-between px-4 md:px-10 z-40">
+    <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-[#c8c5d2] bg-white/95 px-4 backdrop-blur-sm md:left-[280px] md:px-10">
       
       {/* Search & Mobile Menu */}
-      <div className="flex-1 flex items-center gap-4 max-w-md">
-        <button 
+      <div className="flex flex-1 items-center gap-4 md:max-w-md">
+        <Link href="/dashboard" className="flex items-center gap-2 text-sm font-bold tracking-tight text-[#180d62] sm:hidden" aria-label="Kanvise dashboard">
+          <img src="/kanvise_logo.jpeg" alt="" className="size-6 rounded border border-[#c8c5d2] object-cover" />
+          <span>Kanvise</span>
+        </Link>
+        {onMenuClick && <button
           className="md:hidden text-[#474551] flex items-center"
           onClick={onMenuClick}
         >
           <span className="material-symbols-outlined text-[24px]">menu</span>
-        </button>
+        </button>}
         <div className="relative flex-1 hidden sm:block">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#474551] text-[20px]">
             search
@@ -116,7 +121,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
       </div>
       
       {/* User identity */}
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-3 sm:space-x-6">
         <div className="relative">
           <button
             type="button"
@@ -130,7 +135,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
             aria-controls="dashboard-user-menu"
             className="flex items-center space-x-3 rounded-lg px-2 py-1 hover:bg-[#f5f3f2] focus:outline-none focus:ring-2 focus:ring-[#2e2877]"
           >
-            <div className="text-right">
+            <div className="hidden text-right sm:block">
               <div className="text-sm font-semibold text-[#1b1c1c]">
                 {user.first_name}
               </div>
