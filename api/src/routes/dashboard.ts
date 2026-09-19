@@ -410,7 +410,7 @@ dashboardRouter.get('/stats', async (c) => {
     .eq('school_id', schoolId)
     .gte('scheduled_at', startOfToday.toISOString())
     .lte('scheduled_at', endOfToday.toISOString())
-    .neq('status', 'cancelled')
+    .in('status', ['scheduled', 'live'])
     .order('scheduled_at', { ascending: true })
     .limit(6)
   if (!isAdmin) scheduleQuery = scheduleQuery.eq('tutor_id', user.id)
@@ -423,7 +423,7 @@ dashboardRouter.get('/stats', async (c) => {
       .select('id, title, scheduled_at, duration_minutes, status, courses(name)')
       .eq('school_id', schoolId).eq('tutor_id', user.id)
       .gte('scheduled_at', startOfToday.toISOString()).lte('scheduled_at', endOfToday.toISOString())
-      .neq('status', 'cancelled').order('scheduled_at', { ascending: true }).limit(6)
+      .in('status', ['scheduled', 'live']).order('scheduled_at', { ascending: true }).limit(6)
     if (myScheduleError) return c.json({ error: 'Failed to load teaching schedule' }, 500)
     responseData.my_today_schedule = myTodaySchedule || []
   }
