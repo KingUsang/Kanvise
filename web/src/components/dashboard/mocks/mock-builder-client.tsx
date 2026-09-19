@@ -149,6 +149,7 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [builderActionMessage, setBuilderActionMessage] = useState("");
   const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
   const [bulkMarks, setBulkMarks] = useState<string>("");
+  const [bulkMarkMode, setBulkMarkMode] = useState<"per_question" | "total">("per_question");
   const importedQuestionsRef = useRef<HTMLDivElement>(null);
   const importGenerationRef = useRef(0);
 
