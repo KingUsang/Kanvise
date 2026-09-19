@@ -160,20 +160,27 @@ export function MockBuilderClient({ token }: { token: string }) {
   }, [title, linkSlugEdited]);
 
     const applyBulkMarks = () => {
-    const marks = Number(bulkMarks);
-    if (!bulkMarks || isNaN(marks) || marks <= 0) {
+    const value = Number(bulkMarks);
+    if (!bulkMarks || isNaN(value) || value <= 0) {
       toast.error("Enter a valid mark value");
       return;
     }
     
-    // Only update questions that are currently visible in the active subject tab
     const visibleQuestionIds = new Set(visibleQuestions.map(q => q.id));
+    if (visibleQuestionIds.size === 0) {
+      toast.error("No questions to apply marks to");
+      return;
+    }
+    
+    const marksPerQuestion = bulkMarkMode === "total" 
+      ? Number((value / visibleQuestionIds.size).toFixed(2)) 
+      : value;
     
     setQuestions(questions.map(q => 
-      visibleQuestionIds.has(q.id) ? { ...q, marks } : q
+      visibleQuestionIds.has(q.id) ? { ...q, marks: marksPerQuestion } : q
     ));
     
-    toast.success(`Set marks to ${marks} for ${visibleQuestionIds.size} question${visibleQuestionIds.size === 1 ? '' : 's'}`);
+    toast.success(`Applied ${marksPerQuestion} mark${marksPerQuestion === 1 ? '' : 's'} each to ${visibleQuestionIds.size} question${visibleQuestionIds.size === 1 ? '' : 's'}`);
     setBulkMarks("");
   };
 
@@ -1311,10 +1318,14 @@ export function MockBuilderClient({ token }: { token: string }) {
             </div>
           )}
                     {!isReadOnly && (questions.length > 0) && (
-            <div className="flex items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
-              <span className="text-sm font-semibold text-[#474551]">Set marks for all questions</span>
-              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder="e.g. 2" className="w-20 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
-              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply</button>
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+              <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
+              <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
+                <option value="per_question">Per question</option>
+                <option value="total">Divide total marks</option>
+              </select>
+              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder={bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"} className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
+              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply to {visibleQuestions.length}</button>
             </div>
           )}
           <div className="space-y-6">
@@ -1598,10 +1609,14 @@ export function MockBuilderClient({ token }: { token: string }) {
             </h3>
             
                       {!isReadOnly && (questions.length > 0) && (
-            <div className="flex items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
-              <span className="text-sm font-semibold text-[#474551]">Set marks for all questions</span>
-              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder="e.g. 2" className="w-20 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
-              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply</button>
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+              <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
+              <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
+                <option value="per_question">Per question</option>
+                <option value="total">Divide total marks</option>
+              </select>
+              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder={bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"} className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
+              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply to {visibleQuestions.length}</button>
             </div>
           )}
           <div className="space-y-6">
