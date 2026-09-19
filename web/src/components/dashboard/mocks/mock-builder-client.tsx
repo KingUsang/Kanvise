@@ -165,8 +165,15 @@ export function MockBuilderClient({ token }: { token: string }) {
       toast.error("Enter a valid mark value");
       return;
     }
-    setQuestions(questions.map(q => ({ ...q, marks })));
-    toast.success(`Set marks to ${marks} for all questions`);
+    
+    // Only update questions that are currently visible in the active subject tab
+    const visibleQuestionIds = new Set(visibleQuestions.map(q => q.id));
+    
+    setQuestions(questions.map(q => 
+      visibleQuestionIds.has(q.id) ? { ...q, marks } : q
+    ));
+    
+    toast.success(`Set marks to ${marks} for ${visibleQuestionIds.size} question${visibleQuestionIds.size === 1 ? '' : 's'}`);
     setBulkMarks("");
   };
 
