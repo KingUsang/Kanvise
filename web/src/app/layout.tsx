@@ -15,6 +15,7 @@ import NavigationProgress from "@/components/navigation/NavigationProgress";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { UnsavedChangesProvider } from "@/components/navigation/UnsavedChangesContext";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -46,7 +47,9 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>
-        <QueryProvider>{children}</QueryProvider>
+        <UnsavedChangesProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </UnsavedChangesProvider>
         <ServiceWorkerRegistration />
         <InstallPrompt />
         <Toaster position="bottom-right" richColors />

@@ -15,7 +15,7 @@ export type PrePublishReview = {
 
 type ReviewInput = {
   title: string;
-  accessMode: "centre" | "direct" | "both";
+  accessMode: "centre" | "direct" | "both" | "";
   courseId: string;
   programmeId?: string;
   audienceScope?: "course" | "combination" | "direct_link" | "programme" | "school";
