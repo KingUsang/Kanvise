@@ -8,7 +8,7 @@ import { createPresignedUpload, verifyPrivateUpload } from '../storage/r2'
 
 export const webhooksRouter = new Hono()
 
-function validRecorderSignature(body: string, supplied: string | null) {
+function validRecorderSignature(body: string, supplied: string | null | undefined) {
   const secret = process.env.RECORDER_CALLBACK_SECRET || ''
   const expected = secret ? createHmac('sha256', secret).update(body).digest('hex') : ''
   return Boolean(secret && supplied && supplied.length === expected.length && timingSafeEqual(Buffer.from(supplied), Buffer.from(expected)))
