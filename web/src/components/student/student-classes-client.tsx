@@ -116,7 +116,7 @@ export function StudentClassesClient() {
             {resources[item.id] && (resources[item.id].loading || resources[item.id].error || resources[item.id].recordingUrl || resources[item.id].summary) && <div className="mt-4 border-t border-[#eeeae6] pt-4 sm:col-span-3">
               {resources[item.id].loading && <p className="text-sm text-[#716c76]">Loading class resources…</p>}
               {resources[item.id].error && <p role="alert" className="text-sm text-red-700">{resources[item.id].error}</p>}
-              {resources[item.id].recordingUrl && <video controls preload="metadata" className="w-full rounded-xl bg-black" src={resources[item.id].recordingUrl}>Your browser does not support video playback.</video>}
+              {resources[item.id].recordingUrl && <video controls preload="metadata" className="w-full rounded-xl bg-black" src={resources[item.id].recordingUrl || undefined}>Your browser does not support video playback.</video>}
               {resources[item.id].summary && <article className="mt-4 rounded-xl border border-[#e5e1dd] bg-[#fbf9f8] p-4"><h3 className="font-semibold text-[#1b1c1c]">Class summary</h3><div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#474551]">{resources[item.id].summary}</div></article>}
             </div>}
           </article>;
