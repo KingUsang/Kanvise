@@ -15,7 +15,7 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   const contentType = c.req.header('Content-Type') || ''
   if (contentType && !contentType.toLowerCase().startsWith('application/webhook+json') && !contentType.toLowerCase().startsWith('application/json')) return c.text('Unsupported content type', 415)
   const body = await c.req.text()
-  const signature = c.req.header('Authorization')
+  const signature = c.req.header('Authorization') || null
   if (!verifyPlugNmeetWebhook(body, signature)) return c.text('Invalid webhook signature', 401)
 
   let event: any
