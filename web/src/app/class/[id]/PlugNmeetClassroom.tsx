@@ -47,6 +47,12 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
         focusActiveSpeakerWebcam: true,
         maxNumDisplayWebcams: { desktop: 6, tablet: 4, mobile: 2 },
       }
+      // PlugNmeet's shipped client checks `access_token` first when it boots.
+      // Keep the cookie as a fallback, but provide the documented query value
+      // so the embedded client behaves exactly like its standalone page.
+      const currentUrl = new URL(window.location.href)
+      currentUrl.searchParams.set('access_token', joinToken)
+      window.history.replaceState(window.history.state, '', currentUrl)
       // The official client reads this short-lived token from its cookie when
       // it starts. This avoids putting credentials into the visible URL while
       // following PlugNmeet's documented custom-client flow.
@@ -67,6 +73,9 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
         scriptNodes.push(script)
       }
       if (disposed) return
+      // Leave the token available while the client performs verifyToken and
+      // opens its realtime connection; it is short-lived and the page is
+      // already authenticated. The client may renew it through its socket.
       if (!disposed) setLoaded(true)
     }
     void load().catch((error) => { if (!disposed) setIssue(error instanceof Error ? error.message : 'Could not load the classroom') })
