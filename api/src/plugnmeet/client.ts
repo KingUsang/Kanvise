@@ -191,7 +191,7 @@ export function createEnrolledRoomRequest(input: {
       ...(process.env.FRONTEND_URL ? { logout_url: `${process.env.FRONTEND_URL.replace(/\/$/, '')}/dashboard` } : {}),
       room_features: enrolledRoomFeatures(),
       copyright_conf: { display: false },
-      extra_data: { school_id: input.schoolId, course_id: input.courseId },
+      extra_data: { school_id: input.schoolId, course_id: input.courseId || '' },
     },
   }
 }
@@ -220,7 +220,9 @@ export function createGuestRoomRequest(input: {
       ...(process.env.FRONTEND_URL ? { logout_url: `${process.env.FRONTEND_URL.replace(/\/$/, '')}/dashboard` } : {}),
       room_features: features,
       copyright_conf: { display: false },
-      extra_data: { school_id: input.schoolId, course_id: null, access_profile: 'guest' },
+      // PlugNmeet's protobuf map accepts strings only; omit the concept of a
+      // course for guests with an empty string rather than a JSON null.
+      extra_data: { school_id: input.schoolId, course_id: '', access_profile: 'guest' },
     },
   }
 }

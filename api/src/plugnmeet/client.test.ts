@@ -33,5 +33,6 @@ describe('PlugNmeet provider contract', () => {
     expect(request.metadata.room_features.recording_features.is_allow).toBe(false)
     expect(request.metadata.room_features.enable_analytics).toBe(false)
     expect(request.metadata.room_features.insights_features.is_allow).toBe(false)
+    expect(request.metadata.extra_data.course_id).toBe('')
   })
 })
