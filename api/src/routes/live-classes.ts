@@ -405,7 +405,8 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
       await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
       const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
       if (startUpdateError) throw startUpdateError
-      const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode })
+      const isHost = insertedClass.tutor_id === user.id
+      const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, isHost ? 'Tutor' : 'Administrator'), isHost, schoolId: user.school_id, accessMode })
       return c.json({ data: { ...insertedClass, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, ...config } }, 201)
     } catch (error) {
       console.error('[live-classes] plugnmeet start-now failed:', error)
@@ -626,7 +627,10 @@ liveClassesRouter.delete('/:id', requireRole('admin'), async (c) => {
 liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
-  const access = await requireClassroom(c, 'host')
+  // An administrator may use the same ?start=true navigation after creating
+  // a class for another tutor. Once it is live they enter as an observer, not
+  // as a moderator. Starting a still-scheduled class remains tutor-only.
+  const access = await requireClassroom(c, user.role === 'admin' ? 'view' : 'host')
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
   const classroomProvider = providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider })
@@ -634,7 +638,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   if (classroomProvider === 'plugnmeet') {
     if (liveClass.status === 'live') {
       try {
-        const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
+        const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, access.isHost ? 'Tutor' : 'Administrator'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
         return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
       } catch (error) {
         console.error('[live-classes] plugnmeet resume failed:', error)
@@ -642,6 +646,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       }
     }
     if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
+    if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
       const roomId = liveClass.id
       await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
@@ -689,6 +694,8 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   if (liveClass.status !== 'scheduled') {
     return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
   }
+
+  if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
 
   const roomName = `kanvise-class-${id}`
 
