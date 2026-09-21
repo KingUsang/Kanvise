@@ -63,7 +63,8 @@ as an ES module; no custom `initializePlugNmeet()` call is required.
 
 ## Room profile
 
-Enrolled rooms use `max_participants: 0`, analytics, tutor-controlled recording,
+Enrolled rooms use a 1,000-participant infrastructure safety ceiling (the
+current PlugNmeet room API rejects zero), analytics, tutor-controlled recording,
 whiteboard/PDF support, and polls. Tutors use PlugNmeet's native **Generate with
 AI** poll flow: they type a short prompt, edit the generated native poll form,
 then create the poll. Screen sharing, file uploads, virtual backgrounds, RTMP,

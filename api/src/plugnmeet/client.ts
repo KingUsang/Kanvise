@@ -179,8 +179,11 @@ export function createEnrolledRoomRequest(input: {
 }) : PlugNmeetRoomCreateRequest {
   return {
     room_id: input.roomId,
-    max_participants: 0,
-    empty_timeout: 0,
+    // The current PlugNmeet API rejects zero, despite older documentation
+    // describing it as unlimited. This is an infrastructure safety ceiling,
+    // not a Kanvise admission cap.
+    max_participants: 1000,
+    empty_timeout: 300,
     metadata: {
       room_title: input.title,
       welcome_message: 'Welcome to your Kanvise class.',
@@ -208,8 +211,8 @@ export function createGuestRoomRequest(input: {
   features.insights_features = { is_allow: false }
   return {
     room_id: input.roomId,
-    max_participants: 0,
-    empty_timeout: 0,
+    max_participants: 1000,
+    empty_timeout: 300,
     metadata: {
       room_title: input.title,
       welcome_message: 'Welcome to this Kanvise live-class preview.',

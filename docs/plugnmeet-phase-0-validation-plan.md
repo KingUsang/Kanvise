@@ -33,7 +33,8 @@ impossible:
   keeping Kanvise share-token validation and server-issued join tokens.
 - Only enrolled classes receive transcription, Quick Check, recording,
   reconciled attendance, recap generation, and recap notifications.
-- There is no Kanvise-configured participant cap (`max_participants: 0`).
+- There is no Kanvise product admission cap; the API uses a 1,000-participant
+  infrastructure safety ceiling because the current room validator rejects 0.
 - Recording runs on a separate AWS EC2 Recorder VM.
 - The Live Class VM remains on Azure.
 - The browser never receives plugNmeet API credentials.
@@ -85,7 +86,8 @@ upgrades require the contract suite from this plan to pass again.
 
 - Do `/room/create`, `/room/getJoinToken`, `/room/isActive`, and `/room/end`
   behave exactly as documented on the pinned version?
-- Does `max_participants: 0` remove the configured room cap?
+- Does the 1,000-participant infrastructure ceiling meet the expected load
+  without acting as a product admission cap?
 - Can Kanvise UUIDs be used unchanged as `room_id` and `user_id`?
 - What happens on duplicate create, duplicate end, tutor refresh, and two active
   connections using the same `user_id`?

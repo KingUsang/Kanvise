@@ -57,7 +57,9 @@ pinned plugNmeet server version. Do not derive REST paths from SDK method names.
 
 `room_id` is reusable once a session ends — confirms the plan to set it to `live_class.id` directly, no separate mapping table needed.
 
-`max_participants: 0` is an explicit Kanvise product decision: there is no
+The current PlugNmeet room-create validator rejects `max_participants: 0`.
+Kanvise therefore uses `max_participants: 1000` as an infrastructure safety
+ceiling rather than a product admission cap; there is no
 application-level room cap. It does not imply infinite infrastructure capacity;
 monitor bandwidth, CPU, packet loss, and recorder/egress load and scale the
 deployment before saturation.
