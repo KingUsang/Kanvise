@@ -6,6 +6,19 @@ describe('classroom provider selection', () => {
     expect(providerForClass({ accessMode: 'anyone_with_link', schoolId: 'school-1' })).toBe('livekit')
   })
 
+  it('moves newly-created guest/link classes only when explicitly enabled', () => {
+    const previous = { enabled: process.env.PLUGNMEET_GUEST_ENABLED, url: process.env.PLUGNMEET_SERVER_URL, key: process.env.PLUGNMEET_API_KEY, secret: process.env.PLUGNMEET_API_SECRET }
+    process.env.PLUGNMEET_GUEST_ENABLED = 'true'
+    process.env.PLUGNMEET_SERVER_URL = 'https://plugnmeet.example'
+    process.env.PLUGNMEET_API_KEY = 'key'
+    process.env.PLUGNMEET_API_SECRET = 'secret'
+    expect(providerForClass({ accessMode: 'anyone_with_link', schoolId: 'school-1' })).toBe('plugnmeet')
+    if (previous.enabled === undefined) delete process.env.PLUGNMEET_GUEST_ENABLED; else process.env.PLUGNMEET_GUEST_ENABLED = previous.enabled
+    if (previous.url === undefined) delete process.env.PLUGNMEET_SERVER_URL; else process.env.PLUGNMEET_SERVER_URL = previous.url
+    if (previous.key === undefined) delete process.env.PLUGNMEET_API_KEY; else process.env.PLUGNMEET_API_KEY = previous.key
+    if (previous.secret === undefined) delete process.env.PLUGNMEET_API_SECRET; else process.env.PLUGNMEET_API_SECRET = previous.secret
+  })
+
   it('preserves a persisted provider decision', () => {
     expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1', persisted: 'livekit' })).toBe('livekit')
     expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1', persisted: 'plugnmeet' })).toBe('plugnmeet')

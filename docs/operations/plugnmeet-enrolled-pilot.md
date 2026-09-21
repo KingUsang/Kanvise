@@ -1,7 +1,8 @@
 # PlugNmeet enrolled-class pilot runbook
 
-This pilot routes only enrolled classes through PlugNmeet. Guest/link classes
-remain on the existing LiveKit path.
+This pilot uses the repurposed PlugNmeet VM for both classroom profiles.
+Enrolled rooms have the learning/recording layer; guest/link rooms are a
+restricted PlugNmeet preview profile.
 
 ## Enablement
 
@@ -15,6 +16,8 @@ PLUGNMEET_API_KEY=<server-api-key>
 PLUGNMEET_API_SECRET=<server-api-secret>
 PLUGNMEET_WEBHOOK_SECRET=<webhook-secret>
 PLUGNMEET_WEBHOOK_URL=https://<kanvise-api-host>/webhooks/plugnmeet
+PLUGNMEET_GUEST_ENABLED=true
+RECORDER_CALLBACK_SECRET=<long-random-shared-secret>
 ```
 
 Keep the flag `false` until the provider health check, webhook signature check,
@@ -69,13 +72,20 @@ The native AI poll composer is enabled for moderators. The
 browser uses adaptive stream, dynacast, simulcast, VP8, h360, camera-off entry,
 and device-specific webcam limits.
 
-After PlugNmeet emits `recording_proceeded`, the API job worker streams the
-recording to private R2, sends the same stream to Deepgram for transcription,
-then asks Gemini for one canonical student summary. The summary is saved as a
-tutor draft. Only the assigned tutor can edit and publish it; publishing sends
-an in-app notification to enrolled students, who can then watch the private
-recording and read the published summary from My Classes. Guest/link classes
-do not enter this pipeline.
+The recorder's `post_transcoding` hook uploads the finished MP4 directly to
+private R2, deletes its local temporary file, and sends an HMAC-signed callback
+to `/webhooks/plugnmeet-recording-upload`. Kanvise verifies the R2 object
+before marking it playable. Deepgram then reads the R2 object and Gemini makes
+a tutor-editable summary draft. A stopped/restarted recording is stored as
+segments; PlugNmeet merges them asynchronously before the student-facing R2
+recording is published. Guest/link classes do not enter this pipeline.
+
+Install [`post-transcoding-r2.sh`](../../infra/plugnmeet-recorder/post-transcoding-r2.sh)
+on the recorder, make it executable, install `curl`, `jq`, and `openssl`, and
+configure it as the recorder's long-lived `post_transcoding` script. Set
+`KANVISE_RECORDER_CALLBACK_URL=https://<kanvise-api-host>` and the same
+`RECORDER_CALLBACK_SECRET` held by the API. The recorder receives one-time
+presigned URLs only; it does not receive broad R2 credentials.
 
 ## AWS recorder approval gate
 
@@ -104,7 +114,8 @@ Use one pilot school, one tutor, three enrolled students, and one administrator:
 6. Enable Polls, use PlugNmeet's native Generate with AI flow, edit the draft,
    and run one quiz.
 7. End the room and verify webhook idempotency and attendance records.
-8. Join a guest/link class and confirm it still uses LiveKit.
+8. Join a guest/link class and confirm it uses PlugNmeet with recording,
+   analytics and summaries unavailable.
 
 Rollback is the reversible operation of setting
 `PLUGNMEET_ENROLLED_ENABLED=false` or removing a school from

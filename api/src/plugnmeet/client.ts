@@ -193,6 +193,35 @@ export function createEnrolledRoomRequest(input: {
   }
 }
 
+export function createGuestRoomRequest(input: {
+  roomId: string
+  title: string
+  schoolId: string
+  courseId: string | null
+}): PlugNmeetRoomCreateRequest {
+  const features = enrolledRoomFeatures()
+  features.enable_analytics = false
+  features.recording_features = {
+    is_allow: false, is_allow_cloud: false, is_allow_local: false,
+    enable_auto_cloud_recording: false, only_record_admin_webcams: false,
+  }
+  features.insights_features = { is_allow: false }
+  return {
+    room_id: input.roomId,
+    max_participants: 0,
+    empty_timeout: 0,
+    metadata: {
+      room_title: input.title,
+      welcome_message: 'Welcome to this Kanvise live-class preview.',
+      ...(process.env.PLUGNMEET_WEBHOOK_URL ? { webhook_url: process.env.PLUGNMEET_WEBHOOK_URL } : {}),
+      ...(process.env.FRONTEND_URL ? { logout_url: `${process.env.FRONTEND_URL.replace(/\/$/, '')}/dashboard` } : {}),
+      room_features: features,
+      copyright_conf: { display: false },
+      extra_data: { school_id: input.schoolId, course_id: null, access_profile: 'guest' },
+    },
+  }
+}
+
 async function request<T>(path: string, payload: Record<string, unknown>): Promise<PlugNmeetResponse<T>> {
   const { serverUrl, apiKey, apiSecret } = config()
   const body = JSON.stringify(payload)
@@ -230,6 +259,9 @@ export const plugNmeet = {
   },
   getRecordingDownloadToken(recordId: string) {
     return request<{ token?: string }>('/recording/getDownloadToken', { record_id: recordId })
+  },
+  mergeRecordings(input: { room_id: string; recording_ids: string[] }) {
+    return request('/recording/mergeRecordings', { by_ids: input })
   },
   createPoll(input: { room_id: string; question: string; options: Array<{ id: number; text: string; is_correct?: boolean }>; is_quiz: boolean; is_anonymous: boolean; duration: number }) {
     return request<{ poll_id?: string }>('/room/createPoll', input as unknown as Record<string, unknown>)

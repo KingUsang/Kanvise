@@ -220,6 +220,15 @@ export function validatePrivateUploadMetadata(input: {
   contentType: string
   fileSizeBytes: number
 }) {
+  if (input.entityType === 'live_class_recording') {
+    const fileSizeBytes = Number(input.fileSizeBytes)
+    if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) throw new StorageError('File size must be a positive integer', 'INVALID_FILE_SIZE')
+    if (fileSizeBytes > 20 * 1024 * 1024 * 1024) throw new StorageError('Recording exceeds the 20GB safety limit', 'FILE_TOO_LARGE')
+    if (!['video/mp4', 'video/webm'].includes(input.contentType)) throw new StorageError('Recording must be MP4 or WebM', 'INVALID_FILE_TYPE')
+    const extension = input.contentType === 'video/mp4' ? 'mp4' : 'webm'
+    if (input.fileName.split('.').pop()?.toLowerCase() !== extension) throw new StorageError('Filename extension does not match content type', 'FILE_TYPE_MISMATCH')
+    return { extension, fileSizeBytes }
+  }
   if (input.entityType !== 'question_media') return validateDocumentMetadata(input)
   const fileSizeBytes = Number(input.fileSizeBytes)
   if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) {

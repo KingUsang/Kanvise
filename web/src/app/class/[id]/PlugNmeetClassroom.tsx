@@ -37,7 +37,6 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       window.plugNmeetConfig = {
         serverUrl,
         staticAssetsPath: `${serverUrl.replace(/\/$/, '')}/assets`,
-        roomId,
         enableAdaptiveStream: true,
         enableDynacast: true,
         enableSimulcast: true,
@@ -47,10 +46,6 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
         stopMicTrackOnMute: true,
         focusActiveSpeakerWebcam: true,
         maxNumDisplayWebcams: { desktop: 6, tablet: 4, mobile: 2 },
-        cameraOnJoin: false,
-        microphoneOnJoin: isHost,
-        dataSaver: true,
-        rootElementId: 'plugnmeet-app',
       }
       // The official client reads this short-lived token from its cookie when
       // it starts. This avoids putting credentials into the visible URL while
@@ -88,7 +83,7 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
   return (
     <main className="flex h-screen h-dvh flex-col overflow-hidden bg-[#11121a] text-white">
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-white/10 bg-[#191a24] px-4">
-        <div className="min-w-0"><p className="truncate text-sm font-semibold">{classTitle}</p><p className="text-[11px] text-white/60">{loaded ? 'Connected' : 'Connecting'} · Data saver on</p></div>
+        <div className="min-w-0"><p className="truncate text-sm font-semibold">{classTitle}</p><p className="text-[11px] text-white/60">{loaded ? 'Connected · adaptive video' : 'Connecting'}</p></div>
         <span className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-white/70">{isHost ? 'Tutor' : 'Student'}</span>
       </header>
       {issue ? <section className="m-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62]"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : <div id="plugnmeet-app" className="min-h-0 flex-1" data-kanvise-class-id={classId} />}

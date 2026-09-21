@@ -14,7 +14,7 @@ import { createPresignedDownload } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
 import { ensureLiveKitWorkerReady, isLiveKitHealthy } from '../livekit/worker-lifecycle'
-import { createEnrolledPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
+import { createPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
 import { publishClassRecap } from '../jobs/live-class-recording'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
@@ -395,16 +395,17 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   const roomName = `kanvise-class-${insertedClass.id}`
   if (classroomProvider === 'plugnmeet') {
     try {
-      const room = await createEnrolledPlugNmeetRoom({
+      const room = await createPlugNmeetRoom({
         roomId: insertedClass.id,
         title: insertedClass.title,
         schoolId: user.school_id,
         courseId: insertedClass.course_id,
+        accessMode,
       })
       await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
       const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
       if (startUpdateError) throw startUpdateError
-      const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id })
+      const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode })
       return c.json({ data: { ...insertedClass, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, ...config } }, 201)
     } catch (error) {
       console.error('[live-classes] plugnmeet start-now failed:', error)
@@ -633,7 +634,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   if (classroomProvider === 'plugnmeet') {
     if (liveClass.status === 'live') {
       try {
-        const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id })
+        const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
         return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
       } catch (error) {
         console.error('[live-classes] plugnmeet resume failed:', error)
@@ -643,11 +644,11 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
     try {
       const roomId = liveClass.id
-      await createEnrolledPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id })
+      await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
       const startedAt = new Date().toISOString()
       const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id').single()
       if (error || !updated) throw error || new Error('CLASS_UPDATE_FAILED')
-      const config = await getPlugNmeetClientConfig({ roomId, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id })
+      const config = await getPlugNmeetClientConfig({ roomId, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...updated, ...config, class_title: updated.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
       console.error('[live-classes] plugnmeet start failed:', error)
@@ -752,7 +753,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
     if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
     try {
-      const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Participant'), isHost: access.isHost, schoolId: user.school_id })
+      const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Participant'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
       console.error('[live-classes] plugnmeet join failed:', error)

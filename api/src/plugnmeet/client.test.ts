@@ -1,6 +1,6 @@
 import { createHash, createHmac } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { createEnrolledRoomRequest, enrolledRoomFeatures, verifyPlugNmeetWebhook } from './client'
+import { createEnrolledRoomRequest, createGuestRoomRequest, enrolledRoomFeatures, verifyPlugNmeetWebhook } from './client'
 
 describe('PlugNmeet provider contract', () => {
   it('creates an uncapped enrolled room with data-saving features', () => {
@@ -25,5 +25,12 @@ describe('PlugNmeet provider contract', () => {
 
   it('keeps E2EE disabled so tutor audio can be transcribed', () => {
     expect(enrolledRoomFeatures().end_to_end_encryption_features.is_enabled).toBe(false)
+  })
+
+  it('creates a restricted guest room on the same PlugNmeet server', () => {
+    const request = createGuestRoomRequest({ roomId: 'guest-1', title: 'Try class', schoolId: 'school-1', courseId: null })
+    expect(request.metadata.room_features.recording_features.is_allow).toBe(false)
+    expect(request.metadata.room_features.enable_analytics).toBe(false)
+    expect(request.metadata.room_features.insights_features.is_allow).toBe(false)
   })
 })

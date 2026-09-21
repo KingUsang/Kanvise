@@ -1,12 +1,9 @@
-import { createHash } from 'node:crypto'
-import { PassThrough, Readable, Transform } from 'node:stream'
-import { pipeline } from 'node:stream/promises'
 import { supabase } from '../lib/supabase'
-import { buildPrivateFileKey, uploadPrivateObject, uploadPrivateStream } from '../storage/r2'
-import { plugNmeet, plugNmeetClientUrl } from '../plugnmeet/client'
+import { buildPrivateFileKey, createPresignedDownload, uploadPrivateObject } from '../storage/r2'
+import { plugNmeet } from '../plugnmeet/client'
 import { notifyClassRecapPublished } from '../notifications/triggers'
 
-type RecordingJob = { id: string; live_class_id: string; payload: Record<string, unknown>; attempts: number }
+type RecordingJob = { id: string; job_type: 'recording_process' | 'recording_finalize'; live_class_id: string; payload: Record<string, unknown>; attempts: number }
 type RecordingContext = { id: string; school_id: string; course_id: string; tutor_id: string; title: string; provider_room_id: string | null; classroom_provider: string }
 
 function requiredEnv(name: string) {
@@ -15,16 +12,11 @@ function requiredEnv(name: string) {
   return value
 }
 
-function recordingKey(schoolId: string, classId: string, recordingId: string) {
-  const safeId = createHash('sha256').update(recordingId).digest('hex').slice(0, 24)
-  return buildPrivateFileKey(schoolId, 'live_class_recording', classId, 'mp4', safeId)
-}
-
 function transcriptKey(schoolId: string, classId: string) {
   return buildPrivateFileKey(schoolId, 'live_class_transcript', classId, 'json')
 }
 
-async function transcribeDeepgram(stream: PassThrough, contentType = 'video/mp4') {
+async function transcribeDeepgram(stream: NodeJS.ReadableStream, contentType = 'video/mp4') {
   const apiKey = requiredEnv('DEEPGRAM_API_KEY')
   const url = new URL('https://api.deepgram.com/v1/listen')
   url.searchParams.set('model', process.env.DEEPGRAM_MODEL || 'nova-3')
@@ -92,70 +84,15 @@ async function loadContext(classId: string): Promise<RecordingContext> {
 
 async function processRecording(job: RecordingJob) {
   const liveClass = await loadContext(job.live_class_id)
-  const { data: recording, error: recordingError } = await (supabase as any).from('live_class_recordings').select('id, provider_recording_id, status, r2_file_key, content_type, file_size_bytes').eq('live_class_id', liveClass.id).maybeSingle()
-  if (recordingError || !recording?.provider_recording_id) throw recordingError || new Error('Recording provider ID is missing')
+  const { data: recording, error: recordingError } = await (supabase as any).from('live_class_recordings').select('id, r2_file_key, content_type').eq('live_class_id', liveClass.id).eq('status', 'ready').maybeSingle()
+  if (recordingError || !recording?.r2_file_key) throw recordingError || new Error('A verified R2 recording is not available yet')
 
-  const { data: claimed } = recording.status === 'transferring' || recording.status === 'ready'
-    ? { data: recording }
-    : await (supabase as any).from('live_class_recordings').update({ status: 'transferring', updated_at: new Date().toISOString() }).eq('id', recording.id).eq('status', 'pending').select('id, provider_recording_id, status, r2_file_key, content_type, file_size_bytes').maybeSingle()
-  if (!claimed) return
-
-  const infoResponse = await plugNmeet.getRecordingInfo(String(claimed.provider_recording_id))
-  const info = infoResponse.recording_info || {}
-  const tokenResponse = await plugNmeet.getRecordingDownloadToken(String(claimed.provider_recording_id))
-  if (!tokenResponse.token) throw new Error('PlugNmeet did not return a recording download token')
-  const downloadResponse = await fetch(`${plugNmeetClientUrl().replace(/\/$/, '')}/download/recording/${encodeURIComponent(tokenResponse.token)}`)
-  if (!downloadResponse.ok || !downloadResponse.body) throw new Error(`PlugNmeet recording download failed (${downloadResponse.status})`)
-
-  const contentType = claimed.content_type || 'video/mp4'
-  const size = Number(info.file_size || claimed.file_size_bytes || downloadResponse.headers.get('content-length') || 0) || undefined
-  const fileKey = claimed.r2_file_key || recordingKey(liveClass.school_id, liveClass.id, String(claimed.provider_recording_id))
-  const recordingStream = new PassThrough()
-  const transcriptionStream = new PassThrough()
-  const checksum = createHash('sha256')
-  const writeWithBackpressure = (stream: PassThrough, chunk: Buffer) => new Promise<void>((resolve, reject) => {
-    const onDrain = () => { cleanup(); resolve() }
-    const onError = (error: Error) => { cleanup(); reject(error) }
-    const cleanup = () => {
-      stream.off('drain', onDrain)
-      stream.off('error', onError)
-    }
-    stream.once('drain', onDrain)
-    stream.once('error', onError)
-    if (stream.write(chunk)) {
-      cleanup()
-      resolve()
-    }
-  })
-  const splitter = new Transform({
-    async transform(chunk, _encoding, callback) {
-      try {
-        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
-        checksum.update(buffer)
-        await Promise.all([
-          writeWithBackpressure(recordingStream, buffer),
-          writeWithBackpressure(transcriptionStream, buffer),
-        ])
-        callback()
-      } catch (error) {
-        callback(error as Error)
-      }
-    },
-    flush(callback) {
-      recordingStream.end()
-      transcriptionStream.end()
-      callback()
-    },
-  })
-  const uploadPromise = uploadPrivateStream({ fileKey, schoolId: liveClass.school_id, body: recordingStream, contentType, contentLength: size })
-  const transcriptionPromise = transcribeDeepgram(transcriptionStream, contentType).catch((error) => {
-    transcriptionStream.destroy(error as Error)
-    throw error
-  })
-  await Promise.all([pipeline(Readable.fromWeb(downloadResponse.body as any), splitter), uploadPromise])
-  const transcription = await transcriptionPromise
-
-  await (supabase as any).from('live_class_recordings').update({ status: 'ready', r2_file_key: fileKey, content_type: contentType, file_size_bytes: size || null, checksum: checksum.digest('hex'), ended_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', recording.id)
+  // Recorders upload to R2 themselves. Reading a short-lived signed URL keeps
+  // the summary worker independent from PlugNmeet and avoids buffering video.
+  const downloadUrl = await createPresignedDownload(recording.r2_file_key, liveClass.school_id, 60 * 30)
+  const downloadResponse = await fetch(downloadUrl)
+  if (!downloadResponse.ok || !downloadResponse.body) throw new Error(`R2 recording download failed (${downloadResponse.status})`)
+  const transcription = await transcribeDeepgram(downloadResponse.body as any, recording.content_type || 'video/mp4')
   const transcriptFileKey = transcriptKey(liveClass.school_id, liveClass.id)
   await uploadPrivateObject({ fileKey: transcriptFileKey, schoolId: liveClass.school_id, body: Buffer.from(JSON.stringify({ transcript: transcription.transcript, provider: 'deepgram', metadata: transcription.metadata, created_at: new Date().toISOString() })), contentType: 'application/json' })
   const summary = await summarizeWithGemini({ title: liveClass.title, transcript: transcription.transcript })
@@ -164,8 +101,39 @@ async function processRecording(job: RecordingJob) {
   if (recapError) throw recapError
 }
 
+async function finalizeRecording(job: RecordingJob) {
+  const liveClass = await loadContext(job.live_class_id)
+  const { data: segments, error } = await (supabase as any).from('live_class_recording_segments')
+    .select('provider_recording_id, r2_file_key, content_type, file_size_bytes, checksum, ended_at')
+    .eq('live_class_id', liveClass.id).eq('status', 'uploaded').order('created_at', { ascending: true })
+  if (error) throw error
+  if (!segments?.length) throw new Error('Waiting for recorder upload')
+
+  if (segments.length === 1) {
+    const segment = segments[0]
+    const { error: recordingError } = await (supabase as any).from('live_class_recordings').upsert({
+      live_class_id: liveClass.id, provider_recording_id: segment.provider_recording_id, r2_file_key: segment.r2_file_key,
+      status: 'ready', content_type: segment.content_type, file_size_bytes: segment.file_size_bytes, checksum: segment.checksum,
+      ended_at: segment.ended_at || new Date().toISOString(), updated_at: new Date().toISOString(),
+    }, { onConflict: 'live_class_id' })
+    if (recordingError) throw recordingError
+    const { error: jobError } = await (supabase as any).from('live_class_jobs').upsert({
+      job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString(),
+    }, { onConflict: 'job_type,live_class_id' })
+    if (jobError) throw jobError
+    return false
+  }
+
+  await plugNmeet.mergeRecordings({ room_id: String(liveClass.provider_room_id), recording_ids: segments.map((segment: any) => segment.provider_recording_id) })
+  // PlugNmeet sends recording_proceeded when its asynchronous merge finishes.
+  // That event assigns the merged record ID; its recorder hook then supplies
+  // the verified R2 object before any student can view it.
+  await (supabase as any).from('live_class_jobs').update({ status: 'waiting', payload: { merge_requested: true } }).eq('id', job.id)
+  return true
+}
+
 export async function runLiveClassRecordingJob(now = new Date(), limit = 3) {
-  const { data: jobs, error } = await (supabase as any).from('live_class_jobs').select('id, live_class_id, payload, attempts').eq('job_type', 'recording_process').eq('status', 'pending').lte('available_at', now.toISOString()).order('created_at', { ascending: true }).limit(limit)
+  const { data: jobs, error } = await (supabase as any).from('live_class_jobs').select('id, job_type, live_class_id, payload, attempts').in('job_type', ['recording_process', 'recording_finalize']).eq('status', 'pending').lte('available_at', now.toISOString()).order('created_at', { ascending: true }).limit(limit)
   if (error) throw error
   let processed = 0
   let failures = 0
@@ -173,7 +141,12 @@ export async function runLiveClassRecordingJob(now = new Date(), limit = 3) {
     const { data: claimed } = await (supabase as any).from('live_class_jobs').update({ status: 'running', attempts: (job.attempts || 0) + 1 }).eq('id', job.id).eq('status', 'pending').select('id').maybeSingle()
     if (!claimed) continue
     try {
-      await processRecording(job)
+      const waitingForMerge = job.job_type === 'recording_finalize' && await finalizeRecording(job)
+      if (waitingForMerge) {
+        processed += 1
+        continue
+      }
+      if (job.job_type === 'recording_process') await processRecording(job)
       await (supabase as any).from('live_class_jobs').update({ status: 'complete', completed_at: new Date().toISOString(), last_error: null }).eq('id', job.id)
       processed += 1
     } catch (jobError: any) {
@@ -181,7 +154,8 @@ export async function runLiveClassRecordingJob(now = new Date(), limit = 3) {
       const message = String(jobError?.message || jobError).slice(0, 500)
       const attempt = (job.attempts || 0) + 1
       await (supabase as any).from('live_class_jobs').update({ status: attempt >= 3 ? 'failed' : 'pending', last_error: message, available_at: new Date(Date.now() + 5 * 60_000).toISOString() }).eq('id', job.id)
-      await (supabase as any).from('live_class_recordings').update({ status: attempt >= 3 ? 'failed' : 'pending', updated_at: new Date().toISOString() }).eq('live_class_id', job.live_class_id).in('status', ['transferring', 'ready'])
+      // Recording delivery and AI processing are intentionally independent:
+      // students can still watch a verified R2 video if Deepgram/Gemini fails.
       await (supabase as any).from('live_class_recaps').upsert({ live_class_id: job.live_class_id, status: 'failed', failure_reason: message, updated_at: new Date().toISOString() }, { onConflict: 'live_class_id' })
       console.error('[recording] processing failed', { liveClassId: job.live_class_id, error: message })
     }

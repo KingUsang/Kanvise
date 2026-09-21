@@ -40,10 +40,10 @@ the API reference disagree, the reference wins.
 The Recorder VM is intentionally hosted separately on AWS so recording CPU and
 memory spikes cannot degrade a live class. It must reach the Live Class VM's
 media services over an authenticated private tunnel or tightly scoped firewall
-rules. The current API uses PlugNmeet's one-time recording download token and
-streams the MP4 to R2; it never buffers a full recording in Hono memory. AWS
-provisioning is blocked until provider credentials, region, and budget approval
-are supplied.
+rules. The recorder uploads the final MP4 directly to R2 from its
+`post_transcoding` hook and calls Kanvise with an HMAC-authenticated delivery
+notice; Kanvise never buffers or downloads the video through PlugNmeet. AWS
+provisioning is blocked until provider credentials, region, and budget approval.
 
 The two Redis responsibilities must not be conflated. The Redis colocated with
 plugNmeet supports its realtime stack and may disappear when the Live Class VM
@@ -53,10 +53,11 @@ cannot destroy their only copy.
 
 ## 2. Feature Ownership — unchanged from v2
 
-Whiteboard/PDF: 100% plugNmeet. Recording: `plugNmeet-recorder` MP4s, then
-post-class R2 transfer. Polls/Quick Check delivery: PlugNmeet native Polls and
-Generate with AI. STT and summaries: API-owned Deepgram + Gemini job after the
-recording webhook. Guest classes remain on the existing LiveKit path.
+Whiteboard/PDF: 100% plugNmeet. Recording: `plugNmeet-recorder` MP4s uploaded
+directly to R2 after transcoding. Polls/Quick Check delivery: PlugNmeet native
+Polls and Generate with AI. STT and summaries: API-owned Deepgram + Gemini job
+after verified R2 delivery. Guest classes use the same PlugNmeet server with a
+restricted room profile.
 
 ## 3. Room Lifecycle (revised)
 
@@ -136,8 +137,8 @@ first application load and intentional document downloads.
 
 The following egress/Bridge design is retained as future research only. The
 current implementation does not start a LiveKit egress or expose a transcript
-stream during class. It waits for `recording_proceeded`, downloads the finished
-MP4 through PlugNmeet, and sends that stream to Deepgram after class.
+stream during class. It waits for the recorder's verified R2 delivery, then
+sends that MP4 to Deepgram after class.
 
 ### 4.1 Trigger
 

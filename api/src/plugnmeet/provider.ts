@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { plugNmeet, plugNmeetClientUrl, plugNmeetConfigured, createEnrolledRoomRequest } from './client'
+import { plugNmeet, plugNmeetClientUrl, plugNmeetConfigured, createEnrolledRoomRequest, createGuestRoomRequest } from './client'
 
 export type ClassroomProvider = 'livekit' | 'plugnmeet'
 
@@ -12,18 +12,23 @@ export function enrolledPlugNmeetEnabled(schoolId: string | null | undefined, en
   return allowlist.includes('*') || allowlist.includes(schoolId)
 }
 
+export function guestPlugNmeetEnabled(env: NodeJS.ProcessEnv = process.env) {
+  return env.PLUGNMEET_GUEST_ENABLED === 'true' && plugNmeetConfigured(env)
+}
+
 export function providerForClass(input: { accessMode?: string | null; schoolId: string | null | undefined; persisted?: string | null }): ClassroomProvider {
   if (input.persisted === 'plugnmeet' || input.persisted === 'livekit') return input.persisted
   if (input.accessMode === 'enrolled_learners' && enrolledPlugNmeetEnabled(input.schoolId)) return 'plugnmeet'
+  if (input.accessMode === 'anyone_with_link' && guestPlugNmeetEnabled()) return 'plugnmeet'
   return 'livekit'
 }
 
-export async function createEnrolledPlugNmeetRoom(input: { roomId: string; title: string; schoolId: string; courseId: string | null }) {
-  await plugNmeet.createRoom(createEnrolledRoomRequest(input))
+export async function createPlugNmeetRoom(input: { roomId: string; title: string; schoolId: string; courseId: string | null; accessMode: string }) {
+  await plugNmeet.createRoom(input.accessMode === 'anyone_with_link' ? createGuestRoomRequest(input) : createEnrolledRoomRequest(input))
   return { provider: 'plugnmeet' as const, providerRoomId: input.roomId, serverUrl: plugNmeetClientUrl() }
 }
 
-export async function getPlugNmeetClientConfig(input: { roomId: string; userId: string; name: string; isHost: boolean; schoolId: string; profilePic?: string | null }) {
+export async function getPlugNmeetClientConfig(input: { roomId: string; userId: string; name: string; isHost: boolean; schoolId: string; accessMode?: string | null; profilePic?: string | null }) {
   const tokenResult = await plugNmeet.getJoinToken({
     room_id: input.roomId,
     user_info: {
@@ -34,7 +39,7 @@ export async function getPlugNmeetClientConfig(input: { roomId: string; userId: 
       client_type: 'WEB',
       user_metadata: {
         ...(input.profilePic ? { profile_pic: input.profilePic } : {}),
-        extra_data: { school_id: input.schoolId, access_profile: input.isHost ? 'tutor' : 'enrolled' },
+        extra_data: { school_id: input.schoolId, access_profile: input.isHost ? 'tutor' : input.accessMode === 'anyone_with_link' ? 'guest' : 'enrolled' },
         lock_settings: { lock_screen_sharing: true, lock_chat_file_share: true },
       },
     },
