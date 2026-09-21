@@ -6,7 +6,10 @@ export type ClassroomProvider = 'livekit' | 'plugnmeet'
 export function enrolledPlugNmeetEnabled(schoolId: string | null | undefined, env: NodeJS.ProcessEnv = process.env) {
   if (env.PLUGNMEET_ENROLLED_ENABLED !== 'true' || !plugNmeetConfigured(env) || !schoolId) return false
   const allowlist = (env.PLUGNMEET_PILOT_SCHOOL_IDS || '').split(',').map((value) => value.trim()).filter(Boolean)
-  return allowlist.includes(schoolId)
+  // A wildcard is useful for a controlled staging rollout (and keeps the
+  // explicit school allowlist available for production). Guest/link classes
+  // still never reach this branch because providerForClass checks access_mode.
+  return allowlist.includes('*') || allowlist.includes(schoolId)
 }
 
 export function providerForClass(input: { accessMode?: string | null; schoolId: string | null | undefined; persisted?: string | null }): ClassroomProvider {
