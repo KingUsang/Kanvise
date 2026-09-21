@@ -52,6 +52,10 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       // so the embedded client behaves exactly like its standalone page.
       const currentUrl = new URL(window.location.href)
       currentUrl.searchParams.set('access_token', joinToken)
+      // The deployed PlugNmeet client ships the English catalog under `en`.
+      // Pin the detector to that catalog instead of requesting a browser
+      // regional variant (for example `en-GB`) that this server does not have.
+      currentUrl.searchParams.set('lng', 'en')
       window.history.replaceState(window.history.state, '', currentUrl)
       // The official client reads this short-lived token from its cookie when
       // it starts. This avoids putting credentials into the visible URL while
