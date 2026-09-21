@@ -113,7 +113,7 @@ export function StudentClassesClient() {
               {!item.recording_status || item.recording_status === "pending" || item.recording_status === "transferring" ? <span className="self-center text-xs text-[#77727e]">Recording processing</span> : null}
               {item.recap_status === "draft" || item.recap_status === "generating" ? <span className="self-center text-xs text-[#77727e]">Summary pending review</span> : null}
             </div> : <p className={`text-sm font-medium ${isPast ? "text-[#77727e]" : "text-[#2e2877]"}`}>{item.status === "cancelled" ? "Class cancelled" : isPast ? "Awaiting an update" : "Scheduled"}</p>}</div>
-            {resources[item.id] && (resources[item.id].loading || resources[item.id].error || resources[item.id].recordingUrl || resources[item.id].summary) && <div className="mt-4 border-t border-[#eeeae6] pt-4 sm:col-span-3">
+            {resources[item.id] && (resources[item.id].loading || resources[item.id].error || resources[item.id].recordingUrl || resources[item.id].summary) && <div className="mt-4 border-t border-[#eeeae6] pt-4 sm:basis-full sm:flex-none">
               {resources[item.id].loading && <p className="text-sm text-[#716c76]">Loading class resources…</p>}
               {resources[item.id].error && <p role="alert" className="text-sm text-red-700">{resources[item.id].error}</p>}
               {resources[item.id].recordingUrl && <video controls preload="metadata" className="w-full rounded-xl bg-black" src={resources[item.id].recordingUrl || undefined}>Your browser does not support video playback.</video>}
