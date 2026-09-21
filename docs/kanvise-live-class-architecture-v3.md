@@ -1,5 +1,13 @@
 # Kanvise Live Class Architecture v3 — plugNmeet Integration
 
+> **Current pilot scope (2026-09-21):** ship the supported PlugNmeet
+> integration only: enrolled-room access, native tutor-created/AI-generated
+> polls, attendance webhooks, recording lifecycle, and the embedded client.
+> Deepgram, the LiveKit egress bridge, transcript-driven Quick Checks,
+> Kanvise-owned poll editing, and automated summaries are deferred. The later
+> sections describing those components remain design research, not current
+> implementation requirements.
+
 **Status:** Supersedes v2. Read alongside
 `plugnmeet-integration-reference.md` (the source-of-truth API reference) and
 `plugnmeet-phase-0-validation-plan.md` (the mandatory evidence gate before

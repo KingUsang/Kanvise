@@ -29,7 +29,15 @@ export type PlugNmeetRoomFeatures = {
   display_external_link_features: { is_allow: boolean }
   ingress_features: { is_allow: boolean }
   polls_features: { is_allow: boolean }
-  insights_features: { is_allow: boolean }
+  insights_features: {
+    is_allow: boolean
+    transcription_features?: { is_allow: boolean }
+    ai_features?: {
+      is_allow: boolean
+      ai_text_chat_features?: { is_allow: boolean }
+      meeting_summarization_features?: { is_allow: boolean }
+    }
+  }
   sip_dial_in_features: { is_allow: boolean }
   end_to_end_encryption_features: { is_enabled: boolean }
 }
@@ -138,7 +146,17 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
     display_external_link_features: { is_allow: false },
     ingress_features: { is_allow: false },
     polls_features: { is_allow: true },
-    insights_features: { is_allow: false },
+    // Enables PlugNmeet's shipped Generate-with-AI poll composer. Live
+    // transcription and meeting summaries remain off for this pilot.
+    insights_features: {
+      is_allow: true,
+      transcription_features: { is_allow: false },
+      ai_features: {
+        is_allow: true,
+        ai_text_chat_features: { is_allow: true },
+        meeting_summarization_features: { is_allow: false },
+      },
+    },
     sip_dial_in_features: { is_allow: false },
     end_to_end_encryption_features: { is_enabled: false },
   }

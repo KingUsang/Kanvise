@@ -15,8 +15,6 @@ PLUGNMEET_API_KEY=<server-api-key>
 PLUGNMEET_API_SECRET=<server-api-secret>
 PLUGNMEET_WEBHOOK_SECRET=<webhook-secret>
 PLUGNMEET_WEBHOOK_URL=https://<kanvise-api-host>/webhooks/plugnmeet
-PLUGNMEET_BRIDGE_SIGNING_SECRET=<transcription-bridge-secret>
-PLUGNMEET_BRIDGE_URL=https://<transcription-bridge-host>
 ```
 
 Keep the flag `false` until the provider health check, webhook signature check,
@@ -25,7 +23,10 @@ the web application environment.
 
 ## PlugNmeet server configuration
 
-The PlugNmeet server must have webhooks enabled. If Kanvise supplies a
+The PlugNmeet server must have webhooks enabled. Configure a supported
+Insights `ai_text_chat` provider (for example Gemini or OpenAI) because the
+native Generate with AI poll composer uses it; transcription and meeting
+summarization can remain disabled. If Kanvise supplies a
 per-room `webhook_url`, the server must also allow per-meeting webhook URLs:
 
 ```yaml
@@ -52,10 +53,18 @@ as an ES module; no custom `initializePlugNmeet()` call is required.
 ## Room profile
 
 Enrolled rooms use `max_participants: 0`, analytics, tutor-controlled recording,
-whiteboard/PDF support, and polls. Screen sharing, file uploads, virtual
-backgrounds, RTMP, breakout rooms, Insights, and E2EE are disabled. The
+whiteboard/PDF support, and polls. Tutors use PlugNmeet's native **Generate with
+AI** poll flow: they type a short prompt, edit the generated native poll form,
+then create the poll. Screen sharing, file uploads, virtual backgrounds, RTMP,
+breakout rooms, transcription, meeting summarization, and E2EE are disabled.
+The native AI poll composer is enabled for moderators. The
 browser uses adaptive stream, dynacast, simulcast, VP8, h360, camera-off entry,
 and device-specific webcam limits.
+
+Transcript-aware question generation, Deepgram, Kanvise-owned Quick Check
+editing, and automated summaries are deliberately deferred. They require a
+custom PlugNmeet build or a separate audio pipeline and are not prerequisites
+for this pilot.
 
 ## AWS recorder approval gate
 
@@ -76,10 +85,10 @@ Use one pilot school, one tutor, three enrolled students, and one administrator:
 2. Join as an enrolled student; verify camera-off, muted, and data-saver defaults.
 3. Attempt the same class as an unenrolled student; expect `NOT_ENROLLED`.
 4. Start and stop a tutor-controlled recording after AWS approval.
-5. Generate a Quick Check from tutor audio only and publish it as three quizzes.
+5. Enable Polls, use PlugNmeet's native Generate with AI flow, edit the draft,
+   and run one quiz.
 6. End the room and verify webhook idempotency and attendance records.
-7. Publish the tutor-reviewed recap; verify only course-enrolled students receive it.
-8. Join a guest/link class and confirm it still uses LiveKit.
+7. Join a guest/link class and confirm it still uses LiveKit.
 
 Rollback is the reversible operation of setting
 `PLUGNMEET_ENROLLED_ENABLED=false` or removing a school from

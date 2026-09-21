@@ -3,7 +3,6 @@ import { handleSupabaseEmailHook } from './supabase-email-hook'
 import { WebhookReceiver } from 'livekit-server-sdk'
 import { supabase } from '../lib/supabase'
 import { verifyPlugNmeetWebhook } from '../plugnmeet/client'
-import { verifyBridgeSignature } from '../plugnmeet/transcription'
 
 export const webhooksRouter = new Hono()
 
@@ -11,8 +10,7 @@ webhooksRouter.post('/supabase/send-email', (c) => handleSupabaseEmailHook(c.req
 
 // PlugNmeet sends one signed webhook stream for the enrolled-class provider.
 // Persist first, then apply the small amount of synchronous state needed by
-// the classroom UI. Heavy transcript/recording work is intentionally deferred
-// to durable jobs so a provider retry cannot duplicate side effects.
+// the classroom UI. Provider retries must not duplicate side effects.
 webhooksRouter.post('/plugnmeet', async (c) => {
   const contentType = c.req.header('Content-Type') || ''
   if (contentType && !contentType.toLowerCase().startsWith('application/webhook+json') && !contentType.toLowerCase().startsWith('application/json')) return c.text('Unsupported content type', 415)
@@ -50,7 +48,6 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   const participantIdentity = String(event.participant?.user_id || event.participant?.identity || '')
   if (eventName === 'participant_joined' && participantIdentity) {
     const { data: enrolled } = await (supabase as any).from('enrolments').select('student_id').eq('course_id', liveClass.course_id).eq('student_id', participantIdentity).eq('school_id', liveClass.school_id).maybeSingle()
-    // Tutor presence is handled by the provider and transcription pipeline;
     // attendance_records is deliberately learner-only.
     if (enrolled) {
       await (supabase as any).from('attendance_records').insert({ school_id: liveClass.school_id, live_class_id: liveClass.id, student_id: participantIdentity, joined_at: new Date().toISOString() })
@@ -63,50 +60,12 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   }
   if (eventName === 'room_finished' || eventName === 'analytics_proceeded') {
     await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', liveClass.id).eq('status', 'live')
-    await (supabase as any).from('live_class_jobs').upsert({ job_type: 'class_recap', live_class_id: liveClass.id, payload: { reason: eventName }, status: 'pending' }, { onConflict: 'job_type,live_class_id' })
   }
   if (eventName === 'recording_proceeded') {
     const recordingId = event.recording_info?.recording_id || event.recording_info?.id || null
     await (supabase as any).from('live_class_recordings').upsert({ live_class_id: liveClass.id, provider_recording_id: recordingId, status: 'pending' }, { onConflict: 'live_class_id' })
   }
-  if (eventName === 'track_published' && participantIdentity === liveClass.tutor_id) {
-    const trackName = String(event.track?.name || event.track?.source || '').toLowerCase()
-    if (trackName.includes('audio') || trackName.includes('microphone') || trackName.includes('mic')) {
-      await (supabase as any).from('live_class_transcription_sessions').upsert({ live_class_id: liveClass.id, provider_egress_id: event.track?.sid || null, status: 'active', started_at: new Date().toISOString() }, { onConflict: 'live_class_id' })
-    }
-  }
   await (supabase as any).from('plugnmeet_webhook_inbox').update({ processed_at: new Date().toISOString() }).eq('provider_event_id', eventId)
-  return c.text('OK', 200)
-})
-
-// The transcription bridge posts final tutor-only chunks here. It is signed
-// independently from provider webhooks because it is an internal worker path.
-webhooksRouter.post('/plugnmeet/transcript', async (c) => {
-  const body = await c.req.text()
-  let payload: any
-  try { payload = JSON.parse(body) } catch { return c.text('Invalid JSON', 400) }
-  const signature = c.req.header('X-Bridge-Signature') || ''
-  if (!verifyBridgeSignature({
-    classId: String(payload.class_id || ''),
-    trackId: String(payload.track_id || ''),
-    egressId: String(payload.egress_id || ''),
-    expiresAt: String(payload.expires_at || ''),
-    nonce: String(payload.nonce || ''),
-    signature,
-  })) return c.text('Unauthorized', 401)
-  const text = typeof payload.text === 'string' ? payload.text.trim() : ''
-  const sequence = Number(payload.sequence_number)
-  if (!payload.class_id || !text || !Number.isInteger(sequence) || sequence < 0) return c.text('Invalid transcript chunk', 400)
-  const { error } = await (supabase as any).from('live_class_transcript_chunks').upsert({
-    live_class_id: payload.class_id,
-    sequence_number: sequence,
-    started_at: payload.started_at || null,
-    ended_at: payload.ended_at || null,
-    speaker: 'tutor',
-    text: text.slice(0, 4_000),
-    is_final: payload.is_final !== false,
-  }, { onConflict: 'live_class_id,sequence_number' })
-  if (error) return c.text('Retry', 500)
   return c.text('OK', 200)
 })
 

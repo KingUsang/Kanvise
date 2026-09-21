@@ -9,13 +9,12 @@ import {
   requireRole,
 } from '../middleware/auth'
 import type { TenantVariables } from '../types'
-import { notifyClassCancelled, notifyClassRecapPublished } from '../notifications/triggers'
+import { notifyClassCancelled } from '../notifications/triggers'
 import { createPresignedDownload } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
 import { ensureLiveKitWorkerReady, isLiveKitHealthy } from '../livekit/worker-lifecycle'
 import { createEnrolledPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
-import { generateAudioQuickCheck, generateAudioRecap, newCandidateId, publishAudioQuickCheck, type QuickCheckQuestion } from '../plugnmeet/quick-check'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -797,99 +796,6 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
       course_name: (liveClass.courses as any)?.name || null,
     },
   })
-})
-
-// ── Audio-only Quick Check ───────────────────────────────────────────────
-// Quick Checks intentionally read only final tutor transcript chunks. PDFs,
-// slides, whiteboard state, chat, and student audio never enter this path.
-liveClassesRouter.post('/:id/quick-check/generate', requireRole('tutor', 'admin'), async (c) => {
-  const user = c.get('user')
-  const access = await requireClassroom(c, 'host')
-  if ('response' in access) return access.response
-  const liveClass = access.liveClass as any
-  if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) !== 'plugnmeet') return c.json({ error: 'Quick Check is available for PlugNmeet enrolled classes only', code: 'PROVIDER_UNSUPPORTED' }, 409)
-
-  const since = new Date(Date.now() - 15 * 60_000).toISOString()
-  const { data: chunks, error } = await (supabase as any).from('live_class_transcript_chunks').select('text, created_at, is_final').eq('live_class_id', liveClass.id).eq('is_final', true).gte('created_at', since).order('sequence_number', { ascending: true })
-  if (error) return c.json({ error: 'Could not load the tutor transcript', code: 'TRANSCRIPT_UNAVAILABLE' }, 500)
-  const transcript = (chunks || []).map((chunk: any) => String(chunk.text || '').trim()).filter(Boolean).join(' ').slice(0, 12_000)
-  if (transcript.length < 300) return c.json({ error: 'At least 300 characters of recent tutor audio are required', code: 'NOT_ENOUGH_TRANSCRIPT' }, 409)
-  try {
-    const questions = await generateAudioQuickCheck(transcript)
-    const candidateId = newCandidateId()
-    const { error: insertError } = await (supabase as any).from('live_class_quick_checks').insert({ live_class_id: liveClass.id, tutor_id: user.id, candidate_id: candidateId, questions, status: 'candidate' })
-    if (insertError) throw insertError
-    return c.json({ data: { candidate_id: candidateId, questions, expires_in_seconds: 600 } })
-  } catch (error) {
-    console.error('[quick-check] generation failed:', error)
-    return c.json({ error: 'Could not generate the Quick Check', code: 'QUICK_CHECK_FAILED' }, 502)
-  }
-})
-
-liveClassesRouter.post('/:id/quick-check/publish', requireRole('tutor', 'admin'), async (c) => {
-  const user = c.get('user')
-  const access = await requireClassroom(c, 'host')
-  if ('response' in access) return access.response
-  const liveClass = access.liveClass as any
-  const body = await c.req.json().catch(() => ({}))
-  const candidateId = typeof body.candidate_id === 'string' ? body.candidate_id : ''
-  if (!candidateId) return c.json({ error: 'candidate_id is required', code: 'MISSING_FIELDS' }, 400)
-  const { data: candidate, error } = await (supabase as any).from('live_class_quick_checks').select('candidate_id, questions, created_at, status').eq('candidate_id', candidateId).eq('live_class_id', liveClass.id).eq('tutor_id', user.id).maybeSingle()
-  if (error || !candidate) return c.json({ error: 'Quick Check candidate not found', code: 'CANDIDATE_NOT_FOUND' }, 404)
-  if (candidate.status !== 'candidate' || Date.now() - new Date(candidate.created_at).getTime() > 10 * 60_000) return c.json({ error: 'Quick Check candidate has expired', code: 'CANDIDATE_EXPIRED' }, 409)
-  try {
-    const pollIds = await publishAudioQuickCheck({ classId: liveClass.id, candidateId, tutorId: user.id, roomId: liveClass.provider_room_id || liveClass.id, questions: candidate.questions as QuickCheckQuestion[] })
-    return c.json({ data: { candidate_id: candidateId, poll_ids: pollIds } })
-  } catch (publishError) {
-    console.error('[quick-check] publish failed:', publishError)
-    return c.json({ error: 'Could not publish the Quick Check', code: 'QUICK_CHECK_PUBLISH_FAILED' }, 502)
-  }
-})
-
-// ── Reviewed recap and recording access ──────────────────────────────────
-liveClassesRouter.get('/:id/recap', async (c) => {
-  const access = await requireClassroom(c, 'view', true)
-  if ('response' in access) return access.response
-  const { data, error } = await (supabase as any).from('live_class_recaps').select('id, live_class_id, published_body, status, published_at, updated_at').eq('live_class_id', access.liveClass.id).eq('status', 'published').maybeSingle()
-  if (error) return c.json({ error: 'Could not load class recap', code: 'RECAP_UNAVAILABLE' }, 500)
-  if (!data) return c.json({ error: 'Class recap is not published', code: 'RECAP_NOT_READY' }, 404)
-  return c.json({ data })
-})
-
-liveClassesRouter.patch('/:id/recap', requireRole('tutor', 'admin'), async (c) => {
-  const user = c.get('user')
-  const access = await requireClassroom(c, 'host')
-  if ('response' in access) return access.response
-  const body = await c.req.json().catch(() => ({}))
-  const draft = typeof body.body === 'string' ? body.body.trim().slice(0, 12_000) : ''
-  if (!draft) return c.json({ error: 'Recap body is required', code: 'MISSING_FIELDS' }, 400)
-  const { data, error } = await (supabase as any).from('live_class_recaps').upsert({ live_class_id: access.liveClass.id, school_id: user.school_id, draft_body: draft, status: 'draft', updated_at: new Date().toISOString() }, { onConflict: 'live_class_id' }).select('id, live_class_id, draft_body, status, updated_at').single()
-  if (error) return c.json({ error: 'Could not save recap draft', code: 'RECAP_SAVE_FAILED' }, 500)
-  return c.json({ data })
-})
-
-liveClassesRouter.post('/:id/recap/publish', requireRole('tutor', 'admin'), async (c) => {
-  const user = c.get('user')
-  const access = await requireClassroom(c, 'host')
-  if ('response' in access) return access.response
-  if (!access.liveClass.course_id) return c.json({ error: 'Only enrolled classes can publish recaps', code: 'PROVIDER_UNSUPPORTED' }, 409)
-  const body = await c.req.json().catch(() => ({}))
-  let recap = typeof body.body === 'string' ? body.body.trim().slice(0, 12_000) : ''
-  try {
-    if (!recap) {
-      const { data: chunks } = await (supabase as any).from('live_class_transcript_chunks').select('text').eq('live_class_id', access.liveClass.id).eq('is_final', true).order('sequence_number', { ascending: true })
-      const transcript = (chunks || []).map((chunk: any) => String(chunk.text || '')).join(' ').slice(0, 12_000)
-      if (transcript.length < 300) return c.json({ error: 'At least 300 characters of tutor audio are required', code: 'NOT_ENOUGH_TRANSCRIPT' }, 409)
-      recap = await generateAudioRecap(transcript)
-    }
-    const { data, error } = await (supabase as any).from('live_class_recaps').upsert({ live_class_id: access.liveClass.id, school_id: user.school_id, draft_body: recap, published_body: recap, status: 'published', published_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: 'live_class_id' }).select('id, live_class_id, published_body, status, published_at').single()
-    if (error) throw error
-    const notification = await notifyClassRecapPublished({ id: access.liveClass.id, schoolId: user.school_id, courseId: String(access.liveClass.course_id), title: String(access.liveClass.title) })
-    return c.json({ data, notification })
-  } catch (error) {
-    console.error('[recap] publish failed:', error)
-    return c.json({ error: 'Could not publish class recap', code: 'RECAP_PUBLISH_FAILED' }, 500)
-  }
 })
 
 liveClassesRouter.get('/:id/recording', async (c) => {
