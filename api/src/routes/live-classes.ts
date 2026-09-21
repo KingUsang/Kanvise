@@ -809,6 +809,9 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 liveClassesRouter.get('/:id/recording', async (c) => {
   const access = await requireClassroom(c, 'view', true)
   if ('response' in access) return access.response
+  if (access.liveClass.classroom_provider !== 'plugnmeet' || !access.liveClass.course_id || access.liveClass.access_mode === 'anyone_with_link') {
+    return c.json({ error: 'Recording is not available for this class', code: 'RECORDING_UNAVAILABLE' }, 404)
+  }
   const { data, error } = await (supabase as any).from('live_class_recordings').select('id, status, provider_recording_id, r2_file_key, content_type, file_size_bytes, started_at, ended_at').eq('live_class_id', access.liveClass.id).eq('status', 'ready').maybeSingle()
   if (error) return c.json({ error: 'Could not load recording', code: 'RECORDING_UNAVAILABLE' }, 500)
   if (!data) return c.json({ error: 'Recording is not ready', code: 'RECORDING_NOT_READY' }, 404)
@@ -822,6 +825,9 @@ liveClassesRouter.get('/:id/recording', async (c) => {
 liveClassesRouter.get('/:id/recap', async (c) => {
   const access = await requireClassroom(c, 'view', true)
   if ('response' in access) return access.response
+  if (access.liveClass.classroom_provider !== 'plugnmeet' || !access.liveClass.course_id || access.liveClass.access_mode === 'anyone_with_link') {
+    return c.json({ error: 'Class summary is not available for this class', code: 'RECAP_UNAVAILABLE' }, 404)
+  }
   const { data, error } = await (supabase as any).from('live_class_recaps')
     .select(access.isHost ? 'id, live_class_id, draft_body, published_body, status, published_at, updated_at' : 'id, live_class_id, published_body, status, published_at, updated_at')
     .eq('live_class_id', access.liveClass.id)
