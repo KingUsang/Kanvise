@@ -80,4 +80,10 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
   for (const origin of (env.CORS_ALLOWED_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean)) {
     requireHttpsUrl('CORS_ALLOWED_ORIGINS', origin)
   }
+
+  if (env.PLUGNMEET_ENROLLED_ENABLED === 'true') {
+    const plugNmeetMissing = missingVariables(['PLUGNMEET_SERVER_URL', 'PLUGNMEET_API_KEY', 'PLUGNMEET_API_SECRET', 'PLUGNMEET_WEBHOOK_SECRET'], env)
+    if (plugNmeetMissing.length) throw new Error(`Missing PlugNmeet environment variables: ${plugNmeetMissing.join(', ')}`)
+    requireHttpsUrl('PLUGNMEET_SERVER_URL', env.PLUGNMEET_SERVER_URL)
+  }
 }

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ClientClassroom from './ClientClassroom'
 import PreparingClassroom from './PreparingClassroom'
+import PlugNmeetClassroom from './PlugNmeetClassroom'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -96,12 +97,17 @@ export default async function Page({ params, searchParams }: PageProps) {
     : `${honoUrl}/live-classes/${classId}/join`
 
   let classData: {
+    provider?: 'livekit' | 'plugnmeet'
     livekit_room_name: string
     access_token: string
     livekit_url: string
     is_host: boolean
     class_title: string
     course_name: string | null
+    room_id?: string
+    join_token?: string
+    server_url?: string
+    client_files?: { css_files: string[]; js_files: string[] }
   }
   let errorMessage: string | null = null
   let preparing: {
@@ -165,6 +171,10 @@ export default async function Page({ params, searchParams }: PageProps) {
   }
 
   const isHost = classData!.is_host === true // The backend securely confirms if they are the host
+
+  if (classData!.provider === 'plugnmeet' && classData!.join_token && classData!.server_url && classData!.client_files) {
+    return <PlugNmeetClassroom roomId={classData!.room_id || classId} joinToken={classData!.join_token} serverUrl={classData!.server_url} clientFiles={classData!.client_files} classId={classId} isHost={isHost} classTitle={classData!.class_title} />
+  }
 
   return (
     <ClientClassroom

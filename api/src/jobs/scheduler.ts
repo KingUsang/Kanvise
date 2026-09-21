@@ -2,6 +2,7 @@ import cron, { type ScheduledTask } from 'node-cron'
 import { isTelegramEnabled } from '../config/runtime-env'
 import { createGuardedJob, runAssignmentDeadlineJob, runLiveClassReminderJob, runMockPublicationJob, runTelegramAttendanceCloseJob, runTimetableMaterializationJob } from './runners'
 import { deallocateIdleLiveKitWorker, reconcileClosedLiveClasses, warmLiveKitWorkerForUpcomingClasses } from '../livekit/worker-lifecycle'
+import { runPlugNmeetRecapJob } from './plugnmeet'
 
 export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
   const jobs = [
@@ -12,6 +13,7 @@ export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
     { expression: '* * * * *', guarded: createGuardedJob('livekit_worker_warmup', () => warmLiveKitWorkerForUpcomingClasses()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('livekit_closed_class_reconciliation', () => reconcileClosedLiveClasses()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('livekit_worker_deallocation', () => deallocateIdleLiveKitWorker()) },
+    { expression: '* * * * *', guarded: createGuardedJob('plugnmeet_recap', () => runPlugNmeetRecapJob()) },
   ]
   if (isTelegramEnabled(env)) {
     jobs.push({ expression: '* * * * *', guarded: createGuardedJob('telegram_attendance_close', () => runTelegramAttendanceCloseJob()) })
