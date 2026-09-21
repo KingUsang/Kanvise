@@ -39,10 +39,18 @@ copyright_conf:
   allow_override: true
 ```
 
-The server and recorder services should both be active. The installation guide
-requires a clean Ubuntu/Debian host with a public IP, TLS, and the PlugNmeet
-and TURN subdomains; production guidance calls for at least 4 CPU cores, 4 GB
-RAM, and 100 Mbps bandwidth, with 8+ cores/RAM recommended when recording.
+The PlugNmeet server is currently the repurposed Azure `kanvise-livekit` VM.
+It owns the classroom media stack and TURN (`livekit.kanvise.com` and
+`turn.kanvise.com`). The PlugNmeet recorder is intentionally not enabled on
+that VM. Recording capture is a separate AWS on-demand worker and is not yet
+provisioned; do not treat the Azure VM as a recorder.
+
+The installation guide requires a clean Ubuntu/Debian host with a public IP,
+TLS, and the PlugNmeet and TURN subdomains; production guidance calls for at
+least 4 CPU cores, 4 GB RAM, and 100 Mbps bandwidth, with 8+ cores/RAM
+recommended when recording. The Azure VM meets the classroom requirement;
+the AWS recorder remains an infrastructure prerequisite before recording can
+be tested end to end.
 The client asset response must be reachable from the Kanvise browser over HTTPS.
 
 The PlugNmeet client is loaded by defining `window.plugNmeetConfig`, creating
@@ -61,14 +69,18 @@ The native AI poll composer is enabled for moderators. The
 browser uses adaptive stream, dynacast, simulcast, VP8, h360, camera-off entry,
 and device-specific webcam limits.
 
-Transcript-aware question generation, Deepgram, Kanvise-owned Quick Check
-editing, and automated summaries are deliberately deferred. They require a
-custom PlugNmeet build or a separate audio pipeline and are not prerequisites
-for this pilot.
+After PlugNmeet emits `recording_proceeded`, the API job worker streams the
+recording to private R2, sends the same stream to Deepgram for transcription,
+then asks Gemini for one canonical student summary. The summary is saved as a
+tutor draft. Only the assigned tutor can edit and publish it; publishing sends
+an in-app notification to enrolled students, who can then watch the private
+recording and read the published summary from My Classes. Guest/link classes
+do not enter this pipeline.
 
 ## AWS recorder approval gate
 
-Do not provision the paid recorder automatically. The approved pilot target is
+Do not provision the paid recorder until AWS credentials, region, budget owner,
+and R2/Deepgram provider values are available. The approved pilot target is
 an encrypted, On-Demand `c7a.2xlarge` Ubuntu 24.04 EC2 instance with 40 GiB
 root storage, 250 GiB encrypted scratch storage, WireGuard to Azure, and an
 initial two-recording limit. No internal recorder port is public.
@@ -84,11 +96,15 @@ Use one pilot school, one tutor, three enrolled students, and one administrator:
 1. Start an enrolled class and confirm the PlugNmeet client loads.
 2. Join as an enrolled student; verify camera-off, muted, and data-saver defaults.
 3. Attempt the same class as an unenrolled student; expect `NOT_ENROLLED`.
-4. Start and stop a tutor-controlled recording after AWS approval.
-5. Enable Polls, use PlugNmeet's native Generate with AI flow, edit the draft,
+4. Start and stop a tutor-controlled recording after the AWS recorder is
+   provisioned; wait for `recording_proceeded` and the processing job to finish.
+5. As the tutor, review and publish the generated summary; as an enrolled
+   student, verify the recording and summary are visible. Confirm an
+   unenrolled user cannot access either resource.
+6. Enable Polls, use PlugNmeet's native Generate with AI flow, edit the draft,
    and run one quiz.
-6. End the room and verify webhook idempotency and attendance records.
-7. Join a guest/link class and confirm it still uses LiveKit.
+7. End the room and verify webhook idempotency and attendance records.
+8. Join a guest/link class and confirm it still uses LiveKit.
 
 Rollback is the reversible operation of setting
 `PLUGNMEET_ENROLLED_ENABLED=false` or removing a school from

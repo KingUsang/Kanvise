@@ -40,6 +40,8 @@ interface LiveClass {
   course?: { name: string }
   tutor?: { first_name: string, last_name: string }
   series?: { source: 'timetable' | 'direct' } | null
+  recording_status?: 'pending' | 'transferring' | 'ready' | 'failed' | null
+  recap_status?: 'pending' | 'generating' | 'draft' | 'published' | 'failed' | null
 }
 
 interface Course {
@@ -82,12 +84,47 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [shareClassId, setShareClassId] = useState<string | null>(null)
   const [shareAccessMode, setShareAccessMode] = useState<'anyone_with_link' | 'enrolled_learners'>('enrolled_learners')
+  const [reviewClassId, setReviewClassId] = useState<string | null>(null)
+  const [reviewBody, setReviewBody] = useState('')
+  const [reviewWorking, setReviewWorking] = useState(false)
   const classActionFormRef = useRef<HTMLDivElement>(null)
   const subjectSelectRef = useRef<HTMLSelectElement>(null)
   
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const authHeaders = { Authorization: `Bearer ${token}` }
+
+  async function loadRecapForReview(classId: string) {
+    setReviewWorking(true)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/recap`, { headers: authHeaders })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not load summary')
+      setReviewClassId(classId)
+      setReviewBody(body.data?.draft_body || body.data?.published_body || '')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load summary')
+    } finally {
+      setReviewWorking(false)
+    }
+  }
+
+  async function publishRecap() {
+    if (!reviewClassId || !reviewBody.trim()) return
+    setReviewWorking(true)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${reviewClassId}/recap/publish`, { method: 'POST', headers: { ...authHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ body: reviewBody }) })
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error || 'Could not publish summary')
+      toast.success('Class summary published to enrolled students')
+      setReviewClassId(null)
+      await classesQuery.refetch()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not publish summary')
+    } finally {
+      setReviewWorking(false)
+    }
+  }
   const classesQuery = useQuery({
     queryKey: ['live-classes', user.id],
     queryFn: async () => {
@@ -703,6 +740,13 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                           <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">person</span> {cls.tutor?.first_name} {cls.tutor?.last_name}</span>
                           <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span> {cls.duration_minutes}m</span>
                         </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {cls.recording_status === 'ready' && <span className="rounded-full bg-[#e7f5eb] px-2 py-1 text-xs font-semibold text-[#196b37]">Recording ready</span>}
+                          {cls.recording_status === 'pending' || cls.recording_status === 'transferring' ? <span className="rounded-full bg-[#fff0e3] px-2 py-1 text-xs font-semibold text-[#8a4307]">Recording processing</span> : null}
+                          {cls.recap_status === 'published' && <span className="rounded-full bg-[#e7f5eb] px-2 py-1 text-xs font-semibold text-[#196b37]">Summary published</span>}
+                          {cls.recap_status === 'draft' && cls.tutor_id === user.id && <button type="button" disabled={reviewWorking} onClick={() => void loadRecapForReview(cls.id)} className="rounded-lg border border-[#2e2877] px-3 py-1.5 text-xs font-semibold text-[#2e2877]">Review summary</button>}
+                        </div>
+                        {reviewClassId === cls.id && <div className="mt-4 w-full rounded-xl border border-[#d8d2cc] bg-[#fbf9f8] p-4 sm:max-w-2xl"><label className="block text-sm font-semibold text-[#1b1c1c]" htmlFor={`summary-${cls.id}`}>Class summary<textarea id={`summary-${cls.id}`} value={reviewBody} onChange={event => setReviewBody(event.target.value)} rows={10} className="mt-2 w-full rounded-lg border border-[#cfc9c4] bg-white px-3 py-2 text-sm leading-6" /></label><div className="mt-3 flex gap-2"><button type="button" disabled={reviewWorking || !reviewBody.trim()} onClick={() => void publishRecap()} className="rounded-lg bg-[#994704] px-4 py-2 text-sm font-semibold text-white">{reviewWorking ? 'Publishing…' : 'Approve and publish'}</button><button type="button" disabled={reviewWorking} onClick={() => setReviewClassId(null)} className="rounded-lg border border-[#cfc9c4] px-4 py-2 text-sm font-semibold text-[#474551]">Close</button></div></div>}
                       </div>
                     </div>
                   ))}

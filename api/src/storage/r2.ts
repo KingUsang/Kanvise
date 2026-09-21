@@ -14,6 +14,8 @@ export const PRIVATE_UPLOAD_TYPES = [
   'submission',
   'question_media',
   'live_class_presentation',
+  'live_class_recording',
+  'live_class_transcript',
 ] as const
 
 export type PrivateUploadType = typeof PRIVATE_UPLOAD_TYPES[number]
@@ -476,6 +478,26 @@ export async function uploadPrivateObject(input: {
     Body: input.body,
     ContentType: input.contentType,
     ContentLength: input.body.byteLength,
+  }))
+  return { fileKey: input.fileKey }
+}
+
+/** Upload a large private object without buffering the complete file in memory. */
+export async function uploadPrivateStream(input: {
+  fileKey: string
+  schoolId: string
+  body: NodeJS.ReadableStream
+  contentType: string
+  contentLength?: number
+}) {
+  assertPrivateFileKey(input.fileKey, input.schoolId)
+  const { client, bucketName } = configuredClient()
+  await client.send(new PutObjectCommand({
+    Bucket: bucketName,
+    Key: input.fileKey,
+    Body: input.body as any,
+    ContentType: input.contentType,
+    ...(Number.isInteger(input.contentLength) ? { ContentLength: input.contentLength } : {}),
   }))
   return { fileKey: input.fileKey }
 }

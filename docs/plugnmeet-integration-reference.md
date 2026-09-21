@@ -85,7 +85,7 @@ Every sub-object below is marked `Yes` (required) or `No` (optional) per the doc
     "is_allow": true,
     "is_allow_cloud": true,
     "is_allow_local": false,
-    "enable_auto_cloud_recording": true,
+    "enable_auto_cloud_recording": false,
     "only_record_admin_webcams": false
   },
   "chat_features": {
@@ -101,7 +101,15 @@ Every sub-object below is marked `Yes` (required) or `No` (optional) per the doc
   "display_external_link_features": { "is_allow": false },
   "ingress_features": { "is_allow": false },
   "polls_features": { "is_allow": true },
-  "insights_features": { "is_allow": false },
+  "insights_features": {
+    "is_allow": true,
+    "transcription_features": { "is_allow": false },
+    "ai_features": {
+      "is_allow": true,
+      "ai_text_chat_features": { "is_allow": true },
+      "meeting_summarization_features": { "is_allow": false }
+    }
+  },
   "sip_dial_in_features": { "is_allow": false },
   "end_to_end_encryption_features": { "is_enabled": false }
 }
@@ -112,7 +120,10 @@ Notes tying this to decisions already made:
 - `mute_on_start: true` preserves Kanvise's current student-muted entry
   behaviour. The tutor can unmute after joining as moderator.
 - `allow_screen_share: false` — per your call, whiteboard's PDF/office upload already covers materials.
-- `insights_features.is_allow: false` — Kanvise runs its own Deepgram pipeline independently; no reason to also pay for/configure their Azure-backed insights layer.
+- `insights_features.is_allow: true` enables PlugNmeet's native Generate-with-AI
+  poll composer. Its transcription and meeting-summarization subfeatures stay
+  disabled; Kanvise runs Deepgram post-recording and Gemini summary generation
+  in its own API job.
 - `waiting_room_features.is_active: false` — Kanvise gates enrolled users and
   guest-demo links before issuing a join token.
 - `chat_features.is_allow_file_upload: false` — files shared there bypass R2 and aren't tracked in Kanvise's system (flagged earlier as your call; defaulting off per "start minimal").
@@ -128,7 +139,7 @@ override the expensive/persistent learning features:
 | `max_participants` | `0` (no app cap) | `0` (no app cap) |
 | `enable_analytics` | `true` | `false` |
 | `recording_features.is_allow` | `true` | `false` |
-| `recording_features.enable_auto_cloud_recording` | `true` | `false` |
+| `recording_features.enable_auto_cloud_recording` | `false` | `false` |
 | Kanvise transcription / Quick Check / recap | enabled | disabled |
 
 Both profiles are still created server-side by Kanvise and use short-lived join

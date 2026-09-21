@@ -169,9 +169,9 @@ export async function notifyClassRecapPublished(input: {
   await Promise.all(recipients.map((recipient) => notificationRepository.createInApp({
     schoolId: input.schoolId,
     recipientId: recipient.id,
-    event: 'live_class_reminder',
+    event: 'class_recap_ready',
     title: 'Class recap ready',
-    body: `${input.title} has a recap ready to review.`,
+    body: `${input.title} summary and recording are ready to view.`,
     relatedEntityType: 'live_class_recap',
     relatedEntityId: input.id,
   })))

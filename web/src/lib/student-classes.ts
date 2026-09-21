@@ -12,6 +12,8 @@ export type StudentClass = {
   course_id: string;
   course: { id: string; name: string } | null;
   tutor: { id: string; first_name: string; last_name: string } | null;
+  recording_status?: "pending" | "transferring" | "ready" | "failed" | null;
+  recap_status?: "pending" | "generating" | "draft" | "published" | "failed" | null;
 };
 
 export const getStudentClasses = cache(async (accessToken: string): Promise<StudentClass[]> => {

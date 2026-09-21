@@ -7,6 +7,10 @@ export const notificationEmailEvents = {
   submission_graded: 'submission_graded',
   mock_fully_graded: 'mock_fully_graded',
   class_cancelled: 'class_cancellation',
+  // Recap publication is currently in-app/push-only; the value keeps the
+  // notification event type compatible with the existing email router if a
+  // recap email is introduced later.
+  class_recap_ready: 'live_class_reminder',
 } as const
 
 export type NotificationEvent = keyof typeof notificationEmailEvents

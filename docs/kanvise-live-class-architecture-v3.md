@@ -1,12 +1,13 @@
 # Kanvise Live Class Architecture v3 — plugNmeet Integration
 
-> **Current pilot scope (2026-09-21):** ship the supported PlugNmeet
-> integration only: enrolled-room access, native tutor-created/AI-generated
-> polls, attendance webhooks, recording lifecycle, and the embedded client.
-> Deepgram, the LiveKit egress bridge, transcript-driven Quick Checks,
-> Kanvise-owned poll editing, and automated summaries are deferred. The later
-> sections describing those components remain design research, not current
-> implementation requirements.
+> **Current implementation scope (2026-09-21):** enrolled-room access, native
+> tutor-created/AI-generated polls, attendance webhooks, on-demand recording
+> lifecycle, private R2 playback, Deepgram post-recording transcription, and a
+> Gemini class-summary draft that the tutor can edit and publish. Students see
+> a published summary and recording only after enrolment access is verified.
+> The live egress/streaming transcription and Kanvise-owned Quick Check design
+> below are research only; the current product uses PlugNmeet's native AI poll
+> composer.
 
 **Status:** Supersedes v2. Read alongside
 `plugnmeet-integration-reference.md` (the source-of-truth API reference) and
@@ -22,24 +23,27 @@ the API reference disagree, the reference wins.
 - Branding: confirmed official mechanism — `window.plugNmeetConfig.designCustomization` for colors/logo, `copyright_conf.display: false` to remove "Powered by plugNmeet" entirely. Not a CSS hack.
 - Screen share defaulted OFF — whiteboard's native PDF/office upload already covers materials-sharing.
 - The full `room_features` schema is now exact, sourced from their API docs — see the reference doc for the complete JSON.
-- Egress and Deepgram wiring, previously described in outline, is now fully specified end to end (§4).
+- Recording processing is deliberately post-class: PlugNmeet produces the MP4,
+  the API streams it to private R2, then sends the same stream to Deepgram and
+  Gemini. The separate live egress bridge described in older sections is not
+  enabled in this pilot.
 - **Note on SDKs:** the published `plugnmeet-sdk-js` package (GitHub) appears to lag the current live API — it still lists deprecated analytics methods and is missing `createPoll` and the artifact endpoints entirely. Build against the documented REST API directly (HMAC-signed JSON POSTs) rather than assuming the SDK is complete; verify each method exists in the installed SDK version before relying on it.
 
 ## 1. Component Topology (Azure + AWS)
 
 | VM | Runs |
 |---|---|
-| **App VM** | Hono API (PM2), Transcription Bridge worker, durable Kanvise job/transcript Redis (or a managed equivalent) |
-| **Live Class VM** | LiveKit, `livekit-egress` worker, plugNmeet-server, plugNmeet/LiveKit Redis, NATS, MariaDB |
-| **Recorder VM (AWS EC2)** | `plugNmeet-recorder`; isolated from the interactive classroom workload |
+| **App VM** | Hono API (PM2), scheduler/job worker, durable Kanvise database/R2 access |
+| **Live Class VM (Azure)** | repurposed `kanvise-livekit` VM: plugNmeet-server, bundled LiveKit/NATS/Redis/MariaDB, and TURN |
+| **Recorder VM (AWS EC2)** | on-demand `plugNmeet-recorder`; not provisioned yet, isolated from the classroom workload |
 
 The Recorder VM is intentionally hosted separately on AWS so recording CPU and
 memory spikes cannot degrade a live class. It must reach the Live Class VM's
-LiveKit/NATS services over an authenticated private tunnel or tightly scoped
-firewall rules. Before implementation, validate the recorder's final-file
-storage contract: the recorder and `plugNmeet-server` must either share the
-recording path or use a supported external-storage hook. Do not transfer a full
-MP4 through Hono's memory.
+media services over an authenticated private tunnel or tightly scoped firewall
+rules. The current API uses PlugNmeet's one-time recording download token and
+streams the MP4 to R2; it never buffers a full recording in Hono memory. AWS
+provisioning is blocked until provider credentials, region, and budget approval
+are supplied.
 
 The two Redis responsibilities must not be conflated. The Redis colocated with
 plugNmeet supports its realtime stack and may disappear when the Live Class VM
@@ -49,7 +53,10 @@ cannot destroy their only copy.
 
 ## 2. Feature Ownership — unchanged from v2
 
-Whiteboard/PDF: 100% plugNmeet. Recording: `plugNmeet-recorder` MP4s, BBB-style event-stream shelved. Polls/Quick Check delivery: plugNmeet, server-side. STT: fully custom, independent of plugNmeet's Azure-only insights layer.
+Whiteboard/PDF: 100% plugNmeet. Recording: `plugNmeet-recorder` MP4s, then
+post-class R2 transfer. Polls/Quick Check delivery: PlugNmeet native Polls and
+Generate with AI. STT and summaries: API-owned Deepgram + Gemini job after the
+recording webhook. Guest classes remain on the existing LiveKit path.
 
 ## 3. Room Lifecycle (revised)
 
@@ -125,9 +132,12 @@ Phase 0 owns the final numbers. The initial student budgets are 50 MB/hour for
 audio-only and 300 MB/hour for one 360p tutor webcam plus audio, excluding the
 first application load and intentional document downloads.
 
-## 4. Egress → Transcription Pipeline, fully specified
+## 4. Legacy live-transcription design (not enabled in this pilot)
 
-This is the one piece of the system with no plugNmeet involvement at all — LiveKit on one side, Deepgram on the other, Kanvise's own Bridge worker in between.
+The following egress/Bridge design is retained as future research only. The
+current implementation does not start a LiveKit egress or expose a transcript
+stream during class. It waits for `recording_proceeded`, downloads the finished
+MP4 through PlugNmeet, and sends that stream to Deepgram after class.
 
 ### 4.1 Trigger
 
@@ -218,7 +228,13 @@ incrementally to durable storage; Redis is a working buffer, not the only copy.
 
 On the WebSocket closing (track unpublished / tutor left), the Bridge closes its Deepgram connection and lets the Redis key expire naturally rather than deleting it immediately — gives a short grace window in case Quick Check was mid-generation when class ended.
 
-## 5. Quick Check — End to End
+## 5. Quick Check — future Kanvise-owned extension
+
+This section is shelved for the pilot. Tutors currently use PlugNmeet's native
+**Generate with AI** poll composer inside the classroom: they type a prompt,
+edit the generated native poll, and publish it with PlugNmeet controls. No
+custom overlay, transcript context, or fork is required. The design below is
+kept only for a later product decision.
 
 ```mermaid
 sequenceDiagram
@@ -299,26 +315,33 @@ never create a recap. No attendance-diffing, no per-student LLM calls.
 
 **Flow:**
 
-1. On `room_finished`, Hono records an idempotent recap job and acknowledges the
-   webhook quickly. A worker assembles the already-durable transcript into an
-   R2 JSON file under the existing `schools/{school_id}/...` key convention.
-2. The worker sends the bounded/assembled transcript to the LLM, gets back one
-   canonical class summary, and writes it with `status = 'draft'`. Failures are
-   retryable and visible; they do not block the webhook request.
-3. Tutor sees a "Review recap" prompt on their dashboard and approves it. (Whether they can edit the text before approving, or only accept/reject, is still open — worth settling before building the review UI.)
-4. On approval: one `notifications` row per enrolled student — not just attendees — all pointing at the same `class_recaps` record. No per-student content generated.
+1. On `recording_proceeded`, Hono records an idempotent recording-processing job
+   and acknowledges the webhook quickly. The worker obtains a one-time
+   PlugNmeet download token and streams the MP4 to private R2 while teeing the
+   bytes to Deepgram.
+2. The worker stores a private transcript JSON object, asks Gemini for one
+   canonical summary, and writes `live_class_recaps.status = 'draft'`. Failures
+   retry up to three times and remain visible in the job/recording status.
+3. The assigned tutor opens the completed class in Schedule, edits the draft,
+   and clicks **Approve and publish**. The API rechecks tutor ownership and
+   stores the published body.
+4. Publishing creates one in-app `class_recap_ready` notification per student
+   enrolled in the course. The student can then open My Classes, obtain a
+   short-lived recording URL, and read the published summary. No per-student
+   LLM content is generated.
 
 **Schema:**
 
 ```sql
-CREATE TABLE class_recaps (
+CREATE TABLE live_class_recaps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   school_id UUID NOT NULL REFERENCES schools(id),
   live_class_id UUID NOT NULL REFERENCES live_classes(id),
   course_id UUID NOT NULL REFERENCES courses(id),
   tutor_id UUID NOT NULL REFERENCES user_profiles(id),
-  transcript_file_key TEXT,
-  summary_text TEXT,
+  raw_transcript_key TEXT,
+  draft_body TEXT,
+  published_body TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'generating', 'draft', 'published', 'failed')),
   approved_by UUID REFERENCES user_profiles(id),
   failure_reason TEXT,
@@ -331,24 +354,27 @@ CREATE TABLE class_recaps (
 CREATE UNIQUE INDEX class_recaps_one_per_class ON class_recaps(live_class_id);
 ```
 
-**Real migration note, not just an addition:** the current
+**Implemented migration note:** the current
 `notifications_type_check` constraint already includes
 `live_class_reminder`, `assignment_deadline`, `mock_published`,
 `payment_confirmed`, `enrolment_confirmed`, `submission_graded`,
 `mock_fully_graded`, and `class_cancelled`. Delivering the recap as an in-app
 notification requires a migration that recreates the constraint with
-`class_recap_ready` added; it is not a free insert.
+`class_recap_ready` added; it is not a free insert. RLS is enabled on recording
+and recap tables with server-side service-role access only; API routes enforce
+student enrolment and tutor ownership before returning anything.
 
-## 7. Recording Storage — unchanged from v2
+## 7. Recording Storage — current implementation
 
-Recording is enabled only for enrolled classes. The AWS Recorder VM produces
-the MP4 without competing with the Live Class VM. On `recording_proceeded`, a
-background transfer job obtains a one-time token from
-`/recording/getDownloadToken` and streams the file into R2 under
-`schools/{school_id}/...`; Hono never buffers the complete MP4. The job records
-size/checksum, is idempotent by `record_id`, and deletes the plugNmeet copy only
-after R2 verification. A supported plugNmeet storage hook that can write
-directly to the chosen object store is preferred if validated in a spike.
+Recording is enabled only for enrolled classes. The AWS Recorder VM is the
+planned on-demand capture host but is not deployed yet. Once available,
+`recording_proceeded` starts a background job that obtains a one-time token from
+`/recording/getDownloadToken` and streams the file into private R2 under
+`schools/{school_id}/private/live_class_recording/...`; Hono never buffers the
+complete MP4. The job records size and SHA-256, is idempotent by provider
+recording ID, and exposes only short-lived signed playback URLs to authorized
+students/tutors. PlugNmeet source deletion is intentionally deferred until a
+validated retention policy and end-to-end R2 verification are in place.
 
 ## 8. Open Items
 
@@ -357,10 +383,12 @@ Carried forward, still genuinely unresolved:
 - **`voted_poll` field granularity** — blocks `quick_check_responses` (§5.4).
 - **Azure credit type/duration** — unresolved, affects whether this is a disposable pilot deployment.
 - **VM sizing under real concurrent load** — untested assumption, watch CPU on the Live Class VM once multiple simultaneous classes are running for real.
-- **Can tutors edit the recap summary before approving it, or only accept/reject as generated?**
+- **AWS recorder provisioning** — credentials, region, budget approval, private
+  networking, and the recorder's PlugNmeet configuration are still required.
+- **Deepgram provider configuration** — add a staging API key/model and validate
+  the MP4 container contract with a real recording before enabling the worker.
 - **Cross-cloud recorder networking/storage** — validate the AWS Recorder VM's
-  secure NATS/LiveKit connectivity and shared/external storage mechanism before
-  production deployment.
+  secure media connectivity and R2 transfer mechanism before production.
 
 ## 9. Summary of what's shelved
 

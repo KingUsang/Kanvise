@@ -15,6 +15,7 @@ import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
 import { ensureLiveKitWorkerReady, isLiveKitHealthy } from '../livekit/worker-lifecycle'
 import { createEnrolledPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
+import { publishClassRecap } from '../jobs/live-class-recording'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -478,7 +479,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(source)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(source), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
 
@@ -510,7 +511,14 @@ liveClassesRouter.get('/', async (c) => {
     return c.json({ error: 'Failed to fetch classes' }, 500)
   }
 
-  return c.json({ data })
+  const enriched = (data || []).map((item: any) => ({
+    ...item,
+    recording_status: Array.isArray(item.recording) ? item.recording[0]?.status || null : item.recording?.status || null,
+    recap_status: Array.isArray(item.recap) ? item.recap[0]?.status || null : item.recap?.status || null,
+    recording: undefined,
+    recap: undefined,
+  }))
+  return c.json({ data: enriched })
 })
 
 // ── DELETE /live-classes/series/:seriesId — End a direct weekly series ───
@@ -809,6 +817,46 @@ liveClassesRouter.get('/:id/recording', async (c) => {
     try { playbackUrl = await createPresignedDownload(data.r2_file_key, String(access.liveClass.school_id), 600) } catch (downloadError) { console.warn('[recording] signed playback URL unavailable:', downloadError) }
   }
   return c.json({ data: { ...data, playback_url: playbackUrl, access: 'enrolled_students_tutor_admin' } })
+})
+
+liveClassesRouter.get('/:id/recap', async (c) => {
+  const access = await requireClassroom(c, 'view', true)
+  if ('response' in access) return access.response
+  const { data, error } = await (supabase as any).from('live_class_recaps')
+    .select(access.isHost ? 'id, live_class_id, draft_body, published_body, status, published_at, updated_at' : 'id, live_class_id, published_body, status, published_at, updated_at')
+    .eq('live_class_id', access.liveClass.id)
+    .or(access.isHost ? 'status.eq.draft,status.eq.published' : 'status.eq.published')
+    .maybeSingle()
+  if (error) return c.json({ error: 'Could not load class summary', code: 'RECAP_UNAVAILABLE' }, 500)
+  if (!data) return c.json({ error: 'Class summary is not ready', code: 'RECAP_NOT_READY' }, 404)
+  return c.json({ data })
+})
+
+liveClassesRouter.patch('/:id/recap', requireRole('tutor', 'admin'), async (c) => {
+  const user = c.get('user')
+  const access = await requireClassroom(c, 'host')
+  if ('response' in access) return access.response
+  const body = await c.req.json().catch(() => ({}))
+  const draft = typeof body.body === 'string' ? body.body.trim().slice(0, 20_000) : ''
+  if (!draft) return c.json({ error: 'Summary body is required', code: 'MISSING_FIELDS' }, 400)
+  const { data, error } = await (supabase as any).from('live_class_recaps').upsert({ live_class_id: access.liveClass.id, school_id: user.school_id, course_id: access.liveClass.course_id, tutor_id: access.liveClass.tutor_id, draft_body: draft, status: 'draft', updated_at: new Date().toISOString() }, { onConflict: 'live_class_id' }).select('id, live_class_id, draft_body, status, updated_at').single()
+  if (error) return c.json({ error: 'Could not save summary draft', code: 'RECAP_SAVE_FAILED' }, 500)
+  return c.json({ data })
+})
+
+liveClassesRouter.post('/:id/recap/publish', requireRole('tutor', 'admin'), async (c) => {
+  const user = c.get('user')
+  const access = await requireClassroom(c, 'host')
+  if ('response' in access) return access.response
+  const body = await c.req.json().catch(() => ({}))
+  const recapBody = typeof body.body === 'string' ? body.body : ''
+  try {
+    const data = await publishClassRecap({ classId: access.liveClass.id, tutorId: access.liveClass.tutor_id, body: recapBody })
+    return c.json({ data })
+  } catch (error) {
+    console.error('[recap] publish failed:', error)
+    return c.json({ error: error instanceof Error ? error.message : 'Could not publish class summary', code: 'RECAP_PUBLISH_FAILED' }, 500)
+  }
 })
 
 // ── POST /live-classes/:id/end — Tutor ends a class ──────────────────────

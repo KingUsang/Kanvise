@@ -64,6 +64,7 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   if (eventName === 'recording_proceeded') {
     const recordingId = event.recording_info?.recording_id || event.recording_info?.id || null
     await (supabase as any).from('live_class_recordings').upsert({ live_class_id: liveClass.id, provider_recording_id: recordingId, status: 'pending' }, { onConflict: 'live_class_id' })
+    await (supabase as any).from('live_class_jobs').upsert({ job_type: 'recording_process', live_class_id: liveClass.id, payload: { recording_id: recordingId }, status: 'pending', available_at: new Date().toISOString() }, { onConflict: 'job_type,live_class_id' })
   }
   await (supabase as any).from('plugnmeet_webhook_inbox').update({ processed_at: new Date().toISOString() }).eq('provider_event_id', eventId)
   return c.text('OK', 200)

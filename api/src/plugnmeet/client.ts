@@ -75,6 +75,15 @@ export type PlugNmeetJoinRequest = {
 
 type PlugNmeetResponse<T = Record<string, unknown>> = T & { status?: boolean; msg?: string; status_code?: number }
 
+export type PlugNmeetRecordingInfo = {
+  record_id?: string
+  room_id?: string
+  file_path?: string
+  file_size?: number
+  creation_time?: number
+  metadata?: Record<string, unknown>
+}
+
 export function plugNmeetConfigured(env: NodeJS.ProcessEnv = process.env) {
   return Boolean(env.PLUGNMEET_SERVER_URL && env.PLUGNMEET_API_KEY && env.PLUGNMEET_API_SECRET)
 }
@@ -215,6 +224,12 @@ export const plugNmeet = {
   },
   getClientFiles() {
     return request<{ css_files?: string[]; js_files?: string[]; css?: string[]; js?: string[] }>('/getClientFiles', {})
+  },
+  getRecordingInfo(recordId: string) {
+    return request<{ recording_info?: PlugNmeetRecordingInfo }>('/recording/info', { record_id: recordId })
+  },
+  getRecordingDownloadToken(recordId: string) {
+    return request<{ token?: string }>('/recording/getDownloadToken', { record_id: recordId })
   },
   createPoll(input: { room_id: string; question: string; options: Array<{ id: number; text: string; is_correct?: boolean }>; is_quiz: boolean; is_anonymous: boolean; duration: number }) {
     return request<{ poll_id?: string }>('/room/createPoll', input as unknown as Record<string, unknown>)
