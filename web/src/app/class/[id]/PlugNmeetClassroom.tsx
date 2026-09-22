@@ -87,7 +87,8 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
         <div className="min-w-0"><p className="truncate text-sm font-semibold">{classTitle}</p><p className="text-[11px] text-white/60">{loaded ? 'Connected · adaptive video' : 'Connecting'}</p></div>
         <span className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-white/70">{isHost ? 'Tutor' : 'Student'}</span>
       </header>
-      {issue ? <section className="m-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62]"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : <div id="plugnmeet-app" className="min-h-0 flex-1" data-kanvise-class-id={classId} />}
+      <div id="plugnmeet-app" className="relative min-h-0 flex-1" data-kanvise-class-id={classId} />
+      {issue ? <section className="absolute inset-x-4 top-24 z-20 mx-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62] shadow-xl"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : null}
     </main>
   )
 }
