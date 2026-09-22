@@ -44,11 +44,15 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       enableDynacast: true,
       enableSimulcast: true,
       videoCodec: 'vp8',
-      defaultWebcamResolution: 'h360',
+      // Classes are whiteboard-and-audio first. 180p is sufficient for the
+      // optional talking-head tile and is materially kinder to mobile data.
+      // A tutor can still deliberately choose a higher camera setting in the
+      // native PlugNmeet controls when a lesson genuinely needs it.
+      defaultWebcamResolution: 'h180',
       defaultAudioPreset: 'speech',
       stopMicTrackOnMute: true,
       focusActiveSpeakerWebcam: true,
-      maxNumDisplayWebcams: { desktop: 6, tablet: 4, mobile: 2 },
+      maxNumDisplayWebcams: { desktop: 4, tablet: 2, mobile: 1 },
       // Let the supplied PlugNmeet UI fill the page, but brand its native
       // welcome/logo surface as Kanvise. This is PlugNmeet's supported
       // designCustomization API — not a CSS hack over its controls.
