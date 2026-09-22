@@ -258,10 +258,13 @@ export const plugNmeet = {
     return request<{ token?: string; join_token?: string }>('/room/getJoinToken', input as unknown as Record<string, unknown>)
   },
   endRoom(roomId: string) {
-    return request('/room/end', { room_id: roomId })
+    return request('/room/endRoom', { room_id: roomId })
   },
   async isRoomActive(roomId: string) {
-    const response = await request<{ is_active?: boolean }>('/room/isActive', { room_id: roomId })
+    // PlugNmeet's authenticated API uses the full `isRoomActive` route name.
+    // `/room/isActive` is not a route and silently prevented stale live-class
+    // reconciliation from ever receiving a provider answer.
+    const response = await request<{ is_active?: boolean }>('/room/isRoomActive', { room_id: roomId })
     return response.is_active === true
   },
   getClientFiles() {
