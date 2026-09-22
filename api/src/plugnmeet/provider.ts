@@ -17,14 +17,13 @@ export function guestPlugNmeetEnabled(env: NodeJS.ProcessEnv = process.env) {
 }
 
 export function providerForClass(input: { accessMode?: string | null; schoolId: string | null | undefined; persisted?: string | null }): ClassroomProvider {
-  if (input.persisted === 'plugnmeet') return 'plugnmeet'
-  // LiveKit was Kanvise's old custom classroom. Once PlugNmeet is configured
-  // it is never selected for a new or previously scheduled class; the old
-  // fields remain only so historical records can still be read safely.
-  // There are no active users on the legacy standalone LiveKit deployment.
-  // Fail visibly during room creation if PlugNmeet credentials are missing;
-  // never silently send a new class to a retired provider.
-  return 'plugnmeet'
+  if (input.persisted === 'plugnmeet' || input.persisted === 'livekit') return input.persisted
+  if (input.accessMode === 'enrolled_learners' && enrolledPlugNmeetEnabled(input.schoolId)) return 'plugnmeet'
+  if (input.accessMode === 'anyone_with_link' && guestPlugNmeetEnabled()) return 'plugnmeet'
+  // This fallback exists only for historical records and isolated test runs
+  // without PlugNmeet credentials. Staging/production enable both PlugNmeet
+  // paths, so newly created Kanvise rooms do not select it.
+  return 'livekit'
 }
 
 export async function createPlugNmeetRoom(input: { roomId: string; title: string; schoolId: string; courseId: string | null; accessMode: string }) {
