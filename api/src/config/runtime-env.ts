@@ -85,5 +85,10 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
     const plugNmeetMissing = missingVariables(['PLUGNMEET_SERVER_URL', 'PLUGNMEET_API_KEY', 'PLUGNMEET_API_SECRET', 'PLUGNMEET_WEBHOOK_SECRET'], env)
     if (plugNmeetMissing.length) throw new Error(`Missing PlugNmeet environment variables: ${plugNmeetMissing.join(', ')}`)
     requireHttpsUrl('PLUGNMEET_SERVER_URL', env.PLUGNMEET_SERVER_URL)
+    if (env.RECORDER_FLEET_ENABLED === 'true') {
+      const recorderMissing = missingVariables(['RECORDER_FLEET_CONTROLLER_URL', 'RECORDER_FLEET_CONTROLLER_SECRET', 'RECORDER_CALLBACK_SECRET'], env)
+      if (recorderMissing.length) throw new Error(`Missing recorder fleet environment variables: ${recorderMissing.join(', ')}`)
+      requireHttpsUrl('RECORDER_FLEET_CONTROLLER_URL', env.RECORDER_FLEET_CONTROLLER_URL)
+    }
   }
 }

@@ -2,6 +2,7 @@ import cron, { type ScheduledTask } from 'node-cron'
 import { isTelegramEnabled } from '../config/runtime-env'
 import { createGuardedJob, runAssignmentDeadlineJob, runLiveClassReminderJob, runMockPublicationJob, runTelegramAttendanceCloseJob, runTimetableMaterializationJob } from './runners'
 import { runLiveClassRecordingJob } from './live-class-recording'
+import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 import { deallocateIdleLiveKitWorker, reconcileClosedLiveClasses, warmLiveKitWorkerForUpcomingClasses } from '../livekit/worker-lifecycle'
 
 export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
@@ -14,6 +15,7 @@ export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
     { expression: '*/5 * * * *', guarded: createGuardedJob('livekit_closed_class_reconciliation', () => reconcileClosedLiveClasses()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('livekit_worker_deallocation', () => deallocateIdleLiveKitWorker()) },
     { expression: '* * * * *', guarded: createGuardedJob('live_class_recording', () => runLiveClassRecordingJob()) },
+    { expression: '* * * * *', guarded: createGuardedJob('recorder_fleet', () => reconcileRecorderFleet()) },
   ]
   if (isTelegramEnabled(env)) {
     jobs.push({ expression: '* * * * *', guarded: createGuardedJob('telegram_attendance_close', () => runTelegramAttendanceCloseJob()) })

@@ -8,7 +8,7 @@ describe('PlugNmeet provider contract', () => {
     expect(request.max_participants).toBe(1000)
     expect(request.empty_timeout).toBe(300)
     expect(request.metadata.room_features.enable_analytics).toBe(true)
-    expect(request.metadata.room_features.recording_features.enable_auto_cloud_recording).toBe(false)
+    expect(request.metadata.room_features.recording_features.enable_auto_cloud_recording).toBe(true)
     expect(request.metadata.room_features.allow_screen_share).toBe(false)
     expect(request.metadata.room_features.chat_features.is_allow_file_upload).toBe(false)
     expect(request.metadata.room_features.insights_features.transcription_features?.is_allow).toBe(false)

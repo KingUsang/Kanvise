@@ -6,7 +6,6 @@ import "@fontsource/poppins/latin-600.css";
 import "@fontsource/poppins/latin-700.css";
 import "@fontsource/material-symbols-outlined";
 import "@livekit/components-styles";
-import "@excalidraw/excalidraw/index.css";
 import "./globals.css";
 import { Toaster } from "sonner";
 import "katex/dist/katex.min.css";

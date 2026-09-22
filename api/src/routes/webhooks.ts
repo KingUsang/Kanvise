@@ -57,7 +57,23 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   if (!liveClass || liveClass.classroom_provider !== 'plugnmeet') return c.text('OK', 200)
 
   const participantIdentity = String(event.participant?.user_id || event.participant?.identity || '')
+  const guestMatch = /^guest_([0-9a-f-]{36})$/i.exec(participantIdentity)
   if (eventName === 'participant_joined' && participantIdentity) {
+    if (guestMatch && liveClass.course_id === null) {
+      const guestId = guestMatch[1]
+      const { data: guest } = await (supabase as any).from('live_class_guests')
+        .select('id').eq('id', guestId).eq('live_class_id', liveClass.id).eq('school_id', liveClass.school_id).is('revoked_at', null).maybeSingle()
+      if (guest) {
+        // One lightweight lead-engagement row per guest/class. On reconnect we
+        // retain the original join time and clear left_at for the final leave.
+        await (supabase as any).from('guest_live_class_attendance').upsert({
+          school_id: liveClass.school_id, live_class_id: liveClass.id, guest_id: guestId,
+          joined_at: new Date().toISOString(),
+        }, { onConflict: 'live_class_id,guest_id', ignoreDuplicates: true })
+        await (supabase as any).from('guest_live_class_attendance').update({ left_at: null, duration_seconds: null })
+          .eq('live_class_id', liveClass.id).eq('guest_id', guestId)
+      }
+    }
     const { data: enrolled } = await (supabase as any).from('enrolments').select('student_id').eq('course_id', liveClass.course_id).eq('student_id', participantIdentity).eq('school_id', liveClass.school_id).maybeSingle()
     // attendance_records is deliberately learner-only.
     if (enrolled) {
@@ -66,11 +82,26 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   }
   if (eventName === 'participant_left' && participantIdentity) {
     const leftAt = new Date()
+    if (guestMatch) {
+      const { data: guestRecord } = await (supabase as any).from('guest_live_class_attendance')
+        .select('id, joined_at').eq('live_class_id', liveClass.id).eq('guest_id', guestMatch[1]).maybeSingle()
+      if (guestRecord) await (supabase as any).from('guest_live_class_attendance').update({
+        left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(guestRecord.joined_at).getTime()) / 1000)),
+      }).eq('id', guestRecord.id)
+    }
     const { data: record } = await (supabase as any).from('attendance_records').select('id, joined_at').eq('live_class_id', liveClass.id).eq('student_id', participantIdentity).is('left_at', null).order('joined_at', { ascending: false }).limit(1).maybeSingle()
     if (record) await (supabase as any).from('attendance_records').update({ left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(record.joined_at).getTime()) / 1000)) }).eq('id', record.id)
   }
   if (eventName === 'room_finished' || eventName === 'analytics_proceeded') {
     await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', liveClass.id).eq('status', 'live')
+  }
+  if (eventName === 'room_finished') {
+    const endedAt = new Date()
+    const { data: openGuestRecords } = await (supabase as any).from('guest_live_class_attendance')
+      .select('id, joined_at').eq('live_class_id', liveClass.id).is('left_at', null)
+    await Promise.all((openGuestRecords || []).map((record: any) => (supabase as any).from('guest_live_class_attendance').update({
+      left_at: endedAt.toISOString(), duration_seconds: Math.max(0, Math.round((endedAt.getTime() - new Date(record.joined_at).getTime()) / 1000)),
+    }).eq('id', record.id)))
   }
   if (eventName === 'recording_proceeded') {
     // PlugNmeet calls this field record_id. Keep the compatibility fallbacks

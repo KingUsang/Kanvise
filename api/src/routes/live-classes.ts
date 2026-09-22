@@ -16,6 +16,7 @@ import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-a
 import { ensureLiveKitWorkerReady, isLiveKitHealthy } from '../livekit/worker-lifecycle'
 import { createPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
 import { publishClassRecap } from '../jobs/live-class-recording'
+import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -395,6 +396,10 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   const roomName = `kanvise-class-${insertedClass.id}`
   if (classroomProvider === 'plugnmeet') {
     try {
+      // Start-now is supported. It has no T-10 timetable window, so request
+      // recorder capacity before making the room live. The recorder controller
+      // is intentionally best-effort while the fleet rollout is disabled.
+      await reconcileRecorderFleet()
       const room = await createPlugNmeetRoom({
         roomId: insertedClass.id,
         title: insertedClass.title,
@@ -649,6 +654,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
       const roomId = liveClass.id
+      await reconcileRecorderFleet()
       await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
       const startedAt = new Date().toISOString()
       const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id').single()
