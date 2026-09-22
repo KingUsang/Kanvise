@@ -6,7 +6,7 @@ describe('PlugNmeet provider contract', () => {
   it('creates an uncapped enrolled room with data-saving features', () => {
     const request = createEnrolledRoomRequest({ roomId: 'class-1', title: 'Physics', schoolId: 'school-1', courseId: 'course-1' })
     expect(request.max_participants).toBe(1000)
-    expect(request.empty_timeout).toBe(300)
+    expect(request.empty_timeout).toBe(900)
     expect(request.metadata.room_features.enable_analytics).toBe(true)
     expect(request.metadata.room_features.recording_features.enable_auto_cloud_recording).toBe(true)
     expect(request.metadata.room_features.allow_screen_share).toBe(false)

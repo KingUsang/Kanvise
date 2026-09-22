@@ -142,9 +142,8 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
       is_allow: true,
       is_allow_cloud: true,
       is_allow_local: false,
-      // Enrolled Kanvise classes are always recorded. The recorder fleet is
-      // brought up by the scheduler; this asks PlugNmeet to start the cloud
-      // recording as soon as the room is live.
+      // The single recorder worker is registered before this setting is
+      // enabled in deployed environments, so every enrolled class records.
       enable_auto_cloud_recording: true,
       only_record_admin_webcams: false,
     },
@@ -187,7 +186,8 @@ export function createEnrolledRoomRequest(input: {
     // describing it as unlimited. This is an infrastructure safety ceiling,
     // not a Kanvise admission cap.
     max_participants: 1000,
-    empty_timeout: 300,
+    // A tutor can briefly leave or lose focus without ending the classroom.
+    empty_timeout: 900,
     metadata: {
       room_title: input.title,
       welcome_message: 'Welcome to your Kanvise class.',
@@ -216,7 +216,7 @@ export function createGuestRoomRequest(input: {
   return {
     room_id: input.roomId,
     max_participants: 1000,
-    empty_timeout: 300,
+    empty_timeout: 900,
     metadata: {
       room_title: input.title,
       welcome_message: 'Welcome to this Kanvise live-class preview.',
