@@ -102,9 +102,11 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
   }, [clientFiles.css_files, clientFiles.js_files, joinToken, roomId, serverUrl])
 
   return (
-    <main className="relative h-screen h-dvh overflow-hidden bg-[#11121a]">
-      <div ref={rootRef} id="plugNmeet-app" className="h-full w-full" data-kanvise-class-id={classId} aria-label={`${classTitle} classroom`} />
-      {issue ? <section className="absolute inset-x-4 top-24 z-20 mx-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62] shadow-xl"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : null}
-    </main>
+    <>
+      {/* PlugNmeet's own CSS establishes the document and mount height, including
+          its mobile safe-area behaviour. Do not wrap this in a Kanvise viewport. */}
+      <div ref={rootRef} id="plugNmeet-app" data-kanvise-class-id={classId} aria-label={`${classTitle} classroom`} />
+      {issue ? <section className="fixed inset-x-4 top-24 z-20 mx-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62] shadow-xl"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : null}
+    </>
   )
 }
