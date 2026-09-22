@@ -22,7 +22,22 @@ function assetUrl(serverUrl: string, kind: 'css' | 'js', file: string) {
 export default function PlugNmeetClassroom({ joinToken, serverUrl, clientFiles, classId, classTitle, isHost }: Props) {
   const secure = serverUrl.startsWith('https://')
   const cookie = `pnm_access_token=${joinToken}; Path=/; SameSite=Strict${secure ? '; Secure' : ''}`
-  const bootstrap = `document.cookie = ${JSON.stringify(cookie)};`
+  // These two values are required by PlugNmeet's getClientFiles integration.
+  // Without them the shipped client falls back to localhost and never joins.
+  const clientConfig = {
+    serverUrl,
+    staticAssetsPath: `${serverUrl.replace(/\/$/, '')}/assets`,
+    enableAdaptiveStream: true,
+    enableDynacast: true,
+    enableSimulcast: true,
+    videoCodec: 'vp8',
+    defaultWebcamResolution: 'h360',
+    defaultAudioPreset: 'speech',
+    stopMicTrackOnMute: true,
+    focusActiveSpeakerWebcam: true,
+    maxNumDisplayWebcams: { desktop: 6, tablet: 4, mobile: 2 },
+  }
+  const bootstrap = `window.plugNmeetConfig = ${JSON.stringify(clientConfig)}; document.cookie = ${JSON.stringify(cookie)};`
 
   return (
     <main className="flex h-screen h-dvh flex-col overflow-hidden bg-[#11121a] text-white">
