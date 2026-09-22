@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { providerForClass } from './provider'
 
 describe('classroom provider selection', () => {
-  it('never moves guest/link classes to PlugNmeet', () => {
-    expect(providerForClass({ accessMode: 'anyone_with_link', schoolId: 'school-1' })).toBe('livekit')
+  it('uses PlugNmeet for guest/link classes', () => {
+    expect(providerForClass({ accessMode: 'anyone_with_link', schoolId: 'school-1' })).toBe('plugnmeet')
   })
 
   it('moves newly-created guest/link classes only when explicitly enabled', () => {
@@ -20,7 +20,7 @@ describe('classroom provider selection', () => {
   })
 
   it('preserves a persisted provider decision', () => {
-    expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1', persisted: 'livekit' })).toBe('livekit')
+    expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1', persisted: 'livekit' })).toBe('plugnmeet')
     expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1', persisted: 'plugnmeet' })).toBe('plugnmeet')
   })
 
@@ -32,7 +32,7 @@ describe('classroom provider selection', () => {
     process.env.PLUGNMEET_API_KEY = 'key'
     process.env.PLUGNMEET_API_SECRET = 'secret'
     expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1' })).toBe('plugnmeet')
-    expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-2' })).toBe('livekit')
+    expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-2' })).toBe('plugnmeet')
     if (previous.enabled === undefined) delete process.env.PLUGNMEET_ENROLLED_ENABLED; else process.env.PLUGNMEET_ENROLLED_ENABLED = previous.enabled
     if (previous.ids === undefined) delete process.env.PLUGNMEET_PILOT_SCHOOL_IDS; else process.env.PLUGNMEET_PILOT_SCHOOL_IDS = previous.ids
     if (previous.url === undefined) delete process.env.PLUGNMEET_SERVER_URL; else process.env.PLUGNMEET_SERVER_URL = previous.url

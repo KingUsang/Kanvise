@@ -82,9 +82,16 @@ export default async function Page({ params, searchParams }: PageProps) {
       )
     }
 
-    // Class is open to anyone — render the guest join UI (client component)
-    const { GuestClassEntry } = await import('./GuestClassEntry')
-    return <GuestClassEntry classId={classId} classInfo={classInfo} />
+    // Guest access requires the opaque link, never a guessable class id. This
+    // prevents a public route from becoming an alternate access control path.
+    return (
+      <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
+        <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm text-center">
+          <h1 className="text-xl font-bold text-[#180d62]">Use the class link</h1>
+          <p className="mt-3 text-sm leading-6 text-[#66616c]">Ask your tutor for the shared class link to join this preview.</p>
+        </section>
+      </main>
+    )
   }
 
   // ── 2. Call Hono to get the LiveKit token ──────────────────────────────────

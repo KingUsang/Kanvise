@@ -142,7 +142,10 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
       is_allow: true,
       is_allow_cloud: true,
       is_allow_local: false,
-      enable_auto_cloud_recording: false,
+      // Enrolled Kanvise classes are always recorded. The recorder fleet is
+      // brought up by the scheduler; this asks PlugNmeet to start the cloud
+      // recording as soon as the room is live.
+      enable_auto_cloud_recording: true,
       only_record_admin_webcams: false,
     },
     chat_features: { is_allow: true, is_allow_file_upload: false },
