@@ -260,6 +260,10 @@ export const plugNmeet = {
   endRoom(roomId: string) {
     return request('/room/end', { room_id: roomId })
   },
+  async isRoomActive(roomId: string) {
+    const response = await request<{ is_active?: boolean }>('/room/isActive', { room_id: roomId })
+    return response.is_active === true
+  },
   getClientFiles() {
     return request<{ css_files?: string[]; js_files?: string[]; css?: string[]; js?: string[] }>('/getClientFiles', {})
   },
