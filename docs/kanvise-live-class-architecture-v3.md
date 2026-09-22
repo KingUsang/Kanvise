@@ -119,7 +119,7 @@ classroom experience, not an unauthenticated plugNmeet deployment.
 
 Both classroom profiles use the audio-first client defaults defined in the
 integration reference. Adaptive Stream, Dynacast, and Simulcast remain enabled;
-webcam capture defaults to 360p; camera is off on entry; students enter muted;
+webcam capture defaults to 180p; camera is off on entry; students enter muted;
 and only a small, device-specific number of webcams may be visible at once.
 Screen share remains disabled in favour of the whiteboard/PDF path.
 
@@ -130,8 +130,10 @@ treating lower video resolution as an error. Reconnecting must reuse cached
 client assets and must not silently enable camera or microphone.
 
 Phase 0 owns the final numbers. The initial student budgets are 50 MB/hour for
-audio-only and 300 MB/hour for one 360p tutor webcam plus audio, excluding the
-first application load and intentional document downloads.
+audio-only and roughly 100–180 MB/hour for one 180p tutor webcam plus audio,
+excluding the first application load and intentional document downloads. These
+are planning budgets, not a guarantee: actual WebRTC use varies with network
+loss, visible video tiles, and whether a student turns on their own camera.
 
 ## 4. Legacy live-transcription design (not enabled in this pilot)
 

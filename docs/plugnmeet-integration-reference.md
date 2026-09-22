@@ -160,14 +160,14 @@ window.plugNmeetConfig = {
   enableDynacast: true,
   enableSimulcast: true,
   videoCodec: "vp8",
-  defaultWebcamResolution: "h360",
+  defaultWebcamResolution: "h180",
   defaultAudioPreset: "speech",
   stopMicTrackOnMute: true,
   focusActiveSpeakerWebcam: true,
   maxNumDisplayWebcams: {
-    desktop: 6,
-    tablet: 4,
-    mobile: 2,
+    desktop: 4,
+    tablet: 2,
+    mobile: 1,
   },
 };
 ```
@@ -179,7 +179,9 @@ Product defaults around those settings:
 - Student microphones remain muted on entry. Audio is the priority when the
   network degrades.
 - Students should not receive a grid of every participant. Active-speaker
-  focus plus the device-specific webcam limit bounds downstream media.
+  focus plus the device-specific webcam limit bounds downstream media. The
+  default camera publishing layer is h180: whiteboard/PDF and clear audio are
+  the teaching surface, while video is an optional talking-head tile.
 - Screen sharing, virtual backgrounds, external media, and chat file uploads
   stay disabled. Whiteboard/PDF remains the materials-sharing path.
 - Do not disable LiveKit audio RED merely to save bytes. It adds bandwidth but
