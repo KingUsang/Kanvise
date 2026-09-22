@@ -155,8 +155,9 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
     display_external_link_features: { is_allow: false },
     ingress_features: { is_allow: false },
     polls_features: { is_allow: true },
-    // Enables PlugNmeet's shipped Generate-with-AI poll composer. Live
-    // transcription and meeting summaries remain off for this pilot.
+    // Keep audio transcription and automatic summaries off. The AI chat
+    // service starts disabled; a tutor may enable it for only themself when
+    // using PlugNmeet's native poll generator.
     insights_features: {
       is_allow: true,
       transcription_features: { is_allow: false },
