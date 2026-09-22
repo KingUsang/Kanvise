@@ -19,7 +19,15 @@ post_json() {
     "${KANVISE_RECORDER_CALLBACK_URL%/}${path}"
 }
 
-while IFS= read -r hook; do
+hook_buffer=''
+while IFS= read -r hook_line; do
+  # The recorder currently writes pretty-printed JSON to long-lived hooks.
+  # Accumulate lines until there is one complete document, then compact it.
+  hook_buffer+="${hook_line}"$'\n'
+  if ! hook="$(jq -ce '.' <<<"$hook_buffer" 2>/dev/null)"; then
+    continue
+  fi
+  hook_buffer=''
   # PlugNmeet gives post_transcoding hooks the *directory* in input_path and
   # the transcoded filename separately. Hook-manager reads one JSON document
   # per line, so every response below must be compact JSON.
