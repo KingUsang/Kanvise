@@ -47,20 +47,11 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
         focusActiveSpeakerWebcam: true,
         maxNumDisplayWebcams: { desktop: 6, tablet: 4, mobile: 2 },
       }
-      // PlugNmeet's shipped client checks `access_token` first when it boots.
-      // Keep the cookie as a fallback, but provide the documented query value
-      // so the embedded client behaves exactly like its standalone page.
-      const currentUrl = new URL(window.location.href)
-      currentUrl.searchParams.set('access_token', joinToken)
-      // The deployed PlugNmeet client ships the English catalog under `en`.
-      // Pin the detector to that catalog instead of requesting a browser
-      // regional variant (for example `en-GB`) that this server does not have.
-      currentUrl.searchParams.set('lng', 'en')
-      window.history.replaceState(window.history.state, '', currentUrl)
-      // The official client reads this short-lived token from its cookie when
-      // it starts. This avoids putting credentials into the visible URL while
-      // following PlugNmeet's documented custom-client flow.
-      document.cookie = `pnm_access_token=${encodeURIComponent(joinToken)}; Path=/; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
+      // PlugNmeet officially supports reading the short-lived join token from
+      // this cookie. Do not add it to the URL here: Next.js instruments the
+      // History API and can remount this route, removing #plugnmeet-app while
+      // PlugNmeet's module is still starting.
+      document.cookie = `pnm_access_token=${joinToken}; Path=/; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
       for (const file of clientFiles.css_files || []) {
         const link = document.createElement('link')
         link.rel = 'stylesheet'
@@ -77,9 +68,6 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
         scriptNodes.push(script)
       }
       if (disposed) return
-      // Leave the token available while the client performs verifyToken and
-      // opens its realtime connection; it is short-lived and the page is
-      // already authenticated. The client may renew it through its socket.
       if (!disposed) setLoaded(true)
     }
     void load().catch((error) => { if (!disposed) setIssue(error instanceof Error ? error.message : 'Could not load the classroom') })
