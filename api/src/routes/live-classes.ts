@@ -397,8 +397,12 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   if (classroomProvider === 'plugnmeet') {
     try {
       // Start-now is supported. It has no T-10 timetable window, so request
-      // recorder capacity before making the room live. The recorder controller
-      // is intentionally best-effort while the fleet rollout is disabled.
+      // recorder capacity before making the room live.
+      const worker = await ensureLiveKitWorkerReady()
+      if (worker.state === 'preparing') {
+        return c.json({ data: { ...insertedClass, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, is_host: insertedClass.tutor_id === user.id } }, 202)
+      }
+      if (worker.state !== 'ready') throw new Error(worker.message || 'PLUGNMEET_UNAVAILABLE')
       await reconcileRecorderFleet()
       const room = await createPlugNmeetRoom({
         roomId: insertedClass.id,
@@ -646,6 +650,9 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   if (classroomProvider === 'plugnmeet') {
     if (liveClass.status === 'live') {
+      const worker = await ensureLiveKitWorkerReady()
+      if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
+      if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       try {
         const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, access.isHost ? 'Tutor' : 'Administrator'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
         return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
@@ -657,6 +664,9 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
     if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
+      const worker = await ensureLiveKitWorkerReady()
+      if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true } }, 202)
+      if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       const roomId = liveClass.id
       await reconcileRecorderFleet()
       await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
@@ -769,6 +779,9 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
     if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
+    const worker = await ensureLiveKitWorkerReady()
+    if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
+    if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
     try {
       const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Participant'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })

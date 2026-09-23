@@ -20,6 +20,10 @@ RECORDER_CALLBACK_SECRET=<long-random-shared-secret>
 RECORDER_FLEET_ENABLED=true
 RECORDER_FLEET_CONTROLLER_URL=<recorder-controller-function-url>
 RECORDER_FLEET_CONTROLLER_SECRET=<long-random-shared-secret>
+PLUGNMEET_WORKER_CONTROL_ENABLED=true
+PLUGNMEET_HEALTH_URL=https://<plugnmeet-host>
+AZURE_PLUGNMEET_RESOURCE_GROUP=<azure-resource-group>
+AZURE_PLUGNMEET_VM_NAME=<repurposed-vm-name>
 ```
 
 Keep the flag `false` until the provider health check, webhook signature check,
