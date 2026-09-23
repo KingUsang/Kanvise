@@ -75,6 +75,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   const [duration, setDuration] = useState('60')
   const [recurrence, setRecurrence] = useState<'once' | 'weekly'>('once')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [startingClassId, setStartingClassId] = useState<string | null>(null)
   const [formMode, setFormMode] = useState<'now' | 'later' | null>(() => {
     const mode = searchParams.get('mode')
     return mode === 'now' || mode === 'later' ? mode : null
@@ -268,6 +269,8 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
   }
 
   const handleStartClass = async (classId: string) => {
+    if (startingClassId) return
+    setStartingClassId(classId)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/start`, {
         method: 'POST',
@@ -286,6 +289,8 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
     } catch (err) {
       console.error(err)
       toast.error('Could not start the class', { description: 'Check your connection and try again.' })
+    } finally {
+      setStartingClassId(null)
     }
   }
 
@@ -645,7 +650,7 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                       <p className="shrink-0 text-right text-sm font-semibold text-[#2e2877]">{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}<span className="mt-0.5 block text-xs font-normal text-[#716c76]">{cls.duration_minutes} min</span></p>
                     </div>
                     <p className="mt-2 text-xs text-[#716c76]">{dt.toLocaleDateString()} · {cls.tutor?.first_name || 'Tutor'} {cls.tutor?.last_name || ''}</p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">{cls.tutor_id === user.id && <button onClick={() => handleStartClass(cls.id)} className="min-h-11 w-full rounded-xl bg-[#2e2877] px-4 text-sm font-semibold text-white">Start class</button>}{cls.series?.source === 'direct' && cls.timetable_slot_id && <button onClick={() => void handleEndSeries(cls.timetable_slot_id!)} className="min-h-11 w-full rounded-xl border border-[#a43a2a] px-4 text-sm font-semibold text-[#a43a2a]">End series</button>}</div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">{cls.tutor_id === user.id && <button disabled={Boolean(startingClassId)} onClick={() => void handleStartClass(cls.id)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#2e2877] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{startingClassId === cls.id && <span className="material-symbols-outlined animate-spin text-lg" aria-hidden="true">progress_activity</span>}{startingClassId === cls.id ? 'Preparing classroom…' : 'Start class'}</button>}{cls.series?.source === 'direct' && cls.timetable_slot_id && <button onClick={() => void handleEndSeries(cls.timetable_slot_id!)} className="min-h-11 w-full rounded-xl border border-[#a43a2a] px-4 text-sm font-semibold text-[#a43a2a]">End series</button>}</div>
                   </article>
                 )
               })}
@@ -686,10 +691,12 @@ export function ScheduleClient({ token, capabilities, user }: ScheduleClientProp
                           <div className="flex justify-end gap-2">
                             {cls.tutor_id === user.id && (
                               <button 
-                                onClick={() => handleStartClass(cls.id)}
-                                className="px-3 py-1 bg-[#180d62] text-white text-[12px] leading-[16px] tracking-[0.05em] font-bold rounded hover:bg-[#2e2877] transition-colors ml-1"
+                                disabled={Boolean(startingClassId)}
+                                onClick={() => void handleStartClass(cls.id)}
+                                className="inline-flex items-center gap-1 rounded bg-[#180d62] px-3 py-1 text-[12px] font-bold leading-[16px] tracking-[0.05em] text-white transition-colors hover:bg-[#2e2877] disabled:cursor-not-allowed disabled:opacity-60 ml-1"
                               >
-                                Start Class
+                                {startingClassId === cls.id && <span className="material-symbols-outlined animate-spin text-sm" aria-hidden="true">progress_activity</span>}
+                                {startingClassId === cls.id ? 'Preparing…' : 'Start Class'}
                               </button>
                             )}
                             {cls.series?.source === 'direct' && cls.timetable_slot_id && <button onClick={() => void handleEndSeries(cls.timetable_slot_id!)} className="rounded border border-[#a43a2a] px-3 py-1 text-[12px] font-bold text-[#a43a2a]">End series</button>}
