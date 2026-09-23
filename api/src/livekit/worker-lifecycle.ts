@@ -20,22 +20,22 @@ function positiveMinutes(value: string | undefined, fallback: number) {
 }
 
 function enabled(env = process.env) {
-  return env.LIVEKIT_WORKER_CONTROL_ENABLED === 'true'
+  return env.PLUGNMEET_WORKER_CONTROL_ENABLED === 'true' || env.LIVEKIT_WORKER_CONTROL_ENABLED === 'true'
 }
 
 function requiredAzureConfig(env = process.env) {
   const subscriptionId = env.AZURE_SUBSCRIPTION_ID
-  const resourceGroup = env.AZURE_LIVEKIT_RESOURCE_GROUP
-  const vmName = env.AZURE_LIVEKIT_VM_NAME
+  const resourceGroup = env.AZURE_PLUGNMEET_RESOURCE_GROUP || env.AZURE_LIVEKIT_RESOURCE_GROUP
+  const vmName = env.AZURE_PLUGNMEET_VM_NAME || env.AZURE_LIVEKIT_VM_NAME
   if (!subscriptionId || !resourceGroup || !vmName) {
-    throw new Error('Azure LiveKit worker control is enabled but its VM configuration is incomplete')
+    throw new Error('Azure PlugNmeet worker control is enabled but its VM configuration is incomplete')
   }
   return { subscriptionId, resourceGroup, vmName }
 }
 
 function liveKitHttpUrl(env = process.env) {
-  const value = env.LIVEKIT_HEALTH_URL || env.LIVEKIT_URL
-  if (!value) throw new Error('LIVEKIT_URL is not configured')
+  const value = env.PLUGNMEET_HEALTH_URL || env.PLUGNMEET_SERVER_URL || env.LIVEKIT_HEALTH_URL || env.LIVEKIT_URL
+  if (!value) throw new Error('PLUGNMEET_SERVER_URL is not configured')
   return value.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/$/, '')
 }
 
@@ -116,6 +116,7 @@ export async function warmLiveKitWorkerForUpcomingClasses(now = new Date()) {
   const until = new Date(now.getTime() + prewarmMinutes * 60_000).toISOString()
   const { count, error } = await supabase.from('live_classes')
     .select('id', { count: 'exact', head: true })
+    .eq('classroom_provider', 'plugnmeet')
     .eq('status', 'scheduled')
     .gte('scheduled_at', now.toISOString())
     .lte('scheduled_at', until)
@@ -185,9 +186,9 @@ export async function deallocateIdleLiveKitWorker(now = new Date()) {
   const [{ count: scheduledCount, error: scheduledError }, { count: recentLiveCount, error: recentLiveError }, { count: recentCount, error: recentError }] = await Promise.all([
     // Include a recent "start now" row while its room is being created. This
     // closes the narrow race between the tutor's click and listRooms().
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'scheduled').gte('scheduled_at', recentCutoff).lte('scheduled_at', upcomingCutoff),
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'live').gte('started_at', recentCutoff),
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('ended_at', recentCutoff),
+    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'scheduled').gte('scheduled_at', recentCutoff).lte('scheduled_at', upcomingCutoff),
+    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'live').gte('started_at', recentCutoff),
+    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'completed').gte('ended_at', recentCutoff),
   ])
   if (scheduledError || recentLiveError || recentError) throw scheduledError || recentLiveError || recentError
   if (scheduledCount || recentLiveCount || recentCount) return { state: 'busy' as const }

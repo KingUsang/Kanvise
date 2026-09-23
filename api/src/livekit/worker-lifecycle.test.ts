@@ -28,6 +28,8 @@ describe('LiveKit worker lifecycle', () => {
   })
 
   it('preserves the existing always-on path when control is disabled', async () => {
+    vi.stubEnv('LIVEKIT_WORKER_CONTROL_ENABLED', 'false')
+    vi.stubEnv('PLUGNMEET_WORKER_CONTROL_ENABLED', 'false')
     vi.stubEnv('LIVEKIT_URL', 'wss://livekit.example.com')
     const fetcher = vi.fn().mockRejectedValue(new Error('offline')) as any
     await expect(ensureLiveKitWorkerReady(fetcher)).resolves.toEqual({ state: 'ready' })
