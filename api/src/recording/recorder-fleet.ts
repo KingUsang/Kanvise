@@ -14,9 +14,9 @@ function sign(body: string) {
 
 /**
  * Keep the single recorder instance warm from T-10 until 45 minutes after a
- * class has completed. Its capture service accepts two concurrent rooms; its
- * transcode service is intentionally serial. The controller receives 0 or 1
- * because this deployment is a direct EC2 instance, not an Auto Scaling Group.
+ * class has completed. The PlugNmeet recorder uses its own configured/default
+ * concurrency; this controller only decides whether the shared EC2 worker is
+ * on or off. Transcoding remains serial on this small machine.
  */
 export async function reconcileRecorderFleet(now = new Date()) {
   if (!configured()) return { name: 'recorder_fleet', skipped: true, desiredCapacity: 0 }
@@ -40,8 +40,7 @@ export async function reconcileRecorderFleet(now = new Date()) {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kanvise-Recorder-Fleet-Signature': sign(body) }, body,
   })
   if (!response.ok) throw new Error(`Recorder fleet controller failed (${response.status})`)
-  return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id), captureCapacity: 2,
-    capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }
+  return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id) }
 }
 
 // Exported for the controller's contract tests and to keep webhook secrets
