@@ -28,15 +28,14 @@ while IFS= read -r hook_line; do
     continue
   fi
   hook_buffer=''
-  # PlugNmeet gives post_transcoding hooks the *directory* in input_path and
-  # the transcoded filename separately. Hook-manager reads one JSON document
-  # per line, so every response below must be compact JSON.
-  input_dir="$(jq -r '.input_path // empty' <<<"$hook")"
+  # PlugNmeet gives post_transcoding hooks the complete transcoded file path in
+  # input_path. Older recorder builds may also provide file_name; support both.
+  input_path="$(jq -r '.input_path // empty' <<<"$hook")"
   file_name="$(jq -r '.file_name // empty' <<<"$hook")"
   room_id="$(jq -r '.room_id // empty' <<<"$hook")"
   recording_id="$(jq -r '.recording_id // empty' <<<"$hook")"
-  input_path="${input_dir%/}/${file_name}"
-  if [[ -z "$input_dir" || -z "$file_name" || -z "$room_id" || -z "$recording_id" || ! -f "$input_path" ]]; then
+  if [[ -n "$file_name" && -d "$input_path" ]]; then input_path="${input_path%/}/${file_name}"; fi
+  if [[ -z "$input_path" || -z "$room_id" || -z "$recording_id" || ! -f "$input_path" ]]; then
     echo 'Recording hook did not include a valid transcoded file, room_id, and recording_id' >&2
     jq -c '.' <<<"$hook"
     continue
