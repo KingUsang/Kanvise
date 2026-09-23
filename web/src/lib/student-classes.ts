@@ -14,6 +14,9 @@ export type StudentClass = {
   tutor: { id: string; first_name: string; last_name: string } | null;
   recording_status?: "pending" | "transferring" | "ready" | "failed" | null;
   recap_status?: "pending" | "generating" | "draft" | "published" | "failed" | null;
+  classroom_provider?: "livekit" | "plugnmeet";
+  provider_room_status?: "unknown" | "ready" | "active" | "ended" | "unavailable";
+  provider_room_checked_at?: string | null;
 };
 
 export const getStudentClasses = cache(async (accessToken: string): Promise<StudentClass[]> => {

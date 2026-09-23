@@ -59,6 +59,8 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   const participantIdentity = String(event.participant?.user_id || event.participant?.identity || '')
   const guestMatch = /^guest_([0-9a-f-]{36})$/i.exec(participantIdentity)
   if (eventName === 'participant_joined' && participantIdentity) {
+    await (supabase as any).from('live_classes').update({ provider_room_status: 'active', provider_room_checked_at: new Date().toISOString() })
+      .eq('id', liveClass.id).eq('status', 'live')
     if (guestMatch && liveClass.course_id === null) {
       const guestId = guestMatch[1]
       const { data: guest } = await (supabase as any).from('live_class_guests')
@@ -93,7 +95,8 @@ webhooksRouter.post('/plugnmeet', async (c) => {
     if (record) await (supabase as any).from('attendance_records').update({ left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(record.joined_at).getTime()) / 1000)) }).eq('id', record.id)
   }
   if (eventName === 'room_finished' || eventName === 'analytics_proceeded') {
-    await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', liveClass.id).eq('status', 'live')
+    const endedAt = new Date().toISOString()
+    await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: endedAt, provider_room_status: 'ended', provider_room_checked_at: endedAt }).eq('id', liveClass.id).eq('status', 'live')
   }
   if (eventName === 'room_finished') {
     const endedAt = new Date()

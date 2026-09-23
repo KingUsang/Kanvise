@@ -13,15 +13,15 @@ function sign(body: string) {
 }
 
 /**
- * Keep the recorder fleet warm from T-10 until 45 minutes after a class has
- * completed. PlugNmeet load-balances rooms across the active recorders, so
- * capacity is the number of overlapping recording windows, not a fragile
- * class-to-instance assignment.
+ * Keep the single recorder instance warm from T-10 until 45 minutes after a
+ * class has completed. Its capture service accepts two concurrent rooms; its
+ * transcode service is intentionally serial. The controller receives 0 or 1
+ * because this deployment is a direct EC2 instance, not an Auto Scaling Group.
  */
 export async function reconcileRecorderFleet(now = new Date()) {
   if (!configured()) return { name: 'recorder_fleet', skipped: true, desiredCapacity: 0 }
   const warmUntil = new Date(now.getTime() - 45 * 60_000).toISOString()
-  const warmFrom = new Date(now.getTime() - 5 * 60_000).toISOString()
+  const warmFrom = now.toISOString()
   const warmTo = new Date(now.getTime() + 10 * 60_000).toISOString()
   const { data, error } = await (supabase as any).from('live_classes')
     .select('id, status, scheduled_at, ended_at')
@@ -29,7 +29,8 @@ export async function reconcileRecorderFleet(now = new Date()) {
     .not('course_id', 'is', null)
     .or(`and(status.eq.scheduled,scheduled_at.gte.${warmFrom},scheduled_at.lte.${warmTo}),status.eq.live,and(status.eq.completed,ended_at.gte.${warmUntil})`)
   if (error) throw error
-  const desiredCapacity = (data || []).length
+  const activeWindows = data || []
+  const desiredCapacity = activeWindows.length ? 1 : 0
   const payload: FleetAction = {
     action: 'set_capacity', desired_capacity: desiredCapacity,
     reason: desiredCapacity ? 'scheduled_or_active_enrolled_recordings' : 'no_recording_windows', requested_at: now.toISOString(),
@@ -39,7 +40,8 @@ export async function reconcileRecorderFleet(now = new Date()) {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kanvise-Recorder-Fleet-Signature': sign(body) }, body,
   })
   if (!response.ok) throw new Error(`Recorder fleet controller failed (${response.status})`)
-  return { name: 'recorder_fleet', desiredCapacity, activeWindows: (data || []).map((row: any) => row.id) }
+  return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id), captureCapacity: 2,
+    capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }
 }
 
 // Exported for the controller's contract tests and to keep webhook secrets

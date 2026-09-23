@@ -18,9 +18,13 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
     const roomId = String(liveClass.provider_room_id || liveClass.id)
     try {
       checked += 1
-      if (await plugNmeet.isRoomActive(roomId)) continue
+      if (await plugNmeet.isRoomActive(roomId)) {
+        await (supabase as any).from('live_classes').update({ provider_room_status: 'active', provider_room_checked_at: now.toISOString() })
+          .eq('id', liveClass.id).eq('status', 'live')
+        continue
+      }
       const { error: updateError } = await (supabase as any).from('live_classes')
-        .update({ status: 'completed', ended_at: now.toISOString() })
+        .update({ status: 'completed', ended_at: now.toISOString(), provider_room_status: 'ended', provider_room_checked_at: now.toISOString() })
         .eq('id', liveClass.id).eq('status', 'live')
       if (updateError) throw updateError
       completed += 1
