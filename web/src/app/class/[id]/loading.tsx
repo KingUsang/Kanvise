@@ -1,20 +1,13 @@
 export default function ClassroomLoading() {
   return (
-    <main className="flex h-screen flex-col bg-[#f5f3f2]" aria-busy="true" aria-label="Preparing classroom">
-      <header className="flex h-16 items-center gap-3 border-b border-[#e4e2e1] bg-white px-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#180d62] font-bold text-white">K</div>
-        <div className="space-y-2">
-          <div className="h-3 w-40 animate-pulse rounded bg-[#d8d3e4]" />
-          <div className="h-2.5 w-28 animate-pulse rounded bg-[#eeeaf2]" />
-        </div>
-      </header>
-      <div className="flex flex-1 items-center justify-center p-5">
-        <div className="flex w-full max-w-sm flex-col items-center rounded-2xl bg-white p-8 text-center shadow-[0_12px_36px_rgba(24,13,98,0.08)]">
-          <div className="mb-5 h-2 w-16 animate-pulse rounded-full bg-[#ded8ff]" />
-          <h1 className="text-lg font-bold text-[#180d62]">Opening classroom</h1>
-          <p className="mt-2 text-sm leading-6 text-[#787582]">Checking your session…</p>
-        </div>
-      </div>
+    <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans" aria-busy="true" aria-label="Preparing classroom">
+      <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 text-center shadow-sm">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#eeeaff]">
+          <span className="material-symbols-outlined animate-spin text-[#2e2877]" aria-hidden="true">progress_activity</span>
+        </span>
+        <h1 className="mt-5 text-xl font-bold text-[#180d62]">Preparing classroom</h1>
+        <p className="mt-2 text-sm leading-6 text-[#66616c]">Connecting you to the live class. This may take a moment on a cold start.</p>
+      </section>
     </main>
   )
 }
