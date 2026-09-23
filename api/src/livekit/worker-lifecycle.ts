@@ -114,7 +114,7 @@ export async function warmLiveKitWorkerForUpcomingClasses(now = new Date()) {
   if (!enabled()) return { state: 'disabled' as const }
   const prewarmMinutes = positiveMinutes(process.env.LIVEKIT_WORKER_PREWARM_MINUTES, DEFAULT_PREWARM_MINUTES)
   const until = new Date(now.getTime() + prewarmMinutes * 60_000).toISOString()
-  const { count, error } = await supabase.from('live_classes')
+  const { count, error } = await (supabase as any).from('live_classes')
     .select('id', { count: 'exact', head: true })
     .eq('classroom_provider', 'plugnmeet')
     .eq('status', 'scheduled')
@@ -186,9 +186,9 @@ export async function deallocateIdleLiveKitWorker(now = new Date()) {
   const [{ count: scheduledCount, error: scheduledError }, { count: recentLiveCount, error: recentLiveError }, { count: recentCount, error: recentError }] = await Promise.all([
     // Include a recent "start now" row while its room is being created. This
     // closes the narrow race between the tutor's click and listRooms().
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'scheduled').gte('scheduled_at', recentCutoff).lte('scheduled_at', upcomingCutoff),
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'live').gte('started_at', recentCutoff),
-    supabase.from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'completed').gte('ended_at', recentCutoff),
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'scheduled').gte('scheduled_at', recentCutoff).lte('scheduled_at', upcomingCutoff),
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'live').gte('started_at', recentCutoff),
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'completed').gte('ended_at', recentCutoff),
   ])
   if (scheduledError || recentLiveError || recentError) throw scheduledError || recentLiveError || recentError
   if (scheduledCount || recentLiveCount || recentCount) return { state: 'busy' as const }
