@@ -44,6 +44,8 @@ export function StudentClassesClient() {
       if (!response.ok) throw new Error(body?.error || "Failed to load student classes");
       return body.data || [];
     },
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
   const classes = classesQuery.data ?? [];
   const [view, setView] = useState<View>("all");
