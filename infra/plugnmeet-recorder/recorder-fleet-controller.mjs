@@ -35,7 +35,7 @@ export const handler = async (event) => {
   // transcoder has had 15 quiet minutes, so R2 delivery is never cut short.
   const commands = capacity > 0
     ? ['systemctl stop kanvise-recorder-idle-stop.service || true', 'systemctl stop plugnmeet-recorder-transcoder.service || true', 'systemctl enable --now plugnmeet-recorder-capture.service']
-    : ['systemctl disable --now plugnmeet-recorder-capture.service || true', 'systemctl start plugnmeet-recorder-transcoder.service || true', 'systemctl restart kanvise-recorder-idle-stop.service']
+    : ['systemctl disable --now plugnmeet-recorder-capture.service || true', 'systemctl start plugnmeet-recorder-transcoder.service || true', 'systemctl is-active --quiet kanvise-recorder-idle-stop.service || systemctl start kanvise-recorder-idle-stop.service']
   await ssm.send(new SendCommandCommand({
     InstanceIds: [instanceId], DocumentName: 'AWS-RunShellScript',
     Parameters: { commands }, TimeoutSeconds: 60,
