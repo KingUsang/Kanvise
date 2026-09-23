@@ -408,7 +408,7 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
         accessMode,
       })
       await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
-      const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
+      const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
       if (startUpdateError) throw startUpdateError
       const isHost = insertedClass.tutor_id === user.id
       const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, isHost ? 'Tutor' : 'Administrator'), isHost, schoolId: user.school_id, accessMode })
@@ -486,7 +486,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(source), recording:live_class_recordings(status), recap:live_class_recaps(status)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, classroom_provider, provider_room_status, provider_room_checked_at, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(source), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
 
@@ -520,6 +520,10 @@ liveClassesRouter.get('/', async (c) => {
 
   const enriched = (data || []).map((item: any) => ({
     ...item,
+    // A stale database row must not become a false "Live now" badge. A
+    // PlugNmeet room becomes verified when it is created or joins report in.
+    status: item.classroom_provider === 'plugnmeet' && item.status === 'live'
+      && !['ready', 'active'].includes(item.provider_room_status) ? 'scheduled' : item.status,
     recording_status: Array.isArray(item.recording) ? item.recording[0]?.status || null : item.recording?.status || null,
     recap_status: Array.isArray(item.recap) ? item.recap[0]?.status || null : item.recap?.status || null,
     recording: undefined,
@@ -657,7 +661,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       await reconcileRecorderFleet()
       await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
       const startedAt = new Date().toISOString()
-      const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id').single()
+      const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id, provider_room_status, provider_room_checked_at').single()
       if (error || !updated) throw error || new Error('CLASS_UPDATE_FAILED')
       const config = await getPlugNmeetClientConfig({ roomId, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...updated, ...config, class_title: updated.title, course_name: (liveClass.courses as any)?.name || null } })
@@ -831,9 +835,15 @@ liveClassesRouter.get('/:id/recording', async (c) => {
   if (!data) return c.json({ error: 'Recording is not ready', code: 'RECORDING_NOT_READY' }, 404)
   let playbackUrl: string | null = null
   if (data.r2_file_key) {
-    try { playbackUrl = await createPresignedDownload(data.r2_file_key, String(access.liveClass.school_id), 600) } catch (downloadError) { console.warn('[recording] signed playback URL unavailable:', downloadError) }
+    try {
+      const download = c.req.query('download') === '1'
+      const safeTitle = String(access.liveClass.title || 'kanvise-class-recording')
+        .replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 100) || 'kanvise-class-recording'
+      playbackUrl = await createPresignedDownload(data.r2_file_key, String(access.liveClass.school_id), 600,
+        download ? { responseContentDisposition: `attachment; filename="${safeTitle}.mp4"` } : undefined)
+    } catch (downloadError) { console.warn('[recording] signed playback URL unavailable:', downloadError) }
   }
-  return c.json({ data: { ...data, playback_url: playbackUrl, access: 'enrolled_students_tutor_admin' } })
+  return c.json({ data: { ...data, playback_url: playbackUrl, access: 'enrolled_students_tutor_admin', disposition: c.req.query('download') === '1' ? 'attachment' : 'inline' } })
 })
 
 liveClassesRouter.get('/:id/recap', async (c) => {
@@ -889,7 +899,8 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
 
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
     if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
-    const { error } = await supabase.from('live_classes').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'live')
+    const endedAt = new Date().toISOString()
+    const { error } = await supabase.from('live_classes').update({ status: 'completed', ended_at: endedAt, provider_room_status: 'ended', provider_room_checked_at: endedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'live')
     if (error) return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
     try {
       const { plugNmeet } = await import('../plugnmeet/client')

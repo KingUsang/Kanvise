@@ -360,7 +360,7 @@ export async function createPresignedDownload(
   fileKey: string,
   schoolId: string,
   expiresIn = 900,
-  options?: { responseCacheControl?: string },
+  options?: { responseCacheControl?: string; responseContentDisposition?: string },
 ) {
   assertPrivateFileKey(fileKey, schoolId)
   const { client, bucketName } = configuredClient()
@@ -368,6 +368,7 @@ export async function createPresignedDownload(
     Bucket: bucketName,
     Key: fileKey,
     ResponseCacheControl: options?.responseCacheControl,
+    ResponseContentDisposition: options?.responseContentDisposition,
   })
   return getSignedUrl(client, command, { expiresIn })
 }

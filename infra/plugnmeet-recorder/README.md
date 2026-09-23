@@ -1,22 +1,26 @@
-# On-demand PlugNmeet recorder fleet
+# On-demand PlugNmeet recorder
 
-The recorder fleet is an AWS Auto Scaling Group, not a permanent server. The
-Kanvise scheduler sends its desired capacity every minute: one worker for each
-overlapping enrolled PlugNmeet recording window, starting ten minutes before
-class and retained for 45 minutes after completion so post-transcoding and the
-R2 callback can finish. PlugNmeet's recorder protocol automatically balances
-recording tasks across active workers.
+The recorder is one stopped-by-default EC2 instance, not a permanent server or
+an Auto Scaling Group. The Kanvise scheduler requests it from T-10 through 45
+minutes after the last completed enrolled class, then requests a stop. Start
+Now goes through the same request before its room is created.
 
-The launch template must run the official recorder in `both` mode with a local
-temporary directory and the `post-transcoding-r2.sh` hook. It must receive its
-configuration from SSM Parameter Store: never bake API keys, R2 keys, or the
-recorder callback secret into an AMI or this repository.
+Run two PlugNmeet recorder services on that machine: `recorderOnly` accepts up
+to two simultaneous capture jobs; `transcoderOnly` starts only after the last
+class and processes one completed job at a time. They share the recorder
+directory and NATS connection, so capture is never CPU-starved by FFmpeg.
+
+The instance configuration must use 480p output with the
+`post-transcoding-r2.sh` hook and receive its credentials from SSM Parameter
+Store: never bake API keys, R2 keys, or the recorder callback secret into an
+AMI or this repository.
 
 Required API environment variables:
 
-- `RECORDER_FLEET_CONTROLLER_URL` — Lambda Function URL.
+- `RECORDER_FLEET_CONTROLLER_URL` — Lambda Function URL for the instance controller.
 - `RECORDER_FLEET_CONTROLLER_SECRET` — HMAC shared only by API and Lambda.
 
-The Lambda needs only `autoscaling:SetDesiredCapacity` on the one recorder ASG.
-Its Function URL must use `AWS_IAM` or a resource policy that limits invocation
-to Kanvise's API egress; the HMAC remains the application-level replay barrier.
+The Lambda needs only `ec2:DescribeInstances`, `ec2:StartInstances`, and
+`ec2:StopInstances` for the explicit `RECORDER_INSTANCE_ID`. Its Function URL
+must be restricted to Kanvise's API egress; the HMAC remains the application-
+level replay barrier.

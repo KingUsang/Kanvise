@@ -53,7 +53,8 @@ export function StudentClassesClient() {
   const visibleClasses = useMemo(() => filterStudentClasses(classes, view, courseId, now), [classes, courseId, now, view]);
 
   const courses = useMemo(() => Array.from(new Map(classes.map((item) => [item.course_id, item.course?.name || "Subject"])).entries()), [classes]);
-  const liveCount = classes.filter((item) => item.status === "live").length;
+  const isVerifiedLive = (item: StudentClass) => item.status === "live" && (item.classroom_provider !== "plugnmeet" || item.provider_room_status === "ready" || item.provider_room_status === "active");
+  const liveCount = classes.filter(isVerifiedLive).length;
   const upcomingCount = classes.filter((item) => item.status === "scheduled" && new Date(item.scheduled_at).getTime() >= now).length;
   const completedCount = classes.filter((item) => item.status === "completed").length;
 
@@ -83,6 +84,17 @@ export function StudentClassesClient() {
     }
   }
 
+  async function downloadRecording(classId: string) {
+    try {
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/live-classes/${classId}/recording?download=1`, { cache: "no-store" });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body?.data?.playback_url) throw new Error(body?.error || "Could not prepare the download");
+      window.location.assign(body.data.playback_url);
+    } catch (error) {
+      setResources((current) => ({ ...current, [classId]: { ...current[classId], error: error instanceof Error ? error.message : "Could not download recording" } }));
+    }
+  }
+
   if (classesQuery.isPending) return <div className="rounded-2xl border border-[#e5e1dd] bg-white p-10 text-center text-sm text-[#716c76]">Loading classes…</div>;
   if (classesQuery.isError) return <div className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-sm text-red-800"><p>{classesQuery.error.message}</p><button type="button" onClick={() => void classesQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></div>;
   return <>
@@ -104,11 +116,12 @@ export function StudentClassesClient() {
         {visibleClasses.length ? visibleClasses.map((item) => {
           const scheduledTime = new Date(item.scheduled_at).getTime();
           const isPast = item.status === "completed" || item.status === "cancelled" || (item.status === "scheduled" && scheduledTime < now);
-          return <article key={item.id} className={`rounded-2xl border p-4 sm:flex sm:items-center sm:gap-5 sm:p-5 ${item.status === "live" ? "border-[#c26627] bg-[#fffaf5]" : "border-[#e5e1dd] bg-white"}`}>
+          const liveNow = isVerifiedLive(item);
+          return <article key={item.id} className={`rounded-2xl border p-4 sm:flex sm:items-center sm:gap-5 sm:p-5 ${liveNow ? "border-[#c26627] bg-[#fffaf5]" : "border-[#e5e1dd] bg-white"}`}>
             <div className="flex items-start gap-4 sm:min-w-48"><div className="rounded-xl bg-[#eeeafe] px-3 py-2 text-center text-[#2e2877]"><p className="text-lg font-semibold leading-5">{new Date(item.scheduled_at).getDate()}</p><p className="text-[11px] uppercase">{new Intl.DateTimeFormat("en-NG", { month: "short" }).format(new Date(item.scheduled_at))}</p></div><div><p className="text-sm font-semibold">{timeLabel(item.scheduled_at)}</p><p className="mt-1 text-xs text-[#77727e]">{dateLabel(item.scheduled_at)}</p><p className="mt-1 flex items-center gap-1 text-xs text-[#77727e]"><Clock3 size={12} />{item.duration_minutes} mins</p></div></div>
-            <div className="mt-4 min-w-0 flex-1 sm:mt-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{item.title}</p>{item.status === "live" && <span className="rounded-full bg-[#fbe6d6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#994704]">Live now</span>}{item.status === "cancelled" && <span className="rounded-full bg-[#f1efed] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#716c76]">Cancelled</span>}</div><p className="mt-1 text-sm text-[#716c76]">{item.course?.name || "Subject"}</p><p className="mt-2 flex items-center gap-1.5 text-xs text-[#77727e]"><UserRound size={13} />{tutorName(item)}</p></div>
-            <div className="mt-4 sm:mt-0 sm:text-right">{item.status === "live" ? <Link href={`/class/${item.id}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 py-3 text-sm font-semibold text-white hover:bg-[#7f3a03] sm:w-auto"><Video size={17} />Join class</Link> : item.status === "completed" ? <div className="flex flex-wrap justify-end gap-2">
-              {item.recording_status === "ready" && <button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Watch recording</button>}
+            <div className="mt-4 min-w-0 flex-1 sm:mt-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{item.title}</p>{liveNow && <span className="rounded-full bg-[#fbe6d6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#994704]">Live now</span>}{item.status === "cancelled" && <span className="rounded-full bg-[#f1efed] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#716c76]">Cancelled</span>}</div><p className="mt-1 text-sm text-[#716c76]">{item.course?.name || "Subject"}</p><p className="mt-2 flex items-center gap-1.5 text-xs text-[#77727e]"><UserRound size={13} />{tutorName(item)}</p></div>
+            <div className="mt-4 sm:mt-0 sm:text-right">{liveNow ? <Link href={`/class/${item.id}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 py-3 text-sm font-semibold text-white hover:bg-[#7f3a03] sm:w-auto"><Video size={17} />Join class</Link> : item.status === "completed" ? <div className="flex flex-wrap justify-end gap-2">
+              {item.recording_status === "ready" && <><button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Watch recording</button><button type="button" onClick={() => void downloadRecording(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Download</button></>}
               {item.recap_status === "published" && <button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#994704] px-3 py-2 text-sm font-semibold text-[#994704]">Read summary</button>}
               {item.recording_status === "pending" || item.recording_status === "transferring" ? <span className="self-center text-xs text-[#77727e]">Recording processing</span> : null}
               {item.recap_status === "draft" || item.recap_status === "generating" ? <span className="self-center text-xs text-[#77727e]">Summary pending review</span> : null}
