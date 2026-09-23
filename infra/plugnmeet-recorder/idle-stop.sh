@@ -7,7 +7,9 @@ while :; do
   if systemctl is-active --quiet plugnmeet-recorder-capture.service; then
     exit 0
   fi
-  if systemctl is-active --quiet plugnmeet-recorder-transcoder.service || pgrep -x ffmpeg >/dev/null; then
+  # The transcoder daemon intentionally stays alive with its hook process
+  # waiting for work; only an ffmpeg child means an actual job is running.
+  if pgrep -x ffmpeg >/dev/null; then
     idle=0
   else
     idle=$((idle + 1))
