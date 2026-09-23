@@ -2,10 +2,10 @@
 
 import { createBrowserClient } from '@supabase/ssr'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import ClientClassroom from '@/app/class/[id]/ClientClassroom'
+import PlugNmeetClassroom from '@/app/class/[id]/PlugNmeetClassroom'
 
 type PublicClass = { title: string; status: string; access_mode: 'anyone_with_link' | 'enrolled_learners'; scheduled_at: string; centre_name: string; centre_logo_url: string | null }
-type JoinData = { livekit_room_name: string; access_token: string; livekit_url: string; class_title: string; course_name: null }
+type JoinData = { room_id: string; join_token: string; server_url: string; client_files: { css_files: string[]; js_files: string[] }; class_title: string; is_host: boolean }
 
 export default function PublicClassroom({ shareToken }: { shareToken: string }) {
   const [info, setInfo] = useState<PublicClass | null>(null)
@@ -46,7 +46,7 @@ export default function PublicClassroom({ shareToken }: { shareToken: string }) 
     } catch { setError('Could not reach Kanvise. Check your connection and try again.') } finally { setJoining(false) }
   }
 
-  if (joined) return <ClientClassroom token={joined.access_token} serverUrl={joined.livekit_url} roomName={joined.livekit_room_name} classId={`shared-${shareToken}`} isHost={false} classTitle={joined.class_title} courseName={null} guestShareToken={shareToken} />
+  if (joined) return <PlugNmeetClassroom roomId={joined.room_id} joinToken={joined.join_token} serverUrl={joined.server_url} clientFiles={joined.client_files} classId={`shared-${shareToken}`} isHost={false} classTitle={joined.class_title} />
   const unavailable = info?.status === 'completed' || info?.status === 'cancelled' || info?.status === 'revoked'
   return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans"><section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm">
     <div className="flex items-center gap-3">{info?.centre_logo_url ? <img src={info.centre_logo_url} alt="" className="h-11 w-11 rounded-xl object-cover" /> : <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eeeaff] text-[#2e2877]"><span className="material-symbols-outlined">school</span></div>}<div><p className="text-xs font-semibold uppercase tracking-[.12em] text-[#994704]">{info?.centre_name || 'Kanvise'}</p><h1 className="text-xl font-bold text-[#180d62]">{info?.title || 'Loading class…'}</h1></div></div>

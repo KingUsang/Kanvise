@@ -14,6 +14,8 @@ export const PRIVATE_UPLOAD_TYPES = [
   'submission',
   'question_media',
   'live_class_presentation',
+  'live_class_recording',
+  'live_class_transcript',
 ] as const
 
 export type PrivateUploadType = typeof PRIVATE_UPLOAD_TYPES[number]
@@ -218,6 +220,15 @@ export function validatePrivateUploadMetadata(input: {
   contentType: string
   fileSizeBytes: number
 }) {
+  if (input.entityType === 'live_class_recording') {
+    const fileSizeBytes = Number(input.fileSizeBytes)
+    if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) throw new StorageError('File size must be a positive integer', 'INVALID_FILE_SIZE')
+    if (fileSizeBytes > 20 * 1024 * 1024 * 1024) throw new StorageError('Recording exceeds the 20GB safety limit', 'FILE_TOO_LARGE')
+    if (!['video/mp4', 'video/webm'].includes(input.contentType)) throw new StorageError('Recording must be MP4 or WebM', 'INVALID_FILE_TYPE')
+    const extension = input.contentType === 'video/mp4' ? 'mp4' : 'webm'
+    if (input.fileName.split('.').pop()?.toLowerCase() !== extension) throw new StorageError('Filename extension does not match content type', 'FILE_TYPE_MISMATCH')
+    return { extension, fileSizeBytes }
+  }
   if (input.entityType !== 'question_media') return validateDocumentMetadata(input)
   const fileSizeBytes = Number(input.fileSizeBytes)
   if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) {
@@ -349,7 +360,7 @@ export async function createPresignedDownload(
   fileKey: string,
   schoolId: string,
   expiresIn = 900,
-  options?: { responseCacheControl?: string },
+  options?: { responseCacheControl?: string; responseContentDisposition?: string },
 ) {
   assertPrivateFileKey(fileKey, schoolId)
   const { client, bucketName } = configuredClient()
@@ -357,6 +368,7 @@ export async function createPresignedDownload(
     Bucket: bucketName,
     Key: fileKey,
     ResponseCacheControl: options?.responseCacheControl,
+    ResponseContentDisposition: options?.responseContentDisposition,
   })
   return getSignedUrl(client, command, { expiresIn })
 }
@@ -476,6 +488,26 @@ export async function uploadPrivateObject(input: {
     Body: input.body,
     ContentType: input.contentType,
     ContentLength: input.body.byteLength,
+  }))
+  return { fileKey: input.fileKey }
+}
+
+/** Upload a large private object without buffering the complete file in memory. */
+export async function uploadPrivateStream(input: {
+  fileKey: string
+  schoolId: string
+  body: NodeJS.ReadableStream
+  contentType: string
+  contentLength?: number
+}) {
+  assertPrivateFileKey(input.fileKey, input.schoolId)
+  const { client, bucketName } = configuredClient()
+  await client.send(new PutObjectCommand({
+    Bucket: bucketName,
+    Key: input.fileKey,
+    Body: input.body as any,
+    ContentType: input.contentType,
+    ...(Number.isInteger(input.contentLength) ? { ContentLength: input.contentLength } : {}),
   }))
   return { fileKey: input.fileKey }
 }

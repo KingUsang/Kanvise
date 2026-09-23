@@ -1,0 +1,288 @@
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+
+export type PlugNmeetRoomFeatures = {
+  allow_webcams: boolean
+  mute_on_start: boolean
+  allow_screen_share: boolean
+  admin_only_webcams: boolean
+  allow_view_other_webcams: boolean
+  allow_view_other_users_list: boolean
+  enable_analytics: boolean
+  allow_virtual_bg: boolean
+  allow_raise_hand: boolean
+  auto_gen_user_id: boolean
+  room_duration: number
+  recording_features: {
+    is_allow: boolean
+    is_allow_cloud: boolean
+    is_allow_local: boolean
+    enable_auto_cloud_recording: boolean
+    only_record_admin_webcams: boolean
+  }
+  chat_features: { is_allow: boolean; is_allow_file_upload: boolean }
+  shared_note_pad_features: { is_allow: boolean }
+  whiteboard_features: { is_allow: boolean }
+  external_media_player_features: { is_allow: boolean }
+  external_broadcasting_features: { is_allow: boolean; is_allow_rtmp: boolean }
+  waiting_room_features: { is_active: boolean }
+  breakout_room_features: { is_allow: boolean }
+  display_external_link_features: { is_allow: boolean }
+  ingress_features: { is_allow: boolean }
+  polls_features: { is_allow: boolean }
+  insights_features: {
+    is_allow: boolean
+    transcription_features?: { is_allow: boolean }
+    ai_features?: {
+      is_allow: boolean
+      ai_text_chat_features?: { is_allow: boolean }
+      meeting_summarization_features?: { is_allow: boolean }
+    }
+  }
+  sip_dial_in_features: { is_allow: boolean }
+  end_to_end_encryption_features: { is_enabled: boolean }
+}
+
+export type PlugNmeetRoomCreateRequest = {
+  room_id: string
+  max_participants: number
+  empty_timeout: number
+  metadata: {
+    room_title: string
+    welcome_message: string
+    webhook_url?: string
+    logout_url?: string
+    room_features: PlugNmeetRoomFeatures
+    copyright_conf: { display: boolean }
+    extra_data: Record<string, string | null>
+  }
+}
+
+export type PlugNmeetJoinRequest = {
+  room_id: string
+  user_info: {
+    name: string
+    user_id: string
+    is_admin: boolean
+    is_hidden: boolean
+    client_type: 'WEB'
+    user_metadata: {
+      profile_pic?: string
+      extra_data: Record<string, string | null>
+      lock_settings: { lock_screen_sharing: boolean; lock_chat_file_share: boolean }
+    }
+  }
+}
+
+type PlugNmeetResponse<T = Record<string, unknown>> = T & { status?: boolean; msg?: string; status_code?: number }
+
+export type PlugNmeetRecordingInfo = {
+  record_id?: string
+  room_id?: string
+  file_path?: string
+  file_size?: number
+  creation_time?: number
+  metadata?: Record<string, unknown>
+}
+
+export function plugNmeetConfigured(env: NodeJS.ProcessEnv = process.env) {
+  return Boolean(env.PLUGNMEET_SERVER_URL && env.PLUGNMEET_API_KEY && env.PLUGNMEET_API_SECRET)
+}
+
+function config() {
+  const serverUrl = process.env.PLUGNMEET_SERVER_URL?.replace(/\/$/, '')
+  const apiKey = process.env.PLUGNMEET_API_KEY
+  const apiSecret = process.env.PLUGNMEET_API_SECRET
+  if (!serverUrl || !apiKey || !apiSecret) throw new Error('PlugNmeet environment variables are not configured')
+  return { serverUrl, apiKey, apiSecret }
+}
+
+export function signPlugNmeetBody(body: string, secret = process.env.PLUGNMEET_API_SECRET || '') {
+  return createHmac('sha256', secret).update(body).digest('hex')
+}
+
+function verifyWebhookJwt(body: string, authorization: string, secret: string) {
+  const token = authorization.replace(/^Bearer\s+/i, '').trim()
+  const segments = token.split('.')
+  if (segments.length !== 3) return false
+  try {
+    const [encodedHeader, encodedPayload, encodedSignature] = segments
+    const header = JSON.parse(Buffer.from(encodedHeader, 'base64url').toString('utf8')) as { alg?: string; typ?: string }
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as { sha256?: string; exp?: number }
+    if (header.alg !== 'HS256' || !payload.sha256 || (payload.exp !== undefined && payload.exp < Math.floor(Date.now() / 1000))) return false
+    const expectedSignature = createHmac('sha256', secret).update(`${encodedHeader}.${encodedPayload}`).digest()
+    const suppliedSignature = Buffer.from(encodedSignature, 'base64url')
+    const calculatedHash = createHash('sha256').update(body).digest('hex')
+    return suppliedSignature.length === expectedSignature.length
+      && timingSafeEqual(suppliedSignature, expectedSignature)
+      && payload.sha256 === calculatedHash
+  } catch {
+    return false
+  }
+}
+
+export function verifyPlugNmeetWebhook(body: string, authorization: string | null, secret = process.env.PLUGNMEET_WEBHOOK_SECRET || process.env.PLUGNMEET_API_SECRET || '') {
+  if (!authorization || !secret) return false
+  return verifyWebhookJwt(body, authorization, secret)
+}
+
+export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
+  return {
+    allow_webcams: true,
+    mute_on_start: true,
+    allow_screen_share: false,
+    admin_only_webcams: false,
+    allow_view_other_webcams: true,
+    allow_view_other_users_list: true,
+    enable_analytics: true,
+    allow_virtual_bg: false,
+    allow_raise_hand: true,
+    auto_gen_user_id: false,
+    room_duration: 0,
+    recording_features: {
+      is_allow: true,
+      is_allow_cloud: true,
+      is_allow_local: false,
+      // The single recorder worker is registered before this setting is
+      // enabled in deployed environments, so every enrolled class records.
+      enable_auto_cloud_recording: true,
+      only_record_admin_webcams: false,
+    },
+    chat_features: { is_allow: true, is_allow_file_upload: false },
+    shared_note_pad_features: { is_allow: false },
+    whiteboard_features: { is_allow: true },
+    external_media_player_features: { is_allow: false },
+    external_broadcasting_features: { is_allow: false, is_allow_rtmp: false },
+    waiting_room_features: { is_active: false },
+    breakout_room_features: { is_allow: false },
+    display_external_link_features: { is_allow: false },
+    ingress_features: { is_allow: false },
+    polls_features: { is_allow: true },
+    // Enables PlugNmeet's shipped Generate-with-AI poll composer. Live
+    // transcription and meeting summaries remain off for this pilot.
+    insights_features: {
+      is_allow: true,
+      transcription_features: { is_allow: false },
+      ai_features: {
+        is_allow: true,
+        ai_text_chat_features: { is_allow: true },
+        meeting_summarization_features: { is_allow: false },
+      },
+    },
+    sip_dial_in_features: { is_allow: false },
+    end_to_end_encryption_features: { is_enabled: false },
+  }
+}
+
+export function createEnrolledRoomRequest(input: {
+  roomId: string
+  title: string
+  schoolId: string
+  courseId: string | null
+}) : PlugNmeetRoomCreateRequest {
+  return {
+    room_id: input.roomId,
+    // The current PlugNmeet API rejects zero, despite older documentation
+    // describing it as unlimited. This is an infrastructure safety ceiling,
+    // not a Kanvise admission cap.
+    max_participants: 1000,
+    // A tutor can briefly leave or lose focus without ending the classroom.
+    empty_timeout: 900,
+    metadata: {
+      room_title: input.title,
+      welcome_message: 'Welcome to your Kanvise class.',
+      ...(process.env.PLUGNMEET_WEBHOOK_URL ? { webhook_url: process.env.PLUGNMEET_WEBHOOK_URL } : {}),
+      ...(process.env.FRONTEND_URL ? { logout_url: `${process.env.FRONTEND_URL.replace(/\/$/, '')}/dashboard` } : {}),
+      room_features: enrolledRoomFeatures(),
+      copyright_conf: { display: false },
+      extra_data: { school_id: input.schoolId, course_id: input.courseId || '' },
+    },
+  }
+}
+
+export function createGuestRoomRequest(input: {
+  roomId: string
+  title: string
+  schoolId: string
+  courseId: string | null
+}): PlugNmeetRoomCreateRequest {
+  const features = enrolledRoomFeatures()
+  features.enable_analytics = false
+  features.recording_features = {
+    is_allow: false, is_allow_cloud: false, is_allow_local: false,
+    enable_auto_cloud_recording: false, only_record_admin_webcams: false,
+  }
+  features.insights_features = { is_allow: false }
+  return {
+    room_id: input.roomId,
+    max_participants: 1000,
+    empty_timeout: 900,
+    metadata: {
+      room_title: input.title,
+      welcome_message: 'Welcome to this Kanvise live-class preview.',
+      ...(process.env.PLUGNMEET_WEBHOOK_URL ? { webhook_url: process.env.PLUGNMEET_WEBHOOK_URL } : {}),
+      ...(process.env.FRONTEND_URL ? { logout_url: `${process.env.FRONTEND_URL.replace(/\/$/, '')}/dashboard` } : {}),
+      room_features: features,
+      copyright_conf: { display: false },
+      // PlugNmeet's protobuf map accepts strings only; omit the concept of a
+      // course for guests with an empty string rather than a JSON null.
+      extra_data: { school_id: input.schoolId, course_id: '', access_profile: 'guest' },
+    },
+  }
+}
+
+async function request<T>(path: string, payload: Record<string, unknown>): Promise<PlugNmeetResponse<T>> {
+  const { serverUrl, apiKey, apiSecret } = config()
+  const body = JSON.stringify(payload)
+  const response = await fetch(`${serverUrl}/auth${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'API-KEY': apiKey,
+      'HASH-SIGNATURE': signPlugNmeetBody(body, apiSecret),
+    },
+    body,
+  })
+  const json = await response.json().catch(() => ({})) as PlugNmeetResponse<T>
+  if (!response.ok || json.status === false) {
+    throw new Error(`PlugNmeet ${path} failed (${response.status}): ${json.msg || 'unknown error'}`)
+  }
+  return json
+}
+
+export const plugNmeet = {
+  createRoom(input: PlugNmeetRoomCreateRequest) {
+    return request<{ room_id?: string }>('/room/create', input as unknown as Record<string, unknown>)
+  },
+  getJoinToken(input: PlugNmeetJoinRequest) {
+    return request<{ token?: string; join_token?: string }>('/room/getJoinToken', input as unknown as Record<string, unknown>)
+  },
+  endRoom(roomId: string) {
+    return request('/room/endRoom', { room_id: roomId })
+  },
+  async isRoomActive(roomId: string) {
+    // PlugNmeet's authenticated API uses the full `isRoomActive` route name.
+    // `/room/isActive` is not a route and silently prevented stale live-class
+    // reconciliation from ever receiving a provider answer.
+    const response = await request<{ is_active?: boolean }>('/room/isRoomActive', { room_id: roomId })
+    return response.is_active === true
+  },
+  getClientFiles() {
+    return request<{ css_files?: string[]; js_files?: string[]; css?: string[]; js?: string[] }>('/getClientFiles', {})
+  },
+  getRecordingInfo(recordId: string) {
+    return request<{ recording_info?: PlugNmeetRecordingInfo }>('/recording/info', { record_id: recordId })
+  },
+  getRecordingDownloadToken(recordId: string) {
+    return request<{ token?: string }>('/recording/getDownloadToken', { record_id: recordId })
+  },
+  mergeRecordings(input: { room_id: string; recording_ids: string[] }) {
+    return request('/recording/mergeRecordings', { by_ids: input })
+  },
+  createPoll(input: { room_id: string; question: string; options: Array<{ id: number; text: string; is_correct?: boolean }>; is_quiz: boolean; is_anonymous: boolean; duration: number }) {
+    return request<{ poll_id?: string }>('/room/createPoll', input as unknown as Record<string, unknown>)
+  },
+}
+
+export function plugNmeetClientUrl() {
+  return config().serverUrl
+}

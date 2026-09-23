@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ClientClassroom from './ClientClassroom'
 import PreparingClassroom from './PreparingClassroom'
+import PlugNmeetClassroom from './PlugNmeetClassroom'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -81,9 +82,16 @@ export default async function Page({ params, searchParams }: PageProps) {
       )
     }
 
-    // Class is open to anyone — render the guest join UI (client component)
-    const { GuestClassEntry } = await import('./GuestClassEntry')
-    return <GuestClassEntry classId={classId} classInfo={classInfo} />
+    // Guest access requires the opaque link, never a guessable class id. This
+    // prevents a public route from becoming an alternate access control path.
+    return (
+      <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
+        <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm text-center">
+          <h1 className="text-xl font-bold text-[#180d62]">Use the class link</h1>
+          <p className="mt-3 text-sm leading-6 text-[#66616c]">Ask your tutor for the shared class link to join this preview.</p>
+        </section>
+      </main>
+    )
   }
 
   // ── 2. Call Hono to get the LiveKit token ──────────────────────────────────
@@ -96,12 +104,17 @@ export default async function Page({ params, searchParams }: PageProps) {
     : `${honoUrl}/live-classes/${classId}/join`
 
   let classData: {
+    provider?: 'livekit' | 'plugnmeet'
     livekit_room_name: string
     access_token: string
     livekit_url: string
     is_host: boolean
     class_title: string
     course_name: string | null
+    room_id?: string
+    join_token?: string
+    server_url?: string
+    client_files?: { css_files: string[]; js_files: string[] }
   }
   let errorMessage: string | null = null
   let preparing: {
@@ -165,6 +178,10 @@ export default async function Page({ params, searchParams }: PageProps) {
   }
 
   const isHost = classData!.is_host === true // The backend securely confirms if they are the host
+
+  if (classData!.provider === 'plugnmeet' && classData!.join_token && classData!.server_url && classData!.client_files) {
+    return <PlugNmeetClassroom roomId={classData!.room_id || classId} joinToken={classData!.join_token} serverUrl={classData!.server_url} clientFiles={classData!.client_files} classId={classId} isHost={isHost} classTitle={classData!.class_title} />
+  }
 
   return (
     <ClientClassroom

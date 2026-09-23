@@ -4,14 +4,20 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import ClientClassroom from './ClientClassroom'
+import PlugNmeetClassroom from './PlugNmeetClassroom'
 
 type ClassroomToken = {
-  livekit_room_name: string
-  access_token: string
-  livekit_url: string
+  provider?: 'livekit' | 'plugnmeet'
+  livekit_room_name?: string
+  access_token?: string
+  livekit_url?: string
   is_host: boolean
   class_title: string
   course_name: string | null
+  room_id?: string
+  join_token?: string
+  server_url?: string
+  client_files?: { css_files: string[]; js_files: string[] }
 }
 
 type Phase = 'starting_vm' | 'booting' | 'connecting' | 'ready' | 'unavailable'
@@ -160,6 +166,12 @@ export default function PreparingClassroom({
 
   // Handoff to the live classroom
   if (ready) {
+    if (ready.provider === 'plugnmeet' && ready.join_token && ready.server_url && ready.client_files) {
+      return <PlugNmeetClassroom roomId={ready.room_id || classId} joinToken={ready.join_token} serverUrl={ready.server_url} clientFiles={ready.client_files} classId={classId} isHost={ready.is_host} classTitle={ready.class_title || classTitle} />
+    }
+    if (!ready.access_token || !ready.livekit_url || !ready.livekit_room_name) {
+      return null
+    }
     return (
       <ClientClassroom
         token={ready.access_token}

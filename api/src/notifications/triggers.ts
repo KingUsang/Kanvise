@@ -1,6 +1,7 @@
 import { deliverNotification } from './service'
 import type { NotificationRecipient, NotificationResult } from './types'
 import { announceTelegramClassReminder } from '../telegram/delivery'
+import { notificationRepository } from './repository'
 
 type Deliver = typeof deliverNotification
 
@@ -156,4 +157,23 @@ export function notifyAssignmentDeadline(input: {
     telegramAction: { text: 'Open assignment', url: `${frontendUrl()}/dashboard/student/assignments` },
     push: { body: `${input.title} is due in less than 24 hours.`, url: '/dashboard/student/assignments' },
   })
+}
+
+/** Recaps are intentionally in-app/push-only in the pilot. Recipient lookup
+ * is by course enrolment, so a guest or unenrolled link holder can never be
+ * notified even if they know the class UUID. */
+export async function notifyClassRecapPublished(input: {
+  id: string; schoolId: string; courseId: string; title: string
+}) {
+  const recipients = await notificationRepository.resolveRecipients(input.schoolId, { enrolment: { type: 'course', id: input.courseId } })
+  await Promise.all(recipients.map((recipient) => notificationRepository.createInApp({
+    schoolId: input.schoolId,
+    recipientId: recipient.id,
+    event: 'class_recap_ready',
+    title: 'Class recap ready',
+    body: `${input.title} summary and recording are ready to view.`,
+    relatedEntityType: 'live_class_recap',
+    relatedEntityId: input.id,
+  })))
+  return { recipients: recipients.length }
 }

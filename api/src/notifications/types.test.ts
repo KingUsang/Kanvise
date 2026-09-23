@@ -10,6 +10,7 @@ describe('notification type contract', () => {
       submission_graded: 'submission_graded',
       mock_fully_graded: 'mock_fully_graded',
       class_cancelled: 'class_cancellation',
+      class_recap_ready: 'live_class_reminder',
     })
   })
 })

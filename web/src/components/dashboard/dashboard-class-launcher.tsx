@@ -97,7 +97,7 @@ export function DashboardClassLauncher({
       })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not start the class')
-      if (body.data.share_token) {
+      if (body.data.share_token && accessMode === 'anyone_with_link') {
         setShareUrl(`${window.location.origin}/class/${body.data.id}`)
         setShareClassId(body.data.id)
         setStarting(false)
