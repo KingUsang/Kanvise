@@ -1,9 +1,10 @@
 # On-demand PlugNmeet recorder
 
 The recorder is one stopped-by-default EC2 instance, not a permanent server or
-an Auto Scaling Group. The Kanvise scheduler requests it from T-10 through 45
-minutes after the last completed enrolled class, then requests a stop. Start
-Now goes through the same request before its room is created.
+an Auto Scaling Group. The Kanvise scheduler requests it from T-10 through the
+active class, then switches to the transcoder after the class ends and stops
+the instance after the queue is empty. Start Now goes through the same request
+before its room is created.
 
 Run two PlugNmeet recorder services on that machine: `recorderOnly` accepts up
 to two simultaneous capture jobs; `transcoderOnly` starts only after the last

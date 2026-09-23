@@ -20,14 +20,13 @@ function sign(body: string) {
  */
 export async function reconcileRecorderFleet(now = new Date()) {
   if (!configured()) return { name: 'recorder_fleet', skipped: true, desiredCapacity: 0 }
-  const warmUntil = new Date(now.getTime() - 45 * 60_000).toISOString()
   const warmFrom = now.toISOString()
   const warmTo = new Date(now.getTime() + 10 * 60_000).toISOString()
   const { data, error } = await (supabase as any).from('live_classes')
     .select('id, status, scheduled_at, ended_at')
     .eq('classroom_provider', 'plugnmeet')
     .not('course_id', 'is', null)
-    .or(`and(status.eq.scheduled,scheduled_at.gte.${warmFrom},scheduled_at.lte.${warmTo}),status.eq.live,and(status.eq.completed,ended_at.gte.${warmUntil})`)
+    .or(`and(status.eq.scheduled,scheduled_at.gte.${warmFrom},scheduled_at.lte.${warmTo}),status.eq.live`)
   if (error) throw error
   const activeWindows = data || []
   const desiredCapacity = activeWindows.length ? 1 : 0
