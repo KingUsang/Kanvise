@@ -180,7 +180,10 @@ export default async function Page({ params, searchParams }: PageProps) {
   const isHost = classData!.is_host === true // The backend securely confirms if they are the host
 
   if (classData!.provider === 'plugnmeet' && classData!.join_token && classData!.server_url && classData!.client_files) {
-    return <PlugNmeetClassroom roomId={classData!.room_id || classId} joinToken={classData!.join_token} serverUrl={classData!.server_url} clientFiles={classData!.client_files} classId={classId} isHost={isHost} classTitle={classData!.class_title} />
+    return <>
+      <DemoKnowledgeCheck classId={classId} isHost={isHost} studentName={session?.user?.user_metadata?.first_name || "Tutor"} studentId={session?.user?.id} />
+      <PlugNmeetClassroom roomId={classData!.room_id || classId} joinToken={classData!.join_token} serverUrl={classData!.server_url} clientFiles={classData!.client_files} classId={classId} isHost={isHost} classTitle={classData!.class_title} />
+    </>
   }
 
   return (

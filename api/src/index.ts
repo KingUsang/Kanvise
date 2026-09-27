@@ -85,6 +85,7 @@ app.route("/submissions", submissionsRouter);
 app.route("/mock-answers", mockAnswersRouter);
 app.route("/health", healthRouter);
 app.route("/users/me/push", pushRouter);
+app.route("/demo/analyze", demoAnalysisRouter);
 if (isTelegramEnabled()) {
   app.route('/telegram', telegramRouter);
   app.route('/telegram', telegramWebhookRouter);
