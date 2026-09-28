@@ -96,6 +96,7 @@ async function run() {
     name: 'Physics',
     slug: 'physics',
     price: 0,
+    is_published: true,
     created_by: createdUsers['Tutor'].id
   }).select('id').single();
   if (cErr) throw cErr;
