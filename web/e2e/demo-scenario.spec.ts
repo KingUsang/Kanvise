@@ -137,7 +137,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       { text: 'Every action has an equal and opposite reaction.', x: 180, y: 210 },
       { text: 'Example: a book pushes the table; the table pushes the book.', x: 180, y: 290 },
     ]) {
-      await tutorPage.getByRole('button', { name: 'Text' }).click()
+      await tutorPage.getByTestId('toolbar-text').click()
       await whiteboard.click({ position: { x: lesson.x, y: lesson.y } })
       await tutorPage.keyboard.type(lesson.text)
       await tutorPage.keyboard.press('Control+Enter')
