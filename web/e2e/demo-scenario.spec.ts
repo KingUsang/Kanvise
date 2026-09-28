@@ -146,6 +146,12 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await tutorPage.waitForTimeout(2_500)
 
     // Scene 3 — the tutor authors and sends a check based on the lesson.
+    await Promise.all(studentContexts.map(async ({ page }) => {
+      if (!page.url().includes('/class/')) {
+        await page.goto(classURL.toString(), { waitUntil: 'domcontentloaded' })
+        await enterPlugNmeet(page)
+      }
+    }))
     await tutorPage.getByRole('button', { name: 'Generate knowledge check' }).click({ force: true })
     await expect(tutorPage.getByText('Generating a question from today’s lesson…')).toBeVisible()
     await tutorPage.getByLabel('Knowledge check question').fill("Which situation best demonstrates Newton's Third Law?")
