@@ -157,7 +157,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await tutorPage.waitForTimeout(4_000)
 
     // Scene 4 — the tutor closes the check and returns to the live lesson.
-    await tutorPage.getByRole('button', { name: 'Close' }).click()
+    await tutorPage.getByRole('button', { name: 'Close' }).first().click()
     await tutorPage.waitForTimeout(1_500)
 
     // Scene 5 — establish the assessment from the tutor's workflow, then let students submit in the background.
