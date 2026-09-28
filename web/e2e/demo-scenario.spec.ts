@@ -52,7 +52,17 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   async function enterPlugNmeet(page: import('@playwright/test').Page, showDeviceSetup = false) {
     // These selectors are taken from the deployed PlugNmeet UI, rather than
     // from Kanvise's surrounding page. Every participant enters the real room.
-    await expect(page.locator('#plugNmeet-app > .landscape-device')).toBeVisible({ timeout: 45_000 })
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        await expect(page.locator('#plugNmeet-app > .landscape-device')).toBeVisible({ timeout: 45_000 })
+        break
+      } catch (error) {
+        if (attempt === 1) throw error
+        // The external room bundle can miss its first mount under local CPU
+        // pressure. Reload once and still verify the actual native room.
+        await page.reload({ waitUntil: 'domcontentloaded' })
+      }
+    }
     const preJoin = page.locator('#startupJoinModal')
     await expect(preJoin).toBeVisible({ timeout: 30_000 })
     if (showDeviceSetup) {
