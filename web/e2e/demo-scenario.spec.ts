@@ -16,6 +16,23 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   const baseURL = process.env.E2E_BASE_URL
   if (!baseURL) throw new Error('E2E_BASE_URL must point to the prepared Kanvise demo deployment')
 
+  async function addRecordingClickCue(context: import('@playwright/test').BrowserContext) {
+    // Recording-only affordance: a restrained pulse makes each intentional
+    // tutor/learner action legible in the pitch edit without altering Kanvise.
+    await context.addInitScript(() => {
+      document.addEventListener('pointerdown', event => {
+        const cue = document.createElement('span')
+        cue.setAttribute('aria-hidden', 'true')
+        cue.style.cssText = `position:fixed;left:${event.clientX - 18}px;top:${event.clientY - 18}px;width:36px;height:36px;border:3px solid #7c3aed;border-radius:9999px;background:rgba(124,58,237,.14);pointer-events:none;z-index:2147483647;animation:kanvise-recording-click .5s ease-out forwards;`
+        document.body.appendChild(cue)
+        window.setTimeout(() => cue.remove(), 520)
+      }, true)
+      const style = document.createElement('style')
+      style.textContent = '@keyframes kanvise-recording-click { from { transform:scale(.45); opacity:1 } to { transform:scale(1.45); opacity:0 } }'
+      document.documentElement.appendChild(style)
+    })
+  }
+
   async function open(page: import('@playwright/test').Page, path: string) {
     // A Vercel-served route can occasionally abort its first navigation while
     // the browser establishes the document request. Retry only that transport
@@ -89,6 +106,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     permissions: ['camera', 'microphone'],
     recordVideo: { dir: testInfo.outputPath('videos'), size: { width: 1920, height: 1080 } },
   })
+  await addRecordingClickCue(tutorContext)
   const tutorPage = await tutorContext.newPage()
   tutorPage.setDefaultTimeout(30_000)
   const tutorVideo = tutorPage.video()
@@ -104,6 +122,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
         ? { recordVideo: { dir: testInfo.outputPath('student-videos'), size: { width: 1920, height: 1080 } } }
         : {}),
     })
+    if (student.outcome === 'struggling') await addRecordingClickCue(context)
     const page = await context.newPage()
     page.setDefaultTimeout(30_000)
     return { ...student, context, page, video: page.video() }
