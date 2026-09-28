@@ -93,10 +93,20 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   tutorPage.setDefaultTimeout(30_000)
   const tutorVideo = tutorPage.video()
   const studentContexts = await Promise.all(studentStates.map(async (storageState, index) => {
-    const context = await browser.newContext({ baseURL, storageState, viewport: { width: 1920, height: 1080 } })
+    const student = students[index]
+    const context = await browser.newContext({
+      baseURL,
+      storageState,
+      viewport: { width: 1920, height: 1080 },
+      // Emeka is the hero learner: record his actual question and mock flow
+      // so the pitch edit can cut to the learner interface, not only tutor UI.
+      ...(student.outcome === 'struggling'
+        ? { recordVideo: { dir: testInfo.outputPath('student-videos'), size: { width: 1920, height: 1080 } } }
+        : {}),
+    })
     const page = await context.newPage()
     page.setDefaultTimeout(30_000)
-    return { ...students[index], context, page }
+    return { ...student, context, page, video: page.video() }
   }))
 
   try {
@@ -232,6 +242,12 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await tutorPage.waitForTimeout(3_000)
   } finally {
     await Promise.all(studentContexts.map(({ context }) => context.close()))
+    for (const studentContext of studentContexts) {
+      if (!studentContext.video) continue
+      const recordingPath = testInfo.outputPath('emeka-learner-flow.webm')
+      await studentContext.video.saveAs(recordingPath)
+      await testInfo.attach('emeka-learner-flow', { path: recordingPath, contentType: 'video/webm' })
+    }
     await tutorContext.close()
     if (tutorVideo) {
       const recordingPath = testInfo.outputPath('kanvise-pitch-demo.webm')
