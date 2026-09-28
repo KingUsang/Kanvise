@@ -14,7 +14,7 @@ type Props = {
 }
 
 declare global {
-  interface Window { plugNmeetConfig?: Record<string, unknown>; plugNmeet?: { leave?: () => void } }
+  interface Window { plugNmeetConfig?: Record<string, unknown>; plugNmeet?: { leave?: () => void }; __kanvisePlugNmeetReady?: boolean }
 }
 
 function assetUrl(serverUrl: string, kind: 'css' | 'js', file: string) {
@@ -35,6 +35,7 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
 
     let disposed = false
     let frame = 0
+    let readyTimer = 0
     const cssNodes: HTMLLinkElement[] = []
     const scriptNodes: HTMLScriptElement[] = []
     window.plugNmeetConfig = {
@@ -90,6 +91,16 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
           // actionable failure instead of a silent blank classroom.
           await import(/* webpackIgnore: true */ assetUrl(serverUrl, 'js', file))
         }
+        const announceReady = () => {
+          if (disposed) return
+          if (root.childElementCount > 0) {
+            window.__kanvisePlugNmeetReady = true
+            window.dispatchEvent(new Event('kanvise:plugnmeet-ready'))
+            return
+          }
+          readyTimer = window.setTimeout(announceReady, 100)
+        }
+        announceReady()
       } catch {
         if (!disposed) setIssue('Could not start the classroom interface. Please refresh and try again.')
       }
@@ -98,11 +109,13 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
     return () => {
       disposed = true
       cancelAnimationFrame(frame)
+      window.clearTimeout(readyTimer)
       try { window.plugNmeet?.leave?.() } catch { /* best effort */ }
       for (const node of cssNodes) node.remove()
       for (const node of scriptNodes) node.remove()
       document.cookie = `pnm_access_token=; Path=/; Max-Age=0; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
       delete window.plugNmeetConfig
+      delete window.__kanvisePlugNmeetReady
     }
   }, [clientFiles.css_files, clientFiles.js_files, joinToken, roomId, serverUrl])
 

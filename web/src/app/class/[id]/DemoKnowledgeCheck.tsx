@@ -8,6 +8,9 @@ type Response = { status: 'Correct' | 'Incorrect' | 'No response'; studentId?: s
 
 export default function DemoKnowledgeCheck({ classId, isHost, studentName, studentId }: { classId: string, isHost: boolean, studentName?: string, studentId?: string }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [classroomReady, setClassroomReady] = useState(false)
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [draftQuestion, setDraftQuestion] = useState('')
   const [activeQuestion, setActiveQuestion] = useState<string | null>(null)
   const [responses, setResponses] = useState<Record<string, Response>>({})
   const [insight, setInsight] = useState<any>(null)
@@ -36,9 +39,18 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
     return () => { supabase.removeChannel(channel) }
   }, [classId, isHost, supabase])
 
+  useEffect(() => {
+    const markReady = () => setClassroomReady(true)
+    if (window.__kanvisePlugNmeetReady) markReady()
+    window.addEventListener('kanvise:plugnmeet-ready', markReady)
+    return () => window.removeEventListener('kanvise:plugnmeet-ready', markReady)
+  }, [])
+
   const sendQuestion = () => {
-    const q = "Which situation best demonstrates Newton's Third Law?"
+    const q = draftQuestion.trim()
+    if (!q) return
     setActiveQuestion(q)
+    setComposerOpen(false)
     setResponses({
       Ada: { status: 'No response' }, Tobi: { status: 'No response' }, David: { status: 'No response' },
       Favour: { status: 'No response' }, Emeka: { status: 'No response' }, Sarah: { status: 'No response' },
@@ -101,12 +113,20 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-[90] flex flex-col items-end gap-4">
-        {!activeQuestion ? (
-          <button onClick={sendQuestion} className="bg-purple-600 text-white px-5 py-3 rounded-full shadow-lg font-semibold flex items-center gap-2 hover:bg-purple-700 transition-colors">
+      <div className="fixed right-6 top-6 z-[10000] flex max-w-md flex-col items-end gap-4">
+        {!classroomReady ? null : !activeQuestion && !composerOpen ? (
+          <button onClick={() => setComposerOpen(true)} className="bg-purple-600 text-white px-5 py-3 rounded-full shadow-xl font-semibold flex items-center gap-2 hover:bg-purple-700 transition-colors">
             <span className="material-symbols-outlined">psychology</span>
-            Generate Knowledge Check
+            Check understanding
           </button>
+        ) : composerOpen ? (
+          <section className="w-full rounded-2xl border border-purple-200 bg-white p-5 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-wider text-purple-700">Knowledge check</p>
+            <h2 className="mt-1 text-lg font-bold text-slate-900">Ask the class a question</h2>
+            <p className="mt-1 text-sm text-slate-600">Use something you have just taught to check understanding.</p>
+            <textarea value={draftQuestion} onChange={(event) => setDraftQuestion(event.target.value)} aria-label="Knowledge check question" autoFocus rows={4} placeholder="Type a question for your learners…" className="mt-4 w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-900 outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-100" />
+            <div className="mt-3 flex justify-end gap-2"><button onClick={() => setComposerOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600">Cancel</button><button disabled={!draftQuestion.trim()} onClick={sendQuestion} className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Send to learners</button></div>
+          </section>
         ) : (
           <div className="bg-white rounded-xl shadow-2xl w-80 overflow-hidden border border-slate-200">
             <div className="bg-purple-600 text-white p-4">

@@ -88,12 +88,15 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       await page.goto(classURL.toString(), { waitUntil: 'domcontentloaded' })
       await expect(page.getByText("Which situation best demonstrates Newton's Third Law?")).toBeHidden()
     }))
-    await expect(tutorPage.getByRole('button', { name: 'Generate Knowledge Check' })).toBeVisible({ timeout: 30_000 })
+    await expect(tutorPage.locator('#plugNmeet-app > *')).toBeVisible({ timeout: 30_000 })
+    await expect(tutorPage.getByRole('button', { name: 'Check understanding' })).toBeVisible({ timeout: 30_000 })
     await tutorPage.waitForTimeout(2_000)
 
     // Scene 2 and 3 — establish the room, then show the tutor's generated check and varied responses.
     await tutorPage.waitForTimeout(2_000)
-    await tutorPage.getByRole('button', { name: 'Generate Knowledge Check' }).click()
+    await tutorPage.getByRole('button', { name: 'Check understanding' }).click()
+    await tutorPage.getByLabel('Knowledge check question').fill("Which situation best demonstrates Newton's Third Law?")
+    await tutorPage.getByRole('button', { name: 'Send to learners' }).click()
     await expect(tutorPage.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible()
     await tutorPage.waitForTimeout(3_000)
 
