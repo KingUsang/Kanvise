@@ -196,6 +196,12 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     for (const [index, { page, outcome }] of studentContexts.entries()) {
       await tutorPage.waitForTimeout(350)
       await expect(page.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible({ timeout: 20_000 })
+      if (outcome === 'struggling') {
+        // A headed Chromium only paints the foreground window reliably;
+        // bring the hero learner forward for the actual learner-facing shot.
+        await page.bringToFront()
+        await page.waitForTimeout(700)
+      }
       const answer = outcome === 'struggling'
         ? 'A car accelerating forward when the driver presses the gas pedal.'
         : 'A block resting on a table experiencing a normal force equal to its weight.'
@@ -219,6 +225,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       // Today's Physics Mock is a centre programme assessment (the same
       // workflow the tutor published), not a marketplace entitlement.
       await page.goto('/dashboard/student/mocks', { waitUntil: 'domcontentloaded' })
+      if (outcome === 'struggling') await page.bringToFront()
       await page.getByRole('button', { name: /^Available/ }).click()
       const todayStudentMock = page.locator('article', { hasText: "Today's Physics Mock" })
       const instructions = todayStudentMock.getByRole('link', { name: 'View instructions' })
@@ -242,6 +249,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       await page.getByRole('button', { name: 'Review' }).last().click()
       await page.getByRole('button', { name: 'Submit final answers' }).click()
       await page.waitForURL(/\/dashboard\/student\/mocks\/result\//, { timeout: 20_000 })
+      if (outcome === 'struggling') await page.waitForTimeout(3_000)
     }))
 
     // Scene 6 and 7 — show automatic scores and the class-level signal before opening Emeka's insight.
