@@ -113,7 +113,7 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
 
   return (
     <>
-      <div className="fixed right-6 top-6 z-[10000] flex max-w-md flex-col items-end gap-4">
+      <div className="pointer-events-auto fixed right-6 top-6 z-[2147483647] flex max-w-md flex-col items-end gap-4">
         {!classroomReady ? null : !activeQuestion && !composerOpen ? (
           <button onClick={() => setComposerOpen(true)} className="bg-purple-600 text-white px-5 py-3 rounded-full shadow-xl font-semibold flex items-center gap-2 hover:bg-purple-700 transition-colors">
             <span className="material-symbols-outlined">psychology</span>

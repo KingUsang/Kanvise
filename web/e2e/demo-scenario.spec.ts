@@ -78,10 +78,13 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     recordVideo: { dir: testInfo.outputPath('videos'), size: { width: 1920, height: 1080 } },
   })
   const tutorPage = await tutorContext.newPage()
+  tutorPage.setDefaultTimeout(30_000)
   const tutorVideo = tutorPage.video()
   const studentContexts = await Promise.all(studentStates.map(async (storageState, index) => {
     const context = await browser.newContext({ baseURL, storageState, viewport: { width: 1920, height: 1080 } })
-    return { ...students[index], context, page: await context.newPage() }
+    const page = await context.newPage()
+    page.setDefaultTimeout(30_000)
+    return { ...students[index], context, page }
   }))
 
   try {
@@ -126,7 +129,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await tutorPage.waitForTimeout(4_000)
 
     // Scene 3 — the tutor authors and sends a check based on the lesson.
-    await tutorPage.getByRole('button', { name: 'Check understanding' }).click()
+    await tutorPage.getByRole('button', { name: 'Check understanding' }).click({ force: true })
     await tutorPage.getByLabel('Knowledge check question').fill("Which situation best demonstrates Newton's Third Law?")
     await tutorPage.getByRole('button', { name: 'Send to learners' }).click()
     await expect(tutorPage.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible()
