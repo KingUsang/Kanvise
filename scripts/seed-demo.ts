@@ -10,6 +10,10 @@ if (!supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+function assertNoError(error: { message: string } | null, step: string) {
+  if (error) throw new Error(`${step}: ${error.message}`);
+}
+
 async function run() {
   console.log("Starting demo seed...");
   
@@ -52,7 +56,7 @@ async function run() {
       email: u.email,
       password: 'Password123!',
       email_confirm: true,
-      user_metadata: { role: u.role, school_id: school.id }
+      user_metadata: { role: u.role, school_id: school.id, first_name: u.name.split(' ')[0], last_name: u.name.split(' ').slice(1).join(' ') }
     });
     if (authErr) throw authErr;
 
@@ -72,11 +76,14 @@ async function run() {
       if (pErr) throw pErr;
       profile = pData;
     } else {
-        await supabase.from('user_profiles').update({
-            school_id: school.id,
-            first_name: firstName,
-            last_name: lastNames.join(' ') || '',
+        const { error: updateError } = await supabase.from('user_profiles').update({
+          role: u.role,
+          school_id: school.id,
+          first_name: firstName,
+          last_name: lastNames.join(' ') || '',
+          email: u.email,
         }).eq('id', profile.id);
+        assertNoError(updateError, `Updating ${u.name}'s profile`);
     }
     
     createdUsers[u.name.split(' ')[0]] = profile;
@@ -94,34 +101,33 @@ async function run() {
   if (cErr) throw cErr;
 
   // Assign tutor
-  await supabase.from('tutor_course_assignments').insert({
+  const { error: assignmentError } = await supabase.from('tutor_course_assignments').insert({
     school_id: school.id,
     tutor_id: createdUsers['Tutor'].id,
-    course_id: course.id
+    course_id: course.id,
+    // This demo centre has one tutor, who is also the course creator.
+    assigned_by: createdUsers['Tutor'].id,
   });
+  assertNoError(assignmentError, 'Assigning Physics to the tutor');
 
   // Enrol students
   for (const name of ['Emeka', 'Ada', 'Tobi', 'David', 'Favour', 'Sarah']) {
-    await supabase.from('enrolments').insert({
+    const { error: enrolmentError } = await supabase.from('enrolments').insert({
       school_id: school.id,
       student_id: createdUsers[name].id,
       course_id: course.id,
-      payment_status: 'completed'
+      // Current enrolments are either payment-backed or manually granted.
+      // Demo learners are deliberately granted access by the demo tutor.
+      source: 'admin_import',
+      granted_by: createdUsers['Tutor'].id,
+      imported_at: new Date().toISOString(),
     });
+    assertNoError(enrolmentError, `Enrolling ${name} in Physics`);
   }
 
-  // 5. Create Live Class
-  await supabase.from('live_classes').insert({
-    school_id: school.id,
-    course_id: course.id,
-    tutor_id: createdUsers['Tutor'].id,
-    title: 'Newton\'s Laws of Motion',
-    scheduled_for: new Date().toISOString(),
-    status: 'scheduled',
-    access_mode: 'enrolled_learners'
-  });
-
-  // 6. Create Historical Mocks (Mock 1, Mock 2, Mock 3)
+  // 5. Create historical mocks (Mock 1, Mock 2, Mock 3).
+  // The recording itself starts the live class through the product workflow,
+  // so no brittle pre-created classroom is needed here.
   const mockHistory = [
     { title: 'Physics Mock 1', publish_at: new Date(Date.now() - 30*86400000).toISOString(), scores: { "Newton's Laws": 42, "Kinematics": 76, "Energy": 81, "Waves": 78 } },
     { title: 'Physics Mock 2', publish_at: new Date(Date.now() - 20*86400000).toISOString(), scores: { "Newton's Laws": 38, "Kinematics": 71, "Energy": 79, "Waves": 82 } },
@@ -162,16 +168,19 @@ async function run() {
     });
     if (pResErr) throw pResErr;
 
-    await supabase.from('mock_exams').update({ publish_at: m.publish_at }).eq('id', mock.id);
+    const { error: publishAtError } = await supabase.from('mock_exams').update({ publish_at: m.publish_at }).eq('id', mock.id);
+    assertNoError(publishAtError, `Backdating ${m.title}`);
 
-    const { data: mockVersion } = await supabase.from('mock_exam_versions')
+    const { data: mockVersion, error: versionError } = await supabase.from('mock_exam_versions')
       .select('id').eq('mock_exam_id', mock.id).order('version_number', { ascending: false }).limit(1).single();
-
+    assertNoError(versionError, `Loading ${m.title}'s published version`);
     if (!mockVersion) throw new Error("mockVersion is null after publish!");
 
-    const { data: vQuestions } = await supabase.from('mock_version_questions')
+    const { data: vQuestions, error: questionsError } = await supabase.from('mock_version_questions')
       .select('id, section_order_index, order_index, question_version_id')
       .eq('mock_exam_version_id', mockVersion.id);
+    assertNoError(questionsError, `Loading ${m.title}'s questions`);
+    if (!vQuestions?.length) throw new Error(`${m.title} has no published questions`);
 
     const { data: attempt, error: aErr } = await supabase.rpc('start_or_resume_versioned_mock_attempt', {
       p_school_id: school.id,
@@ -183,7 +192,9 @@ async function run() {
 
     const attemptId = attempt[0].attempt_id;
     for (const vq of vQuestions) {
-        const { data: bqv } = await supabase.from('bank_question_versions').select('plain_text').eq('id', vq.question_version_id).single();
+        const { data: bqv, error: questionVersionError } = await supabase.from('bank_question_versions').select('plain_text').eq('id', vq.question_version_id).single();
+        assertNoError(questionVersionError, `Loading a ${m.title} question`);
+        if (!bqv) throw new Error(`Could not load a ${m.title} question`);
         const topic = Object.keys(m.scores).find(t => bqv.plain_text.includes(t));
         const score = m.scores[topic!];
         
@@ -196,12 +207,14 @@ async function run() {
         });
     }
 
-    await supabase.rpc('submit_versioned_mock_attempt', {
+    const { error: submitError } = await supabase.rpc('submit_versioned_mock_attempt', {
       p_school_id: school.id,
       p_attempt_id: attemptId,
-      p_now: m.publish_at
+      p_student_id: createdUsers['Emeka'].id,
+      p_now: m.publish_at,
+      p_reason: 'student',
     });
-    await supabase.from('mock_attempts').update({ status: 'fully_graded' }).eq('id', attemptId);
+    assertNoError(submitError, `Submitting ${m.title} for Emeka`);
   }
   
   // 7. Create "Today's Mock"

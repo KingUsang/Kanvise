@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { getApiUrl } from '@/config/api'
+
+type Response = { status: 'Correct' | 'Incorrect' | 'No response'; studentId?: string }
 
 export default function DemoKnowledgeCheck({ classId, isHost, studentName, studentId }: { classId: string, isHost: boolean, studentName?: string, studentId?: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeQuestion, setActiveQuestion] = useState<string | null>(null)
-  const [responses, setResponses] = useState<Record<string, 'Correct' | 'Incorrect' | 'No response'>>({})
+  const [responses, setResponses] = useState<Record<string, Response>>({})
   const [insight, setInsight] = useState<any>(null)
   const [insightLoading, setInsightLoading] = useState(false)
 
@@ -25,7 +28,7 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
     
     channel.on('broadcast', { event: 'knowledge-check-answer' }, (payload) => {
       if (isHost) {
-        setResponses(prev => ({ ...prev, [payload.payload.student]: payload.payload.isCorrect ? 'Correct' : 'Incorrect' }))
+        setResponses(prev => ({ ...prev, [payload.payload.student]: { status: payload.payload.isCorrect ? 'Correct' : 'Incorrect', studentId: payload.payload.studentId } }))
       }
     })
 
@@ -37,8 +40,8 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
     const q = "Which situation best demonstrates Newton's Third Law?"
     setActiveQuestion(q)
     setResponses({
-      "Ada": "No response", "Tobi": "No response", "David": "No response",
-      "Favour": "No response", "Emeka": "No response", "Sarah": "No response"
+      Ada: { status: 'No response' }, Tobi: { status: 'No response' }, David: { status: 'No response' },
+      Favour: { status: 'No response' }, Emeka: { status: 'No response' }, Sarah: { status: 'No response' },
     })
     supabase.channel(`class-${classId}`).send({
       type: 'broadcast',
@@ -53,18 +56,19 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
     supabase.channel(`class-${classId}`).send({
       type: 'broadcast',
       event: 'knowledge-check-answer',
-      payload: { student: studentName, isCorrect }
+      payload: { student: studentName, studentId, isCorrect }
     })
   }
 
   const loadInsight = async (sId: string) => {
     setInsightLoading(true)
-    const res = await fetch('/demo/analyze', {
+    const res = await fetch(`${getApiUrl()}/demo/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId: sId, classId })
     })
-    const json = await res.json()
+    const json = await res.json().catch(() => null)
+    if (!res.ok || !json?.data?.analysis) throw new Error(json?.error || 'Could not load the student insight')
     setInsight(json.data.analysis)
     setInsightLoading(false)
   }
@@ -110,18 +114,18 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
               <p className="font-medium">{activeQuestion}</p>
             </div>
             <div className="p-2 max-h-64 overflow-y-auto">
-              {Object.entries(responses).map(([name, status]) => (
+              {Object.entries(responses).map(([name, response]) => (
                 <div key={name} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg group">
                   <span className="text-sm font-medium text-slate-700">{name}</span>
                   <div className="flex items-center gap-3">
                       <span className={`text-xs font-bold px-2 py-1 rounded-md ${
-                        status === 'Correct' ? 'bg-green-100 text-green-700' :
-                        status === 'Incorrect' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'
+                        response.status === 'Correct' ? 'bg-green-100 text-green-700' :
+                        response.status === 'Incorrect' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'
                       }`}>
-                        {status === 'Correct' ? '✓ Correct' : status === 'Incorrect' ? '✗ Incorrect' : '— Waiting'}
+                        {response.status === 'Correct' ? '✓ Correct' : response.status === 'Incorrect' ? '✗ Incorrect' : '— Waiting'}
                       </span>
-                      {status === 'Incorrect' && name === 'Emeka' && (
-                          <button onClick={() => loadInsight('f05d52cc-9eb2-47ee-9df7-d7ffc12740bc')} className="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-100">
+                      {response.status === 'Incorrect' && name === 'Emeka' && response.studentId && (
+                          <button onClick={() => void loadInsight(response.studentId!)} className="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-100">
                               Analyze
                           </button>
                       )}

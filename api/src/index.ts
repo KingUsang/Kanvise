@@ -53,6 +53,7 @@ import { studentMembershipsRouter } from "./routes/student-memberships";
 import { guestMocksRouter } from './routes/guest-mocks';
 import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
+import { demoAnalysisRouter } from './routes/demo-analysis';
 import { timetablesRouter } from './routes/timetables';
 
 app.route('/auth', publicRegistrationRouter);

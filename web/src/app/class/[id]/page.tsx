@@ -5,6 +5,7 @@ import Link from 'next/link'
 import ClientClassroom from './ClientClassroom'
 import PreparingClassroom from './PreparingClassroom'
 import PlugNmeetClassroom from './PlugNmeetClassroom'
+import DemoKnowledgeCheck from './DemoKnowledgeCheck'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -186,7 +187,8 @@ export default async function Page({ params, searchParams }: PageProps) {
     </>
   }
 
-  return (
+  return <>
+    <DemoKnowledgeCheck classId={classId} isHost={isHost} studentName={session?.user?.user_metadata?.first_name || 'Tutor'} studentId={session?.user?.id} />
     <ClientClassroom
       token={classData!.access_token}
       serverUrl={classData!.livekit_url}
@@ -196,5 +198,5 @@ export default async function Page({ params, searchParams }: PageProps) {
       classTitle={classData!.class_title}
       courseName={classData!.course_name}
     />
-  )
+  </>
 }
