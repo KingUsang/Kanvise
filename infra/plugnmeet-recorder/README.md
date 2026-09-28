@@ -6,12 +6,10 @@ active class, then switches to the transcoder after the class ends and stops
 the instance after the queue is empty. Start Now goes through the same request
 before its room is created.
 
-Run two PlugNmeet recorder services on that machine: `recorderOnly` handles
-capture and `transcoderOnly` starts only after capture has stopped to process
-completed jobs. The PlugNmeet recorder's configured `max_limit: 0` means its
-normal built-in concurrency default (currently 10), so there is no Kanvise
-two-room cap. Transcoding remains serial on this small machine to avoid
-starving live capture; revisit that after measuring real concurrent classes.
+Run two PlugNmeet recorder services on that machine: `recorderOnly` accepts up
+to two simultaneous capture jobs; `transcoderOnly` starts only after the last
+class and processes one completed job at a time. They share the recorder
+directory and NATS connection, so capture is never CPU-starved by FFmpeg.
 
 The instance configuration must use 480p output with the
 `post-transcoding-r2.sh` hook and receive its credentials from SSM Parameter
