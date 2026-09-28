@@ -51,6 +51,20 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     return statePath
   }
 
+  async function enterPlugNmeet(page: import('@playwright/test').Page, showDeviceSetup = false) {
+    // These selectors are taken from the deployed PlugNmeet UI, rather than
+    // from Kanvise's surrounding page. Every participant enters the real room.
+    await expect(page.locator('#plugNmeet-app > .landscape-device')).toBeVisible({ timeout: 45_000 })
+    const preJoin = page.locator('#startupJoinModal')
+    await expect(preJoin).toBeVisible({ timeout: 30_000 })
+    if (showDeviceSetup) {
+      await preJoin.getByRole('button', { name: 'Enable Microphone and Camera' }).click()
+      await page.waitForTimeout(1_500)
+    }
+    await preJoin.getByRole('button', { name: 'Join as a listener' }).click()
+    await expect(preJoin).toBeHidden({ timeout: 30_000 })
+  }
+
   // Authenticate before the recording context opens so no login/setup footage is captured.
   const tutorState = await signIn(tutor.email, tutor.password, 'tutor')
   const studentStates: string[] = []
@@ -62,6 +76,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     baseURL,
     storageState: tutorState,
     viewport: { width: 1920, height: 1080 },
+    permissions: ['camera', 'microphone'],
     recordVideo: { dir: testInfo.outputPath('videos'), size: { width: 1920, height: 1080 } },
   })
   const tutorPage = await tutorContext.newPage()
@@ -86,14 +101,27 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
 
     await Promise.all(studentContexts.map(async ({ page }) => {
       await page.goto(classURL.toString(), { waitUntil: 'domcontentloaded' })
-      await expect(page.getByText("Which situation best demonstrates Newton's Third Law?")).toBeHidden()
+      await enterPlugNmeet(page)
     }))
-    await expect(tutorPage.locator('#plugNmeet-app > *')).toBeVisible({ timeout: 30_000 })
+
+    // Scene 1 — the tutor completes PlugNmeet's real pre-join device setup,
+    // then enters the live room where the enrolled learners are already present.
+    await enterPlugNmeet(tutorPage, true)
+    await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (6)', { timeout: 30_000 })
     await expect(tutorPage.getByRole('button', { name: 'Check understanding' })).toBeVisible({ timeout: 30_000 })
     await tutorPage.waitForTimeout(2_000)
 
-    // Scene 2 and 3 — establish the room, then show the tutor's generated check and varied responses.
-    await tutorPage.waitForTimeout(2_000)
+    // Scene 2 — the tutor genuinely teaches in PlugNmeet's native whiteboard.
+    await tutorPage.getByRole('button', { name: 'Show Whiteboard' }).click()
+    const whiteboard = tutorPage.locator('#plugNmeet-app canvas.interactive')
+    await expect(whiteboard).toBeVisible({ timeout: 15_000 })
+    await tutorPage.getByRole('button', { name: 'Text' }).click()
+    await whiteboard.click({ position: { x: 230, y: 180 } })
+    await tutorPage.keyboard.type("Newton's Third Law")
+    await tutorPage.keyboard.press('Control+Enter')
+    await tutorPage.waitForTimeout(4_000)
+
+    // Scene 3 — the tutor authors and sends a check based on the lesson.
     await tutorPage.getByRole('button', { name: 'Check understanding' }).click()
     await tutorPage.getByLabel('Knowledge check question').fill("Which situation best demonstrates Newton's Third Law?")
     await tutorPage.getByRole('button', { name: 'Send to learners' }).click()
@@ -111,7 +139,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await expect(tutorPage.getByText('✓ Correct')).toBeVisible({ timeout: 15_000 })
     await tutorPage.waitForTimeout(4_000)
 
-    // Scene 4 — the tutor closes the check and carries on teaching.
+    // Scene 4 — the tutor closes the check and returns to the live lesson.
     await tutorPage.getByRole('button', { name: 'Close' }).click()
     await tutorPage.waitForTimeout(1_500)
 
