@@ -189,7 +189,8 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       // workflow the tutor published), not a marketplace entitlement.
       await page.goto('/dashboard/student/mocks', { waitUntil: 'domcontentloaded' })
       await page.getByRole('button', { name: /^Available/ }).click()
-      const instructions = page.getByRole('link', { name: 'View instructions' }).first()
+      const todayStudentMock = page.locator('article', { hasText: "Today's Physics Mock" })
+      const instructions = todayStudentMock.getByRole('link', { name: 'View instructions' })
       await expect(instructions).toBeVisible({ timeout: 20_000 })
       await instructions.click()
       await page.getByLabel(/starting begins my attempt/i).check()
