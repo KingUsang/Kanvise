@@ -222,7 +222,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await tutorPage.waitForTimeout(3_000)
 
     // Scene 8 — the hero shot: the cross-signal interpretation stays visible long enough to read.
-    await tutorPage.getByRole('button', { name: 'AI Analyze' }).click()
+    await tutorPage.getByRole('button', { name: 'AI Analyze', exact: true }).click()
     await expect(tutorPage.getByRole('heading', { name: 'Emeka Okafor needs attention' })).toBeVisible({ timeout: 15_000 })
     await tutorPage.waitForTimeout(5_000)
 
