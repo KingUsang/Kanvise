@@ -4,8 +4,6 @@ const tutor = { email: 'tutor@demo.com', password: 'Password123!' }
 const students = [
   { email: 'ada@demo.com', outcome: 'strong' },
   { email: 'tobi@demo.com', outcome: 'average' },
-  { email: 'david@demo.com', outcome: 'average' },
-  { email: 'favour@demo.com', outcome: 'average' },
   { email: 'emeka@demo.com', outcome: 'struggling' },
 ]
 
@@ -99,7 +97,10 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     const classURL = new URL(tutorPage.url())
     classURL.search = ''
 
-    await Promise.all(studentContexts.map(async ({ page }) => {
+    await Promise.all(studentContexts.map(async ({ page }, index) => {
+      // Stagger the external classroom bootstrap slightly; starting every
+      // browser's module download in the same instant can starve a laptop.
+      await page.waitForTimeout(index * 750)
       await page.goto(classURL.toString(), { waitUntil: 'domcontentloaded' })
       await enterPlugNmeet(page)
     }))
@@ -107,7 +108,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     // Scene 1 — the tutor completes PlugNmeet's real pre-join device setup,
     // then enters the live room where the enrolled learners are already present.
     await enterPlugNmeet(tutorPage, true)
-    await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (6)', { timeout: 30_000 })
+    await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (4)', { timeout: 30_000 })
     await expect(tutorPage.getByRole('button', { name: 'Check understanding' })).toBeVisible({ timeout: 30_000 })
     await tutorPage.waitForTimeout(2_000)
 
