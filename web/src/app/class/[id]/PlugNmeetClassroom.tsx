@@ -77,22 +77,23 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
     // PlugNmeet's module reads #plugNmeet-app synchronously at evaluation.
     // Waiting one animation frame proves this React-owned node is in the live
     // document before module evaluation starts.
-    frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame(() => { void (async () => {
       if (disposed || !root.isConnected || document.getElementById('plugNmeet-app') !== root) {
         if (!disposed) setIssue('The classroom mount point changed before startup. Please refresh and try again.')
         return
       }
-      for (const file of clientFiles.js_files) {
-        const script = document.createElement('script')
-        script.src = assetUrl(serverUrl, 'js', file)
-        script.crossOrigin = 'anonymous'
-        if (file.startsWith('main-module.')) script.type = 'module'
-        else script.defer = true
-        script.onerror = () => { if (!disposed) setIssue('Could not load the classroom assets. Please try again.') }
-        document.body.appendChild(script)
-        scriptNodes.push(script)
+      try {
+        for (const file of clientFiles.js_files) {
+          // PlugNmeet is an ES module. A dynamically injected module tag can
+          // finish downloading without evaluating in a Next client boundary;
+          // importing it explicitly guarantees execution and gives us an
+          // actionable failure instead of a silent blank classroom.
+          await import(/* webpackIgnore: true */ assetUrl(serverUrl, 'js', file))
+        }
+      } catch {
+        if (!disposed) setIssue('Could not start the classroom interface. Please refresh and try again.')
       }
-    })
+    })() })
 
     return () => {
       disposed = true
