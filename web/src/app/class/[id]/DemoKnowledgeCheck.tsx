@@ -15,7 +15,6 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
   const [responses, setResponses] = useState<Record<string, Response>>({})
   const [insight, setInsight] = useState<any>(null)
   const [insightLoading, setInsightLoading] = useState(false)
-  const isStrugglingStudent = studentName?.trim().toLowerCase().startsWith('emeka') ?? false
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -97,10 +96,10 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
           </div>
           <p className="text-slate-700 mb-6 font-medium">{activeQuestion}</p>
           <div className="space-y-3">
-            <button onClick={() => submitAnswer(!isStrugglingStudent)} className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-purple-500 hover:bg-purple-50 transition-colors">
+            <button onClick={() => submitAnswer(true)} className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-purple-500 hover:bg-purple-50 transition-colors">
               A block resting on a table experiencing a normal force equal to its weight.
             </button>
-            <button onClick={() => submitAnswer(isStrugglingStudent)} className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-purple-500 hover:bg-purple-50 transition-colors">
+            <button onClick={() => submitAnswer(false)} className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-purple-500 hover:bg-purple-50 transition-colors">
               A car accelerating forward when the driver presses the gas pedal.
             </button>
             <button onClick={() => submitAnswer(false)} className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-purple-500 hover:bg-purple-50 transition-colors">
