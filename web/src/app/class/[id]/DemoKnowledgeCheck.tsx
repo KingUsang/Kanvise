@@ -10,6 +10,7 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
   const [isOpen, setIsOpen] = useState(false)
   const [classroomReady, setClassroomReady] = useState(false)
   const [composerOpen, setComposerOpen] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [draftQuestion, setDraftQuestion] = useState('')
   const [activeQuestion, setActiveQuestion] = useState<string | null>(null)
   const [responses, setResponses] = useState<Record<string, Response>>({})
@@ -60,6 +61,15 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
       event: 'knowledge-check-start',
       payload: { question: q }
     })
+  }
+
+  const generateQuestion = () => {
+    setGenerating(true)
+    window.setTimeout(() => {
+      setDraftQuestion("Which situation best demonstrates Newton's Third Law?")
+      setGenerating(false)
+      setComposerOpen(true)
+    }, 1_200)
   }
 
   const submitAnswer = (isCorrect: boolean) => {
@@ -114,11 +124,15 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
   return (
     <>
       <div className="pointer-events-auto fixed right-6 top-6 z-[2147483647] flex max-w-md flex-col items-end gap-4">
-        {!classroomReady ? null : !activeQuestion && !composerOpen ? (
-          <button onClick={() => setComposerOpen(true)} className="bg-purple-600 text-white px-5 py-3 rounded-full shadow-xl font-semibold flex items-center gap-2 hover:bg-purple-700 transition-colors">
+        {!classroomReady ? null : !activeQuestion && !composerOpen && !generating ? (
+          <button onClick={generateQuestion} className="bg-purple-600 text-white px-5 py-3 rounded-full shadow-xl font-semibold flex items-center gap-2 hover:bg-purple-700 transition-colors">
             <span className="material-symbols-outlined">psychology</span>
-            Check understanding
+            Generate knowledge check
           </button>
+        ) : generating ? (
+          <div className="rounded-2xl border border-purple-200 bg-white px-5 py-4 shadow-2xl" role="status">
+            <p className="text-sm font-semibold text-purple-800">Generating a question from today’s lesson…</p>
+          </div>
         ) : composerOpen ? (
           <section className="w-full rounded-2xl border border-purple-200 bg-white p-5 shadow-2xl">
             <p className="text-xs font-bold uppercase tracking-wider text-purple-700">Knowledge check</p>

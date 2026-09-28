@@ -125,33 +125,42 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
 
     // Scene 1 — enrolled learners have now joined the tutor's live room.
     await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (4)', { timeout: 30_000 })
-    await expect(tutorPage.getByRole('button', { name: 'Check understanding' })).toBeVisible({ timeout: 30_000 })
+    await expect(tutorPage.getByRole('button', { name: 'Generate knowledge check' })).toBeVisible({ timeout: 30_000 })
     await tutorPage.waitForTimeout(2_000)
 
     // Scene 2 — the tutor genuinely teaches in PlugNmeet's native whiteboard.
     await tutorPage.getByRole('button', { name: 'Show Whiteboard' }).click()
     const whiteboard = tutorPage.locator('#plugNmeet-app canvas.interactive')
     await expect(whiteboard).toBeVisible({ timeout: 15_000 })
-    await tutorPage.getByRole('button', { name: 'Text' }).click()
-    await whiteboard.click({ position: { x: 230, y: 180 } })
-    await tutorPage.keyboard.type("Newton's Third Law")
-    await tutorPage.keyboard.press('Control+Enter')
-    await tutorPage.waitForTimeout(4_000)
+    for (const lesson of [
+      { text: "Newton's Third Law", x: 180, y: 130 },
+      { text: 'Every action has an equal and opposite reaction.', x: 180, y: 210 },
+      { text: 'Example: a book pushes the table; the table pushes the book.', x: 180, y: 290 },
+    ]) {
+      await tutorPage.getByRole('button', { name: 'Text' }).click()
+      await whiteboard.click({ position: { x: lesson.x, y: lesson.y } })
+      await tutorPage.keyboard.type(lesson.text)
+      await tutorPage.keyboard.press('Control+Enter')
+      await tutorPage.waitForTimeout(900)
+    }
+    await tutorPage.waitForTimeout(2_500)
 
     // Scene 3 — the tutor authors and sends a check based on the lesson.
-    await tutorPage.getByRole('button', { name: 'Check understanding' }).click({ force: true })
+    await tutorPage.getByRole('button', { name: 'Generate knowledge check' }).click({ force: true })
+    await expect(tutorPage.getByText('Generating a question from today’s lesson…')).toBeVisible()
     await tutorPage.getByLabel('Knowledge check question').fill("Which situation best demonstrates Newton's Third Law?")
     await tutorPage.getByRole('button', { name: 'Send to learners' }).click()
     await expect(tutorPage.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible()
     await tutorPage.waitForTimeout(3_000)
 
-    await Promise.all(studentContexts.map(async ({ page, outcome }) => {
+    for (const [index, { page, outcome }] of studentContexts.entries()) {
+      await tutorPage.waitForTimeout(350)
       await expect(page.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible({ timeout: 20_000 })
       const answer = outcome === 'struggling'
         ? 'A car accelerating forward when the driver presses the gas pedal.'
         : 'A block resting on a table experiencing a normal force equal to its weight.'
       await page.getByRole('button', { name: answer }).click()
-    }))
+    }
     await expect(tutorPage.getByText('✗ Incorrect')).toBeVisible({ timeout: 15_000 })
     await expect(tutorPage.getByText('✓ Correct').first()).toBeVisible({ timeout: 15_000 })
     await tutorPage.waitForTimeout(4_000)
