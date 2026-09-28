@@ -97,6 +97,11 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     const classURL = new URL(tutorPage.url())
     classURL.search = ''
 
+    // The host must enter the provider room before learners join it. This is
+    // both the natural classroom sequence and the readiness requirement of
+    // the staged PlugNmeet provider.
+    await enterPlugNmeet(tutorPage, true)
+
     await Promise.all(studentContexts.map(async ({ page }, index) => {
       // Stagger the external classroom bootstrap slightly; starting every
       // browser's module download in the same instant can starve a laptop.
@@ -105,9 +110,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       await enterPlugNmeet(page)
     }))
 
-    // Scene 1 — the tutor completes PlugNmeet's real pre-join device setup,
-    // then enters the live room where the enrolled learners are already present.
-    await enterPlugNmeet(tutorPage, true)
+    // Scene 1 — enrolled learners have now joined the tutor's live room.
     await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (4)', { timeout: 30_000 })
     await expect(tutorPage.getByRole('button', { name: 'Check understanding' })).toBeVisible({ timeout: 30_000 })
     await tutorPage.waitForTimeout(2_000)
