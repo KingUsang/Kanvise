@@ -183,8 +183,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
 
     await Promise.all(studentContexts.map(async ({ page, outcome }) => {
       await page.goto('/dashboard/student/mocks', { waitUntil: 'domcontentloaded' })
-      const mockCard = page.locator('article', { has: page.getByRole('heading', { name: "Today's Physics Mock", exact: true }) })
-      await mockCard.getByRole('link', { name: 'View instructions' }).click()
+      await page.getByRole('link', { name: 'View instructions' }).first().click()
       await page.getByLabel(/starting begins my attempt/i).check()
       await page.getByRole('button', { name: 'Start mock' }).click()
       await expect(page.getByText(/Question 1 of/)).toBeVisible({ timeout: 20_000 })
