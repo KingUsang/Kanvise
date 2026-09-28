@@ -60,7 +60,9 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
         if (attempt === 1) throw error
         // The external room bundle can miss its first mount under local CPU
         // pressure. Reload once and still verify the actual native room.
-        await page.reload({ waitUntil: 'domcontentloaded' })
+        // We only need the document to restart; the provider bundle mounts
+        // afterwards and is verified by the next visibility assertion.
+        await page.reload({ waitUntil: 'commit', timeout: 15_000 })
       }
     }
     const preJoin = page.locator('#startupJoinModal')
@@ -115,13 +117,13 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     // the staged PlugNmeet provider.
     await enterPlugNmeet(tutorPage, true)
 
-    await Promise.all(studentContexts.map(async ({ page }, index) => {
-      // Stagger the external classroom bootstrap slightly; starting every
-      // browser's module download in the same instant can starve a laptop.
-      await page.waitForTimeout(index * 750)
+    for (const { page } of studentContexts) {
+      // PlugNmeet is an external bundle. Joining one learner at a time avoids
+      // starving a slower laptop while still showing all four participants.
       await page.goto(classURL.toString(), { waitUntil: 'domcontentloaded' })
       await enterPlugNmeet(page)
-    }))
+      await page.waitForTimeout(750)
+    }
 
     // Scene 1 — enrolled learners have now joined the tutor's live room.
     await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (4)', { timeout: 30_000 })
