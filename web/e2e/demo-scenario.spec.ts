@@ -185,17 +185,15 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await tutorPage.waitForTimeout(2_000)
 
     await Promise.all(studentContexts.map(async ({ page, outcome }) => {
-      // The deterministic demo assessment is an unlocked offer, which lives
-      // in the student's unlocked-mocks view rather than the programme tab.
-      await page.goto('/dashboard/student/mocks?view=unlocked', { waitUntil: 'domcontentloaded' })
+      // Today's Physics Mock is a centre programme assessment (the same
+      // workflow the tutor published), not a marketplace entitlement.
+      await page.goto('/dashboard/student/mocks', { waitUntil: 'domcontentloaded' })
+      await page.getByRole('button', { name: /^Available/ }).click()
       const instructions = page.getByRole('link', { name: 'View instructions' }).first()
-      if (await instructions.count()) {
-        await instructions.click()
-        await page.getByLabel(/starting begins my attempt/i).check()
-        await page.getByRole('button', { name: 'Start mock' }).click()
-      } else {
-        await page.getByRole('button', { name: 'Start mock' }).first().click()
-      }
+      await expect(instructions).toBeVisible({ timeout: 20_000 })
+      await instructions.click()
+      await page.getByLabel(/starting begins my attempt/i).check()
+      await page.getByRole('button', { name: 'Start mock' }).click()
       await expect(page.getByText(/Question 1 of/)).toBeVisible({ timeout: 20_000 })
 
       // The prepared mock alternates easy/correct A and hard/correct B questions.
