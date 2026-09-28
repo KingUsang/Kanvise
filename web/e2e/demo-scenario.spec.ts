@@ -183,9 +183,14 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
 
     await Promise.all(studentContexts.map(async ({ page, outcome }) => {
       await page.goto('/dashboard/student/mocks', { waitUntil: 'domcontentloaded' })
-      await page.getByRole('link', { name: 'View instructions' }).first().click()
-      await page.getByLabel(/starting begins my attempt/i).check()
-      await page.getByRole('button', { name: 'Start mock' }).click()
+      const instructions = page.getByRole('link', { name: 'View instructions' }).first()
+      if (await instructions.count()) {
+        await instructions.click()
+        await page.getByLabel(/starting begins my attempt/i).check()
+        await page.getByRole('button', { name: 'Start mock' }).click()
+      } else {
+        await page.getByRole('button', { name: 'Start mock' }).first().click()
+      }
       await expect(page.getByText(/Question 1 of/)).toBeVisible({ timeout: 20_000 })
 
       // The prepared mock alternates easy/correct A and hard/correct B questions.
