@@ -153,7 +153,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       await page.getByRole('button', { name: answer }).click()
     }))
     await expect(tutorPage.getByText('✗ Incorrect')).toBeVisible({ timeout: 15_000 })
-    await expect(tutorPage.getByText('✓ Correct')).toBeVisible({ timeout: 15_000 })
+    await expect(tutorPage.getByText('✓ Correct').first()).toBeVisible({ timeout: 15_000 })
     await tutorPage.waitForTimeout(4_000)
 
     // Scene 4 — the tutor closes the check and returns to the live lesson.
