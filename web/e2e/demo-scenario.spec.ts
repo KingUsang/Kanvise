@@ -154,7 +154,10 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     }))
     await tutorPage.getByRole('button', { name: 'Generate knowledge check' }).click({ force: true })
     await expect(tutorPage.getByText('Generating a question from today’s lesson…')).toBeVisible()
-    await tutorPage.getByLabel('Knowledge check question').fill("Which situation best demonstrates Newton's Third Law?")
+    // Kanvise generates this from the lesson the tutor has just delivered.
+    // The tutor only triggers and reviews it; no question text is authored here.
+    await expect(tutorPage.getByLabel('Knowledge check question')).toHaveValue("Which situation best demonstrates Newton's Third Law?", { timeout: 10_000 })
+    await tutorPage.waitForTimeout(2_000)
     await tutorPage.getByRole('button', { name: 'Send to learners' }).click()
     await expect(tutorPage.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible()
     await tutorPage.waitForTimeout(3_000)
@@ -182,7 +185,9 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     await tutorPage.waitForTimeout(2_000)
 
     await Promise.all(studentContexts.map(async ({ page, outcome }) => {
-      await page.goto('/dashboard/student/mocks', { waitUntil: 'domcontentloaded' })
+      // The deterministic demo assessment is an unlocked offer, which lives
+      // in the student's unlocked-mocks view rather than the programme tab.
+      await page.goto('/dashboard/student/mocks?view=unlocked', { waitUntil: 'domcontentloaded' })
       const instructions = page.getByRole('link', { name: 'View instructions' }).first()
       if (await instructions.count()) {
         await instructions.click()
