@@ -18,10 +18,25 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   const baseURL = process.env.E2E_BASE_URL
   if (!baseURL) throw new Error('E2E_BASE_URL must point to the prepared Kanvise demo deployment')
 
+  async function open(page: import('@playwright/test').Page, path: string) {
+    // A Vercel-served route can occasionally abort its first navigation while
+    // the browser establishes the document request. Retry only that transport
+    // condition; all UI assertions still verify the actual page afterwards.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        await page.goto(path, { waitUntil: 'domcontentloaded' })
+        return
+      } catch (error) {
+        if (!String(error).includes('net::ERR_ABORTED') || attempt === 1) throw error
+        await page.waitForTimeout(750)
+      }
+    }
+  }
+
   async function signIn(email: string, password: string, stateName: string) {
     const context = await browser.newContext({ baseURL, viewport: { width: 1920, height: 1080 } })
     const page = await context.newPage()
-    await page.goto('/auth/login', { waitUntil: 'domcontentloaded' })
+    await open(page, '/auth/login')
     await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 20_000 })
     // The login handler is client-side. Let its hydration complete before
     // submitting, otherwise a dev server can perform the form's native GET.
