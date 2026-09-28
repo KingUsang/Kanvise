@@ -218,7 +218,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     // Scene 6 and 7 — show automatic scores and the class-level signal before opening Emeka's insight.
     await todayMock.getByRole('button', { name: /view results/i }).click()
     await expect(tutorPage.getByRole('heading', { name: 'Mock results' })).toBeVisible({ timeout: 20_000 })
-    await expect(tutorPage.getByText('Emeka Okafor')).toBeVisible({ timeout: 20_000 })
+    await expect(tutorPage.getByRole('button', { name: /Emeka Okafor Graded/ })).toBeVisible({ timeout: 20_000 })
     await tutorPage.waitForTimeout(3_000)
 
     // Scene 8 — the hero shot: the cross-signal interpretation stays visible long enough to read.
