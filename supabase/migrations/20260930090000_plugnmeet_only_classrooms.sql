@@ -15,4 +15,7 @@ ALTER TABLE public.live_classes
 
 ALTER TABLE public.live_classes
   ADD CONSTRAINT live_classes_classroom_provider_check
-  CHECK (classroom_provider = 'plugnmeet');
+  -- Completed and cancelled legacy records retain their original provider for
+  -- audit/history only. They cannot be started or joined by the PlugNmeet-only
+  -- API, while all future actionable classes must be PlugNmeet.
+  CHECK (classroom_provider = 'plugnmeet' OR status IN ('completed', 'cancelled'));
