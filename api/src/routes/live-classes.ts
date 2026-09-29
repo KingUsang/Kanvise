@@ -75,52 +75,65 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
   const encode = (payload: Record<string, unknown>) =>
     new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`)
 
+  let closed = false
   const stream = new ReadableStream({
     async start(controller) {
-      let closed = false
       const close = () => {
         closed = true
         try { controller.close() } catch { /* already closed */ }
+      }
+      const emit = (payload: Record<string, unknown>) => {
+        if (closed) return false
+        try {
+          controller.enqueue(encode(payload))
+          return true
+        } catch {
+          // A client can navigate away while an infrastructure poll is in
+          // flight. Treat that as cancellation, never as an API crash.
+          closed = true
+          return false
+        }
       }
 
       try {
         const worker = await ensurePlugNmeetReady()
         if (worker.state === 'unavailable') {
-          controller.enqueue(encode({ phase: 'unavailable', message: worker.message }))
+          emit({ phase: 'unavailable', message: worker.message })
           return close()
         }
-        if (worker.state === 'preparing') controller.enqueue(encode({ phase: 'classroom_waking' }))
+        if (worker.state === 'preparing') emit({ phase: 'classroom_waking' })
 
         // There is no guessed duration or artificial timeout. Each event is a
         // real infrastructure condition, and the stream stays open until the
         // user leaves or the classroom can be opened.
         const poll = async () => {
-          if (closed) return
-          if (!await isPlugNmeetHealthy()) {
-            controller.enqueue(encode({ phase: 'classroom_waking' }))
-            setTimeout(poll, 3_000)
-            return
+          try {
+            if (closed) return
+            if (!await isPlugNmeetHealthy()) {
+              if (emit({ phase: 'classroom_waking' })) setTimeout(poll, 3_000)
+              return
+            }
+            if (!emit({ phase: 'classroom_healthy' })) return
+            const liveClass = access.liveClass as any
+            const requiresRecording = liveClass.access_mode !== 'anyone_with_link' && Boolean(liveClass.course_id)
+            if (!requiresRecording || await recorderReadyForClass(liveClass.id)) {
+              emit({ phase: 'room_ready' })
+              return close()
+            }
+            await reconcileRecorderFleet()
+            if (emit({ phase: 'recorder_waking' })) setTimeout(poll, 3_000)
+          } catch (error) {
+            console.error('[live-classes] readiness poll failed:', error)
+            if (emit({ phase: 'unavailable', message: 'The classroom is temporarily unavailable.' })) close()
           }
-          controller.enqueue(encode({ phase: 'classroom_healthy' }))
-          const liveClass = access.liveClass as any
-          const requiresRecording = liveClass.access_mode !== 'anyone_with_link' && Boolean(liveClass.course_id)
-          if (!requiresRecording || await recorderReadyForClass(liveClass.id)) {
-            controller.enqueue(encode({ phase: 'room_ready' }))
-            return close()
-          }
-          await reconcileRecorderFleet()
-          controller.enqueue(encode({ phase: 'recorder_waking' }))
-          setTimeout(poll, 3_000)
         }
         void poll()
       } catch (error) {
         console.error('[live-classes] readiness/stream failed:', error)
-        if (!closed) {
-          controller.enqueue(encode({ phase: 'unavailable', message: 'The classroom is temporarily unavailable.' }))
-          close()
-        }
+        if (emit({ phase: 'unavailable', message: 'The classroom is temporarily unavailable.' })) close()
       }
     },
+    cancel() { closed = true },
   })
 
   return new Response(stream, {
