@@ -94,7 +94,7 @@ async function deletePageImages(presentation: any, schoolId: string) {
   })))
 }
 
-// State recovery endpoint. It is intentionally API-backed because LiveKit data
+// State recovery endpoint. It is intentionally API-backed because classroom data
 // packets are not buffered for clients that reconnect after an update.
 slidesRouter.get('/:id/presentations', async (c) => {
   const access = await requireClass(c)

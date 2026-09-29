@@ -83,7 +83,7 @@ async function recognisedMember(c: any, liveClass: any) {
 async function findClassById(classId: string) {
   if (!/^[0-9a-f-]{36}$/.test(classId) && !/^\d+$/.test(classId)) return null
   const { data, error } = await db.from('live_classes')
-    .select('id, school_id, course_id, title, status, scheduled_at, livekit_room_name, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
+    .select('id, school_id, course_id, title, status, scheduled_at, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
     .eq('id', classId).maybeSingle()
   if (error) throw error
   return data

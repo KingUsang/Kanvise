@@ -1,29 +1,13 @@
 import { supabase } from '../lib/supabase'
 import { plugNmeet, plugNmeetClientUrl, plugNmeetConfigured, createEnrolledRoomRequest, createGuestRoomRequest } from './client'
 
-export type ClassroomProvider = 'livekit' | 'plugnmeet'
-
-export function enrolledPlugNmeetEnabled(schoolId: string | null | undefined, env: NodeJS.ProcessEnv = process.env) {
-  if (env.PLUGNMEET_ENROLLED_ENABLED !== 'true' || !plugNmeetConfigured(env) || !schoolId) return false
-  const allowlist = (env.PLUGNMEET_PILOT_SCHOOL_IDS || '').split(',').map((value) => value.trim()).filter(Boolean)
-  // A wildcard is useful for a controlled staging rollout (and keeps the
-  // explicit school allowlist available for production). Guest/link classes
-  // still never reach this branch because providerForClass checks access_mode.
-  return allowlist.includes('*') || allowlist.includes(schoolId)
-}
-
-export function guestPlugNmeetEnabled(env: NodeJS.ProcessEnv = process.env) {
-  return env.PLUGNMEET_GUEST_ENABLED === 'true' && plugNmeetConfigured(env)
-}
+export type ClassroomProvider = 'plugnmeet'
 
 export function providerForClass(input: { accessMode?: string | null; schoolId: string | null | undefined; persisted?: string | null }): ClassroomProvider {
-  if (input.persisted === 'plugnmeet' || input.persisted === 'livekit') return input.persisted
-  if (input.accessMode === 'enrolled_learners' && enrolledPlugNmeetEnabled(input.schoolId)) return 'plugnmeet'
-  if (input.accessMode === 'anyone_with_link' && guestPlugNmeetEnabled()) return 'plugnmeet'
-  // This fallback exists only for historical records and isolated test runs
-  // without PlugNmeet credentials. Staging/production enable both PlugNmeet
-  // paths, so newly created Kanvise rooms do not select it.
-  return 'livekit'
+  // Kanvise has one classroom provider. Persisted legacy values are handled
+  // by the cancellation migration, never by a browser fallback.
+  void input
+  return 'plugnmeet'
 }
 
 export async function createPlugNmeetRoom(input: { roomId: string; title: string; schoolId: string; courseId: string | null; accessMode: string }) {

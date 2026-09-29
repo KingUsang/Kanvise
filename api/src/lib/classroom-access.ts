@@ -17,7 +17,6 @@ export type ClassroomRecord = {
   course_id: string | null
   tutor_id: string
   status: string
-  livekit_room_name?: string | null
   [key: string]: unknown
 }
 

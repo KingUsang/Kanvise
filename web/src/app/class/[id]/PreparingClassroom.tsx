@@ -3,14 +3,10 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import ClientClassroom from './ClientClassroom'
 import PlugNmeetClassroom from './PlugNmeetClassroom'
 
 type ClassroomToken = {
-  provider?: 'livekit' | 'plugnmeet'
-  livekit_room_name?: string
-  access_token?: string
-  livekit_url?: string
+  provider?: 'plugnmeet'
   is_host: boolean
   class_title: string
   course_name: string | null
@@ -20,15 +16,15 @@ type ClassroomToken = {
   client_files?: { css_files: string[]; js_files: string[] }
 }
 
-type Phase = 'starting_vm' | 'booting' | 'connecting' | 'ready' | 'unavailable'
+type Phase = 'classroom_waking' | 'classroom_healthy' | 'recorder_waking' | 'room_ready' | 'unavailable'
 
 const PHASES: { id: Phase; label: string; description: string }[] = [
-  { id: 'starting_vm', label: 'Starting classroom', description: 'Waking up the live class server' },
-  { id: 'booting',    label: 'Booting up',          description: 'Setting up the live space' },
-  { id: 'connecting', label: 'Almost there',         description: 'Connecting to the classroom' },
+  { id: 'classroom_waking', label: 'Starting classroom', description: 'Waking up the class server' },
+  { id: 'classroom_healthy', label: 'Classroom ready', description: 'Preparing the live space' },
+  { id: 'recorder_waking', label: 'Starting recording', description: 'Waiting for the recording bot' },
 ]
 
-const PHASE_ORDER: Phase[] = ['starting_vm', 'booting', 'connecting', 'ready']
+const PHASE_ORDER: Phase[] = ['classroom_waking', 'classroom_healthy', 'recorder_waking', 'room_ready']
 
 function phaseIndex(p: Phase) {
   const i = PHASE_ORDER.indexOf(p)
@@ -36,10 +32,10 @@ function phaseIndex(p: Phase) {
 }
 
 const MESSAGES: Record<Phase, string> = {
-  starting_vm: 'Waking up the classroom server — this usually takes under a minute.',
-  booting:     'The server is up and loading. Almost ready for you.',
-  connecting:  'Final checks done. You\'re about to be taken in.',
-  ready:       'The classroom is ready. Taking you in now…',
+  classroom_waking: 'Waking up the classroom server.',
+  classroom_healthy: 'The classroom is ready. Checking recording.',
+  recorder_waking: 'Waiting for the recording bot before anyone enters.',
+  room_ready: 'The classroom and recording are ready. Taking you in now…',
   unavailable: '',
 }
 
@@ -56,7 +52,7 @@ export default function PreparingClassroom({
   courseName: string | null
   isHost: boolean
 }) {
-  const [phase, setPhase]     = useState<Phase>('starting_vm')
+  const [phase, setPhase]     = useState<Phase>('classroom_waking')
   const [error, setError]     = useState<string | null>(null)
   const [ready, setReady]     = useState<ClassroomToken | null>(null)
   const [offline, setOffline] = useState(false)
@@ -89,7 +85,7 @@ export default function PreparingClassroom({
   }, [classId, isStarting])
 
   useEffect(() => {
-    setPhase('starting_vm')
+    setPhase('classroom_waking')
     setError(null)
     setOffline(!navigator.onLine)
 
@@ -144,7 +140,7 @@ export default function PreparingClassroom({
 
               setPhase(event.phase)
 
-              if (event.phase === 'ready') {
+              if (event.phase === 'room_ready') {
                 // Server is healthy — now get the actual classroom token
                 const token = await fetchToken(signal)
                 if (token) setReady(token)
@@ -169,20 +165,7 @@ export default function PreparingClassroom({
     if (ready.provider === 'plugnmeet' && ready.join_token && ready.server_url && ready.client_files) {
       return <PlugNmeetClassroom roomId={ready.room_id || classId} joinToken={ready.join_token} serverUrl={ready.server_url} clientFiles={ready.client_files} classId={classId} isHost={ready.is_host} classTitle={ready.class_title || classTitle} />
     }
-    if (!ready.access_token || !ready.livekit_url || !ready.livekit_room_name) {
-      return null
-    }
-    return (
-      <ClientClassroom
-        token={ready.access_token}
-        serverUrl={ready.livekit_url}
-        roomName={ready.livekit_room_name}
-        classId={classId}
-        isHost={ready.is_host}
-        classTitle={ready.class_title || classTitle}
-        courseName={ready.course_name ?? courseName}
-      />
-    )
+    return null
   }
 
   const activeIndex  = phaseIndex(phase)
@@ -213,7 +196,7 @@ export default function PreparingClassroom({
             <div className="space-y-5">
               {PHASES.map((step, i) => {
                 const isDone    = i < activeIndex
-                const isActive  = i === activeIndex && phase !== 'ready'
+                const isActive  = i === activeIndex && phase !== 'room_ready'
                 const isPending = i > activeIndex
 
                 return (
@@ -272,7 +255,7 @@ export default function PreparingClassroom({
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => { setError(null); setPhase('starting_vm'); setRetryKey(k => k + 1) }}
+                  onClick={() => { setError(null); setPhase('classroom_waking'); setRetryKey(k => k + 1) }}
                   className="rounded-xl bg-[#180d62] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2e2877] active:scale-95 transition-all"
                 >
                   Try again

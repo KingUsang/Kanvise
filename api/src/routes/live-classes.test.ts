@@ -6,6 +6,12 @@ const mocks = vi.hoisted(() => ({
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin', kanvise_user_id: 'KNV-ADM-1' } as any,
 }))
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
+vi.mock('../plugnmeet/provider', () => ({
+  providerForClass: () => 'plugnmeet',
+  createPlugNmeetRoom: vi.fn(),
+  persistProvider: vi.fn(),
+  getPlugNmeetClientConfig: vi.fn((input: any) => Promise.resolve({ provider: 'plugnmeet', room_id: 'room-1', join_token: 'token', server_url: 'https://plugnmeet.example', client_files: { css_files: [], js_files: [] }, is_host: input.isHost })),
+}))
 
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
@@ -288,9 +294,6 @@ describe('live classes API - host permissions', () => {
   })
 
   it('lets an unassigned admin join as a non-host observer', async () => {
-    process.env.LIVEKIT_URL = 'wss://livekit.example.com'
-    process.env.LIVEKIT_API_KEY = 'test-key'
-    process.env.LIVEKIT_API_SECRET = 'test-secret-with-enough-entropy-for-signing'
     mocks.from.mockReturnValue(builder({
       data: { id: 'class-1', school_id: 'school-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'live', livekit_room_name: 'room-1' },
       error: null,
@@ -300,15 +303,12 @@ describe('live classes API - host permissions', () => {
 
     expect(response.status).toBe(200)
     expect((await response.json() as any).data).toMatchObject({
-      livekit_room_name: 'room-1',
+      provider: 'plugnmeet',
       is_host: false,
     })
   })
 
   it('gives an admin who is the assigned class tutor host access', async () => {
-    process.env.LIVEKIT_URL = 'wss://livekit.example.com'
-    process.env.LIVEKIT_API_KEY = 'test-key'
-    process.env.LIVEKIT_API_SECRET = 'test-secret-with-enough-entropy-for-signing'
     mocks.from.mockReturnValue(builder({
       data: { id: 'class-1', school_id: 'school-1', course_id: 'course-1', tutor_id: 'admin-1', status: 'live', livekit_room_name: 'room-1' },
       error: null,

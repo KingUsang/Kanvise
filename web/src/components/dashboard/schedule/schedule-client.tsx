@@ -36,7 +36,6 @@ interface LiveClass {
   scheduled_at: string
   duration_minutes: number
   status: 'scheduled' | 'live' | 'completed' | 'cancelled'
-  livekit_room_name?: string
   course?: { name: string }
   tutor?: { first_name: string, last_name: string }
   series?: { source: 'timetable' | 'direct' } | null

@@ -2,7 +2,6 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import ClientClassroom from './ClientClassroom'
 import PreparingClassroom from './PreparingClassroom'
 import PlugNmeetClassroom from './PlugNmeetClassroom'
 import DemoKnowledgeCheck from './DemoKnowledgeCheck'
@@ -95,7 +94,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     )
   }
 
-  // ── 2. Call Hono to get the LiveKit token ──────────────────────────────────
+  // ── 2. Call Hono to get the PlugNmeet class configuration ─────────────────
   // Tutors navigate with ?start=true to create and start the room.
   // Everyone else calls /join which expects the room to already be live.
 
@@ -105,10 +104,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     : `${honoUrl}/live-classes/${classId}/join`
 
   let classData: {
-    provider?: 'livekit' | 'plugnmeet'
-    livekit_room_name: string
-    access_token: string
-    livekit_url: string
+    provider?: 'plugnmeet'
     is_host: boolean
     class_title: string
     course_name: string | null
@@ -187,16 +183,5 @@ export default async function Page({ params, searchParams }: PageProps) {
     </>
   }
 
-  return <>
-    <DemoKnowledgeCheck classId={classId} isHost={isHost} studentName={session?.user?.user_metadata?.first_name || 'Tutor'} studentId={session?.user?.id} />
-    <ClientClassroom
-      token={classData!.access_token}
-      serverUrl={classData!.livekit_url}
-      roomName={classData!.livekit_room_name}
-      classId={classId}
-      isHost={isHost}
-      classTitle={classData!.class_title}
-      courseName={classData!.course_name}
-    />
-  </>
+  return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5"><section className="max-w-md rounded-2xl bg-white p-7 text-center shadow-sm"><h1 className="text-xl font-bold text-[#180d62]">Classroom unavailable</h1><p className="mt-3 text-sm text-slate-600">This class was created with a retired classroom service. Please ask your tutor to create a new Kanvise class.</p><Link href="/dashboard" className="mt-5 inline-flex rounded-lg bg-[#180d62] px-4 py-2 text-sm font-semibold text-white">Back to dashboard</Link></section></main>
 }

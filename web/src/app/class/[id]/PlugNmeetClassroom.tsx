@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 type Props = {
   roomId: string
@@ -25,6 +26,24 @@ function assetUrl(serverUrl: string, kind: 'css' | 'js', file: string) {
 export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clientFiles, classId, classTitle, isHost }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [issue, setIssue] = useState<string | null>(null)
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    const marker = { kanviseClass: classId }
+    window.history.pushState(marker, '', window.location.href)
+    const onPopState = () => {
+      window.history.pushState(marker, '', window.location.href)
+      setConfirmLeave(true)
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [classId])
+
+  const leaveClass = () => {
+    try { window.plugNmeet?.leave?.() } catch { /* best effort */ }
+    router.replace(isHost ? '/dashboard' : '/dashboard/student/classes')
+  }
 
   useEffect(() => {
     const root = rootRef.current
@@ -45,11 +64,7 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       enableDynacast: true,
       enableSimulcast: true,
       videoCodec: 'vp8',
-      // Classes are whiteboard-and-audio first. 180p is sufficient for the
-      // optional talking-head tile and is materially kinder to mobile data.
-      // A tutor can still deliberately choose a higher camera setting in the
-      // native PlugNmeet controls when a lesson genuinely needs it.
-      defaultWebcamResolution: 'h180',
+      defaultWebcamResolution: 'h720',
       defaultAudioPreset: 'speech',
       stopMicTrackOnMute: true,
       focusActiveSpeakerWebcam: true,
@@ -57,12 +72,8 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       // Let the supplied PlugNmeet UI fill the page, but brand its native
       // welcome/logo surface as Kanvise. This is PlugNmeet's supported
       // designCustomization API — not a CSS hack over its controls.
-      designCustomization: {
-        primary_color: '#2e2877',
-        primary_btn_bg_color: '#2e2877',
-        primary_btn_text_color: '#ffffff',
-        custom_logo: `${window.location.origin}/kanvise_logo_small_blue.png`,
-      },
+      // PlugNmeet's colour customisation applies to its native light theme.
+      designCustomization: { custom_logo: `${window.location.origin}/kanvise_logo_small_blue.png` },
     }
     document.cookie = `pnm_access_token=${joinToken}; Path=/; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
 
@@ -125,6 +136,7 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
           its mobile safe-area behaviour. Do not wrap this in a Kanvise viewport. */}
       <div ref={rootRef} id="plugNmeet-app" data-kanvise-class-id={classId} aria-label={`${classTitle} classroom`} />
       {issue ? <section className="fixed inset-x-4 top-24 z-20 mx-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62] shadow-xl"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : null}
+      {confirmLeave ? <section role="dialog" aria-modal="true" aria-labelledby="leave-class-title" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-5"><div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"><h1 id="leave-class-title" className="text-lg font-bold text-[#180d62]">Leave class?</h1><p className="mt-2 text-sm text-slate-600">You will leave the live classroom.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmLeave(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700">Stay</button><button type="button" onClick={leaveClass} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Leave class</button></div></div></section> : null}
     </>
   )
 }

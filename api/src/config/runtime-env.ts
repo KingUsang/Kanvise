@@ -10,9 +10,10 @@ const CORE_PRODUCTION_VARIABLES = [
   'R2_BUCKET_NAME',
   'R2_PUBLIC_BUCKET_NAME',
   'R2_PUBLIC_BASE_URL',
-  'LIVEKIT_URL',
-  'LIVEKIT_API_KEY',
-  'LIVEKIT_API_SECRET',
+  'PLUGNMEET_SERVER_URL',
+  'PLUGNMEET_API_KEY',
+  'PLUGNMEET_API_SECRET',
+  'PLUGNMEET_WEBHOOK_SECRET',
   'RESEND_API_KEY',
   'EMAIL_FROM',
   'GEMINI_API_KEY',
@@ -73,7 +74,7 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
   requireHttpsUrl('SUPABASE_URL', env.SUPABASE_URL)
   requireHttpsUrl('R2_PUBLIC_BASE_URL', env.R2_PUBLIC_BASE_URL)
   requireHttpsUrl('FRONTEND_URL', env.FRONTEND_URL)
-  requireHttpsUrl('LIVEKIT_URL', env.LIVEKIT_URL?.replace(/^wss:/, 'https:'))
+  requireHttpsUrl('PLUGNMEET_SERVER_URL', env.PLUGNMEET_SERVER_URL)
   if (isWebPushEnabled(env) && !/^(mailto:|https:\/\/)/.test(env.WEB_PUSH_SUBJECT || '')) {
     throw new Error('WEB_PUSH_SUBJECT must be a mailto: or https: URI')
   }
@@ -81,14 +82,9 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
     requireHttpsUrl('CORS_ALLOWED_ORIGINS', origin)
   }
 
-  if (env.PLUGNMEET_ENROLLED_ENABLED === 'true') {
-    const plugNmeetMissing = missingVariables(['PLUGNMEET_SERVER_URL', 'PLUGNMEET_API_KEY', 'PLUGNMEET_API_SECRET', 'PLUGNMEET_WEBHOOK_SECRET'], env)
-    if (plugNmeetMissing.length) throw new Error(`Missing PlugNmeet environment variables: ${plugNmeetMissing.join(', ')}`)
-    requireHttpsUrl('PLUGNMEET_SERVER_URL', env.PLUGNMEET_SERVER_URL)
-    if (env.RECORDER_FLEET_ENABLED === 'true') {
-      const recorderMissing = missingVariables(['RECORDER_FLEET_CONTROLLER_URL', 'RECORDER_FLEET_CONTROLLER_SECRET', 'RECORDER_CALLBACK_SECRET'], env)
-      if (recorderMissing.length) throw new Error(`Missing recorder fleet environment variables: ${recorderMissing.join(', ')}`)
-      requireHttpsUrl('RECORDER_FLEET_CONTROLLER_URL', env.RECORDER_FLEET_CONTROLLER_URL)
-    }
+  if (env.RECORDER_FLEET_ENABLED === 'true') {
+    const recorderMissing = missingVariables(['RECORDER_FLEET_CONTROLLER_URL', 'RECORDER_FLEET_CONTROLLER_SECRET', 'RECORDER_CALLBACK_SECRET'], env)
+    if (recorderMissing.length) throw new Error(`Missing recorder fleet environment variables: ${recorderMissing.join(', ')}`)
+    requireHttpsUrl('RECORDER_FLEET_CONTROLLER_URL', env.RECORDER_FLEET_CONTROLLER_URL)
   }
 }

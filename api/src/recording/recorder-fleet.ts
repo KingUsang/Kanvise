@@ -43,6 +43,18 @@ export async function reconcileRecorderFleet(now = new Date()) {
     capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }
 }
 
+/**
+ * Recording becomes trustworthy only once PlugNmeet has emitted
+ * `recording_proceeded` for this class. VM state alone is deliberately not a
+ * readiness signal: it was the source of the earlier recording-bot race.
+ */
+export async function recorderReadyForClass(classId: string) {
+  const { data, error } = await (supabase as any).from('live_class_recording_segments')
+    .select('id').eq('live_class_id', classId).eq('status', 'pending').maybeSingle()
+  if (error) throw error
+  return Boolean(data)
+}
+
 // Exported for the controller's contract tests and to keep webhook secrets
 // separate from the recorder-to-R2 callback credential.
 export function verifyRecorderFleetSignature(body: string, supplied: string | null, secret = process.env.RECORDER_FLEET_CONTROLLER_SECRET || '') {

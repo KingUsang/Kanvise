@@ -4,7 +4,7 @@ import { createGuardedJob, runAssignmentDeadlineJob, runLiveClassReminderJob, ru
 import { runLiveClassRecordingJob } from './live-class-recording'
 import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 import { reconcileInactivePlugNmeetClasses } from '../plugnmeet/room-lifecycle'
-import { deallocateIdleLiveKitWorker, reconcileClosedLiveClasses, warmLiveKitWorkerForUpcomingClasses } from '../livekit/worker-lifecycle'
+import { warmPlugNmeetForUpcomingClasses } from '../plugnmeet/classroom-lifecycle'
 
 export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
   const jobs = [
@@ -12,9 +12,7 @@ export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
     { expression: '*/5 * * * *', guarded: createGuardedJob('live_class_reminder', () => runLiveClassReminderJob()) },
     { expression: '*/30 * * * *', guarded: createGuardedJob('assignment_deadline', () => runAssignmentDeadlineJob()) },
     { expression: '17 */6 * * *', guarded: createGuardedJob('timetable_materialization', () => runTimetableMaterializationJob()) },
-    { expression: '* * * * *', guarded: createGuardedJob('livekit_worker_warmup', () => warmLiveKitWorkerForUpcomingClasses()) },
-    { expression: '*/5 * * * *', guarded: createGuardedJob('livekit_closed_class_reconciliation', () => reconcileClosedLiveClasses()) },
-    { expression: '*/5 * * * *', guarded: createGuardedJob('livekit_worker_deallocation', () => deallocateIdleLiveKitWorker()) },
+    { expression: '* * * * *', guarded: createGuardedJob('plugnmeet_classroom_warmup', () => warmPlugNmeetForUpcomingClasses()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('plugnmeet_room_lifecycle', () => reconcileInactivePlugNmeetClasses()) },
     { expression: '* * * * *', guarded: createGuardedJob('live_class_recording', () => runLiveClassRecordingJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('recorder_fleet', () => reconcileRecorderFleet()) },

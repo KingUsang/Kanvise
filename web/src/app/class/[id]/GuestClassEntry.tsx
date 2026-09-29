@@ -3,10 +3,10 @@ import Link from "next/link"
 
 import { useState, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import ClientClassroom from './ClientClassroom'
+import PlugNmeetClassroom from './PlugNmeetClassroom'
 
 type ClassInfo = { title: string; status: string; access_mode: string; centre_name: string; centre_logo_url: string | null }
-type JoinData = { livekit_room_name: string; access_token: string; livekit_url: string; class_title: string; course_name: null }
+type JoinData = { room_id: string; join_token: string; server_url: string; client_files: { css_files: string[]; js_files: string[] }; class_title: string }
 
 export function GuestClassEntry({ classId, classInfo }: { classId: string; classInfo: ClassInfo }) {
   const [name, setName] = useState('')
@@ -75,17 +75,7 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
 
   if (joined) {
     return (
-      <ClientClassroom
-        token={joined.access_token}
-        serverUrl={joined.livekit_url}
-        roomName={joined.livekit_room_name}
-        classId={`direct-${classId}`}
-        isHost={false}
-        classTitle={joined.class_title}
-        courseName={null}
-        guestShareToken={classId}
-        onLeave={() => setHasLeft(true)}
-      />
+      <PlugNmeetClassroom roomId={joined.room_id} joinToken={joined.join_token} serverUrl={joined.server_url} clientFiles={joined.client_files} classId={`direct-${classId}`} isHost={false} classTitle={joined.class_title} />
     )
   }
 

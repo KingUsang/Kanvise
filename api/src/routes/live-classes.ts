@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { AccessToken, RoomServiceClient, TrackSource, WebhookReceiver } from 'livekit-server-sdk'
 import { createHash, randomBytes } from 'node:crypto'
 import { supabase } from '../lib/supabase'
 import {
@@ -13,99 +12,27 @@ import { notifyClassCancelled } from '../notifications/triggers'
 import { createPresignedDownload } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
-import { ensureLiveKitWorkerReady, isLiveKitHealthy } from '../livekit/worker-lifecycle'
+import { ensurePlugNmeetReady, isPlugNmeetHealthy } from '../plugnmeet/classroom-lifecycle'
 import { createPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
 import { publishClassRecap } from '../jobs/live-class-recording'
-import { reconcileRecorderFleet } from '../recording/recorder-fleet'
+import { reconcileRecorderFleet, recorderReadyForClass } from '../recording/recorder-fleet'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-function getLiveKitConfig() {
-  const apiKey = process.env.LIVEKIT_API_KEY
-  const apiSecret = process.env.LIVEKIT_API_SECRET
-  const wsUrl = process.env.LIVEKIT_URL
-
-  if (!apiKey || !apiSecret || !wsUrl) {
-    throw new Error('LiveKit environment variables are not configured on the Hono server.')
-  }
-
-  const httpUrl = wsUrl.replace('wss://', 'https://').replace('ws://', 'http://')
-  return { apiKey, apiSecret, wsUrl, httpUrl }
-}
-
-function getRoomService() {
-  const { apiKey, apiSecret, httpUrl } = getLiveKitConfig()
-  return new RoomServiceClient(httpUrl, apiKey, apiSecret)
-}
 
 async function getParticipantDisplayName(user: { id: string; first_name?: string; last_name?: string; kanvise_user_id?: string }, fallback: string) {
   const fromClaims = `${user.first_name || ''} ${user.last_name || ''}`.trim()
   if (fromClaims) return fromClaims
 
   // Auth claims intentionally contain only trusted authorisation data. Names
-  // belong to the canonical profile, so resolve them here for LiveKit's public
-  // participant label instead of showing an internal Kanvise ID.
+  // belong to the canonical profile, so resolve them for the classroom label.
   const { data } = await supabase.from('user_profiles')
     .select('first_name, last_name')
     .eq('id', user.id)
     .maybeSingle()
   const fromProfile = `${data?.first_name || ''} ${data?.last_name || ''}`.trim()
   return fromProfile || user.kanvise_user_id || fallback
-}
-
-async function generateToken(
-  identity: string,
-  name: string,
-  roomName: string,
-  isHost: boolean,
-  avatarConfig: Record<string, string | null> | null,
-): Promise<string> {
-  const { apiKey, apiSecret } = getLiveKitConfig()
-  const at = new AccessToken(apiKey, apiSecret, {
-    identity,
-    name,
-    metadata: JSON.stringify(buildParticipantMetadata(isHost, avatarConfig)),
-  })
-  at.addGrant({
-    roomJoin: true,
-    room: roomName,
-    canPublish: true,
-    // Screen sharing is disabled for the whole classroom. Limit every token
-    // to camera and microphone so the UI restriction cannot be bypassed.
-    canPublishSources: [TrackSource.CAMERA, TrackSource.MICROPHONE],
-    canSubscribe: true,
-    canPublishData: true,
-    canUpdateOwnMetadata: true,
-    roomAdmin: isHost,
-  })
-  return at.toJwt()
-}
-
-export function buildParticipantMetadata(
-  isHost: boolean,
-  avatarConfig: Record<string, string | null> | null,
-) {
-  return { isHost, avatar_config: avatarConfig }
-}
-
-async function getAvatarConfig(userId: string, schoolId: string | null) {
-  if (!schoolId) return null
-  const { data, error } = await supabase.from('avatar_configs')
-    .select('skin_tone, face_shape, hair_style, hair_colour, outfit_colour, accessory, headwear')
-    .eq('user_id', userId)
-    .eq('school_id', schoolId)
-    .maybeSingle()
-  if (error) {
-    console.error('[live-classes] Failed to load avatar config:', error)
-    return null
-  }
-  return data
-}
-
-async function studentCanAccessCourse(studentId: string, schoolId: string, courseId: string) {
-  return (await loadStudentCourseIds(studentId, schoolId)).includes(courseId)
 }
 
 async function requireClassroom(c: any, level: 'view' | 'host' = 'view', hideStudentCourse = false) {
@@ -157,48 +84,35 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
       }
 
       try {
-        // Trigger VM start if needed — idempotent, safe to call when already running
-        const worker = await ensureLiveKitWorkerReady()
-
+        const worker = await ensurePlugNmeetReady()
         if (worker.state === 'unavailable') {
-          controller.enqueue(encode({ phase: 'unavailable', message: worker.message ?? 'The classroom server could not be started.' }))
+          controller.enqueue(encode({ phase: 'unavailable', message: worker.message }))
           return close()
         }
+        if (worker.state === 'preparing') controller.enqueue(encode({ phase: 'classroom_waking' }))
 
-        if (worker.state === 'ready') {
-          controller.enqueue(encode({ phase: 'ready' }))
-          return close()
-        }
-
-        // VM is booting — stream progress phases to the browser
-        controller.enqueue(encode({ phase: 'starting_vm' }))
-
-        const MAX_WAIT_MS = 120_000   // 2 minute absolute ceiling
-        const POLL_INTERVAL_MS = 3_000
-        const started = Date.now()
-
+        // There is no guessed duration or artificial timeout. Each event is a
+        // real infrastructure condition, and the stream stays open until the
+        // user leaves or the classroom can be opened.
         const poll = async () => {
           if (closed) return
-          const elapsed = Date.now() - started
-
-          if (elapsed >= MAX_WAIT_MS) {
-            controller.enqueue(encode({ phase: 'unavailable', message: 'The classroom server took too long to start. Please try again.' }))
+          if (!await isPlugNmeetHealthy()) {
+            controller.enqueue(encode({ phase: 'classroom_waking' }))
+            setTimeout(poll, 3_000)
+            return
+          }
+          controller.enqueue(encode({ phase: 'classroom_healthy' }))
+          const liveClass = access.liveClass as any
+          const requiresRecording = liveClass.access_mode !== 'anyone_with_link' && Boolean(liveClass.course_id)
+          if (!requiresRecording || await recorderReadyForClass(liveClass.id)) {
+            controller.enqueue(encode({ phase: 'room_ready' }))
             return close()
           }
-
-          const healthy = await isLiveKitHealthy()
-          if (healthy) {
-            controller.enqueue(encode({ phase: 'ready' }))
-            return close()
-          }
-
-          // Advance the visual phase on the client stepper
-          const phase = elapsed < 30_000 ? 'booting' : 'connecting'
-          controller.enqueue(encode({ phase, elapsed_ms: elapsed }))
-          setTimeout(poll, POLL_INTERVAL_MS)
+          await reconcileRecorderFleet()
+          controller.enqueue(encode({ phase: 'recorder_waking' }))
+          setTimeout(poll, 3_000)
         }
-
-        setTimeout(poll, POLL_INTERVAL_MS)
+        void poll()
       } catch (error) {
         console.error('[live-classes] readiness/stream failed:', error)
         if (!closed) {
@@ -221,15 +135,15 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
 
 // ── GET /live-classes/:id/readiness — Check classroom readiness ───────────
 // This is intentionally side-effect free from the class perspective: it may
-// wake/check the LiveKit worker, but it does not create a room or issue a
+// wake/check the PlugNmeet classroom, but it does not create a room or issue a
 // participant token. The browser can safely call it after refresh/reconnect.
 liveClassesRouter.get('/:id/readiness', async (c) => {
   const access = await requireClassroom(c, c.req.query('intent') === 'start' ? 'host' : 'view')
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
   try {
-    const worker = await ensureLiveKitWorkerReady()
-    if (worker.state === 'preparing') return c.json({ data: { state: 'starting', retry_after_seconds: worker.retryAfterSeconds } })
+    const worker = await ensurePlugNmeetReady()
+    if (worker.state === 'preparing') return c.json({ data: { state: 'starting' } })
     if (worker.state !== 'ready') return c.json({ data: { state: 'unavailable', message: worker.message || 'The classroom is temporarily unavailable' } }, 503)
     return c.json({ data: { state: 'ready', class_status: liveClass.status } })
   } catch (error) {
@@ -393,87 +307,25 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
     return c.json({ error: 'Could not prepare the class', code: 'CLASS_CREATE_FAILED' }, 500)
   }
 
-  const roomName = `kanvise-class-${insertedClass.id}`
-  if (classroomProvider === 'plugnmeet') {
-    try {
-      // Start-now is supported. It has no T-10 timetable window, so request
-      // recorder capacity before making the room live.
-      const worker = await ensureLiveKitWorkerReady()
-      if (worker.state === 'preparing') {
-        return c.json({ data: { ...insertedClass, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, is_host: insertedClass.tutor_id === user.id } }, 202)
-      }
-      if (worker.state !== 'ready') throw new Error(worker.message || 'PLUGNMEET_UNAVAILABLE')
-      await reconcileRecorderFleet()
-      const room = await createPlugNmeetRoom({
-        roomId: insertedClass.id,
-        title: insertedClass.title,
-        schoolId: user.school_id,
-        courseId: insertedClass.course_id,
-        accessMode,
-      })
-      await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
-      const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
-      if (startUpdateError) throw startUpdateError
-      const isHost = insertedClass.tutor_id === user.id
-      const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, isHost ? 'Tutor' : 'Administrator'), isHost, schoolId: user.school_id, accessMode })
-      return c.json({ data: { ...insertedClass, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, ...config } }, 201)
-    } catch (error) {
-      console.error('[live-classes] plugnmeet start-now failed:', error)
-      await supabase.from('live_classes').delete().eq('id', insertedClass.id).eq('school_id', user.school_id)
-      return c.json({ error: 'Could not start the PlugNmeet class. Nothing was scheduled.', code: 'CLASS_START_FAILED' }, 500)
-    }
-  }
-  let roomCreated = false
   try {
-    const worker = await ensureLiveKitWorkerReady()
+    const worker = await ensurePlugNmeetReady()
     if (worker.state === 'preparing') {
-      return c.json({ data: {
-        ...insertedClass,
-        state: 'preparing',
-        retry_after_seconds: worker.retryAfterSeconds,
-        class_title: insertedClass.title,
-        course_name: course?.name || null,
-        share_token: shareToken,
-        is_host: true,
-      } }, 202)
+      return c.json({ data: { ...insertedClass, state: 'preparing', class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, is_host: insertedClass.tutor_id === user.id } }, 202)
     }
-    if (worker.state !== 'ready') throw new Error(worker.message || 'LIVEKIT_WORKER_UNAVAILABLE')
-    const roomService = getRoomService()
-    await roomService.createRoom({ name: roomName, emptyTimeout: 300, maxParticipants: 200 })
-    roomCreated = true
-
-    const { data: liveClass, error: updateError } = await (supabase.from('live_classes') as any)
-      .update({ status: 'live', livekit_room_name: roomName, started_at: startedAt })
-      .eq('id', insertedClass.id)
-      .eq('school_id', user.school_id)
-      .select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, livekit_room_name')
-      .single()
-    if (updateError || !liveClass) throw new Error('CLASS_UPDATE_FAILED')
-
-    const displayName = await getParticipantDisplayName(user, 'Tutor')
-    const accessToken = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
-    const { wsUrl } = getLiveKitConfig()
-
-    return c.json({
-      data: {
-        ...liveClass,
-        access_token: accessToken,
-        livekit_url: wsUrl,
-        is_host: true,
-        class_title: liveClass.title,
-        course_name: course?.name || null,
-        share_token: shareToken,
-      },
-    }, 201)
+    if (worker.state !== 'ready') throw new Error(worker.message || 'PLUGNMEET_UNAVAILABLE')
+    await reconcileRecorderFleet()
+    const room = await createPlugNmeetRoom({ roomId: insertedClass.id, title: insertedClass.title, schoolId: user.school_id, courseId: insertedClass.course_id, accessMode })
+    await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
+    const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
+    if (startUpdateError) throw startUpdateError
+    if (accessMode !== 'anyone_with_link' && insertedClass.course_id && !await recorderReadyForClass(insertedClass.id)) {
+      return c.json({ data: { ...insertedClass, state: 'preparing', status: 'live', class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, is_host: insertedClass.tutor_id === user.id, waiting_for: 'recorder' } }, 202)
+    }
+    const isHost = insertedClass.tutor_id === user.id
+    const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, isHost ? 'Tutor' : 'Administrator'), isHost, schoolId: user.school_id, accessMode })
+    return c.json({ data: { ...insertedClass, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, ...config } }, 201)
   } catch (error) {
-    console.error('[live-classes] start-now failed:', error)
-    if (roomCreated) {
-      try {
-        await getRoomService().deleteRoom(roomName)
-      } catch {
-        // Continue with database compensation even if room cleanup fails.
-      }
-    }
+    console.error('[live-classes] plugnmeet start-now failed:', error)
     await supabase.from('live_classes')
       .delete()
       .eq('id', insertedClass.id)
@@ -650,10 +502,13 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   if (classroomProvider === 'plugnmeet') {
     if (liveClass.status === 'live') {
-      const worker = await ensureLiveKitWorkerReady()
-      if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
+      const worker = await ensurePlugNmeetReady()
+      if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
       if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       try {
+        if (liveClass.access_mode !== 'anyone_with_link' && liveClass.course_id && !await recorderReadyForClass(liveClass.id)) {
+          return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost, waiting_for: 'recorder' } }, 202)
+        }
         const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, access.isHost ? 'Tutor' : 'Administrator'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
         return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
       } catch (error) {
@@ -664,8 +519,8 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
     if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
-      const worker = await ensureLiveKitWorkerReady()
-      if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true } }, 202)
+      const worker = await ensurePlugNmeetReady()
+      if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true } }, 202)
       if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       const roomId = liveClass.id
       await reconcileRecorderFleet()
@@ -673,6 +528,9 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       const startedAt = new Date().toISOString()
       const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id, provider_room_status, provider_room_checked_at').single()
       if (error || !updated) throw error || new Error('CLASS_UPDATE_FAILED')
+      if (liveClass.access_mode !== 'anyone_with_link' && liveClass.course_id && !await recorderReadyForClass(liveClass.id)) {
+        return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true, waiting_for: 'recorder' } }, 202)
+      }
       const config = await getPlugNmeetClientConfig({ roomId, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...updated, ...config, class_title: updated.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
@@ -681,92 +539,6 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     }
   }
 
-  if (liveClass.status === 'live') {
-    const worker = await ensureLiveKitWorkerReady()
-    if (worker.state === 'preparing') {
-      return c.json({ data: {
-        id,
-        state: 'preparing',
-        retry_after_seconds: worker.retryAfterSeconds,
-        class_title: liveClass.title,
-        course_name: (liveClass.courses as any)?.name || null,
-        is_host: true,
-      } }, 202)
-    }
-    if (worker.state !== 'ready') {
-      return c.json({ error: 'Could not prepare this classroom right now', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
-    }
-    // If the tutor refreshes the page, the class is already live. Just let them back in!
-    const roomName = liveClass.livekit_room_name || `kanvise-class-${id}`
-    const displayName = await getParticipantDisplayName(user, 'Tutor')
-    const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
-    const { wsUrl } = getLiveKitConfig()
-    return c.json({ data: {
-      livekit_room_name: roomName,
-      access_token: token,
-      livekit_url: wsUrl,
-      is_host: true,
-      class_title: liveClass.title,
-      course_name: (liveClass.courses as any)?.name || null,
-    } })
-  }
-
-  if (liveClass.status !== 'scheduled') {
-    return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
-  }
-
-  if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
-
-  const roomName = `kanvise-class-${id}`
-
-  const worker = await ensureLiveKitWorkerReady()
-  if (worker.state === 'preparing') {
-    return c.json({ data: {
-      id,
-      state: 'preparing',
-      retry_after_seconds: worker.retryAfterSeconds,
-      class_title: liveClass.title,
-      course_name: (liveClass.courses as any)?.name || null,
-      is_host: true,
-    } }, 202)
-  }
-  if (worker.state !== 'ready') {
-    return c.json({ error: worker.message || 'The classroom server is unavailable', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
-  }
-
-  try {
-    const roomService = getRoomService()
-    await roomService.createRoom({ name: roomName, emptyTimeout: 300, maxParticipants: 200 })
-  } catch (e) {
-    console.error('[live-classes] createRoom error:', e)
-    return c.json({ error: 'Failed to create LiveKit room' }, 500)
-  }
-
-  const { error: updateError } = await supabase
-    .from('live_classes')
-    .update({ status: 'live', livekit_room_name: roomName, started_at: new Date().toISOString() })
-    .eq('id', id)
-  if (updateError) {
-    try {
-      await getRoomService().deleteRoom(roomName)
-    } catch {
-      // The database error is the actionable failure; room cleanup is best effort.
-    }
-    return c.json({ error: 'Could not start the class', code: 'CLASS_START_FAILED' }, 500)
-  }
-
-  const displayName = await getParticipantDisplayName(user, 'Tutor')
-  const token = await generateToken(user.id, displayName, roomName, true, await getAvatarConfig(user.id, user.school_id))
-  const { wsUrl } = getLiveKitConfig()
-
-  return c.json({ data: {
-    livekit_room_name: roomName,
-    access_token: token,
-    livekit_url: wsUrl,
-    is_host: true,
-    class_title: liveClass.title,
-    course_name: (liveClass.courses as any)?.name || null,
-  } })
 })
 
 // ── POST /live-classes/:id/join — Participant joins a class ───────────────
@@ -779,10 +551,13 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
     if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
-    const worker = await ensureLiveKitWorkerReady()
-    if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', retry_after_seconds: worker.retryAfterSeconds, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
+    const worker = await ensurePlugNmeetReady()
+    if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
     if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
     try {
+      if (liveClass.access_mode !== 'anyone_with_link' && liveClass.course_id && !await recorderReadyForClass(liveClass.id)) {
+        return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost, waiting_for: 'recorder' } }, 202)
+      }
       const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Participant'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
@@ -791,50 +566,6 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
     }
   }
 
-  if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
-    return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
-  }
-
-  // A room can still be marked live after the classroom service has been
-  // paused. Prepare it before handing the browser a token it cannot use.
-  const worker = await ensureLiveKitWorkerReady()
-  if (worker.state === 'preparing') {
-    return c.json({ data: {
-      id: liveClass.id,
-      state: 'preparing',
-      retry_after_seconds: worker.retryAfterSeconds,
-      class_title: liveClass.title,
-      course_name: (liveClass.courses as any)?.name || null,
-      is_host: access.isHost,
-    } }, 202)
-  }
-  if (worker.state !== 'ready') {
-    return c.json({ error: 'Could not prepare this classroom right now', code: 'LIVEKIT_WORKER_UNAVAILABLE' }, 503)
-  }
-
-  // Only the assigned tutor gets host permissions. School admins may join as
-  // non-host observers; unassigned tutors cannot enter another tutor's class.
-  const isHost = access.isHost
-  const displayName = await getParticipantDisplayName(user, 'Participant')
-  const token = await generateToken(
-    user.id,
-    displayName,
-    liveClass.livekit_room_name,
-    isHost,
-    await getAvatarConfig(user.id, user.school_id),
-  )
-  const { wsUrl } = getLiveKitConfig()
-
-  return c.json({
-    data: {
-      livekit_room_name: liveClass.livekit_room_name,
-      access_token: token,
-      livekit_url: wsUrl,
-      is_host: isHost,
-      class_title: liveClass.title,
-      course_name: (liveClass.courses as any)?.name || null,
-    },
-  })
 })
 
 liveClassesRouter.get('/:id/recording', async (c) => {
@@ -910,46 +641,16 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
 
-  if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
-    if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
-    const endedAt = new Date().toISOString()
-    const { error } = await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: endedAt, provider_room_status: 'ended', provider_room_checked_at: endedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'live')
-    if (error) return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
-    try {
-      const { plugNmeet } = await import('../plugnmeet/client')
-      await plugNmeet.endRoom(liveClass.provider_room_id || liveClass.id)
-    } catch (error) {
-      console.warn('[live-classes] plugnmeet room end warning:', error)
-    }
-    return c.json({ message: 'Live class ended' })
+  if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
+  const endedAt = new Date().toISOString()
+  const { error } = await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: endedAt, provider_room_status: 'ended', provider_room_checked_at: endedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'live')
+  if (error) return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
+  try {
+    const { plugNmeet } = await import('../plugnmeet/client')
+    await plugNmeet.endRoom(liveClass.provider_room_id || liveClass.id)
+  } catch (error) {
+    console.warn('[live-classes] plugnmeet room end warning:', error)
   }
-
-  if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
-    return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
-  }
-  const { error: updateError } = await supabase
-    .from('live_classes')
-    .update({ status: 'completed', ended_at: new Date().toISOString() })
-    .eq('id', liveClass.id)
-    .eq('school_id', user.school_id)
-    .eq('status', 'live')
-  if (updateError) {
-    return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
-  }
-
-  // Ending the class must feel immediate to the tutor. Mark it completed
-  // first, then ask LiveKit to close every participant connection without
-  // holding the browser hostage to a remote room-service round trip.
-  void (async () => {
-    try {
-      await getRoomService().deleteRoom(liveClass.livekit_room_name)
-    } catch (error) {
-      // New joins are already denied by the completed class status. Existing
-      // participants will leave naturally if this best-effort disconnect fails.
-      console.warn('[live-classes] background deleteRoom warning:', error)
-    }
-  })()
-
   return c.json({ message: 'Live class ended' })
 })
 
@@ -969,46 +670,4 @@ liveClassesRouter.post('/:id/regenerate-link', requireRole('tutor', 'admin'), as
   if (error) return c.json({ error: 'Could not create a new class link', code: 'LINK_REGENERATE_FAILED' }, 500)
   await (supabase as any).from('live_class_guests').update({ revoked_at: now }).eq('live_class_id', liveClass.id).is('revoked_at', null)
   return c.json({ data: { share_token: shareToken } })
-})
-
-// ── POST /live-classes/:id/host-action — Kick / Mute / Lower hand ─────────
-
-// TODO(auth): Remove 'admin' role bypass after MVP testing is complete
-liveClassesRouter.post('/:id/host-action', requireRole('tutor', 'admin'), async (c) => {
-  const { action, identity, trackSid } = await c.req.json()
-  const access = await requireClassroom(c, 'host')
-  if ('response' in access) return access.response
-  const liveClass = access.liveClass as any
-
-  if (liveClass.status !== 'live' || !liveClass.livekit_room_name) {
-    return c.json({ error: 'Class is not currently live' }, 400)
-  }
-
-  const roomService = getRoomService()
-  const roomName = liveClass.livekit_room_name
-
-  try {
-    if (action === 'kick') {
-      await roomService.removeParticipant(roomName, identity)
-      return c.json({ success: true, action: 'kick', identity })
-    }
-
-    if (action === 'mute') {
-      if (!trackSid) return c.json({ error: 'trackSid is required for mute' }, 400)
-      await roomService.mutePublishedTrack(roomName, identity, trackSid, true)
-      return c.json({ success: true, action: 'mute', identity })
-    }
-
-    if (action === 'lowerHand') {
-      await roomService.updateParticipant(roomName, identity, {
-        attributes: { handRaised: '' },
-      })
-      return c.json({ success: true, action: 'lowerHand', identity })
-    }
-
-    return c.json({ error: 'Invalid action', code: 'INVALID_ACTION' }, 400)
-  } catch (e: any) {
-    console.error('[live-classes] host-action error:', e)
-    return c.json({ error: e.message || 'LiveKit action failed' }, 500)
-  }
 })
