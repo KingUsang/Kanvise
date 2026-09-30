@@ -1,0 +1,10 @@
+[Unit]
+Description=Send Kanvise recorder readiness heartbeat
+
+[Timer]
+OnBootSec=10
+OnUnitActiveSec=15
+Unit=kanvise-recorder-heartbeat.service
+
+[Install]
+WantedBy=timers.target

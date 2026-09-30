@@ -25,3 +25,12 @@ The Lambda needs only `ec2:DescribeInstances`, `ec2:StartInstances`, and
 `ec2:StopInstances` for the explicit `RECORDER_INSTANCE_ID`. Its Function URL
 must be restricted to Kanvise's API egress; the HMAC remains the application-
 level replay barrier.
+
+## Readiness timing
+
+Install `heartbeat.sh` as `/usr/local/bin/kanvise-recorder-heartbeat` and the
+paired service/timer units. Put `KANVISE_RECORDER_CALLBACK_URL` and
+`RECORDER_CALLBACK_SECRET` in `/etc/kanvise-recorder.env`, then enable the
+timer. Kanvise records three distinct timestamps: EC2 start requested, capture
+service healthy, and the room-specific `recording_proceeded` webhook. Do not
+use EC2 `running` as proof that a room can be recorded.

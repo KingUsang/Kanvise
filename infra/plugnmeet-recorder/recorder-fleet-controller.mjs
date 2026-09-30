@@ -18,11 +18,13 @@ export const handler = async (event) => {
   if (!valid(body, event.headers?.['x-kanvise-recorder-fleet-signature'] || event.headers?.['X-Kanvise-Recorder-Fleet-Signature'])) return { statusCode: 401, body: 'Unauthorized' }
   let input
   try { input = JSON.parse(body) } catch { return { statusCode: 400, body: 'Invalid JSON' } }
+  if (input.action !== 'set_capacity' && input.action !== 'status') return { statusCode: 400, body: 'Invalid action' }
   const capacity = Number(input.desired_capacity)
-  if (input.action !== 'set_capacity' || !Number.isInteger(capacity) || capacity < 0 || capacity > 2 || !instanceId) return { statusCode: 400, body: 'Invalid capacity request' }
+  if ((input.action === 'set_capacity' && (!Number.isInteger(capacity) || capacity < 0 || capacity > 2)) || !instanceId) return { statusCode: 400, body: 'Invalid capacity request' }
   const result = await client.send(new DescribeInstancesCommand({ InstanceIds: [instanceId] }))
   const before = result.Reservations?.[0]?.Instances?.[0]?.State?.Name || 'unknown'
+  if (input.action === 'status') return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ instance_id: instanceId, state: before, observed_at: new Date().toISOString() }) }
   if (capacity > 0 && ['stopped', 'stopping'].includes(before)) await client.send(new StartInstancesCommand({ InstanceIds: [instanceId] }))
   if (capacity === 0 && ['running', 'pending'].includes(before)) await client.send(new StopInstancesCommand({ InstanceIds: [instanceId] }))
-  return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ desired_capacity: capacity, instance_id: instanceId, state_before: before }) }
+  return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ desired_capacity: capacity, instance_id: instanceId, state_before: before, requested_at: new Date().toISOString() }) }
 }

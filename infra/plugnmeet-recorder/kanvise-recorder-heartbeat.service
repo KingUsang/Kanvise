@@ -1,0 +1,8 @@
+[Unit]
+Description=Kanvise recorder readiness heartbeat
+After=network-online.target plugnmeet-recorder-capture.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/kanvise-recorder-heartbeat

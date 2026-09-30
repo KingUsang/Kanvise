@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import { supabase } from '../lib/supabase'
 
 type FleetAction = { action: 'set_capacity'; desired_capacity: number; reason: string; requested_at: string }
+type FleetControllerResult = { state_before?: string }
 
 function configured() {
   return process.env.RECORDER_FLEET_ENABLED === 'true'
@@ -39,6 +40,19 @@ export async function reconcileRecorderFleet(now = new Date()) {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kanvise-Recorder-Fleet-Signature': sign(body) }, body,
   })
   if (!response.ok) throw new Error(`Recorder fleet controller failed (${response.status})`)
+  const controller = await response.json().catch(() => ({})) as FleetControllerResult
+  // Do not overwrite the original clock on every scheduler reconciliation.
+  // A stopped worker becoming requested is the beginning of a measurable boot.
+  if (desiredCapacity > 0 && ['stopped', 'stopping'].includes(controller.state_before || '')) {
+    const { error: readinessError } = await (supabase as any).from('recorder_fleet_readiness').upsert({
+      singleton: true, vm_state: 'starting', service_state: 'starting', start_requested_at: now.toISOString(),
+      vm_running_at: null, service_healthy_at: null, last_heartbeat_at: null, updated_at: now.toISOString(),
+    }, { onConflict: 'singleton' })
+    if (readinessError) throw readinessError
+  }
+  if (desiredCapacity === 0 && ['running', 'pending'].includes(controller.state_before || '')) {
+    await (supabase as any).from('recorder_fleet_readiness').upsert({ singleton: true, vm_state: 'stopped', service_state: 'unknown', updated_at: now.toISOString() }, { onConflict: 'singleton' })
+  }
   return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id), captureCapacity: 2,
     capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }
 }
