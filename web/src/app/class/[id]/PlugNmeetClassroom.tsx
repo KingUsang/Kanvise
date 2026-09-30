@@ -26,6 +26,7 @@ function assetUrl(serverUrl: string, kind: 'css' | 'js', file: string) {
 export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clientFiles, classId, classTitle, isHost }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [issue, setIssue] = useState<string | null>(null)
+  const [mounting, setMounting] = useState(true)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const router = useRouter()
 
@@ -57,6 +58,8 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
     let readyTimer = 0
     const cssNodes: HTMLLinkElement[] = []
     const scriptNodes: HTMLScriptElement[] = []
+    setMounting(true)
+    setIssue(null)
     window.plugNmeetConfig = {
       serverUrl,
       staticAssetsPath: `${serverUrl.replace(/\/$/, '')}/assets`,
@@ -107,13 +110,17 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
           if (root.childElementCount > 0) {
             window.__kanvisePlugNmeetReady = true
             window.dispatchEvent(new Event('kanvise:plugnmeet-ready'))
+            setMounting(false)
             return
           }
           readyTimer = window.setTimeout(announceReady, 100)
         }
         announceReady()
       } catch {
-        if (!disposed) setIssue('Could not start the classroom interface. Please refresh and try again.')
+        if (!disposed) {
+          setMounting(false)
+          setIssue('Could not start the classroom interface. Please refresh and try again.')
+        }
       }
     })() })
 
@@ -135,6 +142,31 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       {/* PlugNmeet's own CSS establishes the document and mount height, including
           its mobile safe-area behaviour. Do not wrap this in a Kanvise viewport. */}
       <div ref={rootRef} id="plugNmeet-app" data-kanvise-class-id={classId} aria-label={`${classTitle} classroom`} />
+      {mounting && !issue ? (
+        <main className="fixed inset-0 z-20 flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans" aria-live="polite">
+          <section className="w-full max-w-md">
+            <div className="mb-6">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
+                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" /></span>
+                LIVE CLASS
+              </span>
+              <h1 className="mt-3 text-2xl font-bold leading-tight text-[#180d62]">{classTitle}</h1>
+            </div>
+            <div className="rounded-2xl border border-[#e5e1dd] bg-white p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ece9f8]">
+                  <span className="material-symbols-outlined animate-spin text-[1.1rem] text-[#2e2877]">progress_activity</span>
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-[#180d62]">Opening live classroom</p>
+                  <p className="mt-0.5 text-xs text-[#66616c]">Connecting you to the live class</p>
+                </div>
+              </div>
+              <p className="mt-5 text-sm leading-relaxed text-[#66616c]">Your classroom is ready. We&apos;re loading the meeting controls now…</p>
+            </div>
+          </section>
+        </main>
+      ) : null}
       {issue ? <section className="fixed inset-x-4 top-24 z-20 mx-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62] shadow-xl"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : null}
       {confirmLeave ? <section role="dialog" aria-modal="true" aria-labelledby="leave-class-title" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-5"><div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"><h1 id="leave-class-title" className="text-lg font-bold text-[#180d62]">Leave class?</h1><p className="mt-2 text-sm text-slate-600">You will leave the live classroom.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmLeave(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700">Stay</button><button type="button" onClick={leaveClass} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Leave class</button></div></div></section> : null}
     </>

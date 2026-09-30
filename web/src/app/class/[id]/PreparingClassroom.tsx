@@ -289,7 +289,7 @@ export default function PreparingClassroom({
         {/* Bottom tip */}
         {!error && (
           <p className="mt-4 text-center text-xs text-[#b0abb8]">
-            First class of the day? It may take up to 60 seconds to start.
+            First class of the day? Starting the classroom can take a couple of minutes.
           </p>
         )}
       </div>
