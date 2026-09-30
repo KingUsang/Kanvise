@@ -16,6 +16,25 @@ function validRecorderSignature(body: string, supplied: string | null | undefine
 
 webhooksRouter.post('/supabase/send-email', (c) => handleSupabaseEmailHook(c.req.raw))
 
+// Private recorder heartbeat. The EC2 worker makes an outbound signed request
+// after its capture service registers with PlugNmeet; no recorder port is public.
+webhooksRouter.post('/recorder/heartbeat', async (c) => {
+  const body = await c.req.text()
+  if (!validRecorderSignature(body, c.req.header('X-Kanvise-Recorder-Signature'))) return c.text('Invalid recorder signature', 401)
+  let input: any
+  try { input = JSON.parse(body) } catch { return c.text('Invalid JSON', 400) }
+  if (input.state !== 'healthy') return c.text('Invalid recorder state', 400)
+  const observedAt = new Date().toISOString()
+  const { data: current } = await (supabase as any).from('recorder_fleet_readiness')
+    .select('vm_running_at, service_healthy_at').eq('singleton', true).maybeSingle()
+  const { error } = await (supabase as any).from('recorder_fleet_readiness').upsert({
+    singleton: true, vm_state: 'running', service_state: 'healthy', vm_running_at: current?.vm_running_at || observedAt,
+    service_healthy_at: current?.service_healthy_at || observedAt, last_heartbeat_at: observedAt, updated_at: observedAt,
+  }, { onConflict: 'singleton' })
+  if (error) return c.text('Could not persist recorder heartbeat', 500)
+  return c.text('OK', 200)
+})
+
 // PlugNmeet sends one signed webhook stream for the enrolled-class provider.
 // Persist first, then apply the small amount of synchronous state needed by
 // the classroom UI. Provider retries must not duplicate side effects.

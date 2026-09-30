@@ -39,6 +39,14 @@ export async function reconcileRecorderFleet(now = new Date()) {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kanvise-Recorder-Fleet-Signature': sign(body) }, body,
   })
   if (!response.ok) throw new Error(`Recorder fleet controller failed (${response.status})`)
+  const controller = await response.json().catch(() => ({})) as { state_before?: string }
+  if (desiredCapacity > 0 && ['stopped', 'stopping'].includes(controller.state_before || '')) {
+    const { error: readinessError } = await (supabase as any).from('recorder_fleet_readiness').upsert({
+      singleton: true, vm_state: 'starting', service_state: 'starting', start_requested_at: now.toISOString(),
+      vm_running_at: null, service_healthy_at: null, last_heartbeat_at: null, updated_at: now.toISOString(),
+    }, { onConflict: 'singleton' })
+    if (readinessError) throw readinessError
+  }
   return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id), captureCapacity: 2,
     capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }
 }
