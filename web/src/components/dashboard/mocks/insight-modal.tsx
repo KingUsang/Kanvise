@@ -21,10 +21,12 @@ export function InsightModal({ insight, onClose }: { insight: any, onClose: () =
         <div className="p-6 overflow-y-auto">
           <div className="mb-6">
              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Topic Trend</h4>
-             <div className="flex justify-between items-end h-24 gap-2">
+             <div className="flex h-28 items-end justify-between gap-2" aria-label={`${insight.topic} assessment trend`}>
                 {insight.history.map((score: number, i: number) => (
-                    <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group relative">
-                        <div className={`w-full rounded-t-sm transition-all ${i === 3 ? 'bg-red-400' : 'bg-slate-200'}`} style={{ height: `${Math.max(score, 10)}%` }}></div>
+                    <div key={i} className="group relative flex h-full flex-1 flex-col items-center justify-end gap-2">
+                        <div className={`flex w-full items-start justify-center rounded-t-sm pt-1 text-[10px] font-bold ${i === 3 ? 'bg-red-400 text-red-950' : 'bg-slate-200 text-slate-600'}`} style={{ height: `${Math.max(score, 10)}%` }}>
+                          {score}%
+                        </div>
                         <span className="text-xs font-semibold text-slate-500">{i === 3 ? 'Today' : `Mock ${i+1}`}</span>
                         <div className="absolute -top-8 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">{score}%</div>
                     </div>
