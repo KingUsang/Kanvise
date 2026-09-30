@@ -173,7 +173,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   const accessMode = body.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners'
   const isRecurring = body.recurrence === 'weekly'
   const recurrenceDays = Array.isArray(body.recurrence_days)
-    ? [...new Set(body.recurrence_days.map(Number))].filter((day) => Number.isInteger(day) && day >= 1 && day <= 7)
+    ? [...new Set((body.recurrence_days as unknown[]).map((value): number => Number(value)))].filter((day) => Number.isInteger(day) && day >= 1 && day <= 7)
     : []
 
   if ((!course_id && accessMode === 'enrolled_learners') || !tutor_id || !title || !scheduled_at || !duration_minutes || (isRecurring && (!body.starts_on || !body.start_time))) {
