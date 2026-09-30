@@ -43,20 +43,20 @@ async function managedIdentityToken(fetcher: Fetcher, env = process.env) {
   return data.access_token
 }
 
-async function startVm(fetcher: Fetcher = fetch, env = process.env) {
+async function classroomVmAction(action: 'start' | 'deallocate', fetcher: Fetcher = fetch, env = process.env) {
   const subscriptionId = env.AZURE_SUBSCRIPTION_ID
   const resourceGroup = env.AZURE_PLUGNMEET_RESOURCE_GROUP
   const vmName = env.AZURE_PLUGNMEET_VM_NAME
   if (!subscriptionId || !resourceGroup || !vmName) throw new Error('Azure PlugNmeet VM configuration is incomplete')
   const token = await managedIdentityToken(fetcher, env)
   const resource = `/subscriptions/${encodeURIComponent(subscriptionId)}/resourceGroups/${encodeURIComponent(resourceGroup)}/providers/Microsoft.Compute/virtualMachines/${encodeURIComponent(vmName)}`
-  const response = await fetcher(`https://management.azure.com${resource}/start?api-version=${ARM_API_VERSION}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
-  if (![200, 202, 204].includes(response.status)) throw new Error(`Azure PlugNmeet VM start failed (${response.status})`)
+  const response = await fetcher(`https://management.azure.com${resource}/${action}?api-version=${ARM_API_VERSION}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+  if (![200, 202, 204].includes(response.status)) throw new Error(`Azure PlugNmeet VM ${action} failed (${response.status})`)
 }
 
 export async function ensurePlugNmeetReady(fetcher: Fetcher = fetch, env = process.env): Promise<ClassroomReadiness> {
   if (!enabled(env) || await isPlugNmeetHealthy(fetcher, env)) return { state: 'ready' }
-  if (!startInFlight) startInFlight = startVm(fetcher, env).finally(() => { startInFlight = null })
+  if (!startInFlight) startInFlight = classroomVmAction('start', fetcher, env).finally(() => { startInFlight = null })
   try {
     await startInFlight
     return { state: 'preparing' }
@@ -72,4 +72,20 @@ export async function warmPlugNmeetForUpcomingClasses(now = new Date()) {
   if (error) throw error
   if (!count) return { state: 'not_needed' as const }
   return ensurePlugNmeetReady()
+}
+
+export async function deallocateIdlePlugNmeet(now = new Date()) {
+  if (!enabled()) return { state: 'disabled' as const }
+  const upcoming = new Date(now.getTime() + 10 * 60_000).toISOString()
+  const recent = new Date(now.getTime() - 10 * 60_000).toISOString()
+  const [{ count: scheduled, error: scheduledError }, { count: live, error: liveError }, { count: recentlyEnded, error: endedError }] = await Promise.all([
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'scheduled').lte('scheduled_at', upcoming),
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'live'),
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'completed').gte('ended_at', recent),
+  ])
+  if (scheduledError || liveError || endedError) throw scheduledError || liveError || endedError
+  if (scheduled || live || recentlyEnded) return { state: 'busy' as const }
+  if (!await isPlugNmeetHealthy()) return { state: 'already_off' as const }
+  await classroomVmAction('deallocate')
+  return { state: 'deallocated' as const }
 }

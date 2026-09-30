@@ -96,7 +96,7 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
       }
 
       try {
-        const worker = await ensurePlugNmeetReady()
+        const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
         if (worker.state === 'unavailable') {
           emit({ phase: 'unavailable', message: worker.message })
           return close()
@@ -120,7 +120,6 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
               emit({ phase: 'room_ready' })
               return close()
             }
-            await reconcileRecorderFleet()
             if (emit({ phase: 'recorder_waking' })) setTimeout(poll, 3_000)
           } catch (error) {
             console.error('[live-classes] readiness poll failed:', error)
@@ -155,7 +154,7 @@ liveClassesRouter.get('/:id/readiness', async (c) => {
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
   try {
-    const worker = await ensurePlugNmeetReady()
+    const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
     if (worker.state === 'preparing') return c.json({ data: { state: 'starting' } })
     if (worker.state !== 'ready') return c.json({ data: { state: 'unavailable', message: worker.message || 'The classroom is temporarily unavailable' } }, 503)
     return c.json({ data: { state: 'ready', class_status: liveClass.status } })
@@ -321,12 +320,11 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   }
 
   try {
-    const worker = await ensurePlugNmeetReady()
+    const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
     if (worker.state === 'preparing') {
       return c.json({ data: { ...insertedClass, state: 'preparing', class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, is_host: insertedClass.tutor_id === user.id } }, 202)
     }
     if (worker.state !== 'ready') throw new Error(worker.message || 'PLUGNMEET_UNAVAILABLE')
-    await reconcileRecorderFleet()
     const room = await createPlugNmeetRoom({ roomId: insertedClass.id, title: insertedClass.title, schoolId: user.school_id, courseId: insertedClass.course_id, accessMode })
     await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
     const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
@@ -515,7 +513,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   if (classroomProvider === 'plugnmeet') {
     if (liveClass.status === 'live') {
-      const worker = await ensurePlugNmeetReady()
+      const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
       if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
       if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       try {
@@ -532,11 +530,10 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
     if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
     if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
-      const worker = await ensurePlugNmeetReady()
+      const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
       if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true } }, 202)
       if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       const roomId = liveClass.id
-      await reconcileRecorderFleet()
       await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
       const startedAt = new Date().toISOString()
       const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id, provider_room_status, provider_room_checked_at').single()
@@ -564,7 +561,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
     if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
-    const worker = await ensurePlugNmeetReady()
+    const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
     if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
     if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
     try {
