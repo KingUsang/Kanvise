@@ -172,6 +172,9 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   const { course_id, tutor_id, title, scheduled_at, duration_minutes } = body
   const accessMode = body.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners'
   const isRecurring = body.recurrence === 'weekly'
+  const recurrenceDays = Array.isArray(body.recurrence_days)
+    ? [...new Set(body.recurrence_days.map(Number))].filter((day) => Number.isInteger(day) && day >= 1 && day <= 7)
+    : []
 
   if ((!course_id && accessMode === 'enrolled_learners') || !tutor_id || !title || !scheduled_at || !duration_minutes || (isRecurring && (!body.starts_on || !body.start_time))) {
     return c.json({ error: 'Missing required fields', code: 'MISSING_FIELDS' }, 400)
@@ -209,8 +212,9 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   }
 
   if (isRecurring) {
-    const timezone = typeof body.timezone === 'string' && body.timezone ? body.timezone : 'Africa/Lagos'
-    const { data: seriesId, error: recurringError } = await supabase.rpc('create_recurring_live_class' as any, {
+    const timezone = typeof body.timezone === 'string' && body.timezone ? body.timezone : 'UTC'
+    const days = recurrenceDays.length ? recurrenceDays : [new Date(`${body.starts_on}T12:00:00`).getDay() || 7]
+    const { data: seriesId, error: recurringError } = await supabase.rpc('create_recurring_live_class_series' as any, {
       p_school_id: user.school_id,
       p_actor_id: user.id,
       p_course_id: course_id,
@@ -220,12 +224,13 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
       p_start_time: body.start_time,
       p_timezone: timezone,
       p_duration_minutes: duration_minutes,
+      p_weekdays: days,
     } as any)
     if (recurringError) {
       console.error('[live-classes] recurring insert error:', recurringError)
       return c.json({ error: recurringError.message || 'Failed to schedule recurring class', code: 'RECURRING_CLASS_FAILED' }, 400)
     }
-    return c.json({ data: { series_id: seriesId, recurrence: 'weekly' } }, 201)
+    return c.json({ data: { series_id: seriesId, recurrence: 'weekly', weekdays: days } }, 201)
   }
 
 
@@ -249,6 +254,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
     .single()
 
   if (error) {
+    if (error.code === '23P01') return c.json({ error: 'This tutor already has a class at that time', code: 'TUTOR_TIME_CONFLICT' }, 409)
     console.error('[live-classes] insert error:', error)
     return c.json({ error: 'Failed to schedule class' }, 500)
   }
@@ -353,7 +359,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, classroom_provider, provider_room_status, provider_room_checked_at, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(source), recording:live_class_recordings(status), recap:live_class_recaps(status)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, classroom_provider, provider_room_status, provider_room_checked_at, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
 
@@ -455,6 +461,7 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
     .single()
 
   if (error) {
+    if (error.code === '23P01') return c.json({ error: 'This tutor already has a class at that time', code: 'TUTOR_TIME_CONFLICT' }, 409)
     return c.json({ error: 'Failed to update class' }, 500)
   }
 
@@ -463,7 +470,7 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
 
 // ── DELETE /live-classes/:id — Cancel a scheduled class (Admin) ──────────
 
-liveClassesRouter.delete('/:id', requireRole('admin'), async (c) => {
+liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
   const reason = c.req.query('reason') || undefined
@@ -472,6 +479,9 @@ liveClassesRouter.delete('/:id', requireRole('admin'), async (c) => {
   const liveClass = access.liveClass as any
   if (liveClass.status !== 'scheduled') {
     return c.json({ error: 'Only scheduled classes can be cancelled', code: 'CLASS_NOT_CANCELLABLE' }, 409)
+  }
+  if (user.role === 'tutor' && liveClass.tutor_id !== user.id) {
+    return c.json({ error: 'You can only cancel classes assigned to you', code: 'NOT_CLASS_TUTOR' }, 403)
   }
 
   const { data, error } = await supabase.from('live_classes')

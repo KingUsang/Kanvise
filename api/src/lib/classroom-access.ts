@@ -56,10 +56,9 @@ export async function resolveClassroomAccess(
     if (!liveClass.course_id || !courseIds.includes(liveClass.course_id)) return { reason: 'not_enrolled' }
   }
 
-  // An admin can observe any classroom in their centre. A tutor can access
-  // only their assigned classroom. Both roles become a host only when their
-  // profile is the tutor assigned to this exact class.
-  const isHost = liveClass.tutor_id === user.id && (user.role === 'admin' || user.role === 'tutor')
+  // A centre administrator can take over a classroom when the assigned tutor
+  // is unavailable. Tutors remain limited to classes assigned to them.
+  const isHost = user.role === 'admin' || (liveClass.tutor_id === user.id && user.role === 'tutor')
   if (user.role === 'tutor' && !isHost) return { reason: 'not_assigned_tutor' }
   if (level === 'host' && !isHost) return { reason: 'not_assigned_tutor' }
 
