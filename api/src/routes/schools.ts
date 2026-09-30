@@ -79,7 +79,10 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
         description: body.description,
         contact_email: body.contact_email,
         contact_phone: body.contact_phone,
-      })
+      // The generated database types are refreshed after this migration has
+      // reached every environment. Keep the insert compatible with the
+      // current checked-in type snapshot during that rollout.
+      } as any)
       .select()
       .single()
 
