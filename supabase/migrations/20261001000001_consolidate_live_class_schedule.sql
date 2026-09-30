@@ -26,9 +26,9 @@ ALTER TABLE public.live_classes
   ADD CONSTRAINT live_classes_tutor_time_no_overlap
   EXCLUDE USING gist (
     tutor_id WITH =,
-    tstzrange(
-      scheduled_at,
-      scheduled_at + make_interval(mins => duration_minutes),
+    tsrange(
+      scheduled_at AT TIME ZONE 'UTC',
+      (scheduled_at AT TIME ZONE 'UTC') + duration_minutes * interval '1 minute',
       '[)'
     ) WITH &&
   )
