@@ -31,7 +31,7 @@ export function BrandedLayout({ preview, logoUrl, children }: BrandedLayoutProps
           <Section style={styles.content}>{children}</Section>
           <Hr style={styles.rule} />
           <Text style={styles.footer}>
-            Kanvise helps tutorial centres run focused, professional virtual schools.
+            Kanvise helps tutors and learning teams run focused, professional online teaching.
           </Text>
         </Container>
       </Body>

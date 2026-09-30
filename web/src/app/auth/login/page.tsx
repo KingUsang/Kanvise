@@ -96,7 +96,7 @@ function LoginContent() {
           {/* Logo Section */}
           <div className="mb-8">
             <AuthLogo />
-            <p className="text-sm text-kv-dark/70 font-light mt-1 uppercase tracking-widest text-center">Private OS for Nigerian Tutors</p>
+            <p className="text-sm text-kv-dark/70 font-light mt-1 uppercase tracking-widest text-center">Teaching, understood</p>
           </div>
 
           {reason === "session_expired" && (

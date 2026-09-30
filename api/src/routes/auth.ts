@@ -88,7 +88,7 @@ authRouter.post('/profile/init', async (c) => {
 
   let role: 'admin' | 'tutor' | 'student'
   let studentIntent: any = null
-  if (flow === 'centre') role = 'admin'
+  if (flow === 'centre' || flow === 'independent') role = 'admin'
   else if (flow === 'tutor') role = 'tutor'
   else if (flow === 'student' && typeof student_registration_token === 'string') {
     const tokenHash = createHash('sha256').update(student_registration_token).digest('hex')

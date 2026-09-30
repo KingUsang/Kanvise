@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   applicationName: "Kanvise",
   title: "Kanvise — Run your school. We handle the engine.",
-  description: "Kanvise is the private operating system for serious Nigerian tutors — giving you the tools to run classes, track performance, collect payments, and manage your students like a real school. Invite-only. Built for you.",
+  description: "Kanvise helps tutors and teaching teams run online classes, understand learner performance, and act on what matters.",
   icons: {
     icon: "/kanvise_logo_small_blue.png",
     apple: "/icons/apple-touch-icon.png",

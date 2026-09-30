@@ -8,6 +8,7 @@ export default function TeachingPage() {
       { title: 'Teach', links: [
         { label: 'Materials', description: 'Share notes and study resources by subject.', href: '/dashboard/notes', icon: 'description' },
         { label: 'Assignments', description: 'Set work and review learner submissions.', href: '/dashboard/assignments', icon: 'assignment' },
+        { label: 'Direct assignments', description: 'Share work with a learner without requiring an account.', href: '/dashboard/direct-assignments', icon: 'link' },
       ] },
     ]}
   />

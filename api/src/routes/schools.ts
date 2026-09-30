@@ -16,6 +16,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
   const name = String(body.name || '').trim()
+  const accountType = body.account_type === 'independent' ? 'independent' : 'centre'
 
   // Check the canonical profile as well as the JWT claim. A browser can still
   // hold its pre-setup token immediately after the first centre is created.
@@ -37,7 +38,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
   }
 
   if (!name) {
-    return c.json({ error: 'Centre name is required', code: 'INVALID_NAME' }, 400)
+    return c.json({ error: accountType === 'independent' ? 'Tutor name is required' : 'Centre name is required', code: 'INVALID_NAME' }, 400)
   }
 
   const requestedSlug = body.slug === undefined || body.slug === null ? undefined : body.slug
@@ -73,6 +74,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
       .from('schools')
       .insert({
         name,
+        account_type: accountType,
         slug: candidate,
         description: body.description,
         contact_email: body.contact_email,

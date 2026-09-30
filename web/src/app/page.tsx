@@ -106,7 +106,7 @@ export default function LandingPage() {
           Your tutorial deserves more than a <span className="annotation-underline">group chat</span>.
         </h1>
         <p className="text-[18px] text-on-surface-variant mb-10 max-w-2xl mx-auto">
-          Kanvise is the Operating System for private tutors and students. Organize materials, track payments, and automate attendance in one tactile, focused space.
+          Kanvise brings classes, learner understanding and teaching operations into one focused space.
         </p>
         <div className="flex flex-col md:flex-row justify-center items-center gap-4 mb-20">
           <Link className="w-full md:w-auto px-10 py-4 bg-primary text-white font-label-md rounded-lg text-[16px] hover:bg-primary/90 transition-all desk-mockup-shadow text-center" href="/auth/register">
@@ -223,7 +223,7 @@ export default function LandingPage() {
                 Making online tutorials <span className="italic text-[var(--kv-ruddy-brown)]">less passive.</span>
               </h2>
               <p className="text-[18px] opacity-80 mb-12">
-                Every year, tutorials like this one help thousands of students get into university and succeed. Kanvise exists to become the operating system that lets tutors teach with less stress, and gives students a better place to learn.
+                Every year, tutors help thousands of learners progress. Kanvise exists to help tutors teach with less stress and give learners a better place to learn.
               </p>
               {/*<ul className="space-y-8">
                 <li className="flex gap-4">

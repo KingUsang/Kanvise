@@ -19,7 +19,8 @@ function RegisterContent() {
   // page the student intended to return to.
   const redirectParam = safeRedirectPath(searchParams.get("return_to") || searchParams.get("redirect"));
   const isStudentFlow = pathname.endsWith('/student');
-  const flow = isStudentFlow ? 'student' : 'centre';
+  const [accountType, setAccountType] = useState<'independent' | 'centre'>('independent');
+  const flow = isStudentFlow ? 'student' : accountType === 'independent' ? 'independent' : 'centre';
   const studentRegistrationToken = searchParams.get('intent');
   const loginHref = buildLoginHref({
     redirect: redirectParam,
@@ -42,9 +43,8 @@ function RegisterContent() {
 
   const handleRegister = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isStudentFlow && !centreName.trim()) {
-      setError("Enter your centre name");
-      return;
+    if (!isStudentFlow && accountType === 'centre' && !centreName.trim()) {
+      setError("Enter your tutorial centre name"); return;
     }
     setLoading(true);
     setError(null);
@@ -86,7 +86,7 @@ function RegisterContent() {
           data: {
             first_name: firstName,
             last_name: lastName,
-            ...(!isStudentFlow && { centre_name: centreName.trim() }),
+            ...(!isStudentFlow && accountType === 'centre' && { centre_name: centreName.trim() }),
           },
         },
       });
@@ -131,14 +131,14 @@ function RegisterContent() {
       throw new Error("Your account was created, but the dashboard session could not be refreshed. Please sign in again.");
     }
 
-    if (flow === "centre") {
+    if (flow === "centre" || flow === 'independent') {
       const centreResponse = await fetch(`${apiUrl}/schools`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${refreshed.session.access_token}`,
         },
-        body: JSON.stringify({ name: centreName.trim() }),
+        body: JSON.stringify({ name: flow === 'independent' ? `${firstName.trim()} ${lastName.trim()}`.trim() : centreName.trim(), account_type: flow === 'independent' ? 'independent' : 'centre' }),
       });
       const centreBody = await centreResponse.json().catch(() => null);
       if (!centreResponse.ok && centreBody?.code !== "SCHOOL_ALREADY_CONFIGURED") {
@@ -153,7 +153,7 @@ function RegisterContent() {
       }
     }
 
-    const destination = flow === "centre" ? "/dashboard" : redirectParam || "/dashboard/student";
+    const destination = flow === "centre" || flow === 'independent' ? "/dashboard" : redirectParam || "/dashboard/student";
     window.location.assign(destination);
   };
 
@@ -205,9 +205,11 @@ function RegisterContent() {
             {error && <div className="mb-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
             <form onSubmit={handleRegister} className="space-y-5">
-              {!isStudentFlow && (
-                <Field label="Centre name" icon={<Building2 size={18} />} value={centreName} onChange={setCentreName} placeholder="Bright Future Tutorials" />
-              )}
+              {!isStudentFlow && <fieldset className="grid grid-cols-2 gap-3" aria-label="Account type">
+                <button type="button" onClick={() => setAccountType('independent')} className={`rounded-xl border p-3 text-left text-sm font-semibold ${accountType === 'independent' ? 'border-[#2e2877] bg-[#eeeaff] text-[#180d62]' : 'border-[#c8c5d2] text-[#474551]'}`}>I teach independently<span className="mt-1 block text-xs font-normal">Teach and manage your own learners</span></button>
+                <button type="button" onClick={() => setAccountType('centre')} className={`rounded-xl border p-3 text-left text-sm font-semibold ${accountType === 'centre' ? 'border-[#2e2877] bg-[#eeeaff] text-[#180d62]' : 'border-[#c8c5d2] text-[#474551]'}`}>I run a tutorial centre<span className="mt-1 block text-xs font-normal">Manage tutors and learner groups</span></button>
+              </fieldset>}
+              {!isStudentFlow && accountType === 'centre' && <Field label="Tutorial centre name" icon={<Building2 size={18} />} value={centreName} onChange={setCentreName} placeholder="Bright Future Tutorials" />}
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="First name" icon={<User size={18} />} value={firstName} onChange={setFirstName} placeholder="John" />
                 <Field label="Last name" icon={<User size={18} />} value={lastName} onChange={setLastName} placeholder="Doe" />

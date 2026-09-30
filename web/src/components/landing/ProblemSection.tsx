@@ -91,7 +91,7 @@ export default function ProblemSection() {
               You are not the problem. The infrastructure is.
             </p>
             <p className="text-[#3C3027] text-lg leading-relaxed opacity-90">
-              Nigerian tutors have been working harder than they should — not because they&apos;re not serious, but because no one built the right system for them. Until now.
+              Tutors have been working harder than they should — not because they&apos;re not serious, but because no one built the right system for them. Until now.
             </p>
           </div>
         </div>

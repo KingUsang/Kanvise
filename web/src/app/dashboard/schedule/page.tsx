@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { ScheduleClient } from '@/components/dashboard/schedule/schedule-client'
+import { ClassesWorkspace } from '@/components/dashboard/schedule/classes-workspace'
 import { getApiUrl } from '@/config/api'
 
 export default async function SchedulePage() {
@@ -60,7 +60,7 @@ export default async function SchedulePage() {
 
   return (
     <div className="animate-in fade-in duration-500">
-      <ScheduleClient token={token} capabilities={capabilities} user={userInfo} />
+      <ClassesWorkspace token={token} capabilities={capabilities} user={userInfo} />
     </div>
   )
 }

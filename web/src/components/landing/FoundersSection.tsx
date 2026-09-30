@@ -33,7 +33,7 @@ export default function FoundersSection() {
               Kanvise didn&apos;t start in a boardroom. It started in a tutorial centre — managing students on WhatsApp, sending attendance on Google Sheets, watching good tutors burn out from the admin, not the teaching.
             </p>
             <p className="text-white font-medium">
-              We are tutors. We are builders. We are Nigerian.
+              We are tutors. We are builders. We are here to make teaching work better.
             </p>
             <p>
               We built Kanvise because we knew what the tool should feel like — and nothing out there felt right. This is our answer to a problem we know personally.

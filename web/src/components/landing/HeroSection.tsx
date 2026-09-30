@@ -16,7 +16,7 @@ export default function HeroSection() {
         </h1>
         
         <p className="text-lg md:text-xl font-normal mb-12 text-white opacity-90 max-w-[600px] leading-relaxed">
-          Kanvise is the private operating system for serious Nigerian tutors. 
+          Kanvise is the teaching platform for tutors and learning teams.
           Run classes, track performance, and collect payments like a real school.
         </p>
         
