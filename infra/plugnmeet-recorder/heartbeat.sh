@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Installed on the private recorder VM. It makes an outbound HTTPS heartbeat
 # only after the capture daemon is active; it never opens a port on the VM.
-source /etc/kanvise-recorder.env
+source /etc/plugnmeet-recorder.env
 if ! systemctl is-active --quiet plugnmeet-recorder-capture.service; then
   exit 0
 fi
