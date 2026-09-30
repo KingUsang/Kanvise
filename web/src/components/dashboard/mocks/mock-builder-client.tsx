@@ -75,6 +75,7 @@ type SelectedBankQuestion = {
   sectionId?: string;
   options: Array<{ id: string; text: string; contentBlocks?: ContentBlock[] }>;
 };
+type DocumentImportSummary = { pageCount: number | null; warnings: string[]; questionCount: number };
 
 export function MockBuilderClient({ token }: { token: string }) {
   const router = useRouter();
@@ -144,8 +145,8 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [publishReview, setPublishReview] = useState<PrePublishReview | null>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [documentImportSummary, setDocumentImportSummary] = useState<{ pageCount: number | null; warnings: string[]; questionCount: number } | null>(null);
-  const [importProgress, setImportProgress] = useState<MockImportProgress | null>(null);
+  const [documentImportSummaries, setDocumentImportSummaries] = useState<Record<string, DocumentImportSummary>>({});
+  const [importProgressBySubject, setImportProgressBySubject] = useState<Record<string, MockImportProgress>>({});
   const [builderActionMessage, setBuilderActionMessage] = useState("");
   const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
   const [bulkMarks, setBulkMarks] = useState<string>("");
@@ -407,8 +408,8 @@ export function MockBuilderClient({ token }: { token: string }) {
     // builder shape add an irrelevant success notice or stale questions later.
     importGenerationRef.current += 1;
     setIsUploading(false);
-    setDocumentImportSummary(null);
-    setImportProgress(null);
+    setDocumentImportSummaries({});
+    setImportProgressBySubject({});
     setShowImportPanel(false);
     setShowBankPicker(false);
     setPublishReview(null);
@@ -416,27 +417,18 @@ export function MockBuilderClient({ token }: { token: string }) {
     setIsPreviewOpen(false);
 
     if (nextMode === "subject_combination") {
-      const matchingSection = subjectSections.find((section) => section.courseId === courseId);
-      const firstCourse = courses.find((course) => course.id === courseId);
-      const section = matchingSection || subjectSections[0] || {
-        id: `section-${Date.now()}`,
-        name: singleSubjectName.trim() || firstCourse?.name || "Subject 1",
-        courseId: courseId || null,
-      };
-
-      if (!matchingSection && subjectSections.length === 0) setSubjectSections([section]);
+      // Do not invent a subject when switching modes. The tutor must choose
+      // each subject explicitly before adding or importing its questions.
       setQuestions((current) => current.map((question) => ({
         ...question,
-        section_id: section.id,
-        course_id: section.courseId,
-        subject_name: section.name,
+        section_id: undefined,
       })));
       setSelectedBankQuestions((current) => current.map((question) => ({
         ...question,
-        sectionId: section.id,
-        courseId: section.courseId,
+        sectionId: undefined,
       })));
-      setActiveSubjectCourseId(section.id);
+      setActiveSubjectCourseId("");
+      setBuilderStep("subjects");
       setAudienceScope(accessMode === "direct" ? "direct_link" : "combination");
       setDeliveryMode(nextMode);
       return;
@@ -460,6 +452,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     })));
     setSubjectSections([]);
     setActiveSubjectCourseId("");
+    setBuilderStep("setup");
     setAudienceScope(accessMode === "direct" ? "direct_link" : "course");
     setDeliveryMode(nextMode);
   };
@@ -518,18 +511,24 @@ export function MockBuilderClient({ token }: { token: string }) {
     return { id: section.id, name: section.name, label: linkedCourse ? mockCourseLabel(linkedCourse) : section.name, course_id: section.courseId };
   });
   const availableSubjectCourses = unusedMockCourses(coursesForSelectedProgramme, subjectSections.map((section) => section.courseId));
-  const resolveSubjectSection = (subjectName: string | undefined) => {
-    const normalized = (subjectName || "").toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "");
-    if (!normalized) return activeSubjectSection;
-    return selectedSubjectSections.find((section) => section.name.toLowerCase().replace(/^use of\s+/, "").replace(/[^a-z0-9]/g, "") === normalized) || activeSubjectSection;
-  };
-
   const resolvedActiveSubjectCourseId = deliveryMode === "subject_combination"
     ? (activeSubjectCourseId === UNASSIGNED_SUBJECT_ID && questions.some((question) => !question.course_id)
       ? UNASSIGNED_SUBJECT_ID
       : selectedSubjectSections.some((section) => section.id === activeSubjectCourseId) ? activeSubjectCourseId : selectedSubjectSections[0]?.id || "")
     : "";
   const activeSubjectSection = selectedSubjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) || null;
+  const subjectStateKey = deliveryMode === "subject_combination"
+    ? resolvedActiveSubjectCourseId || UNASSIGNED_SUBJECT_ID
+    : "__single__";
+  const documentImportSummary = documentImportSummaries[subjectStateKey] || null;
+  const importProgress = importProgressBySubject[subjectStateKey] || null;
+
+  useEffect(() => {
+    // Import panels are transient controls. Never carry an open panel from one
+    // subject into another, even though each subject keeps its own result.
+    setShowImportPanel(false);
+    setShowBankPicker(false);
+  }, [subjectStateKey]);
 
   const handleAddMCQ = () => {
     const id = `q${Date.now()}`;
@@ -574,14 +573,15 @@ export function MockBuilderClient({ token }: { token: string }) {
   };
 
   const toggleBankQuestion = (question: BankQuestion, selected: boolean, bankName: string) => {
-    if (selected) {
-      setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.id));
-      setBuilderActionMessage("Question removed from this mock.");
-      return;
-    }
     const targetSection = deliveryMode === "subject_combination" ? subjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) : null;
     if (deliveryMode === "subject_combination" && !targetSection) {
       toast.error("Open a subject section before adding bank questions");
+      return;
+    }
+    const targetSectionId = targetSection?.id;
+    if (selected) {
+      setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.id || item.sectionId !== targetSectionId));
+      setBuilderActionMessage("Question removed from this mock.");
       return;
     }
     setSelectedBankQuestions((current) => [...current, {
@@ -592,7 +592,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       marks: question.current_version.marks,
       bankName,
       courseId: centreAccessEnabled ? targetSection?.courseId || question.course_id || null : null,
-      sectionId: targetSection?.id,
+      sectionId: targetSectionId,
       options: (question.current_version.options || []).map((option) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })),
     }]);
     setBuilderActionMessage("Question added from the bank.");
@@ -612,6 +612,8 @@ export function MockBuilderClient({ token }: { token: string }) {
     setSubjectSections(current => current.filter(s => s.id !== subjectToDelete));
     setQuestions(current => current.map(q => q.section_id === subjectToDelete ? { ...q, section_id: undefined, course_id: null, subject_name: undefined } : q));
     setSelectedBankQuestions(current => current.map(q => q.sectionId === subjectToDelete ? { ...q, sectionId: undefined, courseId: null } : q));
+    setDocumentImportSummaries(current => { const next = { ...current }; delete next[subjectToDelete]; return next; });
+    setImportProgressBySubject(current => { const next = { ...current }; delete next[subjectToDelete]; return next; });
     setSubjectToDelete(null);
   };
 
@@ -642,15 +644,17 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const processCSV = (file: File) => {
     const importGeneration = importGenerationRef.current;
+    const importSubjectKey = subjectStateKey;
+    const importSection = activeSubjectSection;
     const job = newMockImportProgress(file.name);
-    setImportProgress(job);
+    setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: job }));
     setIsUploading(true);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
         if (importGeneration !== importGenerationRef.current) return;
-        setImportProgress({ ...job, phase: "validating", percent: null });
+        setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "validating", percent: null } }));
         const parsedQuestions: QuestionState[] = [];
         results.data.forEach((row: any) => {
           const qType = (row.Type || "").toLowerCase().trim();
@@ -664,9 +668,9 @@ export function MockBuilderClient({ token }: { token: string }) {
             marks: Number(row.Marks) || 1,
             options: [],
             grading_rubric: row['Grading Rubric'] || "",
-            course_id: deliveryMode === "subject_combination" ? activeSubjectSection?.courseId || null : courseId || null,
-            section_id: deliveryMode === "subject_combination" ? activeSubjectSection?.id : undefined,
-            subject_name: deliveryMode === "subject_combination" ? activeSubjectSection?.name : singleSubjectName || undefined,
+            course_id: deliveryMode === "subject_combination" ? importSection?.courseId || null : courseId || null,
+            section_id: deliveryMode === "subject_combination" ? importSection?.id : undefined,
+            subject_name: deliveryMode === "subject_combination" ? importSection?.name : singleSubjectName || undefined,
           };
 
           if (qType === 'mcq') {
@@ -686,7 +690,7 @@ export function MockBuilderClient({ token }: { token: string }) {
         });
         
         setQuestions(prev => [...prev, ...parsedQuestions]);
-        setImportProgress({ ...job, phase: "complete", percent: 100 });
+        setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "complete", percent: 100 } }));
         setIsUploading(false);
         if (parsedQuestions.length > 0) {
           toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`);
@@ -697,7 +701,7 @@ export function MockBuilderClient({ token }: { token: string }) {
       error: (error) => {
         if (importGeneration !== importGenerationRef.current) return;
         console.error(error);
-        setImportProgress({ ...job, phase: "error", percent: null, message: "The CSV file could not be read." });
+        setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "error", percent: null, message: "The CSV file could not be read." } }));
         toast.error("Could not read the CSV file");
         setIsUploading(false);
       }
@@ -706,14 +710,16 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const processDocx = async (file: File) => {
     const importGeneration = importGenerationRef.current;
+    const importSubjectKey = subjectStateKey;
+    const importSection = activeSubjectSection;
     const job = newMockImportProgress(file.name);
-    setImportProgress(job);
+    setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: job }));
     setIsUploading(true);
-    setDocumentImportSummary(null);
+    setDocumentImportSummaries((current) => { const next = { ...current }; delete next[importSubjectKey]; return next; });
     try {
       const mammoth = await import("mammoth");
       const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-      setImportProgress({ ...job, phase: "parsing", percent: null });
+      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "parsing", percent: null } }));
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/import/document-text`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-Import-Job-ID": job.id },
@@ -722,10 +728,10 @@ export function MockBuilderClient({ token }: { token: string }) {
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Could not import that Word document");
       if (importGeneration !== importGenerationRef.current) return;
-      setImportProgress({ ...job, phase: "validating", percent: null });
+      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "validating", percent: null } }));
       const imported = body?.data;
       const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => {
-        const section = deliveryMode === "subject_combination" ? resolveSubjectSection(question.subject_name) : null;
+        const section = deliveryMode === "subject_combination" ? importSection : null;
         return ({
         id: question.id || `docx_${Date.now()}_${Math.random()}`,
         question_type: question.question_type === "mcq" ? "mcq" : "theory",
@@ -743,8 +749,8 @@ export function MockBuilderClient({ token }: { token: string }) {
       });
       setQuestions((current) => [...current, ...parsedQuestions]);
       const warnings = imported?.warnings || [];
-      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length });
-      setImportProgress({ ...job, phase: "complete", percent: 100 });
+      setDocumentImportSummaries((current) => ({ ...current, [importSubjectKey]: { pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length } }));
+      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "complete", percent: 100 } }));
       if (parsedQuestions.length) {
         toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
           description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
@@ -756,7 +762,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     } catch (error) {
       if (importGeneration !== importGenerationRef.current) return;
       console.error("Could not read DOCX", error);
-      setImportProgress({ ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The Word document could not be parsed." });
+      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The Word document could not be parsed." } }));
       toast.error("Could not import that Word document", { description: error instanceof Error ? error.message : "Please try again." });
     } finally {
       if (importGeneration === importGenerationRef.current) setIsUploading(false);
@@ -765,10 +771,12 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const processPDF = async (file: File) => {
     const importGeneration = importGenerationRef.current;
+    const importSubjectKey = subjectStateKey;
+    const importSection = activeSubjectSection;
     const job = newMockImportProgress(file.name);
-    setImportProgress({ ...job, phase: "extracting", percent: null, message: "Uploading the PDF, then extracting and parsing it on the server." });
+    setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "extracting", percent: null, message: "Uploading the PDF, then extracting and parsing it on the server." } }));
     setIsUploading(true);
-    setDocumentImportSummary(null);
+    setDocumentImportSummaries((current) => { const next = { ...current }; delete next[importSubjectKey]; return next; });
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -780,10 +788,10 @@ export function MockBuilderClient({ token }: { token: string }) {
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Could not import that PDF");
       if (importGeneration !== importGenerationRef.current) return;
-      setImportProgress({ ...job, phase: "validating", percent: null });
+      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "validating", percent: null } }));
       const imported = body?.data;
       const parsedQuestions: QuestionState[] = (imported?.questions || []).map((question: any) => {
-        const section = deliveryMode === "subject_combination" ? resolveSubjectSection(question.subject_name) : null;
+        const section = deliveryMode === "subject_combination" ? importSection : null;
         return ({
         id: question.id || `pdf_${Date.now()}_${Math.random()}`,
         question_type: question.question_type === "mcq" ? "mcq" : "theory",
@@ -806,8 +814,8 @@ export function MockBuilderClient({ token }: { token: string }) {
       });
       setQuestions((current) => [...current, ...parsedQuestions]);
       const warnings = imported?.warnings || [];
-      setDocumentImportSummary({ pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length });
-      setImportProgress({ ...job, phase: "complete", percent: 100 });
+      setDocumentImportSummaries((current) => ({ ...current, [importSubjectKey]: { pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length } }));
+      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "complete", percent: 100 } }));
       if (parsedQuestions.length) {
         toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
           description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
@@ -819,7 +827,7 @@ export function MockBuilderClient({ token }: { token: string }) {
     } catch (error) {
       if (importGeneration !== importGenerationRef.current) return;
       console.error("Could not import PDF", error);
-      setImportProgress({ ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The PDF could not be parsed." });
+      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The PDF could not be parsed." } }));
       toast.error("Could not import that PDF", { description: error instanceof Error ? error.message : "Please try again." });
     } finally {
       if (importGeneration === importGenerationRef.current) setIsUploading(false);
@@ -1293,7 +1301,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
             </div>
           )}
-          {!isReadOnly && questions.length === 0 && selectedBankQuestions.length === 0 && !showImportPanel && !showBankPicker && (
+          {!isReadOnly && visibleQuestions.length === 0 && visibleBankQuestions.length === 0 && !showImportPanel && !showBankPicker && (
             <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
                 <span className="material-symbols-outlined text-[28px]">quiz</span>
@@ -1308,7 +1316,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               </div>
             </div>
           )}
-          {!isReadOnly && (questions.length > 0 || selectedBankQuestions.length > 0) && (
+          {!isReadOnly && (visibleQuestions.length > 0 || visibleBankQuestions.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
               <span className="mr-1 text-sm font-semibold text-[#474551]">Add to this section</span>
               <button type="button" onClick={handleAddMCQ} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white">+ MCQ</button>
@@ -1318,7 +1326,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               {builderActionMessage && <span role="status" aria-live="polite" className="basis-full pt-1 text-xs font-medium text-[#166534]">{builderActionMessage}</span>}
             </div>
           )}
-                    {!isReadOnly && (questions.length > 0) && (
+                    {!isReadOnly && visibleQuestions.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
               <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
               <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
@@ -1340,7 +1348,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                     </div>
                     <p className="text-[15px] leading-6 text-[#1b1c1c]">{question.questionText}</p>
                   </div>
-                  {!isReadOnly && <div className="flex items-center gap-2"><button type="button" onClick={() => { setQuestions((current) => [...current, { id: `copy-${Date.now()}`, question_type: question.questionType, question_text: question.questionText, marks: question.marks, options: question.options.map((option) => ({ id: `copy-${option.id}`, option_text: option.text, is_correct: false, content_blocks: option.contentBlocks })), course_id: question.courseId, section_id: question.sectionId, subject_name: subjectSections.find((section) => section.id === question.sectionId)?.name }]); setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId)); }} className="rounded border border-[#c8c5d2] px-2.5 py-1.5 text-xs font-semibold text-[#2e2877]">Edit a copy</button><button type="button" onClick={() => setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId))} className="text-[#787582] hover:text-[#ba1a1a]" aria-label={`Remove bank question ${index + 1}`}><span className="material-symbols-outlined">close</span></button></div>}
+                  {!isReadOnly && <div className="flex items-center gap-2"><button type="button" onClick={() => { setQuestions((current) => [...current, { id: `copy-${Date.now()}`, question_type: question.questionType, question_text: question.questionText, marks: question.marks, options: question.options.map((option) => ({ id: `copy-${option.id}`, option_text: option.text, is_correct: false, content_blocks: option.contentBlocks })), course_id: question.courseId, section_id: question.sectionId, subject_name: subjectSections.find((section) => section.id === question.sectionId)?.name }]); setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId || item.sectionId !== question.sectionId)); }} className="rounded border border-[#c8c5d2] px-2.5 py-1.5 text-xs font-semibold text-[#2e2877]">Edit a copy</button><button type="button" onClick={() => setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId || item.sectionId !== question.sectionId))} className="text-[#787582] hover:text-[#ba1a1a]" aria-label={`Remove bank question ${index + 1}`}><span className="material-symbols-outlined">close</span></button></div>}
                 </div>
               </div>
             ))}
@@ -1389,6 +1397,15 @@ export function MockBuilderClient({ token }: { token: string }) {
                     className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[15px] text-[#1b1c1c] outline-none transition-all mb-5 min-h-[100px] resize-y disabled:bg-[#f5f3f2]" 
                     placeholder="Enter question text here..."
                   />
+
+                  <div className="flex gap-3 mb-5">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-[#2e2877] cursor-pointer hover:underline disabled:opacity-50">
+                      <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>
+                      {uploadingImageQuestionId === q.id ? "Uploading..." : "Add Image"}
+                      <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={isReadOnly || uploadingImageQuestionId === q.id} onChange={(e) => handleImageUpload(q.id, e)} />
+                    </label>
+                  </div>
+
                   {q.content_blocks?.length ? (
                     <div className="mb-5 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#787582]">Formatted content preview</p>
@@ -1538,7 +1555,7 @@ export function MockBuilderClient({ token }: { token: string }) {
                       {isLoadingBankQuestions ? <p className="py-6 text-center text-sm text-[#474551]">Loading questions…</p> : (
                         <div className="max-h-80 space-y-2 overflow-y-auto">
                           {bankQuestions.map((question) => {
-                            const selected = selectedBankQuestions.some((item) => item.questionId === question.id);
+                            const selected = selectedBankQuestions.some((item) => item.questionId === question.id && (deliveryMode !== "subject_combination" || item.sectionId === resolvedActiveSubjectCourseId));
                             const bankName = banks.find((bank) => bank.id === selectedBankId)?.name || "Question bank";
                             return <label key={question.id} className="flex cursor-pointer items-start gap-3 rounded border border-[#e4e2e1] p-3 hover:bg-[#f8f6ff]">
                               <input type="checkbox" checked={selected} onChange={() => toggleBankQuestion(question, selected, bankName)} className="mt-1" />
@@ -1609,7 +1626,7 @@ export function MockBuilderClient({ token }: { token: string }) {
               {builderStep === "setup" ? "Mock setup" : "Share & publish"}
             </h3>
             
-                      {!isReadOnly && (questions.length > 0) && (
+                    {!isReadOnly && visibleQuestions.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
               <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
               <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
