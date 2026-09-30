@@ -58,7 +58,8 @@ describe('centre registration', () => {
     const user = userEvent.setup()
     render(<RegisterPage />)
 
-    fireEvent.change(screen.getByLabelText('Centre name'), { target: { value: 'Bright Future Tutorials' } })
+    await user.click(screen.getByRole('button', { name: /I run a tutorial centre/i }))
+    fireEvent.change(screen.getByLabelText('Tutorial centre name'), { target: { value: 'Bright Future Tutorials' } })
     fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Emmanuel' } })
     fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Usang' } })
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'owner@example.com' } })
@@ -91,7 +92,7 @@ describe('centre registration', () => {
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
       headers: expect.objectContaining({ Authorization: 'Bearer profile-token' }),
-      body: JSON.stringify({ name: 'Bright Future Tutorials' }),
+      body: JSON.stringify({ name: 'Bright Future Tutorials', account_type: 'centre' }),
     })
     expect(await screen.findByText(/centre was created, but the dashboard session could not be refreshed/i)).toBeInTheDocument()
   })
@@ -100,7 +101,7 @@ describe('centre registration', () => {
     navigation.pathname = '/auth/register/student'
     render(<RegisterPage />)
 
-    expect(screen.queryByLabelText('Centre name')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Tutorial centre name')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Join your programme' })).toBeInTheDocument()
   })
 })
