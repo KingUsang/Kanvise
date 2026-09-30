@@ -35,7 +35,7 @@ async function getParticipantDisplayName(user: { id: string; first_name?: string
   return fromProfile || user.kanvise_user_id || fallback
 }
 
-async function requireClassroom(c: any, level: 'view' | 'host' = 'view', hideStudentCourse = false) {
+async function requireClassroom(c: any, level: 'view' | 'host' | 'takeover' = 'view', hideStudentCourse = false) {
   try {
     const result = await resolveClassroomAccess(c.req.param('id'), c.get('user'), level)
     if ('reason' in result) {
@@ -516,7 +516,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   // An administrator may use the same ?start=true navigation after creating
   // a class for another tutor. Once it is live they enter as an observer, not
   // as a moderator. Starting a still-scheduled class remains tutor-only.
-  const access = await requireClassroom(c, user.role === 'admin' ? 'view' : 'host')
+  const access = await requireClassroom(c, user.role === 'admin' ? 'takeover' : 'host')
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
   const classroomProvider = providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider })

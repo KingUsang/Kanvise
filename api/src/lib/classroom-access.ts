@@ -31,7 +31,7 @@ export type ClassroomAccess =
   | { liveClass: ClassroomRecord; isHost: boolean }
   | { reason: ClassroomAccessFailure }
 
-export type ClassroomAccessLevel = 'view' | 'host'
+export type ClassroomAccessLevel = 'view' | 'host' | 'takeover'
 
 export async function resolveClassroomAccess(
   classId: string,
@@ -56,10 +56,12 @@ export async function resolveClassroomAccess(
     if (!liveClass.course_id || !courseIds.includes(liveClass.course_id)) return { reason: 'not_enrolled' }
   }
 
-  // A centre administrator can take over a classroom when the assigned tutor
-  // is unavailable. Tutors remain limited to classes assigned to them.
-  const isHost = user.role === 'admin' || (liveClass.tutor_id === user.id && user.role === 'tutor')
+  const isHost = liveClass.tutor_id === user.id && (user.role === 'admin' || user.role === 'tutor')
   if (user.role === 'tutor' && !isHost) return { reason: 'not_assigned_tutor' }
+  // Takeover is deliberately narrower than general host access. An admin can
+  // start a scheduled classroom for an absent tutor, but cannot thereby edit
+  // its teaching materials or end an already-running class.
+  if (level === 'takeover' && user.role === 'admin') return { liveClass, isHost: true }
   if (level === 'host' && !isHost) return { reason: 'not_assigned_tutor' }
 
   return { liveClass, isHost }

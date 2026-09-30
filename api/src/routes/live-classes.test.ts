@@ -100,11 +100,11 @@ describe('live classes API - scheduling', () => {
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.rpc).toHaveBeenCalledWith('create_recurring_live_class', {
+    expect(mocks.rpc).toHaveBeenCalledWith('create_recurring_live_class_series', {
       p_school_id: 'school-1', p_actor_id: 'tutor-1', p_course_id: 'course-1', p_tutor_id: 'tutor-1',
-      p_title: 'Math 101', p_starts_on: '2030-01-07', p_start_time: '14:30', p_timezone: 'Africa/Lagos', p_duration_minutes: 60,
+      p_title: 'Math 101', p_starts_on: '2030-01-07', p_start_time: '14:30', p_timezone: 'Africa/Lagos', p_duration_minutes: 60, p_weekdays: [1],
     })
-    expect(await response.json()).toEqual({ data: { series_id: 'series-1', recurrence: 'weekly' } })
+    expect(await response.json()).toEqual({ data: { series_id: 'series-1', recurrence: 'weekly', weekdays: [1] } })
     expect(mocks.from).not.toHaveBeenCalledWith('live_classes')
   })
 
