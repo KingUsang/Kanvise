@@ -1398,14 +1398,6 @@ export function MockBuilderClient({ token }: { token: string }) {
                     placeholder="Enter question text here..."
                   />
 
-                  <div className="flex gap-3 mb-5">
-                    <label className="flex items-center gap-2 text-sm font-semibold text-[#2e2877] cursor-pointer hover:underline disabled:opacity-50">
-                      <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>
-                      {uploadingImageQuestionId === q.id ? "Uploading..." : "Add Image"}
-                      <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={isReadOnly || uploadingImageQuestionId === q.id} onChange={(e) => handleImageUpload(q.id, e)} />
-                    </label>
-                  </div>
-
                   {q.content_blocks?.length ? (
                     <div className="mb-5 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#787582]">Formatted content preview</p>
