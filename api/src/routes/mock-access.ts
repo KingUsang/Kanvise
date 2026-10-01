@@ -66,7 +66,14 @@ mockAccessRouter.get('/mock/:slug', async c => {
   try {
     const offer = await loadOffer(c.req.param('slug')!, true)
     if (!offer || !offerVisibleToAnonymous(offer)) return c.json({ error: 'Mock not found' }, 404)
-    return c.json({ data: offer })
+    const isSubjectChoiceMock = offer.mock?.delivery_mode === 'subject_combination'
+    const { data: sections, error: sectionError } = isSubjectChoiceMock
+      ? await db.from('mock_version_questions').select('section_title').eq('school_id', offer.school_id)
+        .eq('mock_exam_version_id', offer.mock_exam_version_id).order('section_order_index').order('order_index')
+      : { data: [], error: null }
+    if (sectionError) return c.json({ error: 'Could not load mock subjects' }, 500)
+    const subjects = [...new Set((sections || []).map((section: any) => String(section.section_title || '').trim()).filter(Boolean))]
+    return c.json({ data: { ...offer, subject_combination: isSubjectChoiceMock ? { subjects } : null } })
   } catch { return c.json({ error: 'Could not load this mock' }, 500) }
 })
 

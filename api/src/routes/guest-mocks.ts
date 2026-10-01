@@ -53,6 +53,8 @@ function guestError(c: any, error: any, fallback: string) {
     'GUEST_MOCK_NOT_AVAILABLE', 'ATTEMPT_EXPIRED', 'ATTEMPT_FINALIZED', 'ATTEMPT_LIMIT_REACHED',
     'STUDENT_ATTEMPT_IN_PROGRESS', 'ENTITLEMENT_EXPIRED', 'ATTEMPT_QUESTION_NOT_FOUND',
     'OPTION_NOT_FOUND', 'MCQ_THEORY_ANSWER_INVALID', 'THEORY_OPTION_INVALID',
+    'SUBJECT_SELECTION_REQUIRED', 'SUBJECT_SELECTION_DUPLICATE', 'SUBJECT_SELECTION_INVALID',
+    'MOCK_HAS_NO_QUESTIONS_FOR_SUBJECTS',
   ].find(candidate => message.includes(candidate))
   if (!code) {
     console.error('guest_mocks.database_error', { message, code: error?.code })
@@ -70,6 +72,10 @@ function guestError(c: any, error: any, fallback: string) {
     ATTEMPT_LIMIT_REACHED: 'This account has already used all attempts for this mock.',
     STUDENT_ATTEMPT_IN_PROGRESS: 'This account already has this mock in progress. Finish that attempt before moving guest progress.',
     ENTITLEMENT_EXPIRED: 'This account’s access to the mock has expired.',
+    SUBJECT_SELECTION_REQUIRED: 'Choose at least one subject before starting.',
+    SUBJECT_SELECTION_DUPLICATE: 'Choose each subject only once.',
+    SUBJECT_SELECTION_INVALID: 'One or more selected subjects are not available in this mock.',
+    MOCK_HAS_NO_QUESTIONS_FOR_SUBJECTS: 'The selected subjects do not have any questions yet.',
   }
   return c.json({ error: publicMessages[code] || 'The guest attempt could not be updated.', code }, status)
 }
@@ -94,8 +100,12 @@ guestMocksRouter.post('/guest/mock/:offerId/attempts', async c => {
       guest = data
       writeGuestCookie(c, token)
     }
-    const { data, error } = await db.rpc('start_or_resume_guest_mock_attempt', {
-      p_guest_id: guest.id, p_offer_id: c.req.param('offerId')!, p_now: new Date().toISOString(),
+    const body = await c.req.json().catch(() => ({})) as { selected_subject_names?: unknown }
+    const selectedSubjectNames = Array.isArray(body.selected_subject_names)
+      ? [...new Set(body.selected_subject_names.filter((name): name is string => typeof name === 'string').map(name => name.trim()).filter(Boolean))]
+      : []
+    const { data, error } = await db.rpc('start_or_resume_guest_mock_attempt_with_subjects', {
+      p_guest_id: guest.id, p_offer_id: c.req.param('offerId')!, p_selected_subject_names: selectedSubjectNames, p_now: new Date().toISOString(),
     })
     if (error) return guestError(c, error, 'Could not start this guest mock')
     return c.json({ data: data?.[0] || data }, 201)

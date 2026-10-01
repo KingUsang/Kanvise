@@ -51,6 +51,26 @@ describe('guest mock ownership', () => {
     expect(cookie.toLowerCase()).toContain('samesite=lax')
   })
 
+  it('passes the guest’s deliberate subject choice to the database snapshot', async () => {
+    const insert = fluent({ data: { id: 'guest-1' }, error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'guest_mock_learners') return insert
+      throw new Error(`Unexpected table ${table}`)
+    })
+    mocks.rpc.mockResolvedValue({ data: { attempt_id: 'attempt-1', resumed: false }, error: null })
+
+    const response = await guestMocksRouter.request('/guest/mock/offer-1/attempts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selected_subject_names: ['Physics', 'Biology', 'Physics', '  Economics  '] }),
+    })
+
+    expect(response.status).toBe(201)
+    expect(mocks.rpc).toHaveBeenCalledWith('start_or_resume_guest_mock_attempt_with_subjects', expect.objectContaining({
+      p_guest_id: 'guest-1', p_offer_id: 'offer-1',
+      p_selected_subject_names: ['Physics', 'Biology', 'Economics'],
+    }))
+  })
+
   it('returns an explicit collision without moving either attempt', async () => {
     const activeGuest = fluent({ data: { id: 'guest-1', claimed_at: null }, error: null })
     mocks.from.mockReturnValue(activeGuest)
