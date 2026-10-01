@@ -61,6 +61,11 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
         if (!preflightBody.data.resumable_attempt && preflightBody.data.attempts_used >= preflightBody.data.attempts_allowed) {
           throw new Error('You have used all attempts included with this mock.')
         }
+        if (preflightBody?.data?.subject_combination?.subjects?.length) {
+          toast.info('Choose the subjects you want to sit before starting your attempt.')
+          router.push('/dashboard/student/mocks?view=unlocked')
+          return
+        }
         const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, { method: 'POST' })
         const attempt = await start.json().catch(() => null)
         if (!start.ok) throw new Error(attempt?.error || 'Could not open this mock')
