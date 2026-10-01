@@ -38,6 +38,21 @@ describe('MockOfferActions student journeys', () => {
     expect(mocks.authenticatedFetch).not.toHaveBeenCalled()
   })
 
+  it('lets a guest choose one or more subjects before starting a public combination mock', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null } })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ data: { attempt_id: 'guest-attempt-2' } }, 201))
+    render(<MockOfferActions offerId="offer-1" mockId="mock-1" slug="jamb-practice" accessMode="free_claim" requiresSubjectSelection subjectOptions={['Physics', 'Biology']} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Choose subjects and start' }))
+    await userEvent.click(screen.getByLabelText('Physics'))
+    await userEvent.click(screen.getByRole('button', { name: 'Start selected subjects' }))
+
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/guest/attempt/guest-attempt-2'))
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/guest/mock/offer-1/attempts', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ selected_subject_names: ['Physics'] }),
+    }))
+  })
+
   it('sends a signed-out paid buyer to student login with the exact mock continuation', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: null } })
     render(<MockOfferActions offerId="offer-1" mockId="mock-1" slug="biology-basics" accessMode="paid" />)
@@ -88,6 +103,7 @@ describe('MockOfferActions student journeys', () => {
       .mockResolvedValueOnce(jsonResponse({ user: { role: 'student', school_id: null } }))
       .mockResolvedValueOnce(jsonResponse({ code: 'MOCK_ENTITLEMENT_NOT_FOUND' }, 403))
       .mockResolvedValueOnce(jsonResponse({ data: { entitlement_id: 'entitlement-1' } }, 201))
+      .mockResolvedValueOnce(jsonResponse({ data: { attempts_used: 0, attempts_allowed: 1, resumable_attempt: null, subject_combination: null } }))
       .mockResolvedValueOnce(jsonResponse({ data: { attempt_id: 'attempt-1' } }, 201))
     render(<MockOfferActions offerId="offer-1" mockId="mock-1" slug="biology-basics" accessMode="free_claim" />)
 
@@ -95,7 +111,8 @@ describe('MockOfferActions student journeys', () => {
 
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/dashboard/student/mocks/attempt/attempt-1'))
     expect(String(mocks.authenticatedFetch.mock.calls[2][1])).toContain('/mock/offer-1/claim')
-    expect(String(mocks.authenticatedFetch.mock.calls[3][1])).toContain('/mock/offer-1/attempts')
+    expect(String(mocks.authenticatedFetch.mock.calls[3][1])).toContain('/mock/offer-1/preflight')
+    expect(String(mocks.authenticatedFetch.mock.calls[4][1])).toContain('/mock/offer-1/attempts')
   })
 
   it('uses programme access before the public entitlement path for an eligible student', async () => {
