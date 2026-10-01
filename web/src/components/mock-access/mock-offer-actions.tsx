@@ -8,13 +8,16 @@ import { getApiUrl } from '@/config/api'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 import { loginHref } from '@/lib/auth-continuation'
 
-export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerId: string; mockId: string; slug: string; accessMode: string }) {
+export function MockOfferActions({ offerId, mockId, slug, accessMode, requiresSubjectSelection = false }: { offerId: string; mockId: string; slug: string; accessMode: string; requiresSubjectSelection?: boolean }) {
   const router = useRouter(); const [loading, setLoading] = useState(false)
   const redirect = `/mock/${encodeURIComponent(slug)}`
   async function access() {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
+      if (requiresSubjectSelection) {
+        router.push(loginHref({ redirect, flow: 'student' })); return
+      }
       if (accessMode === 'free_claim') {
         setLoading(true)
         try {
