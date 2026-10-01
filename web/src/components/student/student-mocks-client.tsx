@@ -12,6 +12,7 @@ import type { StudentMockCard, StudentMockGroups, UnlockedMock } from '@/lib/stu
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 type Tab = keyof StudentMockGroups
+type SubjectPicker = { item: UnlockedMock; subjects: string[]; selected: string[] }
 
 const tabs: Array<{ key: Tab; label: string }> = [
   { key: 'available', label: 'Available' },
@@ -78,6 +79,7 @@ export function StudentMocksClient({ initialView, initialGroups, initialUnlocked
   const [tab, setTab] = useState<Tab>(initial)
   const [search, setSearch] = useState('')
   const [startingOfferId, setStartingOfferId] = useState<string | null>(null)
+  const [subjectPicker, setSubjectPicker] = useState<SubjectPicker | null>(null)
   const items = useMemo(() => groups[tab].filter(item => {
     const value = search.trim().toLowerCase()
     return !value || item.title.toLowerCase().includes(value) || item.course?.name?.toLowerCase().includes(value)
@@ -97,13 +99,28 @@ export function StudentMocksClient({ initialView, initialGroups, initialUnlocked
     router.replace(`/dashboard/student/mocks${next === 'unlocked' ? '?view=unlocked' : ''}`, { scroll: false })
   }
 
-  async function startUnlocked(item: UnlockedMock) {
+  async function startUnlocked(item: UnlockedMock, selectedSubjectNames?: string[]) {
     if (!item.offer) return
     setStartingOfferId(item.offer.id)
     try {
       const { data: { session } } = await createClient().auth.getSession()
       if (!session) return router.push('/auth/login?redirect=%2Fdashboard%2Fstudent%2Fmocks%3Fview%3Dunlocked')
-      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/mock/${item.offer.id}/attempts`, { method: 'POST' })
+      const preflight = await authenticatedFetch(createClient(), `${getApiUrl()}/mock/${item.offer.id}/preflight`, { cache: 'no-store' })
+      const preflightBody = await preflight.json().catch(() => null)
+      if (!preflight.ok) throw new Error(preflightBody?.error || 'Could not prepare this mock')
+      if (preflightBody?.data?.resumable_attempt?.id) {
+        router.push(`/dashboard/student/mocks/attempt/${preflightBody.data.resumable_attempt.id}`)
+        return
+      }
+      const subjects = preflightBody?.data?.subject_combination?.subjects
+      if (Array.isArray(subjects) && subjects.length && !selectedSubjectNames) {
+        setSubjectPicker({ item, subjects, selected: [] })
+        return
+      }
+      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/mock/${item.offer.id}/attempts`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selected_subject_names: selectedSubjectNames || [] }),
+      })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not start this mock')
       router.push(`/dashboard/student/mocks/attempt/${body.data.attempt_id}`)
@@ -116,6 +133,7 @@ export function StudentMocksClient({ initialView, initialGroups, initialUnlocked
 
   return <main className="mx-auto min-w-0 max-w-[1440px] px-4 py-7 pb-28 sm:px-6 lg:px-10 lg:py-10">
     <header><p className="text-sm font-medium text-[#994704]">Practice and assessment</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Mocks</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Programme assessments and mocks you unlocked are kept together here.</p></header>
+    {subjectPicker && <div role="dialog" aria-modal="true" aria-labelledby="subject-picker-title" className="fixed inset-0 z-50 grid place-items-end bg-black/40 p-0 sm:place-items-center sm:p-6"><section className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl"><p className="text-sm font-medium text-[#994704]">Choose your paper</p><h2 id="subject-picker-title" className="mt-1 text-2xl font-semibold text-[#29262f]">Which subjects are you sitting?</h2><p className="mt-2 text-sm leading-6 text-[#716c76]">Choose one or more subjects. Only those questions will be included when your one-hour attempt starts.</p><div className="mt-5 grid gap-2 sm:grid-cols-2">{subjectPicker.subjects.map(subject => { const checked = subjectPicker.selected.includes(subject); return <label key={subject} className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#e4dfda] px-3 py-3 text-sm font-medium text-[#29262f]"><input type="checkbox" checked={checked} onChange={() => setSubjectPicker(current => current ? { ...current, selected: checked ? current.selected.filter(value => value !== subject) : [...current.selected, subject] } : null)} className="h-4 w-4 accent-[#2e2877]" />{subject}</label> })}</div><p className="mt-4 text-xs font-medium text-[#716c76]">{subjectPicker.selected.length} subject{subjectPicker.selected.length === 1 ? '' : 's'} selected</p><div className="mt-6 flex gap-3"><button type="button" onClick={() => setSubjectPicker(null)} className="min-h-11 flex-1 rounded-xl border border-[#d9d3cf] px-4 text-sm font-semibold text-[#474551]">Cancel</button><button type="button" disabled={!subjectPicker.selected.length || startingOfferId === subjectPicker.item.offer?.id} onClick={() => { const current = subjectPicker; setSubjectPicker(null); void startUnlocked(current.item, current.selected) }} className="min-h-11 flex-1 rounded-xl bg-[#994704] px-4 text-sm font-semibold text-white disabled:opacity-45">Start selected subjects</button></div></section></div>}
     <div className="mt-6 grid w-full grid-cols-2 rounded-xl border border-[#ddd7d2] bg-white p-1 sm:inline-grid sm:w-auto" aria-label="Mock access source">
       <button type="button" onClick={() => changeView('programme')} className={`min-w-0 rounded-lg px-3 py-2 text-sm font-medium sm:px-4 ${view === 'programme' ? 'bg-[#2e2877] text-white' : 'text-[#716c76]'}`}>Programme <span className="ml-1 text-xs opacity-75">{programmeCount}</span></button>
       <button type="button" onClick={() => changeView('unlocked')} className={`rounded-lg px-4 py-2 text-sm font-medium ${view === 'unlocked' ? 'bg-[#2e2877] text-white' : 'text-[#716c76]'}`}>Unlocked <span className="ml-1 text-xs opacity-75">{unlocked.length}</span></button>

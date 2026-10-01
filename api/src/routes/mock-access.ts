@@ -10,7 +10,7 @@ export const mockOfferAdminRouter = new Hono<{ Variables: TenantVariables }>()
 
 const db = supabase as any
 const publicOfferFields = `id, slug, audience_scope, access_mode, price_kobo, currency, attempts_included, available_from, closes_at,
-  mock:mock_exams(id, title, description, time_limit_minutes, calculator_mode, result_release_mode, school:schools(name)),
+  mock:mock_exams(id, title, description, time_limit_minutes, calculator_mode, result_release_mode, delivery_mode, school:schools(name)),
   version:mock_exam_versions(id, total_questions, total_marks, settings)`
 
 function isOpen(offer: any, now = new Date()) {
@@ -123,17 +123,37 @@ mockAccessRouter.get('/mock/:offerId/preflight', requireRole('student'), async c
   const { data: entitlement } = await db.from('mock_entitlements').select('id, attempts_granted, attempts_consumed, expires_at').eq('student_id', user.id).eq('offer_id', offer.id).is('revoked_at', null).maybeSingle()
   if (!entitlement || (entitlement.expires_at && new Date(entitlement.expires_at) <= new Date())) return c.json({ error: 'Get access to this mock first', code: 'MOCK_ENTITLEMENT_NOT_FOUND' }, 403)
   const { data: attempts } = await db.from('mock_attempts').select('id, attempt_number, status, deadline_at').eq('student_id', user.id).eq('entitlement_id', entitlement.id)
-  return c.json({ data: { offer, attempts_used: entitlement.attempts_consumed, attempts_allowed: entitlement.attempts_granted, resumable_attempt: (attempts || []).find((item: any) => item.status === 'in_progress' && (!item.deadline_at || new Date() < new Date(item.deadline_at))) || null }, server_now: new Date().toISOString() })
+  const isSubjectChoiceMock = offer.mock?.delivery_mode === 'subject_combination'
+  const { data: sections, error: sectionError } = isSubjectChoiceMock
+    ? await db.from('mock_version_questions').select('section_title').eq('school_id', offer.school_id)
+      .eq('mock_exam_version_id', offer.mock_exam_version_id).order('section_order_index').order('order_index')
+    : { data: [], error: null }
+  if (sectionError) return c.json({ error: 'Could not load mock subjects' }, 500)
+  const subjects = [...new Set((sections || []).map((section: any) => String(section.section_title || '').trim()).filter(Boolean))]
+  return c.json({ data: {
+    offer, attempts_used: entitlement.attempts_consumed, attempts_allowed: entitlement.attempts_granted,
+    resumable_attempt: (attempts || []).find((item: any) => item.status === 'in_progress' && (!item.deadline_at || new Date() < new Date(item.deadline_at))) || null,
+    subject_combination: isSubjectChoiceMock ? { subjects } : null,
+  }, server_now: new Date().toISOString() })
 })
 
 mockAccessRouter.post('/mock/:offerId/attempts', requireRole('student'), async c => {
   const user = c.get('user'); const offer = await loadOffer(c.req.param('offerId')!)
   if (!offer || !(await canUseOffer(user.id, offer))) return c.json({ error: 'Mock not found' }, 404)
   const centreAccess = await hasCentreAccessToOffer(user, offer)
+  const body = await c.req.json().catch(() => ({})) as { selected_subject_names?: unknown }
+  const selectedSubjectNames = Array.isArray(body.selected_subject_names)
+    ? [...new Set(body.selected_subject_names.filter((name): name is string => typeof name === 'string').map(name => name.trim()).filter(Boolean))]
+    : []
   const { data, error } = centreAccess
     ? await db.rpc('start_or_resume_versioned_mock_attempt', { p_school_id: user.school_id, p_mock_exam_id: offer.mock_exam_id, p_student_id: user.id, p_now: new Date().toISOString() })
-    : await db.rpc('start_or_resume_mock_offer_attempt', { p_offer_id: offer.id, p_student_id: user.id, p_now: new Date().toISOString() })
-  if (error) return c.json({ error: String(error.message || 'Could not start the mock'), code: 'ATTEMPT_START_FAILED' }, 409)
+    : await db.rpc('start_or_resume_mock_offer_attempt_with_subjects', { p_offer_id: offer.id, p_student_id: user.id, p_selected_subject_names: selectedSubjectNames, p_now: new Date().toISOString() })
+  if (error) {
+    const message = String(error.message || '')
+    if (message.includes('SUBJECT_SELECTION_REQUIRED')) return c.json({ error: 'Choose at least one subject before starting.', code: 'SUBJECT_SELECTION_REQUIRED' }, 400)
+    if (message.includes('SUBJECT_SELECTION_INVALID')) return c.json({ error: 'One or more selected subjects are not available in this mock.', code: 'SUBJECT_SELECTION_INVALID' }, 400)
+    return c.json({ error: 'Could not start this mock', code: 'ATTEMPT_START_FAILED' }, 409)
+  }
   return c.json({ data: data?.[0] || data, server_now: new Date().toISOString() }, 201)
 })
 
