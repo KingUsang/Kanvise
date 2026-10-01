@@ -174,7 +174,12 @@ mocksRouter.get("/", requireTutorOrAdmin, async (c) => {
     const assignedCourseIds = new Set((assignments || []).map((assignment: any) => assignment.course_id));
     visibleMocks = visibleMocks.filter((mock: any) => {
       const audience = parseMockAudienceScope(mock.audience_scope ?? "course") || "course";
-      return audience === "course" && assignedCourseIds.has(mock.course_id);
+      // A tutor's standalone mocks are intentionally not attached to a course.
+      // They are still their work and must remain visible in the global
+      // Assessments view. Course mocks remain limited to subjects assigned to
+      // the tutor; centre/programme-wide mocks stay admin-managed.
+      return (audience === "course" && assignedCourseIds.has(mock.course_id))
+        || (audience === "direct_link" && mock.tutor_id === user.id);
     });
   }
 
@@ -209,6 +214,40 @@ mocksRouter.get("/ungraded-count", requireTutorOrAdmin, async (c) => {
 // POST /mocks/import/pdf — extract editable questions from a text-based PDF.
 // This deliberately returns a draft for tutor review; it never publishes or
 // persists imported questions by itself.
+type ImportFailure = {
+  error: string;
+  code: string;
+  retryable: boolean;
+};
+
+// Model and document-parser errors are diagnostic information, not product
+// copy. In particular, a provider message can be confusing, leak provider
+// implementation details, or change without warning. Keep it in server logs
+// and return an actionable Kanvise-owned problem to the editor instead.
+function importFailure(error: unknown, source: "PDF" | "Word document"): ImportFailure {
+  const raw = error instanceof Error ? error.message : String(error || "");
+  const normalized = raw.toLowerCase();
+  if (/gemini_api_key|not configured|api key/i.test(raw)) {
+    return { error: "Document import is not available right now. Please use the question editor or contact your administrator.", code: "IMPORT_UNAVAILABLE", retryable: false };
+  }
+  if (/quota|rate limit|resource exhausted|too many requests|429/i.test(normalized)) {
+    return { error: "Kanvise is processing too many document imports right now. Your mock has not changed—try this file again in a few minutes.", code: "IMPORT_RATE_LIMITED", retryable: true };
+  }
+  if (/timeout|timed out|high demand|temporar|503|502|504|network/i.test(normalized)) {
+    return { error: "The document reader is temporarily unavailable. Your mock has not changed—try again shortly.", code: "IMPORT_TEMPORARILY_UNAVAILABLE", retryable: true };
+  }
+  if (/too large|2_000_000|15 mb/i.test(normalized)) {
+    return { error: `${source} is too large to import. Use a smaller file or split it into separate documents.`, code: "IMPORT_TOO_LARGE", retryable: false };
+  }
+  if (/password|encrypted/i.test(normalized)) {
+    return { error: "This PDF is password-protected. Remove the password, then upload it again.", code: "PASSWORD_PROTECTED_PDF", retryable: false };
+  }
+  if (/no questions|readable text|invalid pdf|could not parse|document has no pages/i.test(normalized)) {
+    return { error: `Kanvise could not find usable questions in this ${source.toLowerCase()}. Check the file contains the question paper, then try again.`, code: "IMPORT_CONTENT_NOT_RECOGNISED", retryable: false };
+  }
+  return { error: `Kanvise could not import this ${source.toLowerCase()}. Your mock has not changed. Try another file or add questions manually.`, code: "IMPORT_FAILED", retryable: true };
+}
+
 mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
   const jobId = /^[a-zA-Z0-9_-]{6,64}$/.test(c.req.header("x-import-job-id") || "") ? c.req.header("x-import-job-id")! : crypto.randomUUID();
   c.header("X-Import-Job-ID", jobId);
@@ -242,15 +281,13 @@ mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
     console.info("[mocks] PDF import completed", { job_id: jobId, question_count: result.questions.length });
     return c.json({ data: { ...result, job_id: jobId } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not read this PDF";
-    const expected = /scanned images|no more than|Invalid PDF|PasswordException|password/i.test(message);
-    if (!expected) console.error("[mocks] PDF import failed", error);
-    return c.json({
-      error: /password/i.test(message)
-        ? "Password-protected PDFs cannot be imported. Remove the password and try again."
-        : message,
-      code: "PDF_IMPORT_FAILED",
-    }, 422);
+    const problem = importFailure(error, "PDF");
+    console.error("[mocks] PDF import failed", {
+      code: problem.code,
+      retryable: problem.retryable,
+      diagnostic: error instanceof Error ? error.message : String(error),
+    });
+    return c.json(problem, 422);
   }
 });
 
@@ -273,9 +310,13 @@ mocksRouter.post("/import/document-text", requireTutorOrAdmin, async (c) => {
     console.info("[mocks] document import completed", { job_id: jobId, question_count: result.questions.length });
     return c.json({ data: { ...result, job_id: jobId } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not read this Word document";
-    if (!/AI document import|Word document|No questions|too large/i.test(message)) console.error("[mocks] document import failed", error);
-    return c.json({ error: message, code: "DOCUMENT_IMPORT_FAILED" }, 422);
+    const problem = importFailure(error, "Word document");
+    console.error("[mocks] document import failed", {
+      code: problem.code,
+      retryable: problem.retryable,
+      diagnostic: error instanceof Error ? error.message : String(error),
+    });
+    return c.json(problem, 422);
   }
 });
 
@@ -404,7 +445,7 @@ mocksRouter.get("/:id", requireTutorOrAdmin, async (c) => {
 
   const { data, error } = await supabase
     .from("mock_exams")
-    .select("*, course:courses(id, name)")
+    .select("*, course:courses(id, name), bank:question_banks(id)")
     .eq("id", mockId)
     .eq("school_id", user.school_id)
     .single();

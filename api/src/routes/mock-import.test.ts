@@ -76,4 +76,20 @@ describe('AI mock document import route', () => {
     expect(response.status).toBe(422)
     expect(await response.json()).toMatchObject({ code: 'NO_QUESTIONS_FOUND' })
   })
+
+  it('keeps provider diagnostics out of the tutor-facing import error', async () => {
+    mocks.importQuestionsFromDocumentText.mockRejectedValue(new Error('Gemini quota exceeded: projects/example/api-key'))
+
+    const response = await mocksRouter.request('/import/document-text', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ document_text: '1. What is 2 + 2?' }),
+    })
+
+    expect(response.status).toBe(422)
+    const body = await response.json()
+    expect(body).toMatchObject({ code: 'IMPORT_RATE_LIMITED', retryable: true })
+    expect(body.error).not.toContain('Gemini')
+    expect(body.error).not.toContain('api-key')
+  })
 })

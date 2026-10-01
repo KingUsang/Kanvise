@@ -6,6 +6,7 @@ export type DraftQuestionForReview = {
   options: Array<{ option_text: string; is_correct: boolean; content_blocks?: Array<unknown> }>;
   review_reasons?: string[];
   course_id?: string | null;
+  section_id?: string;
 };
 
 export type PrePublishReview = {
@@ -21,7 +22,7 @@ type ReviewInput = {
   audienceScope?: "course" | "combination" | "direct_link" | "programme" | "school";
   deliveryMode?: "fixed" | "subject_combination";
   questions: DraftQuestionForReview[];
-  selectedBankQuestions: Array<{ questionText: string; questionType: "mcq" | "theory"; marks: number; courseId?: string | null }>;
+  selectedBankQuestions: Array<{ questionText: string; questionType: "mcq" | "theory"; marks: number; courseId?: string | null; sectionId?: string }>;
   isUntimed: boolean;
   timeLimit: number;
   publishMode: "immediate" | "scheduled";
@@ -37,15 +38,23 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
   const audienceScope = input.audienceScope || "course";
   const totalQuestions = input.questions.length + input.selectedBankQuestions.length;
   if (!input.title.trim()) errors.push("Add a title for the mock.");
+  if (!input.accessMode) errors.push("Choose who can take this mock before publishing.");
   if (input.accessMode === "centre" || input.accessMode === "both") {
     if (audienceScope === "course" && !input.courseId) errors.push("Choose the subject this mock is for.");
   }
   if (totalQuestions === 0) errors.push("Add at least one question.");
-  if (input.deliveryMode === "subject_combination" && input.questions.some((question) => !question.course_id)) {
+  // A section is required for every multi-subject question. A centre course is
+  // required only when the assessment is actually assigned through a centre;
+  // standalone/link mocks may have perfectly valid custom subjects.
+  if (input.deliveryMode === "subject_combination" && input.questions.some((question) => !question.section_id)) {
     errors.push("Assign every question to a subject section.");
   }
-  if (input.deliveryMode === "subject_combination" && input.selectedBankQuestions.some((question) => !question.courseId)) {
+  if (input.deliveryMode === "subject_combination" && input.selectedBankQuestions.some((question) => !question.sectionId)) {
     errors.push("Assign every question-bank item to a subject section.");
+  }
+  if (input.deliveryMode === "subject_combination" && (input.accessMode === "centre" || input.accessMode === "both")
+    && input.questions.some((question) => !question.course_id)) {
+    errors.push("Map every subject section to a centre subject before publishing to enrolled students.");
   }
 
   input.questions.forEach((question, index) => {

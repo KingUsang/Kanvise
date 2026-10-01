@@ -71,4 +71,27 @@ describe("buildPrePublishReview", () => {
     });
     expect(review.errors).toContain("Assign every question-bank item to a subject section.");
   });
+
+  it("allows a direct-link multi-subject mock with custom subject sections", () => {
+    const review = buildPrePublishReview({
+      ...base,
+      accessMode: "direct",
+      audienceScope: "direct_link",
+      courseId: "",
+      deliveryMode: "subject_combination",
+      questions: [{ ...base.questions[0], course_id: null, section_id: "physics" }],
+    });
+    expect(review.errors).toEqual([]);
+  });
+
+  it("requires a centre mapping only when a multi-subject mock is assigned through a centre", () => {
+    const review = buildPrePublishReview({
+      ...base,
+      audienceScope: "combination",
+      courseId: "",
+      deliveryMode: "subject_combination",
+      questions: [{ ...base.questions[0], course_id: null, section_id: "physics" }],
+    });
+    expect(review.errors).toContain("Map every subject section to a centre subject before publishing to enrolled students.");
+  });
 });
