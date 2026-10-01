@@ -83,6 +83,14 @@ export function MockOfferActions({ offerId, mockId, slug, accessMode }: { offerI
       }
       const claim = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/claim`, { method: 'POST' })
       const body = await claim.json().catch(() => null); if (!claim.ok) throw new Error(body?.error || 'Could not unlock this mock')
+      const claimedPreflight = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/preflight`, { cache: 'no-store' })
+      const claimedPreflightBody = await claimedPreflight.json().catch(() => null)
+      if (!claimedPreflight.ok) throw new Error(claimedPreflightBody?.error || 'Mock unlocked — open My Mocks to start')
+      if (claimedPreflightBody?.data?.subject_combination?.subjects?.length) {
+        toast.info('Choose the subjects you want to sit before starting your attempt.')
+        router.push('/dashboard/student/mocks?view=unlocked')
+        return
+      }
       const start = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/attempts`, { method: 'POST' })
       const attempt = await start.json().catch(() => null); if (!start.ok) throw new Error(attempt?.error || 'Mock unlocked — open My Mocks to start')
       router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
