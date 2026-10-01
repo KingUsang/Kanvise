@@ -439,7 +439,6 @@ export function MockBuilderClient({ token }: { token: string }) {
         sectionId: undefined,
       })));
       setActiveSubjectCourseId("");
-      setBuilderStep("questions");
       setAudienceScope(accessMode === "centre" || accessMode === "both" ? "combination" : "direct_link");
       setDeliveryMode(nextMode);
       return;
