@@ -146,7 +146,7 @@ export function MockOfferActions({
   }
 
   const label = accessMode === 'paid'
-    ? 'Sign in to buy and attempt'
+    ? 'Buy and attempt mock'
     : loading ? 'Starting mock…' : requiresSubjectSelection ? 'Choose subjects and start' : 'Attempt mock'
 
   return <>
