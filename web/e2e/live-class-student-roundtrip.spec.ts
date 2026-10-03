@@ -71,15 +71,44 @@ test('an enrolled student sees, joins and is recorded for a tutor live class', a
   let classEnded = false
 
   try {
+    const token = await apiToken(tutor)
+    const classResponse = await request.get(`${webEnv('NEXT_PUBLIC_API_URL')}/classes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(classResponse.ok()).toBeTruthy()
+    const teachingClasses = (await classResponse.json()).data as Array<{
+      id: string
+      name: string
+      courses?: Array<{ id: string; name: string }>
+    }>
+    const physicsClass = teachingClasses.find((item) =>
+      item.courses?.some((course) => course.name.toLowerCase() === 'physics'),
+    )
+    expect(physicsClass, 'The E2E student must be enrolled in a Physics teaching class').toBeTruthy()
+    const physics = physicsClass!.courses!.find((course) => course.name.toLowerCase() === 'physics')!
+
     const tutorPage = await tutorContext.newPage()
-    await tutorPage.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-    await tutorPage.getByRole('button', { name: 'Start live class', exact: true }).click()
-    const launcher = tutorPage.getByRole('dialog', { name: 'Start a live class' })
-    await expect(launcher).toBeVisible()
-    await launcher.getByRole('button', { name: 'Enrolled learners', exact: true }).click()
-    await launcher.getByLabel('Class title').fill(title)
-    await launcher.getByLabel('Subject').selectOption({ label: 'Physics' })
-    await launcher.getByRole('button', { name: /Start class now/ }).click()
+    await tutorPage.goto('/dashboard/schedule?new=1', { waitUntil: 'domcontentloaded' })
+    const composer = tutorPage.locator('form', { has: tutorPage.getByRole('heading', { name: 'New class' }) })
+    await expect(composer).toBeVisible({ timeout: 45_000 })
+    await composer.getByRole('button', { name: 'Enrolled learners', exact: true }).click()
+    await composer.getByLabel('Class').selectOption(physicsClass!.id)
+    if (await composer.getByLabel('Subject').isVisible().catch(() => false)) {
+      await composer.getByLabel('Subject').selectOption(physics.id)
+    }
+    const scheduled = new Date(Date.now() + 5 * 60_000)
+    const localDate = `${scheduled.getFullYear()}-${String(scheduled.getMonth() + 1).padStart(2, '0')}-${String(scheduled.getDate()).padStart(2, '0')}`
+    const localTime = `${String(scheduled.getHours()).padStart(2, '0')}:${String(scheduled.getMinutes()).padStart(2, '0')}`
+    await composer.getByLabel('Class title').fill(title)
+    await composer.getByLabel('Date').fill(localDate)
+    await composer.getByLabel('Time').fill(localTime)
+    await composer.getByRole('button', { name: 'Schedule class', exact: true }).click()
+    const scheduledClass = tutorPage.getByRole('button', { name: new RegExp(title) })
+    await expect(scheduledClass).toBeVisible({ timeout: 45_000 })
+    await scheduledClass.click()
+    const sessionDetails = tutorPage.locator('form', { has: tutorPage.getByRole('heading', { name: 'Edit class' }) })
+    await expect(sessionDetails).toBeVisible()
+    await sessionDetails.getByRole('button', { name: 'Join as host', exact: true }).click()
     await tutorPage.waitForURL(/\/class\/[^?]+\?start=true/, { timeout: 60_000 })
     classId = new URL(tutorPage.url()).pathname.split('/').pop() || null
     expect(classId).toBeTruthy()
@@ -98,7 +127,6 @@ test('an enrolled student sees, joins and is recorded for a tutor live class', a
 
     // End the short-lived room through the real tutor endpoint. The provider
     // emits the leave event and Kanvise persists the student's attendance.
-    const token = await apiToken(tutor)
     const endResponse = await request.post(`${webEnv('NEXT_PUBLIC_API_URL')}/live-classes/${classId}/end`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -113,7 +141,7 @@ test('an enrolled student sees, joins and is recorded for a tutor live class', a
         headers: { Authorization: `Bearer ${token}` },
       })
       const body = await response.json().catch(() => null)
-      return body?.data?.find((item: { student_name: string; status: string }) => item.student_name.includes('Emeka'))?.status || null
+      return body?.data?.find((item: { status: string }) => item.status === 'Present')?.status || null
     }, { timeout: 60_000, intervals: [2_000, 3_000, 5_000] }).toBe('Present')
   } finally {
     if (classId && !classEnded) {
