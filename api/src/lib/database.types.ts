@@ -3112,6 +3112,7 @@ export type Database = {
       }
       schools: {
         Row: {
+          account_type: string
           banner_url: string | null
           contact_email: string | null
           contact_phone: string | null
@@ -3132,6 +3133,7 @@ export type Database = {
           whatsapp_number: string | null
         }
         Insert: {
+          account_type?: string
           banner_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -3152,6 +3154,7 @@ export type Database = {
           whatsapp_number?: string | null
         }
         Update: {
+          account_type?: string
           banner_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
