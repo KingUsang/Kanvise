@@ -71,9 +71,21 @@ jobs:
       - name: Check pending migration plan
         run: |
           test -n "$SUPABASE_DB_URL"
-          supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
+          # Preview can legitimately lag behind the shared migration history
+          # after a feature branch is promoted. Include those ordered, missing
+          # migrations there; keep production's ordering check strict.
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
+          else
+            supabase db push --dry-run --include-all --db-url "$SUPABASE_DB_URL"
+          fi
       - name: Apply migrations
-        run: supabase db push --db-url "$SUPABASE_DB_URL"
+        run: |
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            supabase db push --db-url "$SUPABASE_DB_URL"
+          else
+            supabase db push --include-all --db-url "$SUPABASE_DB_URL"
+          fi
       - name: Record remote migration history
         run: supabase migration list --db-url "$SUPABASE_DB_URL"
 
