@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 
 import { useState, useEffect } from 'react'
-import { getDashboardNavItems, getDashboardWorkspaceForPath, getDashboardWorkspaces, type DashboardCapabilities } from '@/config/dashboard-navigation'
+import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
 
 interface SidebarProps {
   capabilities: DashboardCapabilities;
@@ -40,8 +40,15 @@ export function Sidebar({ capabilities }: SidebarProps) {
   }, [capabilities.setupRequired])
   
   const navItems = getDashboardNavItems(capabilities)
-  const workspaces = getDashboardWorkspaces(capabilities)
-  const activeWorkspace = getDashboardWorkspaceForPath(pathname)
+  // The sidebar is a flat product map, not a hierarchy. Class-specific work
+  // belongs inside a class workspace; it should not create a second nested nav.
+  const primaryHrefs = capabilities.setupRequired
+    ? ['/dashboard/school-setup']
+    : ['/dashboard', '/dashboard/classes', '/dashboard/schedule', '/dashboard/students', '/dashboard/tutors', '/dashboard/payments', '/dashboard/mocks', '/dashboard/settings']
+  const primaryItems = primaryHrefs.flatMap((href) => {
+    const item = navItems.find((candidate) => candidate.href === href)
+    return item ? [item] : []
+  })
 
   return (
     <>
@@ -56,30 +63,8 @@ export function Sidebar({ capabilities }: SidebarProps) {
         </div>
         
         <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
-        <ul className="space-y-4">
-          {workspaces.map((workspace) => {
-            const isWorkspaceActive = activeWorkspace === workspace.area
-            const children = capabilities.setupRequired ? [] : navItems.filter((item) => item.area === workspace.area && item.href !== workspace.href)
-            const workspaceLocked = capabilities.setupRequired && workspace.href !== '/dashboard/school-setup'
-            return <li key={workspace.href}>
-              <Link
-                href={workspaceLocked ? '/dashboard/school-setup' : workspace.href}
-                aria-disabled={workspaceLocked}
-                onClick={(event) => {
-                  if (workspaceLocked) {
-                    event.preventDefault()
-                    toast.info('Create your centre first', { description: `${workspace.label} will unlock as soon as you complete the required setup.` })
-                    return
-                  }
-                }}
-                className={`flex items-center px-6 py-2.5 text-sm font-semibold transition-colors relative ${workspaceLocked ? 'cursor-not-allowed text-[#7772bd]' : isWorkspaceActive ? 'text-white bg-white/5' : 'text-[#d1ceff] hover:text-white hover:bg-white/5'}`}
-              >
-                {isWorkspaceActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#c26627] rounded-r-sm" />}
-                <span className="material-symbols-outlined mr-3 text-[22px]">{workspace.icon}</span>
-                <span>{workspace.label}</span>
-              </Link>
-              {children.length > 0 && <ul className="mt-1 space-y-0.5">
-                {children.map((item) => {
+        <ul className="space-y-1">
+          {primaryItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`))
             const badge = item.badge === 'ungradedMocks' ? ungradedMocksCount : 0
             const isLocked = capabilities.setupRequired && item.href !== '/dashboard/school-setup'
@@ -98,18 +83,19 @@ export function Sidebar({ capabilities }: SidebarProps) {
                     }
                   }}
                   className={`
-                    flex items-center py-2 pl-14 pr-5 text-xs font-medium transition-colors relative
+                    relative flex items-center px-6 py-2.5 text-sm font-semibold transition-colors
                     ${isLocked
                       ? 'cursor-not-allowed text-[#7772bd]'
                       : isActive
                       ? 'text-white bg-white/5' 
-                      : 'text-[#9893e8] hover:text-white hover:bg-white/5'
+                      : 'text-[#d1ceff] hover:text-white hover:bg-white/5'
                     }
                   `}
                 >
                   {isActive && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#c26627] rounded-r-sm" />
                   )}
+                  <span className="material-symbols-outlined mr-3 text-[22px]">{item.icon}</span>
                   <span className="flex-1">{item.label}</span>
                   {isLocked && (
                     <span className="material-symbols-outlined text-[17px]" title="Complete school setup to unlock">lock</span>
@@ -122,9 +108,6 @@ export function Sidebar({ capabilities }: SidebarProps) {
                 </Link>
               </li>
             )
-                })}
-              </ul>}
-            </li>
           })}
         </ul>
       </nav>

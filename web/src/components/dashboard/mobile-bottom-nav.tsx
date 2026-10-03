@@ -11,7 +11,7 @@ export function MobileBottomNav({ capabilities }: { capabilities: DashboardCapab
 
   return (
     <nav aria-label="Dashboard navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e4e2e1] bg-white px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(35,31,38,0.10)] md:hidden">
-      <div className={`mx-auto grid h-14 max-w-lg ${items.length === 5 ? 'grid-cols-5' : items.length === 1 ? 'grid-cols-1' : 'grid-cols-4'}`}>
+      <div className={`mx-auto grid h-14 max-w-lg ${items.length === 5 ? 'grid-cols-5' : items.length === 4 ? 'grid-cols-4' : items.length === 3 ? 'grid-cols-3' : 'grid-cols-1'}`}>
       {items.map((item) => {
         const isActive = activeArea === item.area
         return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
 
@@ -11,6 +11,16 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
   const itemsPerPage = 10;
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+
+  // Class workspace links may name the learner that needs attention. Resolve
+  // it only after the roster has loaded so the shared details sheet remains
+  // the single source of truth for the student profile.
+  useEffect(() => {
+    const studentId = new URLSearchParams(window.location.search).get('student');
+    if (!studentId) return;
+    const matchingStudent = students.find(student => student.id === studentId);
+    if (matchingStudent) setSelectedStudent(matchingStudent);
+  }, [students]);
 
   // Extract unique programmes for the filter dropdown
   const enrolmentOptions = useMemo(() => {

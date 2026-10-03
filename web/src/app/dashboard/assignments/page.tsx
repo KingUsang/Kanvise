@@ -3,16 +3,22 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown, CloudUpload, FileText } from "lucide-react";
 import { createBrowserClient } from '@supabase/ssr';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
 import { UploadTaskStatus } from "@/components/uploads/upload-task-status";
 import { uploadFileWithProgress } from "@/lib/upload-with-progress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
-export default function AssignmentsPage() {
+export default function AssignmentsPage({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const contextualCourseId = searchParams.get("course_id");
+  const classContextId = searchParams.get("class_id");
   const [courses, setCourses] = useState<any[]>([]);
+  const [classContextName, setClassContextName] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
 
   // Form State
@@ -44,7 +50,22 @@ export default function AssignmentsPage() {
       });
       const courseBody = await resCourses.json().catch(() => null);
       if (!resCourses.ok) throw new Error(courseBody?.error || "Could not load Subjects");
-      setCourses(courseBody.data || []);
+      const loadedCourses = courseBody.data || [];
+      let visibleCourses = loadedCourses;
+      if (classContextId) {
+        const classRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${classContextId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const classBody = await classRes.json().catch(() => null);
+        if (!classRes.ok) throw new Error(classBody?.error || "Could not load this class");
+        const classSubjectIds = new Set((classBody?.data?.courses || []).map((course: any) => course.id));
+        visibleCourses = loadedCourses.filter((course: any) => classSubjectIds.has(course.id));
+        setClassContextName(classBody?.data?.name || "This class");
+      }
+      setCourses(visibleCourses);
+      if (contextualCourseId && visibleCourses.some((course: any) => course.id === contextualCourseId)) {
+        setCourseId(contextualCourseId);
+      }
 
       // Fetch assignments using the new aggregated backend endpoint
       const resAssignments = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments?page=1&page_size=20`, {
@@ -65,7 +86,7 @@ export default function AssignmentsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [contextualCourseId, classContextId]);
 
   const handleSubmit = async (publish: boolean) => {
     if (!courseId || !title || !description || !deadline) {
@@ -138,6 +159,15 @@ export default function AssignmentsPage() {
       }
 
       toast.success(publish ? "Assignment published" : "Assignment saved as a draft");
+      if (classContextId) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["class-assignments", classContextId] }),
+          queryClient.invalidateQueries({ queryKey: ["class-insights", classContextId] }),
+        ]);
+        startNavigationProgress();
+        router.push(`/dashboard/classes/${classContextId}?tab=assessments`);
+        return;
+      }
       setTitle("");
       setDescription("");
       setDeadline("");
@@ -178,10 +208,18 @@ export default function AssignmentsPage() {
     <div className="flex h-full flex-col gap-6 pb-8 xl:flex-row">
       {/* Left Column: Assignment Creator Form */}
       <div className="w-full xl:w-7/12 flex flex-col gap-6">
-        <DashboardPageHeader
-          title="Create Assignment"
-          description="Write the question or task, set a deadline, and optionally attach supporting material."
-        />
+        {embedded ? (
+          <div className="rounded-xl border border-dashboard-outline bg-[#faf9ff] px-5 py-4">
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">Class assessment</p>
+            <h2 className="mt-1 text-xl font-bold text-[#180d62]">Create assignment</h2>
+            <p className="mt-1 text-sm text-dashboard-muted">{classContextName ? `This assignment is only for students in ${classContextName}.` : "Choose a subject, add the work and set a deadline."}</p>
+          </div>
+        ) : (
+          <DashboardPageHeader
+            title={classContextName ? `Create assignment · ${classContextName}` : "Create Assignment"}
+            description={classContextName ? "Choose one subject in this class, then write the task, set a deadline and attach supporting material if needed." : "Write the question or task, set a deadline, and optionally attach supporting material."}
+          />
+        )}
 
         <div className="flex flex-1 flex-col rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
           <div className="flex flex-1 flex-col gap-6 border-b border-dashboard-outline p-5 sm:p-6">

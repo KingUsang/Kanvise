@@ -67,11 +67,28 @@ async function tutorCanAccessCourse(user: any, courseId: string | null | undefin
   return !!data;
 }
 
-async function canManageMock(user: any, mock: { tutor_id?: string | null; course_id?: string | null; audience_scope?: string | null }) {
+async function tutorCanManageProgrammeSubjects(user: any, programmeId: string | null | undefined) {
+  if (user.role === "admin") return true;
+  if (!programmeId) return false;
+  const [{ data: subProgrammes, error: subProgrammeError }, { data: courses, error: coursesError }, { data: assignments, error: assignmentError }] = await Promise.all([
+    supabase.from("sub_programmes").select("id").eq("school_id", user.school_id).eq("programme_id", programmeId),
+    supabase.from("courses").select("id, programme_id, sub_programme_id").eq("school_id", user.school_id),
+    supabase.from("tutor_course_assignments").select("course_id").eq("school_id", user.school_id).eq("tutor_id", user.id),
+  ]);
+  if (subProgrammeError || coursesError || assignmentError) return false;
+  const subProgrammeIds = new Set((subProgrammes || []).map((item: any) => item.id));
+  const programmeCourseIds = (courses || []).filter((course: any) => course.programme_id === programmeId || (course.sub_programme_id && subProgrammeIds.has(course.sub_programme_id))).map((course: any) => course.id);
+  const assignedCourseIds = new Set((assignments || []).map((assignment: any) => assignment.course_id));
+  return programmeCourseIds.length > 0 && programmeCourseIds.every((courseId: string) => assignedCourseIds.has(courseId));
+}
+
+async function canManageMock(user: any, mock: { tutor_id?: string | null; course_id?: string | null; programme_id?: string | null; audience_scope?: string | null }) {
   if (user.role === "admin") return true;
   if (mock.tutor_id !== user.id) return false;
   const audience = parseMockAudienceScope(mock.audience_scope ?? "course") || "course";
-  return audience === "direct_link" || (audience === "course" && await tutorCanAccessCourse(user, mock.course_id));
+  return audience === "direct_link"
+    || (audience === "course" && await tutorCanAccessCourse(user, mock.course_id))
+    || (audience === "programme" && await tutorCanManageProgrammeSubjects(user, mock.programme_id));
 }
 
 async function loadMockMetrics(mockIds: string[], schoolId: string) {
@@ -676,8 +693,8 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
   if (!canCreateMockForAudience(user.role, audience.scope)) {
     return c.json({ error: "Only an admin can create programme-wide or centre-wide mocks", code: "MOCK_AUDIENCE_FORBIDDEN" }, 403);
   }
-  if (deliveryMode === "subject_combination" && !["combination", "direct_link"].includes(audience.scope)) {
-    return c.json({ error: "Multi-subject mocks must target matching subject combinations or use a direct link", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
+  if (deliveryMode === "subject_combination" && !["combination", "programme", "direct_link"].includes(audience.scope)) {
+    return c.json({ error: "Multi-subject mocks must target a class, matching subject combination or direct link", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
   }
   const duration = Number(time_limit_minutes || 0);
   if (!Number.isInteger(duration) || duration < 0 || duration > 1440) {
@@ -769,8 +786,8 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   if (!canCreateMockForAudience(user.role, audience.scope)) {
     return c.json({ error: "Only an admin can create programme-wide or centre-wide mocks", code: "MOCK_AUDIENCE_FORBIDDEN" }, 403);
   }
-  if (deliveryMode === "subject_combination" && !["combination", "direct_link"].includes(audience.scope)) {
-    return c.json({ error: "Multi-subject mocks must target matching subject combinations or use a direct link", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
+  if (deliveryMode === "subject_combination" && !["combination", "programme", "direct_link"].includes(audience.scope)) {
+    return c.json({ error: "Multi-subject mocks must target a class, matching subject combination or direct link", code: "ADAPTIVE_MOCK_AUDIENCE_INVALID" }, 400);
   }
 
   const duration = Number(time_limit_minutes || 0);

@@ -9,7 +9,7 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-export function SubmissionsClient({ assignmentId, session }: { assignmentId: string; session: any }) {
+export function SubmissionsClient({ assignmentId, session, embedded = false }: { assignmentId: string; session: any; embedded?: boolean }) {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [assignment, setAssignment] = useState<any>(null);
   const [summary, setSummary] = useState({ total_submitted: 0, total_reviewed: 0 });
@@ -123,14 +123,14 @@ export function SubmissionsClient({ assignmentId, session }: { assignmentId: str
   return (
     <div className="flex flex-col animate-in fade-in duration-500">
       {/* Context Header */}
-      <DashboardPageHeader
+      {!embedded && <DashboardPageHeader
         className="mb-8 border-b border-dashboard-outline pb-6"
         title="Submission review"
         description={<span className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             {summary.total_reviewed} of {summary.total_submitted} submissions reviewed
           </span>}
-      />
+      />}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Student List */}

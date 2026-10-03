@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
+import { readFileSync } from 'node:fs'
 
 const tutor = { email: 'tutor@demo.com', password: 'Password123!' }
 const students = [
@@ -6,6 +8,14 @@ const students = [
   { email: 'tobi@demo.com', outcome: 'average' },
   { email: 'emeka@demo.com', outcome: 'struggling' },
 ]
+const mobileRecording = process.env.KANVISE_MOBILE_RECORDING === '1'
+const recordingViewport = mobileRecording ? { width: 393, height: 851 } : { width: 1920, height: 1080 }
+
+function webEnv(name: string) {
+  const match = readFileSync('web/.env.local', 'utf8').match(new RegExp(`^${name}=(.+)$`, 'm'))
+  if (!match) throw new Error(`Missing ${name} in web/.env.local`)
+  return match[1].trim().replace(/^['"]|['"]$/g, '')
+}
 
 test.use({ viewport: { width: 1920, height: 1080 } })
 
@@ -37,6 +47,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     // A Vercel-served route can occasionally abort its first navigation while
     // the browser establishes the document request. Retry only that transport
     // condition; all UI assertions still verify the actual page afterwards.
+    const preJoin = page.locator('#startupJoinModal')
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         await page.goto(path, { waitUntil: 'domcontentloaded' })
@@ -49,6 +60,28 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   }
 
   async function signIn(email: string, password: string, stateName: string) {
+    if (mobileRecording) {
+      // Staging's mobile login transport can briefly create an anonymous
+      // browser session. Use the same Supabase session cookie the app creates
+      // after login, before recording begins, so this remains an authenticated
+      // real UI flow without login footage.
+      const supabaseUrl = webEnv('NEXT_PUBLIC_SUPABASE_URL')
+      const auth = createClient(supabaseUrl, webEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'), { auth: { persistSession: false, autoRefreshToken: false } })
+      const { data, error } = await auth.auth.signInWithPassword({ email, password })
+      if (error || !data.session) throw error ?? new Error(`Could not sign in ${email}`)
+      const context = await browser.newContext({ baseURL, viewport: recordingViewport, hasTouch: true })
+      const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
+      const value = `base64-${Buffer.from(JSON.stringify(data.session)).toString('base64url')}`
+      await context.addCookies(Array.from({ length: Math.ceil(value.length / 3000) }, (_, index) => ({
+        name: `sb-${projectRef}-auth-token.${index}`,
+        value: value.slice(index * 3000, (index + 1) * 3000),
+        url: baseURL!, sameSite: 'Lax' as const,
+      })))
+      const statePath = testInfo.outputPath('storage', `${stateName}.json`)
+      await context.storageState({ path: statePath })
+      await context.close()
+      return statePath
+    }
     const context = await browser.newContext({ baseURL, viewport: { width: 1920, height: 1080 } })
     const page = await context.newPage()
     await open(page, '/auth/login')
@@ -69,9 +102,13 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   async function enterPlugNmeet(page: import('@playwright/test').Page, showDeviceSetup = false) {
     // These selectors are taken from the deployed PlugNmeet UI, rather than
     // from Kanvise's surrounding page. Every participant enters the real room.
+    const preJoin = page.locator('#startupJoinModal')
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        await expect(page.locator('#plugNmeet-app > .landscape-device')).toBeVisible({ timeout: 45_000 })
+        // The provider renders a portrait pre-join surface on phones and its
+        // landscape wrapper only on desktop.
+        if (!mobileRecording) await expect(page.locator('#plugNmeet-app > .landscape-device')).toBeVisible({ timeout: 45_000 })
+        await expect(preJoin).toBeVisible({ timeout: 30_000 })
         break
       } catch (error) {
         if (attempt === 1) throw error
@@ -79,17 +116,20 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
         // pressure. Reload once and still verify the actual native room.
         // We only need the document to restart; the provider bundle mounts
         // afterwards and is verified by the next visibility assertion.
-        await page.reload({ waitUntil: 'commit', timeout: 15_000 })
+        if (mobileRecording) await page.waitForTimeout(2_000)
+        else await page.reload({ waitUntil: 'commit', timeout: 15_000 })
       }
     }
-    const preJoin = page.locator('#startupJoinModal')
-    await expect(preJoin).toBeVisible({ timeout: 30_000 })
     if (showDeviceSetup) {
       await preJoin.getByRole('button', { name: 'Enable Microphone and Camera' }).click()
       await page.waitForTimeout(1_500)
     }
     await preJoin.getByRole('button', { name: 'Join as a listener' }).click()
-    await expect(preJoin).toBeHidden({ timeout: 30_000 })
+    // The portrait provider keeps this node in the DOM after joining; the
+    // classroom participant-count assertion below is the reliable proof that
+    // the learner actually entered.
+    if (mobileRecording) await page.waitForTimeout(1_500)
+    else await expect(preJoin).toBeHidden({ timeout: 30_000 })
   }
 
   // Authenticate before the recording context opens so no login/setup footage is captured.
@@ -102,9 +142,10 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   const tutorContext = await browser.newContext({
     baseURL,
     storageState: tutorState,
-    viewport: { width: 1920, height: 1080 },
+    viewport: recordingViewport,
     permissions: ['camera', 'microphone'],
-    recordVideo: { dir: testInfo.outputPath('videos'), size: { width: 1920, height: 1080 } },
+    hasTouch: mobileRecording,
+    recordVideo: { dir: testInfo.outputPath('videos'), size: recordingViewport },
   })
   await addRecordingClickCue(tutorContext)
   const tutorPage = await tutorContext.newPage()
@@ -115,11 +156,12 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     const context = await browser.newContext({
       baseURL,
       storageState,
-      viewport: { width: 1920, height: 1080 },
+      viewport: recordingViewport,
+      hasTouch: mobileRecording,
       // Emeka is the hero learner: record his actual question and mock flow
       // so the pitch edit can cut to the learner interface, not only tutor UI.
       ...(student.outcome === 'struggling'
-        ? { recordVideo: { dir: testInfo.outputPath('student-videos'), size: { width: 1920, height: 1080 } } }
+        ? { recordVideo: { dir: testInfo.outputPath('student-videos'), size: recordingViewport } }
         : {}),
     })
     if (student.outcome === 'struggling') await addRecordingClickCue(context)
@@ -131,7 +173,9 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   try {
     // Scene 1 — enter a real enrolled-learner classroom.
     await tutorPage.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+    if (mobileRecording) await tutorPage.waitForTimeout(1_000)
     await tutorPage.getByRole('button', { name: 'Start live class' }).click()
+    await expect(tutorPage.getByRole('heading', { name: 'Start a live class' })).toBeVisible({ timeout: 20_000 })
     await tutorPage.getByRole('button', { name: /enrolled learners/i }).click()
     const subjectSelect = tutorPage.getByLabel('Subject')
     await expect(subjectSelect.locator('option', { hasText: 'Physics' })).toHaveCount(1, { timeout: 20_000 })
@@ -155,7 +199,8 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     }
 
     // Scene 1 — enrolled learners have now joined the tutor's live room.
-    await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (4)', { timeout: 30_000 })
+    if (mobileRecording) await expect(tutorPage.locator('#plugNmeet-app')).toContainText(/Show Participant List\s*4/, { timeout: 30_000 })
+    else await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (4)', { timeout: 30_000 })
     await expect(tutorPage.getByRole('button', { name: 'Generate knowledge check' })).toBeVisible({ timeout: 30_000 })
     await tutorPage.waitForTimeout(2_000)
 
@@ -217,7 +262,9 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
 
     // Scene 5 — establish the assessment from the tutor's workflow, then let students submit in the background.
     await tutorPage.goto('/dashboard/mocks', { waitUntil: 'domcontentloaded' })
-    const todayMock = tutorPage.getByRole('row', { name: /Today's Physics Mock/i })
+    const todayMock = mobileRecording
+      ? tutorPage.getByRole('heading', { name: "Today's Physics Mock" })
+      : tutorPage.getByRole('row', { name: /Today's Physics Mock/i })
     await expect(todayMock).toBeVisible({ timeout: 20_000 })
     await tutorPage.waitForTimeout(2_000)
 
@@ -246,16 +293,19 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
         }
         if (question < 7) await page.keyboard.press('ArrowRight')
       }
-      await page.getByRole('button', { name: 'Review' }).last().click()
+      if (mobileRecording) await page.getByRole('button', { name: 'Review' }).last().evaluate((button: HTMLButtonElement) => button.click())
+      else await page.getByRole('button', { name: 'Review' }).last().click()
       await page.getByRole('button', { name: 'Submit final answers' }).click()
       await page.waitForURL(/\/dashboard\/student\/mocks\/result\//, { timeout: 20_000 })
       if (outcome === 'struggling') await page.waitForTimeout(3_000)
     }))
 
     // Scene 6 and 7 — show automatic scores and the class-level signal before opening Emeka's insight.
-    await todayMock.getByRole('button', { name: /view results/i }).click()
+    if (mobileRecording) await tutorPage.getByText('View results', { exact: true }).first().click()
+    else await todayMock.getByRole('button', { name: /view results/i }).click()
     await expect(tutorPage.getByRole('heading', { name: 'Mock results' })).toBeVisible({ timeout: 20_000 })
-    await expect(tutorPage.getByRole('button', { name: /Emeka Okafor Graded/ })).toBeVisible({ timeout: 20_000 })
+    if (mobileRecording) await expect(tutorPage.getByText('Emeka Okafor', { exact: true })).toBeVisible({ timeout: 20_000 })
+    else await expect(tutorPage.getByRole('button', { name: /Emeka Okafor Graded/ })).toBeVisible({ timeout: 20_000 })
     await tutorPage.waitForTimeout(3_000)
 
     // Scene 8 — the hero shot: the cross-signal interpretation stays visible long enough to read.

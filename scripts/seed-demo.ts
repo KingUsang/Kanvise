@@ -28,6 +28,7 @@ async function run() {
   const { data: school, error: schoolErr } = await supabase.from('schools').insert({
     name: 'Pitch Demo Centre',
     slug: 'pitch-demo',
+    account_type: 'centre',
     is_active: true
   }).select('id').single();
   
@@ -36,43 +37,47 @@ async function run() {
 
   // 3. Create Users
   const usersToCreate = [
+    { name: 'Admin', email: 'admin@demo.com', role: 'admin' },
     { name: 'Tutor', email: 'tutor@demo.com', role: 'tutor' },
     { name: 'Emeka Okafor', email: 'emeka@demo.com', role: 'student' },
     { name: 'Ada', email: 'ada@demo.com', role: 'student' },
     { name: 'Tobi', email: 'tobi@demo.com', role: 'student' },
-    { name: 'David', email: 'david@demo.com', role: 'student' },
-    { name: 'Favour', email: 'favour@demo.com', role: 'student' },
-    { name: 'Sarah', email: 'sarah@demo.com', role: 'student' }
   ];
 
   const createdUsers: Record<string, any> = {};
+  // Fetching the complete auth list for every learner made the deterministic
+  // demo setup needlessly slow on the staging connection.
+  const { data: existingUsersData, error: existingUsersError } = await supabase.auth.admin.listUsers();
+  assertNoError(existingUsersError, 'Loading existing demo accounts');
+  const existingUsersByEmail = new Map(
+    (existingUsersData?.users ?? []).map(user => [user.email, user])
+  );
 
   for (const u of usersToCreate) {
-    const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const existing = existingUser.users.find(x => (x as any).email === u.email);
-    if (existing) await supabase.auth.admin.deleteUser(existing.id);
-
-    const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
-      email: u.email,
+    const existing = existingUsersByEmail.get(u.email);
+    const authAttributes = {
       password: 'Password123!',
       email_confirm: true,
       user_metadata: { role: u.role, school_id: school.id, first_name: u.name.split(' ')[0], last_name: u.name.split(' ').slice(1).join(' ') }
-    });
-    if (authErr) throw authErr;
+    };
+    const { data: authUser, error: authErr } = existing
+      ? await supabase.auth.admin.updateUserById(existing.id, authAttributes)
+      : await supabase.auth.admin.createUser({ email: u.email, ...authAttributes });
+    if (authErr || !authUser?.user) throw authErr ?? new Error(`Could not create ${u.email}`);
 
     const [firstName, ...lastNames] = u.name.split(' ');
     
-    let { data: profile } = await supabase.from('user_profiles').select('id').eq('supabase_auth_id', authUser.user.id).maybeSingle();
+    let { data: profile } = await supabase.from('user_profiles').select('id, kanvise_user_id').eq('supabase_auth_id', authUser.user.id).maybeSingle();
     if (!profile) {
       const { data: pData, error: pErr } = await supabase.from('user_profiles').insert({
         supabase_auth_id: authUser.user.id,
         role: u.role,
         school_id: school.id,
-        kanvise_user_id: `KNV-${u.role === "student" ? "STD" : "TUT"}-${Math.floor(Math.random()*10000).toString().padStart(4, "0")}`,
+        kanvise_user_id: `KNV-${u.role === "student" ? "STD" : u.role === "admin" ? "ADM" : "TUT"}-${Math.floor(Math.random()*10000).toString().padStart(4, "0")}`,
         first_name: firstName,
         last_name: lastNames.join(' ') || '',
         email: u.email
-      }).select('id').single();
+      }).select('id, kanvise_user_id').single();
       if (pErr) throw pErr;
       profile = pData;
     } else {
@@ -85,14 +90,43 @@ async function run() {
         }).eq('id', profile.id);
         assertNoError(updateError, `Updating ${u.name}'s profile`);
     }
+    // Auth claims are the server-side source used by the web middleware. They
+    // must move with the re-seeded Pitch Demo Centre, not retain a prior run's
+    // school ID (which sends a valid learner into an empty school session).
+    const { error: claimsError } = await supabase.auth.admin.updateUserById(authUser.user.id, {
+      app_metadata: {
+        role: u.role,
+        kanvise_role: u.role,
+        school_id: school.id,
+        profile_id: profile.id,
+        kanvise_user_id: profile.kanvise_user_id,
+      },
+    });
+    assertNoError(claimsError, `Updating ${u.name}'s auth claims`);
     
     createdUsers[u.name.split(' ')[0]] = profile;
     console.log(`Created ${u.name}`);
   }
 
-  // 4. Create Course
+  // 4. Create a class (persisted as the established programme model) and its
+  // subjects. The class-first dashboard reads these exact existing records; it
+  // does not have a separate demo-only data model.
+  const { data: programme, error: programmeError } = await supabase.from('programmes').insert({
+    school_id: school.id,
+    name: 'JAMB 2027 Preparation',
+    slug: 'jamb-2027-preparation',
+    description: 'A focused multi-subject preparation class for the 2027 UTME.',
+    price: 0,
+    is_published: true,
+    created_by: createdUsers['Tutor'].id,
+  }).select('id').single();
+  assertNoError(programmeError, 'Creating the demo class');
+  if (!programme) throw new Error('Demo class was not created');
+
+  // 5. Create the first subject.
   const { data: course, error: cErr } = await supabase.from('courses').insert({
     school_id: school.id,
+    programme_id: programme.id,
     name: 'Physics',
     slug: 'physics',
     price: 0,
@@ -111,12 +145,31 @@ async function run() {
   });
   assertNoError(assignmentError, 'Assigning Physics to the tutor');
 
+  const { data: chemistry, error: chemistryError } = await supabase.from('courses').insert({
+    school_id: school.id,
+    programme_id: programme.id,
+    name: 'Chemistry',
+    slug: 'chemistry',
+    price: 0,
+    is_published: true,
+    created_by: createdUsers['Tutor'].id,
+  }).select('id').single();
+  assertNoError(chemistryError, 'Creating Chemistry');
+  if (!chemistry) throw new Error('Chemistry was not created');
+  const { error: chemistryAssignmentError } = await supabase.from('tutor_course_assignments').insert({
+    school_id: school.id,
+    tutor_id: createdUsers['Tutor'].id,
+    course_id: chemistry.id,
+    assigned_by: createdUsers['Tutor'].id,
+  });
+  assertNoError(chemistryAssignmentError, 'Assigning Chemistry to the tutor');
+
   // Enrol students
-  for (const name of ['Emeka', 'Ada', 'Tobi', 'David', 'Favour', 'Sarah']) {
+  for (const name of ['Emeka', 'Ada', 'Tobi']) {
     const { error: enrolmentError } = await supabase.from('enrolments').insert({
       school_id: school.id,
       student_id: createdUsers[name].id,
-      course_id: course.id,
+      programme_id: programme.id,
       // Current enrolments are either payment-backed or manually granted.
       // Demo learners are deliberately granted access by the demo tutor.
       source: 'admin_import',
@@ -126,7 +179,38 @@ async function run() {
     assertNoError(enrolmentError, `Enrolling ${name} in Physics`);
   }
 
-  // 5. Create historical mocks (Mock 1, Mock 2, Mock 3).
+  // A real timetable and dated session let the class workspace show both the
+  // recurring teaching arrangement and the next actual class.
+  const nextSessionAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  nextSessionAt.setHours(17, 0, 0, 0);
+  const weekStart = new Date()
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7))
+  const { error: slotError } = await supabase.from('class_timetable_slots').insert([
+    { school_id: school.id, course_id: course.id, tutor_id: createdUsers['Tutor'].id, weekday: 3, start_time: '17:00', duration_minutes: 90, starts_on: weekStart.toISOString().slice(0, 10), title: 'Physics problem-solving', source: 'direct', created_by: createdUsers['Tutor'].id, published_at: new Date().toISOString() },
+    { school_id: school.id, course_id: chemistry.id, tutor_id: createdUsers['Tutor'].id, weekday: 5, start_time: '17:00', duration_minutes: 90, starts_on: weekStart.toISOString().slice(0, 10), title: 'Chemistry revision', source: 'direct', created_by: createdUsers['Tutor'].id, published_at: new Date().toISOString() },
+  ]);
+  assertNoError(slotError, 'Creating recurring class schedule');
+  const { data: upcomingSession, error: sessionError } = await supabase.from('live_classes').insert({
+    school_id: school.id, course_id: course.id, tutor_id: createdUsers['Tutor'].id,
+    title: 'Physics: Forces and motion', scheduled_at: nextSessionAt.toISOString(), duration_minutes: 90,
+    status: 'scheduled', created_by: createdUsers['Tutor'].id, teaching_mode: 'whiteboard', classroom_provider: 'plugnmeet',
+  }).select('id').single();
+  assertNoError(sessionError, 'Creating upcoming Physics session');
+  if (upcomingSession) {
+    const { error: attendanceError } = await supabase.from('attendance_records').insert({
+      school_id: school.id, live_class_id: upcomingSession.id, student_id: createdUsers['Ada'].id,
+      joined_at: new Date().toISOString(), source: 'manual',
+    });
+    assertNoError(attendanceError, 'Creating attendance signal');
+  }
+  const { error: assignmentCreateError } = await supabase.from('assignments').insert({
+    school_id: school.id, course_id: chemistry.id, tutor_id: createdUsers['Tutor'].id,
+    title: 'Balancing equations practice', description: 'Work through the balancing examples before Friday\'s chemistry session.',
+    deadline_at: new Date(Date.now() + 5 * 86400000).toISOString(), is_published: true,
+  });
+  assertNoError(assignmentCreateError, 'Creating class assignment');
+
+  // 6. Create historical mocks (Mock 1, Mock 2, Mock 3).
   // The recording itself starts the live class through the product workflow,
   // so no brittle pre-created classroom is needed here.
   const mockHistory = [
@@ -229,25 +313,75 @@ async function run() {
   }).select('id').single();
   if (todayErr) throw todayErr;
 
-  const todayScores = { "Newton's Laws": 41, "Kinematics": 74, "Energy": 82, "Waves": 79 };
-  const todayQuestions = [];
-  
-  for (const [topic, target] of Object.entries(todayScores)) {
-      todayQuestions.push({
-          question_type: 'mcq',
-          question_text: `Easy question on ${topic}`,
-          marks: target,
-          topic: topic,
-          options: [{ option_text: 'A', is_correct: true }, { option_text: 'B', is_correct: false }]
-      });
-      todayQuestions.push({
-          question_type: 'mcq',
-          question_text: `Hard question on ${topic}`,
-          marks: 100 - target,
-          topic: topic,
-          options: [{ option_text: 'A', is_correct: false }, { option_text: 'B', is_correct: true }]
-      });
-  }
+  // The marks deliberately preserve distinct strong / average / struggling
+  // outcomes, while the questions themselves form a credible short Physics
+  // assessment that follows the live Newton's Third Law lesson.
+  const todayQuestions = [
+    {
+      question_type: 'mcq', topic: "Newton's Laws", marks: 41,
+      question_text: "A book rests on a table. Which force is the Newton's Third Law partner to the force of the book pushing down on the table?",
+      options: [
+        { option_text: 'The table pushes upward on the book.', is_correct: true },
+        { option_text: 'The Earth pulls downward on the book.', is_correct: false },
+      ],
+    },
+    {
+      question_type: 'mcq', topic: "Newton's Laws", marks: 59,
+      question_text: 'A rocket rises by expelling gases downward. Which statement is correct?',
+      options: [
+        { option_text: 'The gases exert no force on the rocket after leaving it.', is_correct: false },
+        { option_text: 'The gases push the rocket upward while the rocket pushes the gases downward.', is_correct: true },
+      ],
+    },
+    {
+      question_type: 'mcq', topic: 'Kinematics', marks: 74,
+      question_text: 'A car starts from rest and accelerates uniformly at 2 m/s² for 5 seconds. What is its final velocity?',
+      options: [
+        { option_text: '10 m/s', is_correct: true },
+        { option_text: '2.5 m/s', is_correct: false },
+      ],
+    },
+    {
+      question_type: 'mcq', topic: 'Kinematics', marks: 26,
+      question_text: 'Which velocity-time graph represents an object moving at constant velocity?',
+      options: [
+        { option_text: 'A straight line sloping upward.', is_correct: false },
+        { option_text: 'A horizontal straight line.', is_correct: true },
+      ],
+    },
+    {
+      question_type: 'mcq', topic: 'Energy', marks: 82,
+      question_text: 'What is the kinetic energy of a 4 kg object moving at 3 m/s?',
+      options: [
+        { option_text: '18 J', is_correct: true },
+        { option_text: '36 J', is_correct: false },
+      ],
+    },
+    {
+      question_type: 'mcq', topic: 'Energy', marks: 18,
+      question_text: 'Ignoring air resistance, what happens to a ball’s energy as it rises after being thrown upward?',
+      options: [
+        { option_text: 'Both kinetic and potential energy decrease.', is_correct: false },
+        { option_text: 'Kinetic energy changes to potential energy while total mechanical energy stays constant.', is_correct: true },
+      ],
+    },
+    {
+      question_type: 'mcq', topic: 'Waves', marks: 79,
+      question_text: 'A wave has frequency 5 Hz and wavelength 2 m. What is its speed?',
+      options: [
+        { option_text: '10 m/s', is_correct: true },
+        { option_text: '2.5 m/s', is_correct: false },
+      ],
+    },
+    {
+      question_type: 'mcq', topic: 'Waves', marks: 21,
+      question_text: 'In a transverse wave, particles of the medium vibrate in which direction?',
+      options: [
+        { option_text: 'Parallel to the direction of wave travel.', is_correct: false },
+        { option_text: 'Perpendicular to the direction of wave travel.', is_correct: true },
+      ],
+    },
+  ];
 
   const { error: todayRpcErr } = await supabase.rpc('replace_authored_mock_questions', {
     p_school_id: school.id,

@@ -52,9 +52,13 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
     if (!q) return
     setActiveQuestion(q)
     setComposerOpen(false)
+    // The pitch room contains the tutor plus these three learners. Keeping the
+    // live check roster aligned with the room prevents unrelated demo accounts
+    // from appearing as permanently "Waiting" in the recording.
     setResponses({
-      Ada: { status: 'No response' }, Tobi: { status: 'No response' }, David: { status: 'No response' },
-      Favour: { status: 'No response' }, Emeka: { status: 'No response' }, Sarah: { status: 'No response' },
+      Ada: { status: 'No response' },
+      Tobi: { status: 'No response' },
+      Emeka: { status: 'No response' },
     })
     supabase.channel(`class-${classId}`).send({
       type: 'broadcast',

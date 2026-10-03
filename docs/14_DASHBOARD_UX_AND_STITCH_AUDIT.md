@@ -474,6 +474,8 @@ This matches the existing RLS migrations, which already read role and school fro
 
 ### Remaining product/UX work
 
+- The legacy `ScheduleClient`/`TimetableManager` draft-publish UI and the inactive `/timetables` API writer were removed after confirming no product route consumes them. `/dashboard/schedule` is the unified dated-session Calendar and `/dashboard/timetable` is the centre-wide recurring-slot read model. New schedule work must extend those active routes only; do not restore a second recurrence writer or a timetable publication layer.
+- Replace the interim class-performance heuristics with a defined learner-intelligence model. The current trend compares two completed assessments, attendance counts recorded session participation, and topic evidence is available only when a versioned question has an optional topic tag. These are useful transparent signals, but they must not be presented as Kanvise's finished AI analysis: tutors may deliberately leave questions untagged, and a missing topic must never suppress or weaken a learner insight. Define evidence confidence, cross-assessment error-pattern analysis, participation/engagement signals, and the recommendation policy before calling this an AI insight.
 - Decide the information architecture for Avatar Customisation before adding a link.
 - Extend dashboard search to records only after a tenant-scoped search API and clear result categories are defined.
 - Add a shareable public enrolment link to the student roster once the school slug is available in that route.
@@ -481,6 +483,11 @@ This matches the existing RLS migrations, which already read role and school fro
 - Add consistent route-level loading, empty, forbidden, and recoverable error states.
 - Audit mobile behavior against product needs; numbered legacy mobile screens are not authoritative.
 - Add notification preferences after a canonical preference model and delivery channels exist.
+- Design the owner Settings screen before expanding it further. The supplied
+  references show Settings in navigation but do not supply a full settings
+  screen. It must be a role-aware sectioned destination: organisation profile,
+  account, payments, calendar integrations, and notification preferences; an
+  independent tutor must not see centre-only controls.
 - Define and validate the mock marketplace pilot before exposing public listings,
   cross-centre licensing, payments, or creator payouts.
 

@@ -28,6 +28,8 @@ export function ProgrammesClient() {
   const queryClient = useQueryClient()
   const [publishingId, setPublishingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
 
   const programmesQuery = useQuery({
     queryKey: ['programmes'],
@@ -37,22 +39,30 @@ export function ProgrammesClient() {
       const headers = { Authorization: `Bearer ${session.access_token}` }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       const [programmesResponse, schoolResponse, profileResponse] = await Promise.all([
-        fetch(`${apiUrl}/programmes`, { headers }),
+        fetch(`${apiUrl}/classes`, { headers }),
         fetch(`${apiUrl}/schools/me`, { headers }),
         fetch(`${apiUrl}/auth/me`, { headers }),
       ])
-      if (!programmesResponse.ok || !schoolResponse.ok || !profileResponse.ok) throw new Error('Could not load programme data')
-      const [{ data }, { data: school }, { user }] = await Promise.all([
+      if (!programmesResponse.ok || !profileResponse.ok) throw new Error('Could not load class data')
+      const [{ data }, schoolBody, { user }] = await Promise.all([
         programmesResponse.json(), schoolResponse.json(), profileResponse.json(),
       ])
-      return { programmes: (data || []) as Programme[], schoolSlug: school?.slug || '', schoolId: school?.id as string | undefined, userId: user?.id as string | undefined }
+      const school = schoolResponse.ok ? schoolBody.data : null
+      return { programmes: (data || []) as Programme[], schoolSlug: school?.slug || '', schoolId: school?.id as string | undefined, userId: user?.id as string | undefined, canCreate: user?.role === 'admin' }
     },
     staleTime: 60_000,
   })
   const programmes = programmesQuery.data?.programmes || []
   const schoolSlug = programmesQuery.data?.schoolSlug || ''
   const hasLocalDraft = Boolean(programmesQuery.data?.schoolId && programmesQuery.data?.userId && loadProgrammeDraft(programmesQuery.data.schoolId, programmesQuery.data.userId))
-  const loadError = programmesQuery.error ? 'We could not load your programmes. Check your connection and try again.' : ''
+  const canCreate = programmesQuery.data?.canCreate ?? false
+  const loadError = programmesQuery.error ? 'We could not load your classes. Check your connection and try again.' : ''
+  const visibleProgrammes = programmes.filter((programme) => {
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'published' ? programme.is_published : !programme.is_published)
+    const needle = search.trim().toLowerCase()
+    const matchesSearch = !needle || `${programme.name} ${programme.courses.map(subject => subject.name).join(' ')}`.toLowerCase().includes(needle)
+    return matchesStatus && matchesSearch
+  })
 
   const copyLink = async (programme: Programme) => {
     try {
@@ -67,7 +77,7 @@ export function ProgrammesClient() {
     setPublishingId(programme.id)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes/${programme.id}/publish`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${programme.id}/publish`, {
         method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` },
       })
       const body = await response.json()
@@ -75,10 +85,10 @@ export function ProgrammesClient() {
         const missing = body.readiness?.missing_tutors?.map((subject: Subject) => subject.name).join(', ')
         throw new Error(missing ? `Assign tutors to: ${missing}` : body.error)
       }
-      toast.success('Programme published')
+      toast.success('Class published')
       await queryClient.invalidateQueries({ queryKey: ['programmes'] })
     } catch (error) {
-      toast.error('Programme is not ready', { description: error instanceof Error ? error.message : 'Please review its setup.' })
+      toast.error('Class is not ready', { description: error instanceof Error ? error.message : 'Please review its setup.' })
     } finally {
       setPublishingId(null)
     }
@@ -89,14 +99,14 @@ export function ProgrammesClient() {
     setDeletingId(programme.id)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes/${programme.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${programme.id}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` },
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.code === 'ACTIVE_ENROLMENTS_EXIST'
         ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
         : body?.error || 'Could not delete programme')
-      toast.success('Programme deleted')
+      toast.success('Class deleted')
       await queryClient.invalidateQueries({ queryKey: ['programmes'] })
     } catch (error) {
       toast.error('Could not delete programme', { description: error instanceof Error ? error.message : 'Please try again.' })
@@ -108,17 +118,12 @@ export function ProgrammesClient() {
   return (
     <div className="flex flex-col gap-6">
       <DashboardPageHeader
-        title="Programmes"
-        description="Create enrolment packages and organise the subjects students receive."
+        title="Classes"
+        description="Create the teaching groups where your subjects, learners and sessions live."
         actions={<>
-          {schoolSlug && (
-            <a href={`/${schoolSlug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] bg-white px-4 py-2.5 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2]">
-              <span className="material-symbols-outlined text-[19px]">storefront</span> Preview centre page
-            </a>
-          )}
-          <Link href="/dashboard/programmes/new" className="inline-flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-dashboard-accent/90">
-            <span className="material-symbols-outlined text-[19px]">add</span> Create programme
-          </Link>
+          {canCreate && <div className="col-span-2 sm:col-auto"><Link href="/dashboard/classes/new" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-dashboard-accent/90 sm:w-auto">
+            <span className="material-symbols-outlined text-[19px]">add</span> Create class
+          </Link></div>}
         </>}
       />
 
@@ -126,9 +131,9 @@ export function ProgrammesClient() {
         <div className="flex flex-col gap-3 rounded-lg border border-[#2e2877]/25 bg-[#f0efff] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="material-symbols-outlined text-[#2e2877]">draft</span>
-            <div><p className="font-semibold text-[#1b1c1c]">Continue setup</p><p className="text-sm text-[#474551]">A programme draft is saved on this device.</p></div>
+            <div><p className="font-semibold text-[#1b1c1c]">Continue setup</p><p className="text-sm text-[#474551]">A class draft is saved on this device.</p></div>
           </div>
-          <Link href="/dashboard/programmes/new" className="text-sm font-semibold text-[#2e2877] hover:underline">Open draft</Link>
+          <Link href="/dashboard/classes/new" className="text-sm font-semibold text-[#2e2877] hover:underline">Open draft</Link>
         </div>
       )}
 
@@ -136,18 +141,23 @@ export function ProgrammesClient() {
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
       )}
 
+      {!programmesQuery.isLoading && programmes.length > 0 && <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+        <label className="relative block min-w-0 flex-1"><span className="sr-only">Search classes</span><span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-[#766f78]">search</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search classes or subjects" className="min-h-11 w-full rounded-lg border border-[#d8d3d0] bg-white py-2 pl-10 pr-3 text-sm text-[#27242d] outline-none transition focus:border-[#2e2877]" /></label>
+        <div className="mt-3 flex gap-2 overflow-x-auto sm:mt-0">{([{ id: 'all', label: `All (${programmes.length})` }, { id: 'published', label: `Active (${programmes.filter(item => item.is_published).length})` }, { id: 'draft', label: `Draft (${programmes.filter(item => !item.is_published).length})` }] as const).map(filter => <button type="button" key={filter.id} onClick={() => setStatusFilter(filter.id)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${statusFilter === filter.id ? 'bg-[#2e2877] text-white' : 'border border-[#d8d3d0] bg-white text-[#625e69] hover:border-[#2e2877]/40'}`}>{filter.label}</button>)}</div>
+      </section>}
+
       {programmesQuery.isLoading ? (
-        <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading programmes…</div>
+        <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading classes…</div>
       ) : programmes.length === 0 ? (
         <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-16 text-center">
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
-          <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first programme</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Bundle at least one subject into a programme students can enrol in.</p>
-          <Link href="/dashboard/programmes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create programme</Link>
+          <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first class</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Add the subjects, learners and sessions you will teach together.</p>
+          {canCreate ? <Link href="/dashboard/classes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create class</Link> : <p className="mt-5 text-sm text-[#474551]">Your centre admin creates classes and assigns you the subjects you teach.</p>}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          {programmes.map(programme => (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {visibleProgrammes.map(programme => (
             <article key={programme.id} className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               <div className="flex gap-4 p-5">
                 <div className="flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-[#c8c5d2] bg-[#f2ebd9]">
@@ -167,14 +177,15 @@ export function ProgrammesClient() {
                 {programme.courses.length ? <div className="flex flex-wrap gap-2">{programme.courses.map(subject => <span key={subject.id} className="rounded border border-[#c8c5d2] bg-white px-2.5 py-1 text-xs font-medium text-[#1b1c1c]">{subject.name}</span>)}</div> : <p className="text-sm text-[#474551]">No subjects added yet.</p>}
               </div>
               <div className="flex flex-wrap gap-2 p-4">
-                <Link href={`/dashboard/programmes/${programme.id}`} className="rounded bg-[#2e2877] px-3.5 py-2 text-xs font-semibold text-white">{programme.courses_count ? 'Manage' : 'Continue setup'}</Link>
-                {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}${programme.is_published ? '' : `?preview=${programme.id}`}`} target="_blank" rel="noreferrer" className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Preview programme page</a>}
+                <Link href={programme.courses_count ? `/dashboard/classes/${programme.id}` : `/dashboard/classes/new`} className="rounded bg-[#2e2877] px-3.5 py-2 text-xs font-semibold text-white">{programme.courses_count ? 'Open class' : 'Continue setup'}</Link>
+                {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}${programme.is_published ? '' : `?preview=${programme.id}`}`} target="_blank" rel="noreferrer" className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Preview enrolment page</a>}
                 {schoolSlug && <button onClick={() => void copyLink(programme)} className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Copy enrolment link</button>}
-                {!programme.is_published && <button disabled={publishingId === programme.id} onClick={() => void publish(programme)} className="ml-auto rounded border border-[#994704] px-3.5 py-2 text-xs font-semibold text-[#994704] disabled:opacity-50">{publishingId === programme.id ? 'Publishing…' : 'Publish'}</button>}
-                <button disabled={deletingId === programme.id} onClick={() => void deleteProgramme(programme)} className={`${programme.is_published ? '' : 'ml-auto'} rounded border border-[#ba1a1a]/40 px-3.5 py-2 text-xs font-semibold text-[#ba1a1a] disabled:opacity-50`}>{deletingId === programme.id ? 'Deleting…' : 'Delete'}</button>
+                {canCreate && !programme.is_published && <button disabled={publishingId === programme.id} onClick={() => void publish(programme)} className="ml-auto rounded border border-[#994704] px-3.5 py-2 text-xs font-semibold text-[#994704] disabled:opacity-50">{publishingId === programme.id ? 'Publishing…' : 'Publish'}</button>}
+                {canCreate && <button disabled={deletingId === programme.id} onClick={() => void deleteProgramme(programme)} className={`${programme.is_published ? '' : 'ml-auto'} rounded border border-[#ba1a1a]/40 px-3.5 py-2 text-xs font-semibold text-[#ba1a1a] disabled:opacity-50`}>{deletingId === programme.id ? 'Deleting…' : 'Delete'}</button>}
               </div>
             </article>
           ))}
+          {!visibleProgrammes.length && <div className="col-span-full rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-14 text-center"><span className="material-symbols-outlined text-4xl text-[#8a838d]">search_off</span><h2 className="mt-3 text-lg font-bold text-[#27242d]">No classes match</h2><p className="mt-1 text-sm text-dashboard-muted">Try another name, subject, or status filter.</p><button type="button" onClick={() => { setSearch(''); setStatusFilter('all') }} className="mt-4 text-sm font-semibold text-[#2e2877] hover:underline">Clear filters</button></div>}
         </div>
       )}
     </div>

@@ -6,11 +6,25 @@ import { useQueryClient } from "@tanstack/react-query";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
+import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { useUnsavedChanges } from "@/components/navigation/UnsavedChangesContext";
-import { QuestionContent, type ContentBlock } from "@/components/questions/question-content";
-import { buildPrePublishReview, type PrePublishReview } from "./mock-builder-validation";
-import { MockDraftPreview, type DraftPreviewQuestion } from "./mock-draft-preview";
-import { MockImportProgressCard, newMockImportProgress, type MockImportProgress } from "./mock-import-progress";
+import {
+  QuestionContent,
+  type ContentBlock,
+} from "@/components/questions/question-content";
+import {
+  buildPrePublishReview,
+  type PrePublishReview,
+} from "./mock-builder-validation";
+import {
+  MockDraftPreview,
+  type DraftPreviewQuestion,
+} from "./mock-draft-preview";
+import {
+  MockImportProgressCard,
+  newMockImportProgress,
+  type MockImportProgress,
+} from "./mock-import-progress";
 import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 import { MockBuilderStepProgress } from "./mock-builder-step-progress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
@@ -22,7 +36,9 @@ type Course = {
   programme?: { name: string } | Array<{ name: string }> | null;
   is_published?: boolean;
 };
-type CentreAudienceScope = "course" | "combination" | "direct_link" | "programme" | "school";
+type BuilderClassContext = { id: string; name: string; courses: Course[] };
+type CentreAudienceScope =
+  "course" | "combination" | "direct_link" | "programme" | "school";
 type DeliveryMode = "fixed" | "subject_combination";
 type AccessMode = "centre" | "direct" | "both" | "";
 type BuilderStep = "setup" | "subjects" | "questions" | "settings" | "review";
@@ -50,7 +66,11 @@ type QuestionState = {
   section_id?: string;
 };
 
-type SubjectSectionState = { id: string; name: string; courseId: string | null };
+type SubjectSectionState = {
+  id: string;
+  name: string;
+  courseId: string | null;
+};
 
 type Bank = { id: string; name: string; question_count: number };
 type BankQuestion = {
@@ -61,7 +81,11 @@ type BankQuestion = {
     id: string;
     plain_text: string;
     marks: number;
-    options?: Array<{ id: string; plain_text: string; content_blocks?: ContentBlock[] }>;
+    options?: Array<{
+      id: string;
+      plain_text: string;
+      content_blocks?: ContentBlock[];
+    }>;
   };
 };
 type SelectedBankQuestion = {
@@ -75,7 +99,11 @@ type SelectedBankQuestion = {
   sectionId?: string;
   options: Array<{ id: string; text: string; contentBlocks?: ContentBlock[] }>;
 };
-type DocumentImportSummary = { pageCount: number | null; warnings: string[]; questionCount: number };
+type DocumentImportSummary = {
+  pageCount: number | null;
+  warnings: string[];
+  questionCount: number;
+};
 
 const IMPORT_SUMMARY_KEY = "__mock__";
 
@@ -86,23 +114,48 @@ function subjectKey(value: string) {
 function importErrorMessage(body: any, fileLabel: "PDF" | "Word document") {
   // The API owns expected problem text. If an unexpected proxy/server response
   // gets here, never surface its diagnostic body to a tutor.
-  if (typeof body?.error === "string" && /^Kanvise |^This PDF is password-protected\./.test(body.error)) return body.error;
-  if (body?.code === "PDF_TOO_LARGE" || body?.code === "IMPORT_TOO_LARGE") return `${fileLabel} is too large to import. Use a smaller file or split it into separate documents.`;
-  if (body?.code === "PASSWORD_PROTECTED_PDF") return "This PDF is password-protected. Remove the password, then upload it again.";
-  if (body?.code === "NO_QUESTIONS_FOUND" || body?.code === "IMPORT_CONTENT_NOT_RECOGNISED") return `Kanvise could not find usable questions in this ${fileLabel.toLowerCase()}. Check the file contains the question paper, then try again.`;
-  if (body?.code === "IMPORT_RATE_LIMITED") return "Kanvise is processing too many document imports right now. Your mock has not changed—try this file again in a few minutes.";
-  if (body?.code === "IMPORT_TEMPORARILY_UNAVAILABLE") return "The document reader is temporarily unavailable. Your mock has not changed—try again shortly.";
+  if (
+    typeof body?.error === "string" &&
+    /^Kanvise |^This PDF is password-protected\./.test(body.error)
+  )
+    return body.error;
+  if (body?.code === "PDF_TOO_LARGE" || body?.code === "IMPORT_TOO_LARGE")
+    return `${fileLabel} is too large to import. Use a smaller file or split it into separate documents.`;
+  if (body?.code === "PASSWORD_PROTECTED_PDF")
+    return "This PDF is password-protected. Remove the password, then upload it again.";
+  if (
+    body?.code === "NO_QUESTIONS_FOUND" ||
+    body?.code === "IMPORT_CONTENT_NOT_RECOGNISED"
+  )
+    return `Kanvise could not find usable questions in this ${fileLabel.toLowerCase()}. Check the file contains the question paper, then try again.`;
+  if (body?.code === "IMPORT_RATE_LIMITED")
+    return "Kanvise is processing too many document imports right now. Your mock has not changed—try this file again in a few minutes.";
+  if (body?.code === "IMPORT_TEMPORARILY_UNAVAILABLE")
+    return "The document reader is temporarily unavailable. Your mock has not changed—try again shortly.";
   return `Kanvise could not import this ${fileLabel.toLowerCase()}. Your mock has not changed. Try another file or add questions manually.`;
 }
 
-export function MockBuilderClient({ token }: { token: string }) {
+export function MockBuilderClient({
+  token,
+  embedded = false,
+}: {
+  token: string;
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const editMockId = searchParams.get("id");
   const isEditMode = !!editMockId;
-  
+  // A class assessment can be reopened for editing. Keep its class context in
+  // that case so Save/Publish returns to the class workspace, not Mocks.
+  const classContextId = searchParams.get("class_id");
+  const contextualCourseId = searchParams.get("course_id");
+
   const [courses, setCourses] = useState<Course[]>([]);
+  const [classContext, setClassContext] = useState<BuilderClassContext | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isReadOnly, setIsReadOnly] = useState(false);
 
@@ -111,33 +164,47 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [description, setDescription] = useState("");
   const [courseId, setCourseId] = useState("");
   const [programmeFilterId, setProgrammeFilterId] = useState("");
-  const [audienceScope, setAudienceScope] = useState<CentreAudienceScope>("course");
+  const [audienceScope, setAudienceScope] =
+    useState<CentreAudienceScope>("course");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("fixed");
   const [accessMode, setAccessMode] = useState<AccessMode>("");
   const [builderStep, setBuilderStep] = useState<BuilderStep>("setup");
-  const [visitedBuilderSteps, setVisitedBuilderSteps] = useState<Set<BuilderStep>>(() => new Set(["setup"]));
+  const [visitedBuilderSteps, setVisitedBuilderSteps] = useState<
+    Set<BuilderStep>
+  >(() => new Set(["setup"]));
   const [activeSubjectCourseId, setActiveSubjectCourseId] = useState("");
-  const [subjectSections, setSubjectSections] = useState<SubjectSectionState[]>([]);
+  const [subjectSections, setSubjectSections] = useState<SubjectSectionState[]>(
+    [],
+  );
   const [newSubjectName, setNewSubjectName] = useState("");
   const [singleSubjectName, setSingleSubjectName] = useState("");
-  const [linkAccessMode, setLinkAccessMode] = useState<"free_claim" | "paid">("free_claim");
+  const [linkAccessMode, setLinkAccessMode] = useState<"free_claim" | "paid">(
+    "free_claim",
+  );
   const [linkPrice, setLinkPrice] = useState("");
   const [linkSlug, setLinkSlug] = useState("");
   const [linkSlugEdited, setLinkSlugEdited] = useState(false);
-  
-  const [publishMode, setPublishMode] = useState<"immediate" | "scheduled">("immediate");
+
+  const [publishMode, setPublishMode] = useState<"immediate" | "scheduled">(
+    "immediate",
+  );
   const [publishDate, setPublishDate] = useState("");
   const [publishTime, setPublishTime] = useState("");
-  
+
   const [isUntimed, setIsUntimed] = useState(false);
   const [timeLimit, setTimeLimit] = useState(60);
-  const [calculatorMode, setCalculatorMode] = useState<"none" | "basic" | "scientific">("none");
+  const [calculatorMode, setCalculatorMode] = useState<
+    "none" | "basic" | "scientific"
+  >("none");
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
   const [maxAttempts, setMaxAttempts] = useState(1);
   const [passMark, setPassMark] = useState(50);
   const [resultReleaseMode, setResultReleaseMode] = useState<
-    "score_only" | "immediately_with_corrections" | "after_close" | "after_theory_grading"
+    | "score_only"
+    | "immediately_with_corrections"
+    | "after_close"
+    | "after_theory_grading"
   >("score_only");
   const [availableFrom, setAvailableFrom] = useState("");
   const [closesAt, setClosesAt] = useState("");
@@ -147,7 +214,9 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [banks, setBanks] = useState<Bank[]>([]);
   const [selectedBankId, setSelectedBankId] = useState("");
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
-  const [selectedBankQuestions, setSelectedBankQuestions] = useState<SelectedBankQuestion[]>([]);
+  const [selectedBankQuestions, setSelectedBankQuestions] = useState<
+    SelectedBankQuestion[]
+  >([]);
   const [showBankPicker, setShowBankPicker] = useState(false);
   const [showImportPanel, setShowImportPanel] = useState(false);
   const [isLoadingBankQuestions, setIsLoadingBankQuestions] = useState(false);
@@ -158,61 +227,94 @@ export function MockBuilderClient({ token }: { token: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
-  const [setupChangeToConfirm, setSetupChangeToConfirm] = useState<{ type: "access" | "delivery", value: AccessMode | DeliveryMode } | null>(null);
-  const [publishReview, setPublishReview] = useState<PrePublishReview | null>(null);
+  const [setupChangeToConfirm, setSetupChangeToConfirm] = useState<{
+    type: "access" | "delivery";
+    value: AccessMode | DeliveryMode;
+  } | null>(null);
+  const [publishReview, setPublishReview] = useState<PrePublishReview | null>(
+    null,
+  );
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [documentImportSummaries, setDocumentImportSummaries] = useState<Record<string, DocumentImportSummary>>({});
-  const [importProgressBySubject, setImportProgressBySubject] = useState<Record<string, MockImportProgress>>({});
+  const [documentImportSummaries, setDocumentImportSummaries] = useState<
+    Record<string, DocumentImportSummary>
+  >({});
+  const [importProgressBySubject, setImportProgressBySubject] = useState<
+    Record<string, MockImportProgress>
+  >({});
   const [builderActionMessage, setBuilderActionMessage] = useState("");
-  const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
+  const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(
+    null,
+  );
   const [bulkMarks, setBulkMarks] = useState<string>("");
-  const [bulkMarkMode, setBulkMarkMode] = useState<"per_question" | "total">("per_question");
+  const [bulkMarkMode, setBulkMarkMode] = useState<"per_question" | "total">(
+    "per_question",
+  );
   const importedQuestionsRef = useRef<HTMLDivElement>(null);
+  const referenceImportInputRef = useRef<HTMLInputElement>(null);
   const importGenerationRef = useRef(0);
 
-  const slugify = (value: string) => value.toLowerCase().trim()
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+  const slugify = (value: string) =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48);
 
   useEffect(() => {
     if (!linkSlugEdited) setLinkSlug(slugify(title) || "mock");
   }, [title, linkSlugEdited]);
 
-    const applyBulkMarks = () => {
+  const applyBulkMarks = () => {
     const value = Number(bulkMarks);
     if (!bulkMarks || isNaN(value) || value <= 0) {
       toast.error("Enter a valid mark value");
       return;
     }
-    
-    const visibleQuestionIds = new Set(visibleQuestions.map(q => q.id));
+
+    const visibleQuestionIds = new Set(visibleQuestions.map((q) => q.id));
     if (visibleQuestionIds.size === 0) {
       toast.error("No questions to apply marks to");
       return;
     }
-    
-    const marksPerQuestion = bulkMarkMode === "total" 
-      ? Number((value / visibleQuestionIds.size).toFixed(2)) 
-      : value;
-    
-    setQuestions(questions.map(q => 
-      visibleQuestionIds.has(q.id) ? { ...q, marks: marksPerQuestion } : q
-    ));
-    
-    toast.success(`Applied ${marksPerQuestion} mark${marksPerQuestion === 1 ? '' : 's'} each to ${visibleQuestionIds.size} question${visibleQuestionIds.size === 1 ? '' : 's'}`);
+
+    const marksPerQuestion =
+      bulkMarkMode === "total"
+        ? Number((value / visibleQuestionIds.size).toFixed(2))
+        : value;
+
+    setQuestions(
+      questions.map((q) =>
+        visibleQuestionIds.has(q.id) ? { ...q, marks: marksPerQuestion } : q,
+      ),
+    );
+
+    toast.success(
+      `Applied ${marksPerQuestion} mark${marksPerQuestion === 1 ? "" : "s"} each to ${visibleQuestionIds.size} question${visibleQuestionIds.size === 1 ? "" : "s"}`,
+    );
     setBulkMarks("");
   };
 
   const showImportedQuestions = () => {
-    window.requestAnimationFrame(() => importedQuestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    window.requestAnimationFrame(() =>
+      importedQuestionsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      }),
+    );
   };
 
   useEffect(() => {
     if (!lastAddedQuestionId) return;
     window.requestAnimationFrame(() => {
-      const question = document.getElementById(`mock-question-${lastAddedQuestionId}`);
+      const question = document.getElementById(
+        `mock-question-${lastAddedQuestionId}`,
+      );
       question?.scrollIntoView({ behavior: "smooth", block: "center" });
-      question?.querySelector<HTMLTextAreaElement>("textarea[data-question-text]")?.focus({ preventScroll: true });
+      question
+        ?.querySelector<HTMLTextAreaElement>("textarea[data-question-text]")
+        ?.focus({ preventScroll: true });
       setLastAddedQuestionId(null);
     });
   }, [lastAddedQuestionId, questions]);
@@ -229,10 +331,19 @@ export function MockBuilderClient({ token }: { token: string }) {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const headers = { "Authorization": `Bearer ${token}` };
-        const [res, banksRes] = await Promise.all([
+        const headers = { Authorization: `Bearer ${token}` };
+        const [res, banksRes, classRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`, { headers }),
+          fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`,
+            { headers },
+          ),
+          classContextId
+            ? fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/classes/${classContextId}`,
+                { headers },
+              )
+            : Promise.resolve(null),
         ]);
         if (!res.ok) {
           const body = await res.json().catch(() => null);
@@ -240,17 +351,69 @@ export function MockBuilderClient({ token }: { token: string }) {
         }
         const { data } = await res.json();
         setCourses(data || []);
+        const contextualCourse = contextualCourseId
+          ? (data || []).find(
+              (course: Course) => course.id === contextualCourseId,
+            )
+          : null;
+        if (contextualCourse) {
+          setCourseId(contextualCourse.id);
+          setSingleSubjectName(contextualCourse.name);
+        }
+        if (classRes?.ok) {
+          const classBody = await classRes.json();
+          const classData = classBody?.data;
+          const classSubjects = Array.isArray(classData?.courses)
+            ? (classData.courses as Course[])
+            : [];
+          setClassContext({
+            id: classData?.id || classContextId!,
+            name: classData?.name || "This class",
+            courses: classSubjects,
+          });
+          setAccessMode("centre");
+          if (contextualCourse) {
+            setDeliveryMode("fixed");
+            setAudienceScope("course");
+          } else if (classSubjects.length > 1) {
+            setDeliveryMode("subject_combination");
+            setAudienceScope("programme");
+            setProgrammeFilterId(classContextId!);
+            setSubjectSections(
+              classSubjects.map((subject) => ({
+                id: `class-subject-${subject.id}`,
+                name: subject.name,
+                courseId: subject.id,
+              })),
+            );
+          } else if (classSubjects.length === 1) {
+            setDeliveryMode("fixed");
+            setAudienceScope("course");
+            setCourseId(classSubjects[0].id);
+            setSingleSubjectName(classSubjects[0].name);
+          }
+        } else if (classRes) {
+          toast.error("Could not load class context", {
+            description:
+              "You can still create this mock from the assessment library.",
+          });
+        }
         if (banksRes.ok) {
           const { data } = await banksRes.json();
           setBanks(data || []);
           setSelectedBankId(data?.[0]?.id || "");
         } else {
-          toast.error("Could not load question banks", { description: "You can still type questions manually." });
+          toast.error("Could not load question banks", {
+            description: "You can still type questions manually.",
+          });
         }
       } catch (err) {
         console.error("Failed to fetch courses", err);
         toast.error("Could not prepare the mock builder", {
-          description: err instanceof Error ? err.message : "Refresh the page and try again.",
+          description:
+            err instanceof Error
+              ? err.message
+              : "Refresh the page and try again.",
         });
       } finally {
         if (!isEditMode) setIsLoading(false);
@@ -262,11 +425,14 @@ export function MockBuilderClient({ token }: { token: string }) {
       try {
         const [mockRes, assemblyRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}/assembly`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          })
+          fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}/assembly`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          ),
         ]);
 
         if (mockRes.ok && assemblyRes.ok) {
@@ -281,24 +447,43 @@ export function MockBuilderClient({ token }: { token: string }) {
           setDescription(mockData.description || "");
           setSingleSubjectName(mockData.subject_name || "");
           setLinkAccessMode(mockData.direct_link_access_mode || "free_claim");
-          setLinkPrice(mockData.direct_link_price_kobo ? String(mockData.direct_link_price_kobo / 100) : "");
+          setLinkPrice(
+            mockData.direct_link_price_kobo
+              ? String(mockData.direct_link_price_kobo / 100)
+              : "",
+          );
           setLinkSlug(mockData.direct_link_slug || "");
           setLinkSlugEdited(Boolean(mockData.direct_link_slug));
           setCourseId(mockData.course_id || "");
           setAudienceScope(mockData.audience_scope || "course");
           setDeliveryMode(mockData.delivery_mode || "fixed");
-          setAccessMode(mockData.direct_link_enabled
-            ? (mockData.audience_scope === "direct_link" ? "direct" : "both")
-            : (mockData.audience_scope === "course" || mockData.audience_scope === "combination" ? "centre" : ""));
+          setAccessMode(
+            mockData.direct_link_enabled
+              ? mockData.audience_scope === "direct_link"
+                ? "direct"
+                : "both"
+              : mockData.audience_scope === "course" ||
+                  mockData.audience_scope === "combination"
+                ? "centre"
+                : "",
+          );
           setCalculatorMode(mockData.calculator_mode || "none");
           setShuffleQuestions(!!mockData.shuffle_questions);
           setShuffleOptions(!!mockData.shuffle_options);
           setMaxAttempts(mockData.max_attempts || 1);
           setPassMark(mockData.pass_mark ?? 50);
           setResultReleaseMode(mockData.result_release_mode || "score_only");
-          setAvailableFrom(mockData.available_from ? new Date(mockData.available_from).toISOString().slice(0, 16) : "");
-          setClosesAt(mockData.closes_at ? new Date(mockData.closes_at).toISOString().slice(0, 16) : "");
-          
+          setAvailableFrom(
+            mockData.available_from
+              ? new Date(mockData.available_from).toISOString().slice(0, 16)
+              : "",
+          );
+          setClosesAt(
+            mockData.closes_at
+              ? new Date(mockData.closes_at).toISOString().slice(0, 16)
+              : "",
+          );
+
           if (mockData.time_limit_minutes === 0) {
             setIsUntimed(true);
           } else {
@@ -309,64 +494,98 @@ export function MockBuilderClient({ token }: { token: string }) {
           if (mockData.publish_at) {
             setPublishMode("scheduled");
             const d = new Date(mockData.publish_at);
-            setPublishDate(d.toISOString().split('T')[0]);
-            setPublishTime(d.toTimeString().substring(0,5));
+            setPublishDate(d.toISOString().split("T")[0]);
+            setPublishTime(d.toTimeString().substring(0, 5));
           }
 
-          const assembledQuestions = (assemblyData.sections || []).flatMap((section: any) => (section.questions || []).map((item: any) => ({
-            ...item,
-            section_course_id: section.course_id || null,
-            section_id: section.id || `section-${section.order_index}`,
-            section_subject_name: section.subject_name || section.title || undefined,
-          })));
-          setSubjectSections((assemblyData.sections || []).map((section: any) => ({
-            id: section.id || `section-${section.order_index}`,
-            name: section.subject_name || section.title || "Untitled subject",
-            courseId: section.course_id || null,
-          })));
-          const authoredQuestions = assembledQuestions.filter((item: any) => item.question?.bank?.source_mock_exam_id === editMockId);
-          const reusedQuestions = assembledQuestions.filter((item: any) => item.question?.bank?.source_mock_exam_id !== editMockId);
-          if (authoredQuestions.length > 0) {
-            setQuestions(authoredQuestions.map((item: any) => {
-              const q = item.question;
-              return {
-              id: `q_${q.id}`,
-              question_type: q.question_type,
-              question_text: q.current_version?.plain_text || "",
-              marks: item.marks_override || q.current_version?.marks,
-              options: (q.current_version?.options || []).map((o: any) => ({
-                id: `o_${o.id}`,
-                option_text: o.plain_text,
-                is_correct: o.is_correct,
-                content_blocks: o.content_blocks || [],
+          const assembledQuestions = (assemblyData.sections || []).flatMap(
+            (section: any) =>
+              (section.questions || []).map((item: any) => ({
+                ...item,
+                section_course_id: section.course_id || null,
+                section_id: section.id || `section-${section.order_index}`,
+                section_subject_name:
+                  section.subject_name || section.title || undefined,
               })),
-              content_blocks: q.current_version?.content_blocks || [],
-              course_id: item.section_course_id || q.course_id || null,
-              section_id: item.section_id || undefined,
-              subject_name: item.section_subject_name || q.subject_name || undefined,
-              grading_rubric: (q.current_version?.grading_rubric_blocks || [])
-                .filter((block: any) => block?.type === "text").map((block: any) => block.text).join("\n")
-            }}));
+          );
+          setSubjectSections(
+            (assemblyData.sections || []).map((section: any) => ({
+              id: section.id || `section-${section.order_index}`,
+              name: section.subject_name || section.title || "Untitled subject",
+              courseId: section.course_id || null,
+            })),
+          );
+          const authoredQuestions = assembledQuestions.filter(
+            (item: any) =>
+              item.question?.bank?.source_mock_exam_id === editMockId,
+          );
+          const reusedQuestions = assembledQuestions.filter(
+            (item: any) =>
+              item.question?.bank?.source_mock_exam_id !== editMockId,
+          );
+          if (authoredQuestions.length > 0) {
+            setQuestions(
+              authoredQuestions.map((item: any) => {
+                const q = item.question;
+                return {
+                  id: `q_${q.id}`,
+                  question_type: q.question_type,
+                  question_text: q.current_version?.plain_text || "",
+                  marks: item.marks_override || q.current_version?.marks,
+                  options: (q.current_version?.options || []).map((o: any) => ({
+                    id: `o_${o.id}`,
+                    option_text: o.plain_text,
+                    is_correct: o.is_correct,
+                    content_blocks: o.content_blocks || [],
+                  })),
+                  content_blocks: q.current_version?.content_blocks || [],
+                  course_id: item.section_course_id || q.course_id || null,
+                  section_id: item.section_id || undefined,
+                  subject_name:
+                    item.section_subject_name || q.subject_name || undefined,
+                  grading_rubric: (
+                    q.current_version?.grading_rubric_blocks || []
+                  )
+                    .filter((block: any) => block?.type === "text")
+                    .map((block: any) => block.text)
+                    .join("\n"),
+                };
+              }),
+            );
           }
-          setSelectedBankQuestions(reusedQuestions.map((item: any) => ({
-            questionId: item.question.id,
-            questionVersionId: item.question_version_id,
-            questionText: item.question.current_version?.plain_text || "",
-            questionType: item.question.question_type,
-              marks: item.marks_override || item.question.current_version?.marks,
+          setSelectedBankQuestions(
+            reusedQuestions.map((item: any) => ({
+              questionId: item.question.id,
+              questionVersionId: item.question_version_id,
+              questionText: item.question.current_version?.plain_text || "",
+              questionType: item.question.question_type,
+              marks:
+                item.marks_override || item.question.current_version?.marks,
               bankName: item.question.bank?.name || "Question bank",
-              courseId: item.section_course_id || item.question.course_id || null,
+              courseId:
+                item.section_course_id || item.question.course_id || null,
               sectionId: item.section_id || undefined,
-              options: (item.question.current_version?.options || []).map((option: any) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })),
-          })));
+              options: (item.question.current_version?.options || []).map(
+                (option: any) => ({
+                  id: option.id,
+                  text: option.plain_text,
+                  contentBlocks: option.content_blocks || [],
+                }),
+              ),
+            })),
+          );
         } else {
-          toast.error("Could not open this mock", { description: "It may no longer exist or you may not have access." });
+          toast.error("Could not open this mock", {
+            description: "It may no longer exist or you may not have access.",
+          });
           startNavigationProgress();
           router.push("/dashboard/mocks");
         }
       } catch (err) {
         console.error("Failed to fetch mock data", err);
-        toast.error("Could not open this mock", { description: "Check your connection and try again." });
+        toast.error("Could not open this mock", {
+          description: "Check your connection and try again.",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -375,21 +594,35 @@ export function MockBuilderClient({ token }: { token: string }) {
     fetchCourses().then(() => {
       if (isEditMode) fetchMockData();
     });
-  }, [token, editMockId, isEditMode, router]);
+  }, [
+    token,
+    editMockId,
+    isEditMode,
+    router,
+    classContextId,
+    contextualCourseId,
+  ]);
 
   useEffect(() => {
     if (!showBankPicker || !selectedBankId) return;
     const load = async () => {
       setIsLoadingBankQuestions(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks/${selectedBankId}/questions?page_size=100`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/question-banks/${selectedBankId}/questions?page_size=100`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         const body = await response.json();
-        if (!response.ok) throw new Error(body.error || "Could not load questions");
+        if (!response.ok)
+          throw new Error(body.error || "Could not load questions");
         setBankQuestions(body.data || []);
       } catch (error) {
-        toast.error("Could not load the question bank", { description: error instanceof Error ? error.message : "Please try again." });
+        toast.error("Could not load the question bank", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
       } finally {
         setIsLoadingBankQuestions(false);
       }
@@ -400,14 +633,22 @@ export function MockBuilderClient({ token }: { token: string }) {
   const doChangeAccessMode = (value: AccessMode) => {
     setAccessMode(value);
     const isMulti = deliveryMode === "subject_combination";
-    setAudienceScope(value === "direct" ? "direct_link" : isMulti ? "combination" : "course");
+    setAudienceScope(
+      value === "direct" ? "direct_link" : isMulti ? "combination" : "course",
+    );
     if (value === "direct") {
       setProgrammeFilterId("");
       setCourseId("");
       setSingleSubjectName("");
-      setSubjectSections((current) => current.map((section) => ({ ...section, courseId: null })));
-      setQuestions((current) => current.map((question) => ({ ...question, course_id: null })));
-      setSelectedBankQuestions((current) => current.map((question) => ({ ...question, courseId: null })));
+      setSubjectSections((current) =>
+        current.map((section) => ({ ...section, courseId: null })),
+      );
+      setQuestions((current) =>
+        current.map((question) => ({ ...question, course_id: null })),
+      );
+      setSelectedBankQuestions((current) =>
+        current.map((question) => ({ ...question, courseId: null })),
+      );
     }
   };
 
@@ -430,40 +671,61 @@ export function MockBuilderClient({ token }: { token: string }) {
       // A multi-subject draft starts empty. Its sections can be discovered from
       // one master import, or deliberately added later. Do not force a tutor
       // through seven subject forms before they can upload the paper.
-      setQuestions((current) => current.map((question) => ({
-        ...question,
-        section_id: undefined,
-      })));
-      setSelectedBankQuestions((current) => current.map((question) => ({
-        ...question,
-        sectionId: undefined,
-      })));
+      setQuestions((current) =>
+        current.map((question) => ({
+          ...question,
+          section_id: undefined,
+        })),
+      );
+      setSelectedBankQuestions((current) =>
+        current.map((question) => ({
+          ...question,
+          sectionId: undefined,
+        })),
+      );
       setActiveSubjectCourseId("");
-      setAudienceScope(accessMode === "centre" || accessMode === "both" ? "combination" : "direct_link");
+      setAudienceScope(
+        accessMode === "centre" || accessMode === "both"
+          ? "combination"
+          : "direct_link",
+      );
       setDeliveryMode(nextMode);
       return;
     }
 
-    const fallbackSection = subjectSections.find((section) => section.courseId) || subjectSections[0];
+    const fallbackSection =
+      subjectSections.find((section) => section.courseId) || subjectSections[0];
     const nextCourseId = courseId || fallbackSection?.courseId || "";
-    const nextSubjectName = singleSubjectName.trim() || courses.find((course) => course.id === nextCourseId)?.name || fallbackSection?.name || "";
+    const nextSubjectName =
+      singleSubjectName.trim() ||
+      courses.find((course) => course.id === nextCourseId)?.name ||
+      fallbackSection?.name ||
+      "";
     setCourseId(nextCourseId);
     setSingleSubjectName(nextSubjectName);
-    setQuestions((current) => current.map((question) => ({
-      ...question,
-      section_id: undefined,
-      course_id: nextCourseId || null,
-      subject_name: nextSubjectName || undefined,
-    })));
-    setSelectedBankQuestions((current) => current.map((question) => ({
-      ...question,
-      sectionId: undefined,
-      courseId: nextCourseId || null,
-    })));
+    setQuestions((current) =>
+      current.map((question) => ({
+        ...question,
+        section_id: undefined,
+        course_id: nextCourseId || null,
+        subject_name: nextSubjectName || undefined,
+      })),
+    );
+    setSelectedBankQuestions((current) =>
+      current.map((question) => ({
+        ...question,
+        sectionId: undefined,
+        courseId: nextCourseId || null,
+      })),
+    );
     setSubjectSections([]);
     setActiveSubjectCourseId("");
     setBuilderStep("setup");
-    setAudienceScope(accessMode === "centre" || accessMode === "both" ? "course" : "direct_link");
+    setAudienceScope(
+      accessMode === "centre" || accessMode === "both"
+        ? "course"
+        : "direct_link",
+    );
     setDeliveryMode(nextMode);
   };
 
@@ -478,7 +740,11 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const changeDeliveryMode = (nextMode: DeliveryMode) => {
     if (nextMode === deliveryMode) return;
-    if (deliveryMode === "subject_combination" && nextMode === "fixed" && (questions.length > 0 || selectedBankQuestions.length > 0)) {
+    if (
+      deliveryMode === "subject_combination" &&
+      nextMode === "fixed" &&
+      (questions.length > 0 || selectedBankQuestions.length > 0)
+    ) {
       setSetupChangeToConfirm({ type: "delivery", value: nextMode });
     } else {
       doChangeDeliveryMode(nextMode);
@@ -496,50 +762,95 @@ export function MockBuilderClient({ token }: { token: string }) {
   };
 
   // Unsaved changes tracking
-  const hasChanges = Boolean(title.trim() || questions.length > 0 || selectedBankQuestions.length > 0 || singleSubjectName.trim());
+  const hasChanges = Boolean(
+    title.trim() ||
+    questions.length > 0 ||
+    selectedBankQuestions.length > 0 ||
+    singleSubjectName.trim(),
+  );
   useUnsavedChanges(hasChanges && !isReadOnly && !isSaving);
 
   const centreAccessEnabled = accessMode === "centre" || accessMode === "both";
   const shareLinkEnabled = accessMode === "direct" || accessMode === "both";
   const selectedSubjectSections = subjectSections;
-  const programmeOptions = Array.from(new Map(courses
-    .filter((course) => Boolean(course.programme_id))
-    .map((course) => [course.programme_id!, {
-      id: course.programme_id!,
-      name: Array.isArray(course.programme) ? course.programme[0]?.name : course.programme?.name,
-    }]))
-    .values())
-    .filter((programme) => Boolean(programme.name)) as Array<{ id: string; name: string }>;
-  const coursesForSelectedProgramme = centreAccessEnabled && programmeFilterId
-    ? courses.filter((course) => course.programme_id === programmeFilterId)
-    : courses;
-  const audienceSummary = !accessMode ? "Not assigned yet"
+  const programmeOptions = Array.from(
+    new Map(
+      courses
+        .filter((course) => Boolean(course.programme_id))
+        .map((course) => [
+          course.programme_id!,
+          {
+            id: course.programme_id!,
+            name: Array.isArray(course.programme)
+              ? course.programme[0]?.name
+              : course.programme?.name,
+          },
+        ]),
+    ).values(),
+  ).filter((programme) => Boolean(programme.name)) as Array<{
+    id: string;
+    name: string;
+  }>;
+  const coursesForSelectedProgramme = classContext
+    ? courses.filter((course) =>
+        classContext.courses.some((subject) => subject.id === course.id),
+      )
+    : centreAccessEnabled && programmeFilterId
+      ? courses.filter((course) => course.programme_id === programmeFilterId)
+      : courses;
+  const audienceSummary = !accessMode
+    ? "Not assigned yet"
     : centreAccessEnabled && shareLinkEnabled
-    ? "Students enrolled in your programme on Kanvise and anyone with the link"
-    : centreAccessEnabled ? "Students enrolled in your programme on Kanvise" : "Anyone with the link";
+      ? "Students enrolled in your programme on Kanvise and anyone with the link"
+      : centreAccessEnabled
+        ? "Students enrolled in your programme on Kanvise"
+        : "Anyone with the link";
   const selectedSubjectCourses = selectedSubjectSections.map((section) => {
-    const linkedCourse = section.courseId ? courses.find((course) => course.id === section.courseId) : null;
-    return { id: section.id, name: section.name, label: linkedCourse ? mockCourseLabel(linkedCourse) : section.name, course_id: section.courseId };
+    const linkedCourse = section.courseId
+      ? courses.find((course) => course.id === section.courseId)
+      : null;
+    return {
+      id: section.id,
+      name: section.name,
+      label: linkedCourse ? mockCourseLabel(linkedCourse) : section.name,
+      course_id: section.courseId,
+    };
   });
-  const availableSubjectCourses = unusedMockCourses(coursesForSelectedProgramme, subjectSections.map((section) => section.courseId));
-  const resolvedActiveSubjectCourseId = deliveryMode === "subject_combination"
-    ? (activeSubjectCourseId === UNASSIGNED_SUBJECT_ID && questions.some((question) => !question.course_id)
-      ? UNASSIGNED_SUBJECT_ID
-      : selectedSubjectSections.some((section) => section.id === activeSubjectCourseId) ? activeSubjectCourseId : selectedSubjectSections[0]?.id || "")
-    : "";
-  const activeSubjectSection = selectedSubjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) || null;
-  const subjectStateKey = deliveryMode === "subject_combination"
-    ? resolvedActiveSubjectCourseId || UNASSIGNED_SUBJECT_ID
-    : "__single__";
+  const availableSubjectCourses = unusedMockCourses(
+    coursesForSelectedProgramme,
+    subjectSections.map((section) => section.courseId),
+  );
+  const resolvedActiveSubjectCourseId =
+    deliveryMode === "subject_combination"
+      ? activeSubjectCourseId === UNASSIGNED_SUBJECT_ID &&
+        questions.some((question) => !question.course_id)
+        ? UNASSIGNED_SUBJECT_ID
+        : selectedSubjectSections.some(
+              (section) => section.id === activeSubjectCourseId,
+            )
+          ? activeSubjectCourseId
+          : selectedSubjectSections[0]?.id || ""
+      : "";
+  const activeSubjectSection =
+    selectedSubjectSections.find(
+      (section) => section.id === resolvedActiveSubjectCourseId,
+    ) || null;
+  const subjectStateKey =
+    deliveryMode === "subject_combination"
+      ? resolvedActiveSubjectCourseId || UNASSIGNED_SUBJECT_ID
+      : "__single__";
   // A document import belongs to the mock draft, not the selected subject.
   // This is what lets a single JAMB paper create all its subject sections at
   // once, while the left rail remains purely a review/navigation control.
-  const documentImportSummary = documentImportSummaries[IMPORT_SUMMARY_KEY] || null;
+  const documentImportSummary =
+    documentImportSummaries[IMPORT_SUMMARY_KEY] || null;
   const importProgress = importProgressBySubject[IMPORT_SUMMARY_KEY] || null;
 
   const applyDocumentImport = (importedQuestions: any[]): QuestionState[] => {
     const sections = [...subjectSections];
-    const sectionsByName = new Map(sections.map((section) => [subjectKey(section.name), section]));
+    const sectionsByName = new Map(
+      sections.map((section) => [subjectKey(section.name), section]),
+    );
     const candidateCourses = coursesForSelectedProgramme;
 
     const sectionFor = (rawSubject: unknown) => {
@@ -548,50 +859,83 @@ export function MockBuilderClient({ token }: { token: string }) {
       const key = subjectKey(name);
       const existing = sectionsByName.get(key);
       if (existing) return existing;
-      const matchingCourses = candidateCourses.filter((course) => subjectKey(course.name) === key);
+      const matchingCourses = candidateCourses.filter(
+        (course) => subjectKey(course.name) === key,
+      );
       const course = matchingCourses.length === 1 ? matchingCourses[0] : null;
-      const section = { id: `section-import-${crypto.randomUUID()}`, name, courseId: course?.id || null };
+      const section = {
+        id: `section-import-${crypto.randomUUID()}`,
+        name,
+        courseId: course?.id || null,
+      };
       sections.push(section);
       sectionsByName.set(key, section);
       return section;
     };
 
-    const parsedQuestions = importedQuestions.map((question: any, index: number) => {
-      const importedSubject = typeof question?.subject_name === "string" ? question.subject_name.trim() : "";
-      const section = sectionFor(importedSubject);
-      const reviewReasons: string[] = Array.isArray(question?.review_reasons)
-        ? question.review_reasons.filter((reason: unknown): reason is string => typeof reason === "string")
-        : [];
-      if (deliveryMode === "subject_combination" && !section) {
-        reviewReasons.push("Kanvise could not identify this question’s subject. Assign it in Needs review before publishing.");
-      }
-      if (deliveryMode === "subject_combination" && centreAccessEnabled && section && !section.courseId) {
-        reviewReasons.push(`Map “${section.name}” to one of your centre subjects before publishing.`);
-      }
-      return {
-        id: question?.id || `import_${Date.now()}_${index}_${Math.random()}`,
-        question_type: question?.question_type === "mcq" ? "mcq" : "theory",
-        question_text: question?.question_text || "",
-        marks: Number(question?.marks) || 1,
-        options: (question?.options || []).map((option: any, optionIndex: number) => ({
-          id: option.id || `import_option_${Date.now()}_${index}_${optionIndex}`,
-          option_text: option.option_text || "",
-          is_correct: option.is_correct === true,
-          content_blocks: option.content_blocks || [],
-        })),
-        grading_rubric: question?.grading_rubric || "",
-        source_page: question?.source_page ?? null,
-        review_reasons: [...new Set(reviewReasons)],
-        content_blocks: question?.content_blocks || [],
-        course_id: deliveryMode === "subject_combination" ? section?.courseId || null : courseId || null,
-        section_id: deliveryMode === "subject_combination" ? section?.id : undefined,
-        subject_name: section?.name || importedSubject || singleSubjectName || undefined,
-      } satisfies QuestionState;
-    });
+    const parsedQuestions = importedQuestions.map(
+      (question: any, index: number) => {
+        const importedSubject =
+          typeof question?.subject_name === "string"
+            ? question.subject_name.trim()
+            : "";
+        const section = sectionFor(importedSubject);
+        const reviewReasons: string[] = Array.isArray(question?.review_reasons)
+          ? question.review_reasons.filter(
+              (reason: unknown): reason is string => typeof reason === "string",
+            )
+          : [];
+        if (deliveryMode === "subject_combination" && !section) {
+          reviewReasons.push(
+            "Kanvise could not identify this question’s subject. Assign it in Needs review before publishing.",
+          );
+        }
+        if (
+          deliveryMode === "subject_combination" &&
+          centreAccessEnabled &&
+          section &&
+          !section.courseId
+        ) {
+          reviewReasons.push(
+            `Map “${section.name}” to one of your centre subjects before publishing.`,
+          );
+        }
+        return {
+          id: question?.id || `import_${Date.now()}_${index}_${Math.random()}`,
+          question_type: question?.question_type === "mcq" ? "mcq" : "theory",
+          question_text: question?.question_text || "",
+          marks: Number(question?.marks) || 1,
+          options: (question?.options || []).map(
+            (option: any, optionIndex: number) => ({
+              id:
+                option.id ||
+                `import_option_${Date.now()}_${index}_${optionIndex}`,
+              option_text: option.option_text || "",
+              is_correct: option.is_correct === true,
+              content_blocks: option.content_blocks || [],
+            }),
+          ),
+          grading_rubric: question?.grading_rubric || "",
+          source_page: question?.source_page ?? null,
+          review_reasons: [...new Set(reviewReasons)],
+          content_blocks: question?.content_blocks || [],
+          course_id:
+            deliveryMode === "subject_combination"
+              ? section?.courseId || null
+              : courseId || null,
+          section_id:
+            deliveryMode === "subject_combination" ? section?.id : undefined,
+          subject_name:
+            section?.name || importedSubject || singleSubjectName || undefined,
+        } satisfies QuestionState;
+      },
+    );
 
     if (deliveryMode === "subject_combination") {
       setSubjectSections(sections);
-      setActiveSubjectCourseId((current) => current || sections[0]?.id || UNASSIGNED_SUBJECT_ID);
+      setActiveSubjectCourseId(
+        (current) => current || sections[0]?.id || UNASSIGNED_SUBJECT_ID,
+      );
     }
     setQuestions((current) => [...current, ...parsedQuestions]);
     return parsedQuestions;
@@ -606,16 +950,27 @@ export function MockBuilderClient({ token }: { token: string }) {
         question_type: "mcq",
         question_text: "",
         marks: 2,
-        course_id: deliveryMode === "subject_combination" ? activeSubjectSection?.courseId || null : courseId || null,
-        section_id: deliveryMode === "subject_combination" ? activeSubjectSection?.id : undefined,
-        subject_name: deliveryMode === "subject_combination" ? activeSubjectSection?.name : singleSubjectName || undefined,
+        course_id:
+          deliveryMode === "subject_combination"
+            ? activeSubjectSection?.courseId || null
+            : courseId || null,
+        section_id:
+          deliveryMode === "subject_combination"
+            ? activeSubjectSection?.id
+            : undefined,
+        subject_name:
+          deliveryMode === "subject_combination"
+            ? activeSubjectSection?.name
+            : singleSubjectName || undefined,
         options: [
           { id: `o${Date.now()}_1`, option_text: "", is_correct: true },
-          { id: `o${Date.now()}_2`, option_text: "", is_correct: false }
-        ]
-      }
+          { id: `o${Date.now()}_2`, option_text: "", is_correct: false },
+        ],
+      },
     ]);
-    setBuilderActionMessage("Multiple-choice question added and ready to edit.");
+    setBuilderActionMessage(
+      "Multiple-choice question added and ready to edit.",
+    );
     setLastAddedQuestionId(id);
   };
 
@@ -628,47 +983,81 @@ export function MockBuilderClient({ token }: { token: string }) {
         question_type: "theory",
         question_text: "",
         marks: 10,
-        course_id: deliveryMode === "subject_combination" ? activeSubjectSection?.courseId || null : courseId || null,
-        section_id: deliveryMode === "subject_combination" ? activeSubjectSection?.id : undefined,
-        subject_name: deliveryMode === "subject_combination" ? activeSubjectSection?.name : singleSubjectName || undefined,
+        course_id:
+          deliveryMode === "subject_combination"
+            ? activeSubjectSection?.courseId || null
+            : courseId || null,
+        section_id:
+          deliveryMode === "subject_combination"
+            ? activeSubjectSection?.id
+            : undefined,
+        subject_name:
+          deliveryMode === "subject_combination"
+            ? activeSubjectSection?.name
+            : singleSubjectName || undefined,
         options: [],
-        grading_rubric: ""
-      }
+        grading_rubric: "",
+      },
     ]);
     setBuilderActionMessage("Theory question added and ready to edit.");
     setLastAddedQuestionId(id);
   };
 
-  const toggleBankQuestion = (question: BankQuestion, selected: boolean, bankName: string) => {
-    const targetSection = deliveryMode === "subject_combination" ? subjectSections.find((section) => section.id === resolvedActiveSubjectCourseId) : null;
+  const toggleBankQuestion = (
+    question: BankQuestion,
+    selected: boolean,
+    bankName: string,
+  ) => {
+    const targetSection =
+      deliveryMode === "subject_combination"
+        ? subjectSections.find(
+            (section) => section.id === resolvedActiveSubjectCourseId,
+          )
+        : null;
     if (deliveryMode === "subject_combination" && !targetSection) {
       toast.error("Open a subject section before adding bank questions");
       return;
     }
     const targetSectionId = targetSection?.id;
     if (selected) {
-      setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.id || item.sectionId !== targetSectionId));
+      setSelectedBankQuestions((current) =>
+        current.filter(
+          (item) =>
+            item.questionId !== question.id ||
+            item.sectionId !== targetSectionId,
+        ),
+      );
       setBuilderActionMessage("Question removed from this mock.");
       return;
     }
-    setSelectedBankQuestions((current) => [...current, {
-      questionId: question.id,
-      questionVersionId: question.current_version.id,
-      questionText: question.current_version.plain_text,
-      questionType: question.question_type,
-      marks: question.current_version.marks,
-      bankName,
-      courseId: centreAccessEnabled ? targetSection?.courseId || question.course_id || null : null,
-      sectionId: targetSectionId,
-      options: (question.current_version.options || []).map((option) => ({ id: option.id, text: option.plain_text, contentBlocks: option.content_blocks || [] })),
-    }]);
+    setSelectedBankQuestions((current) => [
+      ...current,
+      {
+        questionId: question.id,
+        questionVersionId: question.current_version.id,
+        questionText: question.current_version.plain_text,
+        questionType: question.question_type,
+        marks: question.current_version.marks,
+        bankName,
+        courseId: centreAccessEnabled
+          ? targetSection?.courseId || question.course_id || null
+          : null,
+        sectionId: targetSectionId,
+        options: (question.current_version.options || []).map((option) => ({
+          id: option.id,
+          text: option.plain_text,
+          contentBlocks: option.content_blocks || [],
+        })),
+      },
+    ]);
     setBuilderActionMessage("Question added from the bank.");
   };
 
   const updateQuestion = (id: string, updates: Partial<QuestionState>) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, ...updates } : q));
+    setQuestions(
+      questions.map((q) => (q.id === id ? { ...q, ...updates } : q)),
+    );
   };
-
 
   const confirmRemoveSubject = (id: string) => {
     setSubjectToDelete(id);
@@ -676,14 +1065,28 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const executeRemoveSubject = () => {
     if (!subjectToDelete) return;
-    setSubjectSections(current => current.filter(s => s.id !== subjectToDelete));
+    setSubjectSections((current) =>
+      current.filter((s) => s.id !== subjectToDelete),
+    );
     // Never quietly strand questions in an invisible "unassigned" limbo.
     // Removing a section removes its locally-added content as one explicit
     // operation; the confirmation describes that consequence.
-    setQuestions(current => current.filter(q => q.section_id !== subjectToDelete));
-    setSelectedBankQuestions(current => current.filter(q => q.sectionId !== subjectToDelete));
-    setDocumentImportSummaries(current => { const next = { ...current }; delete next[subjectToDelete]; return next; });
-    setImportProgressBySubject(current => { const next = { ...current }; delete next[subjectToDelete]; return next; });
+    setQuestions((current) =>
+      current.filter((q) => q.section_id !== subjectToDelete),
+    );
+    setSelectedBankQuestions((current) =>
+      current.filter((q) => q.sectionId !== subjectToDelete),
+    );
+    setDocumentImportSummaries((current) => {
+      const next = { ...current };
+      delete next[subjectToDelete];
+      return next;
+    });
+    setImportProgressBySubject((current) => {
+      const next = { ...current };
+      delete next[subjectToDelete];
+      return next;
+    });
     setSubjectToDelete(null);
   };
 
@@ -693,16 +1096,17 @@ export function MockBuilderClient({ token }: { token: string }) {
 
   const executeRemoveQuestion = () => {
     if (questionToDelete) {
-      setQuestions(questions.filter(q => q.id !== questionToDelete));
+      setQuestions(questions.filter((q) => q.id !== questionToDelete));
       setQuestionToDelete(null);
     }
   };
 
   const downloadTemplate = () => {
-    const csvContent = "Type,Question,Marks,Option 1,Option 2,Option 3,Option 4,Correct Option (1-4),Grading Rubric\n"
-                     + "mcq,What is the powerhouse of the cell?,2,Nucleus,Mitochondria,Ribosome,Membrane,2,\n"
-                     + "theory,Explain cellular respiration,5,,,,,,Key points: ATP oxygen glucose";
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent =
+      "Type,Question,Marks,Option 1,Option 2,Option 3,Option 4,Correct Option (1-4),Grading Rubric\n" +
+      "mcq,What is the powerhouse of the cell?,2,Nucleus,Mitochondria,Ribosome,Membrane,2,\n" +
+      "theory,Explain cellular respiration,5,,,,,,Key points: ATP oxygen glucose";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -717,19 +1121,25 @@ export function MockBuilderClient({ token }: { token: string }) {
     const importSubjectKey = subjectStateKey;
     const importSection = activeSubjectSection;
     const job = newMockImportProgress(file.name);
-    setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: job }));
+    setImportProgressBySubject((current) => ({
+      ...current,
+      [importSubjectKey]: job,
+    }));
     setIsUploading(true);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
         if (importGeneration !== importGenerationRef.current) return;
-        setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "validating", percent: null } }));
+        setImportProgressBySubject((current) => ({
+          ...current,
+          [importSubjectKey]: { ...job, phase: "validating", percent: null },
+        }));
         const parsedQuestions: QuestionState[] = [];
         results.data.forEach((row: any) => {
           const qType = (row.Type || "").toLowerCase().trim();
-          if (qType !== 'mcq' && qType !== 'theory') return;
-          
+          if (qType !== "mcq" && qType !== "theory") return;
+
           const qId = `q${Date.now()}${Math.random()}`;
           const newQ: QuestionState = {
             id: qId,
@@ -737,44 +1147,69 @@ export function MockBuilderClient({ token }: { token: string }) {
             question_text: row.Question || "",
             marks: Number(row.Marks) || 1,
             options: [],
-            grading_rubric: row['Grading Rubric'] || "",
-            course_id: deliveryMode === "subject_combination" ? importSection?.courseId || null : courseId || null,
-            section_id: deliveryMode === "subject_combination" ? importSection?.id : undefined,
-            subject_name: deliveryMode === "subject_combination" ? importSection?.name : singleSubjectName || undefined,
+            grading_rubric: row["Grading Rubric"] || "",
+            course_id:
+              deliveryMode === "subject_combination"
+                ? importSection?.courseId || null
+                : courseId || null,
+            section_id:
+              deliveryMode === "subject_combination"
+                ? importSection?.id
+                : undefined,
+            subject_name:
+              deliveryMode === "subject_combination"
+                ? importSection?.name
+                : singleSubjectName || undefined,
           };
 
-          if (qType === 'mcq') {
-            const correctOptIndex = Number(row['Correct Option (1-4)']) || 1;
+          if (qType === "mcq") {
+            const correctOptIndex = Number(row["Correct Option (1-4)"]) || 1;
             for (let i = 1; i <= 4; i++) {
               const optText = row[`Option ${i}`];
               if (optText) {
                 newQ.options.push({
                   id: `o${Date.now()}${Math.random()}`,
                   option_text: optText,
-                  is_correct: correctOptIndex === i
+                  is_correct: correctOptIndex === i,
                 });
               }
             }
           }
           parsedQuestions.push(newQ);
         });
-        
-        setQuestions(prev => [...prev, ...parsedQuestions]);
-        setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "complete", percent: 100 } }));
+
+        setQuestions((prev) => [...prev, ...parsedQuestions]);
+        setImportProgressBySubject((current) => ({
+          ...current,
+          [importSubjectKey]: { ...job, phase: "complete", percent: 100 },
+        }));
         setIsUploading(false);
         if (parsedQuestions.length > 0) {
-          toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`);
+          toast.success(
+            `Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`,
+          );
         } else {
-          toast.warning("No valid questions found", { description: "Check the CSV headings and question types, then try again." });
+          toast.warning("No valid questions found", {
+            description:
+              "Check the CSV headings and question types, then try again.",
+          });
         }
       },
       error: (error) => {
         if (importGeneration !== importGenerationRef.current) return;
         console.error(error);
-        setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "error", percent: null, message: "The CSV file could not be read." } }));
+        setImportProgressBySubject((current) => ({
+          ...current,
+          [importSubjectKey]: {
+            ...job,
+            phase: "error",
+            percent: null,
+            message: "The CSV file could not be read.",
+          },
+        }));
         toast.error("Could not read the CSV file");
         setIsUploading(false);
-      }
+      },
     });
   };
 
@@ -782,42 +1217,100 @@ export function MockBuilderClient({ token }: { token: string }) {
     const importGeneration = importGenerationRef.current;
     const importSubjectKey = IMPORT_SUMMARY_KEY;
     const job = newMockImportProgress(file.name);
-    setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: job }));
+    setImportProgressBySubject((current) => ({
+      ...current,
+      [importSubjectKey]: job,
+    }));
     setIsUploading(true);
-    setDocumentImportSummaries((current) => { const next = { ...current }; delete next[importSubjectKey]; return next; });
+    setDocumentImportSummaries((current) => {
+      const next = { ...current };
+      delete next[importSubjectKey];
+      return next;
+    });
     try {
       const mammoth = await import("mammoth");
-      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "parsing", percent: null } }));
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/import/document-text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-Import-Job-ID": job.id },
-        body: JSON.stringify({ document_text: result.value, file_name: file.name }),
+      const result = await mammoth.extractRawText({
+        arrayBuffer: await file.arrayBuffer(),
       });
+      setImportProgressBySubject((current) => ({
+        ...current,
+        [importSubjectKey]: { ...job, phase: "parsing", percent: null },
+      }));
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/mocks/import/document-text`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "X-Import-Job-ID": job.id,
+          },
+          body: JSON.stringify({
+            document_text: result.value,
+            file_name: file.name,
+          }),
+        },
+      );
       const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(importErrorMessage(body, "Word document"));
+      if (!response.ok)
+        throw new Error(importErrorMessage(body, "Word document"));
       if (importGeneration !== importGenerationRef.current) return;
-      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "validating", percent: null } }));
+      setImportProgressBySubject((current) => ({
+        ...current,
+        [importSubjectKey]: { ...job, phase: "validating", percent: null },
+      }));
       const imported = body?.data;
       const parsedQuestions = applyDocumentImport(imported?.questions || []);
       const warnings = imported?.warnings || [];
-      setDocumentImportSummaries((current) => ({ ...current, [importSubjectKey]: { pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length } }));
-      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "complete", percent: 100 } }));
+      setDocumentImportSummaries((current) => ({
+        ...current,
+        [importSubjectKey]: {
+          pageCount: imported?.page_count ?? null,
+          warnings,
+          questionCount: parsedQuestions.length,
+        },
+      }));
+      setImportProgressBySubject((current) => ({
+        ...current,
+        [importSubjectKey]: { ...job, phase: "complete", percent: 100 },
+      }));
       if (parsedQuestions.length) {
-        toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
-          description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
-        });
+        toast.success(
+          `Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`,
+          {
+            description: warnings.length
+              ? "Some items need your review before publishing."
+              : "Review the imported questions before publishing.",
+          },
+        );
         showImportedQuestions();
       } else {
-        toast.warning("No questions were found in that Word document", { description: warnings[0] || "Try another document." });
+        toast.warning("No questions were found in that Word document", {
+          description: warnings[0] || "Try another document.",
+        });
       }
     } catch (error) {
       if (importGeneration !== importGenerationRef.current) return;
       console.error("Could not read DOCX", error);
-      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The Word document could not be parsed." } }));
-      toast.error("Could not import that Word document", { description: error instanceof Error ? error.message : "Please try again." });
+      setImportProgressBySubject((current) => ({
+        ...current,
+        [importSubjectKey]: {
+          ...job,
+          phase: "error",
+          percent: null,
+          message:
+            error instanceof Error
+              ? error.message
+              : "The Word document could not be parsed.",
+        },
+      }));
+      toast.error("Could not import that Word document", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     } finally {
-      if (importGeneration === importGenerationRef.current) setIsUploading(false);
+      if (importGeneration === importGenerationRef.current)
+        setIsUploading(false);
     }
   };
 
@@ -825,41 +1318,95 @@ export function MockBuilderClient({ token }: { token: string }) {
     const importGeneration = importGenerationRef.current;
     const importSubjectKey = IMPORT_SUMMARY_KEY;
     const job = newMockImportProgress(file.name);
-    setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "extracting", percent: null, message: "Uploading the PDF, then extracting and parsing it on the server." } }));
+    setImportProgressBySubject((current) => ({
+      ...current,
+      [importSubjectKey]: {
+        ...job,
+        phase: "extracting",
+        percent: null,
+        message:
+          "Uploading the PDF, then extracting and parsing it on the server.",
+      },
+    }));
     setIsUploading(true);
-    setDocumentImportSummaries((current) => { const next = { ...current }; delete next[importSubjectKey]; return next; });
+    setDocumentImportSummaries((current) => {
+      const next = { ...current };
+      delete next[importSubjectKey];
+      return next;
+    });
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/import/pdf`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "X-Import-Job-ID": job.id },
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/mocks/import/pdf`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Import-Job-ID": job.id,
+          },
+          body: formData,
+        },
+      );
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(importErrorMessage(body, "PDF"));
       if (importGeneration !== importGenerationRef.current) return;
-      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "validating", percent: null } }));
+      setImportProgressBySubject((current) => ({
+        ...current,
+        [importSubjectKey]: { ...job, phase: "validating", percent: null },
+      }));
       const imported = body?.data;
       const parsedQuestions = applyDocumentImport(imported?.questions || []);
       const warnings = imported?.warnings || [];
-      setDocumentImportSummaries((current) => ({ ...current, [importSubjectKey]: { pageCount: imported?.page_count ?? null, warnings, questionCount: parsedQuestions.length } }));
-      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "complete", percent: 100 } }));
+      setDocumentImportSummaries((current) => ({
+        ...current,
+        [importSubjectKey]: {
+          pageCount: imported?.page_count ?? null,
+          warnings,
+          questionCount: parsedQuestions.length,
+        },
+      }));
+      setImportProgressBySubject((current) => ({
+        ...current,
+        [importSubjectKey]: { ...job, phase: "complete", percent: 100 },
+      }));
       if (parsedQuestions.length) {
-        toast.success(`Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`, {
-          description: warnings.length ? "Some items need your review before publishing." : "Review the imported questions before publishing.",
-        });
+        toast.success(
+          `Imported ${parsedQuestions.length} question${parsedQuestions.length === 1 ? "" : "s"}`,
+          {
+            description: warnings.length
+              ? "Some items need your review before publishing."
+              : "Review the imported questions before publishing.",
+          },
+        );
         showImportedQuestions();
       } else {
-        toast.warning("No questions were found in that PDF", { description: warnings[0] || "Try another document." });
+        toast.warning("No questions were found in that PDF", {
+          description: warnings[0] || "Try another document.",
+        });
       }
     } catch (error) {
       if (importGeneration !== importGenerationRef.current) return;
       console.error("Could not import PDF", error);
-      setImportProgressBySubject((current) => ({ ...current, [importSubjectKey]: { ...job, phase: "error", percent: null, message: error instanceof Error ? error.message : "The PDF could not be parsed." } }));
-      toast.error("Could not import that PDF", { description: error instanceof Error ? error.message : "Please try again." });
+      setImportProgressBySubject((current) => ({
+        ...current,
+        [importSubjectKey]: {
+          ...job,
+          phase: "error",
+          percent: null,
+          message:
+            error instanceof Error
+              ? error.message
+              : "The PDF could not be parsed.",
+        },
+      }));
+      toast.error("Could not import that PDF", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     } finally {
-      if (importGeneration === importGenerationRef.current) setIsUploading(false);
+      if (importGeneration === importGenerationRef.current)
+        setIsUploading(false);
     }
   };
 
@@ -895,22 +1442,23 @@ export function MockBuilderClient({ token }: { token: string }) {
     if (file) processImportFile(file);
   };
 
-  const getPrePublishReview = () => buildPrePublishReview({
-    title,
-    courseId,
-    audienceScope,
-    accessMode,
-    deliveryMode,
-    questions,
-    selectedBankQuestions,
-    isUntimed,
-    timeLimit,
-    publishMode,
-    publishDate,
-    publishTime,
-    availableFrom,
-    closesAt,
-  });
+  const getPrePublishReview = () =>
+    buildPrePublishReview({
+      title,
+      courseId,
+      audienceScope,
+      accessMode,
+      deliveryMode,
+      questions,
+      selectedBankQuestions,
+      isUntimed,
+      timeLimit,
+      publishMode,
+      publishDate,
+      publishTime,
+      availableFrom,
+      closesAt,
+    });
 
   const requestPublish = () => {
     const review = getPrePublishReview();
@@ -918,33 +1466,66 @@ export function MockBuilderClient({ token }: { token: string }) {
     setIsReviewOpen(true);
   };
 
-  const handleSave = async (shouldPublish: boolean, navigateOnSuccess: boolean = true) => {
+  const handleSave = async (
+    shouldPublish: boolean,
+    navigateOnSuccess: boolean = true,
+  ) => {
     // An unpublished assessment may exist before its delivery is decided. The
     // persisted direct_link scope is an internal standalone-draft marker here;
     // it does not create or expose a share link unless the tutor enables one.
     const effectiveAudienceScope = accessMode ? audienceScope : "direct_link";
-    const hasCentreTarget = effectiveAudienceScope === "combination" || (effectiveAudienceScope === "course" && Boolean(courseId));
-    if (!title || (centreAccessEnabled && programmeOptions.length > 0 && !programmeFilterId) || (centreAccessEnabled && !hasCentreTarget)) {
-      toast.error("Add a mock title and choose a valid centre target");
+    const hasCentreTarget =
+      effectiveAudienceScope === "combination" ||
+      (effectiveAudienceScope === "course" && Boolean(courseId)) ||
+      (effectiveAudienceScope === "programme" && Boolean(programmeFilterId));
+    if (
+      !title ||
+      (!classContext &&
+        centreAccessEnabled &&
+        programmeOptions.length > 0 &&
+        !programmeFilterId) ||
+      (centreAccessEnabled && !hasCentreTarget)
+    ) {
+      toast.error(
+        classContext
+          ? "Add a quiz title before continuing"
+          : "Add a mock title and choose a valid centre target",
+      );
       return;
     }
-    if (deliveryMode === "subject_combination" && questions.some((question) => !question.section_id)) {
+    if (
+      deliveryMode === "subject_combination" &&
+      questions.some((question) => !question.section_id)
+    ) {
       toast.error("Every multi-subject question must be assigned to a subject");
       return;
     }
-    if (deliveryMode === "subject_combination" && selectedBankQuestions.some((question) => !question.sectionId)) {
-      toast.error("Every multi-subject bank question must be assigned to a subject");
+    if (
+      deliveryMode === "subject_combination" &&
+      selectedBankQuestions.some((question) => !question.sectionId)
+    ) {
+      toast.error(
+        "Every multi-subject bank question must be assigned to a subject",
+      );
       return;
     }
-    if (deliveryMode === "subject_combination" && (accessMode === "centre" || accessMode === "both") && subjectSections.some((section) => !section.courseId)) {
-      toast.error("Match every subject to a centre subject, or choose direct-link access only");
+    if (
+      deliveryMode === "subject_combination" &&
+      (accessMode === "centre" || accessMode === "both") &&
+      subjectSections.some((section) => !section.courseId)
+    ) {
+      toast.error(
+        "Match every subject to a centre subject, or choose direct-link access only",
+      );
       return;
     }
 
     if (shouldPublish) {
       const review = getPrePublishReview();
       if (review.errors.length) {
-        toast.error("Finish the pre-publish checks", { description: review.errors[0] });
+        toast.error("Finish the pre-publish checks", {
+          description: review.errors[0],
+        });
         return;
       }
     }
@@ -952,21 +1533,28 @@ export function MockBuilderClient({ token }: { token: string }) {
     setIsSaving(true);
     try {
       let mockId = editMockId;
-      const finalPublishAt = publishMode === "scheduled" && publishDate && publishTime 
-        ? new Date(`${publishDate}T${publishTime}:00`).toISOString()
-        : null;
+      const finalPublishAt =
+        publishMode === "scheduled" && publishDate && publishTime
+          ? new Date(`${publishDate}T${publishTime}:00`).toISOString()
+          : null;
 
       const payload = {
         title,
         description,
-        subject_name: deliveryMode === "fixed" ? singleSubjectName || null : null,
-        course_id: effectiveAudienceScope === "course" ? courseId || null : null,
-        programme_id: null,
+        subject_name:
+          deliveryMode === "fixed" ? singleSubjectName || null : null,
+        course_id:
+          effectiveAudienceScope === "course" ? courseId || null : null,
+        programme_id:
+          effectiveAudienceScope === "programme"
+            ? programmeFilterId || null
+            : null,
         audience_scope: effectiveAudienceScope,
         delivery_mode: deliveryMode,
         direct_link_enabled: accessMode === "direct" || accessMode === "both",
         direct_link_access_mode: linkAccessMode,
-        direct_link_price_kobo: linkAccessMode === "paid" ? Math.round(Number(linkPrice) * 100) : 0,
+        direct_link_price_kobo:
+          linkAccessMode === "paid" ? Math.round(Number(linkPrice) * 100) : 0,
         direct_link_slug: linkSlug || null,
         publish_at: finalPublishAt,
         time_limit_minutes: isUntimed ? 0 : timeLimit,
@@ -976,58 +1564,92 @@ export function MockBuilderClient({ token }: { token: string }) {
         max_attempts: maxAttempts,
         pass_mark: passMark,
         result_release_mode: resultReleaseMode,
-        available_from: availableFrom ? new Date(availableFrom).toISOString() : null,
+        available_from: availableFrom
+          ? new Date(availableFrom).toISOString()
+          : null,
         closes_at: closesAt ? new Date(closesAt).toISOString() : null,
       };
 
       if (isEditMode) {
         // 1. Update existing Mock
-        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}`, {
-          method: "PUT",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+        const mockRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
           },
-          body: JSON.stringify(payload)
-        });
+        );
         const mockBody = await mockRes.json().catch(() => null);
-        if (!mockRes.ok) throw new Error(mockBody?.details?.[0] || mockBody?.error || "Failed to update mock");
+        if (!mockRes.ok)
+          throw new Error(
+            mockBody?.details?.[0] ||
+              mockBody?.error ||
+              "Failed to update mock",
+          );
       } else {
         // 1. Create Parent Mock
-        const mockRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+        const mockRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/mocks`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
           },
-          body: JSON.stringify(payload)
-        });
+        );
         const mockBody = await mockRes.json().catch(() => null);
-        if (!mockRes.ok) throw new Error(mockBody?.details?.[0] || mockBody?.error || "Failed to create mock");
+        if (!mockRes.ok)
+          throw new Error(
+            mockBody?.details?.[0] ||
+              mockBody?.error ||
+              "Failed to create mock",
+          );
         mockId = mockBody.data.id;
       }
 
       // 2. Insert/Update Questions
-      const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/questions`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+      const qRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/questions`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ questions }),
         },
-        body: JSON.stringify({ questions })
-      });
+      );
       if (!qRes.ok) {
         const body = await qRes.json().catch(() => null);
-        throw new Error(body?.details?.[0] || body?.error || "Failed to save questions");
+        throw new Error(
+          body?.details?.[0] || body?.error || "Failed to save questions",
+        );
       }
 
-      if (selectedBankQuestions.length > 0 || deliveryMode === "subject_combination") {
-        const assemblyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`, {
-          headers: { "Authorization": `Bearer ${token}` },
-        });
+      if (
+        selectedBankQuestions.length > 0 ||
+        deliveryMode === "subject_combination"
+      ) {
+        const assemblyResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         const assemblyBody = await assemblyResponse.json().catch(() => null);
-        if (!assemblyResponse.ok) throw new Error(assemblyBody?.error || "Could not load the saved questions");
-        const authored = (assemblyBody.data?.sections || []).flatMap((section: any) => section.questions || []);
+        if (!assemblyResponse.ok)
+          throw new Error(
+            assemblyBody?.error || "Could not load the saved questions",
+          );
+        const authored = (assemblyBody.data?.sections || []).flatMap(
+          (section: any) => section.questions || [],
+        );
         const combined = [
           ...authored.map((item: any, index: number) => ({
             question_id: item.question_id,
@@ -1043,119 +1665,226 @@ export function MockBuilderClient({ token }: { token: string }) {
             marks_override: null,
             course_id: item.courseId,
             section_id: item.sectionId || null,
-            subject_name: subjectSections.find((section) => section.id === item.sectionId)?.name || null,
+            subject_name:
+              subjectSections.find((section) => section.id === item.sectionId)
+                ?.name || null,
           })),
         ];
-        const sections = deliveryMode === "subject_combination"
-          ? subjectSections.filter((section) => combined.some((item: any) => item.section_id === section.id)).map((section) => ({
-              title: section.name,
-              course_id: section.courseId,
-              subject_name: section.name,
-              instructions: null,
-              questions: combined.filter((item: any) => item.section_id === section.id).map((item: any) => ({ question_id: item.question_id, question_version_id: item.question_version_id, marks_override: item.marks_override })),
-              rules: [],
-            }))
-          : [{ title: singleSubjectName || "Questions", course_id: courseId || null, subject_name: singleSubjectName || null, instructions: null, questions: combined, rules: [] }];
-        const replaceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({
-            sections,
-          }),
-        });
+        const sections =
+          deliveryMode === "subject_combination"
+            ? subjectSections
+                .filter((section) =>
+                  combined.some((item: any) => item.section_id === section.id),
+                )
+                .map((section) => ({
+                  title: section.name,
+                  course_id: section.courseId,
+                  subject_name: section.name,
+                  instructions: null,
+                  questions: combined
+                    .filter((item: any) => item.section_id === section.id)
+                    .map((item: any) => ({
+                      question_id: item.question_id,
+                      question_version_id: item.question_version_id,
+                      marks_override: item.marks_override,
+                    })),
+                  rules: [],
+                }))
+            : [
+                {
+                  title: singleSubjectName || "Questions",
+                  course_id: courseId || null,
+                  subject_name: singleSubjectName || null,
+                  instructions: null,
+                  questions: combined,
+                  rules: [],
+                },
+              ];
+        const replaceResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              sections,
+            }),
+          },
+        );
         const replaceBody = await replaceResponse.json().catch(() => null);
-        if (!replaceResponse.ok) throw new Error(replaceBody?.details?.[0] || replaceBody?.error || "Could not add bank questions");
+        if (!replaceResponse.ok)
+          throw new Error(
+            replaceBody?.details?.[0] ||
+              replaceBody?.error ||
+              "Could not add bank questions",
+          );
       }
-
-
 
       // 3. Marketplace tutors submit immediately for approval. Marketplace admins
       // publish immediately but public availability can still be scheduled by the
       // configured date/time. Centre-only mocks retain their existing scheduler.
       let publishMessage: string | null = null;
       if (shouldPublish && publishMode === "immediate") {
-        const publishResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/publish`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }
-        });
+        const publishResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/publish`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
         if (!publishResponse.ok) {
           const body = await publishResponse.json().catch(() => null);
           throw new Error(body?.error || "Failed to publish mock");
         }
         const body = await publishResponse.json().catch(() => null);
-        publishMessage = typeof body?.message === "string" ? body.message : null;
+        publishMessage =
+          typeof body?.message === "string" ? body.message : null;
       }
 
       // 4. Navigate away
       const publicationMessage = shouldPublish
-        ? (publishMessage || (publishMode === "scheduled" ? "Mock scheduled" : "Mock published"))
+        ? publishMessage ||
+          (publishMode === "scheduled" ? "Mock scheduled" : "Mock published")
         : "Draft saved";
       if (navigateOnSuccess) {
         toast.success(publicationMessage);
-        await queryClient.invalidateQueries({ queryKey: ["mocks"] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["mocks"] }),
+          queryClient.invalidateQueries({
+            queryKey: dashboardQueryKeys.summary,
+          }),
+        ]);
+        if (classContext) {
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: ["class-mocks", classContext.id],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["class-insights", classContext.id],
+            }),
+          ]);
+        }
         startNavigationProgress();
-        router.push("/dashboard/mocks");
+        router.push(
+          classContext
+            ? `/dashboard/classes/${classContext.id}?tab=assessments`
+            : "/dashboard/mocks",
+        );
       } else {
         if (!isEditMode && mockId) {
-          window.history.replaceState(null, "", `/dashboard/mocks/${mockId}/edit`);
+          window.history.replaceState(
+            null,
+            "",
+            `/dashboard/mocks/${mockId}/edit`,
+          );
         }
         return mockId;
       }
     } catch (err) {
       console.error(err);
-      toast.error("Could not save the mock", { description: err instanceof Error ? err.message : "Please try again." });
+      toast.error("Could not save the mock", {
+        description: err instanceof Error ? err.message : "Please try again.",
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
   const isMultiSubject = deliveryMode === "subject_combination";
-  const visibleQuestions = isMultiSubject && resolvedActiveSubjectCourseId
-    ? questions.filter((question) => resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? !question.section_id : question.section_id === resolvedActiveSubjectCourseId)
-    : questions;
-  const visibleBankQuestions = isMultiSubject && resolvedActiveSubjectCourseId
-    ? selectedBankQuestions.filter((question) => question.sectionId === resolvedActiveSubjectCourseId)
-    : selectedBankQuestions;
-  const unassignedQuestionCount = questions.filter((question) => !question.section_id).length;
-  const workflowSteps: Array<{ id: BuilderStep; label: string; icon: string }> = [
-    { id: "setup", label: "Quiz details", icon: "edit_note" },
-    { id: "questions", label: "Questions", icon: "quiz" },
-    { id: "settings", label: "Share & publish", icon: "tune" },
-    { id: "review", label: "Review", icon: "fact_check" },
-  ];
-  const currentStepIndex = Math.max(0, workflowSteps.findIndex((step) => step.id === builderStep));
+  const visibleQuestions =
+    isMultiSubject && resolvedActiveSubjectCourseId
+      ? questions.filter((question) =>
+          resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID
+            ? !question.section_id
+            : question.section_id === resolvedActiveSubjectCourseId,
+        )
+      : questions;
+  const visibleBankQuestions =
+    isMultiSubject && resolvedActiveSubjectCourseId
+      ? selectedBankQuestions.filter(
+          (question) => question.sectionId === resolvedActiveSubjectCourseId,
+        )
+      : selectedBankQuestions;
+  const unassignedQuestionCount = questions.filter(
+    (question) => !question.section_id,
+  ).length;
+  const workflowSteps: Array<{ id: BuilderStep; label: string; icon: string }> =
+    [
+      { id: "setup", label: "Upload", icon: "upload_file" },
+      { id: "questions", label: "Review", icon: "fact_check" },
+      { id: "settings", label: "Publish", icon: "publish" },
+    ];
+  const currentStepIndex = Math.max(
+    0,
+    workflowSteps.findIndex((step) => step.id === builderStep),
+  );
   const moveStep = (direction: -1 | 1) => {
     const target = workflowSteps[currentStepIndex + direction];
     if (!target) return;
-    if (direction === 1 && builderStep === "setup") {
+    if (direction === 1 && builderStep === "setup" && !classContext) {
       if (!title.trim()) {
         toast.error("Give this mock a title before continuing");
         return;
       }
     }
-    if (direction === 1 && builderStep === "questions" && questions.length + selectedBankQuestions.length === 0) {
+    if (
+      direction === 1 &&
+      builderStep === "questions" &&
+      questions.length + selectedBankQuestions.length === 0
+    ) {
       toast.error("Add at least one question before continuing");
       return;
     }
     setBuilderStep(target.id);
-    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    window.requestAnimationFrame(() =>
+      window.scrollTo({ top: 0, behavior: "smooth" }),
+    );
   };
   const draftPreviewQuestions: DraftPreviewQuestion[] = [
     ...questions.map((question) => {
-      const linkedCourse = courses.find((course) => course.id === question.course_id);
-      return { id: question.id, subject: linkedCourse ? mockCourseLabel(linkedCourse) : question.subject_name || "Questions", text: question.question_text, marks: question.marks, type: question.question_type, contentBlocks: question.content_blocks, options: question.options.map((option) => ({ id: option.id, text: option.option_text, contentBlocks: option.content_blocks })) };
+      const linkedCourse = courses.find(
+        (course) => course.id === question.course_id,
+      );
+      return {
+        id: question.id,
+        subject: linkedCourse
+          ? mockCourseLabel(linkedCourse)
+          : question.subject_name || "Questions",
+        text: question.question_text,
+        marks: question.marks,
+        type: question.question_type,
+        contentBlocks: question.content_blocks,
+        options: question.options.map((option) => ({
+          id: option.id,
+          text: option.option_text,
+          contentBlocks: option.content_blocks,
+        })),
+      };
     }),
     ...selectedBankQuestions.map((question) => {
-      const linkedCourse = courses.find((course) => course.id === question.courseId);
-      return { id: question.questionId, subject: linkedCourse ? mockCourseLabel(linkedCourse) : "Questions", text: question.questionText, marks: question.marks, type: question.questionType, options: question.options };
+      const linkedCourse = courses.find(
+        (course) => course.id === question.courseId,
+      );
+      return {
+        id: question.questionId,
+        subject: linkedCourse ? mockCourseLabel(linkedCourse) : "Questions",
+        text: question.questionText,
+        marks: question.marks,
+        type: question.questionType,
+        options: question.options,
+      };
     }),
   ];
 
   if (isLoading) {
-    return <div className="p-8 text-center text-[#474551]">Loading builder...</div>;
+    return (
+      <div className="p-8 text-center text-[#474551]">Loading builder...</div>
+    );
   }
 
   return (
@@ -1166,40 +1895,70 @@ export function MockBuilderClient({ token }: { token: string }) {
             <span className="material-symbols-outlined text-[20px]">lock</span>
             Published mock
           </p>
-          <p className="text-[13px] mt-1">This version has already been given to students, so its questions and settings are locked to keep their results fair.</p>
+          <p className="text-[13px] mt-1">
+            This version has already been given to students, so its questions
+            and settings are locked to keep their results fair.
+          </p>
         </div>
       )}
 
-            {subjectToDelete && (
+      {subjectToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
           <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#ba1a1a]">warning</span>
+              <span className="material-symbols-outlined text-[#ba1a1a]">
+                warning
+              </span>
               Delete Subject?
             </h3>
-            <p className="text-[14px] text-[#474551] mb-6">This removes the subject and its questions from this unsaved mock. This cannot be undone.</p>
+            <p className="text-[14px] text-[#474551] mb-6">
+              This removes the subject and its questions from this unsaved mock.
+              This cannot be undone.
+            </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setSubjectToDelete(null)} className="px-4 py-2 text-[14px] font-medium text-[#474551] hover:bg-gray-100 rounded transition-colors cursor-pointer">Cancel</button>
-              <button onClick={executeRemoveSubject} className="px-4 py-2 text-[14px] font-medium text-white bg-[#ba1a1a] hover:bg-[#931515] rounded transition-colors cursor-pointer">Delete</button>
+              <button
+                onClick={() => setSubjectToDelete(null)}
+                className="px-4 py-2 text-[14px] font-medium text-[#474551] hover:bg-gray-100 rounded transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeRemoveSubject}
+                className="px-4 py-2 text-[14px] font-medium text-white bg-[#ba1a1a] hover:bg-[#931515] rounded transition-colors cursor-pointer"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
       )}
-            {setupChangeToConfirm && (
+      {setupChangeToConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
           <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#ba1a1a]">warning</span>
+              <span className="material-symbols-outlined text-[#ba1a1a]">
+                warning
+              </span>
               Change setup?
             </h3>
             <p className="text-[14px] text-[#474551] mb-6">
-              {setupChangeToConfirm.type === "access" 
-                ? "Changing your audience will reset your selected subjects. Are you sure?" 
+              {setupChangeToConfirm.type === "access"
+                ? "Changing your audience will reset your selected subjects. Are you sure?"
                 : "Changing to single-subject will combine all questions into one subject. Are you sure?"}
             </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setSetupChangeToConfirm(null)} className="px-4 py-2 text-[14px] font-medium text-[#474551] hover:bg-gray-100 rounded transition-colors cursor-pointer">Cancel</button>
-              <button onClick={confirmSetupChange} className="px-4 py-2 text-[14px] font-medium text-white bg-[#ba1a1a] hover:bg-[#931515] rounded transition-colors cursor-pointer">Confirm change</button>
+              <button
+                onClick={() => setSetupChangeToConfirm(null)}
+                className="px-4 py-2 text-[14px] font-medium text-[#474551] hover:bg-gray-100 rounded transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSetupChange}
+                className="px-4 py-2 text-[14px] font-medium text-white bg-[#ba1a1a] hover:bg-[#931515] rounded transition-colors cursor-pointer"
+              >
+                Confirm change
+              </button>
             </div>
           </div>
         </div>
@@ -1209,19 +1968,24 @@ export function MockBuilderClient({ token }: { token: string }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
           <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#ba1a1a]">warning</span>
+              <span className="material-symbols-outlined text-[#ba1a1a]">
+                warning
+              </span>
               Delete Question?
             </h3>
-            <p className="text-[14px] text-[#474551] mb-6">Are you sure you want to delete this question? This action cannot be undone.</p>
+            <p className="text-[14px] text-[#474551] mb-6">
+              Are you sure you want to delete this question? This action cannot
+              be undone.
+            </p>
             <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setQuestionToDelete(null)} 
+              <button
+                onClick={() => setQuestionToDelete(null)}
                 className="px-4 py-2 text-[14px] font-medium text-[#474551] hover:bg-gray-100 rounded transition-colors cursor-pointer"
               >
                 Cancel
               </button>
-              <button 
-                onClick={executeRemoveQuestion} 
+              <button
+                onClick={executeRemoveQuestion}
                 className="px-4 py-2 text-[14px] font-medium text-white bg-[#ba1a1a] hover:bg-[#931515] rounded transition-colors cursor-pointer"
               >
                 Delete
@@ -1236,64 +2000,160 @@ export function MockBuilderClient({ token }: { token: string }) {
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C26627]">Before you publish</p>
-                <h3 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Review this mock</h3>
-                <p className="mt-2 text-sm leading-6 text-[#474551]">Check the questions and settings below. Imported content is still editable after this review.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C26627]">
+                  Before you publish
+                </p>
+                <h3 className="mt-1 text-2xl font-bold text-[#1b1c1c]">
+                  Review this mock
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[#474551]">
+                  Check the questions and settings below. Imported content is
+                  still editable after this review.
+                </p>
               </div>
-              <button type="button" onClick={() => setIsReviewOpen(false)} className="rounded p-1 text-[#787582] hover:bg-[#f5f3f2]" aria-label="Close review">
+              <button
+                type="button"
+                onClick={() => setIsReviewOpen(false)}
+                className="rounded p-1 text-[#787582] hover:bg-[#f5f3f2]"
+                aria-label="Close review"
+              >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Questions</p><p className="mt-1 text-lg font-bold text-[#1b1c1c]">{questions.length + selectedBankQuestions.length}</p></div>
-              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Audience</p><p className="mt-1 text-sm font-bold text-[#1b1c1c]">{audienceSummary}</p></div>
-              <div className="rounded-lg bg-[#f8f6ff] p-4"><p className="text-xs text-[#787582]">Timing</p><p className="mt-1 text-sm font-bold text-[#1b1c1c]">{isUntimed ? "Untimed" : `${timeLimit} minutes`}</p></div>
+              <div className="rounded-lg bg-[#f8f6ff] p-4">
+                <p className="text-xs text-[#787582]">Questions</p>
+                <p className="mt-1 text-lg font-bold text-[#1b1c1c]">
+                  {questions.length + selectedBankQuestions.length}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#f8f6ff] p-4">
+                <p className="text-xs text-[#787582]">Audience</p>
+                <p className="mt-1 text-sm font-bold text-[#1b1c1c]">
+                  {audienceSummary}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#f8f6ff] p-4">
+                <p className="text-xs text-[#787582]">Timing</p>
+                <p className="mt-1 text-sm font-bold text-[#1b1c1c]">
+                  {isUntimed ? "Untimed" : `${timeLimit} minutes`}
+                </p>
+              </div>
             </div>
 
             {publishReview.errors.length > 0 && (
               <div className="mt-5 rounded-lg border border-[#f0b6b6] bg-[#fff4f2] p-4">
-                <p className="font-semibold text-[#ba1a1a]">Fix these before publishing</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-5 text-[#7f1d1d]">{publishReview.errors.map((error) => <li key={error}>{error}</li>)}</ul>
+                <p className="font-semibold text-[#ba1a1a]">
+                  Fix these before publishing
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-5 text-[#7f1d1d]">
+                  {publishReview.errors.map((error) => (
+                    <li key={error}>{error}</li>
+                  ))}
+                </ul>
               </div>
             )}
             {publishReview.warnings.length > 0 && (
               <div className="mt-5 rounded-lg border border-[#e8d7a5] bg-[#fffaf0] p-4">
-                <p className="font-semibold text-[#7a4b00]">Please check these items</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-5 text-[#7a4b00]">{publishReview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+                <p className="font-semibold text-[#7a4b00]">
+                  Please check these items
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-5 text-[#7a4b00]">
+                  {publishReview.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
               </div>
             )}
-            {publishReview.errors.length === 0 && publishReview.warnings.length === 0 && (
-              <div className="mt-5 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 text-sm text-[#166534]">The mock passed the pre-publish checks. You can still edit it after closing this review.</div>
-            )}
+            {publishReview.errors.length === 0 &&
+              publishReview.warnings.length === 0 && (
+                <div className="mt-5 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 text-sm text-[#166534]">
+                  The mock passed the pre-publish checks. You can still edit it
+                  after closing this review.
+                </div>
+              )}
             <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-[#e4e2e1] pt-5">
-              <button type="button" onClick={() => setIsReviewOpen(false)} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#474551] hover:bg-[#f8f6ff]">Go back and edit</button>
-              <button type="button" disabled={publishReview.errors.length > 0 || isSaving} onClick={() => void handleSave(true)} aria-busy={isSaving} className="inline-flex min-w-44 items-center justify-center gap-2 rounded-lg bg-[#C26627] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-65">
-                {isSaving && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
-                {isSaving ? (publishMode === "scheduled" ? "Scheduling mock…" : "Publishing mock…") : (publishMode === "scheduled" ? "Confirm schedule" : "Confirm and publish")}
+              <button
+                type="button"
+                onClick={() => setIsReviewOpen(false)}
+                className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#474551] hover:bg-[#f8f6ff]"
+              >
+                Go back and edit
+              </button>
+              <button
+                type="button"
+                disabled={publishReview.errors.length > 0 || isSaving}
+                onClick={() => void handleSave(true)}
+                aria-busy={isSaving}
+                className="inline-flex min-w-44 items-center justify-center gap-2 rounded-lg bg-[#C26627] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-65"
+              >
+                {isSaving && (
+                  <span className="material-symbols-outlined animate-spin text-[18px]">
+                    progress_activity
+                  </span>
+                )}
+                {isSaving
+                  ? publishMode === "scheduled"
+                    ? "Scheduling mock…"
+                    : "Publishing mock…"
+                  : publishMode === "scheduled"
+                    ? "Confirm schedule"
+                    : "Confirm and publish"}
               </button>
             </div>
           </div>
         </div>
       )}
-      {isPreviewOpen && <MockDraftPreview title={title} description={description} questions={draftPreviewQuestions} onClose={() => setIsPreviewOpen(false)} />}
+      {isPreviewOpen && (
+        <MockDraftPreview
+          title={title}
+          description={description}
+          questions={draftPreviewQuestions}
+          onClose={() => setIsPreviewOpen(false)}
+        />
+      )}
 
       {/* Page Header */}
-      <DashboardPageHeader
-        className="mb-8 border-b border-[#e4e2e1] pb-4"
-        title={isEditMode ? "Edit Mock" : "Build a Mock"}
-        description="Choose how the mock should work, then add or reuse questions for your students."
-        actions={<>
-          <button type="button" onClick={() => setIsPreviewOpen(true)} disabled={draftPreviewQuestions.length === 0} className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#2e2877] disabled:cursor-not-allowed disabled:opacity-45"><span className="material-symbols-outlined text-[18px]">preview</span>Preview as student</button>
-          <button 
-            onClick={() => handleSave(false)}
-            disabled={isReadOnly || isSaving}
-            className="px-6 py-2.5 border border-[#c8c5d2] text-[#1b1c1c] font-semibold text-sm rounded hover:bg-gray-50 hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? "Saving…" : "Save as Draft"}
-          </button>
-        </>}
-      />
+      {!embedded && (
+        <DashboardPageHeader
+          className="mb-8 border-b border-[#e4e2e1] pb-4"
+          title={
+            isEditMode
+              ? "Edit Mock"
+              : classContext
+                ? `Create assessment · ${classContext.name}`
+                : "Build a Mock"
+          }
+          description={
+            classContext
+              ? "It is only for students in this class."
+              : "Choose how the mock should work, then add or reuse questions for your students."
+          }
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(true)}
+                disabled={draftPreviewQuestions.length === 0}
+                className="inline-flex items-center gap-2 rounded border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold text-[#2e2877] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  preview
+                </span>
+                Preview as student
+              </button>
+              <button
+                onClick={() => handleSave(false)}
+                disabled={isReadOnly || isSaving}
+                className="px-6 py-2.5 border border-[#c8c5d2] text-[#1b1c1c] font-semibold text-sm rounded hover:bg-gray-50 hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? "Saving…" : "Save as Draft"}
+              </button>
+            </>
+          }
+        />
+      )}
 
       <MockBuilderStepProgress
         steps={workflowSteps}
@@ -1304,599 +2164,1991 @@ export function MockBuilderClient({ token }: { token: string }) {
       />
 
       {builderStep === "questions" && (
-      <div className={isMultiSubject ? "grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]" : "mx-auto max-w-5xl"}>
-        {isMultiSubject && (
-          <aside className="lg:sticky lg:top-36">
-            <div className="rounded-xl border border-[#e4e2e1] bg-white p-3 shadow-sm">
-              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold text-[#1b1c1c]">Subjects</h3><span className="text-xs text-[#787582]">{selectedSubjectCourses.length}</span></div>
-              <label className="block lg:hidden"><span className="sr-only">Active subject</span><select value={resolvedActiveSubjectCourseId} onChange={(event) => setActiveSubjectCourseId(event.target.value)} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm">{selectedSubjectCourses.map((course) => <option key={course.id} value={course.id}>{course.label}</option>)}{unassignedQuestionCount > 0 && <option value={UNASSIGNED_SUBJECT_ID}>Needs subject ({unassignedQuestionCount})</option>}</select></label>
-              <div className="hidden space-y-1 lg:block">{selectedSubjectCourses.map((course) => { const count = questions.filter((question) => question.section_id === course.id).length + selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => setActiveSubjectCourseId(course.id)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === course.id ? "bg-[#eeeafe] font-semibold text-[#2e2877]" : "text-[#474551] hover:bg-[#f7f5f3]"}`}><span className="truncate">{course.label}</span><span className="ml-2 text-xs">{count}</span></button> })}{unassignedQuestionCount > 0 && <button type="button" onClick={() => setActiveSubjectCourseId(UNASSIGNED_SUBJECT_ID)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "bg-[#fff1ed] font-semibold text-[#9b2f20]" : "text-[#9b2f20] hover:bg-[#fff8f5]"}`}><span>Needs subject</span><span className="text-xs">{unassignedQuestionCount}</span></button>}</div>
-            </div>
-          </aside>
-        )}
-        <div className="flex min-w-0 flex-col gap-6">
-          {isMultiSubject && <div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject paper</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">{resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "Needs review" : selectedSubjectCourses.find((course) => course.id === resolvedActiveSubjectCourseId)?.label || "Build your paper"}</h2><p className="mt-1 text-sm text-[#716c76]">{resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "Assign these questions before publishing." : selectedSubjectCourses.length ? "Review this subject, or import another complete paper." : "Import one complete paper and Kanvise will create subject sections for the questions it recognises."}</p></div>}
-          {documentImportSummary && (
-            <div ref={importedQuestionsRef} tabIndex={-1} className="scroll-mt-6 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 outline-none">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div aria-live="polite">
-                  <p className="font-semibold text-[#166534]">AI import complete · {documentImportSummary.questionCount} question{documentImportSummary.questionCount === 1 ? "" : "s"} ready to review</p>
-                  <p className="mt-1 text-xs leading-5 text-[#35654a]">{documentImportSummary.pageCount ? `${documentImportSummary.pageCount} pages read. ` : ""}{documentImportSummary.warnings.length ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? " needs" : "s need"} attention.` : "Check the imported questions before publishing."}</p>
+        <div
+          className={
+            isMultiSubject
+              ? "grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]"
+              : "mx-auto max-w-5xl"
+          }
+        >
+          {isMultiSubject && (
+            <aside className="lg:sticky lg:top-36">
+              <div className="rounded-xl border border-[#e4e2e1] bg-white p-3 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-[#1b1c1c]">
+                    Subjects
+                  </h3>
+                  <span className="text-xs text-[#787582]">
+                    {selectedSubjectCourses.length}
+                  </span>
                 </div>
-                <button type="button" onClick={showImportedQuestions} className="shrink-0 rounded border border-[#8fc7a2] bg-white px-3 py-2 text-xs font-semibold text-[#166534] hover:bg-[#edf8f1]">Review questions</button>
-              </div>
-            </div>
-          )}
-          {!isReadOnly && visibleQuestions.length === 0 && visibleBankQuestions.length === 0 && !showImportPanel && !showBankPicker && (
-            <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
-                <span className="material-symbols-outlined text-[28px]">quiz</span>
-              </div>
-              <h3 className="mt-4 text-xl font-bold text-[#180d62]">Add your first question</h3>
-              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#474551]">Start with a complete paper, write questions yourself, or reuse questions you already trust.</p>
-              <div className="mx-auto mt-6 grid max-w-4xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-4">
-                <button type="button" onClick={handleAddMCQ} className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">checklist</span><strong className="mt-2 block text-sm">Add an MCQ</strong><span className="mt-1 block text-xs text-[#716c76]">Question with answer options.</span></button>
-                <button type="button" onClick={handleAddTheory} className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">edit_note</span><strong className="mt-2 block text-sm">Add theory</strong><span className="mt-1 block text-xs text-[#716c76]">Written answer question.</span></button>
-                <button type="button" onClick={() => setShowImportPanel(true)} className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">upload_file</span><strong className="mt-2 block text-sm">Import a paper</strong><span className="mt-1 block text-xs text-[#716c76]">One PDF or Word file, including multiple subjects.</span></button>
-                <button type="button" onClick={() => setShowBankPicker(true)} className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"><span className="material-symbols-outlined text-[#2e2877]">inventory_2</span><strong className="mt-2 block text-sm">Question bank</strong><span className="mt-1 block text-xs text-[#716c76]">Reuse questions you already trust.</span></button>
-              </div>
-            </div>
-          )}
-          {!isReadOnly && (visibleQuestions.length > 0 || visibleBankQuestions.length > 0) && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
-              <span className="mr-1 text-sm font-semibold text-[#474551]">Add to this mock</span>
-              <button type="button" onClick={handleAddMCQ} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white">+ MCQ</button>
-              <button type="button" onClick={handleAddTheory} className="rounded-lg border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">+ Theory</button>
-              <button type="button" onClick={() => setShowImportPanel((open) => !open)} className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold">Import</button>
-              <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold">Question bank</button>
-              {builderActionMessage && <span role="status" aria-live="polite" className="basis-full pt-1 text-xs font-medium text-[#166534]">{builderActionMessage}</span>}
-            </div>
-          )}
-                    {!isReadOnly && visibleQuestions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
-              <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
-              <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
-                <option value="per_question">Per question</option>
-                <option value="total">Divide total marks</option>
-              </select>
-              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder={bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"} className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
-              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply to {visibleQuestions.length}</button>
-            </div>
-          )}
-          <div className="space-y-6">
-            {visibleBankQuestions.map((question, index) => (
-              <div key={question.questionId} className="rounded-lg border border-[#c8c5d2] bg-[#f8f6ff] p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#2e2877]">
-                      <span className="material-symbols-outlined text-base">inventory_2</span>
-                      From question bank · {question.bankName} · {question.questionType === "mcq" ? "Multiple choice" : "Theory"} · {question.marks} marks{deliveryMode === "subject_combination" ? ` · ${subjectSections.find((section) => section.id === question.sectionId)?.name || "No subject"}` : ""}
-                    </div>
-                    <p className="text-[15px] leading-6 text-[#1b1c1c]">{question.questionText}</p>
-                  </div>
-                  {!isReadOnly && <div className="flex items-center gap-2"><button type="button" onClick={() => { setQuestions((current) => [...current, { id: `copy-${Date.now()}`, question_type: question.questionType, question_text: question.questionText, marks: question.marks, options: question.options.map((option) => ({ id: `copy-${option.id}`, option_text: option.text, is_correct: false, content_blocks: option.contentBlocks })), course_id: question.courseId, section_id: question.sectionId, subject_name: subjectSections.find((section) => section.id === question.sectionId)?.name }]); setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId || item.sectionId !== question.sectionId)); }} className="rounded border border-[#c8c5d2] px-2.5 py-1.5 text-xs font-semibold text-[#2e2877]">Edit a copy</button><button type="button" onClick={() => setSelectedBankQuestions((current) => current.filter((item) => item.questionId !== question.questionId || item.sectionId !== question.sectionId))} className="text-[#787582] hover:text-[#ba1a1a]" aria-label={`Remove bank question ${index + 1}`}><span className="material-symbols-outlined">close</span></button></div>}
-                </div>
-              </div>
-            ))}
-            {visibleQuestions.map((q, idx) => (
-              <div id={`mock-question-${q.id}`} key={q.id} className="group relative scroll-mt-36 rounded-lg border border-[#e4e2e1] bg-white p-4 shadow-sm sm:p-6">
-                
-                <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <span className={`px-2.5 py-0.5 rounded text-[12px] font-bold ${q.question_type === 'mcq' ? 'bg-[#e3dfff] text-[#180d62]' : 'bg-[#ffdbc9] text-[#994704]'}`}>
-                      Q{idx + 1}
-                    </span>
-                    <span className="text-[12px] font-semibold text-[#787582] uppercase tracking-wider">
-                      {q.question_type === 'mcq' ? 'Multiple Choice' : 'Theory / Essay'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="text-[14px] text-[#474551]">Marks:</label>
-                    <input 
-                      type="number" 
-                      disabled={isReadOnly}
-                      value={Number.isFinite(q.marks) ? q.marks : ""}
-                      onChange={(e) => updateQuestion(q.id, { marks: e.target.value === "" ? Number.NaN : Number(e.target.value) })}
-                      className="w-16 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-2 py-1.5 text-center text-[14px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]" 
-                    />
-                    {!isReadOnly && (
-                      <button onClick={() => confirmRemoveQuestion(q.id)} className="text-[#c8c5d2] hover:text-[#ba1a1a] transition-colors cursor-pointer hover:scale-110">
-                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                <label className="block lg:hidden">
+                  <span className="sr-only">Active subject</span>
+                  <select
+                    value={resolvedActiveSubjectCourseId}
+                    onChange={(event) =>
+                      setActiveSubjectCourseId(event.target.value)
+                    }
+                    className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"
+                  >
+                    {selectedSubjectCourses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.label}
+                      </option>
+                    ))}
+                    {unassignedQuestionCount > 0 && (
+                      <option value={UNASSIGNED_SUBJECT_ID}>
+                        Needs subject ({unassignedQuestionCount})
+                      </option>
+                    )}
+                  </select>
+                </label>
+                <div className="hidden space-y-1 lg:block">
+                  {selectedSubjectCourses.map((course) => {
+                    const count =
+                      questions.filter(
+                        (question) => question.section_id === course.id,
+                      ).length +
+                      selectedBankQuestions.filter(
+                        (question) => question.sectionId === course.id,
+                      ).length;
+                    return (
+                      <button
+                        key={course.id}
+                        type="button"
+                        onClick={() => setActiveSubjectCourseId(course.id)}
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === course.id ? "bg-[#eeeafe] font-semibold text-[#2e2877]" : "text-[#474551] hover:bg-[#f7f5f3]"}`}
+                      >
+                        <span className="truncate">{course.label}</span>
+                        <span className="ml-2 text-xs">{count}</span>
                       </button>
+                    );
+                  })}
+                  {unassignedQuestionCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveSubjectCourseId(UNASSIGNED_SUBJECT_ID)
+                      }
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID ? "bg-[#fff1ed] font-semibold text-[#9b2f20]" : "text-[#9b2f20] hover:bg-[#fff8f5]"}`}
+                    >
+                      <span>Needs subject</span>
+                      <span className="text-xs">{unassignedQuestionCount}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </aside>
+          )}
+          <div className="flex min-w-0 flex-col gap-6">
+            {isMultiSubject && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">
+                  {classContext ? "Class subjects" : "Multi-subject paper"}
+                </p>
+                <h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">
+                  {resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID
+                    ? "Needs review"
+                    : selectedSubjectCourses.find(
+                        (course) => course.id === resolvedActiveSubjectCourseId,
+                      )?.label || "Review questions"}
+                </h2>
+                <p className="mt-1 text-sm text-[#716c76]">
+                  {resolvedActiveSubjectCourseId === UNASSIGNED_SUBJECT_ID
+                    ? "Assign these questions before publishing."
+                    : selectedSubjectCourses.length
+                      ? "Review this subject, or import another complete paper."
+                      : "Import one complete paper and Kanvise will create subject sections for the questions it recognises."}
+                </p>
+              </div>
+            )}
+            {documentImportSummary && (
+              <div
+                ref={importedQuestionsRef}
+                tabIndex={-1}
+                className="scroll-mt-6 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 outline-none"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div aria-live="polite">
+                    <p className="font-semibold text-[#166534]">
+                      AI import complete · {documentImportSummary.questionCount}{" "}
+                      question
+                      {documentImportSummary.questionCount === 1 ? "" : "s"}{" "}
+                      ready to review
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#35654a]">
+                      {documentImportSummary.pageCount
+                        ? `${documentImportSummary.pageCount} pages read. `
+                        : ""}
+                      {documentImportSummary.warnings.length
+                        ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? " needs" : "s need"} attention.`
+                        : "Check the imported questions before publishing."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={showImportedQuestions}
+                    className="shrink-0 rounded border border-[#8fc7a2] bg-white px-3 py-2 text-xs font-semibold text-[#166534] hover:bg-[#edf8f1]"
+                  >
+                    Review questions
+                  </button>
+                </div>
+              </div>
+            )}
+            {!isReadOnly &&
+              visibleQuestions.length === 0 &&
+              visibleBankQuestions.length === 0 &&
+              !showImportPanel &&
+              !showBankPicker && (
+                <div className="rounded-lg border border-dashed border-[#c2b59b] bg-white px-6 py-10 text-center shadow-sm">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#2e2877]">
+                    <span className="material-symbols-outlined text-[28px]">
+                      quiz
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-xl font-bold text-[#180d62]">
+                    Add your first question
+                  </h3>
+                  <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#474551]">
+                    Start with a complete paper, write questions yourself, or
+                    reuse questions you already trust.
+                  </p>
+                  <div className="mx-auto mt-6 grid max-w-4xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-4">
+                    <button
+                      type="button"
+                      onClick={handleAddMCQ}
+                      className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"
+                    >
+                      <span className="material-symbols-outlined text-[#2e2877]">
+                        checklist
+                      </span>
+                      <strong className="mt-2 block text-sm">Add an MCQ</strong>
+                      <span className="mt-1 block text-xs text-[#716c76]">
+                        Question with answer options.
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddTheory}
+                      className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"
+                    >
+                      <span className="material-symbols-outlined text-[#2e2877]">
+                        edit_note
+                      </span>
+                      <strong className="mt-2 block text-sm">Add theory</strong>
+                      <span className="mt-1 block text-xs text-[#716c76]">
+                        Written answer question.
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowImportPanel(true)}
+                      className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"
+                    >
+                      <span className="material-symbols-outlined text-[#2e2877]">
+                        upload_file
+                      </span>
+                      <strong className="mt-2 block text-sm">
+                        Import a paper
+                      </strong>
+                      <span className="mt-1 block text-xs text-[#716c76]">
+                        One PDF or Word file, including multiple subjects.
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowBankPicker(true)}
+                      className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"
+                    >
+                      <span className="material-symbols-outlined text-[#2e2877]">
+                        inventory_2
+                      </span>
+                      <strong className="mt-2 block text-sm">
+                        Question bank
+                      </strong>
+                      <span className="mt-1 block text-xs text-[#716c76]">
+                        Reuse questions you already trust.
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            {!isReadOnly &&
+              (visibleQuestions.length > 0 ||
+                visibleBankQuestions.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+                  <span className="mr-1 text-sm font-semibold text-[#474551]">
+                    Add to this mock
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddMCQ}
+                    className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white"
+                  >
+                    + MCQ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddTheory}
+                    className="rounded-lg border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]"
+                  >
+                    + Theory
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportPanel((open) => !open)}
+                    className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold"
+                  >
+                    Import
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBankPicker((open) => !open)}
+                    className="rounded-lg border border-[#c8c5d2] px-3 py-2 text-sm font-semibold"
+                  >
+                    Question bank
+                  </button>
+                  {builderActionMessage && (
+                    <span
+                      role="status"
+                      aria-live="polite"
+                      className="basis-full pt-1 text-xs font-medium text-[#166534]"
+                    >
+                      {builderActionMessage}
+                    </span>
+                  )}
+                </div>
+              )}
+            {!isReadOnly && visibleQuestions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+                <span className="text-sm font-semibold text-[#474551]">
+                  Assign marks:
+                </span>
+                <select
+                  value={bulkMarkMode}
+                  onChange={(e) =>
+                    setBulkMarkMode(e.target.value as "per_question" | "total")
+                  }
+                  className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]"
+                >
+                  <option value="per_question">Per question</option>
+                  <option value="total">Divide total marks</option>
+                </select>
+                <input
+                  type="number"
+                  value={bulkMarks}
+                  onChange={(e) => setBulkMarks(e.target.value)}
+                  placeholder={bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"}
+                  className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]"
+                />
+                <button
+                  type="button"
+                  onClick={applyBulkMarks}
+                  className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]"
+                >
+                  Apply to {visibleQuestions.length}
+                </button>
+              </div>
+            )}
+            <div className="space-y-6">
+              {visibleBankQuestions.map((question, index) => (
+                <div
+                  key={question.questionId}
+                  className="rounded-lg border border-[#c8c5d2] bg-[#f8f6ff] p-5 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#2e2877]">
+                        <span className="material-symbols-outlined text-base">
+                          inventory_2
+                        </span>
+                        From question bank · {question.bankName} ·{" "}
+                        {question.questionType === "mcq"
+                          ? "Multiple choice"
+                          : "Theory"}{" "}
+                        · {question.marks} marks
+                        {deliveryMode === "subject_combination"
+                          ? ` · ${subjectSections.find((section) => section.id === question.sectionId)?.name || "No subject"}`
+                          : ""}
+                      </div>
+                      <p className="text-[15px] leading-6 text-[#1b1c1c]">
+                        {question.questionText}
+                      </p>
+                    </div>
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuestions((current) => [
+                              ...current,
+                              {
+                                id: `copy-${Date.now()}`,
+                                question_type: question.questionType,
+                                question_text: question.questionText,
+                                marks: question.marks,
+                                options: question.options.map((option) => ({
+                                  id: `copy-${option.id}`,
+                                  option_text: option.text,
+                                  is_correct: false,
+                                  content_blocks: option.contentBlocks,
+                                })),
+                                course_id: question.courseId,
+                                section_id: question.sectionId,
+                                subject_name: subjectSections.find(
+                                  (section) =>
+                                    section.id === question.sectionId,
+                                )?.name,
+                              },
+                            ]);
+                            setSelectedBankQuestions((current) =>
+                              current.filter(
+                                (item) =>
+                                  item.questionId !== question.questionId ||
+                                  item.sectionId !== question.sectionId,
+                              ),
+                            );
+                          }}
+                          className="rounded border border-[#c8c5d2] px-2.5 py-1.5 text-xs font-semibold text-[#2e2877]"
+                        >
+                          Edit a copy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedBankQuestions((current) =>
+                              current.filter(
+                                (item) =>
+                                  item.questionId !== question.questionId ||
+                                  item.sectionId !== question.sectionId,
+                              ),
+                            )
+                          }
+                          className="text-[#787582] hover:text-[#ba1a1a]"
+                          aria-label={`Remove bank question ${index + 1}`}
+                        >
+                          <span className="material-symbols-outlined">
+                            close
+                          </span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
-                {isMultiSubject && <label className="mb-4 block text-xs font-semibold text-[#474551]">Subject section<select value={q.section_id || ""} disabled={isReadOnly} onChange={(event) => { const section = subjectSections.find((item) => item.id === event.target.value); updateQuestion(q.id, { section_id: section?.id, course_id: section?.courseId || null, subject_name: section?.name, review_reasons: section ? (q.review_reasons || []).filter((reason) => !reason.startsWith("Add a section for imported subject")) : q.review_reasons }); }} className="mt-1.5 w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#2e2877]"><option value="">Needs subject assignment</option>{selectedSubjectCourses.map((course) => <option key={course.id} value={course.id}>{course.label}</option>)}</select></label>}
-                {(q.source_page || q.review_reasons?.length) && (
-                  <div className="mb-4 rounded-lg border border-[#e8d7a5] bg-[#fffaf0] px-4 py-3 text-xs leading-5 text-[#7a4b00]">
-                    {q.source_page && <p className="font-semibold">Imported from PDF page {q.source_page}.</p>}
-                    {(q.review_reasons || []).map((reason) => <p key={reason}>Review: {reason}</p>)}
-                  </div>
-                )}
-
-                <div>
-                  <textarea 
-                    data-question-text
-                    value={q.question_text}
-                    disabled={isReadOnly}
-                    onChange={(e) => updateQuestion(q.id, { question_text: e.target.value })}
-                    className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[15px] text-[#1b1c1c] outline-none transition-all mb-5 min-h-[100px] resize-y disabled:bg-[#f5f3f2]" 
-                    placeholder="Enter question text here..."
-                  />
-
-                  {q.content_blocks?.length ? (
-                    <div className="mb-5 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#787582]">Formatted content preview</p>
-                      {q.content_blocks.map((block, blockIndex) => (block.type === "equation" || block.type === "chemistry") ? (
-                        <label key={`${q.id}_block_${blockIndex}`} className="mb-3 block text-xs font-semibold text-[#474551]">
-                          {block.type === "equation" ? "Mathematical equation (LaTeX)" : "Chemical formula or reaction (mhchem/LaTeX)"}
-                          <textarea
-                            disabled={isReadOnly}
-                            value={block.latex}
-                            onChange={(event) => updateQuestion(q.id, { content_blocks: q.content_blocks?.map((currentBlock, index) => index === blockIndex ? { ...currentBlock, latex: event.target.value } : currentBlock) })}
-                            className="mt-1.5 min-h-16 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 font-mono text-xs font-normal outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]"
-                          />
-                        </label>
-                      ) : null)}
-                      <QuestionContent plainText={null} blocks={q.content_blocks} />
+              ))}
+              {visibleQuestions.map((q, idx) => (
+                <div
+                  id={`mock-question-${q.id}`}
+                  key={q.id}
+                  className="group relative scroll-mt-36 rounded-lg border border-[#e4e2e1] bg-white p-4 shadow-sm sm:p-6"
+                >
+                  <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span
+                        className={`px-2.5 py-0.5 rounded text-[12px] font-bold ${q.question_type === "mcq" ? "bg-[#e3dfff] text-[#180d62]" : "bg-[#ffdbc9] text-[#994704]"}`}
+                      >
+                        Q{idx + 1}
+                      </span>
+                      <span className="text-[12px] font-semibold text-[#787582] uppercase tracking-wider">
+                        {q.question_type === "mcq"
+                          ? "Multiple Choice"
+                          : "Theory / Essay"}
+                      </span>
                     </div>
-                  ) : null}
-
-                  {q.question_type === 'mcq' && (
-                    <div className="space-y-3">
-                      {q.options.map((opt) => (
-                        <div key={opt.id} className="flex items-center gap-2 sm:gap-4">
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              const newOpts = q.options.map(o => ({ ...o, is_correct: o.id === opt.id }));
-                              updateQuestion(q.id, { options: newOpts });
-                            }}
-                            className="flex shrink-0 items-center justify-center w-5 h-5 rounded-full border-2 transition-all focus:outline-none cursor-pointer hover:border-[#2e2877]"
-                            style={{ 
-                              borderColor: opt.is_correct ? '#2e2877' : '#c8c5d2',
-                            }}
-                          >
-                            {opt.is_correct && <div className="w-2.5 h-2.5 rounded-full bg-[#2e2877]" />}
-                          </button>
-                          
-                          <input
-                            id={`mock-option-${opt.id}`}
-                            type="text" 
-                            disabled={isReadOnly}
-                            value={opt.option_text}
-                            onChange={(e) => {
-                              const newOpts = q.options.map(o => o.id === opt.id ? { ...o, option_text: e.target.value } : o);
-                              updateQuestion(q.id, { options: newOpts });
-                            }}
-                            className={`min-w-0 flex-1 rounded border px-3 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2] sm:px-4 ${opt.is_correct ? 'border-[#2e2877] bg-[#e3dfff]/20' : 'border-[#c8c5d2] bg-white'}`}
-                          />
-                          {opt.content_blocks?.length ? <QuestionContent plainText={null} blocks={opt.content_blocks} /> : null}
-                          <button 
-                            onClick={() => {
-                              const newOpts = q.options.filter(o => o.id !== opt.id);
-                              updateQuestion(q.id, { options: newOpts });
-                            }}
-                            className="text-[#c8c5d2] hover:text-[#474551] transition-colors cursor-pointer hover:scale-110"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">close</span>
-                          </button>
-                        </div>
-                      ))}
+                    <div className="flex items-center gap-3">
+                      <label className="text-[14px] text-[#474551]">
+                        Marks:
+                      </label>
+                      <input
+                        type="number"
+                        disabled={isReadOnly}
+                        value={Number.isFinite(q.marks) ? q.marks : ""}
+                        onChange={(e) =>
+                          updateQuestion(q.id, {
+                            marks:
+                              e.target.value === ""
+                                ? Number.NaN
+                                : Number(e.target.value),
+                          })
+                        }
+                        className="w-16 bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-2 py-1.5 text-center text-[14px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]"
+                      />
                       {!isReadOnly && (
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            const optionId = `o${Date.now()}`;
-                            const newOpts = [...q.options, { id: optionId, option_text: "", is_correct: false }];
-                            updateQuestion(q.id, { options: newOpts });
-                            setBuilderActionMessage(`Answer option ${newOpts.length} added.`);
-                            window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.getElementById(`mock-option-${optionId}`)?.focus()));
-                          }}
-                          className="flex items-center gap-1.5 text-[#2e2877] text-[14px] font-semibold mt-4 hover:underline ml-9 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                        <button
+                          onClick={() => confirmRemoveQuestion(q.id)}
+                          className="text-[#c8c5d2] hover:text-[#ba1a1a] transition-colors cursor-pointer hover:scale-110"
                         >
-                          <span className="material-symbols-outlined text-[18px]">add</span> Add Option
+                          <span className="material-symbols-outlined text-[20px]">
+                            delete
+                          </span>
                         </button>
                       )}
                     </div>
-                  )}
-
-                  
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Bulk Import Section */}
-          {!isReadOnly && (
-            <>
-              {showImportPanel && <div className="order-2">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[16px] font-semibold text-[#1b1c1c]">Import a prepared set</h3>
-                  <button 
-                    onClick={downloadTemplate} 
-                    className="text-[#2e2877] text-[13px] font-medium hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">download</span> Download CSV Template
-                  </button>
-                </div>
-                
-                <label 
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`w-full border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-colors cursor-pointer group ${
-                    isDragging 
-                      ? 'border-[#2e2877] bg-[#f5f3f2]' 
-                      : 'border-[#c8c5d2] bg-white hover:bg-[#f5f3f2]'
-                  }`}
-                >
-                  <input type="file" accept=".pdf,.csv,.docx,application/pdf" className="hidden" onChange={handleFileInput} />
-                  
-                  {importProgress ? (
-                    <div className="w-full max-w-xl">
-                      <MockImportProgressCard progress={importProgress} />
-                      {!isUploading && <p className="mt-3 text-center text-xs font-semibold text-[#2e2877]">Choose another document</p>}
-                    </div>
-                  ) : (
-                    <>
-                      <div className="h-14 w-14 rounded-full bg-[#f0eded] flex items-center justify-center mb-3 group-hover:bg-[#2e2877] group-hover:text-white transition-colors">
-                        <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
-                      </div>
-                      <span className="text-[15px] font-semibold text-[#1b1c1c] mb-1">Click to upload or drag and drop</span>
-                      <span className="text-[13px] font-normal text-[#474551]">PDF, CSV or Word (.docx) file</span>
-                      <span className="mt-2 max-w-lg text-center text-[12px] leading-5 text-[#787582]">
-                        PDFs and Word files are read with AI and returned as an editable draft. Review every imported question before publishing. CSV remains available for spreadsheet imports.
-                      </span>
-                    </>
-                  )}
-                </label>
-                {documentImportSummary && (
-                  <div className="mt-3 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-3 text-xs leading-5 text-[#474551]">
-                    <p className="font-semibold text-[#2e2877]">Document draft imported{documentImportSummary.pageCount ? ` · ${documentImportSummary.pageCount} pages` : ""}</p>
-                    <p className="mt-1">{documentImportSummary.questionCount} question{documentImportSummary.questionCount === 1 ? "" : "s"} added above. {documentImportSummary.warnings.length ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? "" : "s"} need attention.` : "No provider warnings were returned."}</p>
                   </div>
-                )}
-              </div>}
-
-              {showBankPicker && <div className="order-2 rounded-lg border border-[#c8c5d2] bg-white p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div><h3 className="font-semibold text-[#1b1c1c]">Reuse questions from your bank</h3><p className="mt-1 text-sm text-[#474551]">Choose prepared questions instead of typing them again. <span className="font-semibold text-[#2e2877]">{selectedBankQuestions.length} selected.</span></p></div>
-                  <button type="button" onClick={() => setShowBankPicker((open) => !open)} className="rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">{showBankPicker ? "Close question bank" : "Choose questions"}</button>
-                </div>
-                {showBankPicker && (
-                  <div className="mt-5 border-t border-[#e4e2e1] pt-5">
-                    {banks.length === 0 ? <p className="text-sm text-[#474551]">Create a question bank first, then return here to reuse its questions.</p> : <>
-                      <select value={selectedBankId} onChange={(event) => setSelectedBankId(event.target.value)} className="mb-4 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm">
-                        {banks.map((bank) => <option key={bank.id} value={bank.id}>{bank.name} ({bank.question_count})</option>)}
+                  {isMultiSubject && (
+                    <label className="mb-4 block text-xs font-semibold text-[#474551]">
+                      Subject section
+                      <select
+                        value={q.section_id || ""}
+                        disabled={isReadOnly}
+                        onChange={(event) => {
+                          const section = subjectSections.find(
+                            (item) => item.id === event.target.value,
+                          );
+                          updateQuestion(q.id, {
+                            section_id: section?.id,
+                            course_id: section?.courseId || null,
+                            subject_name: section?.name,
+                            review_reasons: section
+                              ? (q.review_reasons || []).filter(
+                                  (reason) =>
+                                    !reason.startsWith(
+                                      "Add a section for imported subject",
+                                    ),
+                                )
+                              : q.review_reasons,
+                          });
+                        }}
+                        className="mt-1.5 w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#2e2877]"
+                      >
+                        <option value="">Needs subject assignment</option>
+                        {selectedSubjectCourses.map((course) => (
+                          <option key={course.id} value={course.id}>
+                            {course.label}
+                          </option>
+                        ))}
                       </select>
-                      {isLoadingBankQuestions ? <p className="py-6 text-center text-sm text-[#474551]">Loading questions…</p> : (
-                        <div className="max-h-80 space-y-2 overflow-y-auto">
-                          {bankQuestions.map((question) => {
-                            const selected = selectedBankQuestions.some((item) => item.questionId === question.id && (deliveryMode !== "subject_combination" || item.sectionId === resolvedActiveSubjectCourseId));
-                            const bankName = banks.find((bank) => bank.id === selectedBankId)?.name || "Question bank";
-                            return <label key={question.id} className="flex cursor-pointer items-start gap-3 rounded border border-[#e4e2e1] p-3 hover:bg-[#f8f6ff]">
-                              <input type="checkbox" checked={selected} onChange={() => toggleBankQuestion(question, selected, bankName)} className="mt-1" />
-                              <span><span className="block text-sm text-[#1b1c1c]">{question.current_version.plain_text}</span><span className="mt-1 block text-xs text-[#787582]">{question.question_type === "mcq" ? "Multiple choice" : "Theory"} · {question.current_version.marks} marks</span></span>
-                            </label>;
-                          })}
-                        </div>
+                    </label>
+                  )}
+                  {(q.source_page || q.review_reasons?.length) && (
+                    <div className="mb-4 rounded-lg border border-[#e8d7a5] bg-[#fffaf0] px-4 py-3 text-xs leading-5 text-[#7a4b00]">
+                      {q.source_page && (
+                        <p className="font-semibold">
+                          Imported from PDF page {q.source_page}.
+                        </p>
                       )}
-                    </>}
+                      {(q.review_reasons || []).map((reason) => (
+                        <p key={reason}>Review: {reason}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  <div>
+                    <textarea
+                      data-question-text
+                      value={q.question_text}
+                      disabled={isReadOnly}
+                      onChange={(e) =>
+                        updateQuestion(q.id, { question_text: e.target.value })
+                      }
+                      className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-4 py-3 text-[15px] text-[#1b1c1c] outline-none transition-all mb-5 min-h-[100px] resize-y disabled:bg-[#f5f3f2]"
+                      placeholder="Enter question text here..."
+                    />
+
+                    {q.content_blocks?.length ? (
+                      <div className="mb-5 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-4">
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#787582]">
+                          Formatted content preview
+                        </p>
+                        {q.content_blocks.map((block, blockIndex) =>
+                          block.type === "equation" ||
+                          block.type === "chemistry" ? (
+                            <label
+                              key={`${q.id}_block_${blockIndex}`}
+                              className="mb-3 block text-xs font-semibold text-[#474551]"
+                            >
+                              {block.type === "equation"
+                                ? "Mathematical equation (LaTeX)"
+                                : "Chemical formula or reaction (mhchem/LaTeX)"}
+                              <textarea
+                                disabled={isReadOnly}
+                                value={block.latex}
+                                onChange={(event) =>
+                                  updateQuestion(q.id, {
+                                    content_blocks: q.content_blocks?.map(
+                                      (currentBlock, index) =>
+                                        index === blockIndex
+                                          ? {
+                                              ...currentBlock,
+                                              latex: event.target.value,
+                                            }
+                                          : currentBlock,
+                                    ),
+                                  })
+                                }
+                                className="mt-1.5 min-h-16 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 font-mono text-xs font-normal outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]"
+                              />
+                            </label>
+                          ) : null,
+                        )}
+                        <QuestionContent
+                          plainText={null}
+                          blocks={q.content_blocks}
+                        />
+                      </div>
+                    ) : null}
+
+                    {q.question_type === "mcq" && (
+                      <div className="space-y-3">
+                        {q.options.map((opt) => (
+                          <div
+                            key={opt.id}
+                            className="flex items-center gap-2 sm:gap-4"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newOpts = q.options.map((o) => ({
+                                  ...o,
+                                  is_correct: o.id === opt.id,
+                                }));
+                                updateQuestion(q.id, { options: newOpts });
+                              }}
+                              className="flex shrink-0 items-center justify-center w-5 h-5 rounded-full border-2 transition-all focus:outline-none cursor-pointer hover:border-[#2e2877]"
+                              style={{
+                                borderColor: opt.is_correct
+                                  ? "#2e2877"
+                                  : "#c8c5d2",
+                              }}
+                            >
+                              {opt.is_correct && (
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#2e2877]" />
+                              )}
+                            </button>
+
+                            <input
+                              id={`mock-option-${opt.id}`}
+                              type="text"
+                              disabled={isReadOnly}
+                              value={opt.option_text}
+                              onChange={(e) => {
+                                const newOpts = q.options.map((o) =>
+                                  o.id === opt.id
+                                    ? { ...o, option_text: e.target.value }
+                                    : o,
+                                );
+                                updateQuestion(q.id, { options: newOpts });
+                              }}
+                              className={`min-w-0 flex-1 rounded border px-3 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2] sm:px-4 ${opt.is_correct ? "border-[#2e2877] bg-[#e3dfff]/20" : "border-[#c8c5d2] bg-white"}`}
+                            />
+                            {opt.content_blocks?.length ? (
+                              <QuestionContent
+                                plainText={null}
+                                blocks={opt.content_blocks}
+                              />
+                            ) : null}
+                            <button
+                              onClick={() => {
+                                const newOpts = q.options.filter(
+                                  (o) => o.id !== opt.id,
+                                );
+                                updateQuestion(q.id, { options: newOpts });
+                              }}
+                              className="text-[#c8c5d2] hover:text-[#474551] transition-colors cursor-pointer hover:scale-110"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                close
+                              </span>
+                            </button>
+                          </div>
+                        ))}
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const optionId = `o${Date.now()}`;
+                              const newOpts = [
+                                ...q.options,
+                                {
+                                  id: optionId,
+                                  option_text: "",
+                                  is_correct: false,
+                                },
+                              ];
+                              updateQuestion(q.id, { options: newOpts });
+                              setBuilderActionMessage(
+                                `Answer option ${newOpts.length} added.`,
+                              );
+                              window.requestAnimationFrame(() =>
+                                window.requestAnimationFrame(() =>
+                                  document
+                                    .getElementById(`mock-option-${optionId}`)
+                                    ?.focus(),
+                                ),
+                              );
+                            }}
+                            className="flex items-center gap-1.5 text-[#2e2877] text-[14px] font-semibold mt-4 hover:underline ml-9 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">
+                              add
+                            </span>{" "}
+                            Add Option
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bulk Import Section */}
+            {!isReadOnly && (
+              <>
+                {showImportPanel && (
+                  <div className="order-2">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[16px] font-semibold text-[#1b1c1c]">
+                        Import a prepared set
+                      </h3>
+                      <button
+                        onClick={downloadTemplate}
+                        className="text-[#2e2877] text-[13px] font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          download
+                        </span>{" "}
+                        Download CSV Template
+                      </button>
+                    </div>
+
+                    <label
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`w-full border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-colors cursor-pointer group ${
+                        isDragging
+                          ? "border-[#2e2877] bg-[#f5f3f2]"
+                          : "border-[#c8c5d2] bg-white hover:bg-[#f5f3f2]"
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        accept=".pdf,.csv,.docx,application/pdf"
+                        className="hidden"
+                        onChange={handleFileInput}
+                      />
+
+                      {importProgress ? (
+                        <div className="w-full max-w-xl">
+                          <MockImportProgressCard progress={importProgress} />
+                          {!isUploading && (
+                            <p className="mt-3 text-center text-xs font-semibold text-[#2e2877]">
+                              Choose another document
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="h-14 w-14 rounded-full bg-[#f0eded] flex items-center justify-center mb-3 group-hover:bg-[#2e2877] group-hover:text-white transition-colors">
+                            <span className="material-symbols-outlined text-[28px]">
+                              cloud_upload
+                            </span>
+                          </div>
+                          <span className="text-[15px] font-semibold text-[#1b1c1c] mb-1">
+                            Click to upload or drag and drop
+                          </span>
+                          <span className="text-[13px] font-normal text-[#474551]">
+                            PDF, CSV or Word (.docx) file
+                          </span>
+                          <span className="mt-2 max-w-lg text-center text-[12px] leading-5 text-[#787582]">
+                            PDFs and Word files are read with AI and returned as
+                            an editable draft. Review every imported question
+                            before publishing. CSV remains available for
+                            spreadsheet imports.
+                          </span>
+                        </>
+                      )}
+                    </label>
+                    {documentImportSummary && (
+                      <div className="mt-3 rounded-lg border border-[#d9d3ef] bg-[#faf9ff] p-3 text-xs leading-5 text-[#474551]">
+                        <p className="font-semibold text-[#2e2877]">
+                          Document draft imported
+                          {documentImportSummary.pageCount
+                            ? ` · ${documentImportSummary.pageCount} pages`
+                            : ""}
+                        </p>
+                        <p className="mt-1">
+                          {documentImportSummary.questionCount} question
+                          {documentImportSummary.questionCount === 1 ? "" : "s"}{" "}
+                          added above.{" "}
+                          {documentImportSummary.warnings.length
+                            ? `${documentImportSummary.warnings.length} item${documentImportSummary.warnings.length === 1 ? "" : "s"} need attention.`
+                            : "No provider warnings were returned."}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>}
-            </>
-          )}
+
+                {showBankPicker && (
+                  <div className="order-2 rounded-lg border border-[#c8c5d2] bg-white p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="font-semibold text-[#1b1c1c]">
+                          Reuse questions from your bank
+                        </h3>
+                        <p className="mt-1 text-sm text-[#474551]">
+                          Choose prepared questions instead of typing them
+                          again.{" "}
+                          <span className="font-semibold text-[#2e2877]">
+                            {selectedBankQuestions.length} selected.
+                          </span>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowBankPicker((open) => !open)}
+                        className="rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        {showBankPicker
+                          ? "Close question bank"
+                          : "Choose questions"}
+                      </button>
+                    </div>
+                    {showBankPicker && (
+                      <div className="mt-5 border-t border-[#e4e2e1] pt-5">
+                        {banks.length === 0 ? (
+                          <p className="text-sm text-[#474551]">
+                            Create a question bank first, then return here to
+                            reuse its questions.
+                          </p>
+                        ) : (
+                          <>
+                            <select
+                              value={selectedBankId}
+                              onChange={(event) =>
+                                setSelectedBankId(event.target.value)
+                              }
+                              className="mb-4 w-full rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm"
+                            >
+                              {banks.map((bank) => (
+                                <option key={bank.id} value={bank.id}>
+                                  {bank.name} ({bank.question_count})
+                                </option>
+                              ))}
+                            </select>
+                            {isLoadingBankQuestions ? (
+                              <p className="py-6 text-center text-sm text-[#474551]">
+                                Loading questions…
+                              </p>
+                            ) : (
+                              <div className="max-h-80 space-y-2 overflow-y-auto">
+                                {bankQuestions.map((question) => {
+                                  const selected = selectedBankQuestions.some(
+                                    (item) =>
+                                      item.questionId === question.id &&
+                                      (deliveryMode !== "subject_combination" ||
+                                        item.sectionId ===
+                                          resolvedActiveSubjectCourseId),
+                                  );
+                                  const bankName =
+                                    banks.find(
+                                      (bank) => bank.id === selectedBankId,
+                                    )?.name || "Question bank";
+                                  return (
+                                    <label
+                                      key={question.id}
+                                      className="flex cursor-pointer items-start gap-3 rounded border border-[#e4e2e1] p-3 hover:bg-[#f8f6ff]"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={() =>
+                                          toggleBankQuestion(
+                                            question,
+                                            selected,
+                                            bankName,
+                                          )
+                                        }
+                                        className="mt-1"
+                                      />
+                                      <span>
+                                        <span className="block text-sm text-[#1b1c1c]">
+                                          {question.current_version.plain_text}
+                                        </span>
+                                        <span className="mt-1 block text-xs text-[#787582]">
+                                          {question.question_type === "mcq"
+                                            ? "Multiple choice"
+                                            : "Theory"}{" "}
+                                          · {question.current_version.marks}{" "}
+                                          marks
+                                        </span>
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
       )}
 
       {builderStep === "subjects" && isMultiSubject && (
         <section className="mx-auto max-w-4xl">
           <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Multi-subject structure</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Subject sections</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Choose the exact subjects for this mock, then add or import each subject’s questions separately.</p></div></div>
-            <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"><p className="text-sm font-semibold text-[#1b1c1c]">Add a subject section</p><div className="mt-2">{centreAccessEnabled ? <select value="" disabled={isReadOnly || availableSubjectCourses.length === 0} onChange={(event) => { const course = availableSubjectCourses.find((item) => item.id === event.target.value); if (!course) return; const section = { id: `section-${Date.now()}`, name: course.name, courseId: course.id }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setBuilderActionMessage(`${course.name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"><option value="">Choose a programme subject</option>{availableSubjectCourses.map((course) => <option key={course.id} value={course.id}>{mockCourseLabel(course)}</option>)}</select> : <div className="flex gap-2"><input value={newSubjectName} onChange={(event) => setNewSubjectName(event.target.value)} placeholder="e.g. Use of English" className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm" /><button type="button" disabled={isReadOnly || !newSubjectName.trim()} onClick={() => { const name = newSubjectName.trim(); const section = { id: `section-${Date.now()}`, name, courseId: null }; setSubjectSections((current) => [...current, section]); setActiveSubjectCourseId(section.id); setNewSubjectName(""); setBuilderActionMessage(`${name} added. ${subjectSections.length + 1} subjects in this mock.`); }} className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button></div>}</div>{builderActionMessage && <p role="status" aria-live="polite" className="mt-3 text-xs font-medium text-green-700">{builderActionMessage}</p>}<p className="mt-2 text-xs leading-5 text-[#716c76]">{centreAccessEnabled ? "Only students enrolled in every selected programme subject will receive this mock." : "Add the subjects in this exam yourself. They are not connected to your centre."}</p></div>
-            {selectedSubjectCourses.length === 0 ? <div className="mt-4 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center text-sm text-[#716c76]">Add the subjects for this mock—for example, English, Physics, Chemistry and Biology.</div>
-                            : <div className="mt-4 grid gap-3 sm:grid-cols-2">{selectedSubjectCourses.map((course, index) => { 
-                  const authoredCount = questions.filter((question) => question.section_id === course.id).length; 
-                  const bankCount = selectedBankQuestions.filter((question) => question.sectionId === course.id).length; 
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">
+                  Multi-subject structure
+                </p>
+                <h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">
+                  Subject sections
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">
+                  Choose the exact subjects for this mock, then add or import
+                  each subject’s questions separately.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+              <p className="text-sm font-semibold text-[#1b1c1c]">
+                Add a subject section
+              </p>
+              <div className="mt-2">
+                {centreAccessEnabled ? (
+                  <select
+                    value=""
+                    disabled={
+                      isReadOnly || availableSubjectCourses.length === 0
+                    }
+                    onChange={(event) => {
+                      const course = availableSubjectCourses.find(
+                        (item) => item.id === event.target.value,
+                      );
+                      if (!course) return;
+                      const section = {
+                        id: `section-${Date.now()}`,
+                        name: course.name,
+                        courseId: course.id,
+                      };
+                      setSubjectSections((current) => [...current, section]);
+                      setActiveSubjectCourseId(section.id);
+                      setBuilderActionMessage(
+                        `${course.name} added. ${subjectSections.length + 1} subjects in this mock.`,
+                      );
+                    }}
+                    className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"
+                  >
+                    <option value="">Choose a programme subject</option>
+                    {availableSubjectCourses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {mockCourseLabel(course)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      value={newSubjectName}
+                      onChange={(event) =>
+                        setNewSubjectName(event.target.value)
+                      }
+                      placeholder="e.g. Use of English"
+                      className="min-w-0 flex-1 rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"
+                    />
+                    <button
+                      type="button"
+                      disabled={isReadOnly || !newSubjectName.trim()}
+                      onClick={() => {
+                        const name = newSubjectName.trim();
+                        const section = {
+                          id: `section-${Date.now()}`,
+                          name,
+                          courseId: null,
+                        };
+                        setSubjectSections((current) => [...current, section]);
+                        setActiveSubjectCourseId(section.id);
+                        setNewSubjectName("");
+                        setBuilderActionMessage(
+                          `${name} added. ${subjectSections.length + 1} subjects in this mock.`,
+                        );
+                      }}
+                      className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+              </div>
+              {builderActionMessage && (
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="mt-3 text-xs font-medium text-green-700"
+                >
+                  {builderActionMessage}
+                </p>
+              )}
+              <p className="mt-2 text-xs leading-5 text-[#716c76]">
+                {centreAccessEnabled
+                  ? "Only students enrolled in every selected programme subject will receive this mock."
+                  : "Add the subjects in this exam yourself. They are not connected to your centre."}
+              </p>
+            </div>
+            {selectedSubjectCourses.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center text-sm text-[#716c76]">
+                Add the subjects for this mock—for example, English, Physics,
+                Chemistry and Biology.
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {selectedSubjectCourses.map((course, index) => {
+                  const authoredCount = questions.filter(
+                    (question) => question.section_id === course.id,
+                  ).length;
+                  const bankCount = selectedBankQuestions.filter(
+                    (question) => question.sectionId === course.id,
+                  ).length;
                   return (
-                    <div key={course.id} className="group relative rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]">
+                    <div
+                      key={course.id}
+                      className="group relative rounded-xl border border-[#ded8d3] p-4 text-left hover:border-[#2e2877] hover:bg-[#faf9ff]"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs font-semibold text-[#994704]">Subject {index + 1}</span>
+                          <span className="text-xs font-semibold text-[#994704]">
+                            Subject {index + 1}
+                          </span>
                           {!centreAccessEnabled && !isReadOnly ? (
-                            <input type="text" className="mt-1 block w-full text-base font-bold text-[#1b1c1c] border-b border-dashed border-[#c8c5d2] bg-transparent focus:outline-none focus:border-[#2e2877]" value={course.label} onChange={(e) => setSubjectSections(current => current.map(s => s.id === course.id ? { ...s, name: e.target.value } : s))} />
+                            <input
+                              type="text"
+                              className="mt-1 block w-full text-base font-bold text-[#1b1c1c] border-b border-dashed border-[#c8c5d2] bg-transparent focus:outline-none focus:border-[#2e2877]"
+                              value={course.label}
+                              onChange={(e) =>
+                                setSubjectSections((current) =>
+                                  current.map((s) =>
+                                    s.id === course.id
+                                      ? { ...s, name: e.target.value }
+                                      : s,
+                                  ),
+                                )
+                              }
+                            />
                           ) : (
-                            <strong className="mt-1 block truncate text-base text-[#1b1c1c]">{course.label}</strong>
+                            <strong className="mt-1 block truncate text-base text-[#1b1c1c]">
+                              {course.label}
+                            </strong>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">{authoredCount + bankCount} qs</span>
-                          {!isReadOnly && <button type="button" onClick={() => {
-                            confirmRemoveSubject(course.id)
-                          }} className="text-[#c8c5d2] hover:text-[#ba1a1a] p-1 rounded hover:bg-white"><span className="material-symbols-outlined text-sm">delete</span></button>}
+                          <span className="rounded-full bg-[#f0edff] px-2.5 py-1 text-xs font-semibold text-[#2e2877]">
+                            {authoredCount + bankCount} qs
+                          </span>
+                          {!isReadOnly && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                confirmRemoveSubject(course.id);
+                              }}
+                              className="text-[#c8c5d2] hover:text-[#ba1a1a] p-1 rounded hover:bg-white"
+                            >
+                              <span className="material-symbols-outlined text-sm">
+                                delete
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <button type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877] hover:underline">Open question builder <span className="material-symbols-outlined text-base">arrow_forward</span></button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveSubjectCourseId(course.id);
+                          setBuilderStep("questions");
+                        }}
+                        className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2e2877] hover:underline"
+                      >
+                        Open question builder{" "}
+                        <span className="material-symbols-outlined text-base">
+                          arrow_forward
+                        </span>
+                      </button>
                     </div>
-                  ); 
-                })}</div>}
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {builderStep === "review" && (
         <section className="mx-auto max-w-4xl space-y-5">
-          <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7"><p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">Final check</p><h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">Review and publish</h2><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Format</p><p className="mt-1 font-semibold">{isMultiSubject ? "Multi-subject / JAMB" : "Single subject"}</p></div><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Questions</p><p className="mt-1 font-semibold">{questions.length + selectedBankQuestions.length}</p></div><div className="rounded-xl bg-[#f8f6ff] p-4"><p className="text-xs text-[#716c76]">Time</p><p className="mt-1 font-semibold">{isUntimed ? "Untimed" : `${timeLimit} minutes`}</p></div></div>
-            {isMultiSubject && <div className="mt-6"><h3 className="text-sm font-semibold">Subject readiness</h3><div className="mt-3 divide-y divide-[#eeeae6] rounded-xl border border-[#e4e2e1]">{selectedSubjectCourses.map((course) => { const count = questions.filter((question) => question.section_id === course.id).length + selectedBankQuestions.filter((question) => question.sectionId === course.id).length; return <button key={course.id} type="button" onClick={() => { setActiveSubjectCourseId(course.id); setBuilderStep("questions"); }} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-[#faf9ff]"><span className="font-medium">{course.label}</span><span className={count ? "text-[#267045]" : "text-[#a43522]"}>{count ? `${count} questions` : "No questions"}</span></button> })}</div></div>}
-            <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm text-[#474551] sm:flex-row sm:items-center sm:justify-between"><span><strong className="block text-[#2e2877]">Check the student experience</strong>Preview subject switching, question navigation, and mobile layout without creating an attempt or result.</span><button type="button" onClick={() => setIsPreviewOpen(true)} disabled={draftPreviewQuestions.length === 0} className="shrink-0 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 font-semibold text-[#2e2877] disabled:opacity-45">Preview as student</button></div>
-            <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#eeeae6] pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={() => setBuilderStep("questions")} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold">Continue editing</button><button type="button" disabled={isReadOnly || isSaving} onClick={requestPublish} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{isSaving && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}{isSaving ? "Publishing mock…" : publishMode === "scheduled" ? "Review schedule" : "Review and publish"}</button></div>
+          <div className="rounded-2xl border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#994704]">
+              Final check
+            </p>
+            <h2 className="mt-1 text-2xl font-bold text-[#1b1c1c]">
+              Review and publish
+            </h2>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-[#f8f6ff] p-4">
+                <p className="text-xs text-[#716c76]">Format</p>
+                <p className="mt-1 font-semibold">
+                  {isMultiSubject ? "Multi-subject / JAMB" : "Single subject"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-[#f8f6ff] p-4">
+                <p className="text-xs text-[#716c76]">Questions</p>
+                <p className="mt-1 font-semibold">
+                  {questions.length + selectedBankQuestions.length}
+                </p>
+              </div>
+              <div className="rounded-xl bg-[#f8f6ff] p-4">
+                <p className="text-xs text-[#716c76]">Time</p>
+                <p className="mt-1 font-semibold">
+                  {isUntimed ? "Untimed" : `${timeLimit} minutes`}
+                </p>
+              </div>
+            </div>
+            {isMultiSubject && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold">Subject readiness</h3>
+                <div className="mt-3 divide-y divide-[#eeeae6] rounded-xl border border-[#e4e2e1]">
+                  {selectedSubjectCourses.map((course) => {
+                    const count =
+                      questions.filter(
+                        (question) => question.section_id === course.id,
+                      ).length +
+                      selectedBankQuestions.filter(
+                        (question) => question.sectionId === course.id,
+                      ).length;
+                    return (
+                      <button
+                        key={course.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveSubjectCourseId(course.id);
+                          setBuilderStep("questions");
+                        }}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-[#faf9ff]"
+                      >
+                        <span className="font-medium">{course.label}</span>
+                        <span
+                          className={
+                            count ? "text-[#267045]" : "text-[#a43522]"
+                          }
+                        >
+                          {count ? `${count} questions` : "No questions"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm text-[#474551] sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                <strong className="block text-[#2e2877]">
+                  Check the student experience
+                </strong>
+                Preview subject switching, question navigation, and mobile
+                layout without creating an attempt or result.
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(true)}
+                disabled={draftPreviewQuestions.length === 0}
+                className="shrink-0 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 font-semibold text-[#2e2877] disabled:opacity-45"
+              >
+                Preview as student
+              </button>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#eeeae6] pt-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setBuilderStep("questions")}
+                className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold"
+              >
+                Continue editing
+              </button>
+              <button
+                type="button"
+                disabled={isReadOnly || isSaving}
+                onClick={requestPublish}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {isSaving && (
+                  <span className="material-symbols-outlined animate-spin text-[18px]">
+                    progress_activity
+                  </span>
+                )}
+                {isSaving
+                  ? "Publishing mock…"
+                  : publishMode === "scheduled"
+                    ? "Review schedule"
+                    : "Review and publish"}
+              </button>
+            </div>
           </div>
         </section>
       )}
 
-        {(builderStep === "setup" || builderStep === "settings") && <div className="mx-auto max-w-3xl">
-          <div className="rounded-lg border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
-            <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-6 flex items-center gap-3 border-b border-[#e4e2e1] pb-4">
-              <span className="material-symbols-outlined text-[#2e2877]">tune</span>
-              {builderStep === "setup" ? "Mock setup" : "Share & publish"}
-            </h3>
-            
-                    {!isReadOnly && visibleQuestions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
-              <span className="text-sm font-semibold text-[#474551]">Assign marks:</span>
-              <select value={bulkMarkMode} onChange={(e) => setBulkMarkMode(e.target.value as "per_question" | "total")} className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]">
-                <option value="per_question">Per question</option>
-                <option value="total">Divide total marks</option>
-              </select>
-              <input type="number" value={bulkMarks} onChange={(e) => setBulkMarks(e.target.value)} placeholder={bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"} className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]" />
-              <button type="button" onClick={applyBulkMarks} className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]">Apply to {visibleQuestions.length}</button>
+      {(builderStep === "setup" || builderStep === "settings") && (
+        <div className={classContext ? "w-full" : "mx-auto max-w-3xl"}>
+          {builderStep === "setup" && (
+            <section className="mb-6 rounded-2xl border border-[#d9d3ef] bg-white p-5 shadow-sm sm:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
+                    {classContext
+                      ? `Quiz for ${classContext.name}`
+                      : "Create mock exam"}
+                  </p>
+                  <h2 className="mt-1 text-2xl font-bold text-[#180d62]">
+                    {classContext ? "Create quiz" : "Upload your mock paper"}
+                  </h2>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#716c76]">
+                    Upload one PDF or DOCX and Kanvise will extract the
+                    questions, detect subjects and prepare an editable draft.
+                  </p>
+                </div>
+                <span className="material-symbols-outlined hidden text-4xl text-[#5146c7] sm:block">
+                  upload_file
+                </span>
+              </div>
+              <input
+                ref={referenceImportInputRef}
+                type="file"
+                accept=".pdf,.docx,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) processImportFile(file);
+                  event.currentTarget.value = "";
+                }}
+              />
+              <button
+                type="button"
+                disabled={isReadOnly || isUploading}
+                onClick={() => referenceImportInputRef.current?.click()}
+                className="mt-6 flex min-h-44 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#b8b0f2] bg-[#faf9ff] px-5 text-center transition hover:border-[#5146c7] hover:bg-[#f5f3ff] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined text-4xl text-[#5146c7]">
+                  cloud_upload
+                </span>
+                <span className="mt-3 font-bold text-[#2e2877]">
+                  Choose file
+                </span>
+                <span className="mt-1 text-sm text-[#716c76]">
+                  or drag and drop · PDF or DOCX up to 20 MB
+                </span>
+              </button>
+              {importProgress && (
+                <div
+                  className="mt-5 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"
+                  aria-live="polite"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[#27242d]">
+                      {importProgress.phase === "complete"
+                        ? "Parsing complete"
+                        : "Parsing document…"}
+                    </p>
+                    <span className="text-xs text-[#716c76]">
+                      {importProgress.fileName}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2 text-xs text-[#474551] sm:grid-cols-2">
+                    <span
+                      className={
+                        importProgress.phase !== "reading"
+                          ? "text-[#166534]"
+                          : ""
+                      }
+                    >
+                      ✓ Questions extracted
+                    </span>
+                    <span
+                      className={subjectSections.length ? "text-[#166534]" : ""}
+                    >
+                      ✓ Subjects detected{" "}
+                      {subjectSections.length
+                        ? `(${subjectSections.length})`
+                        : ""}
+                    </span>
+                    <span>✓ Answer options found</span>
+                    <span>✓ Answer keys identified</span>
+                  </div>
+                </div>
+              )}
+              {(subjectSections.length > 0 || classContext?.courses.length) && (
+                <div className="mt-5 rounded-xl border border-[#e4e2e1] bg-white">
+                  <div className="flex items-center justify-between border-b border-[#e4e2e1] px-4 py-3">
+                    <h3 className="text-sm font-bold text-[#27242d]">
+                      {questions.length
+                        ? "Detected subjects"
+                        : "Subjects in this class"}
+                    </h3>
+                    <span className="text-xs text-[#716c76]">
+                      {questions.length} questions
+                    </span>
+                  </div>
+                  <div className="divide-y divide-[#eeeae6]">
+                    {(subjectSections.length
+                      ? subjectSections
+                      : (classContext?.courses || []).map((subject) => ({
+                          id: subject.id,
+                          name: subject.name,
+                          courseId: subject.id,
+                        }))
+                    ).map((section) => (
+                      <div
+                        key={section.id}
+                        className="flex items-center justify-between gap-3 px-4 py-3"
+                      >
+                        <span className="font-semibold text-[#27242d]">
+                          {section.name}
+                        </span>
+                        <span className="rounded-full bg-[#e8f4ec] px-2.5 py-1 text-xs font-bold text-[#1e6234]">
+                          {
+                            questions.filter(
+                              (question) =>
+                                question.section_id === section.id ||
+                                question.course_id === section.courseId,
+                            ).length
+                          }{" "}
+                          questions
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {questions.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setBuilderStep("questions")}
+                      className="m-4 inline-flex w-[calc(100%-2rem)] items-center justify-center rounded-lg bg-[#5146c7] px-4 py-3 text-sm font-bold text-white hover:bg-[#4036ae]"
+                    >
+                      Review &amp; edit
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setBuilderStep("questions")}
+                      className="m-4 inline-flex w-[calc(100%-2rem)] items-center justify-center rounded-lg border border-[#5146c7] px-4 py-3 text-sm font-bold text-[#312783] hover:bg-[#f5f3ff]"
+                    >
+                      Start adding questions manually
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+          {(builderStep === "settings" || !classContext) && (
+            <div className="rounded-lg border border-[#e4e2e1] bg-white p-5 shadow-sm sm:p-7">
+              <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-6 flex items-center gap-3 border-b border-[#e4e2e1] pb-4">
+                <span className="material-symbols-outlined text-[#2e2877]">
+                  tune
+                </span>
+                {builderStep === "setup"
+                  ? classContext
+                    ? "Quiz details"
+                    : "Mock setup"
+                  : "Share & publish"}
+              </h3>
+
+              {!isReadOnly && visibleQuestions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
+                  <span className="text-sm font-semibold text-[#474551]">
+                    Assign marks:
+                  </span>
+                  <select
+                    value={bulkMarkMode}
+                    onChange={(e) =>
+                      setBulkMarkMode(
+                        e.target.value as "per_question" | "total",
+                      )
+                    }
+                    className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]"
+                  >
+                    <option value="per_question">Per question</option>
+                    <option value="total">Divide total marks</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={bulkMarks}
+                    onChange={(e) => setBulkMarks(e.target.value)}
+                    placeholder={
+                      bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"
+                    }
+                    className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyBulkMarks}
+                    className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]"
+                  >
+                    Apply to {visibleQuestions.length}
+                  </button>
+                </div>
+              )}
+              <div className="space-y-6">
+                {builderStep === "setup" && (
+                  <>
+                    {!classContext && (
+                      <section>
+                        <p className="text-sm font-semibold text-[#1b1c1c]">
+                          What are you building?
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[#787582]">
+                          Choose the structure first. It determines how
+                          questions are organised for you and for students.
+                        </p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            disabled={isReadOnly}
+                            onClick={() => changeDeliveryMode("fixed")}
+                            className={`rounded-xl border p-4 text-left transition ${deliveryMode === "fixed" ? "border-[#2e2877] bg-[#f4f1ff] ring-1 ring-[#2e2877]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}
+                          >
+                            <span className="material-symbols-outlined text-2xl text-[#2e2877]">
+                              description
+                            </span>
+                            <strong className="mt-2 block text-sm text-[#1b1c1c]">
+                              Single-subject mock
+                            </strong>
+                            <span className="mt-1 block text-xs leading-5 text-[#716c76]">
+                              One continuous question set for a class or
+                              subject.
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isReadOnly}
+                            onClick={() =>
+                              changeDeliveryMode("subject_combination")
+                            }
+                            className={`rounded-xl border p-4 text-left transition ${deliveryMode === "subject_combination" ? "border-[#994704] bg-[#fff7ef] ring-1 ring-[#994704]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}
+                          >
+                            <span className="material-symbols-outlined text-2xl text-[#994704]">
+                              view_column
+                            </span>
+                            <strong className="mt-2 block text-sm text-[#1b1c1c]">
+                              Multi-subject / JAMB mock
+                            </strong>
+                            <span className="mt-1 block text-xs leading-5 text-[#716c76]">
+                              Separate subject sections with their own questions
+                              and progress.
+                            </span>
+                          </button>
+                        </div>
+                      </section>
+                    )}
+                    <div>
+                      <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">
+                        {classContext ? "Quiz title" : "Mock Title"}
+                      </label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]"
+                      />
+                    </div>
+
+                    <details className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8]">
+                      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">
+                        Add instructions{" "}
+                        <span className="font-normal text-[#787582]">
+                          (optional)
+                        </span>
+                      </summary>
+                      <div className="border-t border-[#e4e2e1] p-4">
+                        <label className="sr-only" htmlFor="mock-instructions">
+                          Instructions for students
+                        </label>
+                        <textarea
+                          id="mock-instructions"
+                          value={description}
+                          disabled={isReadOnly}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="What should students know before they begin?"
+                          className="min-h-[100px] w-full resize-y rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] text-[#474551] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]"
+                        />
+                      </div>
+                    </details>
+
+                    {classContext ? (
+                      <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
+                        <p className="text-sm font-bold text-[#1b1c1c]">
+                          Assigned to {classContext.name}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[#716c76]">
+                          This quiz is only for students in this class. Its
+                          subject rows are fixed to this class; you can map
+                          imported questions during review.
+                        </p>
+                      </section>
+                    ) : (
+                      <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
+                        <h4 className="text-sm font-semibold text-[#1b1c1c]">
+                          Share this mock with
+                        </h4>
+                        <p className="mt-1 text-xs leading-5 text-[#716c76]">
+                          Turn on the channels you want to use. This determines
+                          the setup fields that follow.
+                        </p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <label
+                            className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "centre" ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}
+                          >
+                            <input
+                              type="radio"
+                              name="audience"
+                              checked={accessMode === "centre"}
+                              disabled={isReadOnly}
+                              onChange={() => changeAccessMode("centre")}
+                              className="mt-0.5 rounded-full text-[#2e2877] focus:ring-[#2e2877]"
+                            />
+                            <span>
+                              <strong className="block text-sm text-[#1b1c1c]">
+                                Students enrolled in your programme on Kanvise
+                              </strong>
+                              <span className="mt-1 block text-xs leading-5 text-[#716c76]">
+                                Assign it to students in a programme and its
+                                subject(s).
+                              </span>
+                            </span>
+                          </label>
+                          <label
+                            className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "direct" ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}
+                          >
+                            <input
+                              type="radio"
+                              name="audience"
+                              checked={accessMode === "direct"}
+                              disabled={isReadOnly}
+                              onChange={() => changeAccessMode("direct")}
+                              className="mt-0.5 rounded-full text-[#994704] focus:ring-[#994704]"
+                            />
+                            <span>
+                              <strong className="block text-sm text-[#1b1c1c]">
+                                Anyone with the link
+                              </strong>
+                              <span className="mt-1 block text-xs leading-5 text-[#716c76]">
+                                Share outside your centre, free or paid.
+                              </span>
+                            </span>
+                          </label>
+                        </div>
+
+                        {centreAccessEnabled && programmeOptions.length > 0 && (
+                          <label className="mt-4 block text-xs font-semibold text-[#474551]">
+                            Programme
+                            <select
+                              value={programmeFilterId}
+                              disabled={isReadOnly}
+                              onChange={(event) => {
+                                const nextProgrammeId = event.target.value;
+                                setProgrammeFilterId(nextProgrammeId);
+                                if (
+                                  courseId &&
+                                  nextProgrammeId &&
+                                  courses.find(
+                                    (course) => course.id === courseId,
+                                  )?.programme_id !== nextProgrammeId
+                                ) {
+                                  setCourseId("");
+                                  setSingleSubjectName("");
+                                }
+                              }}
+                              className="mt-1 block w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal"
+                            >
+                              <option value="">Choose a programme</option>
+                              {programmeOptions.map((programme) => (
+                                <option key={programme.id} value={programme.id}>
+                                  {programme.name}
+                                </option>
+                              ))}
+                            </select>
+                            <span className="mt-1 block font-normal leading-5 text-[#787582]">
+                              Then choose the subject or subjects for this mock.
+                            </span>
+                          </label>
+                        )}
+
+                        {shareLinkEnabled && (
+                          <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
+                            <p className="text-sm font-semibold text-[#1b1c1c]">
+                              Share link
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                              <label className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="radio"
+                                  checked={linkAccessMode === "free_claim"}
+                                  disabled={isReadOnly}
+                                  onChange={() =>
+                                    setLinkAccessMode("free_claim")
+                                  }
+                                />
+                                Free
+                              </label>
+                              <label className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="radio"
+                                  checked={linkAccessMode === "paid"}
+                                  disabled={isReadOnly}
+                                  onChange={() => setLinkAccessMode("paid")}
+                                />
+                                Paid
+                              </label>
+                            </div>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                              {linkAccessMode === "paid" && (
+                                <label className="text-xs font-semibold text-[#474551]">
+                                  Price (₦)
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={linkPrice}
+                                    disabled={isReadOnly}
+                                    onChange={(event) =>
+                                      setLinkPrice(event.target.value)
+                                    }
+                                    className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm"
+                                    placeholder="e.g. 1500"
+                                  />
+                                </label>
+                              )}
+                              <label className="min-w-0 text-xs font-semibold text-[#474551]">
+                                Link address
+                                <input
+                                  value={linkSlug}
+                                  disabled={isReadOnly}
+                                  onChange={(event) => {
+                                    setLinkSlugEdited(true);
+                                    setLinkSlug(slugify(event.target.value));
+                                  }}
+                                  className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm"
+                                />
+                                <span className="mt-1 block font-normal leading-5 text-[#787582]">
+                                  Generated from the title. Edit only if needed.
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </section>
+                    )}
+
+                    {deliveryMode === "fixed" &&
+                      centreAccessEnabled &&
+                      !classContext && (
+                        <div>
+                          <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">
+                            Subject
+                          </label>
+                          <select
+                            value={courseId}
+                            disabled={isReadOnly}
+                            onChange={(e) => {
+                              setCourseId(e.target.value);
+                              setSingleSubjectName(
+                                courses.find(
+                                  (course) => course.id === e.target.value,
+                                )?.name || "",
+                              );
+                            }}
+                            className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all appearance-none disabled:bg-[#f5f3f2]"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23787582' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                              backgroundPosition: "right 0.5rem center",
+                              backgroundRepeat: "no-repeat",
+                              backgroundSize: "1.5em 1.5em",
+                            }}
+                          >
+                            <option value="">
+                              {centreAccessEnabled
+                                ? "Choose a programme subject"
+                                : "Use a custom subject"}
+                            </option>
+                            {coursesForSelectedProgramme.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {mockCourseLabel(c)}
+                              </option>
+                            ))}
+                          </select>
+                          {coursesForSelectedProgramme.length === 0 && (
+                            <p className="mt-2 text-xs leading-5 text-[#994704]">
+                              No Subjects are available. Ask the centre admin to
+                              create a Subject or assign one to you.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                  </>
+                )}
+
+                {builderStep === "settings" && (
+                  <>
+                    {classContext && (
+                      <>
+                        <div>
+                          <label className="block text-[13px] font-medium text-[#474551]">
+                            Quiz title
+                          </label>
+                          <input
+                            type="text"
+                            value={title}
+                            disabled={isReadOnly}
+                            onChange={(event) => setTitle(event.target.value)}
+                            placeholder="e.g. Week 3 revision"
+                            className="mt-1.5 w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]"
+                          />
+                        </div>
+                        <details className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8]">
+                          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">
+                            Add instructions{" "}
+                            <span className="font-normal text-[#787582]">
+                              (optional)
+                            </span>
+                          </summary>
+                          <div className="border-t border-[#e4e2e1] p-4">
+                            <textarea
+                              value={description}
+                              disabled={isReadOnly}
+                              onChange={(event) =>
+                                setDescription(event.target.value)
+                              }
+                              placeholder="What should learners know before they begin?"
+                              className="min-h-[100px] w-full resize-y rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#2e2877]"
+                            />
+                          </div>
+                        </details>
+                      </>
+                    )}
+                    <section className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+                      <p className="mb-3 text-[13px] font-semibold text-[#1b1c1c]">
+                        When should it become available?
+                      </p>
+                      <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="publishMode"
+                            checked={publishMode === "immediate"}
+                            onChange={() => setPublishMode("immediate")}
+                            className="text-[#2e2877] focus:ring-[#2e2877] cursor-pointer"
+                          />
+                          <span className="text-[14px] text-[#474551]">
+                            Publish now
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="publishMode"
+                            checked={publishMode === "scheduled"}
+                            onChange={() => setPublishMode("scheduled")}
+                            className="text-[#2e2877] focus:ring-[#2e2877] cursor-pointer"
+                          />
+                          <span className="text-[14px] text-[#474551]">
+                            Publish later
+                          </span>
+                        </label>
+                      </div>
+
+                      {publishMode === "scheduled" && (
+                        <div className="mt-2 grid gap-4 border-t border-[#e4e2e1] pt-4 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-[12px] text-[#474551] mb-1.5 font-medium">
+                              Publish Date
+                            </label>
+                            <input
+                              type="date"
+                              value={publishDate}
+                              onChange={(e) => setPublishDate(e.target.value)}
+                              className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3 py-2 text-[13px] text-[#1b1c1c] outline-none transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[12px] text-[#474551] mb-1.5 font-medium">
+                              Publish Time
+                            </label>
+                            <input
+                              type="time"
+                              value={publishTime}
+                              onChange={(e) => setPublishTime(e.target.value)}
+                              className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3 py-2 text-[13px] text-[#1b1c1c] outline-none transition-all"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </section>
+
+                    <div className="rounded-xl border border-[#e4e2e1] p-4">
+                      <label className="mb-2 flex items-center justify-between gap-3 text-[13px] font-medium text-[#474551]">
+                        Time allowed
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isUntimed}
+                            disabled={isReadOnly}
+                            onChange={(event) =>
+                              setIsUntimed(event.target.checked)
+                            }
+                            className="rounded text-[#2e2877] focus:ring-[#2e2877]"
+                          />
+                          <span className="text-[12px] font-normal">
+                            Untimed
+                          </span>
+                        </span>
+                      </label>
+                      {!isUntimed && (
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min={1}
+                            max={1440}
+                            disabled={isReadOnly}
+                            value={Number.isFinite(timeLimit) ? timeLimit : ""}
+                            onChange={(event) =>
+                              setTimeLimit(
+                                event.target.value === ""
+                                  ? Number.NaN
+                                  : Number(event.target.value),
+                              )
+                            }
+                            className="w-24 rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]"
+                          />
+                          <span className="text-[13px] text-[#787582]">
+                            minutes
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <details className="rounded-xl border border-[#e4e2e1] bg-white">
+                      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">
+                        Advanced settings{" "}
+                        <span className="font-normal text-[#787582]">
+                          (optional)
+                        </span>
+                      </summary>
+                      <div className="space-y-5 border-t border-[#e4e2e1] p-4">
+                        <div>
+                          <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
+                            Calculator students can use
+                          </label>
+                          <select
+                            value={calculatorMode}
+                            disabled={isReadOnly}
+                            onChange={(event) =>
+                              setCalculatorMode(
+                                event.target.value as typeof calculatorMode,
+                              )
+                            }
+                            className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] text-[#1b1c1c] outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]"
+                          >
+                            <option value="none">No calculator</option>
+                            <option value="basic">Basic calculator</option>
+                            <option value="scientific">
+                              Scientific calculator
+                            </option>
+                          </select>
+                          <p className="mt-1.5 text-xs leading-5 text-[#787582]">
+                            The calculator opens inside the exam, so students do
+                            not need to leave the page.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
+                              Attempts allowed
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={20}
+                              value={
+                                Number.isFinite(maxAttempts) ? maxAttempts : ""
+                              }
+                              disabled={isReadOnly}
+                              onChange={(event) =>
+                                setMaxAttempts(
+                                  event.target.value === ""
+                                    ? Number.NaN
+                                    : Number(event.target.value),
+                                )
+                              }
+                              className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
+                              Pass mark (%)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={Number.isFinite(passMark) ? passMark : ""}
+                              disabled={isReadOnly}
+                              onChange={(event) =>
+                                setPassMark(
+                                  event.target.value === ""
+                                    ? Number.NaN
+                                    : Number(event.target.value),
+                                )
+                              }
+                              className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
+                            What students see after submitting
+                          </label>
+                          <select
+                            value={resultReleaseMode}
+                            disabled={isReadOnly}
+                            onChange={(event) =>
+                              setResultReleaseMode(
+                                event.target.value as typeof resultReleaseMode,
+                              )
+                            }
+                            className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] disabled:bg-[#f5f3f2]"
+                          >
+                            <option value="score_only">Score only</option>
+                            <option value="immediately_with_corrections">
+                              Score and corrections immediately
+                            </option>
+                            <option value="after_close">
+                              Corrections after the mock closes
+                            </option>
+                            <option value="after_theory_grading">
+                              Corrections after theory is graded
+                            </option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <p className="text-[13px] font-semibold text-[#1b1c1c]">
+                            Optional attempt window
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-[#787582]">
+                            Use this only when a published mock should open
+                            later or close automatically.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
+                              Students can start from
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={availableFrom}
+                              disabled={isReadOnly}
+                              onChange={(event) =>
+                                setAvailableFrom(event.target.value)
+                              }
+                              className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]"
+                            />
+                            <p className="mt-1 text-xs leading-5 text-[#787582]">
+                              Publishing makes the mock visible on the student
+                              dashboard, but they cannot start answering
+                              questions until this time.
+                            </p>
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
+                              {classContext ? "Quiz closes" : "Mock closes"}
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={closesAt}
+                              disabled={isReadOnly}
+                              onChange={(event) =>
+                                setClosesAt(event.target.value)
+                              }
+                              className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
+                          <label className="flex cursor-pointer items-start gap-3 text-sm text-[#474551]">
+                            <input
+                              type="checkbox"
+                              checked={shuffleQuestions}
+                              disabled={isReadOnly}
+                              onChange={(event) =>
+                                setShuffleQuestions(event.target.checked)
+                              }
+                              className="mt-1"
+                            />
+                            <span>
+                              <strong className="block text-[#1b1c1c]">
+                                Mix question order
+                              </strong>
+                              Each student sees the questions in a stable but
+                              different order.
+                            </span>
+                          </label>
+                          <label className="flex cursor-pointer items-start gap-3 text-sm text-[#474551]">
+                            <input
+                              type="checkbox"
+                              checked={shuffleOptions}
+                              disabled={isReadOnly}
+                              onChange={(event) =>
+                                setShuffleOptions(event.target.checked)
+                              }
+                              className="mt-1"
+                            />
+                            <span>
+                              <strong className="block text-[#1b1c1c]">
+                                Mix answer options
+                              </strong>
+                              Useful for reducing answer copying during timed
+                              mocks.
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    </details>
+                  </>
+                )}
+              </div>
             </div>
           )}
-          <div className="space-y-6">
-              {builderStep === "setup" && <>
-              <section>
-                <p className="text-sm font-semibold text-[#1b1c1c]">What are you building?</p>
-                <p className="mt-1 text-xs leading-5 text-[#787582]">Choose the structure first. It determines how questions are organised for you and for students.</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <button type="button" disabled={isReadOnly} onClick={() => changeDeliveryMode("fixed")} className={`rounded-xl border p-4 text-left transition ${deliveryMode === "fixed" ? "border-[#2e2877] bg-[#f4f1ff] ring-1 ring-[#2e2877]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}>
-                    <span className="material-symbols-outlined text-2xl text-[#2e2877]">description</span><strong className="mt-2 block text-sm text-[#1b1c1c]">Single-subject mock</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">One continuous question set for a class or subject.</span>
-                  </button>
-                  <button type="button" disabled={isReadOnly} onClick={() => changeDeliveryMode("subject_combination")} className={`rounded-xl border p-4 text-left transition ${deliveryMode === "subject_combination" ? "border-[#994704] bg-[#fff7ef] ring-1 ring-[#994704]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}>
-                    <span className="material-symbols-outlined text-2xl text-[#994704]">view_column</span><strong className="mt-2 block text-sm text-[#1b1c1c]">Multi-subject / JAMB mock</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Separate subject sections with their own questions and progress.</span>
-                  </button>
-                </div>
-              </section>
-              <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Mock Title</label>
-                <input 
-                  type="text" 
-                  disabled={isReadOnly}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all disabled:bg-[#f5f3f2]" 
-                />
-              </div>
-              
-              <details className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8]">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Add instructions <span className="font-normal text-[#787582]">(optional)</span></summary>
-                <div className="border-t border-[#e4e2e1] p-4">
-                  <label className="sr-only" htmlFor="mock-instructions">Instructions for students</label>
-                  <textarea id="mock-instructions" value={description} disabled={isReadOnly} onChange={(e) => setDescription(e.target.value)} placeholder="What should students know before they begin?" className="min-h-[100px] w-full resize-y rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] text-[#474551] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]" />
-                </div>
-              </details>
+        </div>
+      )}
 
-              <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
-                <h4 className="text-sm font-semibold text-[#1b1c1c]">Share this mock with</h4>
-                <p className="mt-1 text-xs leading-5 text-[#716c76]">Turn on the channels you want to use. This determines the setup fields that follow.</p>
-                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "centre" ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}>
-                    <input type="radio" name="audience" checked={accessMode === "centre"} disabled={isReadOnly} onChange={() => changeAccessMode("centre")} className="mt-0.5 rounded-full text-[#2e2877] focus:ring-[#2e2877]" />
-                    <span><strong className="block text-sm text-[#1b1c1c]">Students enrolled in your programme on Kanvise</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Assign it to students in a programme and its subject(s).</span></span>
-                  </label>
-                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "direct" ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}>
-                    <input type="radio" name="audience" checked={accessMode === "direct"} disabled={isReadOnly} onChange={() => changeAccessMode("direct")} className="mt-0.5 rounded-full text-[#994704] focus:ring-[#994704]" />
-                    <span><strong className="block text-sm text-[#1b1c1c]">Anyone with the link</strong><span className="mt-1 block text-xs leading-5 text-[#716c76]">Share outside your centre, free or paid.</span></span>
-                  </label>
-                </div>
-
-                {centreAccessEnabled && programmeOptions.length > 0 && <label className="mt-4 block text-xs font-semibold text-[#474551]">Programme<select value={programmeFilterId} disabled={isReadOnly} onChange={(event) => { const nextProgrammeId = event.target.value; setProgrammeFilterId(nextProgrammeId); if (courseId && nextProgrammeId && courses.find((course) => course.id === courseId)?.programme_id !== nextProgrammeId) { setCourseId(""); setSingleSubjectName(""); } }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal"><option value="">Choose a programme</option>{programmeOptions.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}</select><span className="mt-1 block font-normal leading-5 text-[#787582]">Then choose the subject or subjects for this mock.</span></label>}
-
-                {shareLinkEnabled && <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
-                  <p className="text-sm font-semibold text-[#1b1c1c]">Share link</p>
-                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                    <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "free_claim"} disabled={isReadOnly} onChange={() => setLinkAccessMode("free_claim")} />Free</label>
-                    <label className="flex items-center gap-2 text-sm"><input type="radio" checked={linkAccessMode === "paid"} disabled={isReadOnly} onChange={() => setLinkAccessMode("paid")} />Paid</label>
-                  </div>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    {linkAccessMode === "paid" && <label className="text-xs font-semibold text-[#474551]">Price (₦)<input type="number" min="1" value={linkPrice} disabled={isReadOnly} onChange={(event) => setLinkPrice(event.target.value)} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" placeholder="e.g. 1500" /></label>}
-                    <label className="min-w-0 text-xs font-semibold text-[#474551]">Link address<input value={linkSlug} disabled={isReadOnly} onChange={(event) => { setLinkSlugEdited(true); setLinkSlug(slugify(event.target.value)); }} className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm" /><span className="mt-1 block font-normal leading-5 text-[#787582]">Generated from the title. Edit only if needed.</span></label>
-                  </div>
-                </div>}
-              </section>
-
-              {deliveryMode === "fixed" && centreAccessEnabled && <div>
-                <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">Subject</label>
-                <select 
-                  value={courseId}
-                  disabled={isReadOnly}
-                  onChange={(e) => { setCourseId(e.target.value); setSingleSubjectName(courses.find((course) => course.id === e.target.value)?.name || ""); }}
-                  className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all appearance-none disabled:bg-[#f5f3f2]"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23787582' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: 'right 0.5rem center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: '1.5em 1.5em',
-                  }}
-                >
-                  <option value="">{centreAccessEnabled ? "Choose a programme subject" : "Use a custom subject"}</option>
-                  {coursesForSelectedProgramme.map(c => (
-                    <option key={c.id} value={c.id}>{mockCourseLabel(c)}</option>
-                  ))}
-                </select>
-                {coursesForSelectedProgramme.length === 0 && (
-                  <p className="mt-2 text-xs leading-5 text-[#994704]">No Subjects are available. Ask the centre admin to create a Subject or assign one to you.</p>
-                )}
-              </div>}
-
-              
-              </>}
-
-              {builderStep === "settings" && <>
-              <section className="rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4">
-                <p className="mb-3 text-[13px] font-semibold text-[#1b1c1c]">When should it become available?</p>
-                <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="publishMode"
-                      checked={publishMode === "immediate"}
-                      onChange={() => setPublishMode("immediate")}
-                      className="text-[#2e2877] focus:ring-[#2e2877] cursor-pointer"
-                    />
-                    <span className="text-[14px] text-[#474551]">Publish now</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="publishMode"
-                      checked={publishMode === "scheduled"}
-                      onChange={() => setPublishMode("scheduled")}
-                      className="text-[#2e2877] focus:ring-[#2e2877] cursor-pointer"
-                    />
-                    <span className="text-[14px] text-[#474551]">Publish later</span>
-                  </label>
-                </div>
-
-                {publishMode === "scheduled" && (
-                  <div className="mt-2 grid gap-4 border-t border-[#e4e2e1] pt-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-[12px] text-[#474551] mb-1.5 font-medium">Publish Date</label>
-                      <input 
-                        type="date" 
-                        value={publishDate}
-                        onChange={(e) => setPublishDate(e.target.value)}
-                        className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3 py-2 text-[13px] text-[#1b1c1c] outline-none transition-all" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[12px] text-[#474551] mb-1.5 font-medium">Publish Time</label>
-                      <input 
-                        type="time" 
-                        value={publishTime}
-                        onChange={(e) => setPublishTime(e.target.value)}
-                        className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3 py-2 text-[13px] text-[#1b1c1c] outline-none transition-all" 
-                      />
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              <div className="rounded-xl border border-[#e4e2e1] p-4">
-                <label className="mb-2 flex items-center justify-between gap-3 text-[13px] font-medium text-[#474551]">
-                  Time allowed
-                  <span className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={isUntimed}
-                      disabled={isReadOnly}
-                      onChange={(event) => setIsUntimed(event.target.checked)}
-                      className="rounded text-[#2e2877] focus:ring-[#2e2877]"
-                    />
-                    <span className="text-[12px] font-normal">Untimed</span>
-                  </span>
-                </label>
-                {!isUntimed && <div className="flex items-center gap-3"><input type="number" min={1} max={1440} disabled={isReadOnly} value={Number.isFinite(timeLimit) ? timeLimit : ""} onChange={(event) => setTimeLimit(event.target.value === "" ? Number.NaN : Number(event.target.value))} className="w-24 rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]" /><span className="text-[13px] text-[#787582]">minutes</span></div>}
-              </div>
-
-              <details className="rounded-xl border border-[#e4e2e1] bg-white">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#2e2877]">Advanced settings <span className="font-normal text-[#787582]">(optional)</span></summary>
-                <div className="space-y-5 border-t border-[#e4e2e1] p-4">
-              <div>
-                <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Calculator students can use</label>
-                <select
-                  value={calculatorMode}
-                  disabled={isReadOnly}
-                  onChange={(event) => setCalculatorMode(event.target.value as typeof calculatorMode)}
-                  className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] text-[#1b1c1c] outline-none focus:border-[#2e2877] disabled:bg-[#f5f3f2]"
-                >
-                  <option value="none">No calculator</option>
-                  <option value="basic">Basic calculator</option>
-                  <option value="scientific">Scientific calculator</option>
-                </select>
-                <p className="mt-1.5 text-xs leading-5 text-[#787582]">The calculator opens inside the exam, so students do not need to leave the page.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Attempts allowed</label>
-                  <input type="number" min={1} max={20} value={Number.isFinite(maxAttempts) ? maxAttempts : ""} disabled={isReadOnly}
-                    onChange={(event) => setMaxAttempts(event.target.value === "" ? Number.NaN : Number(event.target.value))}
-                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Pass mark (%)</label>
-                  <input type="number" min={0} max={100} value={Number.isFinite(passMark) ? passMark : ""} disabled={isReadOnly}
-                    onChange={(event) => setPassMark(event.target.value === "" ? Number.NaN : Number(event.target.value))}
-                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">What students see after submitting</label>
-                <select value={resultReleaseMode} disabled={isReadOnly}
-                  onChange={(event) => setResultReleaseMode(event.target.value as typeof resultReleaseMode)}
-                  className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] disabled:bg-[#f5f3f2]">
-                  <option value="score_only">Score only</option>
-                  <option value="immediately_with_corrections">Score and corrections immediately</option>
-                  <option value="after_close">Corrections after the mock closes</option>
-                  <option value="after_theory_grading">Corrections after theory is graded</option>
-                </select>
-              </div>
-
-              <div>
-                <p className="text-[13px] font-semibold text-[#1b1c1c]">Optional attempt window</p>
-                <p className="mt-1 text-xs leading-5 text-[#787582]">Use this only when a published mock should open later or close automatically.</p>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Students can start from</label>
-                  <input type="datetime-local" value={availableFrom} disabled={isReadOnly}
-                    onChange={(event) => setAvailableFrom(event.target.value)}
-                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
-                  <p className="mt-1 text-xs leading-5 text-[#787582]">Publishing makes the mock visible on the student dashboard, but they cannot start answering questions until this time.</p>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">Mock closes</label>
-                  <input type="datetime-local" value={closesAt} disabled={isReadOnly}
-                    onChange={(event) => setClosesAt(event.target.value)}
-                    className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]" />
-                </div>
-              </div>
-
-              <div className="space-y-3 rounded-lg border border-[#e4e2e1] bg-[#fbf9f8] p-4">
-                <label className="flex cursor-pointer items-start gap-3 text-sm text-[#474551]">
-                  <input type="checkbox" checked={shuffleQuestions} disabled={isReadOnly}
-                    onChange={(event) => setShuffleQuestions(event.target.checked)} className="mt-1" />
-                  <span><strong className="block text-[#1b1c1c]">Mix question order</strong>Each student sees the questions in a stable but different order.</span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-3 text-sm text-[#474551]">
-                  <input type="checkbox" checked={shuffleOptions} disabled={isReadOnly}
-                    onChange={(event) => setShuffleOptions(event.target.checked)} className="mt-1" />
-                  <span><strong className="block text-[#1b1c1c]">Mix answer options</strong>Useful for reducing answer copying during timed mocks.</span>
-                </label>
-              </div>
-
-                </div>
-              </details>
-              </>}
-            </div>
-          </div>
-        </div>}
-
-      {builderStep !== "review" && <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 mx-auto mt-8 flex max-w-5xl items-center justify-between gap-3 rounded-xl border border-[#d8d2cd] bg-white/95 p-3 shadow-[0_8px_30px_rgba(24,13,98,0.16)] backdrop-blur sm:static sm:rounded-none sm:border-x-0 sm:border-b-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none"><button type="button" disabled={isReadOnly || currentStepIndex === 0} onClick={() => moveStep(-1)} className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40">Back</button><button type="button" disabled={isReadOnly} onClick={() => moveStep(1)} className="min-w-28 rounded-lg bg-[#2e2877] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Continue</button></div>}
+      {builderStep !== "review" && (
+        <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 mx-auto mt-8 flex max-w-5xl items-center justify-between gap-3 rounded-xl border border-[#d8d2cd] bg-white/95 p-3 shadow-[0_8px_30px_rgba(24,13,98,0.16)] backdrop-blur sm:static sm:rounded-none sm:border-x-0 sm:border-b-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none">
+          <button
+            type="button"
+            disabled={isReadOnly || currentStepIndex === 0}
+            onClick={() => moveStep(-1)}
+            className="rounded-lg border border-[#c8c5d2] px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            disabled={isReadOnly}
+            onClick={() =>
+              builderStep === "settings" ? requestPublish() : moveStep(1)
+            }
+            className="min-w-28 rounded-lg bg-[#2e2877] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {builderStep === "settings" ? "Review & publish" : "Continue"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

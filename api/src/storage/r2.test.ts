@@ -10,12 +10,14 @@ import {
   isPublicR2Configured,
   isR2Configured,
   MAX_DOCUMENT_SIZE,
+  MAX_MATERIAL_VIDEO_SIZE,
   MAX_PUBLIC_IMAGE_SIZE,
   MAX_QUESTION_IMAGE_SIZE,
   publicFileKeyFromUrl,
   publicFileUrl,
   StorageError,
   validateDocumentMetadata,
+  validateMaterialMetadata,
   validatePrivateUploadMetadata,
   validatePublicMediaMetadata,
   uploadPublicObject,
@@ -143,6 +145,18 @@ describe('R2 storage policy', () => {
       contentType: 'application/pdf',
       fileSizeBytes: MAX_DOCUMENT_SIZE + 1,
     })).toThrowError('File exceeds 50MB limit')
+  })
+
+  it('allows private material videos up to the video limit', () => {
+    expect(validateMaterialMetadata({
+      fileName: 'revision.mp4', contentType: 'video/mp4', fileSizeBytes: 1024,
+    })).toEqual({ extension: 'mp4', fileSizeBytes: 1024 })
+    expect(validatePrivateUploadMetadata({
+      entityType: 'note', fileName: 'revision.webm', contentType: 'video/webm', fileSizeBytes: 1024,
+    })).toEqual({ extension: 'webm', fileSizeBytes: 1024 })
+    expect(() => validateMaterialMetadata({
+      fileName: 'lesson.mov', contentType: 'video/quicktime', fileSizeBytes: MAX_MATERIAL_VIDEO_SIZE + 1,
+    })).toThrowError('File exceeds 500MB limit')
   })
 
   it('normalizes MIME types to the database file-type values', () => {

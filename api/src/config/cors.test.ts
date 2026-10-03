@@ -13,8 +13,13 @@ describe('CORS origin configuration', () => {
       'https://staging.kanvise.com',
       'https://app.kanvise.com',
       'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3100',
+      'http://127.0.0.1:3100',
     ]))
     expect(resolveCorsOrigin('https://staging.kanvise.com', env)).toBe('https://staging.kanvise.com')
+    expect(resolveCorsOrigin('http://127.0.0.1:3000', env)).toBe('http://127.0.0.1:3000')
+    expect(resolveCorsOrigin('http://127.0.0.1:3100', env)).toBe('http://127.0.0.1:3100')
   })
 
   it('allows HTTPS Vercel preview origins', () => {

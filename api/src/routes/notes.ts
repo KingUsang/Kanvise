@@ -4,7 +4,7 @@ import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middl
 import {
   assertPrivateFileKey,
   createPresignedDownload,
-  documentFileType,
+  materialFileType,
   StorageError,
   verifyPrivateUpload,
 } from "../storage/r2";
@@ -150,7 +150,7 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
         description: description || null,
         file_key,
         file_name,
-        file_type: documentFileType(file_type),
+        file_type: materialFileType(file_type),
         file_size_bytes
       })
       .select()
@@ -236,7 +236,7 @@ notesRouter.delete("/:id", enforceAdminOrTutor, async (c) => {
 
     const { data: note, error: fetchError } = await supabase
       .from("notes")
-      .select("tutor_id")
+      .select("tutor_id, course_id")
       .eq("id", id)
       .eq("school_id", profile.school_id)
       .single();
@@ -245,9 +245,23 @@ notesRouter.delete("/:id", enforceAdminOrTutor, async (c) => {
       return c.json({ error: "Note not found", code: "NOT_FOUND" }, 404);
     }
 
-    // Only admin or the tutor who created it can delete
-    if (profile.role === "tutor" && note.tutor_id !== profile.id) {
-      return c.json({ error: "Cannot delete another tutor's note", code: "FORBIDDEN" }, 403);
+    // A tutor must still be responsible for the subject. Checking only the
+    // creator would let a tutor retain control after being removed from a
+    // course, and it is inconsistent with create/list access.
+    if (profile.role === "tutor") {
+      const { data: assignment, error: assignmentError } = await supabase
+        .from("tutor_course_assignments")
+        .select("id")
+        .eq("tutor_id", profile.id)
+        .eq("course_id", note.course_id)
+        .eq("school_id", profile.school_id)
+        .single();
+      if (assignmentError || !assignment) {
+        return c.json({ error: "Not assigned to this course", code: "NOT_ASSIGNED_TO_COURSE" }, 403);
+      }
+      if (note.tutor_id !== profile.id) {
+        return c.json({ error: "Cannot delete another tutor's note", code: "FORBIDDEN" }, 403);
+      }
     }
 
     const { error: deleteError } = await supabase

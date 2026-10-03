@@ -55,9 +55,22 @@ export const DOCUMENT_CONTENT_TYPES = {
   'image/png': 'png',
 } as const
 
+export const MATERIAL_VIDEO_CONTENT_TYPES = {
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+} as const
+
+export const MATERIAL_CONTENT_TYPES = {
+  ...DOCUMENT_CONTENT_TYPES,
+  ...MATERIAL_VIDEO_CONTENT_TYPES,
+} as const
+
 export type DocumentContentType = keyof typeof DOCUMENT_CONTENT_TYPES
+export type MaterialContentType = keyof typeof MATERIAL_CONTENT_TYPES
 
 export const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024
+export const MAX_MATERIAL_VIDEO_SIZE = 500 * 1024 * 1024
 export const MAX_QUESTION_IMAGE_SIZE = 10 * 1024 * 1024
 
 const QUESTION_IMAGE_CONTENT_TYPES = {
@@ -214,6 +227,30 @@ export function validateDocumentMetadata(input: {
   return { extension: expectedExtension, fileSizeBytes }
 }
 
+export function validateMaterialMetadata(input: {
+  fileName: string
+  contentType: string
+  fileSizeBytes: number
+}) {
+  const fileSizeBytes = Number(input.fileSizeBytes)
+  if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) {
+    throw new StorageError('File size must be a positive integer', 'INVALID_FILE_SIZE')
+  }
+  const extension = MATERIAL_CONTENT_TYPES[input.contentType as MaterialContentType]
+  if (!extension) throw new StorageError('Invalid material file type', 'INVALID_FILE_TYPE')
+  const isVideo = input.contentType.startsWith('video/')
+  const limit = isVideo ? MAX_MATERIAL_VIDEO_SIZE : MAX_DOCUMENT_SIZE
+  if (fileSizeBytes > limit) {
+    throw new StorageError(`File exceeds ${isVideo ? '500MB' : '50MB'} limit`, 'FILE_TOO_LARGE')
+  }
+  const suppliedExtension = input.fileName.split('.').pop()?.toLowerCase()
+  const validExtensions = extension === 'jpg' ? ['jpg', 'jpeg'] : [extension]
+  if (!suppliedExtension || !validExtensions.includes(suppliedExtension)) {
+    throw new StorageError('Filename extension does not match content type', 'FILE_TYPE_MISMATCH')
+  }
+  return { extension, fileSizeBytes }
+}
+
 export function validatePrivateUploadMetadata(input: {
   entityType: PrivateUploadType
   fileName: string
@@ -229,6 +266,7 @@ export function validatePrivateUploadMetadata(input: {
     if (input.fileName.split('.').pop()?.toLowerCase() !== extension) throw new StorageError('Filename extension does not match content type', 'FILE_TYPE_MISMATCH')
     return { extension, fileSizeBytes }
   }
+  if (input.entityType === 'note') return validateMaterialMetadata(input)
   if (input.entityType !== 'question_media') return validateDocumentMetadata(input)
   const fileSizeBytes = Number(input.fileSizeBytes)
   if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) {
@@ -542,5 +580,11 @@ export async function uploadPublicObject(input: {
 export function documentFileType(contentType: string) {
   const type = DOCUMENT_CONTENT_TYPES[contentType as DocumentContentType]
   if (!type) throw new StorageError('Invalid file type', 'INVALID_FILE_TYPE')
+  return type
+}
+
+export function materialFileType(contentType: string) {
+  const type = MATERIAL_CONTENT_TYPES[contentType as MaterialContentType]
+  if (!type) throw new StorageError('Invalid material file type', 'INVALID_FILE_TYPE')
   return type
 }

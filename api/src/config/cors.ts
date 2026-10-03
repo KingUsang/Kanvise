@@ -1,4 +1,12 @@
-const LOCAL_DEVELOPMENT_ORIGIN = 'http://localhost:3000'
+const LOCAL_DEVELOPMENT_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  // Visual QA and the local web dev server may deliberately run on a spare
+  // port while the API retains 3001. Keep this development-only pair explicit
+  // rather than weakening the production origin allow-list.
+  'http://localhost:3100',
+  'http://127.0.0.1:3100',
+]
 
 function normaliseOrigin(value: string) {
   return value.trim().replace(/\/$/, '')
@@ -9,7 +17,7 @@ export function getAllowedOrigins(env: NodeJS.ProcessEnv = process.env) {
     .filter((value): value is string => Boolean(value?.trim()))
     .map(normaliseOrigin)
 
-  return new Set([...configured, LOCAL_DEVELOPMENT_ORIGIN])
+  return new Set([...configured, ...LOCAL_DEVELOPMENT_ORIGINS])
 }
 
 export function resolveCorsOrigin(origin: string, env: NodeJS.ProcessEnv = process.env) {

@@ -73,7 +73,7 @@ function csvCell(value: string | number) {
   return `"${safe.replaceAll('"', '""')}"`
 }
 
-export function MockResultsClient({ mockId, token }: { mockId: string; token: string }) {
+export function MockResultsClient({ mockId, token, embedded = false }: { mockId: string; token: string; embedded?: boolean }) {
   const [data, setData] = useState<ResultsData | null>(null)
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null)
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
@@ -215,7 +215,7 @@ export function MockResultsClient({ mockId, token }: { mockId: string; token: st
       <InsightModal insight={insight} onClose={() => setInsight(null)} />
     <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-8">
       <DashboardPageHeader
-        breadcrumb={<><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</>}
+        breadcrumb={embedded ? <>Class assessments <span className="px-1">›</span> {data.mock.title}</> : <><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</>}
         title="Mock results"
         description={`Review scores and mark written answers for ${data.mock.course?.name || 'this subject'}.`}
         actions={<button type="button" onClick={exportCsv} disabled={data.attempts.length === 0} className="inline-flex items-center justify-center gap-2 rounded-md border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-50">

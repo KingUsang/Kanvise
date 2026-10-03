@@ -10,8 +10,11 @@ export function uploadFileWithProgress(url: string, file: File, onProgress: (pro
       if (request.status >= 200 && request.status < 300) resolve()
       else reject(new Error('Could not upload file to storage'))
     })
-    request.addEventListener('error', () => reject(new Error('The upload was interrupted by a network error')))
-    request.addEventListener('abort', () => reject(new Error('The upload was cancelled')))
+    // Browsers intentionally hide the underlying reason for a failed cross-origin
+    // PUT. It may be DNS, an R2/CDN outage, a rejected CORS preflight, or the
+    // user's connection — never claim it was definitely their network.
+    request.addEventListener('error', () => reject(new Error('The storage upload URL could not be reached. This may be a storage, DNS, or browser-permission issue; please try again shortly.')))
+    request.addEventListener('abort', () => reject(new Error('The upload was cancelled before it completed.')))
     request.send(file)
   })
 }

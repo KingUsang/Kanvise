@@ -1,5 +1,5 @@
-import { ProgrammeBuilder } from '@/components/dashboard/programmes/programme-builder'
+import { redirect } from 'next/navigation'
 
 export default function NewProgrammePage() {
-  return <ProgrammeBuilder />
+  redirect('/dashboard/classes/new')
 }

@@ -1,66 +1,9 @@
-import { redirect } from 'next/navigation'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { ClassesWorkspace } from '@/components/dashboard/schedule/classes-workspace'
-import { getApiUrl } from '@/config/api'
+import { ScheduleRouteClient } from "@/components/dashboard/dashboard-route-clients";
 
-export default async function SchedulePage() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/auth/login')
-  }
-
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
-
-  if (!token) {
-    redirect('/auth/login')
-  }
-
-  // Fetch capabilities to know if admin/tutor
-  const res = await fetch(`${getApiUrl()}/dashboard/stats`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    },
-    cache: 'no-store'
-  })
-
-  if (!res.ok) {
-    throw new Error('Failed to fetch user capabilities')
-  }
-
-  const { data: statsData } = await res.json()
-  const capabilities = {
-    isAdmin: !!statsData.admin_stats,
-    isTutor: !!statsData.tutor_stats
-  }
-
-  const userInfo = {
-    // Course assignments reference user_profiles.id, not auth.users.id. Keep
-    // the scheduler on the same identifier so an assigned admin can be
-    // selected as the class tutor.
-    id: typeof user.app_metadata?.profile_id === 'string' ? user.app_metadata.profile_id : user.id,
-    first_name: user.user_metadata?.first_name || '',
-    last_name: user.user_metadata?.last_name || '',
-  }
-
+export default function SchedulePage() {
   return (
     <div className="animate-in fade-in duration-500">
-      <ClassesWorkspace token={token} capabilities={capabilities} user={userInfo} />
+      <ScheduleRouteClient />
     </div>
-  )
+  );
 }

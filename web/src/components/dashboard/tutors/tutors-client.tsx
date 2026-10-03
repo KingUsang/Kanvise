@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import { dashboardQueryKeys } from '@/lib/dashboard-session'
 
 interface Tutor {
   id: string
@@ -123,7 +124,11 @@ export function TutorsClient() {
       if (!res.ok) throw new Error(json.error || 'Failed to generate invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteEmail('') // Clear input on success
-      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tutors'] }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.capabilities }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
+      ])
       toast.success(json.data.email_sent ? 'Invitation emailed to the tutor' : 'Invitation link created', {
         description: json.data.email_sent ? 'They can use the email to join your centre.' : 'The email could not be sent. Copy and share the link yourself.'
       })
@@ -239,7 +244,11 @@ export function TutorsClient() {
       )
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not update the Subject assignment')
-      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tutors'] }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.capabilities }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
+      ])
       toast.success(isAssigned ? 'Tutor removed from Subject' : 'Tutor assigned to Subject')
     } catch (error) {
       toast.error('Could not update the Subject assignment', { description: error instanceof Error ? error.message : 'Please try again.' })

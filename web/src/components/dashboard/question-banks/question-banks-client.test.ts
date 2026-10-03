@@ -56,11 +56,20 @@ describe('question-bank authoring helpers', () => {
     expect(canAccessDashboardPath('/dashboard/notes', { isAdmin: true, isTutor: true })).toBe(true)
   })
 
+  it('keeps the operational timetable centre-only', () => {
+    const independent = { isAdmin: true, isTutor: true, organisationType: 'independent' as const }
+    const centre = { isAdmin: true, isTutor: false, organisationType: 'centre' as const }
+    expect(getDashboardNavItems(independent).some(item => item.href === '/dashboard/timetable')).toBe(false)
+    expect(canAccessDashboardPath('/dashboard/timetable', independent)).toBe(false)
+    expect(getDashboardNavItems(centre).some(item => item.href === '/dashboard/timetable')).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/timetable', centre)).toBe(true)
+  })
+
   it('keeps a new Admin inside school setup until a centre is created', () => {
     const onboarding = { isAdmin: true, isTutor: false, setupRequired: true }
-    expect(getDashboardNavItems(onboarding).map(item => item.href)).toContain('/dashboard/programmes')
+    expect(getDashboardNavItems(onboarding).map(item => item.href)).toContain('/dashboard/classes')
     expect(getDashboardNavItems(onboarding).map(item => item.href)).toContain('/dashboard/school-setup')
     expect(canAccessDashboardPath('/dashboard/school-setup', onboarding)).toBe(true)
-    expect(canAccessDashboardPath('/dashboard/programmes', onboarding)).toBe(false)
+    expect(canAccessDashboardPath('/dashboard/classes', onboarding)).toBe(false)
   })
 })

@@ -1,133 +1,198 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
-import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
+import { dashboardQueryKeys } from "@/lib/dashboard-session";
 
 interface MockExam {
-  id: string
-  title: string
-  status: 'draft' | 'published' | 'archived'
-  course?: { name: string }
-  total_mcq_questions: number
-  total_theory_questions: number
-  publish_at: string | null
-  updated_at: string
-  created_at: string
-  direct_link_enabled?: boolean
-  direct_link_slug?: string | null
+  id: string;
+  title: string;
+  status: "draft" | "published" | "archived";
+  course?: { name: string };
+  total_mcq_questions: number;
+  total_theory_questions: number;
+  publish_at: string | null;
+  updated_at: string;
+  created_at: string;
+  direct_link_enabled?: boolean;
+  direct_link_slug?: string | null;
+  audience_scope?:
+    "course" | "programme" | "school" | "combination" | "direct_link";
   metrics: {
-    attempts: number
-    pending_grading: number
-  }
+    attempts: number;
+    pending_grading: number;
+  };
 }
 
 // Native date formatting helpers
 function formatDistanceToNow(date: Date) {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 60) return `${diffMins} minutes`
-  if (diffHours < 24) return `${diffHours} hours`
-  return `${diffDays} days`
+  if (diffMins < 60) return `${diffMins} minutes`;
+  if (diffHours < 24) return `${diffHours} hours`;
+  return `${diffDays} days`;
 }
 
 function formatMMMdd(date: Date) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(date)
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+  }).format(date);
 }
 
 function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }).format(date)
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
 }
 
 interface MocksManagementClientProps {
-  token: string
-  capabilities: { isAdmin: boolean; isTutor: boolean }
-  user: { id: string; first_name: string; last_name: string }
+  token: string;
+  capabilities: { isAdmin: boolean; isTutor: boolean };
+  user: { id: string; first_name: string; last_name: string };
 }
 
-export function MocksManagementClient({ token, capabilities, user }: MocksManagementClientProps) {
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterCourse, setFilterCourse] = useState<string>('all')
-  const [mockToArchive, setMockToArchive] = useState<MockExam | null>(null)
-  const [isArchiving, setIsArchiving] = useState(false)
+export function MocksManagementClient({
+  token,
+  capabilities,
+  user,
+}: MocksManagementClientProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterCourse, setFilterCourse] = useState<string>("all");
+  const [mockToArchive, setMockToArchive] = useState<MockExam | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const mocksQuery = useQuery({
-    queryKey: ['mocks', user.id],
+    queryKey: ["mocks", user.id],
     queryFn: async () => {
-      const res = await fetch(`${baseUrl}/mocks`, { headers: { Authorization: `Bearer ${token}` } })
-      const body = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(body?.error || `HTTP error ${res.status}`)
-      return (body?.data || []) as MockExam[]
+      const res = await fetch(`${baseUrl}/mocks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error || `HTTP error ${res.status}`);
+      return (body?.data || []) as MockExam[];
     },
     staleTime: 30_000,
-  })
-  const mocks = mocksQuery.data || []
-  const apiError = mocksQuery.error instanceof Error ? mocksQuery.error.message : null
+  });
+  const mocks = mocksQuery.data || [];
+  const apiError =
+    mocksQuery.error instanceof Error ? mocksQuery.error.message : null;
 
   const archiveMock = async () => {
-    if (!mockToArchive) return
-    setIsArchiving(true)
+    if (!mockToArchive) return;
+    setIsArchiving(true);
     try {
-      const response = await fetch(`${baseUrl}/mocks/${mockToArchive.id}/archive`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.error || 'Failed to archive mock')
-      toast.success('Submission closed', { description: 'Its attempts and results are still available.' })
-      setMockToArchive(null)
-      await queryClient.invalidateQueries({ queryKey: ['mocks', user.id] })
+      const response = await fetch(
+        `${baseUrl}/mocks/${mockToArchive.id}/archive`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const body = await response.json().catch(() => null);
+      if (!response.ok)
+        throw new Error(body?.error || "Failed to archive mock");
+      toast.success("Submission closed", {
+        description: "Its attempts and results are still available.",
+      });
+      setMockToArchive(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["mocks", user.id] }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
+      ]);
     } catch (error) {
-      toast.error('Could not archive the mock', {
-        description: error instanceof Error ? error.message : 'Please try again.'
-      })
+      toast.error("Could not archive the mock", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     } finally {
-      setIsArchiving(false)
+      setIsArchiving(false);
     }
-  }
+  };
 
   const copyStudentLink = async (slug: string) => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/mock/${slug}`)
-      toast.success('Student link copied')
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/mock/${slug}`,
+      );
+      toast.success("Student link copied");
     } catch {
-      toast.error('Could not copy the student link')
+      toast.error("Could not copy the student link");
     }
-  }
+  };
 
-  const uniqueCourses = Array.from(new Set(mocks.map(m => m.course?.name).filter(Boolean))) as string[]
+  const uniqueCourses = Array.from(
+    new Set(mocks.map((m) => m.course?.name).filter(Boolean)),
+  ) as string[];
+  const audienceLabel = (mock: MockExam) => {
+    if (mock.course?.name) return mock.course.name;
+    if (mock.audience_scope === "direct_link") return "Standalone mock";
+    if (mock.audience_scope === "combination") return "Subject combination";
+    if (mock.audience_scope === "programme") return "Class assessment";
+    if (mock.audience_scope === "school") return "Centre-wide";
+    return "Unassigned draft";
+  };
 
   const filteredMocks = mocks.filter((mock) => {
-    const statusMatch = filterStatus === 'all' || mock.status === filterStatus
-    const courseMatch = filterCourse === 'all' || mock.course?.name === filterCourse
-    return statusMatch && courseMatch
-  })
+    const statusMatch = filterStatus === "all" || mock.status === filterStatus;
+    const courseMatch =
+      filterCourse === "all" || mock.course?.name === filterCourse;
+    return statusMatch && courseMatch;
+  });
 
   return (
     <div className="w-full animate-in fade-in duration-500">
       {mockToArchive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="archive-mock-title">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="archive-mock-title"
+        >
           <div className="w-full max-w-md rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-xl">
-            <h2 id="archive-mock-title" className="text-lg font-semibold text-[#1b1c1c]">Close submission for this mock?</h2>
+            <h2
+              id="archive-mock-title"
+              className="text-lg font-semibold text-[#1b1c1c]"
+            >
+              Close submission for this mock?
+            </h2>
             <p className="mt-2 text-sm text-[#474551]">
-              {mockToArchive.title} will leave the active list, but its attempts and results will be preserved.
+              {mockToArchive.title} will leave the active list, but its attempts
+              and results will be preserved.
             </p>
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" disabled={isArchiving} onClick={() => setMockToArchive(null)} className="rounded-md px-4 py-2 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2] disabled:opacity-50">Cancel</button>
-              <button type="button" disabled={isArchiving} onClick={archiveMock} className="rounded-md bg-[#994704] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7a3903] disabled:opacity-50">
-                {isArchiving ? 'Closing…' : 'Close submission'}
+              <button
+                type="button"
+                disabled={isArchiving}
+                onClick={() => setMockToArchive(null)}
+                className="rounded-md px-4 py-2 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isArchiving}
+                onClick={archiveMock}
+                className="rounded-md bg-[#994704] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7a3903] disabled:opacity-50"
+              >
+                {isArchiving ? "Closing…" : "Close submission"}
               </button>
             </div>
           </div>
@@ -136,12 +201,17 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       {/* Header Section */}
       <DashboardPageHeader
         className="mb-8 border-b border-dashboard-outline pb-6"
-        title="Mocks"
-        description="Create practice exams, publish them to students, and review their results."
-        actions={<Link href="/dashboard/mocks/builder" className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-6 py-3 text-sm font-semibold text-white shadow-dashboard-card transition-colors hover:bg-dashboard-accent/90">
+        title="Assessments"
+        description="Create, share and review mocks — with or without a class."
+        actions={
+          <Link
+            href="/dashboard/mocks/builder"
+            className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-6 py-3 text-sm font-semibold text-white shadow-dashboard-card transition-colors hover:bg-dashboard-accent/90"
+          >
             <span className="material-symbols-outlined text-[20px]">add</span>
-            Create Mock
-        </Link>}
+            Create assessment
+          </Link>
+        }
       />
 
       {/* Filters & Controls */}
@@ -149,18 +219,18 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
         {/* Status Tabs */}
         <div className="flex bg-[#f5f3f2] p-1 rounded-md border border-[#c8c5d2] overflow-x-auto w-full lg:w-auto">
           {[
-            { id: 'all', label: 'All Mocks' },
-            { id: 'draft', label: 'Drafts' },
-            { id: 'published', label: 'Published' },
-            { id: 'archived', label: 'Closed' }
-          ].map(tab => (
+            { id: "all", label: "All Mocks" },
+            { id: "draft", label: "Drafts" },
+            { id: "published", label: "Published" },
+            { id: "archived", label: "Closed" },
+          ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
               className={`px-5 py-2 text-[12px] font-semibold tracking-wider rounded-sm whitespace-nowrap transition-colors ${
-                filterStatus === tab.id 
-                  ? 'bg-white text-[#180d62] shadow-sm' 
-                  : 'text-[#474551] hover:text-[#180d62]'
+                filterStatus === tab.id
+                  ? "bg-white text-[#180d62] shadow-sm"
+                  : "text-[#474551] hover:text-[#180d62]"
               }`}
             >
               {tab.label}
@@ -170,16 +240,20 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
 
         {/* Course Dropdown */}
         <div className="flex items-center gap-3">
-          <span className="text-[12px] font-semibold text-[#474551] uppercase tracking-widest">Filter by Subject:</span>
+          <span className="text-[12px] font-semibold text-[#474551] uppercase tracking-widest">
+            Filter by Subject:
+          </span>
           <div className="relative">
-            <select 
+            <select
               value={filterCourse}
               onChange={(e) => setFilterCourse(e.target.value)}
               className="appearance-none bg-white border border-[#c8c5d2] text-[#1b1c1c] text-[14px] py-2 pl-4 pr-10 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded-md shadow-sm min-w-[220px]"
             >
-              <option value="all">All Active Subjects</option>
-              {uniqueCourses.map(courseName => (
-                <option key={courseName} value={courseName}>{courseName}</option>
+              <option value="all">All subjects and standalone mocks</option>
+              {uniqueCourses.map((courseName) => (
+                <option key={courseName} value={courseName}>
+                  {courseName}
+                </option>
               ))}
             </select>
             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#787582] pointer-events-none text-[20px]">
@@ -192,26 +266,149 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
       {/* Data Table */}
       <div className="bg-white border border-[#c2b59b] rounded-xl shadow-[0px_4px_20px_rgba(61,61,61,0.08)] overflow-hidden mb-12">
         <div className="divide-y divide-[#e4e2e1] sm:hidden">
-          {apiError ? <div className="p-6 text-center text-sm text-[#ba1a1a]">{apiError}<button type="button" onClick={() => void mocksQuery.refetch()} className="mt-3 block w-full rounded-lg border border-[#994704] px-3 py-2 font-semibold text-[#994704]">Try again</button></div>
-            : mocksQuery.isLoading ? <div className="p-8 text-center text-sm text-[#474551]">Loading mocks…</div>
-            : filteredMocks.length === 0 ? filterStatus === 'all' ? <div className="flex flex-col items-center p-10 text-center"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#787582]"><span className="material-symbols-outlined text-[30px]">quiz</span></div><h2 className="text-lg font-semibold text-[#1b1c1c]">No mocks yet</h2><p className="mt-2 max-w-[280px] text-sm leading-6 text-[#474551]">Create your first mock exam to start assessing your students&apos; progress.</p><Link href="/dashboard/mocks/builder" className="mt-5 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white">Create first mock</Link></div> : <div className="p-8 text-center text-sm text-[#474551]">No {filterStatus} mocks found.</div>
-            : filteredMocks.map((mock) => {
-              const questions = mock.total_mcq_questions + mock.total_theory_questions
-              return <article key={mock.id} className={`p-4 ${mock.status === 'archived' ? 'opacity-60' : ''}`}>
-                <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-semibold text-[#1b1c1c]">{mock.title}</h2><p className="mt-1 text-xs text-[#716c76]">{mock.course?.name || 'General mock'} · {questions} questions</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${mock.status === 'published' ? 'bg-[#e8f5e9] text-[#2e7d32]' : mock.status === 'draft' ? 'bg-[#f0eded] text-[#474551]' : 'bg-[#e4e2e1] text-[#787582]'}`}>{mock.status}</span></div>
-                <div className="mt-3 flex items-center justify-between text-xs text-[#716c76]"><span>{mock.status === 'draft' ? 'Not published' : `${mock.metrics.attempts} attempts`}</span>{mock.metrics.pending_grading > 0 && mock.total_theory_questions > 0 && <span className="font-semibold text-[#ba1a1a]">{mock.metrics.pending_grading} to grade</span>}</div>
-                <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">{mock.status === 'published' && mock.direct_link_enabled && mock.direct_link_slug && <button onClick={() => void copyStudentLink(mock.direct_link_slug!)} className="text-[#2e2877]">Copy link</button>}{mock.status === 'draft' ? <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/builder?id=${mock.id}`) }} className="text-[#994704]">Edit mock</button> : <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#994704]">View results</button>}{mock.status === 'published' && <button onClick={() => setMockToArchive(mock)} className="text-[#716c76]">Close submission</button>}</div>
-              </article>
-            })}
+          {apiError ? (
+            <div className="p-6 text-center text-sm text-[#ba1a1a]">
+              {apiError}
+              <button
+                type="button"
+                onClick={() => void mocksQuery.refetch()}
+                className="mt-3 block w-full rounded-lg border border-[#994704] px-3 py-2 font-semibold text-[#994704]"
+              >
+                Try again
+              </button>
+            </div>
+          ) : mocksQuery.isLoading ? (
+            <div className="p-8 text-center text-sm text-[#474551]">
+              Loading mocks…
+            </div>
+          ) : filteredMocks.length === 0 ? (
+            filterStatus === "all" ? (
+              <div className="flex flex-col items-center p-10 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eded] text-[#787582]">
+                  <span className="material-symbols-outlined text-[30px]">
+                    quiz
+                  </span>
+                </div>
+                <h2 className="text-lg font-semibold text-[#1b1c1c]">
+                  No mocks yet
+                </h2>
+                <p className="mt-2 max-w-[280px] text-sm leading-6 text-[#474551]">
+                  Create your first mock exam to start assessing your
+                  students&apos; progress.
+                </p>
+                <Link
+                  href="/dashboard/mocks/builder"
+                  className="mt-5 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white"
+                >
+                  Create first mock
+                </Link>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-sm text-[#474551]">
+                No {filterStatus} mocks found.
+              </div>
+            )
+          ) : (
+            filteredMocks.map((mock) => {
+              const questions =
+                mock.total_mcq_questions + mock.total_theory_questions;
+              return (
+                <article
+                  key={mock.id}
+                  className={`p-4 ${mock.status === "archived" ? "opacity-60" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="truncate font-semibold text-[#1b1c1c]">
+                        {mock.title}
+                      </h2>
+                      <p className="mt-1 text-xs text-[#716c76]">
+                        {audienceLabel(mock)} · {questions} questions
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${mock.status === "published" ? "bg-[#e8f5e9] text-[#2e7d32]" : mock.status === "draft" ? "bg-[#f0eded] text-[#474551]" : "bg-[#e4e2e1] text-[#787582]"}`}
+                    >
+                      {mock.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-[#716c76]">
+                    <span>
+                      {mock.status === "draft"
+                        ? "Not published"
+                        : `${mock.metrics.attempts} attempts`}
+                    </span>
+                    {mock.metrics.pending_grading > 0 &&
+                      mock.total_theory_questions > 0 && (
+                        <span className="font-semibold text-[#ba1a1a]">
+                          {mock.metrics.pending_grading} to grade
+                        </span>
+                      )}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
+                    {mock.status === "published" &&
+                      mock.direct_link_enabled &&
+                      mock.direct_link_slug && (
+                        <button
+                          onClick={() =>
+                            void copyStudentLink(mock.direct_link_slug!)
+                          }
+                          className="text-[#2e2877]"
+                        >
+                          Copy link
+                        </button>
+                      )}
+                    {mock.status === "draft" ? (
+                      <button
+                        onClick={() => {
+                          startNavigationProgress();
+                          router.push(`/dashboard/mocks/builder?id=${mock.id}`);
+                        }}
+                        className="text-[#994704]"
+                      >
+                        Edit mock
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          startNavigationProgress();
+                          router.push(`/dashboard/mocks/${mock.id}/results`);
+                        }}
+                        className="text-[#994704]"
+                      >
+                        View results
+                      </button>
+                    )}
+                    {mock.status === "published" && (
+                      <button
+                        onClick={() => setMockToArchive(mock)}
+                        className="text-[#716c76]"
+                      >
+                        Close submission
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })
+          )}
         </div>
         <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-[#f5f3ed] border-b border-[#c2b59b]">
-                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">Mock Details</th>
-                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">Status</th>
-                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest text-right">Metrics</th>
-                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest text-right">Actions</th>
+                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">
+                  Mock Details
+                </th>
+                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">
+                  Status
+                </th>
+                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest text-right">
+                  Metrics
+                </th>
+                <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e4e2e1]">
@@ -219,8 +416,12 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                 <tr>
                   <td colSpan={4} className="py-16 text-center text-[#ba1a1a]">
                     <div className="flex flex-col items-center justify-center">
-                      <span className="material-symbols-outlined text-[32px] mb-2">error</span>
-                      <p className="font-semibold">We could not load your mocks</p>
+                      <span className="material-symbols-outlined text-[32px] mb-2">
+                        error
+                      </span>
+                      <p className="font-semibold">
+                        We could not load your mocks
+                      </p>
                       <p className="text-[14px] mt-1">{apiError}</p>
                       <button
                         type="button"
@@ -235,19 +436,28 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
               ) : mocksQuery.isLoading ? (
                 <tr>
                   <td colSpan={4} className="py-16 text-center text-[#474551]">
-                    <div className="flex justify-center"><div className="animate-spin h-8 w-8 border-b-2 border-[#180d62] rounded-full"></div></div>
+                    <div className="flex justify-center">
+                      <div className="animate-spin h-8 w-8 border-b-2 border-[#180d62] rounded-full"></div>
+                    </div>
                   </td>
                 </tr>
               ) : filteredMocks.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-0 border-none">
-                    {filterStatus === 'all' ? (
+                    {filterStatus === "all" ? (
                       <div className="bg-white p-16 flex flex-col items-center justify-center text-center">
                         <div className="w-16 h-16 bg-[#f0eded] rounded-full flex items-center justify-center mb-5 text-[#787582]">
-                          <span className="material-symbols-outlined text-[32px]">quiz</span>
+                          <span className="material-symbols-outlined text-[32px]">
+                            quiz
+                          </span>
                         </div>
-                        <h4 className="text-[20px] font-semibold text-[#1b1c1c] mb-2">No mocks yet</h4>
-                        <p className="text-[14px] text-[#474551] max-w-[280px] mb-8">Create your first mock exam to start assessing your students' progress.</p>
+                        <h4 className="text-[20px] font-semibold text-[#1b1c1c] mb-2">
+                          No mocks yet
+                        </h4>
+                        <p className="text-[14px] text-[#474551] max-w-[280px] mb-8">
+                          Create your first mock exam to start assessing your
+                          students' progress.
+                        </p>
                         <Link href="/dashboard/mocks/builder">
                           <button className="bg-[#994704] text-white text-[14px] font-semibold px-6 py-3 rounded-lg hover:bg-[#7a3903] transition-colors">
                             Create First Mock
@@ -262,83 +472,167 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
                   </td>
                 </tr>
               ) : (
-                filteredMocks.map(mock => {
-                  const totalQs = mock.total_mcq_questions + mock.total_theory_questions
-                  
+                filteredMocks.map((mock) => {
+                  const totalQs =
+                    mock.total_mcq_questions + mock.total_theory_questions;
+
                   return (
-                    <tr key={mock.id} className={`hover:bg-[#f3f0f0] transition-colors group ${mock.status === 'archived' ? 'opacity-60' : ''}`}>
+                    <tr
+                      key={mock.id}
+                      className={`hover:bg-[#f3f0f0] transition-colors group ${mock.status === "archived" ? "opacity-60" : ""}`}
+                    >
                       <td className="py-5 px-6">
                         <div className="flex flex-col gap-1">
-                          <span className={`text-[18px] font-semibold transition-colors ${mock.status === 'archived' ? 'text-[#474551]' : 'text-[#1b1c1c] group-hover:text-[#180d62]'}`}>
+                          <span
+                            className={`text-[18px] font-semibold transition-colors ${mock.status === "archived" ? "text-[#474551]" : "text-[#1b1c1c] group-hover:text-[#180d62]"}`}
+                          >
                             {mock.title}
                           </span>
-                          <span className={`text-[14px] ${mock.status === 'archived' ? 'text-[#787582]' : 'text-[#474551]'}`}>
-                            {mock.course?.name || 'General mock'} • {mock.status === 'draft' ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago` : mock.status === 'archived' ? `Closed ${formatMMMdd(new Date(mock.updated_at))}` : `Created ${formatMMMdd(new Date(mock.created_at))}`}
+                          <span
+                            className={`text-[14px] ${mock.status === "archived" ? "text-[#787582]" : "text-[#474551]"}`}
+                          >
+                            {audienceLabel(mock)} •{" "}
+                            {mock.status === "draft"
+                              ? `Last edited ${formatDistanceToNow(new Date(mock.updated_at))} ago`
+                              : mock.status === "archived"
+                                ? `Closed ${formatMMMdd(new Date(mock.updated_at))}`
+                                : `Created ${formatMMMdd(new Date(mock.created_at))}`}
                           </span>
                         </div>
                       </td>
 
                       <td className="py-5 px-6 align-top pt-6">
-                        {mock.status === 'published' && (
-                          <div className="flex flex-col items-start gap-2"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-[11px] font-semibold border border-[#A5D6A7]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#4CAF50]"></span> Published
-                          </span></div>
-                        )}
-                        {mock.status === 'draft' && (
-                          <div className="flex flex-col gap-2 items-start">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0eded] text-[#474551] text-[11px] font-semibold border border-[#c8c5d2]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#787582]"></span> Draft
+                        {mock.status === "published" && (
+                          <div className="flex flex-col items-start gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-[11px] font-semibold border border-[#A5D6A7]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#4CAF50]"></span>{" "}
+                              Published
                             </span>
-                            {mock.publish_at && new Date(mock.publish_at) > new Date() && (
-                              <span className="flex items-center gap-1 text-[#2e2877] text-[11px] font-semibold mt-1">
-                                <span className="material-symbols-outlined text-[14px]">schedule</span> {formatDateTime(new Date(mock.publish_at))}
-                              </span>
-                            )}
                           </div>
                         )}
-                        {mock.status === 'archived' && (
+                        {mock.status === "draft" && (
+                          <div className="flex flex-col gap-2 items-start">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0eded] text-[#474551] text-[11px] font-semibold border border-[#c8c5d2]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#787582]"></span>{" "}
+                              Draft
+                            </span>
+                            {mock.publish_at &&
+                              new Date(mock.publish_at) > new Date() && (
+                                <span className="flex items-center gap-1 text-[#2e2877] text-[11px] font-semibold mt-1">
+                                  <span className="material-symbols-outlined text-[14px]">
+                                    schedule
+                                  </span>{" "}
+                                  {formatDateTime(new Date(mock.publish_at))}
+                                </span>
+                              )}
+                          </div>
+                        )}
+                        {mock.status === "archived" && (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e4e2e1] text-[#787582] text-[11px] font-semibold border border-[#c8c5d2]">
-                            <span className="material-symbols-outlined text-[14px]">inventory_2</span> Closed
+                            <span className="material-symbols-outlined text-[14px]">
+                              inventory_2
+                            </span>{" "}
+                            Closed
                           </span>
                         )}
                       </td>
 
                       <td className="py-5 px-6 text-right align-top pt-6">
-                        <div className={`flex flex-col items-end gap-1 ${mock.status === 'archived' ? 'text-[#787582]' : ''}`}>
+                        <div
+                          className={`flex flex-col items-end gap-1 ${mock.status === "archived" ? "text-[#787582]" : ""}`}
+                        >
                           <div className="flex items-center justify-end gap-3 w-full">
-                            <span className="text-[14px] text-[#474551] min-w-[78px] text-right" title="Questions">{totalQs} questions</span>
+                            <span
+                              className="text-[14px] text-[#474551] min-w-[78px] text-right"
+                              title="Questions"
+                            >
+                              {totalQs} questions
+                            </span>
                             <span className="text-[#c8c5d2]">|</span>
-                            <span className={`text-[16px] min-w-[32px] text-right ${mock.status === 'draft' ? 'text-[#474551]' : 'font-semibold text-[#1b1c1c]'}`} title="Attempts">
-                              {mock.status === 'draft' ? '-' : mock.metrics.attempts}
+                            <span
+                              className={`text-[16px] min-w-[32px] text-right ${mock.status === "draft" ? "text-[#474551]" : "font-semibold text-[#1b1c1c]"}`}
+                              title="Attempts"
+                            >
+                              {mock.status === "draft"
+                                ? "-"
+                                : mock.metrics.attempts}
                             </span>
                           </div>
-                          {mock.metrics.pending_grading > 0 && mock.total_theory_questions > 0 && mock.status !== 'draft' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#ffdad6] text-[#ba1a1a] text-[11px] font-semibold rounded border border-[#ba1a1a]/20 mt-2">
-                              <span className="material-symbols-outlined text-[14px]">edit_note</span> {mock.metrics.pending_grading} pending grading
-                            </span>
-                          )}
+                          {mock.metrics.pending_grading > 0 &&
+                            mock.total_theory_questions > 0 &&
+                            mock.status !== "draft" && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#ffdad6] text-[#ba1a1a] text-[11px] font-semibold rounded border border-[#ba1a1a]/20 mt-2">
+                                <span className="material-symbols-outlined text-[14px]">
+                                  edit_note
+                                </span>{" "}
+                                {mock.metrics.pending_grading} pending grading
+                              </span>
+                            )}
                         </div>
                       </td>
 
                       <td className="py-5 px-6 text-right align-top pt-6">
-                        {mock.status === 'published' && (
+                        {mock.status === "published" && (
                           <div className="flex items-center justify-end gap-3">
-                            {mock.direct_link_enabled && mock.direct_link_slug && <button onClick={() => void copyStudentLink(mock.direct_link_slug!)} className="text-[#2e2877] text-[12px] font-semibold hover:underline">Copy student link</button>}
-                            <button onClick={() => setMockToArchive(mock)} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704]">Close submission</button>
-                            <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#994704] text-[12px] font-semibold hover:underline">View Results</button>
+                            {mock.direct_link_enabled &&
+                              mock.direct_link_slug && (
+                                <button
+                                  onClick={() =>
+                                    void copyStudentLink(mock.direct_link_slug!)
+                                  }
+                                  className="text-[#2e2877] text-[12px] font-semibold hover:underline"
+                                >
+                                  Copy student link
+                                </button>
+                              )}
+                            <button
+                              onClick={() => setMockToArchive(mock)}
+                              className="text-[#787582] text-[12px] font-semibold hover:text-[#994704]"
+                            >
+                              Close submission
+                            </button>
+                            <button
+                              onClick={() => {
+                                startNavigationProgress();
+                                router.push(
+                                  `/dashboard/mocks/${mock.id}/results`,
+                                );
+                              }}
+                              className="text-[#994704] text-[12px] font-semibold hover:underline"
+                            >
+                              View Results
+                            </button>
                           </div>
                         )}
-                        {mock.status === 'draft' && (
-                          <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/builder?id=${mock.id}`) }} className="text-[#994704] text-[12px] font-semibold hover:underline">
+                        {mock.status === "draft" && (
+                          <button
+                            onClick={() => {
+                              startNavigationProgress();
+                              router.push(
+                                `/dashboard/mocks/builder?id=${mock.id}`,
+                              );
+                            }}
+                            className="text-[#994704] text-[12px] font-semibold hover:underline"
+                          >
                             Edit Mock
                           </button>
                         )}
-                        {mock.status === 'archived' && (
-                          <button onClick={() => { startNavigationProgress(); router.push(`/dashboard/mocks/${mock.id}/results`) }} className="text-[#787582] text-[12px] font-semibold hover:text-[#994704] hover:underline">View Results</button>
+                        {mock.status === "archived" && (
+                          <button
+                            onClick={() => {
+                              startNavigationProgress();
+                              router.push(
+                                `/dashboard/mocks/${mock.id}/results`,
+                              );
+                            }}
+                            className="text-[#787582] text-[12px] font-semibold hover:text-[#994704] hover:underline"
+                          >
+                            View Results
+                          </button>
                         )}
                       </td>
                     </tr>
-                  )
+                  );
                 })
               )}
             </tbody>
@@ -346,5 +640,5 @@ export function MocksManagementClient({ token, capabilities, user }: MocksManage
         </div>
       </div>
     </div>
-  )
+  );
 }
