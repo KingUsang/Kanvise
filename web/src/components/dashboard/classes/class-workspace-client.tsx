@@ -35,7 +35,7 @@ import { ClassStudentInviteDialog } from "./class-student-invite-dialog";
 import { MockBuilderClient } from "../mocks/mock-builder-client";
 import { MockResultsClient } from "../mocks/mock-results-client";
 import { SubmissionsClient } from "../assignments/submissions-client";
-import AssignmentsPage from "@/app/dashboard/assignments/page";
+import { AssignmentsClient } from "@/app/dashboard/assignments/page";
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
 
@@ -607,7 +607,7 @@ export function ClassWorkspaceClient({
               ) : isCreatingAssignment ? (
                 <section className="mt-5">
                   <ClassAssessmentBackButton classId={classId} />
-                  <AssignmentsPage embedded />
+                  <AssignmentsClient embedded />
                 </section>
               ) : mocksQuery.isPending || assignmentsQuery.isPending ? (
                 <WorkspaceSectionLoading cards={3} />

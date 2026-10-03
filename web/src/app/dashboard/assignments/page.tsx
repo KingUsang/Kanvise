@@ -11,7 +11,7 @@ import { UploadTaskStatus } from "@/components/uploads/upload-task-status";
 import { uploadFileWithProgress } from "@/lib/upload-with-progress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
-export default function AssignmentsPage({ embedded = false }: { embedded?: boolean }) {
+export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -459,4 +459,8 @@ export default function AssignmentsPage({ embedded = false }: { embedded?: boole
       </div>
     </div>
   );
+}
+
+export default function AssignmentsPage() {
+  return <AssignmentsClient />
 }
