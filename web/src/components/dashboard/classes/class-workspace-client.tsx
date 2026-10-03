@@ -35,7 +35,7 @@ import { ClassStudentInviteDialog } from "./class-student-invite-dialog";
 import { MockBuilderClient } from "../mocks/mock-builder-client";
 import { MockResultsClient } from "../mocks/mock-results-client";
 import { SubmissionsClient } from "../assignments/submissions-client";
-import { AssignmentsClient } from "@/app/dashboard/assignments/page";
+import { AssignmentsClient } from "@/components/dashboard/assignments/assignments-client";
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
 
