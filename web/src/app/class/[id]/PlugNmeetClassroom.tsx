@@ -54,7 +54,7 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
     }
 
     let disposed = false
-    let frame = 0
+    let startupTimer = 0
     let readyTimer = 0
     const cssNodes: HTMLLinkElement[] = []
     const scriptNodes: HTMLScriptElement[] = []
@@ -109,9 +109,9 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
     }
 
     // PlugNmeet's module reads #plugNmeet-app synchronously at evaluation.
-    // Waiting one animation frame proves this React-owned node is in the live
-    // document before module evaluation starts.
-    frame = requestAnimationFrame(() => { void (async () => {
+    // A timer lets React commit the node without relying on requestAnimationFrame,
+    // which browsers throttle indefinitely when this tab starts in background.
+    startupTimer = window.setTimeout(() => { void (async () => {
       if (disposed || !root.isConnected || document.getElementById('plugNmeet-app') !== root) {
         if (!disposed) setIssue('The classroom mount point changed before startup. Please refresh and try again.')
         return
@@ -141,11 +141,11 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
           setIssue('Could not start the classroom interface. Please refresh and try again.')
         }
       }
-    })() })
+    })() }, 0)
 
     return () => {
       disposed = true
-      cancelAnimationFrame(frame)
+      window.clearTimeout(startupTimer)
       window.clearTimeout(readyTimer)
       try { window.plugNmeet?.leave?.() } catch { /* best effort */ }
       for (const node of cssNodes) node.remove()
