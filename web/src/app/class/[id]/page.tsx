@@ -1,10 +1,6 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import PreparingClassroom from './PreparingClassroom'
-import PlugNmeetClassroom from './PlugNmeetClassroom'
-import DemoKnowledgeCheck from './DemoKnowledgeCheck'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -94,96 +90,17 @@ export default async function Page({ params, searchParams }: PageProps) {
     )
   }
 
-  // ── 2. Call Hono to get the PlugNmeet class configuration ─────────────────
-  // Tutors navigate with ?start=true to create and start the room.
-  // Everyone else calls /join which expects the room to already be live.
-
-  const honoUrl = process.env.NEXT_PUBLIC_API_URL
-  const endpoint = isStarting
-    ? `${honoUrl}/live-classes/${classId}/start`
-    : `${honoUrl}/live-classes/${classId}/join`
-
-  let classData: {
-    provider?: 'plugnmeet'
-    is_host: boolean
-    class_title: string
-    course_name: string | null
-    room_id?: string
-    join_token?: string
-    server_url?: string
-    client_files?: { css_files: string[]; js_files: string[] }
-  }
-  let errorMessage: string | null = null
-  let preparing: {
-    retry_after_seconds?: number
-    class_title?: string
-    course_name?: string | null
-    is_host?: boolean
-  } | null = null
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      // next.js fetch cache: never cache a live class token
-      cache: 'no-store',
-    })
-
-    const json = await response.json()
-
-    if (response.status === 202 && json.data?.state === 'preparing') {
-      preparing = json.data
-    } else if (!response.ok) {
-      errorMessage = json.error || `Failed to ${isStarting ? 'start' : 'join'} class (${response.status})`
-    } else {
-      classData = json.data
-    }
-  } catch {
-    errorMessage = 'Could not reach the Kanvise API. Is the Hono server running?'
-  }
-
-  // ── 3. Render ──────────────────────────────────────────────────────────────
-
-  if (preparing) {
-    return <PreparingClassroom
-      classId={classId}
-      isStarting={isStarting}
-      classTitle={preparing.class_title || 'Your live class'}
-      courseName={preparing.course_name || null}
-      isHost={preparing.is_host ?? isStarting}
-      studentName={session?.user?.user_metadata?.first_name || 'Tutor'}
-      studentId={session?.user?.id}
-    />
-  }
-
-  if (errorMessage || !classData!) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#fbf9f8] font-sans">
-        <div className="bg-white rounded-2xl p-8 shadow-xl max-w-sm w-full text-center">
-          <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-600 text-2xl">!</span>
-          </div>
-          <h2 className="text-[#180d62] font-bold text-lg mb-2">Cannot Join Class</h2>
-          <p className="text-[#787582] text-sm">{errorMessage}</p>
-          <Link href="/dashboard" className="mt-5 inline-flex rounded-lg bg-[#180d62] px-4 py-2 text-sm font-semibold text-white">
-            Back to dashboard
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  const isHost = classData!.is_host === true // The backend securely confirms if they are the host
-
-  if (classData!.provider === 'plugnmeet' && classData!.join_token && classData!.server_url && classData!.client_files) {
-    return <>
-      <DemoKnowledgeCheck classId={classId} isHost={isHost} studentName={session?.user?.user_metadata?.first_name || "Tutor"} studentId={session?.user?.id} />
-      <PlugNmeetClassroom roomId={classData!.room_id || classId} joinToken={classData!.join_token} serverUrl={classData!.server_url} clientFiles={classData!.client_files} classId={classId} isHost={isHost} classTitle={classData!.class_title} />
-    </>
-  }
-
-  return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5"><section className="max-w-md rounded-2xl bg-white p-7 text-center shadow-sm"><h1 className="text-xl font-bold text-[#180d62]">Classroom unavailable</h1><p className="mt-3 text-sm text-slate-600">This class was created with a retired classroom service. Please ask your tutor to create a new Kanvise class.</p><Link href="/dashboard" className="mt-5 inline-flex rounded-lg bg-[#180d62] px-4 py-2 text-sm font-semibold text-white">Back to dashboard</Link></section></main>
+  // Start and join are intentionally client-side. PlugNMeet can cold-start,
+  // and awaiting that request in this server component strands the visitor on
+  // Next's non-interactive route fallback. PreparingClassroom owns readiness,
+  // retries and the eventual handoff to the provider UI.
+  return <PreparingClassroom
+    classId={classId}
+    isStarting={isStarting}
+    classTitle="Your live class"
+    courseName={null}
+    isHost={isStarting}
+    studentName={session.user.user_metadata?.first_name || 'Tutor'}
+    studentId={session.user.id}
+  />
 }
