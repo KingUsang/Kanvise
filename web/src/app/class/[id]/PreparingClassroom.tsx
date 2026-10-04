@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import PlugNmeetClassroom from "./PlugNmeetClassroom";
+import DemoKnowledgeCheck from "./DemoKnowledgeCheck";
 
 type ClassroomToken = {
   provider?: "plugnmeet";
@@ -46,12 +47,16 @@ export default function PreparingClassroom({
   classTitle,
   courseName,
   isHost,
+  studentName,
+  studentId,
 }: {
   classId: string;
   isStarting: boolean;
   classTitle: string;
   courseName: string | null;
   isHost: boolean;
+  studentName?: string;
+  studentId?: string;
 }) {
   const [phase, setPhase] = useState<Phase>("classroom_waking");
   const [error, setError] = useState<string | null>(null);
@@ -210,7 +215,8 @@ export default function PreparingClassroom({
       ready.server_url &&
       ready.client_files
     ) {
-      return (
+      return (<>
+        <DemoKnowledgeCheck classId={classId} isHost={ready.is_host} studentName={studentName} studentId={studentId} />
         <PlugNmeetClassroom
           roomId={ready.room_id || classId}
           joinToken={ready.join_token}
@@ -220,7 +226,7 @@ export default function PreparingClassroom({
           isHost={ready.is_host}
           classTitle={ready.class_title || classTitle}
         />
-      );
+      </>);
     }
     return null;
   }

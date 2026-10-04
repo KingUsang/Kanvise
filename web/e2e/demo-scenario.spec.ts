@@ -9,7 +9,8 @@ const students = [
   { email: 'emeka@demo.com', outcome: 'struggling' },
 ]
 const mobileRecording = process.env.KANVISE_MOBILE_RECORDING === '1'
-const recordingViewport = mobileRecording ? { width: 393, height: 851 } : { width: 1920, height: 1080 }
+const recordingViewport = mobileRecording ? { width: 393, height: 851 } : { width: 2560, height: 1440 }
+const recordingSize = mobileRecording ? recordingViewport : { width: 1920, height: 1080 }
 
 function webEnv(name: string) {
   const match = readFileSync('web/.env.local', 'utf8').match(new RegExp(`^${name}=(.+)$`, 'm'))
@@ -33,13 +34,24 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       document.addEventListener('pointerdown', event => {
         const cue = document.createElement('span')
         cue.setAttribute('aria-hidden', 'true')
-        cue.style.cssText = `position:fixed;left:${event.clientX - 18}px;top:${event.clientY - 18}px;width:36px;height:36px;border:3px solid #7c3aed;border-radius:9999px;background:rgba(124,58,237,.14);pointer-events:none;z-index:2147483647;animation:kanvise-recording-click .5s ease-out forwards;`
+        cue.style.cssText = `position:fixed;left:${event.clientX - 18}px;top:${event.clientY - 18}px;width:36px;height:36px;border:3px solid #c26627;border-radius:9999px;background:rgba(194,102,39,.14);pointer-events:none;z-index:2147483647;animation:kanvise-recording-click .5s ease-out forwards;`
         document.body.appendChild(cue)
         window.setTimeout(() => cue.remove(), 520)
       }, true)
       const style = document.createElement('style')
       style.textContent = '@keyframes kanvise-recording-click { from { transform:scale(.45); opacity:1 } to { transform:scale(1.45); opacity:0 } }'
       document.documentElement.appendChild(style)
+      if (!window.matchMedia('(pointer: coarse)').matches) {
+        const cursor = document.createElement('span')
+        cursor.setAttribute('aria-hidden', 'true')
+        cursor.innerHTML = '<svg width="28" height="34" viewBox="0 0 28 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L24 18.2L13.1 20.1L8.1 31L2 2Z" fill="white" stroke="#17131B" stroke-width="2.5" stroke-linejoin="round"/></svg>'
+        cursor.style.cssText = 'position:fixed;left:-40px;top:-40px;width:28px;height:34px;pointer-events:none;z-index:2147483647;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));transform:translate(-2px,-2px)'
+        document.documentElement.appendChild(cursor)
+        document.addEventListener('pointermove', event => {
+          cursor.style.left = `${event.clientX}px`
+          cursor.style.top = `${event.clientY}px`
+        }, true)
+      }
     })
   }
 
@@ -145,7 +157,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     viewport: recordingViewport,
     permissions: ['camera', 'microphone'],
     hasTouch: mobileRecording,
-    recordVideo: { dir: testInfo.outputPath('videos'), size: recordingViewport },
+    recordVideo: { dir: testInfo.outputPath('videos'), size: recordingSize },
   })
   await addRecordingClickCue(tutorContext)
   const tutorPage = await tutorContext.newPage()
@@ -161,7 +173,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
       // Emeka is the hero learner: record his actual question and mock flow
       // so the pitch edit can cut to the learner interface, not only tutor UI.
       ...(student.outcome === 'struggling'
-        ? { recordVideo: { dir: testInfo.outputPath('student-videos'), size: recordingViewport } }
+        ? { recordVideo: { dir: testInfo.outputPath('student-videos'), size: recordingSize } }
         : {}),
     })
     if (student.outcome === 'struggling') await addRecordingClickCue(context)
@@ -201,7 +213,7 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     // Scene 1 — enrolled learners have now joined the tutor's live room.
     if (mobileRecording) await expect(tutorPage.locator('#plugNmeet-app')).toContainText(/Show Participant List\s*4/, { timeout: 30_000 })
     else await expect(tutorPage.locator('#plugNmeet-app')).toContainText('Participants (4)', { timeout: 30_000 })
-    await expect(tutorPage.getByRole('button', { name: 'Generate knowledge check' })).toBeVisible({ timeout: 30_000 })
+    await expect(tutorPage.getByRole('button', { name: 'Suggest a knowledge check' })).toBeVisible({ timeout: 30_000 })
     await tutorPage.waitForTimeout(2_000)
 
     // Scene 2 — the tutor genuinely teaches in PlugNmeet's native whiteboard.
@@ -228,19 +240,19 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
         await enterPlugNmeet(page)
       }
     }))
-    await tutorPage.getByRole('button', { name: 'Generate knowledge check' }).click({ force: true })
-    await expect(tutorPage.getByText('Generating a question from today’s lesson…')).toBeVisible()
+    await tutorPage.getByRole('button', { name: 'Suggest a knowledge check' }).click({ force: true })
+    await expect(tutorPage.getByText('Creating a question')).toBeVisible()
     // Kanvise generates this from the lesson the tutor has just delivered.
     // The tutor only triggers and reviews it; no question text is authored here.
-    await expect(tutorPage.getByLabel('Knowledge check question')).toHaveValue("Which situation best demonstrates Newton's Third Law?", { timeout: 10_000 })
+    await expect(tutorPage.getByRole('heading', { name: "Which example best shows Newton's Third Law?" })).toBeVisible({ timeout: 10_000 })
     await tutorPage.waitForTimeout(2_000)
-    await tutorPage.getByRole('button', { name: 'Send to learners' }).click()
-    await expect(tutorPage.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible()
+    await tutorPage.getByRole('button', { name: 'Send to students' }).click()
+    await expect(tutorPage.getByText("Which example best shows Newton's Third Law?")).toBeVisible()
     await tutorPage.waitForTimeout(3_000)
 
     for (const [index, { page, outcome }] of studentContexts.entries()) {
       await tutorPage.waitForTimeout(350)
-      await expect(page.getByText("Which situation best demonstrates Newton's Third Law?")).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByText("Which example best shows Newton's Third Law?")).toBeVisible({ timeout: 20_000 })
       if (outcome === 'struggling') {
         // A headed Chromium only paints the foreground window reliably;
         // bring the hero learner forward for the actual learner-facing shot.
@@ -248,8 +260,8 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
         await page.waitForTimeout(700)
       }
       const answer = outcome === 'struggling'
-        ? 'A car accelerating forward when the driver presses the gas pedal.'
-        : 'A block resting on a table experiencing a normal force equal to its weight.'
+        ? 'A stationary book has balanced forces acting on it.'
+        : 'A rocket moves upward as it pushes exhaust gases downward.'
       await page.getByRole('button', { name: answer }).click()
     }
     await expect(tutorPage.getByText('✗ Incorrect')).toBeVisible({ timeout: 15_000 })

@@ -154,6 +154,8 @@ export default async function Page({ params, searchParams }: PageProps) {
       classTitle={preparing.class_title || 'Your live class'}
       courseName={preparing.course_name || null}
       isHost={preparing.is_host ?? isStarting}
+      studentName={session?.user?.user_metadata?.first_name || 'Tutor'}
+      studentId={session?.user?.id}
     />
   }
 

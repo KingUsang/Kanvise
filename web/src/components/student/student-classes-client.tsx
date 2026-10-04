@@ -53,6 +53,18 @@ export function StudentClassesClient() {
   const [resources, setResources] = useState<Record<string, ClassResources>>({});
   const now = Date.now();
   const visibleClasses = useMemo(() => filterStudentClasses(classes, view, courseId, now), [classes, courseId, now, view]);
+  const classGroups = useMemo(() => Array.from(visibleClasses.reduce((groups, session) => {
+    const key = session.course_id || "unassigned";
+    const current = groups.get(key) || [];
+    current.push(session);
+    groups.set(key, current);
+    return groups;
+  }, new Map<string, StudentClass[]>()).entries()).map(([id, sessions]) => ({
+    id,
+    subject: sessions[0]?.course?.name || "Class",
+    tutor: tutorName(sessions[0]),
+    sessions,
+  })), [visibleClasses]);
 
   const courses = useMemo(() => Array.from(new Map(classes.map((item) => [item.course_id, item.course?.name || "Subject"])).entries()), [classes]);
   // An ended_at timestamp is authoritative even if an older API response or
@@ -117,14 +129,19 @@ export function StudentClassesClient() {
         <label className="flex items-center gap-2 text-sm text-[#716c76]"><span className="shrink-0">Subject</span><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-[#dcd6d1] bg-white px-3 py-2.5 text-[#25232d] outline-none focus:border-[#2e2877] sm:min-w-52"><option value="all">All subjects</option>{courses.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
       </div>
 
-      <div className="mt-5 space-y-4">
-        {visibleClasses.length ? visibleClasses.map((item) => {
+      <div className="mt-5 space-y-5">
+        {classGroups.length ? classGroups.map((group) => <section key={group.id} className="overflow-hidden rounded-2xl border border-[#e5e1dd] bg-[#fbfaf9]">
+          <header className="flex flex-col gap-2 border-b border-[#e5e1dd] bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div><p className="text-xs font-semibold uppercase tracking-[.12em] text-[#994704]">Your class</p><h2 className="mt-1 text-lg font-semibold text-[#2e2877]">{group.subject}</h2><p className="mt-1 flex items-center gap-1.5 text-xs text-[#77727e]"><UserRound size={13}/>{group.tutor}</p></div>
+            <p className="text-xs font-medium text-[#716c76]">{group.sessions.length} session{group.sessions.length === 1 ? "" : "s"} in this view</p>
+          </header>
+          <div className="space-y-3 p-3 sm:p-4">{group.sessions.map((item) => {
           const scheduledTime = new Date(item.scheduled_at).getTime();
           const isPast = item.status === "completed" || item.status === "cancelled" || Boolean(item.ended_at) || (item.status === "scheduled" && scheduledTime < now);
           const liveNow = isVerifiedLive(item);
-          return <article key={item.id} className={`rounded-2xl border p-4 sm:flex sm:items-center sm:gap-5 sm:p-5 ${liveNow ? "border-[#c26627] bg-[#fffaf5]" : "border-[#e5e1dd] bg-white"}`}>
+          return <article key={item.id} className={`rounded-xl border p-4 sm:flex sm:flex-wrap sm:items-center sm:gap-5 ${liveNow ? "border-[#c26627] bg-[#fffaf5]" : "border-[#e5e1dd] bg-white"}`}>
             <div className="flex items-start gap-4 sm:min-w-48"><div className="rounded-xl bg-[#eeeafe] px-3 py-2 text-center text-[#2e2877]"><p className="text-lg font-semibold leading-5">{new Date(item.scheduled_at).getDate()}</p><p className="text-[11px] uppercase">{new Intl.DateTimeFormat("en-NG", { month: "short" }).format(new Date(item.scheduled_at))}</p></div><div><p className="text-sm font-semibold">{timeLabel(item.scheduled_at)}</p><p className="mt-1 text-xs text-[#77727e]">{dateLabel(item.scheduled_at)}</p><p className="mt-1 flex items-center gap-1 text-xs text-[#77727e]"><Clock3 size={12} />{item.duration_minutes} mins</p></div></div>
-            <div className="mt-4 min-w-0 flex-1 sm:mt-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{item.title}</p>{liveNow && <span className="rounded-full bg-[#fbe6d6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#994704]">Live now</span>}{item.status === "cancelled" && <span className="rounded-full bg-[#f1efed] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#716c76]">Cancelled</span>}</div><p className="mt-1 text-sm text-[#716c76]">{item.course?.name || "Subject"}</p><p className="mt-2 flex items-center gap-1.5 text-xs text-[#77727e]"><UserRound size={13} />{tutorName(item)}</p></div>
+            <div className="mt-4 min-w-0 flex-1 sm:mt-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{item.title}</p>{liveNow && <span className="rounded-full bg-[#fbe6d6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#994704]">Live now</span>}{item.status === "cancelled" && <span className="rounded-full bg-[#f1efed] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#716c76]">Cancelled</span>}</div><p className="mt-1 text-sm text-[#716c76]">{isPast ? "Past session" : "Upcoming session"}</p></div>
             <div className="mt-4 sm:mt-0 sm:text-right">{liveNow ? <Link href={`/class/${item.id}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 py-3 text-sm font-semibold text-white hover:bg-[#7f3a03] sm:w-auto"><Video size={17} />Join class</Link> : (item.status === "completed" || Boolean(item.ended_at)) ? <div className="flex flex-wrap justify-end gap-2">
               {item.recording_status === "ready" && <><button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Watch recording</button><button type="button" onClick={() => void downloadRecording(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Download</button></>}
               {item.recap_status === "published" && <button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#994704] px-3 py-2 text-sm font-semibold text-[#994704]">Read summary</button>}
@@ -138,7 +155,7 @@ export function StudentClassesClient() {
               {resources[item.id].summary && <article className="mt-4 rounded-xl border border-[#e5e1dd] bg-[#fbf9f8] p-4"><h3 className="font-semibold text-[#1b1c1c]">Class summary</h3><div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#474551]">{resources[item.id].summary}</div></article>}
             </div>}
           </article>;
-        }) : <div className="py-12 text-center"><CalendarDays className="mx-auto text-[#aaa4ad]" /><h2 className="mt-3 font-semibold">No classes here</h2><p className="mt-1 text-sm text-[#716c76]">Try another filter, or check back after your tutor schedules a class.</p></div>}
+        })}</div></section>) : <div className="py-12 text-center"><CalendarDays className="mx-auto text-[#aaa4ad]" /><h2 className="mt-3 font-semibold">No classes here</h2><p className="mt-1 text-sm text-[#716c76]">Try another filter, or check back after your tutor schedules a class.</p></div>}
       </div>
     </section>
   </>;

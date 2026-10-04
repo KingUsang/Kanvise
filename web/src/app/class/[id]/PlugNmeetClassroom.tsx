@@ -72,11 +72,30 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       stopMicTrackOnMute: true,
       focusActiveSpeakerWebcam: true,
       maxNumDisplayWebcams: { desktop: 4, tablet: 2, mobile: 1 },
+      // Kanvise classrooms always use PlugNmeet's supported light theme. The
+      // colour customisation API only applies consistently in that theme, and
+      // keeping the toggle disabled prevents a saved provider preference from
+      // switching a learner back to PlugNmeet's default purple/dark surface.
+      disableDarkMode: true,
       // Let the supplied PlugNmeet UI fill the page, but brand its native
       // welcome/logo surface as Kanvise. This is PlugNmeet's supported
       // designCustomization API — not a CSS hack over its controls.
       // PlugNmeet's colour customisation applies to its native light theme.
-      designCustomization: { custom_logo: `${window.location.origin}/kanvise_logo_small_blue.png` },
+      designCustomization: {
+        primary_color: '#312783',
+        primary_btn_bg_color: '#994704',
+        primary_btn_text_color: '#ffffff',
+        secondary_color: '#625e69',
+        secondary_btn_bg_color: '#f3eee9',
+        secondary_btn_text_color: '#27242d',
+        header_bg_color: '#ffffff',
+        footer_bg_color: '#ffffff',
+        footer_icon_bg_color: '#f3eee9',
+        footer_icon_color: '#312783',
+        side_panel_bg_color: '#fbf9f8',
+        background_color: '#fbf9f8',
+        custom_logo: `${window.location.origin}/kanvise_logo_small_blue.png`,
+      },
     }
     document.cookie = `pnm_access_token=${joinToken}; Path=/; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
 
