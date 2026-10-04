@@ -116,7 +116,10 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
             if (!emit({ phase: 'classroom_healthy' })) return
             const liveClass = access.liveClass as any
             const requiresRecording = liveClass.access_mode !== 'anyone_with_link' && Boolean(liveClass.course_id)
-            if (!requiresRecording || await recorderReadyForClass(liveClass.id)) {
+            // A scheduled room does not have a per-class recording segment
+            // yet. Let the host create the room first; the start endpoint will
+            // then report the short recorder handshake as `preparing`.
+            if (isStarting || !requiresRecording || await recorderReadyForClass(liveClass.id)) {
               emit({ phase: 'room_ready' })
               return close()
             }

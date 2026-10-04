@@ -169,9 +169,25 @@ export default function PreparingClassroom({
               setPhase(event.phase);
 
               if (event.phase === "room_ready") {
-                // Server is healthy — now get the actual classroom token
-                const token = await fetchToken(signal);
-                if (token) setReady(token);
+                // The room can be created as soon as PlugNmeet is healthy.
+                // Recording may finish its per-class handshake just after
+                // that. A 202 must therefore retry instead of closing the SSE
+                // path and leaving the page permanently on "Opening".
+                while (!signal.aborted) {
+                  const token = await fetchToken(signal);
+                  if (token) {
+                    setReady(token);
+                    return;
+                  }
+                  setPhase("recorder_waking");
+                  await new Promise<void>((resolve) => {
+                    const timeout = window.setTimeout(resolve, 2_000);
+                    signal.addEventListener("abort", () => {
+                      window.clearTimeout(timeout);
+                      resolve();
+                    }, { once: true });
+                  });
+                }
                 return;
               }
             } catch {
