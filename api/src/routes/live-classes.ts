@@ -15,7 +15,7 @@ import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-a
 import { ensurePlugNmeetReady, isPlugNmeetHealthy } from '../plugnmeet/classroom-lifecycle'
 import { createPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
 import { publishClassRecap } from '../jobs/live-class-recording'
-import { reconcileRecorderFleet, recorderReadyForClass } from '../recording/recorder-fleet'
+import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -114,16 +114,11 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
               return
             }
             if (!emit({ phase: 'classroom_healthy' })) return
-            const liveClass = access.liveClass as any
-            const requiresRecording = liveClass.access_mode !== 'anyone_with_link' && Boolean(liveClass.course_id)
-            // A scheduled room does not have a per-class recording segment
-            // yet. Let the host create the room first; the start endpoint will
-            // then report the short recorder handshake as `preparing`.
-            if (isStarting || !requiresRecording || await recorderReadyForClass(liveClass.id)) {
-              emit({ phase: 'room_ready' })
-              return close()
-            }
-            if (emit({ phase: 'recorder_waking' })) setTimeout(poll, 3_000)
+            // Room-specific recording rows are produced asynchronously by
+            // PlugNMeet after the room lifecycle begins. They cannot be a
+            // prerequisite for issuing the token that lets participants in.
+            emit({ phase: 'room_ready' })
+            return close()
           } catch (error) {
             console.error('[live-classes] readiness poll failed:', error)
             if (emit({ phase: 'unavailable', message: 'The classroom is temporarily unavailable.' })) close()
@@ -338,9 +333,6 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
     await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
     const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
     if (startUpdateError) throw startUpdateError
-    if (accessMode !== 'anyone_with_link' && insertedClass.course_id && !await recorderReadyForClass(insertedClass.id)) {
-      return c.json({ data: { ...insertedClass, state: 'preparing', status: 'live', class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, is_host: insertedClass.tutor_id === user.id, waiting_for: 'recorder' } }, 202)
-    }
     const isHost = insertedClass.tutor_id === user.id
     const config = await getPlugNmeetClientConfig({ roomId: insertedClass.id, userId: user.id, name: await getParticipantDisplayName(user, isHost ? 'Tutor' : 'Administrator'), isHost, schoolId: user.school_id, accessMode })
     return c.json({ data: { ...insertedClass, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, ...config } }, 201)
@@ -530,9 +522,6 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
       if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       try {
-        if (liveClass.access_mode !== 'anyone_with_link' && liveClass.course_id && !await recorderReadyForClass(liveClass.id)) {
-          return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost, waiting_for: 'recorder' } }, 202)
-        }
         const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, access.isHost ? 'Tutor' : 'Administrator'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
         return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
       } catch (error) {
@@ -551,9 +540,6 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       const startedAt = new Date().toISOString()
       const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id, provider_room_status, provider_room_checked_at').single()
       if (error || !updated) throw error || new Error('CLASS_UPDATE_FAILED')
-      if (liveClass.access_mode !== 'anyone_with_link' && liveClass.course_id && !await recorderReadyForClass(liveClass.id)) {
-        return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true, waiting_for: 'recorder' } }, 202)
-      }
       const config = await getPlugNmeetClientConfig({ roomId, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...updated, ...config, class_title: updated.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
@@ -578,9 +564,6 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
     if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
     if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
     try {
-      if (liveClass.access_mode !== 'anyone_with_link' && liveClass.course_id && !await recorderReadyForClass(liveClass.id)) {
-        return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost, waiting_for: 'recorder' } }, 202)
-      }
       const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, 'Participant'), isHost: access.isHost, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
