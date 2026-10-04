@@ -64,6 +64,7 @@ export default function PreparingClassroom({
   const [offline, setOffline] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const tokenRequestRef = useRef<Promise<ClassroomToken | null> | null>(null);
 
   // Keep a stable supabase client across re-renders
   const supabaseRef = useRef(
@@ -99,6 +100,19 @@ export default function PreparingClassroom({
       return body.data as ClassroomToken;
     },
     [classId, isStarting],
+  );
+
+  const requestToken = useCallback(
+    (signal: AbortSignal) => {
+      if (tokenRequestRef.current) return tokenRequestRef.current;
+
+      const request = fetchToken(signal).finally(() => {
+        if (tokenRequestRef.current === request) tokenRequestRef.current = null;
+      });
+      tokenRequestRef.current = request;
+      return request;
+    },
+    [fetchToken],
   );
 
   useEffect(() => {
@@ -174,7 +188,7 @@ export default function PreparingClassroom({
                 // that. A 202 must therefore retry instead of closing the SSE
                 // path and leaving the page permanently on "Opening".
                 while (!signal.aborted) {
-                  const token = await fetchToken(signal);
+                  const token = await requestToken(signal);
                   if (token) {
                     setReady(token);
                     return;
@@ -212,7 +226,49 @@ export default function PreparingClassroom({
 
     run();
     return () => controller.abort();
-  }, [classId, isStarting, fetchToken, retryKey]);
+  }, [classId, isStarting, requestToken, retryKey]);
+
+  // Some reverse proxies buffer SSE response chunks. Keep the readiness
+  // stream for immediate status updates, but independently attempt the
+  // idempotent start/join handoff so a buffered stream cannot strand the
+  // tutor on this screen.
+  useEffect(() => {
+    if (ready || error) return;
+
+    const controller = new AbortController();
+    let stopped = false;
+    let timeout: number | undefined;
+
+    const poll = async () => {
+      if (stopped) return;
+
+      try {
+        const token = await requestToken(controller.signal);
+        if (token) {
+          setReady(token);
+          return;
+        }
+        setPhase("recorder_waking");
+      } catch (cause) {
+        if (
+          controller.signal.aborted ||
+          (cause instanceof DOMException && cause.name === "AbortError")
+        )
+          return;
+        // The readiness stream remains authoritative for fatal errors. A
+        // transient start/join failure is retried while the classroom boots.
+      }
+
+      timeout = window.setTimeout(poll, 4_000);
+    };
+
+    timeout = window.setTimeout(poll, 1_500);
+    return () => {
+      stopped = true;
+      controller.abort();
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [error, ready, requestToken, retryKey]);
 
   useEffect(() => {
     if (ready || error) return;
