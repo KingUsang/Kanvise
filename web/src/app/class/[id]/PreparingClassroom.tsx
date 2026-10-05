@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import PlugNmeetClassroom from "./PlugNmeetClassroom";
-import DemoKnowledgeCheck from "./DemoKnowledgeCheck";
+
 
 type ClassroomToken = {
   provider?: "plugnmeet";
@@ -288,7 +288,7 @@ export default function PreparingClassroom({
       ready.client_files
     ) {
       return (<>
-        <DemoKnowledgeCheck classId={classId} isHost={ready.is_host} studentName={studentName} studentId={studentId} />
+        {/* Knowledge check hidden */}
         <PlugNmeetClassroom
           roomId={ready.room_id || classId}
           joinToken={ready.join_token}
