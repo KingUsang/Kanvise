@@ -45,6 +45,7 @@ type ClassData = {
   name: string;
   description?: string | null;
   is_published: boolean;
+  teaching_mode: string;
   courses: Subject[];
   enrolled_count?: number;
 };
@@ -221,7 +222,7 @@ export function ClassWorkspaceClient({
       return body.data as ClassData;
     },
     staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
   const data = classQuery.data;
   const scheduleQuery = useQuery({
@@ -239,6 +240,7 @@ export function ClassWorkspaceClient({
       } as ScheduleData;
     },
     staleTime: 30_000,
+    refetchInterval: (query) => query.state.data?.sessions.some(s => s.status === 'live') ? 15000 : false,
   });
   const mocksQuery = useQuery({
     queryKey: ["class-mocks", classId],
@@ -475,7 +477,7 @@ export function ClassWorkspaceClient({
           ) : null}
         </header>
         <div className="mt-2">
-          <WorkspaceRail classId={classId} activeTab={activeTab} />
+          <WorkspaceRail classId={classId} activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} />
           <div className="min-w-0">
             {activeTab === "overview" &&
               (scheduleQuery.isPending ||
@@ -546,8 +548,10 @@ export function ClassWorkspaceClient({
                       )
                     }
                     onStartSession={(session) =>
-                      navigate(
+                      window.open(
                         `/class/${session.id}${session.status === "live" ? "" : "?start=true"}`,
+                        "_blank",
+                        "noopener,noreferrer"
                       )
                     }
                   />
@@ -781,9 +785,11 @@ export function ClassWorkspaceClient({
 function WorkspaceRail({
   classId,
   activeTab,
+  isOneToOne,
 }: {
   classId: string;
   activeTab: Tab;
+  isOneToOne: boolean;
 }) {
   return (
     <section className="border-b border-dashboard-outline">
@@ -798,7 +804,7 @@ function WorkspaceRail({
             aria-current={activeTab === tab.id ? "page" : undefined}
             className={`relative min-h-12 shrink-0 border-b-[3px] px-4 py-3 text-left text-sm font-semibold transition ${activeTab === tab.id ? "border-[#994704] text-[#211969]" : "border-transparent text-[#625e69] hover:text-[#211969]"}`}
           >
-            {tab.label}
+            {tab.id === "learners" && isOneToOne ? "Student" : tab.label}
           </Link>
         ))}
       </nav>
@@ -1214,11 +1220,23 @@ function Overview({
   onAddMaterial: () => void;
 }) {
   const upcomingCount = sessions.filter(
-    (session) =>
-      session.status === "live" || new Date(session.scheduled_at) >= new Date(),
+    (session) => {
+      const scheduledTime = new Date(session.scheduled_at).getTime();
+      const nowTime = Date.now();
+      const oneWeek = nowTime + 7 * 24 * 60 * 60 * 1000;
+      return session.status === "live" || (scheduledTime >= nowTime && scheduledTime <= oneWeek);
+    }
   ).length;
+  const now = new Date();
   const activities = [
-    ...sessions.map((session) => ({
+    ...sessions
+      .filter((session) =>
+        session.status === "completed" ||
+        session.status === "live" ||
+        session.status === "cancelled" ||
+        new Date(session.scheduled_at) <= now,
+      )
+      .map((session) => ({
       id: `session-${session.id}`,
       kind: "Session",
       title: session.title,

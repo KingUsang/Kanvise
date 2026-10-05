@@ -115,6 +115,7 @@ export function ClassBuilder() {
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim(),
+          teaching_mode: studentMode,
           price: Number(price),
           subjects: subjects.map(subject => ({
             name: subject.name.trim(),

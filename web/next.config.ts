@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1", "localhost", "172.24.91.206"],
   experimental: {
     // The CLI-backed checker can lose `tsc --showConfig` output under some
     // Node/Next combinations. The compiler API performs the same check without

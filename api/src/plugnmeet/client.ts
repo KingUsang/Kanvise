@@ -144,7 +144,7 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
       is_allow_local: false,
       // The single recorder worker is registered before this setting is
       // enabled in deployed environments, so every enrolled class records.
-      enable_auto_cloud_recording: true,
+      enable_auto_cloud_recording: false,
       only_record_admin_webcams: false,
     },
     chat_features: { is_allow: true, is_allow_file_upload: false },

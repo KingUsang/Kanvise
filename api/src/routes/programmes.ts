@@ -145,6 +145,9 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
       p_subjects: subjects,
     })
     if (error) throw error
+    if (data?.id && typeof body.teaching_mode === 'string') {
+      await supabase.from('programmes').update({ teaching_mode: body.teaching_mode }).eq('id', data.id)
+    }
     return c.json({ data, message: 'Programme setup saved as a draft' }, 201)
   } catch (error: any) {
     const code = error.message === 'TUTOR_SCHOOL_MISMATCH' ? 'INVALID_TUTOR'

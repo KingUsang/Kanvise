@@ -66,6 +66,7 @@ type EnsureWelcomeInput = {
   recipientEmail: string
   firstName: string
   dashboardUrl: string
+  role: string
 }
 
 type WelcomeDependencies = {
@@ -91,6 +92,7 @@ export async function ensureWelcomeEmail(
       to: input.recipientEmail,
       firstName: input.firstName,
       dashboardUrl: input.dashboardUrl,
+      role: input.role,
       idempotencyKey,
     })
     await dependencies.store.markSent(idempotencyKey, result.id)

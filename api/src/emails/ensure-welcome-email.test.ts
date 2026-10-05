@@ -19,6 +19,7 @@ const input = {
   recipientEmail: 'ada@example.com',
   firstName: 'Ada',
   dashboardUrl: 'https://kanvise.com/dashboard',
+  role: 'student',
 }
 
 describe('ensureWelcomeEmail', () => {

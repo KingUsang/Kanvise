@@ -59,6 +59,7 @@ async function deliverWelcome(profile: any, email: string) {
       recipientEmail: email,
       firstName: profile.first_name,
       dashboardUrl,
+      role: profile.role,
     })
   } catch (error) {
     console.error('[auth/profile/init] Welcome email failed:', error)

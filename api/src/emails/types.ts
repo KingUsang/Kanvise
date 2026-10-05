@@ -8,6 +8,7 @@ export type TutorInvitationEmailInput = {
 export type WelcomeEmailInput = {
   firstName: string
   dashboardUrl: string
+  role?: string
 }
 
 export type PaymentConfirmedEmailInput = {
@@ -68,6 +69,11 @@ export type MockFullyGradedEmailInput = {
   resultsUrl: string
 }
 
+export type LifecycleDripEmailInput = {
+  firstName: string
+  actionUrl: string
+}
+
 export type EmailTemplateInputs = {
   tutor_invitation: TutorInvitationEmailInput
   welcome: WelcomeEmailInput
@@ -78,6 +84,12 @@ export type EmailTemplateInputs = {
   submission_graded: SubmissionGradedEmailInput
   mock_published: MockPublishedEmailInput
   mock_fully_graded: MockFullyGradedEmailInput
+  founder_letter: LifecycleDripEmailInput
+  meet_kavi: LifecycleDripEmailInput
+  use_this_thing: LifecycleDripEmailInput
+  first_week: LifecycleDripEmailInput
+  kavi_challenge: LifecycleDripEmailInput
+  pilot_ending: LifecycleDripEmailInput
 }
 
 export type EmailEventName = keyof EmailTemplateInputs

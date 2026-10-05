@@ -1,0 +1,388 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1800" viewBox="0 0 1760 1800" font-family="DejaVu Sans, sans-serif" xmlns:c2pa="http://c2pa.org/manifest"><metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYToxZDI0NTI5Zi02NTNkLTRmMzctODZkZC01ZTEyNzk0NjVlY2EAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaMKWU4rQAmfp5Rr2x4m6PzoAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDphNjI2NTliMy1iNTc2LTRmZDEtYWMyNy0wZGE2Y2Y5NjQxZDFscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNotqwOwbgLtB6jMv3MH1KRxgAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggGIYdrcJGebM3DdZqlm9qTPsxzO/u5v1yygiKMgFjI0+kZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaGKPxFhANQOkyAPxfIqfMMQAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRNAAAAAAAAAAAAAAAAAGRoYXNoWCBL47apXiIETBP2ZHIpXeA9sLBps5ilvyH4yonuawa3tWRuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBjAZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjFkMjQ1MjlmLTY1M2QtNGYzNy04NmRkLTVlMTI3OTQ2NWVjYS9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjZkYjAwZWNmLTU2ZTgtNDJhMC1hZGJiLTY1MGM3N2EwOGM3MnJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCAYhh2twkZ5szcN1mqWb2pM+zHM7+7m/XLKCIoyAWMjT6JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggbuL9bHbmN3uGR5yhTN8WZJBnFB0nV7q88BQG2ZEI3X+iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFgg35zIv52ZAzS4RaD3GKf3Axygvxi6gwxXDimlaAwCd+V0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQHx/WsomTew6rB5RIgdUgIwIdN2Pp9AMJUE0G45szibF7suIjOIC9HO8yLLPQ1rFHrmPc89jbSg1BRkbYNKhFog=</c2pa:manifest></metadata>
+<rect width="1760" height="1800" fill="#F1F5F9"/>
+<text x="40" y="62" font-size="32" font-weight="700" fill="#0F172A" text-anchor="start">Kanvise: class-first UI model</text>
+<text x="40" y="94" font-size="15" font-weight="400" fill="#64748B" text-anchor="start">A class is what tutors create and sell. A subject is a filter inside it. A session is one occurrence of a subject.</text>
+<rect x="40" y="130" width="540" height="540" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="70" cy="160" r="14" fill="#4F46E5"/>
+<text x="70" y="165" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">1</text>
+<text x="94" y="166" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Classes list</text>
+<text x="60" y="190" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Classes only. Subjects never appear as list items.</text>
+<rect x="54" y="202" width="512" height="454" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<rect x="70" y="216" width="300" height="34" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="82" y="238" font-size="12.5" font-weight="400" fill="#94A3B8" text-anchor="start">Search classes...</text>
+<rect x="382" y="216" width="168" height="34" rx="8" fill="#4F46E5" stroke="none" stroke-width="0"/>
+<text x="466.0" y="238.0" font-size="13" font-weight="500" fill="#FFFFFF" text-anchor="middle">+ Create class</text>
+<rect x="70" y="262" width="480" height="116" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="86" y="290" font-size="16" font-weight="700" fill="#0F172A" text-anchor="start">JAMB 2027 Science</text>
+<text x="86" y="311" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">4 subjects · 48 learners</text>
+<rect x="86" y="320" width="70" height="24" rx="12" fill="#DBEAFE" stroke="none" stroke-width="0"/>
+<text x="96" y="336.0" font-size="12" font-weight="500" fill="#1E40AF" text-anchor="start">English</text>
+<rect x="162" y="320" width="56" height="24" rx="12" fill="#FEF3C7" stroke="none" stroke-width="0"/>
+<text x="172" y="336.0" font-size="12" font-weight="500" fill="#92400E" text-anchor="start">Maths</text>
+<rect x="224" y="320" width="70" height="24" rx="12" fill="#EDE9FE" stroke="none" stroke-width="0"/>
+<text x="234" y="336.0" font-size="12" font-weight="500" fill="#5B21B6" text-anchor="start">Physics</text>
+<rect x="300" y="320" width="84" height="24" rx="12" fill="#CCFBF1" stroke="none" stroke-width="0"/>
+<text x="310" y="336.0" font-size="12" font-weight="500" fill="#115E59" text-anchor="start">Chemistry</text>
+<text x="86" y="366" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Next: Physics, today 5:00 PM</text>
+<rect x="70" y="390" width="480" height="84" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="86" y="418" font-size="16" font-weight="700" fill="#0F172A" text-anchor="start">WAEC Physics Revision</text>
+<text x="86" y="439" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Physics · 16 learners</text>
+<text x="86" y="461" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Next: Friday 6:00 PM</text>
+<rect x="70" y="486" width="480" height="84" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="86" y="514" font-size="16" font-weight="700" fill="#0F172A" text-anchor="start">Chisom Adebayo (1-on-1)</text>
+<text x="86" y="535" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Maths · 1 learner</text>
+<text x="86" y="557" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Next: Saturday 10:00 AM</text>
+<rect x="70" y="600" width="480" height="48" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="84" y="621" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">Single-subject and 1-on-1 classes show no subject UI.</text>
+<text x="84" y="638" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">Same object, fewer controls.</text>
+<rect x="610" y="130" width="540" height="540" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="640" cy="160" r="14" fill="#4F46E5"/>
+<text x="640" y="165" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">2</text>
+<text x="664" y="166" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Create class</text>
+<text x="630" y="190" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">One question decides the starting state.</text>
+<rect x="624" y="202" width="512" height="454" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<text x="640" y="230" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Class name</text>
+<rect x="640" y="238" width="480" height="38" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="652" y="262" font-size="13.5" font-weight="400" fill="#0F172A" text-anchor="start">JAMB 2027 Science</text>
+<text x="640" y="306" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">What will you teach?</text>
+<rect x="640" y="314" width="234" height="62" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="662" cy="345" r="8" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5"/>
+<text x="680" y="342" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">One subject</text>
+<text x="680" y="362" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">e.g. Physics class</text>
+<rect x="886" y="314" width="234" height="62" rx="10" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2"/>
+<circle cx="908" cy="345" r="8" fill="#FFFFFF" stroke="#4F46E5" stroke-width="1.5"/><circle cx="908" cy="345" r="4.5" fill="#4F46E5"/>
+<text x="926" y="342" font-size="13.5" font-weight="700" fill="#3730A3" text-anchor="start">Several subjects</text>
+<text x="926" y="362" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">e.g. JAMB bundle</text>
+<text x="640" y="406" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Subjects</text>
+<rect x="640" y="416" width="86" height="28" rx="14" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.2"/>
+<polyline points="650,431 654,435 661,426" fill="none" stroke="#4F46E5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="666" y="435" font-size="12" font-weight="500" fill="#3730A3" text-anchor="start">English</text>
+<rect x="732" y="416" width="115" height="28" rx="14" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.2"/>
+<polyline points="742,431 746,435 753,426" fill="none" stroke="#4F46E5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="758" y="435" font-size="12" font-weight="500" fill="#3730A3" text-anchor="start">Mathematics</text>
+<rect x="853" y="416" width="86" height="28" rx="14" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.2"/>
+<polyline points="863,431 867,435 874,426" fill="none" stroke="#4F46E5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="879" y="435" font-size="12" font-weight="500" fill="#3730A3" text-anchor="start">Physics</text>
+<rect x="945" y="416" width="100" height="28" rx="14" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.2"/>
+<polyline points="955,431 959,435 966,426" fill="none" stroke="#4F46E5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="971" y="435" font-size="12" font-weight="500" fill="#3730A3" text-anchor="start">Chemistry</text>
+<rect x="640" y="452" width="74" height="28" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2"/>
+<text x="652" y="471" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Biology</text>
+<rect x="720" y="452" width="96" height="28" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2"/>
+<text x="732" y="471" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Government</text>
+<text x="640" y="512" font-size="12.5" font-weight="500" fill="#4F46E5" text-anchor="start">Use JAMB science preset</text>
+<rect x="640" y="530" width="480" height="42" rx="8" fill="#4F46E5" stroke="none" stroke-width="0"/>
+<text x="880.0" y="556.0" font-size="13" font-weight="500" fill="#FFFFFF" text-anchor="middle">Create class</text>
+<rect x="640" y="588" width="480" height="48" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="654" y="609" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">Single or several only sets the starting state.</text>
+<text x="654" y="626" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">Tutors can add subjects later without migrating.</text>
+<rect x="1180" y="130" width="540" height="540" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1210" cy="160" r="14" fill="#4F46E5"/>
+<text x="1210" y="165" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
+<text x="1234" y="166" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Class workspace: several subjects</text>
+<text x="1200" y="190" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">One click from the list. Subject chips filter every tab.</text>
+<rect x="1194" y="202" width="512" height="454" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<text x="1210" y="228" font-size="12" font-weight="500" fill="#4F46E5" text-anchor="start">&lt; Classes</text>
+<text x="1210" y="254" font-size="18" font-weight="700" fill="#0F172A" text-anchor="start">JAMB 2027 Science</text>
+<text x="1210" y="273" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">48 learners · 4 subjects</text>
+<rect x="1210" y="284" width="106" height="24" rx="12" fill="#3730A3" stroke="none" stroke-width="0"/>
+<text x="1220" y="300.0" font-size="12" font-weight="500" fill="#FFFFFF" text-anchor="start">All subjects</text>
+<rect x="1322" y="284" width="70" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1332" y="300.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">English</text>
+<rect x="1398" y="284" width="56" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1408" y="300.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Maths</text>
+<rect x="1460" y="284" width="70" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1470" y="300.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Physics</text>
+<rect x="1536" y="284" width="84" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1546" y="300.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Chemistry</text>
+<text x="1214" y="344" font-size="12.5" font-weight="700" fill="#4F46E5" text-anchor="start">Overview</text>
+<rect x="1210" y="352" width="69" height="3" rx="1.5" fill="#4F46E5"/>
+<text x="1287" y="344" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Schedule</text>
+<text x="1360" y="344" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Assessments</text>
+<text x="1455" y="344" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Materials</text>
+<text x="1535" y="344" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Learners</text>
+<text x="1608" y="344" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Performance</text>
+<line x1="1210" y1="354" x2="1690" y2="354" stroke="#E2E8F0" stroke-width="1"/>
+<rect x="1210" y="366" width="480" height="70" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1224" y="390" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Next session</text>
+<text x="1224" y="414" font-size="14.5" font-weight="700" fill="#0F172A" text-anchor="start">Physics · Today 5:00 PM</text>
+<rect x="1572" y="382" width="104" height="36" rx="8" fill="#4F46E5" stroke="none" stroke-width="0"/>
+<text x="1624.0" y="405.0" font-size="13" font-weight="500" fill="#FFFFFF" text-anchor="middle">Start class</text>
+<rect x="1210" y="448" width="234" height="70" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1228" cy="472" r="6" fill="#3B82F6"/>
+<text x="1242" y="477" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">English</text>
+<text x="1226" y="497" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">48 learners</text>
+<text x="1226" y="511" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Next: Sat</text>
+<rect x="1456" y="448" width="234" height="70" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1474" cy="472" r="6" fill="#F59E0B"/>
+<text x="1488" y="477" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Maths</text>
+<text x="1472" y="497" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">48 learners</text>
+<text x="1472" y="511" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Next: Fri</text>
+<rect x="1210" y="528" width="234" height="70" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1228" cy="552" r="6" fill="#8B5CF6"/>
+<text x="1242" y="557" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Physics</text>
+<text x="1226" y="577" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">48 learners</text>
+<text x="1226" y="591" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Next: Today</text>
+<rect x="1456" y="528" width="234" height="70" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1474" cy="552" r="6" fill="#14B8A6"/>
+<text x="1488" y="557" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Chemistry</text>
+<text x="1472" y="577" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">48 learners</text>
+<text x="1472" y="591" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Next: Thu</text>
+<rect x="1210" y="612" width="480" height="36" rx="10" fill="#FEF3C7" stroke="none" stroke-width="0"/>
+<text x="1224" y="635" font-size="12" font-weight="500" fill="#92400E" text-anchor="start">6 learners need attention across the class</text>
+<rect x="40" y="710" width="540" height="540" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="70" cy="740" r="14" fill="#4F46E5"/>
+<text x="70" y="745" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">4</text>
+<text x="94" y="746" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Class workspace: one subject</text>
+<text x="60" y="770" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Same workspace, no subject switcher.</text>
+<rect x="54" y="782" width="512" height="454" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<text x="70" y="808" font-size="12" font-weight="500" fill="#4F46E5" text-anchor="start">&lt; Classes</text>
+<text x="70" y="834" font-size="18" font-weight="700" fill="#0F172A" text-anchor="start">Physics, SS2</text>
+<text x="70" y="853" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">16 learners</text>
+<rect x="70" y="864" width="480" height="30" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2" stroke-dasharray="6 5"/>
+<text x="310" y="884" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="middle" font-style="italic">No subject chips here</text>
+<text x="74" y="924" font-size="12.5" font-weight="700" fill="#4F46E5" text-anchor="start">Overview</text>
+<rect x="70" y="932" width="69" height="3" rx="1.5" fill="#4F46E5"/>
+<text x="147" y="924" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Schedule</text>
+<text x="220" y="924" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Assessments</text>
+<text x="315" y="924" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Materials</text>
+<text x="395" y="924" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Learners</text>
+<text x="468" y="924" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Performance</text>
+<line x1="70" y1="934" x2="550" y2="934" stroke="#E2E8F0" stroke-width="1"/>
+<rect x="70" y="946" width="480" height="70" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="84" y="970" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Next class</text>
+<text x="84" y="994" font-size="14.5" font-weight="700" fill="#0F172A" text-anchor="start">Fri, Oct 9 · 6:00 PM</text>
+<rect x="432" y="962" width="104" height="36" rx="8" fill="#4F46E5" stroke="none" stroke-width="0"/>
+<text x="484.0" y="985.0" font-size="13" font-weight="500" fill="#FFFFFF" text-anchor="middle">Start class</text>
+<rect x="70" y="1028" width="234" height="74" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="86" y="1054" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Class average</text>
+<text x="86" y="1088" font-size="24" font-weight="700" fill="#0F172A" text-anchor="start">71%</text>
+<rect x="316" y="1028" width="234" height="74" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="332" y="1054" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Attendance</text>
+<text x="332" y="1088" font-size="24" font-weight="700" fill="#0F172A" text-anchor="start">88%</text>
+<rect x="70" y="1114" width="480" height="54" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="84" y="1136" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Recent assessment</text>
+<text x="84" y="1156" font-size="13" font-weight="500" fill="#0F172A" text-anchor="start">Mechanics Test · Avg 71%</text>
+<rect x="70" y="1182" width="480" height="46" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="84" y="1202" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">A solo tutor with one subject never sees</text>
+<text x="84" y="1218" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">the word subject. Nothing extra to click.</text>
+<rect x="610" y="710" width="540" height="540" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="640" cy="740" r="14" fill="#4F46E5"/>
+<text x="640" y="745" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">5</text>
+<text x="664" y="746" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Schedule tab</text>
+<text x="630" y="770" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Sessions from all subjects merged. Filter by subject.</text>
+<rect x="624" y="782" width="512" height="454" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<text x="640" y="808" font-size="16" font-weight="700" fill="#0F172A" text-anchor="start">JAMB 2027 Science</text>
+<rect x="640" y="818" width="106" height="24" rx="12" fill="#3730A3" stroke="none" stroke-width="0"/>
+<text x="650" y="834.0" font-size="12" font-weight="500" fill="#FFFFFF" text-anchor="start">All subjects</text>
+<rect x="752" y="818" width="70" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="762" y="834.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">English</text>
+<rect x="828" y="818" width="56" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="838" y="834.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Maths</text>
+<rect x="890" y="818" width="70" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="900" y="834.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Physics</text>
+<rect x="966" y="818" width="84" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+<text x="976" y="834.0" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Chemistry</text>
+<rect x="640" y="858" width="280" height="32" rx="8" fill="#E2E8F0" stroke="none" stroke-width="0"/>
+<rect x="643" y="861" width="88" height="26" rx="6" fill="#FFFFFF" stroke="none" stroke-width="0"/>
+<text x="687" y="879" font-size="12" font-weight="700" fill="#0F172A" text-anchor="middle">Upcoming</text>
+<text x="775" y="879" font-size="12" font-weight="400" fill="#64748B" text-anchor="middle">Past</text>
+<text x="858" y="879" font-size="12" font-weight="400" fill="#64748B" text-anchor="middle">Recurring</text>
+<rect x="1012" y="858" width="108" height="32" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1066.0" y="879.0" font-size="13" font-weight="500" fill="#0F172A" text-anchor="middle">+ Add session</text>
+<rect x="640" y="904" width="480" height="56" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="656" y="928" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Wed, Oct 7</text>
+<text x="656" y="947" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">5:00 PM - 6:30 PM</text>
+<rect x="890" y="920" width="70" height="24" rx="12" fill="#EDE9FE" stroke="none" stroke-width="0"/>
+<text x="900" y="936.0" font-size="12" font-weight="500" fill="#5B21B6" text-anchor="start">Physics</text>
+<text x="1106" y="938" font-size="11.5" font-weight="500" fill="#16A34A" text-anchor="end">Confirmed</text>
+<rect x="640" y="968" width="480" height="56" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="656" y="992" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Thu, Oct 8</text>
+<text x="656" y="1011" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">5:00 PM - 6:30 PM</text>
+<rect x="890" y="984" width="84" height="24" rx="12" fill="#CCFBF1" stroke="none" stroke-width="0"/>
+<text x="900" y="1000.0" font-size="12" font-weight="500" fill="#115E59" text-anchor="start">Chemistry</text>
+<text x="1106" y="1002" font-size="11.5" font-weight="500" fill="#16A34A" text-anchor="end">Confirmed</text>
+<rect x="640" y="1032" width="480" height="56" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="656" y="1056" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Fri, Oct 9</text>
+<text x="656" y="1075" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">5:00 PM - 6:30 PM</text>
+<rect x="890" y="1048" width="56" height="24" rx="12" fill="#FEF3C7" stroke="none" stroke-width="0"/>
+<text x="900" y="1064.0" font-size="12" font-weight="500" fill="#92400E" text-anchor="start">Maths</text>
+<text x="1106" y="1066" font-size="11.5" font-weight="500" fill="#16A34A" text-anchor="end">Confirmed</text>
+<rect x="640" y="1096" width="480" height="56" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="656" y="1120" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Sat, Oct 10</text>
+<text x="656" y="1139" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">10:00 AM - 11:30 AM</text>
+<rect x="890" y="1112" width="70" height="24" rx="12" fill="#DBEAFE" stroke="none" stroke-width="0"/>
+<text x="900" y="1128.0" font-size="12" font-weight="500" fill="#1E40AF" text-anchor="start">English</text>
+<text x="1106" y="1130" font-size="11.5" font-weight="500" fill="#16A34A" text-anchor="end">Confirmed</text>
+<rect x="640" y="1170" width="480" height="58" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="654" y="1192" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">Session belongs to a subject. Subject belongs to a class.</text>
+<text x="654" y="1210" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">Tap a row to open attendance, chat and recording.</text>
+<rect x="1180" y="710" width="540" height="540" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1210" cy="740" r="14" fill="#4F46E5"/>
+<text x="1210" y="745" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">6</text>
+<text x="1234" y="746" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Assessment with sections</text>
+<text x="1200" y="770" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">One uploaded paper splits into subject sections.</text>
+<rect x="1194" y="782" width="512" height="454" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<rect x="1210" y="800" width="152" height="30" rx="15" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.4"/>
+<text x="1286" y="820" font-size="12" font-weight="400" fill="#64748B" text-anchor="middle">1 Upload</text>
+<rect x="1374" y="800" width="152" height="30" rx="15" fill="#EEF2FF" stroke="#4F46E5" stroke-width="1.4"/>
+<text x="1450" y="820" font-size="12" font-weight="700" fill="#3730A3" text-anchor="middle">2 Review</text>
+<rect x="1538" y="800" width="152" height="30" rx="15" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.4"/>
+<text x="1614" y="820" font-size="12" font-weight="400" fill="#64748B" text-anchor="middle">3 Publish</text>
+<rect x="1210" y="844" width="480" height="68" rx="10" fill="#FFFFFF" stroke="#A5B4FC" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="1226" y="870" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">JAMB Mock 04.pdf</text>
+<polyline points="1226,894 1230,898 1237,889" fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1246" y="899" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">160 questions found · 4 subjects · answer keys found</text>
+<text x="1210" y="942" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Sections detected</text>
+<rect x="1210" y="952" width="480" height="46" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1230" cy="975" r="6" fill="#3B82F6"/>
+<text x="1246" y="980" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">English</text>
+<text x="1410" y="980" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">60 Qs</text>
+<text x="1676" y="980" font-size="12.5" font-weight="500" fill="#0F172A" text-anchor="end">Avg 81%</text>
+<rect x="1210" y="1006" width="480" height="46" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1230" cy="1029" r="6" fill="#8B5CF6"/>
+<text x="1246" y="1034" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Physics</text>
+<text x="1410" y="1034" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">40 Qs</text>
+<text x="1676" y="1034" font-size="12.5" font-weight="500" fill="#0F172A" text-anchor="end">Avg 76%</text>
+<rect x="1210" y="1060" width="480" height="46" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1230" cy="1083" r="6" fill="#14B8A6"/>
+<text x="1246" y="1088" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Chemistry</text>
+<text x="1410" y="1088" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">40 Qs</text>
+<text x="1676" y="1088" font-size="12.5" font-weight="500" fill="#0F172A" text-anchor="end">Avg 61%</text>
+<rect x="1210" y="1114" width="480" height="46" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1230" cy="1137" r="6" fill="#F59E0B"/>
+<text x="1246" y="1142" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Maths</text>
+<text x="1410" y="1142" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">40 Qs</text>
+<text x="1676" y="1142" font-size="12.5" font-weight="500" fill="#0F172A" text-anchor="end">Avg 72%</text>
+<rect x="1210" y="1178" width="480" height="50" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="1224" y="1199" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">One assessment, many sections. Each section belongs</text>
+<text x="1224" y="1216" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">to one subject. A single-subject test has one section.</text>
+<rect x="40" y="1290" width="540" height="470" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="70" cy="1320" r="14" fill="#4F46E5"/>
+<text x="70" y="1325" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">7</text>
+<text x="94" y="1326" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Centre tutor dashboard</text>
+<text x="60" y="1350" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Scoped to the subject they teach.</text>
+<rect x="54" y="1362" width="512" height="384" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<rect x="70" y="1378" width="108" height="236" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<rect x="76" y="1386" width="96" height="30" rx="8" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="84" y="1406" font-size="12" font-weight="700" fill="#4F46E5" text-anchor="start">Dashboard</text>
+<text x="84" y="1442" font-size="12" font-weight="400" fill="#0F172A" text-anchor="start">My classes</text>
+<text x="84" y="1478" font-size="12" font-weight="400" fill="#0F172A" text-anchor="start">Calendar</text>
+<text x="84" y="1514" font-size="12" font-weight="400" fill="#0F172A" text-anchor="start">My students</text>
+<text x="84" y="1560" font-size="12" font-weight="400" fill="#CBD5E1" text-anchor="start">Payments</text>
+<text x="84" y="1576" font-size="10.5" font-weight="400" fill="#CBD5E1" text-anchor="start" font-style="italic">hidden</text>
+<text x="192" y="1394" font-size="15" font-weight="700" fill="#0F172A" text-anchor="start">Good morning, Tunde</text>
+<text x="192" y="1412" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Physics tutor, Bright Minds Centre</text>
+<rect x="192" y="1424" width="358" height="62" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="204" y="1446" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">Next up in 2 hours</text>
+<text x="204" y="1468" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Physics · JAMB 2027 Science</text>
+<rect x="458" y="1440" width="80" height="32" rx="8" fill="#4F46E5" stroke="none" stroke-width="0"/>
+<text x="498.0" y="1461.0" font-size="13" font-weight="500" fill="#FFFFFF" text-anchor="middle">Start</text>
+<text x="192" y="1512" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">This week</text>
+<rect x="192" y="1520" width="358" height="38" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="204" y="1544" font-size="11.5" font-weight="700" fill="#0F172A" text-anchor="start">Wed 5:00 PM</text>
+<text x="292" y="1544" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Physics · JAMB 2027 Science</text>
+<rect x="192" y="1564" width="358" height="38" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="204" y="1588" font-size="11.5" font-weight="700" fill="#0F172A" text-anchor="start">Fri 6:00 PM</text>
+<text x="292" y="1588" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Physics · WAEC Revision</text>
+<text x="192" y="1626" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">My classes</text>
+<rect x="192" y="1634" width="358" height="56" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="204" y="1658" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">JAMB 2027 Science</text>
+<rect x="204" y="1664" width="128" height="24" rx="12" fill="#EDE9FE" stroke="none" stroke-width="0"/>
+<text x="214" y="1680.0" font-size="12" font-weight="500" fill="#5B21B6" text-anchor="start">Physics (yours)</text>
+<rect x="70" y="1700" width="480" height="40" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="84" y="1718" font-size="11.5" font-weight="400" fill="#3730A3" text-anchor="start">Other subjects' sessions, scores and learners stay hidden.</text>
+<text x="84" y="1733" font-size="11.5" font-weight="400" fill="#3730A3" text-anchor="start">Centre admins see everything.</text>
+<rect x="610" y="1290" width="540" height="470" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="640" cy="1320" r="14" fill="#4F46E5"/>
+<text x="640" y="1325" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">8</text>
+<text x="664" y="1326" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Independent tutor dashboard</text>
+<text x="630" y="1350" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">Students first. Classes are secondary.</text>
+<rect x="624" y="1362" width="512" height="384" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<rect x="640" y="1378" width="108" height="236" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="654" y="1406" font-size="12" font-weight="400" fill="#0F172A" text-anchor="start">Dashboard</text>
+<rect x="646" y="1422" width="96" height="30" rx="8" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="654" y="1442" font-size="12" font-weight="700" fill="#4F46E5" text-anchor="start">Students</text>
+<text x="654" y="1478" font-size="12" font-weight="400" fill="#0F172A" text-anchor="start">Classes</text>
+<text x="654" y="1514" font-size="12" font-weight="400" fill="#0F172A" text-anchor="start">Calendar</text>
+<text x="654" y="1550" font-size="12" font-weight="400" fill="#0F172A" text-anchor="start">Payments</text>
+<text x="762" y="1394" font-size="15" font-weight="700" fill="#0F172A" text-anchor="start">Good morning, Ada</text>
+<text x="762" y="1412" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Independent tutor</text>
+<rect x="762" y="1424" width="358" height="62" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="774" y="1446" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">Next lesson, 4:00 PM</text>
+<text x="774" y="1468" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Chisom Adebayo · Maths</text>
+<rect x="1028" y="1440" width="80" height="32" rx="8" fill="#4F46E5" stroke="none" stroke-width="0"/>
+<text x="1068.0" y="1461.0" font-size="13" font-weight="500" fill="#FFFFFF" text-anchor="middle">Start</text>
+<text x="762" y="1512" font-size="12" font-weight="500" fill="#64748B" text-anchor="start">Your students</text>
+<rect x="762" y="1520" width="358" height="40" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="784" cy="1540" r="13" fill="#E0E7FF"/>
+<text x="784" y="1544" font-size="10.5" font-weight="700" fill="#3730A3" text-anchor="middle">CA</text>
+<text x="804" y="1538" font-size="12" font-weight="700" fill="#0F172A" text-anchor="start">Chisom Adebayo</text>
+<text x="804" y="1552" font-size="10.5" font-weight="400" fill="#64748B" text-anchor="start">Maths</text>
+<rect x="982" y="1537" width="100" height="7" rx="3.5" fill="#E2E8F0" stroke="none" stroke-width="0"/>
+<rect x="982" y="1537" width="82" height="7" rx="3.5" fill="#22C55E" stroke="none" stroke-width="0"/>
+<text x="1108" y="1545" font-size="11" font-weight="500" fill="#0F172A" text-anchor="end">82%</text>
+<rect x="762" y="1566" width="358" height="40" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="784" cy="1586" r="13" fill="#E0E7FF"/>
+<text x="784" y="1590" font-size="10.5" font-weight="700" fill="#3730A3" text-anchor="middle">DO</text>
+<text x="804" y="1584" font-size="12" font-weight="700" fill="#0F172A" text-anchor="start">David Okafor</text>
+<text x="804" y="1598" font-size="10.5" font-weight="400" fill="#64748B" text-anchor="start">Physics</text>
+<rect x="982" y="1583" width="100" height="7" rx="3.5" fill="#E2E8F0" stroke="none" stroke-width="0"/>
+<rect x="982" y="1583" width="65" height="7" rx="3.5" fill="#22C55E" stroke="none" stroke-width="0"/>
+<text x="1108" y="1591" font-size="11" font-weight="500" fill="#0F172A" text-anchor="end">65%</text>
+<rect x="762" y="1612" width="358" height="40" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="784" cy="1632" r="13" fill="#E0E7FF"/>
+<text x="784" y="1636" font-size="10.5" font-weight="700" fill="#3730A3" text-anchor="middle">BI</text>
+<text x="804" y="1630" font-size="12" font-weight="700" fill="#0F172A" text-anchor="start">Blessing Ibe</text>
+<text x="804" y="1644" font-size="10.5" font-weight="400" fill="#64748B" text-anchor="start">English</text>
+<rect x="982" y="1629" width="100" height="7" rx="3.5" fill="#E2E8F0" stroke="none" stroke-width="0"/>
+<rect x="982" y="1629" width="91" height="7" rx="3.5" fill="#22C55E" stroke="none" stroke-width="0"/>
+<text x="1108" y="1637" font-size="11" font-weight="500" fill="#0F172A" text-anchor="end">91%</text>
+<rect x="762" y="1662" width="358" height="32" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="774" y="1682" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">Classes (groups): 1 active</text>
+<rect x="640" y="1706" width="480" height="36" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="654" y="1728" font-size="11.5" font-weight="400" fill="#3730A3" text-anchor="start">Chosen at onboarding. Same data model, different home.</text>
+<rect x="1180" y="1290" width="540" height="470" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<circle cx="1210" cy="1320" r="14" fill="#4F46E5"/>
+<text x="1210" y="1325" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">9</text>
+<text x="1234" y="1326" font-size="19" font-weight="700" fill="#0F172A" text-anchor="start">Object hierarchy</text>
+<text x="1200" y="1350" font-size="12.5" font-weight="400" fill="#64748B" text-anchor="start">What the data model looks like under the UI.</text>
+<rect x="1194" y="1362" width="512" height="384" rx="12" fill="#F8FAFC" stroke="none" stroke-width="0"/>
+<rect x="1210" y="1382" width="220" height="50" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1224" y="1404" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Organisation</text>
+<text x="1224" y="1422" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">a centre, or a solo tutor</text>
+<line x1="1320" y1="1432" x2="1320" y2="1452" stroke="#94A3B8" stroke-width="2"/>
+<polyline points="1315,1445 1320,1452 1325,1445" fill="none" stroke="#94A3B8" stroke-width="2"/>
+<rect x="1210" y="1452" width="220" height="50" rx="10" fill="#FFFFFF" stroke="#4F46E5" stroke-width="2"/>
+<text x="1224" y="1474" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Class</text>
+<text x="1224" y="1492" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">what tutors create and sell</text>
+<line x1="1320" y1="1502" x2="1320" y2="1522" stroke="#94A3B8" stroke-width="2"/>
+<polyline points="1315,1515 1320,1522 1325,1515" fill="none" stroke="#94A3B8" stroke-width="2"/>
+<rect x="1210" y="1522" width="220" height="50" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1224" y="1544" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Subject</text>
+<text x="1224" y="1562" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">optional tutor per subject</text>
+<line x1="1320" y1="1572" x2="1320" y2="1592" stroke="#94A3B8" stroke-width="2"/>
+<polyline points="1315,1585 1320,1592 1325,1585" fill="none" stroke="#94A3B8" stroke-width="2"/>
+<rect x="1210" y="1592" width="220" height="50" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1224" y="1614" font-size="13.5" font-weight="700" fill="#0F172A" text-anchor="start">Session</text>
+<text x="1224" y="1632" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">one occurrence</text>
+<rect x="1472" y="1452" width="218" height="50" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1486" y="1474" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Learner enrolment</text>
+<text x="1486" y="1492" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">per subject, default all</text>
+<rect x="1472" y="1522" width="218" height="50" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1486" y="1544" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Assessment</text>
+<text x="1486" y="1562" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">belongs to the class</text>
+<rect x="1472" y="1592" width="218" height="50" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+<text x="1486" y="1614" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Section</text>
+<text x="1486" y="1632" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">each tied to one subject</text>
+<line x1="1430" y1="1497" x2="1472" y2="1477" stroke="#94A3B8" stroke-width="2"/>
+<polyline points="1465,1472 1472,1477 1465,1482" fill="none" stroke="#94A3B8" stroke-width="2"/>
+<line x1="1430" y1="1432" x2="1472" y2="1547" stroke="#94A3B8" stroke-width="2"/>
+<polyline points="1465,1542 1472,1547 1465,1552" fill="none" stroke="#94A3B8" stroke-width="2"/>
+<line x1="1581" y1="1572" x2="1581" y2="1592" stroke="#94A3B8" stroke-width="2"/>
+<polyline points="1576,1585 1581,1592 1586,1585" fill="none" stroke="#94A3B8" stroke-width="2"/>
+<rect x="1210" y="1674" width="480" height="62" rx="10" fill="#EEF2FF" stroke="none" stroke-width="0"/>
+<text x="1224" y="1696" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">UI rule: subject chips appear only when a class has</text>
+<text x="1224" y="1713" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">two or more subjects. Calendar and Dashboard are the</text>
+<text x="1224" y="1730" font-size="12" font-weight="400" fill="#3730A3" text-anchor="start">global time and home views.</text>
+</svg>

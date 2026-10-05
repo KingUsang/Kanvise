@@ -23,23 +23,27 @@ export function TutorInvitationEmail({
 
   return (
     <BrandedLayout
-      preview={`${invitedByName} invited you to join ${schoolName} on Kanvise.`}
+      preview={`${invitedByName} added you to ${schoolName} on Kanvise. 👀`}
       logoUrl={logoUrl}
     >
-      <Text style={styles.eyebrow}>TUTOR INVITATION</Text>
-      <Heading as="h1" style={styles.heading}>You’ve been invited to teach.</Heading>
+      <Text style={styles.copy}>Hey!</Text>
       <Text style={styles.copy}>
-        {invitedByName} has invited you to join <strong>{schoolName}</strong> as a tutor on Kanvise.
+        Kavi here. {invitedByName} just added you to <strong>{schoolName}</strong> on Kanvise.
       </Text>
       <Text style={styles.copy}>
-        Set up your account to access your subjects, students, classes, and teaching tools.
+        We've set up your space so you can access your classes, students, and teaching tools.
       </Text>
-      <Button href={inviteUrl} style={styles.button}>Accept invitation</Button>
-      <Text style={styles.expiry}>This invitation expires on {expiry}.</Text>
+      <Text style={styles.copy}>
+        Hit the button below to get in.
+      </Text>
+      <Button href={inviteUrl} style={styles.button}>Accept invitation →</Button>
+      <Text style={styles.expiry}>This link expires on {expiry}.</Text>
       <Text style={styles.fallback}>
         If the button does not work, copy and paste this link into your browser:<br />
         {inviteUrl}
       </Text>
+      <Text style={styles.copy}>See you inside. 👀</Text>
+      <Text style={styles.signature}>Kavi 💛</Text>
     </BrandedLayout>
   )
 }
@@ -78,4 +82,5 @@ const styles = {
     margin: 0,
     overflowWrap: 'anywhere' as const,
   },
+  signature: { color: '#3C3027', fontSize: '16px', lineHeight: '26px', margin: '20px 0 0', fontWeight: 'bold' },
 }

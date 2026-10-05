@@ -228,7 +228,7 @@ No route handler may query a tenant-scoped table without a `school_id` filter. T
 
 The following tables are tenant-scoped (every query must include school_id): schools, programmes, sub_programmes, courses, sub_courses, enrolments, users (student/tutor profiles), live_classes, attendance_records, notes, assignments, submissions, mock_exams, mock_questions, mock_answers, mock_results, payments, notifications, promos, reviews.
 
-The following tables are not tenant-scoped (platform-level data): kanvise_subscriptions (tutorial centre billing records), platform_users (Kanvise internal team — post-MVP).
+The following tables are not tenant-scoped (platform-level data): kanvise_subscriptions (tutorial centre billing records), platform_users (Kanvise internal team — post-MVP), and landing_analytics_events (anonymous, privacy-limited marketing funnel events collected before a visitor belongs to any school). The analytics table is never exposed directly to browser roles; validated writes and reporting go through Hono.
 
 ---
 

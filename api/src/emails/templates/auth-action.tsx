@@ -9,6 +9,7 @@ export type AuthActionEmailProps = {
   heading: string
   logoUrl: string
   preview: string
+  kaviSignOff?: boolean
 }
 
 export function AuthActionEmail({
@@ -19,11 +20,14 @@ export function AuthActionEmail({
   heading,
   logoUrl,
   preview,
+  kaviSignOff,
 }: AuthActionEmailProps) {
   return <BrandedLayout preview={preview} logoUrl={logoUrl}>
     <Text style={styles.eyebrow}>KANVISE ACCOUNT SECURITY</Text>
     <Heading as="h1" style={styles.heading}>{heading}</Heading>
-    <Text style={styles.copy}>{body}</Text>
+    {body.split('\n\n').map((paragraph, idx) => (
+      <Text key={idx} style={styles.copy}>{paragraph}</Text>
+    ))}
     {code && <>
       <Text style={styles.codeLabel}>YOUR SIX-DIGIT CODE</Text>
       <Text style={styles.code}>{code}</Text>
@@ -33,6 +37,7 @@ export function AuthActionEmail({
       If the button does not work, copy and paste this link into your browser:<br />
       {actionUrl}
     </Text>}
+    {kaviSignOff && <Text style={styles.signature}>Kavi 💛</Text>}
     <Text style={styles.note}>If you did not request this, you can safely ignore this email.</Text>
   </BrandedLayout>
 }
@@ -51,5 +56,6 @@ const styles = {
     fontSize: '15px', fontWeight: 700, margin: '8px 0 20px', padding: '14px 24px', textDecoration: 'none',
   },
   fallback: { color: '#77727F', fontSize: '11px', lineHeight: '18px', margin: '0 0 20px', overflowWrap: 'anywhere' as const },
+  signature: { color: '#3C3027', fontSize: '16px', lineHeight: '26px', margin: '20px 0 20px', fontWeight: 'bold' },
   note: { color: '#77727F', fontSize: '12px', lineHeight: '19px', margin: 0 },
 }

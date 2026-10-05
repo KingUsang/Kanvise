@@ -763,6 +763,39 @@ export type Database = {
           },
         ]
       }
+      landing_analytics_events: {
+        Row: {
+          created_at: string
+          device_type: string
+          event_name: string
+          event_properties: Json
+          id: string
+          page_path: string
+          referrer_host: string | null
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_type: string
+          event_name: string
+          event_properties?: Json
+          id?: string
+          page_path?: string
+          referrer_host?: string | null
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          device_type?: string
+          event_name?: string
+          event_properties?: Json
+          id?: string
+          page_path?: string
+          referrer_host?: string | null
+          session_id?: string
+        }
+        Relationships: []
+      }
       live_classes: {
         Row: {
           course_id: string
@@ -778,7 +811,6 @@ export type Database = {
           slides_urls: string[] | null
           started_at: string | null
           status: string
-          teaching_mode: string
           title: string
           tutor_id: string
           updated_at: string
@@ -797,7 +829,6 @@ export type Database = {
           slides_urls?: string[] | null
           started_at?: string | null
           status?: string
-          teaching_mode?: string
           title: string
           tutor_id: string
           updated_at?: string
@@ -816,7 +847,6 @@ export type Database = {
           slides_urls?: string[] | null
           started_at?: string | null
           status?: string
-          teaching_mode?: string
           title?: string
           tutor_id?: string
           updated_at?: string
@@ -2694,6 +2724,7 @@ export type Database = {
           school_id: string
           slug: string
           thumbnail_url: string | null
+          teaching_mode: string
           updated_at: string
         }
         Insert: {
@@ -2708,6 +2739,7 @@ export type Database = {
           school_id: string
           slug: string
           thumbnail_url?: string | null
+          teaching_mode?: string
           updated_at?: string
         }
         Update: {
@@ -2721,6 +2753,7 @@ export type Database = {
           price?: number
           school_id?: string
           slug?: string
+          teaching_mode?: string
           thumbnail_url?: string | null
           updated_at?: string
         }

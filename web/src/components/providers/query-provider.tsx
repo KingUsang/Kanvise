@@ -7,10 +7,15 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60_000,
+        // Data is considered fresh for 5 minutes. Switching tabs will NOT
+        // trigger a background refetch until stale. Specific queries that need
+        // tighter freshness (e.g. live session status) opt in with their own
+        // staleTime. Cache is kept in memory for 30 minutes after unmount so
+        // navigating back to a page feels instant.
+        staleTime: 5 * 60_000,
         gcTime: 30 * 60_000,
         refetchOnWindowFocus: true,
-        refetchOnReconnect: true,
+        refetchOnReconnect: false,
         retry: 1,
       },
     },

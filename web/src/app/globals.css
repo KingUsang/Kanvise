@@ -31,36 +31,78 @@
   transform: rotate(var(--rotate)) scaleX(var(--scale-x));
 }
 
-.kanvise-pdf-text-layer .markedContent { display: contents; }
-.kanvise-pdf-text-layer ::selection { background: rgb(55 85 255 / 25%); }
+.kanvise-pdf-text-layer .markedContent {
+  display: contents;
+}
+.kanvise-pdf-text-layer ::selection {
+  background: rgb(55 85 255 / 25%);
+}
 
 /* ── Scroll-reveal animations ── */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes slideRight {
-  from { opacity: 0; transform: translateX(-20px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.animate-fade-up   { animation: fadeUp   0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.animate-fade-in   { animation: fadeIn   0.5s ease both; }
-.animate-slide-right { animation: slideRight 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.animation-delay-100 { animation-delay: 0.1s; }
-.animation-delay-200 { animation-delay: 0.2s; }
-.animation-delay-300 { animation-delay: 0.3s; }
-.animation-delay-400 { animation-delay: 0.4s; }
-.animation-delay-500 { animation-delay: 0.5s; }
+.animate-fade-up {
+  animation: fadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+.animate-slide-right {
+  animation: slideRight 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+.animation-delay-500 {
+  animation-delay: 0.5s;
+}
 
 @keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
-  100% { transform: translateY(0px); }
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 .animate-float {
   animation: float 6s ease-in-out infinite;
@@ -68,8 +110,6 @@
 .animate-float-delayed {
   animation: float 6s ease-in-out 3s infinite;
 }
-
-
 
 /* ── Kanvise Brand Tokens ── */
 :root {
@@ -89,12 +129,12 @@
   --error-foreground: #ffffff;
 
   /* Kanvise Landing Page Brand Tokens */
-  --kv-blue-rose: #2E2877;
-  --kv-ruddy-brown: #C26627;
-  --kv-dark-grey: #3C3027;
-  --kv-rodeo-dust: #C2B59B;
-  --kv-white: #FFFFFF;
-  --kv-bg-soft: #F7F5F2;
+  --kv-blue-rose: #2e2877;
+  --kv-ruddy-brown: #c26627;
+  --kv-dark-grey: #3c3027;
+  --kv-rodeo-dust: #c2b59b;
+  --kv-white: #ffffff;
+  --kv-bg-soft: #f7f5f2;
   --kv-rodeo-dust-15: rgba(194, 181, 155, 0.15);
   --kv-shadow-card: 0 2px 12px rgba(46, 40, 119, 0.08);
   --kv-shadow-hero: 0 8px 40px rgba(46, 40, 119, 0.24);
@@ -132,11 +172,11 @@
   --font-sans: var(--font-poppins), Arial, sans-serif;
 
   /* Kanvise brand colors exposed as Tailwind utilities */
-  --color-kv-blue: #2E2877;
-  --color-kv-brown: #C26627;
-  --color-kv-dark: #3C3027;
-  --color-kv-dust: #C2B59B;
-  --color-kv-soft: #F7F5F2;
+  --color-kv-blue: #2e2877;
+  --color-kv-brown: #c26627;
+  --color-kv-dark: #3c3027;
+  --color-kv-dust: #c2b59b;
+  --color-kv-soft: #f7f5f2;
 
   /* Dashboard semantic utilities */
   --color-dashboard-page: var(--dashboard-page);
@@ -289,7 +329,9 @@ body {
   border-radius: 8px;
   border-left: 4px solid var(--kv-blue-rose);
   box-shadow: var(--kv-shadow-card);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 .feature-card:hover {
   transform: translateY(-3px);
@@ -313,8 +355,8 @@ html {
 }
 /* Hide scrollbar for IE, Edge and Firefox */
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 /* The classroom owns its board controls. Excalidraw still mounts its generic
@@ -352,7 +394,7 @@ html {
 
 /* Material Symbols Outlined font class (required for self-hosted @fontsource package) */
 .material-symbols-outlined {
-  font-family: 'Material Symbols Outlined', sans-serif;
+  font-family: "Material Symbols Outlined", sans-serif;
   font-weight: 300;
   font-style: normal;
   font-size: 24px;
@@ -363,7 +405,164 @@ html {
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
+}
+
+@keyframes landing-tool-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes landing-pulse-glow {
+  0%,
+  100% {
+    opacity: 0.68;
+    transform: scale(0.99);
+  }
+  50% {
+    opacity: 0.84;
+    transform: scale(1.01);
+  }
+}
+
+@keyframes landing-tutor-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.15deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.15deg);
+  }
+}
+
+@keyframes landing-converge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes landing-reveal-pulse {
+  0%,
+  100% {
+    box-shadow: 0 15px 35px rgba(33, 25, 104, 0.25);
+  }
+  50% {
+    box-shadow: 0 18px 45px rgba(106, 80, 220, 0.4);
+  }
+}
+
+@keyframes landing-confetti-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) rotate(0deg) scale(0.5);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--confetti-x)), var(--confetti-y))
+      rotate(var(--confetti-rotate)) scale(1);
+  }
+}
+
+.landing-tool-float {
+  animation: landing-tool-float 7s ease-in-out infinite;
+}
+.landing-pulse-glow {
+  animation: landing-pulse-glow 9s ease-in-out infinite;
+}
+.landing-tutor-visual {
+  animation: none;
+}
+.landing-converge-chip {
+  animation: none;
+}
+.landing-kanvise-reveal {
+  animation: none;
+}
+.landing-confetti {
+  animation: landing-confetti-burst 1.45s cubic-bezier(0.12, 0.7, 0.2, 1) both;
+  animation-delay: var(--confetti-delay);
+}
+
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.landing-reveal[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.landing-reveal-delay-1 {
+  transition-delay: 90ms;
+}
+
+/* Keep the stacked landing feature cards usable on shorter laptop displays.
+   Their spacious 680px treatment is reserved for taller desktop viewports. */
+@media (min-width: 1024px) and (max-height: 900px) {
+  .landing-feature-card {
+    top: 76px !important;
+  }
+
+  .landing-feature-grid {
+    min-height: 540px !important;
+  }
+
+  .landing-feature-copy {
+    justify-content: flex-start;
+    padding-top: 2.75rem;
+    padding-bottom: 2.75rem;
+  }
+
+  .landing-feature-visual {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 720px) {
+  .landing-feature-grid {
+    min-height: 480px !important;
+  }
+
+  .landing-feature-copy {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-tool-float,
+  .landing-pulse-glow,
+  .landing-tutor-visual,
+  .landing-converge-chip,
+  .landing-kanvise-reveal,
+  .landing-confetti {
+    animation: none !important;
+  }
+
+  .landing-reveal,
+  .landing-reveal[data-visible="true"] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }

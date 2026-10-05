@@ -40,6 +40,12 @@ export const smokeInputs: { [K in EmailEventName]: EmailTemplateInputs[K] } = {
     firstName: 'Ada', mockTitle: 'WAEC Physics Mock', score: '42',
     resultsUrl: `${baseUrl}/dashboard/mocks/smoke-mock/results/smoke-attempt`,
   },
+  founder_letter: { firstName: 'Ada', actionUrl: `${baseUrl}/dashboard` },
+  meet_kavi: { firstName: 'Ada', actionUrl: `${baseUrl}/dashboard` },
+  use_this_thing: { firstName: 'Ada', actionUrl: `${baseUrl}/dashboard` },
+  first_week: { firstName: 'Ada', actionUrl: `${baseUrl}/dashboard` },
+  kavi_challenge: { firstName: 'Ada', actionUrl: `${baseUrl}/dashboard` },
+  pilot_ending: { firstName: 'Ada', actionUrl: `${baseUrl}/dashboard` },
 }
 
 export async function runEmailSmoke() {

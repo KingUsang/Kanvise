@@ -160,8 +160,9 @@ export function ClassSchedulePanel({ sessions, recurringSlots = [], onAddSession
   const [tab, setTab] = useState<'upcoming' | 'past' | 'recurring'>('upcoming')
   const visibleSessions = useMemo(() => {
     const now = Date.now()
+    const oneWeek = now + 7 * 24 * 60 * 60 * 1000
     return sessions.filter((session) => tab === 'upcoming'
-      ? session.status === 'live' || (session.status === 'scheduled' && new Date(session.startsAt).getTime() >= now)
+      ? session.status === 'live' || (session.status === 'scheduled' && new Date(session.startsAt).getTime() >= now && new Date(session.startsAt).getTime() <= oneWeek)
       : session.status === 'completed' || session.status === 'cancelled' || new Date(session.startsAt).getTime() < now,
     ).sort((a, b) => tab === 'upcoming'
       ? new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()

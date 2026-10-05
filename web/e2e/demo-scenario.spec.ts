@@ -151,6 +151,39 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
     studentStates.push(await signIn(student.email, tutor.password, student.email.split('@')[0]))
   }
 
+  // Prepare the provider before recording. The usable footage begins in the
+  // class workspace and shows the tutor entering the live session, without
+  // exposing account login, server wake-up, or environment setup.
+  const setupAuth = createClient(webEnv('NEXT_PUBLIC_SUPABASE_URL'), webEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data: setupSession, error: setupAuthError } = await setupAuth.auth.signInWithPassword(tutor)
+  if (setupAuthError || !setupSession.session) throw setupAuthError ?? new Error('Could not prepare the tutor demo session')
+  const setupHeaders = { Authorization: `Bearer ${setupSession.session.access_token}`, 'Content-Type': 'application/json' }
+  const apiURL = process.env.E2E_API_URL || 'https://staging-api.kanvise.com'
+  const programmesResponse = await fetch(`${apiURL}/programmes`, { headers: setupHeaders })
+  const programmesBody = await programmesResponse.json()
+  if (!programmesResponse.ok) throw new Error(programmesBody.error || 'Could not load the demo class')
+  const demoProgramme = programmesBody.data.find((programme: { courses?: { name: string }[] }) =>
+    programme.courses?.some(course => course.name === 'Physics'))
+  const physics = demoProgramme?.courses?.find((course: { name: string }) => course.name === 'Physics')
+  if (!demoProgramme?.id || !physics?.id) throw new Error('The staging tutor does not have a Physics class')
+  const demoClassTitle = "Newton's Third Law live class"
+  const startResponse = await fetch(`${apiURL}/live-classes/start-now`, {
+    method: 'POST',
+    headers: setupHeaders,
+    body: JSON.stringify({
+      course_id: physics.id,
+      tutor_id: setupSession.user.id,
+      title: demoClassTitle,
+      access_mode: 'enrolled_learners',
+      duration_minutes: 60,
+    }),
+  })
+  const startBody = await startResponse.json()
+  if (!startResponse.ok || !startBody.data?.id) throw new Error(startBody.error || 'Could not prepare the staging live class')
+  const preparedClassId = startBody.data.id as string
+
   const tutorContext = await browser.newContext({
     baseURL,
     storageState: tutorState,
@@ -183,17 +216,12 @@ test('records the Kanvise tutor insight story', async ({ browser }, testInfo) =>
   }))
 
   try {
-    // Scene 1 — enter a real enrolled-learner classroom.
-    await tutorPage.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-    if (mobileRecording) await tutorPage.waitForTimeout(1_000)
-    await tutorPage.getByRole('button', { name: 'Start live class' }).click()
-    await expect(tutorPage.getByRole('heading', { name: 'Start a live class' })).toBeVisible({ timeout: 20_000 })
-    await tutorPage.getByRole('button', { name: /enrolled learners/i }).click()
-    const subjectSelect = tutorPage.getByLabel('Subject')
-    await expect(subjectSelect.locator('option', { hasText: 'Physics' })).toHaveCount(1, { timeout: 20_000 })
-    await subjectSelect.selectOption({ label: 'Physics' })
-    await tutorPage.getByRole('button', { name: /start class now/i }).click()
+    // Scene 1 — enter the prepared session from its real class workspace.
+    await tutorPage.goto(`/dashboard/classes/${demoProgramme.id}?tab=schedule`, { waitUntil: 'domcontentloaded' })
+    await expect(tutorPage.getByRole('heading', { name: demoProgramme.name })).toBeVisible({ timeout: 30_000 })
+    await tutorPage.getByRole('button', { name: new RegExp(`(?:Start|Join) ${demoClassTitle}`, 'i') }).click()
     await tutorPage.waitForURL(/\/class\/[^?]+\?start=true/, { timeout: 30_000 })
+    expect(tutorPage.url()).toContain(preparedClassId)
     const classURL = new URL(tutorPage.url())
     classURL.search = ''
 

@@ -408,7 +408,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
     });
     const body = await response.json();
     if (!response.ok) return toast.error(body.error || "Could not start class");
-    router.push(`/class/${item.id}?start=true`);
+    window.open(`/class/${item.id}?start=true`, "_blank", "noopener,noreferrer");
   }
   function selectMobileMonth(month: Date) {
     setMobileMonth(month);

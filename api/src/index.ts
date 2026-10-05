@@ -102,6 +102,96 @@ app.route("/", mockAccessRouter);
 app.route("/students/me", studentMembershipsRouter);
 app.route('/', guestMocksRouter);
 
+const landingEventNames = new Set([
+  'landing_view',
+  'hero_cta_clicked',
+  'product_cta_clicked',
+  'tool_explored',
+  'feature_explored',
+  'section_viewed',
+  'waitlist_cta_clicked',
+  'waitlist_form_started',
+  'waitlist_completed',
+  'social_clicked',
+]);
+
+const landingEventRateLimits = new Map<string, { count: number; resetAt: number }>();
+
+function clientAddress(c: { req: { header(name: string): string | undefined } }) {
+  const forwarded = c.req.header('x-forwarded-for')?.split(',').map((value) => value.trim()).filter(Boolean);
+  return c.req.header('cf-connecting-ip')
+    || c.req.header('x-real-ip')
+    || forwarded?.at(-1)
+    || 'unknown';
+}
+
+function pruneExpiredRateLimits(now: number) {
+  if (landingEventRateLimits.size < 2_000) return;
+  for (const [key, value] of landingEventRateLimits) {
+    if (value.resetAt <= now) landingEventRateLimits.delete(key);
+  }
+  if (landingEventRateLimits.size > 5_000) {
+    for (const key of landingEventRateLimits.keys()) {
+      landingEventRateLimits.delete(key);
+      if (landingEventRateLimits.size <= 4_000) break;
+    }
+  }
+}
+
+app.post('/analytics/landing-events', async (c) => {
+  try {
+    const clientKey = clientAddress(c);
+    const now = Date.now();
+    pruneExpiredRateLimits(now);
+    const bucket = landingEventRateLimits.get(clientKey);
+    if (bucket && bucket.resetAt > now && bucket.count >= 120) {
+      return c.json({ error: 'Too many analytics events' }, 429);
+    }
+    landingEventRateLimits.set(clientKey, bucket && bucket.resetAt > now
+      ? { ...bucket, count: bucket.count + 1 }
+      : { count: 1, resetAt: now + 60_000 });
+
+    const raw = await c.req.text();
+    if (raw.length > 4_096) return c.json({ error: 'Analytics payload is too large' }, 413);
+    const body = JSON.parse(raw) as Record<string, unknown>;
+    const eventName = typeof body.event_name === 'string' ? body.event_name : '';
+    const sessionId = typeof body.session_id === 'string' ? body.session_id : '';
+    const deviceType = typeof body.device_type === 'string' ? body.device_type : 'unknown';
+    const pagePath = typeof body.page_path === 'string' ? body.page_path.slice(0, 255) : '/';
+    const referrerHost = typeof body.referrer_host === 'string' ? body.referrer_host.slice(0, 255) : null;
+    const properties = body.event_properties && typeof body.event_properties === 'object' && !Array.isArray(body.event_properties)
+      ? Object.fromEntries(Object.entries(body.event_properties as Record<string, unknown>)
+          .slice(0, 8)
+          .filter(([, value]) => value === null || ['string', 'number', 'boolean'].includes(typeof value))
+          .map(([key, value]) => [key.slice(0, 80), typeof value === 'string' ? value.slice(0, 255) : value]))
+      : {};
+
+    if (!landingEventNames.has(eventName) || sessionId.length < 16 || sessionId.length > 128) {
+      return c.json({ error: 'Invalid analytics event' }, 400);
+    }
+    if (!['mobile', 'tablet', 'desktop', 'unknown'].includes(deviceType)) {
+      return c.json({ error: 'Invalid device type' }, 400);
+    }
+
+    const { error } = await supabase.from('landing_analytics_events').insert({
+      event_name: eventName,
+      session_id: sessionId,
+      device_type: deviceType,
+      page_path: pagePath,
+      referrer_host: referrerHost,
+      event_properties: properties as any,
+    });
+    if (error) {
+      console.error('Error recording landing analytics event:', error);
+      return c.json({ error: 'Could not record analytics event' }, 500);
+    }
+    return c.body(null, 204);
+  } catch (error) {
+    console.error('Landing analytics endpoint error:', error);
+    return c.json({ error: 'Invalid analytics event' }, 400);
+  }
+});
+
 // Waitlist Route
 app.get("/waitlist/count", async (c) => {
   try {
@@ -126,46 +216,91 @@ app.post("/waitlist", async (c) => {
     const body = await c.req.json();
     const { contact_name, contact_email, centre_name, contact_phone, estimated_student_count, wants_beta_testing } = body;
 
-    // Basic validation
-    if (!contact_email || !contact_name || !centre_name) {
+    const normalizedName = typeof contact_name === 'string' ? contact_name.trim() : '';
+    const normalizedEmail = typeof contact_email === 'string' ? contact_email.trim().toLowerCase() : '';
+    const normalizedCentre = typeof centre_name === 'string' ? centre_name.trim() : '';
+    const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+    const parsedStudentCount = estimated_student_count === undefined || estimated_student_count === null || estimated_student_count === ''
+      ? null
+      : Number.parseInt(String(estimated_student_count), 10);
+
+    if (!normalizedEmail || !normalizedName || !normalizedCentre) {
       return c.json({ error: "Missing required fields" }, 400);
+    }
+    if (!emailLooksValid || normalizedEmail.length > 320 || normalizedName.length > 120 || normalizedCentre.length > 160) {
+      return c.json({ error: "Invalid waitlist details" }, 400);
+    }
+    if (parsedStudentCount !== null && (!Number.isFinite(parsedStudentCount) || parsedStudentCount < 0 || parsedStudentCount > 1_000_000)) {
+      return c.json({ error: "Invalid estimated student count" }, 400);
     }
 
     // Check for duplicate email
     const { data: existingUser, error: checkError } = await supabase
       .from("waitlist_signups")
-      .select("id")
-      .eq("contact_email", contact_email)
-      .single();
+      .select("id, created_at")
+      .ilike("contact_email", normalizedEmail)
+      .maybeSingle();
 
     if (existingUser) {
-      return c.json({ message: "You're already on the list! We will be in touch soon." }, 409);
+      const { count } = await supabase
+        .from('waitlist_signups')
+        .select('*', { count: 'exact', head: true })
+        .lte('created_at', existingUser.created_at);
+      return c.json({
+        message: "You're already on the list!",
+        position: count || 1,
+        already_joined: true,
+      }, 409);
     }
 
-    if (checkError && checkError.code !== "PGRST116") {
+    if (checkError) {
       console.error("Error checking duplicate:", checkError);
       return c.json({ error: "Failed to verify email." }, 500);
     }
 
     // Insert new signup
-    const { error: insertError } = await supabase.from("waitlist_signups").insert([
+    const { data: signup, error: insertError } = await supabase.from("waitlist_signups").insert([
       {
-        contact_name,
-        contact_email,
-        centre_name,
-        contact_phone: contact_phone || null,
-        estimated_student_count: estimated_student_count ? parseInt(estimated_student_count, 10) : null,
+        contact_name: normalizedName,
+        contact_email: normalizedEmail,
+        centre_name: normalizedCentre,
+        contact_phone: typeof contact_phone === 'string' ? contact_phone.trim().slice(0, 40) || null : null,
+        estimated_student_count: parsedStudentCount,
         wants_beta_testing: wants_beta_testing ? true : false,
         status: "pending",
       },
-    ]);
+    ]).select('id, created_at').single();
 
     if (insertError) {
+      if (insertError.code === '23505') {
+        const { data: duplicate } = await supabase
+          .from('waitlist_signups')
+          .select('id, created_at')
+          .ilike('contact_email', normalizedEmail)
+          .maybeSingle();
+        if (duplicate) {
+          const { count } = await supabase
+            .from('waitlist_signups')
+            .select('*', { count: 'exact', head: true })
+            .lte('created_at', duplicate.created_at);
+          return c.json({ message: "You're already on the list!", position: count || 1, already_joined: true }, 409);
+        }
+      }
       console.error("Error inserting waitlist signup:", insertError);
       return c.json({ error: "Failed to join waitlist. Please try again." }, 500);
     }
 
-    return c.json({ message: "Successfully joined the waitlist!" }, 201);
+    const { count, error: countError } = await supabase
+      .from('waitlist_signups')
+      .select('*', { count: 'exact', head: true })
+      .lte('created_at', signup.created_at);
+    if (countError) console.error('Error calculating waitlist position:', countError);
+
+    return c.json({
+      message: "Successfully joined the waitlist!",
+      position: count || 1,
+      already_joined: false,
+    }, 201);
   } catch (error) {
     console.error("Waitlist endpoint error:", error);
     return c.json({ error: "Internal server error" }, 500);

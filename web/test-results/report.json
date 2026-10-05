@@ -5,7 +5,7 @@
       "/home/kingusang/Kanvise/node_modules/.bin/playwright",
       "test",
       "--config=web/playwright.config.ts",
-      "web/e2e/pwa.spec.ts",
+      "web/e2e/kanvise-landing-demo.spec.ts",
       "--project=desktop"
     ],
     "configFile": "/home/kingusang/Kanvise/web/playwright.config.ts",
@@ -84,98 +84,95 @@
   },
   "suites": [
     {
-      "title": "pwa.spec.ts",
-      "file": "pwa.spec.ts",
+      "title": "kanvise-landing-demo.spec.ts",
+      "file": "kanvise-landing-demo.spec.ts",
       "column": 0,
       "line": 0,
-      "specs": [],
-      "suites": [
+      "specs": [
         {
-          "title": "PWA readiness",
-          "file": "pwa.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
+          "title": "records the full Kanvise story for the landing page",
+          "ok": false,
+          "tags": [],
+          "tests": [
             {
-              "title": "publishes an installable role-aware manifest and required icons",
-              "ok": true,
-              "tags": [],
-              "tests": [
+              "timeout": 1500000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
                 {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "desktop",
-                  "projectName": "desktop",
-                  "results": [
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 1516088,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 1500000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 1500000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 324,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-16T20:28:42.166Z",
-                      "annotations": [],
-                      "attachments": []
+                      "message": "\u001b[31mTest timeout of 1500000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/kingusang/Kanvise/web/e2e/kanvise-landing-demo.spec.ts",
+                        "column": 19,
+                        "line": 197
+                      },
+                      "message": "Error: video.saveAs: Target page, context or browser has been closed\n\n  195 |     if (video) {\n  196 |       const dest = testInfo.outputPath('kanvise-demo.webm')\n> 197 |       await video.saveAs(dest)\n      |                   ^\n  198 |       await testInfo.attach('kanvise-demo', { path: dest, contentType: 'video/webm' })\n  199 |       console.log(`[demo] Video saved to ${dest}`)\n  200 |     }\n    at /home/kingusang/Kanvise/web/e2e/kanvise-landing-demo.spec.ts:197:19"
                     }
                   ],
-                  "status": "expected"
-                }
-              ],
-              "id": "30bf0965a0eb07fc9173-2c35081ec2cd865842c6",
-              "file": "pwa.spec.ts",
-              "line": 4,
-              "column": 7
-            },
-            {
-              "title": "serves a non-cacheable push-only service worker",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "desktop",
-                  "projectName": "desktop",
-                  "results": [
+                  "stdout": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 79,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-16T20:28:42.576Z",
-                      "annotations": [],
-                      "attachments": []
+                      "text": "[demo] Script starting\n"
+                    },
+                    {
+                      "text": "[demo] Polling for classroom worker readiness\n"
+                    },
+                    {
+                      "text": "[demo] Worker ready\n"
+                    },
+                    {
+                      "text": "[demo] Cleaning up\n"
                     }
                   ],
-                  "status": "expected"
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-04T16:38:16.583Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/kingusang/Kanvise/web/test-results/kanvise-landing-demo-recor-63f68--story-for-the-landing-page-desktop/error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "/home/kingusang/Kanvise/web/test-results/kanvise-landing-demo-recor-63f68--story-for-the-landing-page-desktop/trace.zip"
+                    }
+                  ]
                 }
               ],
-              "id": "30bf0965a0eb07fc9173-b750048222ce9bda5a92",
-              "file": "pwa.spec.ts",
-              "line": 19,
-              "column": 7
+              "status": "unexpected"
             }
-          ]
+          ],
+          "id": "5d28a3d83e0fbce98485-9cd9a7c9bab4e4fb770f",
+          "file": "kanvise-landing-demo.spec.ts",
+          "line": 58,
+          "column": 5
         }
       ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-16T20:28:40.540Z",
-    "duration": 2204.662,
-    "expected": 2,
+    "startTime": "2026-10-04T16:38:10.665Z",
+    "duration": 1559657.241,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }

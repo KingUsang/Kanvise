@@ -429,8 +429,12 @@ dashboardRouter.get("/student", async (c) => {
   const visibleMocks = (mocks || []).filter((item) =>
     studentCanAccessCentreMock(item, mockAudience),
   );
+  const endOfPeriod = new Date();
+  endOfPeriod.setDate(endOfPeriod.getDate() + 7);
+  endOfPeriod.setHours(23, 59, 59, 999);
+  
   const upcomingClasses = (classes || [])
-    .filter((item) => item.status === "live" || item.scheduled_at >= now)
+    .filter((item) => item.status === "live" || (item.scheduled_at >= now && new Date(item.scheduled_at) <= endOfPeriod))
     .slice(0, 6)
     .map((item) => ({
       ...item,

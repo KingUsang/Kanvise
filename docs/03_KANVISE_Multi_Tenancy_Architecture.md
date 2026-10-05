@@ -282,6 +282,7 @@ The following tables are not scoped to a school. They store platform-level data 
 | Table | Purpose |
 |---|---|
 | kanvise_subscriptions | Monthly subscription billing records for tutorial centres |
+| landing_analytics_events | Anonymous public-site funnel events collected before a visitor has a school context; browser roles have no direct table access |
 | paystack_subaccounts | Paystack subaccount IDs per school — linked to school by school_id but managed at platform level |
 
 Note: `paystack_subaccounts` does reference a `school_id` as a foreign key but it is managed by platform-level processes, not by school-scoped route handlers.

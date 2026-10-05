@@ -8,7 +8,9 @@ export const emailSubjects = {
   tutor_invitation: (input: EmailTemplateInputs['tutor_invitation']) =>
     `You’re invited to teach at ${subjectValue(input.schoolName)}`,
   welcome: (input: EmailTemplateInputs['welcome']) =>
-    `Welcome to Kanvise, ${subjectValue(input.firstName)}`,
+    input.role === 'admin' || input.role === 'tutor' 
+      ? 'Welcome to Kanvise 👋' 
+      : `Welcome to Kanvise, ${subjectValue(input.firstName)}`,
   payment_confirmed: (input: EmailTemplateInputs['payment_confirmed']) =>
     `Payment confirmed — ${subjectValue(input.programmeName)}`,
   live_class_reminder: (input: EmailTemplateInputs['live_class_reminder']) =>
@@ -23,5 +25,11 @@ export const emailSubjects = {
     `New mock available: ${subjectValue(input.mockTitle)}`,
   mock_fully_graded: (input: EmailTemplateInputs['mock_fully_graded']) =>
     `Your mock result is ready: ${subjectValue(input.mockTitle)}`,
+  founder_letter: () => `There’s a reason we asked you to be here 💛`,
+  meet_kavi: () => `Okay, I have something to tell you 👀`,
+  use_this_thing: () => `You’re in. Now let’s actually use Kanvise 👀`,
+  first_week: () => `So… what happened when you actually used it? 👀`,
+  kavi_challenge: () => `You’ve seen the basics. Now try this 👀`,
+  pilot_ending: () => `You were here before everyone else 💛`,
 } satisfies { [K in keyof EmailTemplateInputs]: (input: EmailTemplateInputs[K]) => string }
 

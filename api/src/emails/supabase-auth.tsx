@@ -32,6 +32,7 @@ type AuthMessage = {
   subject: string
   heading: string
   suffix: string
+  kaviSignOff?: boolean
 }
 
 type AuthEmailSender = (
@@ -39,22 +40,26 @@ type AuthEmailSender = (
   options: { event: string; idempotencyKey?: string; providerTimeoutMs?: number },
 ) => Promise<{ id: string | null; provider: string }>
 
-const actionContent: Record<string, { subject: string; heading: string; body: string; actionLabel?: string }> = {
+const actionContent: Record<string, { subject: string; heading: string; body: string; actionLabel?: string; kaviSignOff?: boolean }> = {
   signup: {
-    subject: 'Confirm your Kanvise email',
-    heading: 'Confirm your email address.',
-    body: 'Enter this code on Kanvise to finish creating your account.',
+    subject: 'Wait, don’t leave yet 👀',
+    heading: 'I’ve got your code.',
+    body: 'Kavi here. I’ve got something you need before we let you in.\n\nPop that in and you\'re good to go. See you inside. 👀',
+    kaviSignOff: true,
   },
   recovery: {
-    subject: 'Reset your Kanvise password',
-    heading: 'Reset your password.',
-    body: 'Enter this code on Kanvise to continue resetting your password.',
+    subject: 'Need to get back in?',
+    heading: 'I’ve got you.',
+    body: 'Looks like you need a little help getting back into Kanvise.\n\nNo worries. I’ve got you.',
+    actionLabel: 'Reset your password →',
+    kaviSignOff: true,
   },
   invite: {
-    subject: 'You’re invited to Kanvise',
-    heading: 'Your Kanvise invitation is ready.',
-    body: 'Use the secure button below to accept your invitation and set up your account.',
-    actionLabel: 'Accept invitation',
+    subject: 'You’re invited to Kanvise 👀',
+    heading: 'Your invitation is ready.',
+    body: 'You have been invited to join a class on Kanvise. Use the secure button below to accept your invitation and set up your account.',
+    actionLabel: 'Accept invitation →',
+    kaviSignOff: true,
   },
   magiclink: {
     subject: 'Your Kanvise sign-in link',
@@ -107,7 +112,7 @@ export function buildSupabaseAuthMessages(
   const common = (recipient: string, code: string | undefined, tokenHash: string | undefined, suffix: string) => ({
     ...content,
     recipient: requiredText(recipient, 'recipient email'),
-    code: code?.trim() || undefined,
+    code: (action === 'invite' || action === 'magiclink') ? undefined : (code?.trim() || undefined),
     actionUrl: verificationUrl({
       action,
       redirectTo: payload.email_data.redirect_to || payload.email_data.site_url,
@@ -164,6 +169,7 @@ export async function deliverSupabaseAuthEmail(input: {
       heading={message.heading}
       logoUrl={config.logoUrl}
       preview={message.subject}
+      kaviSignOff={message.kaviSignOff}
     />
     const emailPayload: EmailPayload = {
       from: config.from,

@@ -14,6 +14,7 @@ import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-regis
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { UnsavedChangesProvider } from "@/components/navigation/UnsavedChangesContext";
+import { Analytics } from "@vercel/analytics/next";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -24,14 +25,19 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   applicationName: "Kanvise",
-  title: "Kanvise — Run your school. We handle the engine.",
-  description: "Kanvise helps tutors and teaching teams run online classes, understand learner performance, and act on what matters.",
+  title: "Kanvise | One workspace for smarter tutoring",
+  description:
+    "Teach live, manage students, assess learning and see who needs attention in one connected tutoring workspace.",
   icons: {
     icon: "/kanvise_logo_small_blue.png",
     apple: "/icons/apple-touch-icon.png",
   },
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Kanvise", statusBarStyle: "black-translucent" },
+  appleWebApp: {
+    capable: true,
+    title: "Kanvise",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({
@@ -50,6 +56,7 @@ export default function RootLayout({
         </UnsavedChangesProvider>
         <ServiceWorkerRegistration />
         <InstallPrompt />
+        <Analytics />
         <Toaster position="bottom-right" richColors />
       </body>
     </html>

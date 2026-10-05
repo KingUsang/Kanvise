@@ -10,18 +10,19 @@ export type WelcomeEmailProps = {
 export function WelcomeEmail({ firstName, dashboardUrl, logoUrl }: WelcomeEmailProps) {
   return (
     <BrandedLayout
-      preview="Your Kanvise account is ready."
+      preview="Your Kanvise account is ready. 👀"
       logoUrl={logoUrl}
     >
-      <Text style={styles.eyebrow}>WELCOME TO KANVISE</Text>
-      <Heading as="h1" style={styles.heading}>Welcome, {firstName}.</Heading>
+      <Text style={styles.copy}>Hey {firstName}!</Text>
       <Text style={styles.copy}>
-        Your account is ready. You can now continue setting up your profile and access your Kanvise workspace.
+        Kavi here. Your Kanvise account is fully set up and ready to go.
       </Text>
-      <Button href={dashboardUrl} style={styles.button}>Open Kanvise</Button>
-      <Text style={styles.note}>
-        If you did not create this account, you can safely ignore this email.
+      <Text style={styles.copy}>
+        You can now jump in to access your classes, assignments, and everything else you need.
       </Text>
+      <Button href={dashboardUrl} style={styles.button}>Open Kanvise →</Button>
+      <Text style={styles.copy}>See you inside. 👀</Text>
+      <Text style={styles.signature}>Kavi 💛</Text>
     </BrandedLayout>
   )
 }
@@ -52,5 +53,6 @@ const styles = {
     padding: '14px 24px',
     textDecoration: 'none',
   },
+  signature: { color: '#3C3027', fontSize: '16px', lineHeight: '26px', margin: '20px 0 0', fontWeight: 'bold' },
   note: { color: '#77727F', fontSize: '12px', lineHeight: '19px', margin: 0 },
 }

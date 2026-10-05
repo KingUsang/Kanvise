@@ -17,7 +17,10 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid JSON payload" },
+      { status: 400 },
+    );
   }
 
   const contactName = body.contact_name?.trim();
@@ -31,17 +34,30 @@ export async function POST(req: NextRequest) {
         : null;
 
   if (!contactName || !contactEmail || !centreName) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing required fields" },
+      { status: 400 },
+    );
   }
 
   const atIndex = contactEmail.indexOf("@");
   const dotAfterAt = contactEmail.indexOf(".", atIndex + 2);
-  if (atIndex < 1 || dotAfterAt <= atIndex + 1 || dotAfterAt >= contactEmail.length - 1) {
-    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  if (
+    atIndex < 1 ||
+    dotAfterAt <= atIndex + 1 ||
+    dotAfterAt >= contactEmail.length - 1
+  ) {
+    return NextResponse.json(
+      { error: "Invalid email address" },
+      { status: 400 },
+    );
   }
 
   if (estimatedStudentCount !== null && Number.isNaN(estimatedStudentCount)) {
-    return NextResponse.json({ error: "Estimated student count must be a valid number" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Estimated student count must be a valid number" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -65,7 +81,7 @@ export async function POST(req: NextRequest) {
     console.error("[Waitlist Route] Failed to reach API:", error);
     return NextResponse.json(
       { error: "Failed to process waitlist request. Please try again later." },
-      { status: 502 }
+      { status: 502 },
     );
   }
 }

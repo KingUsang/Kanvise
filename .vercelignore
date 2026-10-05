@@ -1,0 +1,15 @@
+.git
+.next
+**/.next
+node_modules
+**/node_modules
+.server-backups
+.fixes-worktree
+scratch
+web/test-results
+web/videos
+web/public/videos
+web/*-state.json
+*.docx
+*.png
+!web/public/**/*.png

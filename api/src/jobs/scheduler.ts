@@ -5,9 +5,11 @@ import { runLiveClassRecordingJob } from './live-class-recording'
 import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 import { reconcileInactivePlugNmeetClasses } from '../plugnmeet/room-lifecycle'
 import { deallocateIdlePlugNmeet, warmPlugNmeetForUpcomingClasses } from '../plugnmeet/classroom-lifecycle'
+import { runOnboardingDripJob } from './onboarding-drip'
 
 export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
   const jobs = [
+    { expression: '0 * * * *', guarded: createGuardedJob('onboarding_drip', () => runOnboardingDripJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('mock_publication', () => runMockPublicationJob()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('live_class_reminder', () => runLiveClassReminderJob()) },
     { expression: '*/30 * * * *', guarded: createGuardedJob('assignment_deadline', () => runAssignmentDeadlineJob()) },

@@ -1,6 +1,4 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
-import { createClient } from '@supabase/supabase-js'
-import { readFileSync } from 'node:fs'
 
 const tutor = {
   email: process.env.E2E_LIVE_TUTOR_EMAIL,
@@ -13,12 +11,6 @@ const student = {
 const baseURL = process.env.E2E_BASE_URL
 const title = `Live Physics check ${Date.now().toString(36)}`
 
-function webEnv(name: string) {
-  const match = readFileSync('web/.env.local', 'utf8').match(new RegExp(`^${name}=(.+)$`, 'm'))
-  if (!match) throw new Error(`Missing ${name} in web/.env.local`)
-  return match[1].trim().replace(/^['"]|['"]$/g, '')
-}
-
 function requireFixture() {
   if (!baseURL) throw new Error('E2E_BASE_URL is required')
   if (!tutor.email || !tutor.password || !student.email || !student.password) {
@@ -27,6 +19,16 @@ function requireFixture() {
   if (new URL(baseURL).hostname === 'kanvise.com') {
     throw new Error('This journey starts and ends a real class. Run only on localhost or staging.')
   }
+}
+
+function apiBase() {
+  if (!baseURL) throw new Error('E2E_BASE_URL is required')
+  // Remote browser runs must never inherit a developer's localhost API URL.
+  // Staging has its own API origin even though local web/.env.local is used
+  // for the Supabase test fixture configuration.
+  return new URL(baseURL).hostname === 'staging.kanvise.com'
+    ? 'https://staging-api.kanvise.com'
+    : 'http://127.0.0.1:3001'
 }
 
 async function signedInContext(browser: Browser, credentials: { email?: string; password?: string }): Promise<BrowserContext> {
@@ -53,13 +55,20 @@ async function joinPlugNmeet(page: Page) {
   await expect(preJoin).toBeHidden({ timeout: 45_000 })
 }
 
-async function apiToken(credentials: { email?: string; password?: string }) {
-  const auth = createClient(webEnv('NEXT_PUBLIC_SUPABASE_URL'), webEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'), {
-    auth: { persistSession: false, autoRefreshToken: false },
+async function browserAccessToken(page: Page) {
+  const token = await page.evaluate(() => {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (!key?.includes('auth-token')) continue
+      try {
+        const stored = JSON.parse(localStorage.getItem(key) || '{}')
+        if (typeof stored.access_token === 'string') return stored.access_token
+      } catch { /* try the next storage key */ }
+    }
+    return null
   })
-  const { data, error } = await auth.auth.signInWithPassword({ email: credentials.email!, password: credentials.password! })
-  if (error || !data.session) throw error || new Error('Could not authenticate test fixture')
-  return data.session.access_token
+  if (!token) throw new Error('Could not read the authenticated browser session')
+  return token
 }
 
 test('an enrolled student sees, joins and is recorded for a tutor live class', async ({ browser, request }) => {
@@ -69,32 +78,30 @@ test('an enrolled student sees, joins and is recorded for a tutor live class', a
   const studentContext = await signedInContext(browser, student)
   let classId: string | null = null
   let classEnded = false
+  let token: string | null = null
 
   try {
-    const token = await apiToken(tutor)
-    const classResponse = await request.get(`${webEnv('NEXT_PUBLIC_API_URL')}/classes`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    expect(classResponse.ok()).toBeTruthy()
-    const teachingClasses = (await classResponse.json()).data as Array<{
-      id: string
-      name: string
-      courses?: Array<{ id: string; name: string }>
-    }>
-    const physicsClass = teachingClasses.find((item) =>
-      item.courses?.some((course) => course.name.toLowerCase() === 'physics'),
-    )
-    expect(physicsClass, 'The E2E student must be enrolled in a Physics teaching class').toBeTruthy()
-    const physics = physicsClass!.courses!.find((course) => course.name.toLowerCase() === 'physics')!
-
     const tutorPage = await tutorContext.newPage()
     await tutorPage.goto('/dashboard/schedule?new=1', { waitUntil: 'domcontentloaded' })
     const composer = tutorPage.locator('form', { has: tutorPage.getByRole('heading', { name: 'New class' }) })
     await expect(composer).toBeVisible({ timeout: 45_000 })
     await composer.getByRole('button', { name: 'Enrolled learners', exact: true }).click()
-    await composer.getByLabel('Class').selectOption(physicsClass!.id)
+    const classSelect = composer.getByLabel('Class')
+    await expect(classSelect).toBeVisible()
+    const classOptions = await classSelect.locator('option').evaluateAll((options) =>
+      options.map((option) => ({ value: option.getAttribute('value') || '', label: option.textContent || '' })),
+    )
+    const physicsClass = classOptions.find((option) => option.label.toLowerCase().includes('physics')) || classOptions.find((option) => option.value)
+    expect(physicsClass, 'The tutor needs an enrolled teaching class for this fixture').toBeTruthy()
+    await classSelect.selectOption(physicsClass!.value)
     if (await composer.getByLabel('Subject').isVisible().catch(() => false)) {
-      await composer.getByLabel('Subject').selectOption(physics.id)
+      const subjectSelect = composer.getByLabel('Subject')
+      const subjectOptions = await subjectSelect.locator('option').evaluateAll((options) =>
+        options.map((option) => ({ value: option.getAttribute('value') || '', label: option.textContent || '' })),
+      )
+      const physics = subjectOptions.find((option) => option.label.toLowerCase() === 'physics') || subjectOptions.find((option) => option.value)
+      expect(physics, 'The selected teaching class needs a subject').toBeTruthy()
+      await subjectSelect.selectOption(physics!.value)
     }
     const scheduled = new Date(Date.now() + 5 * 60_000)
     const localDate = `${scheduled.getFullYear()}-${String(scheduled.getMonth() + 1).padStart(2, '0')}-${String(scheduled.getDate()).padStart(2, '0')}`
@@ -112,6 +119,7 @@ test('an enrolled student sees, joins and is recorded for a tutor live class', a
     await tutorPage.waitForURL(/\/class\/[^?]+\?start=true/, { timeout: 60_000 })
     classId = new URL(tutorPage.url()).pathname.split('/').pop() || null
     expect(classId).toBeTruthy()
+    token = await browserAccessToken(tutorPage)
     await joinPlugNmeet(tutorPage)
 
     const studentPage = await studentContext.newPage()
@@ -127,7 +135,7 @@ test('an enrolled student sees, joins and is recorded for a tutor live class', a
 
     // End the short-lived room through the real tutor endpoint. The provider
     // emits the leave event and Kanvise persists the student's attendance.
-    const endResponse = await request.post(`${webEnv('NEXT_PUBLIC_API_URL')}/live-classes/${classId}/end`, {
+    const endResponse = await request.post(`${apiBase()}/live-classes/${classId}/end`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     expect(endResponse.ok()).toBeTruthy()
@@ -137,16 +145,15 @@ test('an enrolled student sees, joins and is recorded for a tutor live class', a
     // not a mocked browser response. Attendance records become visible only
     // after the session ends, which is how the tutor attendance view works.
     await expect.poll(async () => {
-      const response = await request.get(`${webEnv('NEXT_PUBLIC_API_URL')}/attendance/records?class_id=${classId}`, {
+      const response = await request.get(`${apiBase()}/attendance/records?class_id=${classId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const body = await response.json().catch(() => null)
       return body?.data?.find((item: { status: string }) => item.status === 'Present')?.status || null
     }, { timeout: 60_000, intervals: [2_000, 3_000, 5_000] }).toBe('Present')
   } finally {
-    if (classId && !classEnded) {
-      const token = await apiToken(tutor)
-      await request.post(`${webEnv('NEXT_PUBLIC_API_URL')}/live-classes/${classId}/end`, {
+    if (classId && !classEnded && token) {
+      await request.post(`${apiBase()}/live-classes/${classId}/end`, {
         headers: { Authorization: `Bearer ${token}` },
       })
     }

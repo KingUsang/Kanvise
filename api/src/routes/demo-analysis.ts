@@ -1,18 +1,25 @@
 import { Hono } from 'hono';
 import { supabase } from '../lib/supabase';
+import { jwtVerificationMiddleware, profileResolutionMiddleware, type Variables } from '../middleware/auth';
 
-export const demoAnalysisRouter = new Hono();
+export const demoAnalysisRouter = new Hono<{ Variables: Variables }>();
+demoAnalysisRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware);
 
 // This endpoint runs the cross-signal AI analysis for the demo
 demoAnalysisRouter.post('/', async (c) => {
-  const { studentId, courseId } = await c.req.json();
-  const user = c.get('user' as any); // Assuming middleware provides this
+  const { studentId, classId } = await c.req.json();
+  const user = c.get('user');
+  if (!['admin', 'tutor'].includes(user.role) || !user.school_id) return c.json({ error: 'Tutor access only' }, 403);
+  const classQuery = supabase.from('live_classes').select('id, tutor_id').eq('id', classId).eq('school_id', user.school_id);
+  const { data: liveClass } = user.role === 'tutor' ? await classQuery.eq('tutor_id', user.id).maybeSingle() : await classQuery.maybeSingle();
+  if (!liveClass) return c.json({ error: 'Class not found' }, 404);
 
   // Fetch the student profile
   const { data: student } = await supabase
     .from('user_profiles')
     .select('first_name, last_name')
     .eq('id', studentId)
+    .eq('school_id', user.school_id)
     .single();
 
   if (!student) {
@@ -27,6 +34,7 @@ demoAnalysisRouter.post('/', async (c) => {
   const { data: attempts } = await supabase
     .from('mock_attempts')
     .select('id, mock_exam_id, status, created_at')
+    .eq('school_id', user.school_id)
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
 
