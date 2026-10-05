@@ -7,6 +7,7 @@ import {
   CalendarClock,
   ChevronRight,
   CircleAlert,
+  Copy,
   Download,
   FileText,
   FolderOpen,
@@ -20,6 +21,7 @@ import {
   UsersRound,
   Video,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export type ClassSessionItem = {
   id: string
@@ -177,7 +179,7 @@ export function ClassSchedulePanel({ sessions, recurringSlots = [], onAddSession
       {visibleSessions.map(session => <article key={session.id} className="flex items-start gap-3 px-5 py-4 sm:px-6">
         <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f1efff] text-[#312783]"><CalendarClock size={18}/></div>
         <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-bold text-[#27242d]">{session.title}</p>{session.status !== 'scheduled' ? <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold capitalize ${statusStyle[session.status]}`}>{session.status}</span> : null}</div><p className="mt-1 text-sm text-dashboard-muted">{session.subject} · {dateTime(session.startsAt)}</p>{session.recurrenceLabel || session.attendeeCount !== null ? <p className="mt-1 text-xs text-[#655f67]">{[session.recurrenceLabel, session.attendeeCount !== null && session.attendeeCount !== undefined ? `${session.attendeeCount} students` : null].filter(Boolean).join(' · ')}</p> : null}</div>
-        <div className="mt-1 flex shrink-0 items-center gap-1">{session.status === 'scheduled' || session.status === 'live' ? <button type="button" onClick={() => onStartSession?.(session)} aria-label={session.status === 'live' ? `Join ${session.title}` : `Start ${session.title}`} title={session.status === 'live' ? 'Join class' : 'Start class'} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#312783] text-white hover:bg-[#241c70]"><Video size={16}/></button> : null}<button type="button" onClick={() => onOpenSession?.(session)} aria-label={`Open ${session.title} session details`} className="rounded-lg p-2 text-[#625e69] transition hover:bg-[#f1efff] hover:text-[#180d62]"><ChevronRight size={18}/></button></div>
+        <div className="mt-1 flex shrink-0 items-center gap-1">{session.status === 'scheduled' || session.status === 'live' ? <><button type="button" onClick={() => void navigator.clipboard.writeText(window.location.origin + "/class/" + session.id).then(() => toast.success('Class link copied'))} aria-label="Copy class link" title="Copy link to join this class" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#f1efff] text-[#312783] hover:bg-[#e4dfff]"><Copy size={16}/></button><button type="button" onClick={() => onStartSession?.(session)} aria-label={session.status === 'live' ? `Join ${session.title}` : `Start ${session.title}`} title={session.status === 'live' ? 'Join class' : 'Start class'} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#312783] text-white hover:bg-[#241c70]"><Video size={16}/></button></> : null}<button type="button" onClick={() => onOpenSession?.(session)} aria-label={`Open ${session.title} session details`} className="rounded-lg p-2 text-[#625e69] transition hover:bg-[#f1efff] hover:text-[#180d62]"><ChevronRight size={18}/></button></div>
       </article>)}
     </div>}
   </Panel>
