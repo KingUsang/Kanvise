@@ -25,16 +25,27 @@ export function ClassSessionComposer({ open, onClose, onSaved, classId, subjects
   useEffect(() => {
     if (!open || !courseId) return
     let active = true
-    void Promise.all([fetch(`${api}/schools/me`, { headers }), fetch(`${api}/courses/${courseId}/tutors`, { headers })]).then(async ([school, assignments]) => {
+    void Promise.all([
+      fetch(`${api}/schools/me`, { headers }), 
+      fetch(`${api}/courses/${courseId}/tutors`, { headers }),
+      fetch(`${api}/users/tutors`, { headers }),
+      fetch(`${api}/users/me`, { headers })
+    ]).then(async ([school, assignments, tutorsRes, meRes]) => {
       const schoolBody = school.ok ? await school.json() : null
       const assignmentBody = assignments.ok ? await assignments.json() : { data: [] }
+      const tutorsBody = tutorsRes.ok ? await tutorsRes.json() : { data: [] }
+      const meBody = meRes.ok ? await meRes.json() : null
+      
       const isIndependent = schoolBody?.data?.account_type === 'independent'
       if (!active) return
       setIndependent(isIndependent)
-      const ids = (assignmentBody.data || []).map((item: { tutor_id: string; tutor?: Tutor }) => item.tutor_id)
-      const people = (assignmentBody.data || []).map((item: { tutor?: Tutor }) => item.tutor).filter(Boolean) as Tutor[]
+      
+      const ids = (assignmentBody.data || []).map((item: { tutor_id: string }) => item.tutor_id)
+      const allTutors = tutorsBody.data?.length ? tutorsBody.data : (meBody?.data ? [meBody.data] : [])
+      const people = ids.length ? allTutors.filter((t: Tutor) => ids.includes(t.id)) : allTutors
+      
       setTutors(people)
-      setTutorId(ids.length === 1 ? ids[0] : '')
+      setTutorId(ids.length === 1 ? ids[0] : (people.length === 1 ? people[0].id : ''))
     }).catch(() => { if (active) setTutors([]) })
     return () => { active = false }
   }, [api, courseId, open, token])
