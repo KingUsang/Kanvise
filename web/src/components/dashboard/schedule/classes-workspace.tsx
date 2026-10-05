@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Copy,
   Loader2,
   Plus,
   Video,
@@ -409,6 +410,25 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
     const body = await response.json();
     if (!response.ok) return toast.error(body.error || "Could not start class");
     window.open(`/class/${item.id}?start=true`, "_blank", "noopener,noreferrer");
+  }
+  async function copyClassroomLink(value: string) {
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+      else {
+        const input = document.createElement('textarea');
+        input.value = value;
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand('copy');
+        input.remove();
+        if (!copied) throw new Error('Copy was blocked')
+      }
+      toast.success('Classroom link copied')
+    } catch {
+      toast.error('Could not copy the classroom link')
+    }
   }
   function selectMobileMonth(month: Date) {
     setMobileMonth(month);
@@ -968,12 +988,21 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => void start(composer.existing!)}
+                    onClick={() => void copyClassroomLink(`${window.location.origin}/class/${composer.existing!.id}`)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#2e2877] text-sm font-semibold text-[#2e2877]"
+                  >
+                    <Copy size={16} />
+                    Copy link
+                  </button>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={`/class/${composer.existing!.id}?start=true`}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2e2877] text-sm font-semibold text-white hover:bg-[#1a1555]"
                   >
                     <Video size={16} />
                     Join as host
-                  </button>
+                  </a>
                   <button
                     type="button"
                     onClick={() => void cancel(composer.existing!)}
