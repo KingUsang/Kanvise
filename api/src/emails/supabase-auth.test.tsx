@@ -18,7 +18,7 @@ describe('Supabase auth email delivery', () => {
       expect.objectContaining({
         recipient: 'student@example.com',
         code: '305805',
-        subject: 'Confirm your Kanvise email',
+        subject: 'Wait, don’t leave yet 👀',
         actionUrl: undefined,
       }),
     ])
@@ -69,7 +69,7 @@ describe('Supabase auth email delivery', () => {
     })
     expect(send).toHaveBeenCalledWith(expect.objectContaining({
       to: ['student@example.com'],
-      subject: 'Confirm your Kanvise email',
+      subject: 'Wait, don’t leave yet 👀',
       html: expect.stringContaining('305805'),
     }), expect.objectContaining({
       event: 'supabase_auth.signup',
