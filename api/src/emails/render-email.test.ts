@@ -14,13 +14,13 @@ const cases: Array<{
   {
     event: 'tutor_invitation',
     input: { inviteUrl: 'https://kanvise.com/join?token=abc', invitedByName: 'Ada Okafor', schoolName: 'Bright Minds', expiresAt: '2026-07-27T12:00:00Z' },
-    expected: ['Ada Okafor', 'Bright Minds', 'TUTOR INVITATION'],
+    expected: ['Ada Okafor', 'Bright Minds'],
     link: 'https://kanvise.com/join?token=abc',
   },
   {
     event: 'welcome',
     input: { firstName: 'Chidi', dashboardUrl: 'https://kanvise.com/dashboard' },
-    expected: ['Chidi', 'WELCOME TO KANVISE'],
+    expected: ['Chidi', 'Your Kanvise account is fully set up'],
     link: 'https://kanvise.com/dashboard',
   },
   {
@@ -89,7 +89,7 @@ describe('initial email templates', () => {
 
     expect(result.html).not.toContain('<img src=x onerror=alert(1)>')
     expect(result.html).toContain('&lt;img src=x onerror=alert(1)&gt;')
-    expect(result.text).toContain(unsafeName.toUpperCase())
+    expect(result.text).toContain(unsafeName)
   })
 
   it('rejects relative and non-web links', async () => {

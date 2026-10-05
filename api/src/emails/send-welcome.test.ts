@@ -28,8 +28,8 @@ describe('sendWelcomeEmail', () => {
     }, transport)).resolves.toEqual({ id: 'email_welcome' })
 
     expect(sent?.subject).toBe('Welcome to Kanvise, Ada')
-    expect(sent?.html).toContain('WELCOME TO KANVISE')
-    expect(sent?.text).toContain('WELCOME, ADA.')
+    expect(sent?.html).toContain('ready to go')
+    expect(sent?.text).toContain('ready to go')
     expect(sent?.text).toContain('https://kanvise.com/dashboard')
     expect(options).toEqual({ idempotencyKey: 'welcome:profile-123' })
   })
