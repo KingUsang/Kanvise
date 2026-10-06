@@ -1833,6 +1833,7 @@ export default function ModernLanding() {
           <div className="flex flex-wrap gap-5 text-[9px] font-semibold text-[#6f6877]">
             <a href="#workspace">DEMO</a>
             <a href="#faq">FAQs</a>
+            <Link href="/privacy">Privacy Policy</Link>
             <a href="mailto:info@kanvise.com">Contact</a>
             <span>© {new Date().getFullYear()} Kanvise</span>
           </div>

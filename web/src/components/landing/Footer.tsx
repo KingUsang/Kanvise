@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -27,9 +28,9 @@ export default function Footer() {
           </a>
         </li>
         <li>
-          <a className="text-[#474551] hover:text-[#C26627] transition-colors text-xs font-semibold opacity-80 hover:opacity-100" href="#">
+          <Link className="text-[#474551] hover:text-[#C26627] transition-colors text-xs font-semibold opacity-80 hover:opacity-100" href="/privacy">
             Privacy Policy
-          </a>
+          </Link>
         </li>
         <li>
           <a className="text-[#474551] hover:text-[#C26627] transition-colors text-xs font-semibold opacity-80 hover:opacity-100" href="#">
