@@ -26,6 +26,11 @@ AZURE_PLUGNMEET_RESOURCE_GROUP=<azure-resource-group>
 AZURE_PLUGNMEET_VM_NAME=<repurposed-vm-name>
 ```
 
+For existing production installations where the classroom VM was provisioned
+before the PlugNmeet rename, `AZURE_LIVEKIT_RESOURCE_GROUP` and
+`AZURE_LIVEKIT_VM_NAME` are accepted as backwards-compatible identifiers. New
+deployments should use the explicit `AZURE_PLUGNMEET_*` names.
+
 Keep the flag `false` until the provider health check, webhook signature check,
 and browser smoke test pass. The API secret is server-only; never add it to
 the web application environment.
