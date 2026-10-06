@@ -129,7 +129,7 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
   return {
     allow_webcams: true,
     mute_on_start: true,
-    allow_screen_share: false,
+    allow_screen_share: true,
     admin_only_webcams: false,
     allow_view_other_webcams: true,
     allow_view_other_users_list: true,

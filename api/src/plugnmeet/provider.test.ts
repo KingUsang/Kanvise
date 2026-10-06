@@ -1,7 +1,13 @@
-import { describe, expect, it } from 'vitest'
-import { providerForClass } from './provider'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { plugNmeet } from './client'
+import { getPlugNmeetClientConfig, providerForClass } from './provider'
 
 describe('classroom provider selection', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+  })
+
   it('always selects PlugNmeet for organised and shared classes', () => {
     expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1' })).toBe('plugnmeet')
     expect(providerForClass({ accessMode: 'anyone_with_link', schoolId: 'school-1' })).toBe('plugnmeet')
@@ -9,5 +15,20 @@ describe('classroom provider selection', () => {
 
   it('does not revive a persisted LiveKit row', () => {
     expect(providerForClass({ accessMode: 'enrolled_learners', schoolId: 'school-1', persisted: 'livekit' })).toBe('plugnmeet')
+  })
+
+  it('lets tutors share their screen while keeping students locked', async () => {
+    vi.stubEnv('PLUGNMEET_SERVER_URL', 'https://plugnmeet.example')
+    vi.stubEnv('PLUGNMEET_API_KEY', 'test-key')
+    vi.stubEnv('PLUGNMEET_API_SECRET', 'test-secret')
+    const joinToken = vi.spyOn(plugNmeet, 'getJoinToken').mockResolvedValue({ token: 'join-token' })
+    vi.spyOn(plugNmeet, 'getClientFiles').mockResolvedValue({ css_files: [], js_files: [] } as any)
+    const base = { roomId: 'room-1', userId: 'user-1', name: 'Ada', schoolId: 'school-1' }
+
+    await getPlugNmeetClientConfig({ ...base, isHost: true })
+    await getPlugNmeetClientConfig({ ...base, isHost: false })
+
+    expect(joinToken.mock.calls[0][0].user_info.user_metadata.lock_settings.lock_screen_sharing).toBe(false)
+    expect(joinToken.mock.calls[1][0].user_info.user_metadata.lock_settings.lock_screen_sharing).toBe(true)
   })
 })

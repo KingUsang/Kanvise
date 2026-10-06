@@ -74,7 +74,7 @@ Every sub-object below is marked `Yes` (required) or `No` (optional) per the doc
 {
   "allow_webcams": true,
   "mute_on_start": true,
-  "allow_screen_share": false,
+  "allow_screen_share": true,
   "admin_only_webcams": false,
   "allow_view_other_webcams": true,
   "allow_view_other_users_list": true,
@@ -121,7 +121,7 @@ Notes tying this to decisions already made:
 - `enable_analytics: true` is **required** for the post-class attendance reconciliation (see Analytics section) — default in the docs is `false`, don't forget this.
 - `mute_on_start: true` preserves Kanvise's current student-muted entry
   behaviour. The tutor can unmute after joining as moderator.
-- `allow_screen_share: false` — per your call, whiteboard's PDF/office upload already covers materials.
+- `allow_screen_share: true` — tutors can share a screen during class. Join-token locks keep screen sharing disabled for students.
 - `insights_features.is_allow: true` enables PlugNmeet's native Generate-with-AI
   poll composer. Its transcription and meeting-summarization subfeatures stay
   disabled; Kanvise runs Deepgram post-recording and Gemini summary generation
@@ -182,8 +182,8 @@ Product defaults around those settings:
   focus plus the device-specific webcam limit bounds downstream media. The
   default camera publishing layer is h180: whiteboard/PDF and clear audio are
   the teaching surface, while video is an optional talking-head tile.
-- Screen sharing, virtual backgrounds, external media, and chat file uploads
-  stay disabled. Whiteboard/PDF remains the materials-sharing path.
+- Tutors can screen-share alongside the whiteboard/PDF materials path. Virtual
+  backgrounds, external media, and chat file uploads stay disabled.
 - Do not disable LiveKit audio RED merely to save bytes. It adds bandwidth but
   improves speech under packet loss; validate the trade-off on Nigerian mobile
   networks before overriding it.
