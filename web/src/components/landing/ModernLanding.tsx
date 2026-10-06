@@ -275,7 +275,7 @@ const features = [
   {
     number: "06",
     name: "Attendance",
-    verb: "Track",
+    verb: "Attendance",
     headline: "Know who showed up.",
     copy: "Attendance is tied to the actual class session and the student record, ready for follow-up.",
     accent: "#2E2877",
@@ -284,7 +284,7 @@ const features = [
   {
     number: "07",
     name: "Payments",
-    verb: "Organise",
+    verb: "Collect",
     headline: "Know what has been paid and what is still outstanding.",
     copy: "Keep payment and enrolment status connected to the right student and class.",
     accent: "#C26627",
@@ -1070,7 +1070,7 @@ export default function ModernLanding() {
               }
               className="hidden text-[#474551] hover:text-[#2E2877] sm:block"
             >
-              Demo
+              DEMO
             </a>
             <a
               href="#faq"
@@ -1144,7 +1144,7 @@ export default function ModernLanding() {
                 }
                 className="inline-flex items-center justify-center py-2 text-sm font-bold text-[#2E2877] sm:rounded-full sm:border sm:border-[#C2B59B]/70 sm:bg-white sm:px-6 sm:py-3.5 sm:hover:bg-[#F7F5F2]"
               >
-                Demo <ArrowRight className="ml-2" size={15} />
+                DEMO <ArrowRight className="ml-2" size={15} />
               </a>
             </div>
             <p className="mt-2 text-[10px] text-[#474551]/65 sm:mt-4 sm:text-xs">
@@ -1921,7 +1921,7 @@ export default function ModernLanding() {
             </p>
           </div>
           <div className="flex flex-wrap gap-5 text-[9px] font-semibold text-[#6f6877]">
-            <a href="#workspace">Product</a>
+            <a href="#workspace">DEMO</a>
             <a href="#faq">FAQs</a>
             <a href="mailto:info@kanvise.com">Contact</a>
             <span>© {new Date().getFullYear()} Kanvise</span>
