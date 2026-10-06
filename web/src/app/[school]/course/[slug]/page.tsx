@@ -300,7 +300,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
           <div className="mt-16 pt-8 border-t border-white/20 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-primary-fixed/60">
             <p>© {new Date().getFullYear()} Kanvise. All rights reserved.</p>
             <div className="flex gap-6">
-              <a className="hover:text-white transition-colors" href="#">Privacy Policy</a>
+              <Link className="hover:text-white transition-colors" href="/privacy">Privacy Policy</Link>
               <a className="hover:text-white transition-colors" href="#">Terms of Service</a>
             </div>
           </div>
