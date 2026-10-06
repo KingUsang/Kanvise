@@ -7,6 +7,7 @@ import { getApiUrl } from '@/config/api'
 import { createClient } from '@/lib/supabase/client'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 export function slugifyCentreName(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64)
@@ -32,7 +33,7 @@ function UploadStatus({ label, progress }: { label: string, progress: number | n
   )
 }
 
-export function SchoolSetupForm({ initialData, token }: { initialData: any, token: string }) {
+export function SchoolSetupForm({ initialData }: { initialData: any }) {
   const isFirstSetup = !initialData?.id
   const canUploadMedia = Boolean(initialData?.id)
   const initialFormData = {
@@ -86,9 +87,9 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
         entity_type: entityType,
         context_id: initialData.id,
       }
-      const presignResponse = await fetch(`${apiUrl}/storage/presign/public`, {
+      const presignResponse = await authenticatedApiFetch(`${apiUrl}/storage/presign/public`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(metadata),
       })
       const presignBody = await presignResponse.json()
@@ -96,9 +97,9 @@ export function SchoolSetupForm({ initialData, token }: { initialData: any, toke
 
       await uploadFileWithProgress(presignBody.data.presigned_url, file, setUploadProgress)
 
-      const confirmResponse = await fetch(`${apiUrl}/storage/public/confirm`, {
+      const confirmResponse = await authenticatedApiFetch(`${apiUrl}/storage/public/confirm`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...metadata, file_key: presignBody.data.file_key }),
       })
       const confirmBody = await confirmResponse.json()

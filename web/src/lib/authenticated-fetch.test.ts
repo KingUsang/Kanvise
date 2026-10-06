@@ -40,6 +40,34 @@ describe('authenticatedFetch', () => {
     expect(refreshSession).not.toHaveBeenCalled()
   })
 
+  it('does not refresh for a 401 that is not an expired access token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'ACCOUNT_INACTIVE' }), { status: 401 }))
+    const refreshSession = vi.fn()
+
+    const response = await authenticatedFetch(
+      { auth: { refreshSession } } as any,
+      '/dashboard/student',
+      'token',
+    )
+
+    expect(response.status).toBe(401)
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(refreshSession).not.toHaveBeenCalled()
+  })
+
+  it('returns a clear sign-in message when the refresh session has ended', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'TOKEN_EXPIRED' }), { status: 401 }))
+    const refreshSession = vi.fn().mockResolvedValue({ data: { session: null }, error: new Error('refresh expired') })
+
+    const response = await authenticatedFetch(
+      { auth: { refreshSession } } as any,
+      '/dashboard/student',
+      'expired-token',
+    )
+
+    expect(await response.json()).toEqual({ error: 'Your session has ended. Please sign in again.', code: 'SESSION_EXPIRED' })
+  })
+
   it('supports using the client-managed session without a token argument', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
     const getSession = vi.fn().mockResolvedValue({ data: { session: { access_token: 'current-token' } } })
@@ -72,4 +100,5 @@ describe('authenticatedFetch', () => {
     expect(responses.every(response => response.status === 200)).toBe(true)
     expect(refreshSession).toHaveBeenCalledOnce()
   })
+
 })

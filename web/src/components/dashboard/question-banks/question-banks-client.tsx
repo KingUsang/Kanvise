@@ -9,6 +9,7 @@ import 'katex/contrib/mhchem'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type Bank = {
   id: string
@@ -125,9 +126,8 @@ function imageDimensions(file: File) {
   })
 }
 
-export function QuestionBanksClient({ token }: { token: string }) {
+export function QuestionBanksClient() {
   const apiUrl = getApiUrl()
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
   const queryClient = useQueryClient()
   const [selectedBankId, setSelectedBankId] = useState('')
   const [search, setSearch] = useState('')
@@ -138,9 +138,9 @@ export function QuestionBanksClient({ token }: { token: string }) {
   const [bankToArchive, setBankToArchive] = useState<Bank | null>(null)
 
   const banksQuery = useQuery({
-    queryKey: ['question-banks', token],
+    queryKey: ['question-banks'],
     queryFn: async () => {
-      const response = await fetch(`${apiUrl}/question-banks?page_size=100`, { headers })
+      const response = await authenticatedApiFetch(`${apiUrl}/question-banks?page_size=100`)
       const body = await responseBody<{ data: Bank[] }>(response)
       return body.data
     },
@@ -150,13 +150,13 @@ export function QuestionBanksClient({ token }: { token: string }) {
   const selectedBank = banks.find(bank => bank.id === selectedBankId) || null
 
   const questionsQuery = useQuery({
-    queryKey: ['question-bank-questions', token, selectedBankId, debouncedSearch, subjectFilter],
+    queryKey: ['question-bank-questions', selectedBankId, debouncedSearch, subjectFilter],
     enabled: !!selectedBankId,
     queryFn: async () => {
       const params = new URLSearchParams({ page_size: '100' })
       if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim())
       if (subjectFilter) params.set('subject_name', subjectFilter)
-      const response = await fetch(`${apiUrl}/question-banks/${selectedBankId}/questions?${params}`, { headers })
+      const response = await authenticatedApiFetch(`${apiUrl}/question-banks/${selectedBankId}/questions?${params}`)
       const body = await responseBody<{ data: Question[] }>(response)
       return body.data
     },
@@ -165,9 +165,9 @@ export function QuestionBanksClient({ token }: { token: string }) {
   const questions = questionsQuery.data || []
 
   const coursesQuery = useQuery({
-    queryKey: ['courses', token],
+    queryKey: ['courses'],
     queryFn: async () => {
-      const response = await fetch(`${apiUrl}/courses`, { headers })
+      const response = await authenticatedApiFetch(`${apiUrl}/courses`)
       const body = await responseBody<{ data: Course[] }>(response)
       return body.data || []
     },
@@ -195,15 +195,15 @@ export function QuestionBanksClient({ token }: { token: string }) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     try {
-      const response = await fetch(`${apiUrl}/question-banks`, {
+      const response = await authenticatedApiFetch(`${apiUrl}/question-banks`, {
         method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildQuestionBankCreatePayload(form)),
       })
       const body = await responseBody<{ data: Bank }>(response)
       toast.success('Question bank created')
       setShowCreateBank(false)
-      await queryClient.invalidateQueries({ queryKey: ['question-banks', token] })
+      await queryClient.invalidateQueries({ queryKey: ['question-banks'] })
       setSelectedBankId(body.data.id)
     } catch (error) {
       toast.error('Could not create the bank', { description: error instanceof Error ? error.message : 'Please try again.' })
@@ -213,15 +213,15 @@ export function QuestionBanksClient({ token }: { token: string }) {
   async function archiveBank() {
     if (!bankToArchive) return
     try {
-      const response = await fetch(`${apiUrl}/question-banks/${bankToArchive.id}`, {
+      const response = await authenticatedApiFetch(`${apiUrl}/question-banks/${bankToArchive.id}`, {
         method: 'PATCH',
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived: true }),
       })
       await responseBody(response)
       toast.success('Question bank archived', { description: 'Published mocks and their question versions remain unchanged.' })
       setBankToArchive(null)
-      await queryClient.invalidateQueries({ queryKey: ['question-banks', token] })
+      await queryClient.invalidateQueries({ queryKey: ['question-banks'] })
     } catch (error) {
       toast.error('Could not archive the bank', { description: error instanceof Error ? error.message : 'Please try again.' })
     }
@@ -334,7 +334,7 @@ export function QuestionBanksClient({ token }: { token: string }) {
       </div>
 
       {showCreateBank && <BankDialog onClose={() => setShowCreateBank(false)} onSubmit={createBank} />}
-      {showQuestionEditor && selectedBank && <QuestionDialog bank={selectedBank} courses={courses} token={token} apiUrl={apiUrl} onClose={() => setShowQuestionEditor(false)} onCreated={async () => { setShowQuestionEditor(false); await Promise.all([queryClient.invalidateQueries({ queryKey: ['question-banks', token] }), queryClient.invalidateQueries({ queryKey: ['question-bank-questions', token, selectedBankId] })]) }} />}
+      {showQuestionEditor && selectedBank && <QuestionDialog bank={selectedBank} courses={courses} apiUrl={apiUrl} onClose={() => setShowQuestionEditor(false)} onCreated={async () => { setShowQuestionEditor(false); await Promise.all([queryClient.invalidateQueries({ queryKey: ['question-banks'] }), queryClient.invalidateQueries({ queryKey: ['question-bank-questions', selectedBankId] })]) }} />}
       {bankToArchive && <ConfirmDialog title="Archive this question bank?" description={`${bankToArchive.name} will leave the active list. Questions already used in published mocks stay unchanged.`} confirmLabel="Archive bank" onCancel={() => setBankToArchive(null)} onConfirm={archiveBank} />}
     </main>
   )
@@ -351,7 +351,7 @@ function BankDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (eve
   </div>
 }
 
-function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { bank: Bank; courses: Course[]; token: string; apiUrl: string; onClose: () => void; onCreated: () => void }) {
+function QuestionDialog({ bank, courses, apiUrl, onClose, onCreated }: { bank: Bank; courses: Course[]; apiUrl: string; onClose: () => void; onCreated: () => void }) {
   const [type, setType] = useState<'mcq' | 'theory'>('mcq')
   const [options, setOptions] = useState(['', '', '', ''])
   const [correctOption, setCorrectOption] = useState(0)
@@ -393,9 +393,9 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
     if (!imageFile) return null
     if (!imageAltText.trim()) throw new Error('Describe the image for students who cannot see it')
     const dimensions = await imageDimensions(imageFile)
-    const presignResponse = await fetch(`${apiUrl}/storage/presign/upload`, {
+    const presignResponse = await authenticatedApiFetch(`${apiUrl}/storage/presign/upload`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         entity_type: 'question_media', bank_id: bank.id,
         file_name: imageFile.name, content_type: imageFile.type, file_size_bytes: imageFile.size,
@@ -407,9 +407,9 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
     await uploadFileWithProgress(presign.data.presigned_url, imageFile, setUploadProgress)
     setSaveStage('saving')
     setUploadProgress(null)
-    const confirmResponse = await fetch(`${apiUrl}/question-banks/media/confirm`, {
+    const confirmResponse = await authenticatedApiFetch(`${apiUrl}/question-banks/media/confirm`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         bank_id: bank.id, file_key: presign.data.file_key, file_name: imageFile.name,
         content_type: imageFile.type, file_size_bytes: imageFile.size,
@@ -440,9 +440,9 @@ function QuestionDialog({ bank, courses, token, apiUrl, onClose, onCreated }: { 
         type: 'image', media_id: registeredImage.id, alt_text: registeredImage.alt_text,
         width: registeredImage.width, height: registeredImage.height,
       })
-      const response = await fetch(`${apiUrl}/question-banks/${bank.id}/questions`, {
+      const response = await authenticatedApiFetch(`${apiUrl}/question-banks/${bank.id}/questions`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question_type: type,
           plain_text: plainText,

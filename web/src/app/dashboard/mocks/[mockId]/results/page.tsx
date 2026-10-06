@@ -13,8 +13,8 @@ export default async function MockResultsPage({ params }: { params: Promise<{ mo
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll: () => cookieStore.getAll() } },
   )
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/auth/login')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
 
-  return <MockResultsClient mockId={mockId} token={session.access_token} />
+  return <MockResultsClient mockId={mockId} />
 }

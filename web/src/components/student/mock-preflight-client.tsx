@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { getApiUrl } from '@/config/api'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type PreflightData = {
   mock: { id: string; title: string; description?: string | null; course?: { name: string } | null; time_limit_minutes: number; calculator_mode: string }
@@ -35,14 +36,14 @@ export function MockPreflightClient({ data, token, startPath, backHref = '/dashb
     try {
       if (data.subject_combination) {
         if (subjectCourseIds.length !== data.subject_combination.required_count) throw new Error(`Choose exactly ${data.subject_combination.required_count} subjects for this JAMB mock.`)
-        const selection = await fetch(`${getApiUrl()}/students/me/subject-combination`, {
-          method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        const selection = await authenticatedApiFetch(`${getApiUrl()}/students/me/subject-combination`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ programme_id: data.subject_combination.programme_id, course_ids: subjectCourseIds }),
         })
         const selectionBody = await selection.json().catch(() => null)
         if (!selection.ok) throw new Error(selectionBody?.error || 'Could not save your subject combination')
       }
-      const response = await fetch(`${getApiUrl()}${startPath || `/mocks/${mock.id}/attempts`}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+      const response = await authenticatedApiFetch(`${getApiUrl()}${startPath || `/mocks/${mock.id}/attempts`}`, { method: 'POST' })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not start this mock')
       startNavigationProgress(); router.push(`/dashboard/student/mocks/attempt/${body.data.attempt_id}`)

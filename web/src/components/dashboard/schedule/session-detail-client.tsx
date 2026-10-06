@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, CalendarDays, ChevronRight, Clock3, Copy, ExternalLink, UsersRound, Video } from 'lucide-react'
 import { toast } from 'sonner'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type Session = { id: string; title: string; scheduled_at: string; duration_minutes?: number | null; status: 'scheduled' | 'live' | 'completed' | 'cancelled'; course?: { name?: string | null } | null; courses?: { name?: string | null } | null }
 type AttendanceRow = { student_id: string; student_name: string; join_time: string; duration: string; status: 'Present' | 'Late' | 'Absent' }
@@ -13,20 +14,19 @@ type Tab = 'details' | 'attendance' | 'participants' | 'recording'
 const date = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
 
-export function SessionDetailClient({ sessionId, token, backHref = '/dashboard/schedule' }: { sessionId: string; token: string; backHref?: string }) {
+export function SessionDetailClient({ sessionId, backHref = '/dashboard/schedule' }: { sessionId: string; backHref?: string }) {
   const api = process.env.NEXT_PUBLIC_API_URL
-  const headers = { Authorization: `Bearer ${token}` }
   const [tab, setTab] = useState<Tab>('details')
   const sessionQuery = useQuery({ queryKey: ['session-detail', sessionId], queryFn: async () => {
-    const response = await fetch(`${api}/live-classes/${sessionId}`, { headers }); const body = await response.json().catch(() => null)
+    const response = await authenticatedApiFetch(`${api}/live-classes/${sessionId}`); const body = await response.json().catch(() => null)
     if (!response.ok) throw new Error(body?.error || 'Could not load this session'); return body.data as Session
   }})
   const attendanceQuery = useQuery({ queryKey: ['session-attendance', sessionId], enabled: tab === 'attendance' || tab === 'participants', queryFn: async () => {
-    const response = await fetch(`${api}/attendance/records?class_id=${encodeURIComponent(sessionId)}&limit=100`, { headers }); const body = await response.json().catch(() => null)
+    const response = await authenticatedApiFetch(`${api}/attendance/records?class_id=${encodeURIComponent(sessionId)}&limit=100`); const body = await response.json().catch(() => null)
     if (!response.ok) throw new Error(body?.error || 'Could not load attendance'); return (body?.data || []) as AttendanceRow[]
   }})
   const recordingQuery = useQuery({ queryKey: ['session-recording', sessionId], enabled: tab === 'recording', queryFn: async () => {
-    const response = await fetch(`${api}/live-classes/${sessionId}/recording`, { headers }); const body = await response.json().catch(() => null)
+    const response = await authenticatedApiFetch(`${api}/live-classes/${sessionId}/recording`); const body = await response.json().catch(() => null)
     if (response.status === 404) return null; if (!response.ok) throw new Error(body?.error || 'Could not load recording'); return body.data as Recording
   }})
   if (sessionQuery.isPending) return <main className="w-full animate-pulse"><div className="h-4 w-28 rounded bg-[#e9e6e3]"/><div className="mt-6 h-9 w-72 rounded bg-[#e9e6e3]"/><div className="mt-8 h-80 rounded-xl border border-dashboard-outline bg-white"/></main>

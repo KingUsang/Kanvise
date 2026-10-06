@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 interface MockExam {
   id: string;
@@ -60,13 +61,11 @@ function formatDateTime(date: Date) {
 }
 
 interface MocksManagementClientProps {
-  token: string;
   capabilities: { isAdmin: boolean; isTutor: boolean };
   user: { id: string; first_name: string; last_name: string };
 }
 
 export function MocksManagementClient({
-  token,
   capabilities,
   user,
 }: MocksManagementClientProps) {
@@ -82,9 +81,7 @@ export function MocksManagementClient({
   const mocksQuery = useQuery({
     queryKey: ["mocks", user.id],
     queryFn: async () => {
-      const res = await fetch(`${baseUrl}/mocks`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authenticatedApiFetch(`${baseUrl}/mocks`);
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error || `HTTP error ${res.status}`);
       return (body?.data || []) as MockExam[];
@@ -99,11 +96,10 @@ export function MocksManagementClient({
     if (!mockToArchive) return;
     setIsArchiving(true);
     try {
-      const response = await fetch(
+      const response = await authenticatedApiFetch(
         `${baseUrl}/mocks/${mockToArchive.id}/archive`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
         },
       );
       const body = await response.json().catch(() => null);

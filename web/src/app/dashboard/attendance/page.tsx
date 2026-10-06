@@ -22,16 +22,15 @@ export default async function AttendancePage() {
     }
   )
 
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!token) {
+  if (!user) {
     redirect('/auth/login')
   }
 
   return (
     <div className="animate-in fade-in duration-500">
-      <AttendanceClient token={token} />
+      <AttendanceClient />
     </div>
   )
 }
