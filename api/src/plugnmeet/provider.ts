@@ -27,7 +27,9 @@ export async function getPlugNmeetClientConfig(input: { roomId: string; userId: 
       user_metadata: {
         ...(input.profilePic ? { profile_pic: input.profilePic } : {}),
         extra_data: { school_id: input.schoolId, access_profile: input.isHost ? 'tutor' : input.accessMode === 'anyone_with_link' ? 'guest' : 'enrolled' },
-        lock_settings: { lock_screen_sharing: true, lock_chat_file_share: true },
+        // The classroom allows screen sharing, but only the tutor can publish
+        // a screen. Students remain locked to prevent accidental broadcasts.
+        lock_settings: { lock_screen_sharing: !input.isHost, lock_chat_file_share: true },
       },
     },
   })

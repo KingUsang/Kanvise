@@ -20,6 +20,18 @@ function serverUrl(env = process.env) {
   return value.replace(/\/$/, '')
 }
 
+export function plugNmeetWorkerConfig(env = process.env) {
+  // Production originally provisioned this same classroom VM under the
+  // LiveKit variable names. Keep those names as a backwards-compatible
+  // fallback while staging and new deployments use the explicit PlugNmeet
+  // names.
+  return {
+    subscriptionId: env.AZURE_SUBSCRIPTION_ID,
+    resourceGroup: env.AZURE_PLUGNMEET_RESOURCE_GROUP || env.AZURE_LIVEKIT_RESOURCE_GROUP,
+    vmName: env.AZURE_PLUGNMEET_VM_NAME || env.AZURE_LIVEKIT_VM_NAME,
+  }
+}
+
 export async function isPlugNmeetHealthy(fetcher: Fetcher = fetch, env = process.env) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 2_500)
@@ -44,9 +56,7 @@ async function managedIdentityToken(fetcher: Fetcher, env = process.env) {
 }
 
 async function classroomVmAction(action: 'start' | 'deallocate', fetcher: Fetcher = fetch, env = process.env) {
-  const subscriptionId = env.AZURE_SUBSCRIPTION_ID
-  const resourceGroup = env.AZURE_PLUGNMEET_RESOURCE_GROUP
-  const vmName = env.AZURE_PLUGNMEET_VM_NAME
+  const { subscriptionId, resourceGroup, vmName } = plugNmeetWorkerConfig(env)
   if (!subscriptionId || !resourceGroup || !vmName) throw new Error('Azure PlugNmeet VM configuration is incomplete')
   const token = await managedIdentityToken(fetcher, env)
   const resource = `/subscriptions/${encodeURIComponent(subscriptionId)}/resourceGroups/${encodeURIComponent(resourceGroup)}/providers/Microsoft.Compute/virtualMachines/${encodeURIComponent(vmName)}`

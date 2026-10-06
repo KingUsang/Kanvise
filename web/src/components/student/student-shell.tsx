@@ -15,7 +15,7 @@ import type { StudentDashboardData } from '@/lib/student-dashboard';
 
 const navigation = [
   { label: "Home", href: "/dashboard/student", icon: Home },
-  { label: "My classes", href: "/dashboard/student/classes", icon: CalendarDays },
+  { label: "Live classes", href: "/dashboard/student/classes", icon: CalendarDays },
   { label: "Assignments", href: "/dashboard/student/assignments", icon: ClipboardCheck },
   { label: "Mocks", href: "/dashboard/student/mocks", icon: BookOpen },
   { label: "Materials", href: "/dashboard/student/materials", icon: FileText },

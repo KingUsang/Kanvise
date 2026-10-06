@@ -9,15 +9,9 @@ import {
   CirclePlay,
   FileText,
   Lightbulb,
-  MessageCircle,
-  Mic,
-  MonitorUp,
-  PhoneOff,
   Sparkles,
   TrendingDown,
   Upload,
-  Users,
-  Video,
   WandSparkles,
 } from "lucide-react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
@@ -231,8 +225,8 @@ const features = [
     number: "01",
     name: "Live classes",
     verb: "Teach",
-    headline: "Teach live. Check who is following.",
-    copy: "Run the class, then trigger an AI knowledge check based on what you have just taught.",
+    headline: "Teach live with everything in one classroom.",
+    copy: "Bring video, whiteboard teaching, screen sharing, lesson materials, chat, polls and quick knowledge checks into one live class. Keep attendance, recordings and recaps connected to every session.",
     accent: "#C26627",
     type: "live",
   },
@@ -275,7 +269,7 @@ const features = [
   {
     number: "06",
     name: "Attendance",
-    verb: "Track",
+    verb: "Attendance",
     headline: "Know who showed up.",
     copy: "Attendance is tied to the actual class session and the student record, ready for follow-up.",
     accent: "#2E2877",
@@ -284,7 +278,7 @@ const features = [
   {
     number: "07",
     name: "Payments",
-    verb: "Organise",
+    verb: "Collect",
     headline: "Know what has been paid and what is still outstanding.",
     copy: "Keep payment and enrolment status connected to the right student and class.",
     accent: "#C26627",
@@ -537,107 +531,23 @@ function Row({
 function FeatureSurface({ type }: { type: (typeof features)[number]["type"] }) {
   if (type === "live")
     return (
-      <ProductShell title="Live class · Physics">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wider text-[#16834d]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#22a862]" /> Live ·
-              24:18
-            </p>
-            <h4 className="text-base font-bold text-[#2E2877]">
-              Newton&apos;s third law
-            </h4>
-          </div>
-          <span className="flex items-center gap-1 rounded-full bg-[#e9f8ef] px-2 py-1 text-[8px] font-bold text-[#16834d]">
-            <Users size={10} /> 18 present
-          </span>
+      <ProductShell title="Live class workspace">
+        <div className="overflow-hidden rounded-xl border border-[#d8d1e4] bg-white shadow-sm">
+          <Image
+            src="/landing/kanvise-live-class-workspace-v1.png"
+            alt="A tutor leading a video class with a digital whiteboard, student video tiles and class chat"
+            width={1672}
+            height={941}
+            className="h-auto w-full"
+            sizes="(min-width: 1024px) 680px, (min-width: 640px) 80vw, 100vw"
+          />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_158px]">
-          <div className="relative min-h-[245px] overflow-hidden rounded-xl border border-[#d8d1e4] bg-[#f5f2f8] p-3">
-            <div className="flex items-center justify-between">
-              <div className="inline-flex rounded-lg border border-[#ddd6e6] bg-white p-0.5 text-[7px] font-bold text-[#777080]">
-                <span className="rounded-md bg-[#2E2877] px-2 py-1 text-white">
-                  Whiteboard
-                </span>
-                <span className="px-2 py-1">Presentation</span>
-              </div>
-              <span className="text-[7px] font-semibold text-[#16834d]">
-                Saved
-              </span>
-            </div>
-            <div className="mt-3 rounded-lg border border-[#e2dce8] bg-white px-4 py-3 shadow-sm">
-              <p className="text-[7px] font-bold uppercase tracking-[.14em] text-[#C26627]">
-                Newton&apos;s third law
-              </p>
-              <p className="mt-2 text-[11px] font-semibold leading-4 text-[#30284b]">
-                Every action creates an equal and opposite reaction.
-              </p>
-              <div className="mt-3 flex items-center gap-2 text-[#2E2877]">
-                <span className="h-8 w-1 rounded-full bg-[#C26627]" />
-                <span className="h-0.5 flex-1 bg-[#2E2877]/45" />
-                <ArrowRight size={15} className="text-[#C26627]" />
-                <span className="h-0.5 flex-1 bg-[#2E2877]/45" />
-                <ArrowRight size={15} className="rotate-180 text-[#C26627]" />
-              </div>
-            </div>
-
-            <div className="absolute bottom-12 left-3 flex items-center">
-              {["AO", "CE", "DO"].map((initials, index) => (
-                <span
-                  key={initials}
-                  className="grid h-6 w-6 place-items-center rounded-full border-2 border-[#f5f2f8] bg-[#2E2877] text-[6px] font-bold text-white"
-                  style={{ marginLeft: index === 0 ? 0 : -6 }}
-                >
-                  {initials}
-                </span>
-              ))}
-              <span className="ml-1 text-[7px] font-semibold text-[#746d7d]">
-                +15 students
-              </span>
-            </div>
-
-            <div className="absolute bottom-10 right-3 h-14 w-14 overflow-hidden rounded-full border-2 border-white bg-[#2E2877] shadow-lg">
-              <Image
-                src="/landing/kanvise-tutor-overwhelmed-v1.png"
-                alt="Tutor teaching live"
-                fill
-                className="object-cover object-[72%_28%]"
-                sizes="56px"
-              />
-              <span className="absolute bottom-0 inset-x-0 bg-[#2E2877]/85 py-0.5 text-center text-[5px] font-bold text-white">
-                Tutor
-              </span>
-            </div>
-
-            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-[#211b48] px-2 py-1.5 text-white shadow-lg">
-              {[Mic, Video, MonitorUp, MessageCircle].map((Control, index) => (
-                <span
-                  key={index}
-                  className="grid h-5 w-5 place-items-center rounded-full bg-white/10"
-                >
-                  <Control size={9} />
-                </span>
-              ))}
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-[#c95039]">
-                <PhoneOff size={9} />
-              </span>
-            </div>
-          </div>
-          <div className="self-start rounded-xl border border-[#e7e1ef] bg-white p-3 shadow-sm">
-            <p className="flex items-center gap-1 text-[8px] font-bold text-[#2E2877]">
-              <Sparkles size={12} className="text-[#C26627]" /> AI knowledge
-              check
-            </p>
-            <span className="mt-2 inline-block rounded-full bg-[#fff3ea] px-2 py-1 text-[6px] font-bold text-[#a64f1b]">
-              Based on what you just taught
+        <div className="mt-3 flex flex-wrap gap-2 text-[8px] font-bold text-[#2E2877]">
+          {["Live video", "Whiteboard & screen share", "Chat & quick checks"].map((capability) => (
+            <span key={capability} className="rounded-full bg-[#f0edf6] px-2.5 py-1.5">
+              {capability}
             </span>
-            <p className="mt-3 text-[9px] font-semibold leading-4">
-              A swimmer pushes water backward. Why do they move forward?
-            </p>
-            <button className="mt-4 w-full rounded-lg bg-[#C26627] py-2 text-[8px] font-bold text-white">
-              Ask the class
-            </button>
-          </div>
+          ))}
         </div>
       </ProductShell>
     );
@@ -1070,7 +980,7 @@ export default function ModernLanding() {
               }
               className="hidden text-[#474551] hover:text-[#2E2877] sm:block"
             >
-              Demo
+              DEMO
             </a>
             <a
               href="#faq"
@@ -1144,7 +1054,7 @@ export default function ModernLanding() {
                 }
                 className="inline-flex items-center justify-center py-2 text-sm font-bold text-[#2E2877] sm:rounded-full sm:border sm:border-[#C2B59B]/70 sm:bg-white sm:px-6 sm:py-3.5 sm:hover:bg-[#F7F5F2]"
               >
-                Demo <ArrowRight className="ml-2" size={15} />
+                DEMO <ArrowRight className="ml-2" size={15} />
               </a>
             </div>
             <p className="mt-2 text-[10px] text-[#474551]/65 sm:mt-4 sm:text-xs">
@@ -1921,7 +1831,7 @@ export default function ModernLanding() {
             </p>
           </div>
           <div className="flex flex-wrap gap-5 text-[9px] font-semibold text-[#6f6877]">
-            <a href="#workspace">Product</a>
+            <a href="#workspace">DEMO</a>
             <a href="#faq">FAQs</a>
             <a href="mailto:info@kanvise.com">Contact</a>
             <span>© {new Date().getFullYear()} Kanvise</span>
