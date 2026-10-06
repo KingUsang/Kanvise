@@ -151,11 +151,10 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
         }
       }
 
-      const res = await fetch(`${getApiUrl()}${isFirstSetup ? '/schools' : '/schools/me'}`, {
+      const res = await authenticatedApiFetch(`${getApiUrl()}${isFirstSetup ? '/schools' : '/schools/me'}`, {
         method: isFirstSetup ? 'POST' : 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(isFirstSetup ? { name: formData.name.trim() } : changedProfileFields)
       })

@@ -17,7 +17,7 @@ describe('centre setup helpers', () => {
 
   it('keeps first-time setup to the centre name and a generated link preview', async () => {
     const user = userEvent.setup()
-    render(React.createElement(SchoolSetupForm, { initialData: null, token: 'test-token' }))
+    render(React.createElement(SchoolSetupForm, { initialData: null }))
 
     expect(screen.getByRole('heading', { name: 'Name your centre' })).toBeInTheDocument()
     expect(screen.getAllByRole('textbox')).toHaveLength(1)
@@ -31,7 +31,6 @@ describe('centre setup helpers', () => {
   it('only exposes discard and save after an existing profile changes', async () => {
     const user = userEvent.setup()
     render(React.createElement(SchoolSetupForm, {
-      token: 'test-token',
       initialData: { id: 'school-1', name: 'Bright Future', slug: 'bright-future', is_active: true },
     }))
 
