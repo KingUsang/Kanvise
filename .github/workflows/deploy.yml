@@ -54,7 +54,11 @@ jobs:
   migrations:
     name: Apply database migrations
     needs: [verify, changes]
-    if: needs.changes.outputs.migrations == 'true'
+    # Production must reconcile its full ordered migration history on every
+    # deploy. A prior code-only deploy can otherwise leave production running
+    # code that references a migration applied only in staging. Staging still
+    # runs migrations when a migration file changes.
+    if: github.ref_name == 'main' || needs.changes.outputs.migrations == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Preview is Kanvise's staging environment; Production is protected in
