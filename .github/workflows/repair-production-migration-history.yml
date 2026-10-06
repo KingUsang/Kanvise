@@ -1,0 +1,52 @@
+name: Repair production migration history
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Reconcile missing remote history records, or apply the reviewed pending plan
+        required: true
+        type: choice
+        options:
+          - repair_and_plan
+          - apply_pending
+      confirmation:
+        description: Type REPAIR_PRODUCTION_MIGRATIONS to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    name: ${{ inputs.operation }}
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+      - name: Verify explicit confirmation
+        run: |
+          test -n "$SUPABASE_DB_URL"
+          test "${{ inputs.confirmation }}" = "REPAIR_PRODUCTION_MIGRATIONS"
+      - name: Reconcile production-only history records
+        if: inputs.operation == 'repair_and_plan'
+        run: |
+          # These six versions are recorded in production but their SQL files
+          # are absent from every Git/server recovery source. This only repairs
+          # migration metadata; it does not execute schema SQL.
+          supabase migration repair --status reverted --db-url "$SUPABASE_DB_URL" \
+            20261005143618 20261005143659 20261005144057 \
+            20261005144127 20261005144223 20261005144251
+      - name: Show ordered pending migration plan
+        run: supabase db push --dry-run --include-all --db-url "$SUPABASE_DB_URL"
+      - name: Apply reviewed pending migrations
+        if: inputs.operation == 'apply_pending'
+        run: supabase db push --include-all --db-url "$SUPABASE_DB_URL"
+      - name: Record final migration history
+        if: inputs.operation == 'apply_pending'
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"
