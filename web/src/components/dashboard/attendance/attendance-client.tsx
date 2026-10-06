@@ -110,7 +110,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       <DashboardPageHeader
         className="mb-8"
         title="Attendance"
-        description="See who attended completed classes and how long they stayed."
+        description="See who attended completed live classes and how long they stayed."
       />
 
       {/* Filters Grid */}
@@ -127,9 +127,9 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Specific Class</label>
+            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Specific Live Class</label>
             <select value={classId} onChange={(e) => { setClassId(e.target.value); setPage(1) }} className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none">
-              <option value="">All Classes</option>
+              <option value="">All Live Classes</option>
               {filteredClasses?.map(c => (
                  <option key={c.id} value={c.id}>{c.title}</option>
               ))}
@@ -162,13 +162,13 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
           </div>
           <div className="mt-4 flex items-center gap-1 text-[12px] text-green-700 font-semibold">
             <span className="material-symbols-outlined text-[14px]">trending_up</span>
-            For the selected classes
+            For the selected live classes
           </div>
         </div>
         
         <div className="bg-white border border-[#c2b59b] p-6 rounded-lg shadow-sm relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-[#c26627]/10 rounded-bl-full -mr-4 -mt-4"></div>
-          <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">Completed Classes</p>
+          <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">Completed Live Classes</p>
           <div className="flex items-baseline gap-2">
             <span className="text-[40px] leading-[48px] font-bold text-[#2e2877]">{metrics?.total_sessions || 0}</span>
           </div>

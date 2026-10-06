@@ -338,7 +338,7 @@ export default function PreparingClassroom({
                     {error}
                   </p>
                   <p className="mt-1 text-xs text-[#92400e]">
-                    Your class is still scheduled and safe. Try rejoining below.
+                    Your live class is still scheduled and safe. Try rejoining below.
                   </p>
                 </div>
               </div>
@@ -358,7 +358,7 @@ export default function PreparingClassroom({
                   href="/dashboard/schedule"
                   className="rounded-xl border border-[#c8c5d2] px-5 py-2.5 text-sm font-semibold text-[#2e2877] hover:bg-[#f5f4f8] transition-colors"
                 >
-                  Back to classes
+                  Back to live classes
                 </Link>
               </div>
             </div>
@@ -385,7 +385,7 @@ export default function PreparingClassroom({
                 </div>
               </div>
               <h2 className="mt-6 text-xl font-bold text-[#180d62]">
-                Getting your class ready
+                Getting your live class ready
               </h2>
               <p className="mt-2 min-h-12 text-sm leading-6 text-[#5f5964]">
                 {statusMessage}

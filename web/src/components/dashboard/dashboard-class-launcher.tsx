@@ -96,19 +96,19 @@ export function DashboardClassLauncher({
         body: JSON.stringify({ course_id: courseId || undefined, tutor_id: accessMode === 'anyone_with_link' ? user.id : tutorId, title: title.trim() || undefined, access_mode: accessMode, duration_minutes: 60 }),
       })
       const body = await response.json()
-      if (!response.ok) throw new Error(body.error || 'Could not start the class')
+      if (!response.ok) throw new Error(body.error || 'Could not start the live class')
       if (body.data.share_token && accessMode === 'anyone_with_link') {
         setShareUrl(`${window.location.origin}/class/${body.data.id}`)
         setShareClassId(body.data.id)
         setStarting(false)
-        toast.success(accessMode === 'anyone_with_link' ? 'Your class is ready to share' : 'Your learner link is ready')
+        toast.success(accessMode === 'anyone_with_link' ? 'Your live class is ready to share' : 'Your learner link is ready')
         return
       }
       toast.success(response.status === 202 ? 'Preparing your classroom' : 'Class started')
       setStarting(false)
       window.open(`/class/${body.data.id}?start=true`, "_blank", "noopener,noreferrer")
     } catch (error) {
-      toast.error('Could not start the class', { description: error instanceof Error ? error.message : 'Check your connection and try again.' })
+      toast.error('Could not start the live class', { description: error instanceof Error ? error.message : 'Check your connection and try again.' })
       setStarting(false)
     }
   }
@@ -122,12 +122,12 @@ export function DashboardClassLauncher({
       <section className="relative w-full rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-md sm:rounded-2xl sm:p-7">
         <div className="mx-auto mb-5 h-1.5 w-10 rounded-full bg-[#ded8d3] sm:hidden" />
         <div className="flex items-start justify-between gap-4">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#994704]">Live class</p><h2 id="start-class-title" className="mt-1 text-xl font-bold text-[#180d62]">Start a live class</h2><p className="mt-1 text-sm leading-5 text-[#66616c]">Share a class in seconds, or teach your enrolled learners.</p></div>
+          <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#994704]">Live class</p><h2 id="start-class-title" className="mt-1 text-xl font-bold text-[#180d62]">Start a live class</h2><p className="mt-1 text-sm leading-5 text-[#66616c]">Share a live class in seconds, or teach your enrolled learners.</p></div>
           <button type="button" aria-label="Close" onClick={() => !starting && setOpen(false)} className="hidden h-10 w-10 shrink-0 rounded-full text-[#66616c] hover:bg-[#f5f3f2] sm:inline-flex sm:items-center sm:justify-center"><span className="material-symbols-outlined">close</span></button>
         </div>
         {shareUrl ? <div className="mt-6"><p className="text-sm leading-5 text-[#66616c]">{accessMode === 'anyone_with_link' ? 'Anyone with this link can join while your class is live.' : 'Share this with enrolled learners. They will sign in before joining.'}</p><input readOnly value={shareUrl.replace('https://', '').replace('http://', '')} className="mt-4 min-h-12 w-full rounded-lg border border-[#8b8580] bg-[#fbf9f8] px-3 text-sm" /><div className="mt-4 grid grid-cols-2 gap-3"><button type="button" onClick={() => void navigator.clipboard.writeText(shareUrl.replace('https://', '').replace('http://', '')).then(() => toast.success('Class link copied'))} className="min-h-11 rounded-lg border border-[#2e2877] px-3 text-sm font-semibold text-[#2e2877]">Copy link</button><button type="button" disabled={!shareClassId} onClick={() => { if (!shareClassId) return; window.open(`/class/${shareClassId}?start=true`, "_blank", "noopener,noreferrer") }} className="min-h-11 rounded-lg bg-[#994704] px-3 text-sm font-semibold text-white disabled:opacity-50">Enter class</button></div></div> : <>
         <fieldset className="mt-6 grid grid-cols-2 gap-3"><button type="button" onClick={() => setAccessMode('anyone_with_link')} className={`rounded-xl border p-3 text-left text-sm font-semibold ${accessMode === 'anyone_with_link' ? 'border-[#2e2877] bg-[#eeeaff] text-[#180d62]' : 'border-[#d8d3d0] text-[#474551]'}`}>Anyone with the link<span className="mt-1 block text-xs font-normal">Best for free classes</span></button><button type="button" onClick={() => setAccessMode('enrolled_learners')} className={`rounded-xl border p-3 text-left text-sm font-semibold ${accessMode === 'enrolled_learners' ? 'border-[#2e2877] bg-[#eeeaff] text-[#180d62]' : 'border-[#d8d3d0] text-[#474551]'}`}>Enrolled learners<span className="mt-1 block text-xs font-normal">Use a teaching group</span></button></fieldset>
-        <label className="mt-5 block text-sm font-semibold text-[#1b1c1c]">Class title <span className="font-normal text-[#66616c]">(optional)</span><input value={title} onChange={event => setTitle(event.target.value)} maxLength={160} className="mt-2 min-h-12 w-full rounded-lg border border-[#8b8580] px-3 font-normal" placeholder="e.g. JAMB Physics revision" /></label>
+        <label className="mt-5 block text-sm font-semibold text-[#1b1c1c]">Live class title <span className="font-normal text-[#66616c]">(optional)</span><input value={title} onChange={event => setTitle(event.target.value)} maxLength={160} className="mt-2 min-h-12 w-full rounded-lg border border-[#8b8580] px-3 font-normal" placeholder="e.g. JAMB Physics revision" /></label>
         {accessMode === 'enrolled_learners' && (subjectsFailed ? <div className="mt-6 rounded-xl bg-[#fff3e8] p-4 text-sm text-[#7a3903]">We could not load your subjects. Check your connection and reopen this.</div> : <>
           <label className="mt-6 block text-sm font-semibold text-[#1b1c1c]">Subject
             <select value={courseId} onChange={event => { setCourseId(event.target.value); if (!isAdmin) setTutorId(user.id) }} disabled={subjectsLoading} className="mt-2 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 text-base font-normal outline-none focus:border-[#2e2877] focus:ring-2 focus:ring-[#ded8ff]">

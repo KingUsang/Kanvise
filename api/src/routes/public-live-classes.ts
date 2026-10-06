@@ -97,7 +97,7 @@ publicLiveClassesRouter.get('/by-id/:classId', async c => {
     return c.json({ data: publicClassData(liveClass) })
   } catch (error) {
     console.error('[public-live-class] by-id lookup failed', error)
-    return c.json({ error: 'Could not load this class', code: 'LOOKUP_FAILED' }, 500)
+    return c.json({ error: 'Could not load this live class', code: 'LOOKUP_FAILED' }, 500)
   }
 })
 
@@ -109,7 +109,7 @@ publicLiveClassesRouter.get('/:shareToken', async c => {
     return c.json({ data: publicClassData(liveClass) })
   } catch (error) {
     console.error('[public-live-class] lookup failed', error)
-    return c.json({ error: 'Could not load this class', code: 'LOOKUP_FAILED' }, 500)
+    return c.json({ error: 'Could not load this live class', code: 'LOOKUP_FAILED' }, 500)
   }
 })
 
@@ -122,7 +122,7 @@ publicLiveClassesRouter.post('/:shareToken/join', async c => {
     // middleware. An opaque share token resolves the class and its school.
     if (liveClass.access_mode !== 'anyone_with_link') return c.json({ error: 'This class is for enrolled learners only', code: 'ENROLLED_ONLY' }, 403)
     if (liveClass.status !== 'live' || !liveClass.provider_room_id || providerForClass({ accessMode: liveClass.access_mode, schoolId: liveClass.school_id, persisted: liveClass.classroom_provider }) !== 'plugnmeet') {
-      return c.json({ error: liveClass.status === 'completed' ? 'This class has ended' : 'Your tutor has not started this class yet', code: liveClass.status === 'completed' ? 'CLASS_ENDED' : 'CLASS_NOT_LIVE' }, 409)
+      return c.json({ error: liveClass.status === 'completed' ? 'This live class has ended' : 'Your tutor has not started this live class yet', code: liveClass.status === 'completed' ? 'CLASS_ENDED' : 'CLASS_NOT_LIVE' }, 409)
     }
 
     const body = await c.req.json().catch(() => ({}))

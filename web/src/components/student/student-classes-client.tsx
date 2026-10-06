@@ -41,7 +41,7 @@ export function StudentClassesClient() {
     queryFn: async () => {
       const response = await authenticatedFetch(createClient(), `${getApiUrl()}/live-classes`, { cache: "no-store" });
       const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error || "Failed to load student classes");
+      if (!response.ok) throw new Error(body?.error || "Failed to load live classes");
       return body.data || [];
     },
     refetchInterval: 15_000,
@@ -97,7 +97,7 @@ export function StudentClassesClient() {
         },
       }));
     } catch (error) {
-      setResources((current) => ({ ...current, [classId]: { loading: false, error: error instanceof Error ? error.message : "Could not load class resources" } }));
+      setResources((current) => ({ ...current, [classId]: { loading: false, error: error instanceof Error ? error.message : "Could not load live class resources" } }));
     }
   }
 
@@ -112,7 +112,7 @@ export function StudentClassesClient() {
     }
   }
 
-  if (classesQuery.isPending) return <div className="rounded-2xl border border-[#e5e1dd] bg-white p-10 text-center text-sm text-[#716c76]">Loading classes…</div>;
+  if (classesQuery.isPending) return <div className="rounded-2xl border border-[#e5e1dd] bg-white p-10 text-center text-sm text-[#716c76]">Loading live classes…</div>;
   if (classesQuery.isError) return <div className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-sm text-red-800"><p>{classesQuery.error.message}</p><button type="button" onClick={() => void classesQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></div>;
   return <>
     <section className="grid gap-3 sm:grid-cols-3">
@@ -132,7 +132,7 @@ export function StudentClassesClient() {
       <div className="mt-5 space-y-5">
         {classGroups.length ? classGroups.map((group) => <section key={group.id} className="overflow-hidden rounded-2xl border border-[#e5e1dd] bg-[#fbfaf9]">
           <header className="flex flex-col gap-2 border-b border-[#e5e1dd] bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <div><p className="text-xs font-semibold uppercase tracking-[.12em] text-[#994704]">Your class</p><h2 className="mt-1 text-lg font-semibold text-[#2e2877]">{group.subject}</h2><p className="mt-1 flex items-center gap-1.5 text-xs text-[#77727e]"><UserRound size={13}/>{group.tutor}</p></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[.12em] text-[#994704]">Your subject</p><h2 className="mt-1 text-lg font-semibold text-[#2e2877]">{group.subject}</h2><p className="mt-1 flex items-center gap-1.5 text-xs text-[#77727e]"><UserRound size={13}/>{group.tutor}</p></div>
             <p className="text-xs font-medium text-[#716c76]">{group.sessions.length} session{group.sessions.length === 1 ? "" : "s"} in this view</p>
           </header>
           <div className="space-y-3 p-3 sm:p-4">{group.sessions.map((item) => {
@@ -142,20 +142,20 @@ export function StudentClassesClient() {
           return <article key={item.id} className={`rounded-xl border p-4 sm:flex sm:flex-wrap sm:items-center sm:gap-5 ${liveNow ? "border-[#c26627] bg-[#fffaf5]" : "border-[#e5e1dd] bg-white"}`}>
             <div className="flex items-start gap-4 sm:min-w-48"><div className="rounded-xl bg-[#eeeafe] px-3 py-2 text-center text-[#2e2877]"><p className="text-lg font-semibold leading-5">{new Date(item.scheduled_at).getDate()}</p><p className="text-[11px] uppercase">{new Intl.DateTimeFormat("en-NG", { month: "short" }).format(new Date(item.scheduled_at))}</p></div><div><p className="text-sm font-semibold">{timeLabel(item.scheduled_at)}</p><p className="mt-1 text-xs text-[#77727e]">{dateLabel(item.scheduled_at)}</p><p className="mt-1 flex items-center gap-1 text-xs text-[#77727e]"><Clock3 size={12} />{item.duration_minutes} mins</p></div></div>
             <div className="mt-4 min-w-0 flex-1 sm:mt-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{item.title}</p>{liveNow && <span className="rounded-full bg-[#fbe6d6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#994704]">Live now</span>}{item.status === "cancelled" && <span className="rounded-full bg-[#f1efed] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#716c76]">Cancelled</span>}</div><p className="mt-1 text-sm text-[#716c76]">{isPast ? "Past session" : "Upcoming session"}</p></div>
-            <div className="mt-4 sm:mt-0 sm:text-right">{liveNow ? <Link href={`/class/${item.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 py-3 text-sm font-semibold text-white hover:bg-[#7f3a03] sm:w-auto"><Video size={17} />Join class</Link> : (item.status === "completed" || Boolean(item.ended_at)) ? <div className="flex flex-wrap justify-end gap-2">
+            <div className="mt-4 sm:mt-0 sm:text-right">{liveNow ? <Link href={`/class/${item.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 py-3 text-sm font-semibold text-white hover:bg-[#7f3a03] sm:w-auto"><Video size={17} />Join live class</Link> : (item.status === "completed" || Boolean(item.ended_at)) ? <div className="flex flex-wrap justify-end gap-2">
               {item.recording_status === "ready" && <><button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Watch recording</button><button type="button" onClick={() => void downloadRecording(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Download</button></>}
               {item.recap_status === "published" && <button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#994704] px-3 py-2 text-sm font-semibold text-[#994704]">Read summary</button>}
               {item.recording_status === "pending" || item.recording_status === "transferring" ? <span className="self-center text-xs text-[#77727e]">Recording processing</span> : null}
               {item.recap_status === "draft" || item.recap_status === "generating" ? <span className="self-center text-xs text-[#77727e]">Summary pending review</span> : null}
-            </div> : <p className={`text-sm font-medium ${isPast ? "text-[#77727e]" : "text-[#2e2877]"}`}>{item.status === "cancelled" ? "Class cancelled" : isPast ? "Awaiting an update" : "Scheduled"}</p>}</div>
+            </div> : <p className={`text-sm font-medium ${isPast ? "text-[#77727e]" : "text-[#2e2877]"}`}>{item.status === "cancelled" ? "Live class cancelled" : isPast ? "Awaiting an update" : "Scheduled"}</p>}</div>
             {resources[item.id] && (resources[item.id].loading || resources[item.id].error || resources[item.id].recordingUrl || resources[item.id].summary) && <div className="mt-4 border-t border-[#eeeae6] pt-4 sm:basis-full sm:flex-none">
-              {resources[item.id].loading && <p className="text-sm text-[#716c76]">Loading class resources…</p>}
+              {resources[item.id].loading && <p className="text-sm text-[#716c76]">Loading live class resources…</p>}
               {resources[item.id].error && <p role="alert" className="text-sm text-red-700">{resources[item.id].error}</p>}
               {resources[item.id].recordingUrl && <video controls preload="metadata" className="w-full rounded-xl bg-black" src={resources[item.id].recordingUrl || undefined}>Your browser does not support video playback.</video>}
-              {resources[item.id].summary && <article className="mt-4 rounded-xl border border-[#e5e1dd] bg-[#fbf9f8] p-4"><h3 className="font-semibold text-[#1b1c1c]">Class summary</h3><div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#474551]">{resources[item.id].summary}</div></article>}
+              {resources[item.id].summary && <article className="mt-4 rounded-xl border border-[#e5e1dd] bg-[#fbf9f8] p-4"><h3 className="font-semibold text-[#1b1c1c]">Live class summary</h3><div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#474551]">{resources[item.id].summary}</div></article>}
             </div>}
           </article>;
-        })}</div></section>) : <div className="py-12 text-center"><CalendarDays className="mx-auto text-[#aaa4ad]" /><h2 className="mt-3 font-semibold">No classes here</h2><p className="mt-1 text-sm text-[#716c76]">Try another filter, or check back after your tutor schedules a class.</p></div>}
+        })}</div></section>) : <div className="py-12 text-center"><CalendarDays className="mx-auto text-[#aaa4ad]" /><h2 className="mt-3 font-semibold">No live classes here</h2><p className="mt-1 text-sm text-[#716c76]">Try another filter, or check back after your tutor schedules a live class.</p></div>}
       </div>
     </section>
   </>;
