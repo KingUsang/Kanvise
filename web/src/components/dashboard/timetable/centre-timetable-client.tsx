@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 type Tutor = { id: string; first_name: string; last_name: string };
 type Course = { id: string; name: string };
@@ -27,7 +28,7 @@ type TimetableOccurrence = TimetableSlot & {
   status: "scheduled";
 };
 
-type Props = { token: string };
+type Props = Record<string, never>;
 
 const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const startHour = 7;
@@ -80,7 +81,7 @@ function hueFor(value: string) {
   return total;
 }
 
-export function CentreTimetableClient({ token }: Props) {
+export function CentreTimetableClient(_: Props) {
   const api = process.env.NEXT_PUBLIC_API_URL;
   const [week, setWeek] = useState(() => startOfWeek(new Date()));
   const [selectedDay, setSelectedDay] = useState(new Date());
@@ -93,9 +94,7 @@ export function CentreTimetableClient({ token }: Props) {
     queryKey: dashboardQueryKeys.timetable,
     staleTime: 30_000,
     queryFn: async (): Promise<TimetableSlot[]> => {
-      const response = await fetch(`${api}/classes/timetable`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await authenticatedApiFetch(`${api}/classes/timetable`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok)
         throw new Error(body.error || "Could not load timetable");

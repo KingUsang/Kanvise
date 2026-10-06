@@ -11,6 +11,9 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/config/api', () => ({
   getApiUrl: () => 'https://staging-api.kanvise.com',
 }))
+vi.mock('@/lib/authenticated-fetch', () => ({
+  authenticatedApiFetch: (...args: Parameters<typeof fetch>) => fetch(...args),
+}))
 
 vi.mock('@/components/navigation/NavigationProgress', () => ({
   startNavigationProgress: vi.fn(),

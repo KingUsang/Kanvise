@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Mail, UserPlus, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 export function ClassStudentInviteDialog({
   open,
@@ -10,7 +11,6 @@ export function ClassStudentInviteDialog({
   classId,
   className,
   api,
-  token,
   onInvited,
 }: {
   open: boolean
@@ -18,7 +18,6 @@ export function ClassStudentInviteDialog({
   classId: string
   className: string
   api: string | undefined
-  token: string
   onInvited: () => Promise<void> | void
 }) {
   const [firstName, setFirstName] = useState('')
@@ -44,9 +43,9 @@ export function ClassStudentInviteDialog({
     if (!api) return toast.error('Student service is unavailable. Refresh and try again.')
     try {
       setSending(true)
-      const response = await fetch(`${api}/users/students/import`, {
+      const response = await authenticatedApiFetch(`${api}/users/students/import`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           students: [{
             first_name: firstName.trim(),

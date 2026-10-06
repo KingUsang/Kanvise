@@ -4,10 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
-
-interface AttendanceClientProps {
-  token: string
-}
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type AttendanceFilters = {
   programmes: { id: string; name: string }[]
@@ -21,7 +18,7 @@ type AttendanceRecords = {
   meta: { page: number; limit: number; total: number; total_pages: number } | null
 }
 
-export function AttendanceClient({ token }: AttendanceClientProps) {
+export function AttendanceClient() {
   // Filters
   const [programmeId, setProgrammeId] = useState('')
   const [classId, setClassId] = useState('')
@@ -32,13 +29,12 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
 
   const filtersQuery = useQuery<AttendanceFilters>({
-    queryKey: ['attendance-filters', token],
+    queryKey: ['attendance-filters'],
     queryFn: async () => {
-      const headers = { Authorization: `Bearer ${token}` }
       const [progRes, classRes, courseRes] = await Promise.all([
-        fetch(`${apiUrl}/programmes`, { headers }),
-        fetch(`${apiUrl}/live-classes`, { headers }),
-        fetch(`${apiUrl}/courses`, { headers }),
+        authenticatedApiFetch(`${apiUrl}/programmes`),
+        authenticatedApiFetch(`${apiUrl}/live-classes`),
+        authenticatedApiFetch(`${apiUrl}/courses`),
       ])
       if (!progRes.ok || !classRes.ok || !courseRes.ok) throw new Error('Could not load attendance filters')
       const [{ data: programmes }, { data: classes }, { data: courseData }] = await Promise.all([
@@ -51,7 +47,7 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
 
   const filterKey = [programmeId, classId, startDate, endDate, page] as const
   const recordsQuery = useQuery<AttendanceRecords>({
-    queryKey: ['attendance-records', token, ...filterKey],
+    queryKey: ['attendance-records', ...filterKey],
     queryFn: async () => {
       const query = new URLSearchParams()
       if (programmeId) query.append('programme_id', programmeId)
@@ -60,10 +56,9 @@ export function AttendanceClient({ token }: AttendanceClientProps) {
       if (endDate) query.append('end_date', `${endDate}T23:59:59.999`)
       query.append('page', String(page))
 
-      const headers = { Authorization: `Bearer ${token}` }
       const [metricsRes, recordsRes] = await Promise.all([
-        fetch(`${apiUrl}/attendance/metrics?${query.toString()}`, { headers }),
-        fetch(`${apiUrl}/attendance/records?${query.toString()}`, { headers }),
+        authenticatedApiFetch(`${apiUrl}/attendance/metrics?${query.toString()}`),
+        authenticatedApiFetch(`${apiUrl}/attendance/records?${query.toString()}`),
       ])
       if (!metricsRes.ok || !recordsRes.ok) throw new Error('Could not load attendance records')
       const [{ data: metrics }, { data: records, meta }] = await Promise.all([metricsRes.json(), recordsRes.json()])

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { FileText, UploadCloud, Video, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { titleFromFileName, uploadFileWithProgress } from '@/lib/upload-with-progress'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type Subject = { id: string; name: string }
 
@@ -24,7 +25,6 @@ export function ClassMaterialUploadDialog({
   subjects,
   initialSubjectId,
   api,
-  token,
   onUploaded,
 }: {
   open: boolean
@@ -32,7 +32,6 @@ export function ClassMaterialUploadDialog({
   subjects: Subject[]
   initialSubjectId?: string | null
   api: string | undefined
-  token: string
   onUploaded: () => Promise<void> | void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -77,9 +76,9 @@ export function ClassMaterialUploadDialog({
     try {
       setStage('uploading')
       setProgress(0)
-      const presign = await fetch(`${api}/storage/presign/upload`, {
+      const presign = await authenticatedApiFetch(`${api}/storage/presign/upload`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           file_name: file.name,
           content_type: file.type,
@@ -92,9 +91,9 @@ export function ClassMaterialUploadDialog({
       if (!presign.ok) throw new Error(presignBody?.error || 'Could not prepare this upload')
       await uploadFileWithProgress(presignBody.data.presigned_url, file, setProgress)
       setStage('saving')
-      const create = await fetch(`${api}/notes/${subjectId}`, {
+      const create = await authenticatedApiFetch(`${api}/notes/${subjectId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim() || null,

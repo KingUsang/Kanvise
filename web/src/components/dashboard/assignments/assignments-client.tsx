@@ -10,8 +10,10 @@ import { startNavigationProgress } from "@/components/navigation/NavigationProgr
 import { UploadTaskStatus } from "@/components/uploads/upload-task-status";
 import { uploadFileWithProgress } from "@/lib/upload-with-progress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) {
+  const fetch = authenticatedApiFetch;
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();

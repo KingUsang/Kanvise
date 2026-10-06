@@ -43,7 +43,6 @@ export function ScheduleRouteClient() {
   if (query.isError) return <RouteError query={query} />;
   return (
     <ClassesWorkspace
-      token={query.data.token}
       capabilities={query.data.capabilities}
       user={query.data.user}
     />
@@ -56,7 +55,6 @@ export function MocksRouteClient() {
   if (query.isError) return <RouteError query={query} />;
   return (
     <MocksManagementClient
-      token={query.data.token}
       capabilities={query.data.capabilities}
       user={query.data.user}
     />
@@ -67,7 +65,7 @@ export function TimetableRouteClient() {
   const query = useDashboardSession();
   if (query.isPending) return <RouteLoading label="timetable" />;
   if (query.isError) return <RouteError query={query} />;
-  return <CentreTimetableClient token={query.data.token} />;
+  return <CentreTimetableClient />;
 }
 
 export function ClassWorkspaceRouteClient({ classId }: { classId: string }) {

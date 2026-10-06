@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 import {
   ClassAssessmentsPanel,
   ClassLearnersPanel,
@@ -190,7 +191,6 @@ export function ClassWorkspaceClient({
   const [selectedLearnerId, setSelectedLearnerId] = useState<string | null>(
     null,
   );
-  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
@@ -215,7 +215,7 @@ export function ClassWorkspaceClient({
   const classQuery = useQuery({
     queryKey: ["class-workspace", classId],
     queryFn: async () => {
-      const response = await fetch(`${api}/classes/${classId}`, { headers });
+      const response = await authenticatedApiFetch(`${api}/classes/${classId}`);
       const body = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(body?.error || "Could not load this class");
@@ -228,9 +228,7 @@ export function ClassWorkspaceClient({
   const scheduleQuery = useQuery({
     queryKey: ["class-schedule", classId],
     queryFn: async () => {
-      const response = await fetch(`${api}/classes/${classId}/schedule`, {
-        headers,
-      });
+      const response = await authenticatedApiFetch(`${api}/classes/${classId}/schedule`);
       const body = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(body?.error || "Could not load this class schedule");
@@ -245,7 +243,7 @@ export function ClassWorkspaceClient({
   const mocksQuery = useQuery({
     queryKey: ["class-mocks", classId],
     queryFn: async () => {
-      const response = await fetch(`${api}/mocks`, { headers });
+      const response = await authenticatedApiFetch(`${api}/mocks`);
       const body = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(body?.error || "Could not load assessments");
@@ -256,9 +254,7 @@ export function ClassWorkspaceClient({
   const assignmentsQuery = useQuery({
     queryKey: ["class-assignments", classId],
     queryFn: async () => {
-      const response = await fetch(`${api}/assignments?page_size=100`, {
-        headers,
-      });
+      const response = await authenticatedApiFetch(`${api}/assignments?page_size=100`);
       const body = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(body?.error || "Could not load assignments");
@@ -280,7 +276,7 @@ export function ClassWorkspaceClient({
     queryFn: async () => {
       const responses = await Promise.all(
         visibleMaterialSubjectIds.map(async (courseId) => {
-          const response = await fetch(`${api}/notes/${courseId}`, { headers });
+          const response = await authenticatedApiFetch(`${api}/notes/${courseId}`);
           const body = await response.json().catch(() => null);
           if (!response.ok)
             throw new Error(body?.error || "Could not load materials");
@@ -304,9 +300,8 @@ export function ClassWorkspaceClient({
         activeSubject === "all"
           ? ""
           : `?course_id=${encodeURIComponent(activeSubject)}`;
-      const response = await fetch(
+      const response = await authenticatedApiFetch(
         `${api}/classes/${classId}/insights${query}`,
-        { headers },
       );
       const body = await response.json().catch(() => null);
       if (!response.ok)
@@ -333,9 +328,8 @@ export function ClassWorkspaceClient({
     queryFn: async () => {
       const params = new URLSearchParams({ learner_id: detailLearnerId! });
       if (activeSubject !== "all") params.set("course_id", activeSubject);
-      const response = await fetch(
+      const response = await authenticatedApiFetch(
         `${api}/classes/${classId}/insights?${params.toString()}`,
-        { headers },
       );
       const body = await response.json().catch(() => null);
       if (!response.ok)
@@ -516,7 +510,6 @@ export function ClassWorkspaceClient({
                 <section className="mt-5">
                   <SessionDetailClient
                     sessionId={sessionId}
-                    token={token}
                     backHref={`/dashboard/classes/${classId}?tab=schedule`}
                   />
                 </section>
@@ -575,7 +568,6 @@ export function ClassWorkspaceClient({
                   ) : (
                     <MockResultsClient
                       mockId={assessmentId}
-                      token={token}
                       embedded
                     />
                   )}
@@ -721,7 +713,6 @@ export function ClassWorkspaceClient({
         subjects={data.courses}
         initialSubjectId={activeSubject === "all" ? null : activeSubject}
         api={api}
-        token={token}
         onUploaded={async () => {
           await Promise.all([
             queryClient.invalidateQueries({
@@ -739,7 +730,6 @@ export function ClassWorkspaceClient({
         classId={classId}
         className={data.name}
         api={api}
-        token={token}
         onInvited={async () => {
           await Promise.all([
             queryClient.invalidateQueries({
@@ -775,7 +765,6 @@ export function ClassWorkspaceClient({
         }}
         classId={classId}
         subjects={data.courses}
-        token={token}
         initialCourseId={activeSubject === "all" ? undefined : activeSubject}
       />
     </>

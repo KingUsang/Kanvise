@@ -39,7 +39,7 @@ export default async function SchoolSetupPage() {
 
   return (
     <div className="animate-in fade-in duration-500">
-      <SchoolSetupForm initialData={schoolData} token={token} />
+      <SchoolSetupForm initialData={schoolData} />
     </div>
   )
 }

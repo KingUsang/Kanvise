@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 interface Bank {
   id: number;
@@ -17,6 +18,7 @@ interface EditPayoutModalProps {
 }
 
 export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: EditPayoutModalProps) {
+  const fetch = authenticatedApiFetch;
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
   const [bankCode, setBankCode] = useState("");

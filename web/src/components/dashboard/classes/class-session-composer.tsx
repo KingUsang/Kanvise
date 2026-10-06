@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type Subject = { id: string; name: string }
 type Tutor = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null }
 
-export function ClassSessionComposer({ open, onClose, onSaved, classId, subjects, token, initialCourseId }: { open: boolean; onClose: () => void; onSaved: () => void; classId: string; subjects: Subject[]; token: string; initialCourseId?: string }) {
+export function ClassSessionComposer({ open, onClose, onSaved, classId, subjects, initialCourseId }: { open: boolean; onClose: () => void; onSaved: () => void; classId: string; subjects: Subject[]; initialCourseId?: string }) {
   const api = process.env.NEXT_PUBLIC_API_URL
-  const headers = { Authorization: `Bearer ${token}` }
   const [courseId, setCourseId] = useState(initialCourseId || subjects[0]?.id || '')
   const [tutors, setTutors] = useState<Tutor[]>([])
   const [tutorId, setTutorId] = useState('')
@@ -26,10 +26,10 @@ export function ClassSessionComposer({ open, onClose, onSaved, classId, subjects
     if (!open || !courseId) return
     let active = true
     void Promise.all([
-      fetch(`${api}/schools/me`, { headers }), 
-      fetch(`${api}/courses/${courseId}/tutors`, { headers }),
-      fetch(`${api}/users/tutors`, { headers }),
-      fetch(`${api}/users/me`, { headers })
+      authenticatedApiFetch(`${api}/schools/me`),
+      authenticatedApiFetch(`${api}/courses/${courseId}/tutors`),
+      authenticatedApiFetch(`${api}/users/tutors`),
+      authenticatedApiFetch(`${api}/users/me`)
     ]).then(async ([school, assignments, tutorsRes, meRes]) => {
       const schoolBody = school.ok ? await school.json() : null
       const assignmentBody = assignments.ok ? await assignments.json() : { data: [] }
@@ -48,7 +48,7 @@ export function ClassSessionComposer({ open, onClose, onSaved, classId, subjects
       setTutorId(ids.length === 1 ? ids[0] : (people.length === 1 ? people[0].id : ''))
     }).catch(() => { if (active) setTutors([]) })
     return () => { active = false }
-  }, [api, courseId, open, token])
+  }, [api, courseId, open])
 
   if (!open) return null
   const selectedSubject = subjects.find((subject) => subject.id === courseId)
@@ -57,7 +57,7 @@ export function ClassSessionComposer({ open, onClose, onSaved, classId, subjects
     if (!courseId || !title.trim() || !date || !time || (!independent && !tutorId)) return
     setSaving(true)
     try {
-      const response = await fetch(`${api}/live-classes`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim(), course_id: courseId, tutor_id: tutorId || undefined, scheduled_at: new Date(`${date}T${time}:00`).toISOString(), duration_minutes: Number(duration), access_mode: 'enrolled_learners', recurrence: repeat ? 'weekly' : 'once', recurrence_days: repeat ? [new Date(`${date}T12:00:00`).getDay() || 7] : undefined, starts_on: repeat ? date : undefined, start_time: repeat ? time : undefined, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }) })
+      const response = await authenticatedApiFetch(`${api}/live-classes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim(), course_id: courseId, tutor_id: tutorId || undefined, scheduled_at: new Date(`${date}T${time}:00`).toISOString(), duration_minutes: Number(duration), access_mode: 'enrolled_learners', recurrence: repeat ? 'weekly' : 'once', recurrence_days: repeat ? [new Date(`${date}T12:00:00`).getDay() || 7] : undefined, starts_on: repeat ? date : undefined, start_time: repeat ? time : undefined, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }) })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not schedule this live class')
       toast.success(repeat ? 'Recurring live classes scheduled' : 'Live class scheduled')

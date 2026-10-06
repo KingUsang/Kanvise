@@ -11,6 +11,7 @@ import { startNavigationProgress } from '@/components/navigation/NavigationProgr
 import Link from 'next/link'
 import { loginHref } from '@/lib/auth-continuation'
 import { AntiCheatWrapper } from "./anti-cheat-wrapper"
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type SavedAnswer = {
   selected_option_version_id: string | null
@@ -90,11 +91,14 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
     setSaveStates(states => new Map(states).set(questionId, 'saving'))
     try {
       const answerPath = guest ? `/guest/attempts/${data.attempt.id}/answers/${questionId}` : `/attempts/${data.attempt.id}/answers/${questionId}`
-      const response = await fetch(`${getApiUrl()}${answerPath}`, {
+      const requestInit: RequestInit = {
         method: 'PUT', credentials: guest ? 'include' : 'same-origin',
-        headers: { ...(guest ? {} : { Authorization: `Bearer ${token}` }), 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(answer),
-      })
+      }
+      const response = guest
+        ? await fetch(`${getApiUrl()}${answerPath}`, requestInit)
+        : await authenticatedApiFetch(`${getApiUrl()}${answerPath}`, requestInit)
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not save answer')
       localStorage.removeItem(queuedAnswerKey(data.attempt.id, questionId))
@@ -133,11 +137,14 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
         }
       }
       const submitPath = guest ? `/guest/attempts/${data.attempt.id}/submit` : `/attempts/${data.attempt.id}/submit`
-      const response = await fetch(`${getApiUrl()}${submitPath}`, {
+      const requestInit: RequestInit = {
         method: 'POST', credentials: guest ? 'include' : 'same-origin',
-        headers: { ...(guest ? {} : { Authorization: `Bearer ${token}` }), 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(guest ? { guest_name: guestName, guest_email: guestEmail, guest_phone: guestPhone } : {})
-      })
+      }
+      const response = guest
+        ? await fetch(`${getApiUrl()}${submitPath}`, requestInit)
+        : await authenticatedApiFetch(`${getApiUrl()}${submitPath}`, requestInit)
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not submit mock')
       toast.success(timedOut ? 'Time is up. Your mock has been finalized.' : 'Your mock has been submitted.')
