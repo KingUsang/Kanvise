@@ -21,7 +21,8 @@ the API reference disagree, the reference wins.
 - Attendance reconciliation confirmed: `analytics_proceeded` webhook fires when a post-session report is ready; the report itself is fetched via the **Artifact API** (the old dedicated Analytics API is deprecated). Per-user `duration`, `joined`, `left` fields come pre-computed — no manual summing of raw join/leave pairs.
 - Quick Check now uses `createPoll` with `is_quiz: true` — correct-answer hide/reveal is handled by plugNmeet natively, not something Kanvise needs to track itself.
 - Branding: confirmed official mechanism — `window.plugNmeetConfig.designCustomization` for colors/logo, `copyright_conf.display: false` to remove "Powered by plugNmeet" entirely. Not a CSS hack.
-- Screen share defaulted OFF — whiteboard's native PDF/office upload already covers materials-sharing.
+- Tutors can share their screen alongside whiteboard/PDF materials; student
+  join-token locks keep screen sharing disabled for learners.
 - The full `room_features` schema is now exact, sourced from their API docs — see the reference doc for the complete JSON.
 - Recording processing is deliberately post-class: PlugNmeet produces the MP4,
   the API streams it to private R2, then sends the same stream to Deepgram and
@@ -121,7 +122,8 @@ Both classroom profiles use the audio-first client defaults defined in the
 integration reference. Adaptive Stream, Dynacast, and Simulcast remain enabled;
 webcam capture defaults to 180p; camera is off on entry; students enter muted;
 and only a small, device-specific number of webcams may be visible at once.
-Screen share remains disabled in favour of the whiteboard/PDF path.
+Tutors can screen-share alongside the whiteboard/PDF materials path; students
+remain locked from publishing a screen.
 
 The UI should communicate degraded states plainly: when bandwidth is poor,
 preserve tutor audio, lower or pause video automatically, keep the whiteboard
