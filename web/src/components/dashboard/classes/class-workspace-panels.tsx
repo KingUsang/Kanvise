@@ -171,7 +171,7 @@ export function ClassSchedulePanel({ sessions, recurringSlots = [], onAddSession
       : new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime())
   }, [sessions, tab])
 
-  return <Panel eyebrow="Class schedule" title="Sessions" description="Plan and review the dated teaching sessions for this class." action={action}>
+  return <Panel eyebrow="Live session schedule" title="Live sessions" description="Plan and review the dated live teaching sessions for this teaching group." action={action}>
     <div className="flex gap-5 border-b border-dashboard-outline px-5 sm:px-6">
       {(['upcoming', 'past', 'recurring'] as const).map((item) => <button key={item} type="button" onClick={() => setTab(item)} className={`border-b-2 px-0 py-3 text-sm font-bold capitalize transition ${tab === item ? 'border-[#994704] text-[#211969]' : 'border-transparent text-[#625e69] hover:text-[#211969]'}`}>{item === 'recurring' ? 'Recurring' : `${item} sessions`}</button>)}
     </div>

@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
@@ -119,6 +120,8 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
   const scheduleQuery = useQuery({
     queryKey: dashboardQueryKeys.schedule,
     staleTime: 30_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
     queryFn: async () => {
       const requests: Promise<Response>[] = [
         fetch(`${api}/live-classes`, { headers }),
@@ -130,7 +133,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
         await Promise.all(requests);
       const classBody = await classResponse.json().catch(() => null);
       if (!classResponse.ok)
-        throw new Error(classBody?.error || "Could not load classes");
+        throw new Error(classBody?.error || "Could not load live classes");
       const courseBody = courseResponse.ok
         ? await courseResponse.json()
         : { data: [] };
@@ -194,6 +197,9 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
   );
   const selectedClass = teachingClasses.find((item) => item.id === classId);
   const selectedClassSubjects = selectedClass?.courses || [];
+  const existingSessionLocked = Boolean(
+    composer?.existing && composer.existing.status !== "scheduled",
+  );
   const conflict = Boolean(
     date &&
     time &&
@@ -331,14 +337,14 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
           }),
         });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Could not save class");
+      if (!response.ok) throw new Error(body.error || "Could not save this live class");
       setComposer(null);
       toast.success(
         composer.existing
-          ? "Class updated"
+          ? "Live class updated"
           : repeat
-            ? "Recurring classes scheduled"
-            : "Class scheduled",
+            ? "Recurring live classes scheduled"
+            : "Live class scheduled",
       );
       await Promise.all([
         queryClient.invalidateQueries({
@@ -358,7 +364,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
       ]);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Could not save class",
+        error instanceof Error ? error.message : "Could not save this live class",
       );
     } finally {
       setSaving(false);
@@ -372,9 +378,9 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
     });
     const body = await response.json();
     if (!response.ok)
-      return toast.error(body.error || "Could not cancel class");
+      return toast.error(body.error || "Could not cancel this live class");
     setComposer(null);
-    toast.success("Class cancelled");
+    toast.success("Live class cancelled");
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
@@ -408,7 +414,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
       headers,
     });
     const body = await response.json();
-    if (!response.ok) return toast.error(body.error || "Could not start class");
+    if (!response.ok) return toast.error(body.error || "Could not start this live class");
     window.open(`/class/${item.id}?start=true`, "_blank", "noopener,noreferrer");
   }
   async function copyClassroomLink(value: string) {
@@ -451,7 +457,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
           </p>
           <h1 className="mt-1 text-3xl font-bold text-[#180d62]">Calendar</h1>
           <p className="mt-2 text-sm text-[#66616c]">
-            Every dated teaching session across the classes you can manage.
+            Every dated live teaching session across the teaching groups you can manage.
           </p>
         </div>
         <button
@@ -760,10 +766,10 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
-                  {composer.existing ? "Class details" : "Add to schedule"}
+                  {composer.existing ? "Live session details" : "Add to schedule"}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold text-[#180d62]">
-                  {composer.existing ? "Edit class" : "New class"}
+                  {composer.existing ? "Edit live session" : "New live class"}
                 </h2>
               </div>
               <button
@@ -777,14 +783,27 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
             </div>
             <div className="mt-6 space-y-4">
               <label className="block text-sm font-semibold">
-                Class title
+                Live class title
                 <input
                   required
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
+                  disabled={existingSessionLocked}
                   className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] px-3 font-normal"
                 />
               </label>
+              {composer.existing && existingSessionLocked && (
+                <p
+                  role="status"
+                  className="rounded-lg border border-[#c8c0d3] bg-[#f8f7ff] p-3 text-sm leading-6 text-[#514b5b]"
+                >
+                  {composer.existing.status === "live"
+                    ? "This live class has already started. It cannot be edited or cancelled here. Join as host to end it."
+                    : composer.existing.status === "completed"
+                      ? "This live class has already ended. Its details are read-only."
+                      : "This live class has already been cancelled. Its details are read-only."}
+                </p>
+              )}
               {!composer.existing && (
                 <fieldset>
                   <legend className="text-sm font-semibold">
@@ -820,7 +839,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
               {access === "enrolled_learners" && !composer.existing && (
                 <>
                   <label className="block text-sm font-semibold">
-                    Class
+                    Teaching group
                     <select
                       required
                       value={classId}
@@ -838,7 +857,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                       }}
                       className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 font-normal"
                     >
-                      <option value="">Choose a class</option>
+                      <option value="">Choose a teaching group</option>
                       {teachingClasses.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name}
@@ -846,10 +865,21 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                       ))}
                     </select>
                   </label>
+                  {!teachingClasses.length && (
+                    <p className="rounded-lg border border-dashed border-[#c8c0d3] bg-[#f8f7ff] px-3 py-3 text-sm leading-6 text-[#514b5b]">
+                      You have not created a teaching group yet.{" "}
+                      <Link
+                        href="/dashboard/classes"
+                        className="font-semibold text-[#2e2877] underline"
+                      >
+                        Go to Classes to create one.
+                      </Link>
+                    </p>
+                  )}
                   {selectedClass && selectedClassSubjects.length === 1 && (
                     <p className="rounded-lg bg-[#f8f7ff] px-3 py-3 text-sm text-[#514b5b]">
                       <strong>{selectedClassSubjects[0].name}</strong> is the
-                      subject for this class.
+                      subject for this teaching group.
                     </p>
                   )}
                   {selectedClass && selectedClassSubjects.length > 1 && (
@@ -896,6 +926,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                     required
                     value={date}
                     onChange={(event) => setDate(event.target.value)}
+                    disabled={existingSessionLocked}
                     className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] px-3 font-normal"
                   />
                 </label>
@@ -906,6 +937,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                     required
                     value={time}
                     onChange={(event) => setTime(event.target.value)}
+                    disabled={existingSessionLocked}
                     className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] px-3 font-normal"
                   />
                 </label>
@@ -915,6 +947,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                 <select
                   value={duration}
                   onChange={(event) => setDuration(event.target.value)}
+                  disabled={existingSessionLocked}
                   className="mt-1.5 min-h-12 w-full rounded-lg border border-[#8b8580] bg-white px-3 font-normal"
                 >
                   <option value="45">45 minutes</option>
@@ -957,7 +990,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
               )}
               {access === "anyone_with_link" && !composer.existing && (
                 <p className="rounded-lg bg-[#fff0e3] p-3 text-xs text-[#7a3903]">
-                  Private-link sessions are one-off so each class has its own
+                  Private-link sessions are one-off so each live class has its own
                   secure learner link.
                 </p>
               )}
@@ -966,24 +999,26 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                   role="alert"
                   className="rounded-lg bg-[#fff0ed] p-3 text-sm font-semibold text-[#8d2f22]"
                 >
-                  This tutor already has a class at that time.
+                  This tutor already has a live class at that time.
                 </p>
               )}
-              <button
-                disabled={
-                  saving ||
-                  conflict ||
-                  (repeat && !repeatDays.length) ||
-                  (access === "enrolled_learners" && !courseId)
-                }
-                className="min-h-12 w-full rounded-xl bg-[#994704] text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {saving
-                  ? "Saving…"
-                  : composer.existing
-                    ? "Save changes"
-                    : "Schedule class"}
-              </button>
+              {!existingSessionLocked && (
+                <button
+                  disabled={
+                    saving ||
+                    conflict ||
+                    (repeat && !repeatDays.length) ||
+                    (access === "enrolled_learners" && !courseId)
+                  }
+                  className="min-h-12 w-full rounded-xl bg-[#994704] text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {saving
+                    ? "Saving…"
+                    : composer.existing
+                      ? "Save changes"
+                      : "Schedule live class"}
+                </button>
+              )}
               {composer.existing && (
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -994,22 +1029,26 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
                     <Copy size={16} />
                     Copy link
                   </button>
-                  <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href={`/class/${composer.existing!.id}?start=true`}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2e2877] text-sm font-semibold text-white hover:bg-[#1a1555]"
-                  >
-                    <Video size={16} />
-                    Join as host
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => void cancel(composer.existing!)}
-                    className="min-h-11 rounded-xl border border-[#c44b3b] text-sm font-semibold text-[#a43a2a]"
-                  >
-                    Cancel this class
-                  </button>
+                  {['scheduled', 'live'].includes(composer.existing.status) && (
+                    <a
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      href={`/class/${composer.existing!.id}?start=true`}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2e2877] text-sm font-semibold text-white hover:bg-[#1a1555]"
+                    >
+                      <Video size={16} />
+                      {composer.existing.status === 'live' ? 'Join as host' : 'Open live class'}
+                    </a>
+                  )}
+                  {composer.existing.status === "scheduled" && (
+                    <button
+                      type="button"
+                      onClick={() => void cancel(composer.existing!)}
+                      className="min-h-11 rounded-xl border border-[#c44b3b] text-sm font-semibold text-[#a43a2a]"
+                    >
+                      Cancel live class
+                    </button>
+                  )}
                   {composer.existing.series && (
                     <button
                       type="button"

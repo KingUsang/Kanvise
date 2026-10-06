@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const openingLines = [
   "Creating a live space for your lesson…",
   "Getting your classroom ready…",
-  "Your class will open automatically.",
+  "Your live class will open automatically.",
 ];
 
 export default function ClassroomLoading() {

@@ -183,7 +183,7 @@ export function DashboardHomeClient() {
               subtitle="Across the centre"
             />
             <StatCard
-              title="Classes Today"
+              title="Live Classes Today"
               value={admin.upcoming_classes}
               icon="event"
               subtitle="Scheduled centre-wide"
@@ -224,7 +224,7 @@ export function DashboardHomeClient() {
           )}
           <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
             <StatCard
-              title="My Classes Today"
+              title="My Live Classes Today"
               value={tutor.classes_today}
               icon="laptop_chromebook"
               subtitle="Sessions assigned to you"
@@ -311,9 +311,9 @@ export function DashboardHomeClient() {
             </div>
           ) : (
             <div className="rounded-lg border-2 border-dashed border-[#eae8e7] px-4 py-6 text-center sm:py-10">
-              <h3 className="font-medium text-[#1b1c1c]">No classes today</h3>
+              <h3 className="font-medium text-[#1b1c1c]">No live classes today</h3>
               <p className="mt-1 text-sm text-[#474551]">
-                Your next class will appear here.
+                Your next live class will appear here.
               </p>
             </div>
           )}

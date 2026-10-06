@@ -19,6 +19,13 @@ import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
+function statusActionMessage(status: string, action: 'update' | 'cancel') {
+  if (status === 'live') return `This live class has already started and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.${action === 'cancel' ? ' End it from the live classroom instead.' : ''}`
+  if (status === 'completed') return `This live class has already ended and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
+  if (status === 'cancelled') return `This live class has already been cancelled and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
+  return `Only scheduled live classes can be ${action === 'update' ? 'edited' : 'cancelled'}.`
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 async function getParticipantDisplayName(user: { id: string; first_name?: string; last_name?: string; kanvise_user_id?: string }, fallback: string) {
@@ -180,7 +187,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
 
   const scheduledDate = new Date(scheduled_at)
   if (!Number.isFinite(scheduledDate.getTime()) || scheduledDate < new Date()) {
-    return c.json({ error: 'Cannot schedule a class in the past', code: 'SCHEDULED_IN_PAST' }, 400)
+    return c.json({ error: 'Cannot schedule a live class in the past', code: 'SCHEDULED_IN_PAST' }, 400)
   }
 
   if (typeof duration_minutes !== 'number' || duration_minutes < 15 || duration_minutes > 240) {
@@ -188,7 +195,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   }
 
   if (user.role === 'tutor' && tutor_id !== user.id) {
-    return c.json({ error: 'Tutors can only schedule classes for themselves', code: 'FORBIDDEN' }, 403)
+    return c.json({ error: 'Tutors can only schedule live classes for themselves', code: 'FORBIDDEN' }, 403)
   }
 
   if (accessMode === 'anyone_with_link' && isRecurring) {
@@ -254,7 +261,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   if (error) {
     if (error.code === '23P01') return c.json({ error: 'This tutor already has a class at that time', code: 'TUTOR_TIME_CONFLICT' }, 409)
     console.error('[live-classes] insert error:', error)
-    return c.json({ error: 'Failed to schedule class' }, 500)
+    return c.json({ error: 'Failed to schedule live class' }, 500)
   }
 
   return c.json({ data: { ...data, share_token: shareToken } }, 201)
@@ -298,7 +305,7 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
     return c.json({ error: 'Choose a subject assigned to this tutor', code: 'INVALID_TUTOR_OR_COURSE' }, 403)
   }
 
-  const title = String(body.title || '').trim().slice(0, 160) || (course ? `${course.name} class` : 'Live class')
+  const title = String(body.title || '').trim().slice(0, 160) || (course ? `${course.name} live class` : 'Live class')
   const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
   const startedAt = new Date().toISOString()
   const classroomProvider = providerForClass({ accessMode, schoolId: user.school_id })
@@ -342,7 +349,7 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
       .delete()
       .eq('id', insertedClass.id)
       .eq('school_id', user.school_id)
-    return c.json({ error: 'Could not start the class. Nothing was scheduled.', code: 'CLASS_START_FAILED' }, 500)
+    return c.json({ error: 'Could not start the live class. Nothing was scheduled.', code: 'CLASS_START_FAILED' }, 500)
   }
 })
 
@@ -432,7 +439,7 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
   const body = await c.req.json()
 
   if (existing.status !== 'scheduled') {
-    return c.json({ error: 'Only scheduled classes can be updated', code: 'CLASS_NOT_EDITABLE' }, 409)
+    return c.json({ error: statusActionMessage(existing.status, 'update'), code: 'CLASS_NOT_EDITABLE' }, 409)
   }
 
   if (user.role === 'tutor' && existing.tutor_id !== user.id) {
@@ -473,7 +480,7 @@ liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
   if (liveClass.status !== 'scheduled') {
-    return c.json({ error: 'Only scheduled classes can be cancelled', code: 'CLASS_NOT_CANCELLABLE' }, 409)
+    return c.json({ error: statusActionMessage(liveClass.status, 'cancel'), code: 'CLASS_NOT_CANCELLABLE' }, 409)
   }
   if (user.role === 'tutor' && liveClass.tutor_id !== user.id) {
     return c.json({ error: 'You can only cancel classes assigned to you', code: 'NOT_CLASS_TUTOR' }, 403)
@@ -499,7 +506,7 @@ liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
     reason,
   })
 
-  return c.json({ message: 'Class cancelled', data, notification })
+  return c.json({ message: 'Live class cancelled', data, notification })
 })
 
 // ── POST /live-classes/:id/start — Tutor starts a class ───────────────────
@@ -529,7 +536,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
         return c.json({ error: 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       }
     }
-    if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
+    if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled live classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
     if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
       const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
@@ -544,7 +551,7 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       return c.json({ data: { ...updated, ...config, class_title: updated.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
       console.error('[live-classes] plugnmeet start failed:', error)
-      return c.json({ error: 'Could not start the PlugNmeet class', code: 'CLASS_START_FAILED' }, 500)
+      return c.json({ error: 'Could not start the PlugNmeet live class', code: 'CLASS_START_FAILED' }, 500)
     }
   }
 
@@ -559,7 +566,7 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
   const liveClass = access.liveClass as any
 
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
-    if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 404)
+    if (liveClass.status !== 'live') return c.json({ error: 'This live class is not currently in progress', code: 'CLASS_NOT_LIVE' }, 404)
     const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
     if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
     if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
@@ -607,7 +614,7 @@ liveClassesRouter.get('/:id/recap', async (c) => {
     .eq('live_class_id', access.liveClass.id)
     .or(access.isHost ? 'status.eq.draft,status.eq.published' : 'status.eq.published')
     .maybeSingle()
-  if (error) return c.json({ error: 'Could not load class summary', code: 'RECAP_UNAVAILABLE' }, 500)
+  if (error) return c.json({ error: 'Could not load live class summary', code: 'RECAP_UNAVAILABLE' }, 500)
   if (!data) return c.json({ error: 'Class summary is not ready', code: 'RECAP_NOT_READY' }, 404)
   return c.json({ data })
 })
@@ -647,7 +654,7 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
 
-  if (liveClass.status !== 'live') return c.json({ error: 'Class is not currently live', code: 'CLASS_NOT_LIVE' }, 400)
+  if (liveClass.status !== 'live') return c.json({ error: 'This live class is not currently in progress', code: 'CLASS_NOT_LIVE' }, 400)
   const endedAt = new Date().toISOString()
   const { error } = await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: endedAt, provider_room_status: 'ended', provider_room_checked_at: endedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'live')
   if (error) return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
