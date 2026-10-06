@@ -86,8 +86,8 @@ describe('authenticatedFetch', () => {
 
   it('shares one refresh when requests receive 401 together', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(null, { status: 401 }))
-      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'TOKEN_EXPIRED' }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'TOKEN_EXPIRED' }), { status: 401 }))
       .mockResolvedValue(new Response(null, { status: 200 }))
     const refreshSession = vi.fn(() => new Promise(resolve => setTimeout(() => resolve({ data: { session: { access_token: 'fresh-token' } }, error: null }), 0)))
     const supabase = { auth: { refreshSession, getSession: vi.fn().mockResolvedValue({ data: { session: null } }), onAuthStateChange: vi.fn() } } as any
