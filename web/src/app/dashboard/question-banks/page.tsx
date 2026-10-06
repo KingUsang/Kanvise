@@ -13,11 +13,10 @@ export default async function QuestionBanksPage() {
     { cookies: { getAll: () => cookieStore.getAll() } },
   )
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!user || !session?.access_token) redirect('/auth/login')
+  if (!user) redirect('/auth/login')
 
   const role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role
   if (!['admin', 'tutor'].includes(role)) redirect('/dashboard')
 
-  return <QuestionBanksClient token={session.access_token} />
+  return <QuestionBanksClient />
 }

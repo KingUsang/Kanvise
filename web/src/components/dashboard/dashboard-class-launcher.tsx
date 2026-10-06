@@ -6,17 +6,16 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type Course = { id: string; name: string }
 type Programme = { id: string; name: string; courses: Course[] }
 type Tutor = { id: string; first_name: string; last_name: string }
 
 export function DashboardClassLauncher({
-  token,
   user,
   isAdmin,
 }: {
-  token: string
   user: { id: string; firstName: string; lastName: string }
   isAdmin: boolean
 }) {
@@ -29,12 +28,11 @@ export function DashboardClassLauncher({
   const [shareClassId, setShareClassId] = useState<string | null>(null)
   const [tutorId, setTutorId] = useState(isAdmin ? '' : user.id)
   const [starting, setStarting] = useState(false)
-  const headers = { Authorization: `Bearer ${token}` }
 
   const programmes = useQuery({
     queryKey: ['programmes', 'class-launcher', user.id],
     queryFn: async () => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, { headers })
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`)
       if (!response.ok) throw new Error('Could not load subjects')
       return (await response.json()).data as Programme[]
     },
@@ -44,7 +42,7 @@ export function DashboardClassLauncher({
   const standaloneSubjects = useQuery({
     queryKey: ['standalone-subjects', 'class-launcher', user.id],
     queryFn: async () => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses?standalone=true`, { headers })
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/courses?standalone=true`)
       if (!response.ok) throw new Error('Could not load subjects')
       return (await response.json()).data as Course[]
     },
@@ -54,7 +52,7 @@ export function DashboardClassLauncher({
   const subjectTutors = useQuery({
     queryKey: ['subject-tutors', 'class-launcher', user.id, courseId],
     queryFn: async () => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/tutors`, { headers })
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/tutors`)
       if (!response.ok) throw new Error('Could not load tutors')
       return (await response.json()).data.map((item: { tutor_id: string }) => item.tutor_id) as string[]
     },
@@ -64,7 +62,7 @@ export function DashboardClassLauncher({
   const tutors = useQuery({
     queryKey: ['teaching-tutors', 'class-launcher', user.id],
     queryFn: async () => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?roles=admin,tutor`, { headers })
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/users?roles=admin,tutor`)
       if (!response.ok) throw new Error('Could not load tutors')
       return (await response.json()).data as Tutor[]
     },
@@ -90,9 +88,9 @@ export function DashboardClassLauncher({
     if (!canStart) return
     setStarting(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/start-now`, {
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/start-now`, {
         method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ course_id: courseId || undefined, tutor_id: accessMode === 'anyone_with_link' ? user.id : tutorId, title: title.trim() || undefined, access_mode: accessMode, duration_minutes: 60 }),
       })
       const body = await response.json()

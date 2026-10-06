@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
@@ -142,6 +143,9 @@ export function MockBuilderClient({
   token: string;
   embedded?: boolean;
 }) {
+  // Keep legacy call sites on the current Supabase session while this large
+  // editor is incrementally disentangled from its historical token prop.
+  const fetch = authenticatedApiFetch;
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();

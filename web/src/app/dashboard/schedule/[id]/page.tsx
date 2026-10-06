@@ -12,7 +12,6 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
     { cookies: { getAll: () => cookieStore.getAll() } },
   )
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!user || !session) redirect('/auth/login')
-  return <SessionDetailClient sessionId={id} token={session.access_token} />
+  if (!user) redirect('/auth/login')
+  return <SessionDetailClient sessionId={id} />
 }

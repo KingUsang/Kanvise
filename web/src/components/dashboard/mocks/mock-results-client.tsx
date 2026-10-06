@@ -7,6 +7,7 @@ import { QuestionContent, type ContentBlock } from '@/components/questions/quest
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import { getApiUrl } from '@/config/api'
 import { InsightModal } from './insight-modal'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type MockAnswer = {
   id: string
@@ -73,7 +74,7 @@ function csvCell(value: string | number) {
   return `"${safe.replaceAll('"', '""')}"`
 }
 
-export function MockResultsClient({ mockId, token, embedded = false }: { mockId: string; token: string; embedded?: boolean }) {
+export function MockResultsClient({ mockId, embedded = false }: { mockId: string; embedded?: boolean }) {
   const [data, setData] = useState<ResultsData | null>(null)
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null)
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
@@ -95,9 +96,7 @@ export function MockResultsClient({ mockId, token, embedded = false }: { mockId:
     setIsLoading(true)
     setLoadError('')
     try {
-      const response = await fetch(`${apiUrl}/mocks/${mockId}/results`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const response = await authenticatedApiFetch(`${apiUrl}/mocks/${mockId}/results`)
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Failed to load results')
       setData(body.data)
@@ -109,7 +108,7 @@ export function MockResultsClient({ mockId, token, embedded = false }: { mockId:
     } finally {
       setIsLoading(false)
     }
-  }, [apiUrl, mockId, token])
+  }, [apiUrl, mockId])
 
   useEffect(() => { void loadResults() }, [loadResults])
 
@@ -131,9 +130,9 @@ export function MockResultsClient({ mockId, token, embedded = false }: { mockId:
     }
     setSavingAnswerId(answer.id)
     try {
-      const response = await fetch(`${apiUrl}/mock-answers/${answer.id}/grade`, {
+      const response = await authenticatedApiFetch(`${apiUrl}/mock-answers/${answer.id}/grade`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tutor_score: score, tutor_feedback: draft.feedback.trim() || null }),
       })
       const body = await response.json().catch(() => null)
@@ -184,9 +183,9 @@ export function MockResultsClient({ mockId, token, embedded = false }: { mockId:
   const allowAnotherAttempt = async (attempt: Attempt) => {
     setGrantingAttemptId(attempt.id)
     try {
-      const response = await fetch(`${apiUrl}/mocks/${mockId}/attempt-grants`, {
+      const response = await authenticatedApiFetch(`${apiUrl}/mocks/${mockId}/attempt-grants`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attempt_id: attempt.id, reason: 'Allowed from the mock results page' }),
       })
       const body = await response.json().catch(() => null)

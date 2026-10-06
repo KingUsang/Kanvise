@@ -4,12 +4,14 @@ import React, { useState, useEffect } from "react";
 import { Download, Edit, Search, FileText, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
 export function SubmissionsClient({ assignmentId, session, embedded = false }: { assignmentId: string; session: any; embedded?: boolean }) {
+  const fetch = authenticatedApiFetch;
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [assignment, setAssignment] = useState<any>(null);
   const [summary, setSummary] = useState({ total_submitted: 0, total_reviewed: 0 });

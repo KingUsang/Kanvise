@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 type Tutor = { id: string; first_name: string; last_name: string };
 type Course = { id: string; name: string };
@@ -32,7 +33,6 @@ type LiveClass = {
   series?: { id: string; recurrence_group_id?: string | null } | null;
 };
 type Props = {
-  token: string;
   capabilities: { isAdmin: boolean; isTutor: boolean };
   user: Tutor;
 };
@@ -88,11 +88,10 @@ function overlaps(
   });
 }
 
-export function ClassesWorkspace({ token, capabilities, user }: Props) {
+export function ClassesWorkspace({ capabilities, user }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const api = process.env.NEXT_PUBLIC_API_URL;
-  const headers = { Authorization: `Bearer ${token}` };
   const queryClient = useQueryClient();
   const [week, setWeek] = useState(() => startOfWeek(new Date()));
   const [mobileDay, setMobileDay] = useState(new Date());
@@ -126,11 +125,11 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
     queryFn: async () => {
       try {
         const requests: Promise<Response>[] = [
-          fetch(`${api}/live-classes`, { headers }),
-          fetch(`${api}/classes`, { headers }),
+          authenticatedApiFetch(`${api}/live-classes`),
+          authenticatedApiFetch(`${api}/classes`),
         ];
         if (capabilities.isAdmin)
-          requests.push(fetch(`${api}/users/tutors`, { headers }));
+          requests.push(authenticatedApiFetch(`${api}/users/tutors`));
         const [classResponse, courseResponse, tutorResponse] =
           await Promise.all(requests);
         const classBody = await classResponse.json().catch(() => null);
@@ -237,7 +236,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
       return;
     }
     let active = true;
-    void fetch(`${api}/courses/${courseId}/tutors`, { headers })
+    void authenticatedApiFetch(`${api}/courses/${courseId}/tutors`)
       .then(async (response) => (response.ok ? response.json() : { data: [] }))
       .then((body) => {
         if (!active) return;
@@ -314,9 +313,9 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
       const scheduledAt = new Date(`${date}T${time}:00`).toISOString();
       let response: Response;
       if (composer.existing)
-        response = await fetch(`${api}/live-classes/${composer.existing.id}`, {
+        response = await authenticatedApiFetch(`${api}/live-classes/${composer.existing.id}`, {
           method: "PATCH",
-          headers: { ...headers, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: title.trim(),
             scheduled_at: scheduledAt,
@@ -324,9 +323,9 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
           }),
         });
       else
-        response = await fetch(`${api}/live-classes`, {
+        response = await authenticatedApiFetch(`${api}/live-classes`, {
           method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: title.trim(),
             tutor_id: tutorId,
@@ -377,9 +376,8 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
   }
   async function cancel(item: LiveClass) {
     if (!window.confirm(`Cancel “${item.title}”?`)) return;
-    const response = await fetch(`${api}/live-classes/${item.id}`, {
+    const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}`, {
       method: "DELETE",
-      headers,
     });
     const body = await response.json();
     if (!response.ok)
@@ -399,9 +397,8 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
       !window.confirm("End this recurring series and remove future sessions?")
     )
       return;
-    const response = await fetch(`${api}/live-classes/series/${seriesId}`, {
+    const response = await authenticatedApiFetch(`${api}/live-classes/series/${seriesId}`, {
       method: "DELETE",
-      headers,
     });
     const body = await response.json();
     if (!response.ok) return toast.error(body.error || "Could not end series");
@@ -414,9 +411,8 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
     ]);
   }
   async function start(item: LiveClass) {
-    const response = await fetch(`${api}/live-classes/${item.id}/start`, {
+    const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}/start`, {
       method: "POST",
-      headers,
     });
     const body = await response.json();
     if (!response.ok) return toast.error(body.error || "Could not start this live class");

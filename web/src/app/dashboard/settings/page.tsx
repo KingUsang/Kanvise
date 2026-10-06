@@ -15,5 +15,5 @@ export default async function SettingsPage() {
   const body = await response.json().catch(() => null)
   if (!response.ok) redirect('/dashboard/school-setup')
 
-  return <div className="animate-in fade-in duration-500"><SchoolSetupForm initialData={body?.data} token={session.access_token} /></div>
+  return <div className="animate-in fade-in duration-500"><SchoolSetupForm initialData={body?.data} /></div>
 }
