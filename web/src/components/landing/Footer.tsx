@@ -23,9 +23,9 @@ export default function Footer() {
       </div>
       <ul className="flex flex-wrap justify-center gap-6">
         <li>
-          <a className="text-[#474551] hover:text-[#C26627] transition-colors text-xs font-semibold opacity-80 hover:opacity-100" href="#">
+          <Link className="text-[#474551] hover:text-[#C26627] transition-colors text-xs font-semibold opacity-80 hover:opacity-100" href="/terms">
             Terms of Service
-          </a>
+          </Link>
         </li>
         <li>
           <Link className="text-[#474551] hover:text-[#C26627] transition-colors text-xs font-semibold opacity-80 hover:opacity-100" href="/privacy">
