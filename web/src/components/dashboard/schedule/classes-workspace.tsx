@@ -117,37 +117,42 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
   const [eligibleTutorIds, setEligibleTutorIds] = useState<string[]>([]);
   const [repeat, setRepeat] = useState(false);
   const [repeatDays, setRepeatDays] = useState<number[]>([]);
+  const scheduleLoadError = "We couldn't load your live-class schedule. Please try again.";
   const scheduleQuery = useQuery({
     queryKey: dashboardQueryKeys.schedule,
     staleTime: 30_000,
     refetchOnMount: "always",
     refetchOnWindowFocus: "always",
     queryFn: async () => {
-      const requests: Promise<Response>[] = [
-        fetch(`${api}/live-classes`, { headers }),
-        fetch(`${api}/classes`, { headers }),
-      ];
-      if (capabilities.isAdmin)
-        requests.push(fetch(`${api}/users/tutors`, { headers }));
-      const [classResponse, courseResponse, tutorResponse] =
-        await Promise.all(requests);
-      const classBody = await classResponse.json().catch(() => null);
-      if (!classResponse.ok)
-        throw new Error(classBody?.error || "Could not load live classes");
-      const courseBody = courseResponse.ok
-        ? await courseResponse.json()
-        : { data: [] };
-      const tutorBody = tutorResponse?.ok
-        ? await tutorResponse.json()
-        : { data: [] };
-      const team = (tutorBody.data || []) as Tutor[];
-      return {
-        classes: (classBody?.data || []) as LiveClass[],
-        teachingClasses: (courseBody.data || []) as TeachingClass[],
-        tutors: team.some((item) => item.id === user.id)
-          ? team
-          : [user, ...team],
-      };
+      try {
+        const requests: Promise<Response>[] = [
+          fetch(`${api}/live-classes`, { headers }),
+          fetch(`${api}/classes`, { headers }),
+        ];
+        if (capabilities.isAdmin)
+          requests.push(fetch(`${api}/users/tutors`, { headers }));
+        const [classResponse, courseResponse, tutorResponse] =
+          await Promise.all(requests);
+        const classBody = await classResponse.json().catch(() => null);
+        if (!classResponse.ok) throw new Error(scheduleLoadError);
+        const courseBody = courseResponse.ok
+          ? await courseResponse.json()
+          : { data: [] };
+        const tutorBody = tutorResponse?.ok
+          ? await tutorResponse.json()
+          : { data: [] };
+        const team = (tutorBody.data || []) as Tutor[];
+        return {
+          classes: (classBody?.data || []) as LiveClass[],
+          teachingClasses: (courseBody.data || []) as TeachingClass[],
+          tutors: team.some((item) => item.id === user.id)
+            ? team
+            : [user, ...team],
+        };
+      } catch (error) {
+        console.error("[schedule] load failed", error);
+        throw new Error(scheduleLoadError);
+      }
     },
   });
   const classes = scheduleQuery.data?.classes || [];
@@ -528,7 +533,7 @@ export function ClassesWorkspace({ token, capabilities, user }: Props) {
           </div>
         ) : scheduleQuery.isError ? (
           <div className="flex h-96 flex-col items-center justify-center gap-3 px-6 text-center text-sm text-[#66616c]">
-            <p>{scheduleQuery.error instanceof Error ? scheduleQuery.error.message : "Could not load the calendar."}</p>
+            <p>{scheduleLoadError}</p>
             <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold text-[#2e2877] underline">Try again</button>
           </div>
         ) : (

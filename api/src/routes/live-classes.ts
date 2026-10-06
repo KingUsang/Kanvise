@@ -390,7 +390,7 @@ liveClassesRouter.get('/', async (c) => {
 
   if (error) {
     console.error('[live-classes] list error:', error)
-    return c.json({ error: 'Failed to fetch classes' }, 500)
+    return c.json({ error: 'We could not load live classes. Please try again.' }, 500)
   }
 
   const enriched = (data || []).map((item: any) => ({

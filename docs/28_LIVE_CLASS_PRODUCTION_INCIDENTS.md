@@ -19,6 +19,28 @@ The current deployment workflow only invokes `supabase db push --include-all`
 when the triggering commit changes `supabase/migrations/**`; later API-only
 deployments therefore cannot repair the already-missing migration.
 
+**Broader migration risk:** The last confirmed production migration deployment
+was 2026-09-23. The following later migration files must be treated as pending
+until their production history is explicitly reviewed: PlugNmeet-only
+classrooms, recorder readiness, independent tutors/direct assignments, live
+class schedule consolidation, mock import jobs, direct-link/guest mock subject
+selection, video learning materials, landing analytics, and teaching mode.
+
+**Related configuration finding:** Production allows CORS requests from
+`https://www.kanvise.com`, but rejects `https://kanvise.com`. Root-domain
+visitors can therefore encounter browser request failures even when the API is
+healthy. Add the canonical root origin to the production API CORS allow-list
+and restart the API only after its intended canonical domain is confirmed.
+
+**PlugNmeet finding:** Both environments use the same PlugNmeet host and all
+live classes select PlugNmeet unconditionally; the pilot-school list and
+enrolment/guest feature flags are currently not used to select a provider.
+Production health checks return HTTP 200, but it lacks automatic classroom-VM
+wake configuration and repeatedly logs NATS room-status failures during room
+lifecycle reconciliation. Staging has automatic wake enabled but lacks the
+dedicated webhook secret. These are separate live-class reliability issues and
+do not cause the calendar's SQL error.
+
 **Required remediation:**
 
 1. Apply the pending migration to the production Supabase project using the
