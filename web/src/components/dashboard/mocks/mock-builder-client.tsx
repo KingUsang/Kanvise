@@ -301,12 +301,21 @@ export function MockBuilderClient({
   };
 
   const showImportedQuestions = () => {
-    window.requestAnimationFrame(() =>
-      importedQuestionsRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      }),
-    );
+    const scrollToImportedQuestions = () =>
+      window.requestAnimationFrame(() =>
+        window.requestAnimationFrame(() =>
+          importedQuestionsRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          }),
+        ),
+      );
+    if (builderStep !== "questions") {
+      setBuilderStep("questions");
+      scrollToImportedQuestions();
+      return;
+    }
+    scrollToImportedQuestions();
   };
 
   useEffect(() => {
@@ -802,13 +811,9 @@ export function MockBuilderClient({
     : centreAccessEnabled && programmeFilterId
       ? courses.filter((course) => course.programme_id === programmeFilterId)
       : courses;
-  const audienceSummary = !accessMode
-    ? "Not assigned yet"
-    : centreAccessEnabled && shareLinkEnabled
-      ? "Students enrolled in your programme on Kanvise and anyone with the link"
-      : centreAccessEnabled
-        ? "Students enrolled in your programme on Kanvise"
-        : "Anyone with the link";
+  const audienceSummary = classContext
+    ? `Students in ${classContext.name}`
+    : "Anyone with the link";
   const selectedSubjectCourses = selectedSubjectSections.map((section) => {
     const linkedCourse = section.courseId
       ? courses.find((course) => course.id === section.courseId)
@@ -1324,7 +1329,6 @@ export function MockBuilderClient({
               : "Review the imported questions before publishing.",
           },
         );
-        showImportedQuestions();
       } else {
         toast.warning("No questions were found in that Word document", {
           description: warnings[0] || "Try another document.",
@@ -1420,7 +1424,6 @@ export function MockBuilderClient({
               : "Review the imported questions before publishing.",
           },
         );
-        showImportedQuestions();
       } else {
         toast.warning("No questions were found in that PDF", {
           description: warnings[0] || "Try another document.",
@@ -3429,41 +3432,30 @@ export function MockBuilderClient({
                 </span>
               </button>
               {importProgress && (
-                <div
-                  className="mt-5 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-4"
-                  aria-live="polite"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[#27242d]">
-                      {importProgress.phase === "complete"
-                        ? "Parsing complete"
-                        : "Parsing document…"}
-                    </p>
-                    <span className="text-xs text-[#716c76]">
-                      {importProgress.fileName}
-                    </span>
-                  </div>
-                  <div className="mt-3 grid gap-2 text-xs text-[#474551] sm:grid-cols-2">
-                    <span
-                      className={
-                        importProgress.phase !== "reading"
-                          ? "text-[#166534]"
-                          : ""
-                      }
-                    >
-                      ✓ Questions extracted
-                    </span>
-                    <span
-                      className={subjectSections.length ? "text-[#166534]" : ""}
-                    >
-                      ✓ Subjects detected{" "}
-                      {subjectSections.length
-                        ? `(${subjectSections.length})`
-                        : ""}
-                    </span>
-                    <span>✓ Answer options found</span>
-                    <span>✓ Answer keys identified</span>
-                  </div>
+                <div className="mt-5">
+                  <MockImportProgressCard progress={importProgress} />
+                  {importProgress.phase === "complete" &&
+                    documentImportSummary && (
+                      <div className="mt-3 flex flex-col gap-3 rounded-xl border border-[#b7dec6] bg-[#f2fbf5] p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm leading-5 text-[#35654a]">
+                          <strong className="text-[#166534]">
+                            {documentImportSummary.questionCount} questions
+                          </strong>{" "}
+                          imported
+                          {subjectSections.length
+                            ? ` across ${subjectSections.length} subject${subjectSections.length === 1 ? "" : "s"}`
+                            : ""}
+                          .
+                        </p>
+                        <button
+                          type="button"
+                          onClick={showImportedQuestions}
+                          className="shrink-0 rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white"
+                        >
+                          Review questions
+                        </button>
+                      </div>
+                    )}
                 </div>
               )}
               {(subjectSections.length > 0 || classContext?.courses.length) && (
