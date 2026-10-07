@@ -11,6 +11,7 @@ import { detachBrowserPushOnLogout } from "@/lib/push-notifications";
 import { createClient } from '@/lib/supabase/client';
 import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import { getApiUrl } from '@/config/api';
+import { FeedbackDialog } from '@/components/feedback/feedback-dialog';
 import type { StudentDashboardData } from '@/lib/student-dashboard';
 
 const navigation = [
@@ -81,6 +82,7 @@ export function StudentShell({ children, studentName = 'Student', schoolName = '
         })}
       </nav>
       <div className="space-y-1 border-t border-white/10 p-3">
+        <FeedbackDialog />
         <Link href="/dashboard/student/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/72 hover:bg-white/8 hover:text-white"><Settings size={18} />Settings</Link>
         <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/72 hover:bg-white/8 hover:text-white"><LogOut size={18} />Log out</button>
       </div>
