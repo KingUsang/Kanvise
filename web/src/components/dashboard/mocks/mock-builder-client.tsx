@@ -3533,46 +3533,6 @@ export function MockBuilderClient({
                   : "Share & publish"}
               </h3>
 
-              {!isReadOnly && visibleQuestions.length > 0 && (
-                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4e2e1] bg-[#fbf9f8] p-3">
-                  <span className="text-sm font-semibold text-[#474551]">
-                    {isMultiSubject
-                      ? `Assign marks in ${activeSubjectSection?.name || "this subject"}:`
-                      : "Assign marks:"}
-                  </span>
-                  <select
-                    value={bulkMarkMode}
-                    onChange={(e) =>
-                      setBulkMarkMode(
-                        e.target.value as "per_question" | "total",
-                      )
-                    }
-                    className="rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]"
-                  >
-                    <option value="per_question">Per question</option>
-                    <option value="total">Divide total marks</option>
-                  </select>
-                  <input
-                    type="number"
-                    value={bulkMarks}
-                    onChange={(e) => setBulkMarks(e.target.value)}
-                    placeholder={
-                      bulkMarkMode === "total" ? "e.g. 100" : "e.g. 2"
-                    }
-                    className="w-24 rounded border border-[#c8c5d2] px-2 py-1.5 text-sm outline-none focus:border-[#2e2877]"
-                  />
-                  <button
-                    type="button"
-                    onClick={applyBulkMarks}
-                    className="rounded bg-[#e4e2e1] px-3 py-1.5 text-sm font-semibold text-[#1b1c1c] hover:bg-[#d9d3ef]"
-                  >
-                    Apply to {visibleQuestions.length}
-                    {isMultiSubject
-                      ? ` in ${activeSubjectSection?.name || "this subject"}`
-                      : ""}
-                  </button>
-                </div>
-              )}
               <div className="space-y-6">
                 {builderStep === "setup" && (
                   <>
