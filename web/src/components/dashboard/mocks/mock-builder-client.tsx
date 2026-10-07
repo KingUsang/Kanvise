@@ -169,9 +169,9 @@ export function MockBuilderClient({
   const [courseId, setCourseId] = useState("");
   const [programmeFilterId, setProgrammeFilterId] = useState("");
   const [audienceScope, setAudienceScope] =
-    useState<CentreAudienceScope>("course");
+    useState<CentreAudienceScope>("direct_link");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("fixed");
-  const [accessMode, setAccessMode] = useState<AccessMode>("");
+  const [accessMode, setAccessMode] = useState<AccessMode>("direct");
   const [builderStep, setBuilderStep] = useState<BuilderStep>("setup");
   const [visitedBuilderSteps, setVisitedBuilderSteps] = useState<
     Set<BuilderStep>
@@ -855,7 +855,10 @@ export function MockBuilderClient({
     const sectionsByName = new Map(
       sections.map((section) => [subjectKey(section.name), section]),
     );
-    const candidateCourses = coursesForSelectedProgramme;
+    // General mocks own their sections. A document heading must never be
+    // silently coupled to a centre course. Class-created assessments are the
+    // one explicit exception: their subject rows were chosen from the class.
+    const candidateCourses = classContext ? coursesForSelectedProgramme : [];
 
     const sectionFor = (rawSubject: unknown) => {
       const name = typeof rawSubject === "string" ? rawSubject.trim() : "";
@@ -894,14 +897,9 @@ export function MockBuilderClient({
             "Kanvise could not identify this question’s subject. Assign it in Needs review before publishing.",
           );
         }
-        if (
-          deliveryMode === "subject_combination" &&
-          centreAccessEnabled &&
-          section &&
-          !section.courseId
-        ) {
+        if (classContext && section && !section.courseId) {
           reviewReasons.push(
-            `Map “${section.name}” to one of your centre subjects before publishing.`,
+            `“${section.name}” is not one of this class’s subjects. Assign it before publishing.`,
           );
         }
         return {
@@ -958,9 +956,11 @@ export function MockBuilderClient({
         question_type: "mcq",
         question_text: "",
         marks: 2,
-        course_id:
-          deliveryMode === "subject_combination"
-            ? activeSubjectSection?.courseId || null
+          course_id:
+            deliveryMode === "subject_combination"
+              ? classContext
+                ? activeSubjectSection?.courseId || null
+                : null
             : courseId || null,
         section_id:
           deliveryMode === "subject_combination"
@@ -995,9 +995,11 @@ export function MockBuilderClient({
         question_type: "theory",
         question_text: "",
         marks: 10,
-        course_id:
-          deliveryMode === "subject_combination"
-            ? activeSubjectSection?.courseId || null
+          course_id:
+            deliveryMode === "subject_combination"
+              ? classContext
+                ? activeSubjectSection?.courseId || null
+                : null
             : courseId || null,
         section_id:
           deliveryMode === "subject_combination"
@@ -1013,6 +1015,26 @@ export function MockBuilderClient({
     ]);
     setBuilderActionMessage("Theory question added and ready to edit.");
     setLastAddedQuestionId(id);
+  };
+
+  const addManualSubject = () => {
+    const name = newSubjectName.trim();
+    if (!name) return;
+    if (subjectSections.some((section) => subjectKey(section.name) === subjectKey(name))) {
+      toast.error("That subject has already been added");
+      return;
+    }
+    const section = {
+      id: `section-${Date.now()}`,
+      name,
+      courseId: null,
+    };
+    setSubjectSections((current) => [...current, section]);
+    setActiveSubjectCourseId(section.id);
+    setNewSubjectName("");
+    setBuilderActionMessage(
+      `${name} added. ${subjectSections.length + 1} subjects in this mock.`,
+    );
   };
 
   const toggleBankQuestion = (
@@ -1051,9 +1073,14 @@ export function MockBuilderClient({
         questionType: question.question_type,
         marks: question.current_version.marks,
         bankName,
-        courseId: centreAccessEnabled
-          ? targetSection?.courseId || question.course_id || null
-          : null,
+        courseId:
+          deliveryMode === "subject_combination"
+            ? classContext
+              ? targetSection?.courseId || null
+              : null
+            : centreAccessEnabled
+              ? question.course_id || null
+              : null,
         sectionId: targetSectionId,
         options: (question.current_version.options || []).map((option) => ({
           id: option.id,
@@ -1162,7 +1189,9 @@ export function MockBuilderClient({
             grading_rubric: row["Grading Rubric"] || "",
             course_id:
               deliveryMode === "subject_combination"
-                ? importSection?.courseId || null
+                ? classContext
+                  ? importSection?.courseId || null
+                  : null
                 : courseId || null,
             section_id:
               deliveryMode === "subject_combination"
@@ -1521,17 +1550,6 @@ export function MockBuilderClient({
       );
       return;
     }
-    if (
-      deliveryMode === "subject_combination" &&
-      (accessMode === "centre" || accessMode === "both") &&
-      subjectSections.some((section) => !section.courseId)
-    ) {
-      toast.error(
-        "Match every subject to a centre subject, or choose direct-link access only",
-      );
-      return;
-    }
-
     if (shouldPublish) {
       const review = getPrePublishReview();
       if (review.errors.length) {
@@ -2144,7 +2162,7 @@ export function MockBuilderClient({
           description={
             classContext
               ? "It is only for students in this class."
-              : "Choose how the mock should work, then add or reuse questions for your students."
+              : "Build a standalone mock, then share it with its link."
           }
           actions={
             <>
@@ -2191,7 +2209,7 @@ export function MockBuilderClient({
                   </p>
                 </div>
                 {!isReadOnly &&
-                  (centreAccessEnabled ? (
+                  (classContext && centreAccessEnabled ? (
                     <select
                       value=""
                       onChange={(event) => {
@@ -2225,7 +2243,9 @@ export function MockBuilderClient({
                           setNewSubjectName(event.target.value)
                         }
                         onKeyDown={(event) => {
-                          if (event.key === "Enter") event.preventDefault();
+                          if (event.key !== "Enter") return;
+                          event.preventDefault();
+                          addManualSubject();
                         }}
                         placeholder="Add subject"
                         className="min-w-0 rounded-lg border border-[#c8c5d2] px-3 text-sm"
@@ -2233,20 +2253,7 @@ export function MockBuilderClient({
                       <button
                         type="button"
                         disabled={!newSubjectName.trim()}
-                        onClick={() => {
-                          const name = newSubjectName.trim();
-                          const section = {
-                            id: `section-${Date.now()}`,
-                            name,
-                            courseId: null,
-                          };
-                          setSubjectSections((current) => [
-                            ...current,
-                            section,
-                          ]);
-                          setActiveSubjectCourseId(section.id);
-                          setNewSubjectName("");
-                        }}
+                        onClick={addManualSubject}
                         className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                       >
                         Add
@@ -3149,20 +3156,7 @@ export function MockBuilderClient({
                     <button
                       type="button"
                       disabled={isReadOnly || !newSubjectName.trim()}
-                      onClick={() => {
-                        const name = newSubjectName.trim();
-                        const section = {
-                          id: `section-${Date.now()}`,
-                          name,
-                          courseId: null,
-                        };
-                        setSubjectSections((current) => [...current, section]);
-                        setActiveSubjectCourseId(section.id);
-                        setNewSubjectName("");
-                        setBuilderActionMessage(
-                          `${name} added. ${subjectSections.length + 1} subjects in this mock.`,
-                        );
-                      }}
+                      onClick={addManualSubject}
                       className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                     >
                       Add
@@ -3681,100 +3675,21 @@ export function MockBuilderClient({
                         </p>
                         <p className="mt-1 text-xs leading-5 text-[#716c76]">
                           This quiz is only for students in this class. Its
-                          subject rows are fixed to this class; you can map
-                          imported questions during review.
+                          subject rows are fixed to this class; review imported
+                          questions under the appropriate subject.
                         </p>
                       </section>
                     ) : (
                       <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
-                        <h4 className="text-sm font-semibold text-[#1b1c1c]">
-                          Share this mock with
-                        </h4>
-                        <p className="mt-1 text-xs leading-5 text-[#716c76]">
-                          Turn on the channels you want to use. This determines
-                          the setup fields that follow.
+                        <p className="text-sm font-bold text-[#1b1c1c]">
+                          Standalone mock
                         </p>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <label
-                            className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "centre" ? "border-[#2e2877] ring-1 ring-[#2e2877]" : "border-[#ded8d3]"}`}
-                          >
-                            <input
-                              type="radio"
-                              name="audience"
-                              checked={accessMode === "centre"}
-                              disabled={isReadOnly}
-                              onChange={() => changeAccessMode("centre")}
-                              className="mt-0.5 rounded-full text-[#2e2877] focus:ring-[#2e2877]"
-                            />
-                            <span>
-                              <strong className="block text-sm text-[#1b1c1c]">
-                                Students enrolled in your programme on Kanvise
-                              </strong>
-                              <span className="mt-1 block text-xs leading-5 text-[#716c76]">
-                                Assign it to students in a programme and its
-                                subject(s).
-                              </span>
-                            </span>
-                          </label>
-                          <label
-                            className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 ${accessMode === "direct" ? "border-[#994704] ring-1 ring-[#994704]" : "border-[#ded8d3]"}`}
-                          >
-                            <input
-                              type="radio"
-                              name="audience"
-                              checked={accessMode === "direct"}
-                              disabled={isReadOnly}
-                              onChange={() => changeAccessMode("direct")}
-                              className="mt-0.5 rounded-full text-[#994704] focus:ring-[#994704]"
-                            />
-                            <span>
-                              <strong className="block text-sm text-[#1b1c1c]">
-                                Anyone with the link
-                              </strong>
-                              <span className="mt-1 block text-xs leading-5 text-[#716c76]">
-                                Share outside your centre, free or paid.
-                              </span>
-                            </span>
-                          </label>
-                        </div>
-
-                        {centreAccessEnabled && programmeOptions.length > 0 && (
-                          <label className="mt-4 block text-xs font-semibold text-[#474551]">
-                            Programme
-                            <select
-                              value={programmeFilterId}
-                              disabled={isReadOnly}
-                              onChange={(event) => {
-                                const nextProgrammeId = event.target.value;
-                                setProgrammeFilterId(nextProgrammeId);
-                                if (
-                                  courseId &&
-                                  nextProgrammeId &&
-                                  courses.find(
-                                    (course) => course.id === courseId,
-                                  )?.programme_id !== nextProgrammeId
-                                ) {
-                                  setCourseId("");
-                                  setSingleSubjectName("");
-                                }
-                              }}
-                              className="mt-1 block w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm font-normal"
-                            >
-                              <option value="">Choose a programme</option>
-                              {programmeOptions.map((programme) => (
-                                <option key={programme.id} value={programme.id}>
-                                  {programme.name}
-                                </option>
-                              ))}
-                            </select>
-                            <span className="mt-1 block font-normal leading-5 text-[#787582]">
-                              Then choose the subject or subjects for this mock.
-                            </span>
-                          </label>
-                        )}
-
-                        {shareLinkEnabled && (
-                          <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
+                        <p className="mt-1 text-xs leading-5 text-[#716c76]">
+                          This builder creates a shareable mock. To assess a
+                          specific class or programme, create the assessment from
+                          that class instead.
+                        </p>
+                        <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
                             <p className="text-sm font-semibold text-[#1b1c1c]">
                               Share link
                             </p>
@@ -3833,56 +3748,28 @@ export function MockBuilderClient({
                                 </span>
                               </label>
                             </div>
-                          </div>
-                        )}
+                        </div>
                       </section>
                     )}
 
-                    {deliveryMode === "fixed" &&
-                      centreAccessEnabled &&
-                      !classContext && (
-                        <div>
-                          <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">
-                            Subject
-                          </label>
-                          <select
-                            value={courseId}
-                            disabled={isReadOnly}
-                            onChange={(e) => {
-                              setCourseId(e.target.value);
-                              setSingleSubjectName(
-                                courses.find(
-                                  (course) => course.id === e.target.value,
-                                )?.name || "",
-                              );
-                            }}
-                            className="w-full bg-white border border-[#c8c5d2] focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all appearance-none disabled:bg-[#f5f3f2]"
-                            style={{
-                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23787582' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                              backgroundPosition: "right 0.5rem center",
-                              backgroundRepeat: "no-repeat",
-                              backgroundSize: "1.5em 1.5em",
-                            }}
-                          >
-                            <option value="">
-                              {centreAccessEnabled
-                                ? "Choose a programme subject"
-                                : "Use a custom subject"}
-                            </option>
-                            {coursesForSelectedProgramme.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {mockCourseLabel(c)}
-                              </option>
-                            ))}
-                          </select>
-                          {coursesForSelectedProgramme.length === 0 && (
-                            <p className="mt-2 text-xs leading-5 text-[#994704]">
-                              No Subjects are available. Ask the centre admin to
-                              create a Subject or assign one to you.
-                            </p>
-                          )}
-                        </div>
-                      )}
+                    {deliveryMode === "fixed" && !classContext && (
+                      <div>
+                        <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">
+                          Subject{" "}
+                          <span className="font-normal text-[#787582]">
+                            (optional)
+                          </span>
+                        </label>
+                        <input
+                          type="text"
+                          value={singleSubjectName}
+                          disabled={isReadOnly}
+                          onChange={(e) => setSingleSubjectName(e.target.value)}
+                          placeholder="e.g. Economics"
+                          className="w-full rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[15px] text-[#1b1c1c] outline-none transition-all focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]"
+                        />
+                      </div>
+                    )}
                   </>
                 )}
 
