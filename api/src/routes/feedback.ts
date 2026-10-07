@@ -6,7 +6,7 @@ import { jwtVerificationMiddleware, profileResolutionMiddleware } from '../middl
 import { getEmailConfig } from '../emails/config'
 import { sendEmail } from '../emails/provider-router'
 import type { AppVariables } from '../types'
-import { buildPrivateFileKey, uploadPrivateObject, validatePrivateUploadMetadata } from '../storage/r2'
+import { buildPrivateFileKey, createPresignedDownload, uploadPrivateObject, validatePrivateUploadMetadata } from '../storage/r2'
 
 export const feedbackRouter = new Hono<{ Variables: AppVariables }>()
 const recent = new Map<string, number>()
@@ -20,7 +20,8 @@ async function sendReceipt(report: any, user: any) {
   const config = getEmailConfig()
   const ref = `KAN-${report.id.slice(0, 8).toUpperCase()}`
   const isBug = report.kind === 'bug'
-  await sendEmail({ from: config.from, to: [user.email], replyTo: supportEmail(), subject: `${isBug ? 'We received your report' : 'We received your suggestion'} (${ref})`, html: `<p>Hello ${user.first_name || 'there'},</p><p>${isBug ? 'We received your report and are looking into it.' : 'Thanks for sharing your idea. Our team will review it.'}</p><p>Reference: <strong>${ref}</strong></p>`, text: `${isBug ? 'We received your report and are looking into it.' : 'Thanks for sharing your idea.'} Reference: ${ref}` }, { event: 'feedback_receipt', idempotencyKey: `feedback-receipt:${report.id}` })
+  const message = isBug ? 'We’ve received your report and will get back to you shortly.' : 'We’ve received your suggestion and will get back to you shortly.'
+  await sendEmail({ from: config.from, to: [user.email], replyTo: supportEmail(), subject: `${isBug ? 'We received your report' : 'We received your suggestion'} (${ref})`, html: `<p>Hello ${user.first_name || 'there'},</p><p>${message}</p><p>Reference: <strong>${ref}</strong></p>`, text: `${message} Reference: ${ref}` }, { event: 'feedback_receipt', idempotencyKey: `feedback-receipt:${report.id}` })
 }
 
 feedbackRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware)
@@ -35,6 +36,7 @@ feedbackRouter.post('/', async c => {
   const now = Date.now(); if ((recent.get(user.id) || 0) > now - 60_000) return c.json({ error: 'Please wait a moment before sending another report.', code: 'RATE_LIMITED' }, 429); recent.set(user.id, now)
   const { data: report, error } = await (supabase as any).from('feedback_reports').insert({ reporter_id: user.id, school_id: user.school_id || null, kind, severity, description, attempted_action: attemptedAction || null, page_url: typeof body.page_url === 'string' ? body.page_url.slice(0, 2000) : null, user_agent: c.req.header('user-agent')?.slice(0, 512) || null, sentry_event_id: typeof body.sentry_event_id === 'string' ? body.sentry_event_id.slice(0, 128) : null }).select().single()
   if (error || !report) { console.error('feedback create failed', error); return c.json({ error: 'We could not send your report. Please try again.', code: 'FEEDBACK_CREATE_FAILED' }, 500) }
+  let screenshotKey: string | null = null
   if (body?.screenshot) {
     try {
       const shot = body.screenshot
@@ -42,14 +44,23 @@ feedbackRouter.post('/', async c => {
       const buffer = Buffer.from(shot.data, 'base64')
       const metadata = validatePrivateUploadMetadata({ entityType: 'feedback_screenshot', fileName: shot.name, contentType: shot.content_type, fileSizeBytes: buffer.length })
       const storageScope = user.school_id || `support-${user.id}`
-      const screenshotKey = buildPrivateFileKey(storageScope, 'feedback_screenshot', report.id, metadata.extension)
+      screenshotKey = buildPrivateFileKey(storageScope, 'feedback_screenshot', report.id, metadata.extension)
       await uploadPrivateObject({ fileKey: screenshotKey, schoolId: storageScope, body: buffer, contentType: shot.content_type })
       await (supabase as any).from('feedback_reports').update({ screenshot_key: screenshotKey }).eq('id', report.id)
     } catch { return c.json({ error: 'We could not attach that screenshot. Please send the report again without it.', code: 'SCREENSHOT_FAILED' }, 400) }
   }
   Sentry.captureMessage('user_feedback_submitted', { level: 'info', tags: { feedback_id: report.id, kind, severity: severity || 'none', school_id: user.school_id || 'none' } })
   const origin = new URL(c.req.url).origin
-  try { if (user.email) await sendReceipt(report, user); await sendEmail({ from: getEmailConfig().from, to: [supportEmail()], replyTo: user.email || undefined, subject: `[${kind === 'bug' ? 'BUG' : 'IDEA'}] ${severity || 'new'} — ${user.first_name || 'User'}`, html: `<p><strong>Reference:</strong> KAN-${report.id.slice(0, 8).toUpperCase()}</p><p>${description.replace(/</g, '&lt;')}</p><p><a href="${resolveUrl(origin, report.id)}">Mark report resolved</a></p>`, text: `Reference: KAN-${report.id.slice(0, 8).toUpperCase()}\n\n${description}\n\nResolve: ${resolveUrl(origin, report.id)}` }, { event: 'feedback_support', idempotencyKey: `feedback-support:${report.id}` }); await (supabase as any).from('feedback_reports').update({ receipt_sent_at: new Date().toISOString() }).eq('id', report.id) } catch (emailError) { Sentry.captureException(emailError, { tags: { feedback_id: report.id, operation: 'feedback_email' } }) }
+  try {
+    if (user.email) await sendReceipt(report, user)
+    const screenshotUrl = screenshotKey
+      ? await createPresignedDownload(screenshotKey, user.school_id || `support-${user.id}`, 60 * 60 * 24 * 7)
+      : null
+    const screenshotHtml = screenshotUrl ? `<p><strong>Screenshot:</strong> <a href="${screenshotUrl}">View full image</a></p><p><a href="${screenshotUrl}"><img src="${screenshotUrl}" alt="Reporter screenshot" style="max-width:100%;height:auto;border:1px solid #ddd" /></a></p>` : ''
+    const screenshotText = screenshotUrl ? `\n\nScreenshot: ${screenshotUrl}` : ''
+    await sendEmail({ from: getEmailConfig().from, to: [supportEmail()], replyTo: user.email || undefined, subject: `[${kind === 'bug' ? 'BUG' : 'IDEA'}] ${severity || 'new'} — ${user.first_name || 'User'}`, html: `<p><strong>Reference:</strong> KAN-${report.id.slice(0, 8).toUpperCase()}</p><p>${description.replace(/</g, '&lt;')}</p>${screenshotHtml}<p><a href="${resolveUrl(origin, report.id)}">Mark report resolved</a></p>`, text: `Reference: KAN-${report.id.slice(0, 8).toUpperCase()}\n\n${description}${screenshotText}\n\nResolve: ${resolveUrl(origin, report.id)}` }, { event: 'feedback_support', idempotencyKey: `feedback-support:${report.id}` })
+    await (supabase as any).from('feedback_reports').update({ receipt_sent_at: new Date().toISOString() }).eq('id', report.id)
+  } catch (emailError) { Sentry.captureException(emailError, { tags: { feedback_id: report.id, operation: 'feedback_email' } }) }
   return c.json({ data: { id: report.id, reference: `KAN-${report.id.slice(0, 8).toUpperCase()}` } }, 201)
 })
 
