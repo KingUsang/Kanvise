@@ -115,9 +115,6 @@ export function Sidebar({ capabilities }: SidebarProps) {
       
       <div className="p-4 border-t border-white/10">
         {!capabilities.setupRequired && <FeedbackDialog />}
-        <div className="text-xs text-[#9893e8] text-center">
-          Kanvise OS v1.0
-        </div>
       </div>
     </aside>
     </>
