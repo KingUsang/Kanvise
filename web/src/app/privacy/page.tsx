@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import Link from "next/link";
+import { MarkdownDocument } from "@/components/legal/markdown-document";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Kanvise",
@@ -23,9 +24,7 @@ export default function PrivacyPolicyPage() {
         <Link href="/" className="text-sm font-semibold text-[#2e2877] hover:underline">
           ← Back to Kanvise
         </Link>
-        <pre className="mt-8 whitespace-pre-wrap font-sans text-sm leading-7 text-[#474551] sm:text-[15px]">
-          {policy}
-        </pre>
+        <div className="mt-8"><MarkdownDocument source={policy} /></div>
       </article>
     </main>
   );
