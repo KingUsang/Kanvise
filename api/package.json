@@ -7,9 +7,9 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node --import tsx --import ./src/instrument.ts --watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node --import ./dist/instrument.js dist/index.js",
     "test": "vitest run src",
     "email:smoke": "npm run build && node dist/scripts/email-smoke.js",
     "push:vapid": "web-push generate-vapid-keys --json"
@@ -21,6 +21,8 @@
     "@napi-rs/canvas": "^1.0.2",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
+    "@sentry/hono": "^11.4.0",
+    "@sentry/node": "^11.4.0",
     "@supabase/supabase-js": "^2.47.11",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

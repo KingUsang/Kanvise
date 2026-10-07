@@ -2,9 +2,10 @@
 
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 
 export default function StudentPortalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error('student_portal.render_failed', error) }, [error])
+  useEffect(() => { Sentry.captureException(error) }, [error])
 
   return <main className="mx-auto max-w-2xl px-4 py-14 sm:px-6 lg:py-20">
     <section className="rounded-2xl border border-[#ead8d0] bg-white p-7 text-center sm:p-10">

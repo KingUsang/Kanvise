@@ -2,8 +2,11 @@
 
 import Link from 'next/link'
 import { AlertCircle, RefreshCw } from 'lucide-react'
+import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 
-export default function MockLinkError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function MockLinkError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => { Sentry.captureException(error) }, [error])
   return <main className="min-h-screen bg-[#f8f7f5] px-4 py-12 sm:px-6 sm:py-20">
     <section className="mx-auto max-w-xl rounded-3xl border border-[#ead8d0] bg-white p-7 text-center sm:p-10">
       <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fff1eb] text-[#994704]"><AlertCircle aria-hidden="true" /></span>
