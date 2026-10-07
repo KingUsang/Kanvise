@@ -946,6 +946,10 @@ export function MockBuilderClient({
   };
 
   const handleAddMCQ = () => {
+    if (deliveryMode === "subject_combination" && !activeSubjectSection) {
+      toast.error("Add or choose a subject before adding questions");
+      return;
+    }
     const id = `q${Date.now()}`;
     setQuestions((current) => [
       ...current,
@@ -979,6 +983,10 @@ export function MockBuilderClient({
   };
 
   const handleAddTheory = () => {
+    if (deliveryMode === "subject_combination" && !activeSubjectSection) {
+      toast.error("Add or choose a subject before adding questions");
+      return;
+    }
     const id = `q${Date.now()}`;
     setQuestions((current) => [
       ...current,
@@ -1817,6 +1825,10 @@ export function MockBuilderClient({
   const unassignedQuestionCount = questions.filter(
     (question) => !question.section_id,
   ).length;
+  const hasActiveQuestionSubject =
+    !isMultiSubject || Boolean(activeSubjectSection);
+  const hasQuestionsToReview =
+    questions.length + selectedBankQuestions.length > 0;
   const workflowSteps: Array<{ id: BuilderStep; label: string; icon: string }> =
     [
       { id: "setup", label: "Upload", icon: "upload_file" },
@@ -2337,6 +2349,34 @@ export function MockBuilderClient({
               </div>
             )}
             {!isReadOnly &&
+              isMultiSubject &&
+              !activeSubjectSection &&
+              !showImportPanel &&
+              !showBankPicker && (
+                <div className="rounded-lg border border-dashed border-[#b8b0f2] bg-[#faf9ff] px-6 py-10 text-center shadow-sm">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#2e2877] shadow-sm">
+                    <span className="material-symbols-outlined text-[28px]">
+                      library_add
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-xl font-bold text-[#180d62]">
+                    Add your first subject
+                  </h3>
+                  <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#474551]">
+                    Choose <strong>Add subject</strong> above first. Its tab
+                    will keep the questions and marks for that subject together.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportPanel(true)}
+                    className="mt-5 text-sm font-semibold text-[#2e2877] underline-offset-4 hover:underline"
+                  >
+                    Or import a complete paper
+                  </button>
+                </div>
+              )}
+            {!isReadOnly &&
+              hasActiveQuestionSubject &&
               visibleQuestions.length === 0 &&
               visibleBankQuestions.length === 0 &&
               !showImportPanel &&
@@ -3360,6 +3400,7 @@ export function MockBuilderClient({
                   <p className="mt-2 max-w-xl text-sm leading-6 text-[#716c76]">
                     Upload one PDF or DOCX and Kanvise will extract the
                     questions, detect subjects and prepare an editable draft.
+                    No file? You can continue and build it manually.
                   </p>
                 </div>
                 <span className="material-symbols-outlined hidden text-4xl text-[#5146c7] sm:block">
@@ -4201,7 +4242,13 @@ export function MockBuilderClient({
             }
             className="min-w-28 rounded-lg bg-[#2e2877] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {builderStep === "settings" ? "Review & publish" : "Continue"}
+            {builderStep === "settings"
+              ? "Review & publish"
+              : builderStep === "setup" && !hasQuestionsToReview
+                ? isMultiSubject
+                  ? "Skip upload & add subjects"
+                  : "Skip upload & add questions"
+                : "Continue"}
           </button>
         </div>
       )}
