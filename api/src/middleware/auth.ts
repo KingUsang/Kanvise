@@ -1,4 +1,5 @@
 import { Context, Next } from 'hono'
+import * as Sentry from '@sentry/node'
 import { supabase } from '../lib/supabase'
 
 import { decode, verifyWithJwks } from 'hono/jwt'
@@ -7,6 +8,12 @@ export type Variables = {
   user: any;
   jwt_payload: any;
 };
+
+function setSentryUserContext(user: { id?: string; kanvise_user_id?: string; school_id?: string | null }) {
+  const userId = user.kanvise_user_id ?? user.id
+  if (userId) Sentry.setUser({ id: userId })
+  if (user.school_id) Sentry.setTag('school_id', user.school_id)
+}
 
 export function resolveTrustedProfileClaims(jwtPayload: any) {
   const appMetadata = jwtPayload?.app_metadata || {}
@@ -110,6 +117,7 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
       if (currentProfile?.school_id) resolvedClaims = { ...trustedClaims, school_id: currentProfile.school_id }
     }
     c.set('user', resolvedClaims)
+    setSentryUserContext(resolvedClaims)
     return await next()
   }
   
@@ -133,7 +141,7 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
     return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
   }
   
-  c.set('user', {
+  const resolvedUser = {
     id: profile.id,
     supabase_auth_id: supabaseAuthId,
     role: profile.role,
@@ -142,7 +150,9 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
     first_name: profile.first_name,
     last_name: profile.last_name,
     email: profile.email || jwtPayload.email || null,
-  })
+  }
+  c.set('user', resolvedUser)
+  setSentryUserContext(resolvedUser)
 
   // Existing users may have been issued tokens before trusted claims moved to
   // app_metadata. Backfill from the canonical profile without blocking access

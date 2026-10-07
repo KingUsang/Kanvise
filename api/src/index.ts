@@ -2,6 +2,11 @@ import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+// TypeScript's legacy Node resolution cannot resolve the SDK's runtime-specific
+// export, while Node resolves it correctly at runtime.
+const { sentry } = require("@sentry/hono/node") as {
+  sentry: (app: Hono) => any;
+};
 import { supabase } from "./lib/supabase";
 import { validateProductionPaymentSecrets } from "./config/payment-secrets";
 import { resolveCorsOrigin } from "./config/cors";
@@ -14,6 +19,8 @@ validateProductionEnvironment();
 const app = new Hono();
 
 // Middleware
+// Sentry starts before route middleware so it captures unhandled 5xx responses.
+app.use("/*", sentry(app));
 app.use("/*", cors({
   origin: (origin) => resolveCorsOrigin(origin),
   credentials: true,
