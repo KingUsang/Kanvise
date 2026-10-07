@@ -3,6 +3,7 @@
 import { useId, useState } from 'react'
 import * as Sentry from '@sentry/nextjs'
 import { MessageCircle, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { getApiUrl } from '@/config/api'
 
@@ -21,7 +22,7 @@ export function FeedbackDialog() {
   const [attempted, setAttempted] = useState('')
   const [severity, setSeverity] = useState('major')
   const [screenshot, setScreenshot] = useState<Screenshot | null>(null)
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [state, setState] = useState<'idle' | 'sending' | 'error'>('idle')
 
   async function pick(file?: File) {
     if (!file) return
@@ -46,10 +47,14 @@ export function FeedbackDialog() {
         body: JSON.stringify({ kind, description, attempted_action: attempted, severity: kind === 'bug' ? severity : undefined, page_url: window.location.href, sentry_event_id: Sentry.lastEventId() || undefined, screenshot }),
       })
       if (!response.ok) throw new Error('Feedback submission failed')
-      setState('sent')
       setDescription('')
       setAttempted('')
       setScreenshot(null)
+      setState('idle')
+      setOpen(false)
+      toast.success(kind === 'bug' ? 'Report received' : 'Suggestion received', {
+        description: 'We’ve received it and will get back to you shortly.',
+      })
     } catch {
       setState('error')
     }
@@ -68,7 +73,6 @@ export function FeedbackDialog() {
           <label htmlFor={screenshotId} className="block text-sm font-semibold text-[#3d3843]">Screenshot <span className="font-normal text-[#716c76]">(optional, PNG, JPG or WebP; up to 5 MB)</span><input id={screenshotId} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void pick(event.target.files?.[0])} className="mt-1.5 block w-full rounded-lg border border-[#cfc9d2] bg-white px-3 py-2 text-sm text-[#514c58] file:mr-3 file:rounded-md file:border-0 file:bg-[#eeeafb] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[#2e2877]" /></label>
         </div>
         {screenshot && <p className="mt-2 text-xs text-[#514c58]">Attached: {screenshot.name}</p>}
-        {state === 'sent' && <p role="status" className="mt-4 rounded-lg bg-[#e8f5ea] px-3 py-2 text-sm text-[#176b35]">Received. We have sent you a confirmation email.</p>}
         {state === 'error' && <p role="alert" className="mt-4 rounded-lg bg-[#fff0ef] px-3 py-2 text-sm text-[#a6241d]">We could not send that report. Please try again.</p>}
         <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-[#514c58] hover:bg-[#f3f0f5]">Cancel</button><button disabled={state === 'sending'} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white hover:bg-[#211c60] disabled:cursor-not-allowed disabled:opacity-60">{state === 'sending' ? 'Sending…' : 'Send report'}</button></div>
       </form>
