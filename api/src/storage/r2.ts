@@ -16,6 +16,7 @@ export const PRIVATE_UPLOAD_TYPES = [
   'live_class_presentation',
   'live_class_recording',
   'live_class_transcript',
+  'feedback_screenshot',
 ] as const
 
 export type PrivateUploadType = typeof PRIVATE_UPLOAD_TYPES[number]
@@ -267,16 +268,16 @@ export function validatePrivateUploadMetadata(input: {
     return { extension, fileSizeBytes }
   }
   if (input.entityType === 'note') return validateMaterialMetadata(input)
-  if (input.entityType !== 'question_media') return validateDocumentMetadata(input)
+  if (input.entityType !== 'question_media' && input.entityType !== 'feedback_screenshot') return validateDocumentMetadata(input)
   const fileSizeBytes = Number(input.fileSizeBytes)
   if (!Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) {
     throw new StorageError('File size must be a positive integer', 'INVALID_FILE_SIZE')
   }
-  if (fileSizeBytes > MAX_QUESTION_IMAGE_SIZE) {
+  if (fileSizeBytes > (input.entityType === 'feedback_screenshot' ? 5 * 1024 * 1024 : MAX_QUESTION_IMAGE_SIZE)) {
     throw new StorageError('Question image exceeds 10MB limit', 'FILE_TOO_LARGE')
   }
   const extension = QUESTION_IMAGE_CONTENT_TYPES[input.contentType as keyof typeof QUESTION_IMAGE_CONTENT_TYPES]
-  if (!extension) throw new StorageError('Question media must be a JPG, PNG, or WebP image', 'INVALID_FILE_TYPE')
+  if (!extension) throw new StorageError('Screenshot must be a JPG, PNG, or WebP image', 'INVALID_FILE_TYPE')
   const suppliedExtension = input.fileName.split('.').pop()?.toLowerCase()
   const validExtensions = extension === 'jpg' ? ['jpg', 'jpeg'] : [extension]
   if (!suppliedExtension || !validExtensions.includes(suppliedExtension)) {
