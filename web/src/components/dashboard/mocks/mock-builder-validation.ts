@@ -43,20 +43,14 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
     if (audienceScope === "course" && !input.courseId) errors.push("Choose the subject this mock is for.");
   }
   if (totalQuestions === 0) errors.push("Add at least one question.");
-  // A section is required for every multi-subject question. A centre course is
-  // required only when the assessment is actually assigned through a centre;
-  // standalone/link mocks may have perfectly valid custom subjects.
+  // A section is required for every multi-subject question. Section names are
+  // authoring data, not a proxy for a centre course or enrolment audience.
   if (input.deliveryMode === "subject_combination" && input.questions.some((question) => !question.section_id)) {
     errors.push("Assign every question to a subject section.");
   }
   if (input.deliveryMode === "subject_combination" && input.selectedBankQuestions.some((question) => !question.sectionId)) {
     errors.push("Assign every question-bank item to a subject section.");
   }
-  if (input.deliveryMode === "subject_combination" && (input.accessMode === "centre" || input.accessMode === "both")
-    && input.questions.some((question) => !question.course_id)) {
-    errors.push("Map every subject section to a centre subject before publishing to enrolled students.");
-  }
-
   input.questions.forEach((question, index) => {
     const label = `Question ${index + 1}`;
     if (!question.question_text.trim() && !question.content_blocks?.length) errors.push(`${label} needs question text.`);
