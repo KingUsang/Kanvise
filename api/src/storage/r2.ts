@@ -277,7 +277,7 @@ export function validatePrivateUploadMetadata(input: {
     throw new StorageError('Question image exceeds 10MB limit', 'FILE_TOO_LARGE')
   }
   const extension = QUESTION_IMAGE_CONTENT_TYPES[input.contentType as keyof typeof QUESTION_IMAGE_CONTENT_TYPES]
-  if (!extension) throw new StorageError('Screenshot must be a JPG, PNG, or WebP image', 'INVALID_FILE_TYPE')
+  if (!extension) throw new StorageError(input.entityType === 'feedback_screenshot' ? 'Screenshot must be a JPG, PNG, or WebP image' : 'Question media must be a JPG, PNG, or WebP image', 'INVALID_FILE_TYPE')
   const suppliedExtension = input.fileName.split('.').pop()?.toLowerCase()
   const validExtensions = extension === 'jpg' ? ['jpg', 'jpeg'] : [extension]
   if (!suppliedExtension || !validExtensions.includes(suppliedExtension)) {
