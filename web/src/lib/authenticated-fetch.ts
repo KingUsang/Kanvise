@@ -33,10 +33,17 @@ export async function authenticatedFetch(
 ) {
   const suppliedToken = typeof accessTokenOrInit === 'string' ? accessTokenOrInit : undefined
   const init = typeof accessTokenOrInit === 'string' ? maybeInit : (accessTokenOrInit ?? {})
-  const request = (token: string) => fetch(input, {
-    ...init,
-    headers: { ...Object.fromEntries(new Headers(init.headers).entries()), Authorization: `Bearer ${token}` },
-  })
+  const request = (token: string) => {
+    // Normalise then replace the header. A few older callers supplied the
+    // server-rendered token themselves; leaving that lower-cased header in
+    // place alongside this one causes browsers to combine both values.
+    const headers = Object.fromEntries(new Headers(init.headers).entries())
+    delete headers.authorization
+    return fetch(input, {
+      ...init,
+      headers: { ...headers, Authorization: `Bearer ${token}` },
+    })
+  }
 
   const accessToken = suppliedToken ?? await getCurrentAccessToken(supabase)
   if (!accessToken) return new Response(null, { status: 401, statusText: 'Unauthenticated' })

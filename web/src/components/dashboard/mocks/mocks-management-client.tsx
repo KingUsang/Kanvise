@@ -198,7 +198,7 @@ export function MocksManagementClient({
       <DashboardPageHeader
         className="mb-8 border-b border-dashboard-outline pb-6"
         title="Assessments"
-        description="Create, share and review mocks — with or without a class."
+        description="Create, share and review standalone mocks. Create class assessments from Classes."
         actions={
           <Link
             href="/dashboard/mocks/builder"

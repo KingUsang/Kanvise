@@ -11,18 +11,27 @@ export type MockImportProgress = {
 export function MockImportProgressCard({ progress }: { progress: MockImportProgress }) {
   const isComplete = progress.phase === 'complete'
   const isError = progress.phase === 'error'
+  const status = progress.phase === 'reading'
+    ? { title: 'Preparing your file', detail: 'Kanvise is preparing your document for import.' }
+    : progress.phase === 'extracting'
+      ? { title: 'Uploading and reading your paper', detail: 'Your file is being sent securely, then Kanvise will extract the questions and subject headings.' }
+      : progress.phase === 'parsing'
+        ? { title: 'Organising your questions', detail: 'Kanvise is structuring questions, options and subject sections.' }
+        : progress.phase === 'validating'
+          ? { title: 'Checking the import', detail: 'Kanvise is preparing an editable draft for you to review.' }
+          : null
   return (
     <div className={`w-full rounded-xl border p-4 text-left ${isError ? 'border-red-200 bg-red-50' : isComplete ? 'border-[#b7dec6] bg-[#f2fbf5]' : 'border-[#d9d3ef] bg-[#faf9ff]'}`} role="status" aria-live="polite">
       <div className="flex items-start gap-3">
         <span className={`material-symbols-outlined mt-0.5 text-xl ${isError ? 'text-red-700' : isComplete ? 'text-[#166534]' : 'animate-spin text-[#2e2877]'}`}>{isError ? 'error' : isComplete ? 'check_circle' : 'progress_activity'}</span>
         <div className="min-w-0">
-          <p className="font-semibold text-[#1b1c1c]">{isComplete ? 'Questions ready to review' : isError ? 'Import stopped' : 'Reading your paper'}</p>
+          <p className="font-semibold text-[#1b1c1c]">{isComplete ? 'Questions ready to review' : isError ? 'Import stopped' : status?.title}</p>
           <p className="mt-0.5 truncate text-xs text-[#716c76]">{progress.fileName}</p>
           {isError
             ? <p className="mt-3 text-sm leading-5 text-red-700">{progress.message || 'Kanvise could not read this document. Your mock has not changed.'}</p>
             : isComplete
               ? <p className="mt-2 text-sm leading-5 text-[#166534]">Kanvise found editable questions. Review them before publishing.</p>
-              : <p className="mt-2 text-sm leading-5 text-[#474551]">Kanvise is reading question blocks and subject headings. This can take a little while for a full paper.</p>}
+              : <p className="mt-2 text-sm leading-5 text-[#474551]">{progress.message || status?.detail}</p>}
         </div>
       </div>
     </div>
