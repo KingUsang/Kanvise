@@ -131,7 +131,9 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
     mute_on_start: true,
     allow_screen_share: true,
     admin_only_webcams: false,
-    allow_view_other_webcams: true,
+    // Attendees should not see every participant's camera. PlugNmeet still
+    // lets moderators (the tutor and school admins) see all webcams.
+    allow_view_other_webcams: false,
     allow_view_other_users_list: true,
     enable_analytics: true,
     allow_virtual_bg: false,
@@ -141,16 +143,16 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
     recording_features: {
       is_allow: true,
       is_allow_cloud: true,
-      is_allow_local: false,
+      is_allow_local: true,
       // The single recorder worker is registered before this setting is
       // enabled in deployed environments, so every enrolled class records.
       enable_auto_cloud_recording: false,
       only_record_admin_webcams: false,
     },
     chat_features: { is_allow: true, is_allow_file_upload: false },
-    shared_note_pad_features: { is_allow: false },
+    shared_note_pad_features: { is_allow: true },
     whiteboard_features: { is_allow: true },
-    external_media_player_features: { is_allow: false },
+    external_media_player_features: { is_allow: true },
     external_broadcasting_features: { is_allow: false, is_allow_rtmp: false },
     waiting_room_features: { is_active: false },
     breakout_room_features: { is_allow: false },
