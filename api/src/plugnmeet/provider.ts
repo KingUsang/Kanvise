@@ -15,21 +15,25 @@ export async function createPlugNmeetRoom(input: { roomId: string; title: string
   return { provider: 'plugnmeet' as const, providerRoomId: input.roomId, serverUrl: plugNmeetClientUrl() }
 }
 
-export async function getPlugNmeetClientConfig(input: { roomId: string; userId: string; name: string; isHost: boolean; schoolId: string; accessMode?: string | null; profilePic?: string | null }) {
+export async function getPlugNmeetClientConfig(input: { roomId: string; userId: string; name: string; isHost: boolean; isModerator?: boolean; schoolId: string; accessMode?: string | null; profilePic?: string | null }) {
+  const isModerator = input.isModerator ?? input.isHost
   const tokenResult = await plugNmeet.getJoinToken({
     room_id: input.roomId,
     user_info: {
       name: input.name,
       user_id: input.userId,
-      is_admin: input.isHost,
+      // School admins who join a class are intentionally full PlugNmeet
+      // moderators, while isHost remains reserved for the assigned tutor in
+      // Kanvise's own UI and class-management rules.
+      is_admin: isModerator,
       is_hidden: false,
       client_type: 'WEB',
       user_metadata: {
         ...(input.profilePic ? { profile_pic: input.profilePic } : {}),
-        extra_data: { school_id: input.schoolId, access_profile: input.isHost ? 'tutor' : input.accessMode === 'anyone_with_link' ? 'guest' : 'enrolled' },
-        // The classroom allows screen sharing, but only the tutor can publish
-        // a screen. Students remain locked to prevent accidental broadcasts.
-        lock_settings: { lock_screen_sharing: !input.isHost, lock_chat_file_share: true },
+        extra_data: { school_id: input.schoolId, access_profile: input.isHost ? 'tutor' : isModerator ? 'admin' : input.accessMode === 'anyone_with_link' ? 'guest' : 'enrolled' },
+        // Students remain locked from publishing a screen; tutors and school
+        // admins are moderators and can use the classroom controls.
+        lock_settings: { lock_screen_sharing: !isModerator, lock_chat_file_share: true },
       },
     },
   })
