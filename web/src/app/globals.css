@@ -524,22 +524,22 @@ html {
 .landing-tool-drop-2 {
   --drop-start-x: 42%; --drop-start-y: -7%; --drop-start-rotate: 11deg;
   --drop-mid-x: 38%; --drop-mid-y: 9%; --drop-mid-rotate: -7deg;
-  animation-delay: 3.5s;
+  animation-delay: 1.2s;
 }
 .landing-tool-drop-3 {
   --drop-start-x: 85%; --drop-start-y: 4%; --drop-start-rotate: 16deg;
   --drop-mid-x: 67%; --drop-mid-y: 13%; --drop-mid-rotate: -8deg;
-  animation-delay: 7.8s;
+  animation-delay: 3.1s;
 }
 .landing-tool-drop-4 {
   --drop-start-x: 91%; --drop-start-y: 24%; --drop-start-rotate: 12deg;
   --drop-mid-x: 70%; --drop-mid-y: 23%; --drop-mid-rotate: -10deg;
-  animation-delay: 11s;
+  animation-delay: 4s;
 }
 .landing-tool-drop-5 {
   --drop-start-x: 2%; --drop-start-y: 23%; --drop-start-rotate: -17deg;
   --drop-mid-x: 26%; --drop-mid-y: 22%; --drop-mid-rotate: 9deg;
-  animation-delay: 14.5s;
+  animation-delay: 6.4s;
 }
 .landing-pulse-glow {
   animation: landing-pulse-glow 9s ease-in-out infinite;
