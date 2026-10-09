@@ -1043,18 +1043,31 @@ export default function ModernLanding() {
           </div>
           <div
             data-landing-reveal
-            className="landing-reveal landing-reveal-delay-1 relative mx-auto h-[430px] w-full max-w-[700px] sm:h-[570px] lg:h-[430px]"
+            className="landing-reveal landing-reveal-delay-1 relative mx-auto h-[270px] w-full max-w-[680px] sm:h-[400px] lg:h-[430px]"
           >
-            <div className="landing-pulse-glow absolute inset-[8%_2%_12%] rounded-[42%] bg-[#C2B59B]/35 blur-3xl" />
-            <div className="landing-tutor-visual absolute inset-x-[2%] bottom-[4%] top-[4%] z-10 overflow-hidden rounded-[2rem] border border-[#C2B59B]/60 bg-[#FBF9F8] shadow-[0_24px_70px_rgba(46,40,119,.18)]">
+            <div className="landing-pulse-glow absolute inset-[12%_6%_8%] rounded-[42%] bg-[#C2B59B]/35 blur-3xl" />
+            <div className="landing-tutor-visual absolute inset-0 z-10 overflow-hidden rounded-[1.5rem] bg-[#FBF9F8] sm:rounded-[2rem]">
               <Image
                 priority
                 src="/landing/kanvise-disconnected-tools-carton-v1.png"
                 alt="Disconnected teaching tools moving into one organised Kanvise workspace"
                 fill
-                className="object-cover"
+                className="object-cover object-center"
                 sizes="(max-width: 1024px) 85vw, 48vw"
               />
+            </div>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[1.5rem] sm:rounded-[2rem]">
+              {tools.slice(0, 5).map((tool, index) => {
+                const Icon = tool.icon;
+                return (
+                  <span
+                    key={tool.name}
+                    className={`landing-tool-drop landing-tool-drop-${index + 1} grid h-9 w-9 place-items-center rounded-lg border border-white/80 bg-white/95 shadow-[0_8px_20px_rgba(46,40,119,.22)] sm:h-11 sm:w-11 sm:rounded-xl`}
+                  >
+                    <Icon size={20} />
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>
