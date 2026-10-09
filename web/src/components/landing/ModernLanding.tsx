@@ -1049,7 +1049,7 @@ export default function ModernLanding() {
             <div className="landing-tutor-visual absolute inset-0 z-10 overflow-hidden rounded-[1.5rem] bg-[#FBF9F8] sm:rounded-[2rem]">
               <Image
                 priority
-                src="/landing/kanvise-empty-carton-v1.png"
+                src="/landing/kanvise-empty-carton-orange-v2.png"
                 alt="Disconnected teaching tools moving into one organised Kanvise workspace"
                 fill
                 className="object-contain object-center"
