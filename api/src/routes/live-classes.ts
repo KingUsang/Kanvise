@@ -20,10 +20,23 @@ import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
 function statusActionMessage(status: string, action: 'update' | 'cancel') {
+  if (status === 'starting') return `This live class is being prepared and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
+  if (status === 'ready') return `This live classroom is ready for its tutor and cannot be ${action === 'update' ? 'edited' : 'cancelled'}. End it from the live classroom instead.`
   if (status === 'live') return `This live class has already started and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.${action === 'cancel' ? ' End it from the live classroom instead.' : ''}`
+  if (status === 'ending') return `This live class is ending and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
   if (status === 'completed') return `This live class has already ended and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
+  if (status === 'interrupted') return `This live class could not be verified after it was started and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
   if (status === 'cancelled') return `This live class has already been cancelled and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
-  return `Only scheduled live classes can be ${action === 'update' ? 'edited' : 'cancelled'}.`
+  return `This live class is not in a state where it can be ${action === 'update' ? 'edited' : 'cancelled'}. Refresh the page to see its latest status.`
+}
+
+// Keep legacy dashboard clients safe while the API holds the more precise
+// provider lifecycle internally. A prepared room is not advertised as live;
+// an interrupted/ending room is never offered as joinable.
+function presentationStatus(status: string) {
+  if (status === 'starting' || status === 'ready') return 'scheduled'
+  if (status === 'ending' || status === 'interrupted') return 'completed'
+  return status
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -56,7 +69,7 @@ async function requireClassroom(c: any, level: 'view' | 'host' | 'takeover' = 'v
     return result
   } catch (error) {
     console.error('[live-classes] class access check failed:', error)
-    return { response: c.json({ error: 'Could not verify class access', code: 'CLASS_ACCESS_FAILED' }, 500) }
+    return { response: c.json({ error: 'We could not confirm your access to this live class. Please try again.', code: 'CLASS_ACCESS_FAILED' }, 500) }
   }
 }
 
@@ -128,13 +141,13 @@ liveClassesRouter.get('/:id/readiness/stream', async (c) => {
             return close()
           } catch (error) {
             console.error('[live-classes] readiness poll failed:', error)
-            if (emit({ phase: 'unavailable', message: 'The classroom is temporarily unavailable.' })) close()
+            if (emit({ phase: 'unavailable', message: 'The classroom is not available right now. Please try again in a moment.' })) close()
           }
         }
         void poll()
       } catch (error) {
         console.error('[live-classes] readiness/stream failed:', error)
-        if (emit({ phase: 'unavailable', message: 'The classroom is temporarily unavailable.' })) close()
+        if (emit({ phase: 'unavailable', message: 'The classroom is not available right now. Please try again in a moment.' })) close()
       }
     },
     cancel() { closed = true },
@@ -161,11 +174,11 @@ liveClassesRouter.get('/:id/readiness', async (c) => {
   try {
     const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
     if (worker.state === 'preparing') return c.json({ data: { state: 'starting' } })
-    if (worker.state !== 'ready') return c.json({ data: { state: 'unavailable', message: worker.message || 'The classroom is temporarily unavailable' } }, 503)
+    if (worker.state !== 'ready') return c.json({ data: { state: 'unavailable', message: worker.message || 'The classroom is not available right now. Please try again in a moment.' } }, 503)
     return c.json({ data: { state: 'ready', class_status: liveClass.status } })
   } catch (error) {
     console.error('[live-classes] readiness check failed:', error)
-    return c.json({ data: { state: 'unavailable', message: 'The classroom is temporarily unavailable' } }, 503)
+    return c.json({ data: { state: 'unavailable', message: 'The classroom is not available right now. Please try again in a moment.' } }, 503)
   }
 })
 
@@ -398,7 +411,7 @@ liveClassesRouter.get('/', async (c) => {
     // A stale database row must not become a false "Live now" badge. A
     // PlugNmeet room becomes verified when it is created or joins report in.
     status: item.classroom_provider === 'plugnmeet' && item.status === 'live'
-      && !['ready', 'active'].includes(item.provider_room_status) ? 'scheduled' : item.status,
+      && !['active'].includes(item.provider_room_status) ? 'scheduled' : presentationStatus(item.status),
     recording_status: Array.isArray(item.recording) ? item.recording[0]?.status || null : item.recording?.status || null,
     recap_status: Array.isArray(item.recap) ? item.recap[0]?.status || null : item.recap?.status || null,
     recording: undefined,
@@ -425,7 +438,7 @@ liveClassesRouter.delete('/series/:seriesId', requireRole('admin', 'tutor'), asy
 liveClassesRouter.get('/:id', async (c) => {
   const access = await requireClassroom(c, 'view', true)
   if ('response' in access) return access.response
-  return c.json({ data: access.liveClass })
+  return c.json({ data: { ...access.liveClass, status: presentationStatus(access.liveClass.status) } })
 })
 
 // ── PATCH /live-classes/:id — Update a scheduled class (Admin, Tutor) ──────
@@ -524,34 +537,44 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
   const classroomProvider = providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider })
 
   if (classroomProvider === 'plugnmeet') {
-    if (liveClass.status === 'live') {
+    if (liveClass.status === 'live' || liveClass.status === 'ready') {
       const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
       if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
-      if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
+      if (worker.state !== 'ready') return c.json({ error: worker.message || 'The classroom is taking a little longer to open. Please try again in a moment.', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       try {
         const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, access.isHost ? 'Tutor' : 'Administrator'), isHost: access.isHost, isModerator: access.isHost || user.role === 'admin', schoolId: user.school_id, accessMode: liveClass.access_mode })
         return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
       } catch (error) {
         console.error('[live-classes] plugnmeet resume failed:', error)
-        return c.json({ error: 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
+        return c.json({ error: 'The classroom is taking a little longer to open. Please try again in a moment.', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       }
     }
-    if (liveClass.status !== 'scheduled') return c.json({ error: 'Only scheduled live classes can be started', code: 'CLASS_NOT_SCHEDULED' }, 400)
+    if (liveClass.status === 'starting') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
+    if (liveClass.status !== 'scheduled') return c.json({ error: 'This live class is not available to start. Refresh the page to see its latest status.', code: 'CLASS_NOT_SCHEDULED' }, 409)
     if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
       const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
       if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true } }, 202)
-      if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
+      if (worker.state !== 'ready') return c.json({ error: worker.message || 'The classroom is taking a little longer to open. Please try again in a moment.', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
+      // Claim the start before touching the provider. Only one request can
+      // win this compare-and-set, so refreshes/double-clicks cannot create a
+      // second provider session for the same scheduled class.
+      const startRequestedAt = new Date().toISOString()
+      const { data: claimed, error: claimError } = await (supabase as any).from('live_classes').update({
+        status: 'starting', start_requested_at: startRequestedAt, provider_error_at: null, provider_error_message: null, updated_at: startRequestedAt,
+      }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'scheduled').select('id').maybeSingle()
+      if (claimError) throw claimError
+      if (!claimed) return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true } }, 202)
       const roomId = liveClass.id
       await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
-      const startedAt = new Date().toISOString()
-      const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'live', classroom_provider: 'plugnmeet', provider_room_id: roomId, started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id, provider_room_status, provider_room_checked_at').single()
+      const readyAt = new Date().toISOString()
+      const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'ready', classroom_provider: 'plugnmeet', provider_room_id: roomId, room_ready_at: readyAt, provider_room_status: 'ready', provider_room_checked_at: readyAt, updated_at: readyAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'starting').select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id, provider_room_status, provider_room_checked_at').single()
       if (error || !updated) throw error || new Error('CLASS_UPDATE_FAILED')
       const config = await getPlugNmeetClientConfig({ roomId, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...updated, ...config, class_title: updated.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
       console.error('[live-classes] plugnmeet start failed:', error)
-      return c.json({ error: 'Could not start the PlugNmeet live class', code: 'CLASS_START_FAILED' }, 500)
+      return c.json({ error: 'We could not get your classroom ready just now. Please try again in a moment.', code: 'CLASS_START_FAILED' }, 503)
     }
   }
 
@@ -566,16 +589,16 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
   const liveClass = access.liveClass as any
 
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
-    if (liveClass.status !== 'live') return c.json({ error: 'This live class is not currently in progress', code: 'CLASS_NOT_LIVE' }, 404)
+    if (liveClass.status !== 'live') return c.json({ error: 'Your tutor has not started this live class yet. Please check back shortly.', code: 'CLASS_NOT_LIVE' }, 409)
     const [worker] = await Promise.all([ensurePlugNmeetReady(), reconcileRecorderFleet()])
     if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
-    if (worker.state !== 'ready') return c.json({ error: worker.message || 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
+    if (worker.state !== 'ready') return c.json({ error: worker.message || 'The classroom is taking a little longer to open. Please try again in a moment.', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
     try {
       const config = await getPlugNmeetClientConfig({ roomId: liveClass.provider_room_id || liveClass.id, userId: user.id, name: await getParticipantDisplayName(user, access.isHost ? 'Tutor' : user.role === 'admin' ? 'Administrator' : 'Participant'), isHost: access.isHost, isModerator: access.isHost || user.role === 'admin', schoolId: user.school_id, accessMode: liveClass.access_mode })
       return c.json({ data: { ...config, class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null } })
     } catch (error) {
       console.error('[live-classes] plugnmeet join failed:', error)
-      return c.json({ error: 'Could not prepare this classroom right now', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
+      return c.json({ error: 'The classroom is taking a little longer to open. Please try again in a moment.', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
     }
   }
 
@@ -654,17 +677,19 @@ liveClassesRouter.post('/:id/end', requireRole('tutor', 'admin'), async (c) => {
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
 
-  if (liveClass.status !== 'live') return c.json({ error: 'This live class is not currently in progress', code: 'CLASS_NOT_LIVE' }, 400)
-  const endedAt = new Date().toISOString()
-  const { error } = await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: endedAt, provider_room_status: 'ended', provider_room_checked_at: endedAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'live')
-  if (error) return c.json({ error: 'Could not complete the class record', code: 'CLASS_END_UPDATE_FAILED' }, 500)
+  if (liveClass.status === 'ending') return c.json({ message: 'Ending this live class. We are waiting for the classroom to confirm it has closed.', pending: true }, 202)
+  if (!['ready', 'live'].includes(liveClass.status)) return c.json({ error: 'This live class has already ended or is not ready to end yet.', code: 'CLASS_NOT_LIVE' }, 409)
+  const endingAt = new Date().toISOString()
+  const { error } = await (supabase as any).from('live_classes').update({ status: 'ending', provider_room_checked_at: endingAt, updated_at: endingAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', liveClass.status)
+  if (error) return c.json({ error: 'We could not send the request to end this live class. Please try again.', code: 'CLASS_END_UPDATE_FAILED' }, 500)
   try {
     const { plugNmeet } = await import('../plugnmeet/client')
     await plugNmeet.endRoom(liveClass.provider_room_id || liveClass.id)
   } catch (error) {
     console.warn('[live-classes] plugnmeet room end warning:', error)
+    return c.json({ message: 'We are retrying the request to end this live class.', pending: true }, 202)
   }
-  return c.json({ message: 'Live class ended' })
+  return c.json({ message: 'Ending this live class. It will be marked ended once the classroom confirms closure.', pending: true }, 202)
 })
 
 // ── POST /live-classes/:id/regenerate-link — invalidate a leaked class link ─

@@ -32,9 +32,16 @@ async function findClass(identifier: string) {
 }
 
 function publicClassData(liveClass: any) {
+  // A share-link visitor should wait while the tutor's room is being prepared,
+  // and should never be offered a class which is ending or unverified.
+  const status = liveClass.status === 'starting' || liveClass.status === 'ready'
+    ? 'scheduled'
+    : liveClass.status === 'ending' || liveClass.status === 'interrupted'
+      ? 'completed'
+      : liveClass.status
   return {
     title: liveClass.title,
-    status: liveClass.share_link_revoked_at ? 'revoked' : liveClass.status,
+    status: liveClass.share_link_revoked_at ? 'revoked' : status,
     scheduled_at: liveClass.scheduled_at,
     centre_name: liveClass.school?.name || 'Kanvise centre',
     centre_logo_url: liveClass.school?.logo_url || null,

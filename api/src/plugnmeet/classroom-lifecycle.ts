@@ -71,7 +71,7 @@ export async function ensurePlugNmeetReady(fetcher: Fetcher = fetch, env = proce
     await startInFlight
     return { state: 'preparing' }
   } catch {
-    return { state: 'unavailable', message: 'The classroom server could not be started.' }
+    return { state: 'unavailable', message: 'We could not start the classroom just now. Please try again in a moment.' }
   }
 }
 
@@ -89,8 +89,12 @@ export async function deallocateIdlePlugNmeet(now = new Date()) {
   const upcoming = new Date(now.getTime() + 10 * 60_000).toISOString()
   const recent = new Date(now.getTime() - 10 * 60_000).toISOString()
   const [{ count: scheduled, error: scheduledError }, { count: live, error: liveError }, { count: recentlyEnded, error: endedError }] = await Promise.all([
-    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'scheduled').lte('scheduled_at', upcoming),
-    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'live'),
+    // Only a *future* schedule can justify keeping an idle VM online. An old
+    // scheduled row was the reason the classroom server stayed up for days.
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'scheduled').gte('scheduled_at', now.toISOString()).lte('scheduled_at', upcoming),
+    // A room being prepared or ending is just as unsafe to deallocate as one
+    // currently live. Historic interrupted rows are deliberately excluded.
+    (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').in('status', ['starting', 'ready', 'live', 'ending']),
     (supabase as any).from('live_classes').select('id', { count: 'exact', head: true }).eq('classroom_provider', 'plugnmeet').eq('status', 'completed').gte('ended_at', recent),
   ])
   if (scheduledError || liveError || endedError) throw scheduledError || liveError || endedError

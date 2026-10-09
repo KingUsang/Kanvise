@@ -78,9 +78,20 @@ webhooksRouter.post('/plugnmeet', async (c) => {
 
   const participantIdentity = String(event.participant?.user_id || event.participant?.identity || '')
   const guestMatch = /^guest_([0-9a-f-]{36})$/i.exec(participantIdentity)
+  // A room is only genuinely live when PlugNmeet says the meeting started or
+  // somebody joined it. Room creation alone merely makes it ready.
+  if (eventName === 'room_started' || (eventName === 'participant_joined' && participantIdentity)) {
+    const observedAt = new Date().toISOString()
+    await (supabase as any).from('live_classes').update({
+      status: 'live', provider_room_status: 'active', provider_room_checked_at: observedAt,
+      last_provider_event_at: observedAt, provider_error_at: null, provider_error_message: null,
+    }).eq('id', liveClass.id).in('status', ['starting', 'ready', 'live'])
+    // Preserve the first provider-confirmed start time through retries and
+    // later participant joins; never overwrite it with a browser click.
+    await (supabase as any).from('live_classes').update({ started_at: observedAt })
+      .eq('id', liveClass.id).is('started_at', null)
+  }
   if (eventName === 'participant_joined' && participantIdentity) {
-    await (supabase as any).from('live_classes').update({ provider_room_status: 'active', provider_room_checked_at: new Date().toISOString() })
-      .eq('id', liveClass.id).eq('status', 'live')
     if (guestMatch && liveClass.course_id === null) {
       const guestId = guestMatch[1]
       const { data: guest } = await (supabase as any).from('live_class_guests')
@@ -116,7 +127,13 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   }
   if (eventName === 'room_finished' || eventName === 'analytics_proceeded') {
     const endedAt = new Date().toISOString()
-    await (supabase as any).from('live_classes').update({ status: 'completed', ended_at: endedAt, provider_room_status: 'ended', provider_room_checked_at: endedAt }).eq('id', liveClass.id).eq('status', 'live')
+    await (supabase as any).from('live_classes').update({
+      status: 'completed', provider_room_status: 'ended', provider_room_checked_at: endedAt,
+      last_provider_event_at: endedAt, provider_error_at: null, provider_error_message: null,
+    }).eq('id', liveClass.id).in('status', ['starting', 'ready', 'live', 'ending'])
+    // Keep the first terminal provider observation when delivery is retried.
+    await (supabase as any).from('live_classes').update({ ended_at: endedAt })
+      .eq('id', liveClass.id).is('ended_at', null)
   }
   if (eventName === 'room_finished') {
     const endedAt = new Date()
