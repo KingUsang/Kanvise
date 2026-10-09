@@ -855,8 +855,6 @@ function FeatureSurface({ type }: { type: (typeof features)[number]["type"] }) {
 }
 
 export default function ModernLanding() {
-  const [activeTool, setActiveTool] = useState<number | null>(0);
-  const exploredTools = useRef(new Set<number>());
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -899,14 +897,6 @@ export default function ModernLanding() {
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, []);
-
-  function selectTool(index: number) {
-    setActiveTool(index);
-    if (!exploredTools.current.has(index)) {
-      exploredTools.current.add(index);
-      trackLandingEvent("tool_explored", { tool: tools[index].name });
-    }
-  }
 
   function startForm() {
     if (formStarted.current) return;
@@ -1056,106 +1046,16 @@ export default function ModernLanding() {
             className="landing-reveal landing-reveal-delay-1 relative mx-auto h-[430px] w-full max-w-[700px] sm:h-[570px] lg:h-[430px]"
           >
             <div className="landing-pulse-glow absolute inset-[8%_2%_12%] rounded-[42%] bg-[#C2B59B]/35 blur-3xl" />
-            <div className="landing-tutor-visual absolute inset-x-[2%] bottom-[13%] top-[12%] z-10 overflow-hidden rounded-[2rem] border border-[#C2B59B]/60 bg-[linear-gradient(145deg,#2E2877,#C2B59B)] shadow-[0_24px_70px_rgba(46,40,119,.18)]">
+            <div className="landing-tutor-visual absolute inset-x-[2%] bottom-[4%] top-[4%] z-10 overflow-hidden rounded-[2rem] border border-[#C2B59B]/60 bg-[#FBF9F8] shadow-[0_24px_70px_rgba(46,40,119,.18)]">
               <Image
                 priority
-                src="/landing/kanvise-tutor-overwhelmed-v1.png"
-                alt="An online tutor overwhelmed by disconnected tools"
+                src="/landing/kanvise-disconnected-tools-carton-v1.png"
+                alt="Disconnected teaching tools moving into one organised Kanvise workspace"
                 fill
-                className="object-contain object-bottom"
+                className="object-cover"
                 sizes="(max-width: 1024px) 85vw, 48vw"
               />
-              <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#2E2877] to-transparent" />
             </div>
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible sm:hidden"
-            >
-              <g
-                fill="none"
-                stroke="#C26627"
-                strokeLinecap="round"
-                strokeWidth="0.55"
-                opacity="0.58"
-              >
-                <path d="M10 27 C29 25 44 31 55 42" />
-                <path d="M50 7 C54 20 58 30 62 36" />
-                <path d="M90 22 C82 27 77 33 74 40" />
-                <path d="M96 50 C86 52 81 51 78 49" />
-                <path d="M85 74 C79 68 75 64 72 61" />
-                <path d="M16 74 C35 70 48 65 57 59" />
-                <path d="M5 50 C29 48 45 50 54 52" />
-              </g>
-              <g fill="#C26627" opacity="0.78">
-                <circle cx="55" cy="42" r="0.65" />
-                <circle cx="62" cy="36" r="0.65" />
-                <circle cx="74" cy="40" r="0.65" />
-                <circle cx="78" cy="49" r="0.65" />
-                <circle cx="72" cy="61" r="0.65" />
-                <circle cx="57" cy="59" r="0.65" />
-                <circle cx="54" cy="52" r="0.65" />
-              </g>
-            </svg>
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              className="pointer-events-none absolute inset-0 z-20 hidden h-full w-full overflow-visible sm:block"
-            >
-              <g
-                fill="none"
-                stroke="#C26627"
-                strokeLinecap="round"
-                strokeWidth="0.7"
-                opacity="0.72"
-              >
-                <path d="M10 27 C30 20 44 22 57 27" />
-                <path d="M50 7 C55 14 59 18 64 20" />
-                <path d="M90 22 C82 20 78 23 75 28" />
-                <path d="M96 50 C85 49 80 45 78 40" />
-                <path d="M85 74 C79 62 76 56 73 53" />
-                <path d="M16 74 C36 63 49 52 56 46" />
-                <path d="M5 50 C29 48 45 43 55 38" />
-              </g>
-              <g fill="#C26627" opacity="0.88">
-                <circle cx="57" cy="27" r="0.75" />
-                <circle cx="64" cy="20" r="0.75" />
-                <circle cx="75" cy="28" r="0.75" />
-                <circle cx="78" cy="40" r="0.75" />
-                <circle cx="73" cy="53" r="0.75" />
-                <circle cx="56" cy="46" r="0.75" />
-                <circle cx="55" cy="38" r="0.75" />
-              </g>
-            </svg>
-            {tools.map((item, index) => {
-              const Icon = item.icon;
-              const selected = activeTool === index;
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => selectTool(index)}
-                  onFocus={() => selectTool(index)}
-                  onMouseEnter={() => selectTool(index)}
-                  style={{ animationDelay: `${index * 0.16}s` }}
-                  aria-label={`${item.name}: ${item.detail}`}
-                  className={`group landing-tool-float absolute z-30 ${item.position} grid h-12 w-12 place-items-center rounded-xl border bg-white text-[#2E2877] shadow-[0_10px_28px_rgba(46,40,119,.16)] transition duration-300 hover:-translate-y-1 ${selected ? "scale-105 border-[#C26627] ring-2 ring-[#C26627]/15" : "border-[#C2B59B]/55"}`}
-                >
-                  <Icon size={23} />
-                  <span
-                    className={`pointer-events-none absolute z-40 min-w-[150px] rounded-xl border border-[#C2B59B]/55 bg-white p-2.5 text-left shadow-[0_12px_30px_rgba(46,40,119,.16)] transition duration-200 ${item.tooltip} ${selected ? "visible opacity-100" : "invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"}`}
-                  >
-                    <b className="block text-[10px] text-[#2E2877]">
-                      {item.name}
-                    </b>
-                    <small className="mt-0.5 block text-[8px] leading-3 text-[#3C3027]/70">
-                      {item.detail}
-                    </small>
-                  </span>
-                </button>
-              );
-            })}
           </div>
         </div>
         <div className="relative mx-auto mt-8 grid max-w-[900px] grid-cols-3 divide-x divide-[#C2B59B]/45 border-y border-[#C2B59B]/45 px-5 py-5 text-center sm:mt-14 lg:mt-5 lg:py-3">
