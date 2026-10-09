@@ -235,7 +235,7 @@ const features = [
     name: "Payments",
     verb: "Collect",
     headline: "Collect payments without chasing DMs.",
-    copy: "Give your tutoring agency a professional payment page. When a student pays, their enrolment updates and you can see what is paid, outstanding and ready for follow-up.",
+    copy: "Give your tutoring business a professional payment page. Whether you teach independently or run an agency, when a student pays their enrolment updates and you can see what is paid, outstanding and ready for follow-up.",
     accent: "#C26627",
     type: "payments",
   },
