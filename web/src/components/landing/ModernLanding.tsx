@@ -232,6 +232,15 @@ const features = [
   },
   {
     number: "02",
+    name: "Payments",
+    verb: "Collect",
+    headline: "Collect payments without chasing DMs.",
+    copy: "Give your tutoring agency a professional payment page. When a student pays, their enrolment updates and you can see what is paid, outstanding and ready for follow-up.",
+    accent: "#C26627",
+    type: "payments",
+  },
+  {
+    number: "03",
     name: "Student management",
     verb: "Manage",
     headline: "Students, classes and enrolment in one place.",
@@ -240,7 +249,7 @@ const features = [
     type: "students",
   },
   {
-    number: "03",
+    number: "04",
     name: "Materials",
     verb: "Share",
     headline: "Share materials in the right context.",
@@ -249,7 +258,7 @@ const features = [
     type: "materials",
   },
   {
-    number: "04",
+    number: "05",
     name: "Assignments",
     verb: "Assign",
     headline: "Give work. Receive it. Respond.",
@@ -258,7 +267,7 @@ const features = [
     type: "assignments",
   },
   {
-    number: "05",
+    number: "06",
     name: "Quizzes & mocks",
     verb: "Assess",
     headline: "Create, publish and grade automatically.",
@@ -267,22 +276,13 @@ const features = [
     type: "quiz",
   },
   {
-    number: "06",
+    number: "07",
     name: "Attendance",
     verb: "Attendance",
     headline: "Know who showed up.",
     copy: "Attendance is tied to the actual class session and the student record, ready for follow-up.",
     accent: "#2E2877",
     type: "attendance",
-  },
-  {
-    number: "07",
-    name: "Payments",
-    verb: "Collect",
-    headline: "Know what has been paid and what is still outstanding.",
-    copy: "Keep payment and enrolment status connected to the right student and class.",
-    accent: "#C26627",
-    type: "payments",
   },
   {
     number: "08",
@@ -302,7 +302,7 @@ const faqs = [
   ],
   [
     "Who is Kanvise built for?",
-    "Independent tutors, one-on-one tutors and tutorial centres that want to teach online without stitching together several disconnected tools.",
+    "Independent tutors, one-on-one tutors and tutoring agencies that want to teach online without stitching together several disconnected tools.",
   ],
   [
     "Is Kanvise just another video-class platform?",
@@ -925,8 +925,8 @@ export default function ModernLanding() {
           contact_name: form.name,
           contact_email: form.email,
           centre_name:
-            form.type === "Tutorial centre"
-              ? "Tutorial centre"
+            form.type === "Tutoring agency"
+              ? "Tutoring agency"
               : `${form.type}: ${form.name}`,
           wants_beta_testing: true,
         }),
@@ -1005,7 +1005,7 @@ export default function ModernLanding() {
 
       <section
         data-analytics-section="hero"
-        className="relative overflow-hidden bg-[#fbf9f8] pb-20 pt-24 text-[#3C3027] sm:pt-28 lg:min-h-[900px] lg:pb-28 lg:pt-36"
+        className="relative overflow-hidden bg-[#fbf9f8] pb-20 pt-24 text-[#3C3027] sm:pt-28 lg:h-[100svh] lg:min-h-[720px] lg:pb-6 lg:pt-28"
       >
         <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_75%_20%,rgba(46,40,119,.12)_0,transparent_34%),radial-gradient(circle_at_12%_88%,rgba(194,102,39,.08)_0,transparent_28%)]" />
         <div className="pointer-events-none absolute inset-0 opacity-[.05] [background-image:linear-gradient(rgba(46,40,119,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(46,40,119,.7)_1px,transparent_1px)] [background-size:64px_64px]" />
@@ -1013,22 +1013,12 @@ export default function ModernLanding() {
           <div data-landing-reveal className="landing-reveal relative z-10">
             <p className="inline-flex items-center gap-2 rounded-full border border-[#C2B59B]/55 bg-white px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[.12em] text-[#2E2877] shadow-sm sm:text-[10px] sm:tracking-[.14em]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#C26627]" /> For
-              independent tutors and tutorial centres
+              independent tutors and tutoring agencies
             </p>
             <h1 className="mt-5 max-w-[640px] text-[2.1rem] font-medium leading-[1.05] tracking-[-.04em] sm:mt-6 sm:text-[2.75rem] lg:text-[3.25rem]">
               Running one tutorial shouldn&apos;t take{" "}
               <span className="text-[#C26627]">seven tools.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-sm leading-6 text-[#474551] sm:mt-6 sm:text-lg sm:leading-8">
-              <span className="sm:hidden">
-                Run your classes and see which students need your attention.
-              </span>
-              <span className="hidden sm:inline">
-                Kanvise brings live classes, students, materials, assignments,
-                quizzes, payments and performance into one place. Tutors can see
-                who needs attention before a student falls behind.
-              </span>
-            </p>
             <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
               <a
                 href="#access"
@@ -1063,7 +1053,7 @@ export default function ModernLanding() {
           </div>
           <div
             data-landing-reveal
-            className="landing-reveal landing-reveal-delay-1 relative mx-auto h-[430px] w-full max-w-[700px] sm:h-[570px]"
+            className="landing-reveal landing-reveal-delay-1 relative mx-auto h-[430px] w-full max-w-[700px] sm:h-[570px] lg:h-[430px]"
           >
             <div className="landing-pulse-glow absolute inset-[8%_2%_12%] rounded-[42%] bg-[#C2B59B]/35 blur-3xl" />
             <div className="landing-tutor-visual absolute inset-x-[2%] bottom-[13%] top-[12%] z-10 overflow-hidden rounded-[2rem] border border-[#C2B59B]/60 bg-[linear-gradient(145deg,#2E2877,#C2B59B)] shadow-[0_24px_70px_rgba(46,40,119,.18)]">
@@ -1168,7 +1158,7 @@ export default function ModernLanding() {
             })}
           </div>
         </div>
-        <div className="relative mx-auto mt-8 grid max-w-[900px] grid-cols-3 divide-x divide-[#C2B59B]/45 border-y border-[#C2B59B]/45 px-5 py-5 text-center sm:mt-14">
+        <div className="relative mx-auto mt-8 grid max-w-[900px] grid-cols-3 divide-x divide-[#C2B59B]/45 border-y border-[#C2B59B]/45 px-5 py-5 text-center sm:mt-14 lg:mt-5 lg:py-3">
           <div>
             <b className="text-2xl text-[#C26627]">7</b>
             <span className="mt-1 block text-[8px] uppercase tracking-widest text-[#474551]/65">
@@ -1694,7 +1684,7 @@ export default function ModernLanding() {
                       className="mt-2 w-full rounded-xl border border-[#ddd6e4] bg-[#F7F5F2] px-4 py-3 text-sm font-normal outline-none focus:border-[#2E2877]"
                     >
                       <option>Independent tutor</option>
-                      <option>Tutorial centre</option>
+                      <option>Tutoring agency</option>
                     </select>
                   </label>
                 </div>
