@@ -481,47 +481,66 @@ html {
   animation: landing-tool-float 7s ease-in-out infinite;
 }
 
-@keyframes landing-tool-drop-1 {
-  0%, 12% { left: 12%; top: 2%; opacity: 0; transform: rotate(-7deg) scale(.72); }
-  20% { opacity: 1; }
-  78% { left: 46%; top: 35%; opacity: 1; transform: rotate(3deg) scale(.76); }
-  86%, 100% { left: 48%; top: 38%; opacity: 0; transform: rotate(3deg) scale(.45); }
-}
-@keyframes landing-tool-drop-2 {
-  0%, 20% { left: 43%; top: -5%; opacity: 0; transform: rotate(5deg) scale(.7); }
-  28% { opacity: 1; }
-  80% { left: 46%; top: 35%; opacity: 1; transform: rotate(-3deg) scale(.78); }
-  88%, 100% { left: 48%; top: 38%; opacity: 0; transform: rotate(-3deg) scale(.42); }
-}
-@keyframes landing-tool-drop-3 {
-  0%, 4% { left: 76%; top: 5%; opacity: 0; transform: rotate(8deg) scale(.7); }
-  12% { opacity: 1; }
-  72% { left: 46%; top: 35%; opacity: 1; transform: rotate(-3deg) scale(.8); }
-  80%, 100% { left: 48%; top: 38%; opacity: 0; transform: rotate(-3deg) scale(.42); }
-}
-@keyframes landing-tool-drop-4 {
-  0%, 29% { left: 88%; top: 24%; opacity: 0; transform: rotate(7deg) scale(.7); }
-  37% { opacity: 1; }
-  82% { left: 46%; top: 35%; opacity: 1; transform: rotate(-4deg) scale(.75); }
-  90%, 100% { left: 48%; top: 38%; opacity: 0; transform: rotate(-4deg) scale(.42); }
-}
-@keyframes landing-tool-drop-5 {
-  0%, 35% { left: 3%; top: 25%; opacity: 0; transform: rotate(-8deg) scale(.7); }
-  43% { opacity: 1; }
-  83% { left: 46%; top: 35%; opacity: 1; transform: rotate(3deg) scale(.75); }
-  91%, 100% { left: 48%; top: 38%; opacity: 0; transform: rotate(3deg) scale(.42); }
+@keyframes landing-tool-drop {
+  0% {
+    left: var(--drop-start-x);
+    top: var(--drop-start-y);
+    opacity: 0;
+    transform: rotate(var(--drop-start-rotate)) scale(.72);
+  }
+  1.5% { opacity: 1; }
+  7% {
+    left: var(--drop-mid-x);
+    top: var(--drop-mid-y);
+    opacity: 1;
+    transform: rotate(var(--drop-mid-rotate)) scale(1);
+  }
+  12% {
+    left: 46%;
+    top: 29%;
+    opacity: 1;
+    transform: rotate(0deg) scale(.76);
+  }
+  15%, 100% {
+    left: 48%;
+    top: 36%;
+    opacity: 0;
+    transform: rotate(0deg) scale(.28);
+  }
 }
 .landing-tool-drop {
   position: absolute;
-  animation-duration: 6.8s;
+  opacity: 0;
+  animation-name: landing-tool-drop;
+  animation-duration: 18s;
   animation-iteration-count: infinite;
-  animation-timing-function: cubic-bezier(.25, .7, .3, 1);
+  animation-timing-function: cubic-bezier(.22, .7, .28, 1);
 }
-.landing-tool-drop-1 { animation-name: landing-tool-drop-1; }
-.landing-tool-drop-2 { animation-name: landing-tool-drop-2; }
-.landing-tool-drop-3 { animation-name: landing-tool-drop-3; }
-.landing-tool-drop-4 { animation-name: landing-tool-drop-4; }
-.landing-tool-drop-5 { animation-name: landing-tool-drop-5; }
+.landing-tool-drop-1 {
+  --drop-start-x: 7%; --drop-start-y: 2%; --drop-start-rotate: -14deg;
+  --drop-mid-x: 29%; --drop-mid-y: 11%; --drop-mid-rotate: 8deg;
+  animation-delay: 0s;
+}
+.landing-tool-drop-2 {
+  --drop-start-x: 42%; --drop-start-y: -7%; --drop-start-rotate: 11deg;
+  --drop-mid-x: 38%; --drop-mid-y: 9%; --drop-mid-rotate: -7deg;
+  animation-delay: 3.5s;
+}
+.landing-tool-drop-3 {
+  --drop-start-x: 85%; --drop-start-y: 4%; --drop-start-rotate: 16deg;
+  --drop-mid-x: 67%; --drop-mid-y: 13%; --drop-mid-rotate: -8deg;
+  animation-delay: 7.8s;
+}
+.landing-tool-drop-4 {
+  --drop-start-x: 91%; --drop-start-y: 24%; --drop-start-rotate: 12deg;
+  --drop-mid-x: 70%; --drop-mid-y: 23%; --drop-mid-rotate: -10deg;
+  animation-delay: 11s;
+}
+.landing-tool-drop-5 {
+  --drop-start-x: 2%; --drop-start-y: 23%; --drop-start-rotate: -17deg;
+  --drop-mid-x: 26%; --drop-mid-y: 22%; --drop-mid-rotate: 9deg;
+  animation-delay: 14.5s;
+}
 .landing-pulse-glow {
   animation: landing-pulse-glow 9s ease-in-out infinite;
 }
