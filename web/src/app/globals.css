@@ -481,73 +481,6 @@ html {
   animation: landing-tool-float 7s ease-in-out infinite;
 }
 
-@keyframes landing-tool-drop-1 {
-  0% { left: -10%; top: -8%; opacity: 0; transform: rotate(-12deg) scale(.72); }
-  4% { left: 0%; top: 2%; opacity: 1; transform: rotate(-9deg) scale(.82); }
-  35% { left: 19%; top: 9%; transform: rotate(-5deg) scale(1); }
-  62% { left: 35%; top: 20%; transform: rotate(-2deg) scale(.9); }
-  87% { left: 44%; top: 29%; opacity: 1; transform: rotate(0deg) scale(.76); }
-  100% { left: 48%; top: 36%; opacity: 0; transform: rotate(0deg) scale(.28); }
-}
-@keyframes landing-tool-drop-2 {
-  0% { left: 35%; top: -12%; opacity: 0; transform: rotate(9deg) scale(.72); }
-  4% { left: 38%; top: -4%; opacity: 1; transform: rotate(7deg) scale(.82); }
-  35% { left: 40%; top: 8%; transform: rotate(4deg) scale(1); }
-  62% { left: 43%; top: 20%; transform: rotate(1deg) scale(.9); }
-  87% { left: 46%; top: 30%; opacity: 1; transform: rotate(0deg) scale(.76); }
-  100% { left: 48%; top: 36%; opacity: 0; transform: rotate(0deg) scale(.28); }
-}
-@keyframes landing-tool-drop-3 {
-  0% { left: 100%; top: -5%; opacity: 0; transform: rotate(13deg) scale(.72); }
-  4% { left: 90%; top: 2%; opacity: 1; transform: rotate(10deg) scale(.82); }
-  35% { left: 75%; top: 9%; transform: rotate(6deg) scale(1); }
-  62% { left: 60%; top: 20%; transform: rotate(2deg) scale(.9); }
-  87% { left: 50%; top: 30%; opacity: 1; transform: rotate(0deg) scale(.76); }
-  100% { left: 48%; top: 36%; opacity: 0; transform: rotate(0deg) scale(.28); }
-}
-@keyframes landing-tool-drop-4 {
-  0% { left: 105%; top: 32%; opacity: 0; transform: rotate(11deg) scale(.72); }
-  4% { left: 92%; top: 31%; opacity: 1; transform: rotate(8deg) scale(.82); }
-  35% { left: 74%; top: 29%; transform: rotate(5deg) scale(1); }
-  62% { left: 59%; top: 30%; transform: rotate(2deg) scale(.9); }
-  87% { left: 50%; top: 33%; opacity: 1; transform: rotate(0deg) scale(.76); }
-  100% { left: 48%; top: 36%; opacity: 0; transform: rotate(0deg) scale(.28); }
-}
-@keyframes landing-tool-drop-5 {
-  0% { left: -11%; top: 35%; opacity: 0; transform: rotate(-14deg) scale(.72); }
-  4% { left: 3%; top: 33%; opacity: 1; transform: rotate(-10deg) scale(.82); }
-  35% { left: 20%; top: 28%; transform: rotate(-6deg) scale(1); }
-  62% { left: 37%; top: 28%; transform: rotate(-2deg) scale(.9); }
-  87% { left: 45%; top: 31%; opacity: 1; transform: rotate(0deg) scale(.76); }
-  100% { left: 48%; top: 36%; opacity: 0; transform: rotate(0deg) scale(.28); }
-}
-.landing-tool-drop {
-  position: absolute;
-  opacity: 0;
-  animation-duration: 9s;
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
-}
-.landing-tool-drop-1 {
-  animation-name: landing-tool-drop-1;
-  animation-delay: 0s;
-}
-.landing-tool-drop-2 {
-  animation-name: landing-tool-drop-2;
-  animation-delay: -1.8s;
-}
-.landing-tool-drop-3 {
-  animation-name: landing-tool-drop-3;
-  animation-delay: -3.6s;
-}
-.landing-tool-drop-4 {
-  animation-name: landing-tool-drop-4;
-  animation-delay: -5.4s;
-}
-.landing-tool-drop-5 {
-  animation-name: landing-tool-drop-5;
-  animation-delay: -7.2s;
-}
 .landing-pulse-glow {
   animation: landing-pulse-glow 9s ease-in-out infinite;
 }
@@ -619,7 +552,6 @@ html {
 
 @media (prefers-reduced-motion: reduce) {
   .landing-tool-float,
-  .landing-tool-drop,
   .landing-pulse-glow,
   .landing-tutor-visual,
   .landing-converge-chip,

@@ -220,6 +220,29 @@ const tools = [
   },
 ] as const;
 
+const cartonMotionPaths = [
+  {
+    path: "M 30 -42 C 88 24 178 79 270 119 S 328 151 346 166",
+    begin: "0s",
+  },
+  {
+    path: "M 245 -48 C 270 24 302 78 324 118 S 340 151 346 166",
+    begin: "-1.6s",
+  },
+  {
+    path: "M 650 -42 C 598 22 522 77 445 116 S 374 151 346 166",
+    begin: "-3.2s",
+  },
+  {
+    path: "M 540 -48 C 522 18 480 76 426 116 S 370 151 346 166",
+    begin: "-4.8s",
+  },
+  {
+    path: "M 115 -46 C 150 18 212 74 282 115 S 328 151 346 166",
+    begin: "-6.4s",
+  },
+] as const;
+
 const features = [
   {
     number: "01",
@@ -1057,17 +1080,44 @@ export default function ModernLanding() {
               />
             </div>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[1.5rem] sm:rounded-[2rem]">
+              <svg
+                viewBox="0 0 680 430"
+                preserveAspectRatio="none"
+                className="h-full w-full overflow-visible"
+              >
               {tools.slice(0, 5).map((tool, index) => {
                 const Icon = tool.icon;
+                const motion = cartonMotionPaths[index];
                 return (
-                  <span
+                  <foreignObject
                     key={tool.name}
-                    className={`landing-tool-drop landing-tool-drop-${index + 1} grid h-9 w-9 place-items-center rounded-lg border border-white/80 bg-white/95 shadow-[0_8px_20px_rgba(46,40,119,.22)] sm:h-11 sm:w-11 sm:rounded-xl`}
+                    x="-18"
+                    y="-18"
+                    width="52"
+                    height="52"
                   >
-                    <Icon size={20} />
-                  </span>
+                    <div className="grid h-9 w-9 place-items-center rounded-lg border border-white/80 bg-white/95 shadow-[0_8px_20px_rgba(46,40,119,.22)] sm:h-11 sm:w-11 sm:rounded-xl">
+                      <Icon size={20} />
+                    </div>
+                    <animateMotion
+                      dur="8s"
+                      begin={motion.begin}
+                      repeatCount="indefinite"
+                      path={motion.path}
+                      rotate="0"
+                    />
+                    <animate
+                      attributeName="opacity"
+                      values="0;1;1;0"
+                      keyTimes="0;0.06;0.88;1"
+                      dur="8s"
+                      begin={motion.begin}
+                      repeatCount="indefinite"
+                    />
+                  </foreignObject>
                 );
               })}
+              </svg>
             </div>
           </div>
         </div>
