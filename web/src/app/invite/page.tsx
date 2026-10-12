@@ -24,6 +24,10 @@ function InviteContent() {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
     }).then(async response => {
       const body = await response.json().catch(() => null)
+      console.info('[invitation] preview response', {
+        status: response.status,
+        cache: response.headers.get('x-vercel-cache') || response.headers.get('cf-cache-status') || null,
+      })
       if (!response.ok || !body?.data) throw new Error(body?.error || 'This invitation link is invalid.')
       if (body.data.status === 'accepted') {
         const { data } = await supabase.auth.getUser()
@@ -46,9 +50,17 @@ function InviteContent() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
       })
       const body = await response.json().catch(() => null)
+      console.info('[invitation] start response', { status: response.status })
       if (!response.ok || !body?.data?.action_url) throw new Error(body?.error || 'This invitation could not be started.')
-      window.location.assign(body.data.action_url)
+      const actionUrl = new URL(body.data.action_url)
+      console.info('[invitation] redirecting to auth action', {
+        host: actionUrl.host,
+        path: actionUrl.pathname,
+        hasRedirect: actionUrl.searchParams.has('redirect_to'),
+      })
+      window.location.assign(actionUrl.toString())
     } catch (reason) {
+      console.warn('[invitation] start failed', reason)
       setError(reason instanceof Error ? reason.message : 'This invitation could not be started.')
       setStarting(false)
     }
@@ -63,7 +75,7 @@ function InviteContent() {
         : unavailable ? <Recovery message={invitation.status === 'accepted' ? 'This invitation has already been accepted. Sign in to continue.' : `This invitation has ${invitation.status}. Ask your tutorial centre to send a new one.`} />
         : invitation ? <>
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#f5f3ff] text-[#2e2877]"><Mail /></div>
-          <header className="text-center"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">{invitation.role} invitation</p><h1 className="mt-2 text-3xl font-bold text-[#2e2877]">Join {invitation.school_name}</h1><p className="mt-3 text-sm leading-6 text-[#6a6874]">Continue as <strong>{invitation.email}</strong>{invitation.metadata?.programme_name ? ` to access ${invitation.metadata.programme_name}` : ''}. You can reopen this link until setup is complete.</p></header>
+          <header className="text-center"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">{invitation.role} invitation</p><h1 className="mt-2 text-3xl font-bold text-[#2e2877]">Join {invitation.school_name}</h1><p className="mt-3 text-sm leading-6 text-[#6a6874]">Continue as <strong>{invitation.email}</strong>{invitation.metadata?.programme_name ? ` to access ${invitation.metadata.programme_name}` : ''}.</p></header>
           {error && <p role="alert" className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <button onClick={() => void continueInvitation()} disabled={starting} className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-[#994704] px-6 py-4 font-bold text-white disabled:opacity-60">{starting ? <><Loader2 className="animate-spin" size={18}/>Preparing account…</> : <><CheckCircle2 size={18}/>Continue to account setup</>}</button>
         </> : null}

@@ -105,8 +105,22 @@ authRouter.post('/invitation/start', async (c) => {
     },
   })
   if (error || !generated?.properties?.action_link || !generated.user) {
+    console.error('[auth/invitation/start] generateLink failed', {
+      invitationId: invitation.id,
+      role: invitation.role,
+      message: error?.message || 'missing action link',
+    })
     return c.json({ error: error?.message || 'Could not start this invitation' }, 502)
   }
+
+  const actionUrl = new URL(generated.properties.action_link)
+  console.info('[auth/invitation/start] generated action link', {
+    invitationId: invitation.id,
+    role: invitation.role,
+    host: actionUrl.host,
+    path: actionUrl.pathname,
+    hasRedirect: actionUrl.searchParams.has('redirect_to'),
+  })
 
   const { error: updateError } = await (supabase as any).from('account_invitations').update({
     supabase_auth_id: generated.user.id,

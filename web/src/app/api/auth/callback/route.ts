@@ -11,6 +11,12 @@ export async function GET(request: Request) {
   const inviteToken = searchParams.get('invite_token')
   const accountInvitationToken = searchParams.get('account_invitation_token')
 
+  console.info('[auth/callback] received invitation callback', {
+    hasCode: Boolean(code),
+    hasAccountInvitation: Boolean(accountInvitationToken),
+    hasRole: Boolean(role),
+  })
+
   if (code) {
     const supabase = await createClient()
     const { error, data } = await supabase.auth.exchangeCodeForSession(code)
@@ -21,6 +27,7 @@ export async function GET(request: Request) {
 
     if (!error && data.user) {
       if (accountInvitationToken) {
+        console.info('[auth/callback] redirecting to complete invitation')
         return NextResponse.redirect(`${origin}/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`)
       }
       // Supabase's invite link has already proven that the recipient controls
@@ -103,8 +110,10 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { data } = await supabase.auth.getSession()
     if (data.session) {
+      console.info('[auth/callback] existing invitation session found; completing invitation')
       return NextResponse.redirect(`${origin}/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`)
     }
+    console.warn('[auth/callback] invitation callback has no session; returning to invite page')
     return NextResponse.redirect(`${origin}/invite?token=${encodeURIComponent(accountInvitationToken)}&notice=session-expired`)
   }
 
