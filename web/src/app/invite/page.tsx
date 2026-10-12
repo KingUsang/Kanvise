@@ -7,6 +7,18 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 type Invitation = { role: 'tutor' | 'student'; email: string; school_name: string; status: string; expires_at: string; metadata?: { programme_name?: string } }
+const INVITATION_TRACE_KEY = 'kanvise.invitation.trace'
+
+function traceInvitation(event: string, details: Record<string, unknown> = {}) {
+  const entry = { at: new Date().toISOString(), event, ...details }
+  console.info(`[invitation] ${event}`, details)
+  try {
+    const previous = JSON.parse(sessionStorage.getItem(INVITATION_TRACE_KEY) || '[]')
+    sessionStorage.setItem(INVITATION_TRACE_KEY, JSON.stringify([...previous.slice(-9), entry]))
+  } catch {
+    // Storage may be unavailable in privacy-restricted browsers.
+  }
+}
 
 function InviteContent() {
   const params = useSearchParams()
@@ -19,12 +31,21 @@ function InviteContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    try {
+      const previous = JSON.parse(sessionStorage.getItem(INVITATION_TRACE_KEY) || '[]')
+      if (previous.length) console.info('[invitation] previous attempt trace', previous)
+    } catch {
+      // Storage may be unavailable in privacy-restricted browsers.
+    }
+  }, [])
+
+  useEffect(() => {
     let live = true
     void fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/invitation/preview`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
     }).then(async response => {
       const body = await response.json().catch(() => null)
-      console.info('[invitation] preview response', {
+      traceInvitation('preview response', {
         status: response.status,
         cache: response.headers.get('x-vercel-cache') || response.headers.get('cf-cache-status') || null,
       })
@@ -50,17 +71,17 @@ function InviteContent() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
       })
       const body = await response.json().catch(() => null)
-      console.info('[invitation] start response', { status: response.status })
+      traceInvitation('start response', { status: response.status })
       if (!response.ok || !body?.data?.action_url) throw new Error(body?.error || 'This invitation could not be started.')
       const actionUrl = new URL(body.data.action_url)
-      console.info('[invitation] redirecting to auth action', {
+      traceInvitation('redirecting to auth action', {
         host: actionUrl.host,
         path: actionUrl.pathname,
         hasRedirect: actionUrl.searchParams.has('redirect_to'),
       })
       window.location.assign(actionUrl.toString())
     } catch (reason) {
-      console.warn('[invitation] start failed', reason)
+      traceInvitation('start failed', { message: reason instanceof Error ? reason.message : String(reason) })
       setError(reason instanceof Error ? reason.message : 'This invitation could not be started.')
       setStarting(false)
     }
