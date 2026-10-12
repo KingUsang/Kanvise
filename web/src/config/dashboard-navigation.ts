@@ -29,12 +29,14 @@ export type DashboardWorkspace = {
 export const dashboardWorkspaces: DashboardWorkspace[] = [
   { label: 'Home', href: '/dashboard', icon: 'space_dashboard', area: 'home', access: 'all' },
   { label: 'Classes', href: '/dashboard/classes', icon: 'library_books', area: 'classes', access: 'shared' },
+  { label: 'Mocks', href: '/dashboard/mocks', icon: 'quiz', area: 'mocks', access: 'shared' },
   { label: 'Calendar', href: '/dashboard/schedule', icon: 'calendar_month', area: 'calendar', access: 'shared' },
-  { label: 'Settings', href: '/dashboard/settings', icon: 'settings', area: 'centre', access: 'admin' },
+  { label: 'More', href: '/dashboard/more', icon: 'more_horiz', area: 'centre', access: 'admin' },
 ]
 
 export const dashboardNavItems: DashboardNavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'space_dashboard', area: 'home', access: 'all', keywords: ['home', 'overview'] },
+  { label: 'More', href: '/dashboard/more', icon: 'more_horiz', area: 'centre', access: 'admin', keywords: ['more', 'centre', 'management'] },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings', area: 'centre', access: 'admin', keywords: ['settings', 'centre', 'school', 'branding', 'profile'] },
   { label: 'School Setup', href: '/dashboard/school-setup', icon: 'settings_applications', area: 'centre', access: 'admin', keywords: ['school', 'identity', 'branding', 'setup'] },
   { label: 'Tutors', href: '/dashboard/tutors', icon: 'groups_3', area: 'centre', access: 'admin', keywords: ['tutors', 'teachers', 'invites', 'directory'] },

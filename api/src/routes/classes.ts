@@ -17,6 +17,11 @@ export const classesRouter = new Hono<{ Variables: TenantVariables }>()
 
 type CourseRow = { id: string; name: string; programme_id?: string | null; sub_programme_id?: string | null }
 
+function slugify(value: string) {
+  return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+}
+
 async function visibleClassSubjects(user: any, classId: string): Promise<CourseRow[] | null> {
   const [{ data: programme, error: programmeError }, { data: subProgrammes, error: subError }, { data: courses, error: courseError }] = await Promise.all([
     supabase.from('programmes').select('id').eq('id', classId).eq('school_id', user.school_id).maybeSingle(),
@@ -42,6 +47,51 @@ async function visibleClassSubjects(user: any, classId: string): Promise<CourseR
 function classAccessMiddleware() {
   return [jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('admin', 'tutor')] as const
 }
+
+classesRouter.post('/:id/subjects', ...classAccessMiddleware(), async (c) => {
+  const user = c.get('user')
+  if (user.role !== 'admin') return c.json({ error: 'Only admins can add subjects', code: 'FORBIDDEN' }, 403)
+  try {
+    const classId = c.req.param('id')
+    if (!classId) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+    const body = await c.req.json().catch(() => null)
+    const name = typeof body?.name === 'string' ? body.name.trim() : ''
+    const description = typeof body?.description === 'string' ? body.description.trim() : ''
+    if (!name) return c.json({ error: 'Enter a subject name', code: 'SUBJECT_NAME_REQUIRED' }, 400)
+
+    const [{ data: programme, error: programmeError }, { data: school, error: schoolError }] = await Promise.all([
+      supabase.from('programmes').select('id, name, is_published').eq('id', classId).eq('school_id', user.school_id).maybeSingle(),
+      supabase.from('schools').select('account_type').eq('id', user.school_id).maybeSingle(),
+    ])
+    if (programmeError || schoolError) throw programmeError || schoolError
+    if (!programme) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+
+    const requestedTutorIds = Array.isArray(body?.tutor_ids)
+      ? [...new Set(body.tutor_ids.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))]
+      : []
+    const tutorIds = school?.account_type === 'independent' ? [user.id] : requestedTutorIds
+    const { data, error } = await (supabase as any).rpc('add_programme_subject', {
+      p_school_id: user.school_id,
+      p_created_by: user.id,
+      p_programme_id: programme.id,
+      p_name: name,
+      p_slug: slugify(`${programme.name}-${name}`),
+      p_description: description,
+      p_tutor_ids: tutorIds,
+    })
+    if (error) throw error
+    return c.json({ data, message: 'Subject added' }, 201)
+  } catch (error: any) {
+    if (error?.message === 'TUTOR_SCHOOL_MISMATCH') {
+      return c.json({ error: 'A selected tutor does not belong to this centre', code: 'INVALID_TUTOR' }, 400)
+    }
+    if (error?.code === '23505') {
+      return c.json({ error: 'This class already has a subject with that name.', code: 'SUBJECT_NAME_TAKEN' }, 409)
+    }
+    console.error('[classes] subject creation failed:', error)
+    return c.json({ error: 'Could not add this subject', code: 'SUBJECT_CREATE_FAILED' }, 500)
+  }
+})
 
 // The class schedule is a read model over dated sessions and recurring slots.
 // It intentionally does not use the old class_timetables draft/publish writer.

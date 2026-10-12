@@ -482,6 +482,10 @@ This matches the existing RLS migrations, which already read role and school fro
 - Ensure an admin who teaches sees teaching priorities without overwhelming the admin overview.
 - Add consistent route-level loading, empty, forbidden, and recoverable error states.
 - Audit mobile behavior against product needs; numbered legacy mobile screens are not authoritative.
+- Staff mobile navigation uses the truthful destinations **Home, Classes,
+  Mocks, Calendar, More**. More is a role-filtered administration hub and must
+  not expose centre-only Teaching Team or Timetable controls to an independent
+  account.
 - Add notification preferences after a canonical preference model and delivery channels exist.
 - Design the owner Settings screen before expanding it further. The supplied
   references show Settings in navigation but do not supply a full settings

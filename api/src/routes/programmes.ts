@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { randomUUID } from 'node:crypto'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
 
@@ -107,12 +108,19 @@ programmesRouter.post('/', enforceAdmin, async (c) => {
 
 // Atomically creates a draft programme, its subjects, and optional teaching assignments.
 programmesRouter.post('/setup', enforceAdmin, async (c) => {
+  let requestedSlug = ''
   try {
     const profile = c.get('user')
     if (!profile.school_id) return c.json({ error: 'Admin has no school setup', code: 'NO_SCHOOL' }, 400)
     const body = await c.req.json()
+    const suppliedCreationKey = c.req.header('Idempotency-Key')?.trim()
+    if (suppliedCreationKey && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(suppliedCreationKey)) {
+      return c.json({ error: 'Invalid class creation key', code: 'INVALID_IDEMPOTENCY_KEY' }, 400)
+    }
+    const creationKey = suppliedCreationKey || randomUUID()
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     const programmeSlug = slugify(name)
+    requestedSlug = programmeSlug
     const subjects = (Array.isArray(body.subjects) ? normaliseSubjects(body.subjects) : [])
       .map(subject => ({ ...subject, slug: slugify(`${programmeSlug}-${subject.name}`) }))
     if (!name) return c.json({ error: 'Programme name is required', code: 'PROGRAMME_NAME_REQUIRED' }, 400)
@@ -143,17 +151,29 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
       p_price: price,
       p_currency: body.currency || 'NGN',
       p_subjects: subjects,
+      p_creation_key: creationKey,
     })
     if (error) throw error
-    if (data?.id && typeof body.teaching_mode === 'string') {
-      await supabase.from('programmes').update({ teaching_mode: body.teaching_mode }).eq('id', data.id)
+    if (data?.programme?.id && typeof body.teaching_mode === 'string' && !data.replayed) {
+      await supabase.from('programmes').update({ teaching_mode: body.teaching_mode })
+        .eq('id', data.programme.id).eq('school_id', profile.school_id)
     }
-    return c.json({ data, message: 'Programme setup saved as a draft' }, 201)
+    return c.json({ data, message: data?.replayed ? 'Existing class creation recovered' : 'Programme setup saved as a draft' }, data?.replayed ? 200 : 201)
   } catch (error: any) {
     const code = error.message === 'TUTOR_SCHOOL_MISMATCH' ? 'INVALID_TUTOR'
       : error.message === 'DUPLICATE_SUBJECTS' ? 'DUPLICATE_SUBJECTS'
       : error.code === '23505' ? 'SLUG_TAKEN' : 'SETUP_FAILED'
     const status = ['INVALID_TUTOR', 'DUPLICATE_SUBJECTS'].includes(code) ? 400 : code === 'SLUG_TAKEN' ? 409 : 500
+    if (code === 'SLUG_TAKEN') {
+      const profile = c.get('user')
+      const { data: existing } = requestedSlug ? await supabase.from('programmes').select('id')
+        .eq('school_id', profile.school_id).eq('slug', requestedSlug).maybeSingle() : { data: null }
+      return c.json({
+        error: 'A class with this name already exists.',
+        code: 'CLASS_NAME_TAKEN',
+        existing_class_id: existing?.id || null,
+      }, 409)
+    }
     return c.json({ error: code === 'INVALID_TUTOR' ? 'A selected tutor does not belong to this centre' : error.message || 'Programme setup failed', code }, status)
   }
 })

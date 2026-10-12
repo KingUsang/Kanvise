@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin' } as any,
 }))
 
-vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
+vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
@@ -29,6 +30,35 @@ describe('class-first API aliases', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+  })
+
+  it('adds a subject atomically for an admin and keeps tenant identity in the RPC', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'programmes') return query({ data: { id: 'class-1', name: 'JAMB 2027', is_published: false }, error: null })
+      if (table === 'schools') return query({ data: { account_type: 'centre' }, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    mocks.rpc.mockResolvedValue({ data: { subject: { id: 'physics', name: 'Physics' }, tutor_ids: ['tutor-1'] }, error: null })
+
+    const response = await classesRouter.request('/class-1/subjects', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Physics', tutor_ids: ['tutor-1'] }),
+    })
+
+    expect(response.status).toBe(201)
+    expect(mocks.rpc).toHaveBeenCalledWith('add_programme_subject', expect.objectContaining({
+      p_school_id: 'school-1', p_created_by: 'admin-1', p_programme_id: 'class-1',
+      p_slug: 'jamb-2027-physics', p_tutor_ids: ['tutor-1'],
+    }))
+  })
+
+  it('rejects ordinary tutors before subject creation', async () => {
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+    const response = await classesRouter.request('/class-1/subjects', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Physics' }),
+    })
+    expect(response.status).toBe(403)
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('serves the cross-class recurring timetable without invoking a legacy programme route', async () => {
