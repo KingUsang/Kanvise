@@ -84,6 +84,21 @@ describe('authenticatedFetch', () => {
     }))
   })
 
+  it('replaces a caller-supplied Authorization header instead of sending two bearer tokens', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+
+    await authenticatedFetch(
+      { auth: { refreshSession: vi.fn() } } as any,
+      '/mocks/mock-1',
+      'current-token',
+      { headers: { authorization: 'Bearer stale-server-token', 'X-Request-ID': 'request-1' } },
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith('/mocks/mock-1', expect.objectContaining({
+      headers: { Authorization: 'Bearer current-token', 'x-request-id': 'request-1' },
+    }))
+  })
+
   it('shares one refresh when requests receive 401 together', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'TOKEN_EXPIRED' }), { status: 401 }))

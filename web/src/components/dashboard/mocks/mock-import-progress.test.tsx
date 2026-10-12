@@ -10,11 +10,11 @@ describe('mock import progress', () => {
     })
   })
 
-  it('does not invent progress for a server-side import', () => {
+  it('shows the current honest import stage without inventing a percentage', () => {
     render(<MockImportProgressCard progress={{ id: '9147c666', fileName: 'questions.pdf', phase: 'parsing', percent: null }} />)
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-    expect(screen.getByText('Reading your paper')).toBeInTheDocument()
-    expect(screen.getByText(/reading question blocks and subject headings/i)).toBeInTheDocument()
+    expect(screen.getByText('Organising your questions')).toBeInTheDocument()
+    expect(screen.getByText(/structuring questions, options and subject sections/i)).toBeInTheDocument()
   })
 
   it('shows a review-ready state only after the server returns questions', () => {

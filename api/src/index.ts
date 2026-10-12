@@ -63,6 +63,7 @@ import { guestMocksRouter } from './routes/guest-mocks';
 import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
 import { demoAnalysisRouter } from './routes/demo-analysis';
+import { feedbackResolutionRouter, feedbackRouter } from './routes/feedback';
 
 app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
@@ -95,6 +96,8 @@ app.route("/internal/payments", internalPaymentsRouter);
 app.route("/submissions", submissionsRouter);
 app.route("/mock-answers", mockAnswersRouter);
 app.route("/health", healthRouter);
+app.route('/feedback', feedbackRouter);
+app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
 app.route("/demo/analyze", demoAnalysisRouter);
 if (isTelegramEnabled()) {
