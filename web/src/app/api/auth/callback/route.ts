@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const role = searchParams.get('role') // from the email redirect url
   const redirect = searchParams.get('redirect') // specific course redirect
   const inviteToken = searchParams.get('invite_token')
+  const accountInvitationToken = searchParams.get('account_invitation_token')
 
   if (code) {
     const supabase = await createClient()
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
     }
 
     if (!error && data.user) {
+      if (accountInvitationToken) {
+        return NextResponse.redirect(`${origin}/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`)
+      }
       // Supabase's invite link has already proven that the recipient controls
       // the invited mailbox. Let them choose their password and names in one
       // final screen; do not send a second signup confirmation or OTP.
@@ -93,6 +97,15 @@ export async function GET(request: Request) {
       
       return NextResponse.redirect(redirectUrl)
     }
+  }
+
+  if (accountInvitationToken) {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getSession()
+    if (data.session) {
+      return NextResponse.redirect(`${origin}/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`)
+    }
+    return NextResponse.redirect(`${origin}/invite?token=${encodeURIComponent(accountInvitationToken)}&notice=session-expired`)
   }
 
   // Return the user to an error page with some instructions

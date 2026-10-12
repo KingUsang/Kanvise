@@ -568,6 +568,24 @@ unexpired, and addressed to the verified Supabase email. Revocation therefore
 invalidates one invite immediately, and an accepted invite cannot be reused by a
 different Auth user. A callback retry by the same verified Auth user is idempotent.
 
+### 11.1 Durable account invitations
+
+New tutor and admin-invited student emails use a Kanvise-managed durable link at
+`/invite?token=...`. The raw 256-bit token appears only in the delivered URL;
+the database stores its SHA-256 hash in `account_invitations`. The invitation
+remains `pending` for seven days and may be reopened after an interrupted setup.
+
+Supabase action links remain one-time authentication credentials, but they no
+longer define the invitation lifecycle. Each use of a pending Kanvise link can
+issue a fresh Supabase action for the same invited email. Kanvise changes the
+invitation to `accepted` only after password/profile setup and tutor membership
+or student activation succeeds. Replays by the same Auth user are idempotent;
+another email or Auth user cannot consume the invitation.
+
+Resending rotates the durable token and expiry and invalidates the previous
+link. Revocation remains immediate. Existing legacy Supabase invitation links
+continue through their existing routes until they expire.
+
 ---
 
 ## 12. KanviseUser ID Generation

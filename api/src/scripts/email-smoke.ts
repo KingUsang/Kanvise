@@ -10,6 +10,10 @@ export const smokeInputs: { [K in EmailEventName]: EmailTemplateInputs[K] } = {
     inviteUrl: `${baseUrl}/join?token=smoke-test`, invitedByName: 'Amara Okafor',
     schoolName: 'Kanvise Demo School', expiresAt: '2026-07-27T12:00:00Z',
   },
+  student_invitation: {
+    inviteUrl: `${baseUrl}/invite?token=smoke-test`, invitedByName: 'Amara Okafor',
+    schoolName: 'Kanvise Demo School', programmeName: 'WAEC Physics', expiresAt: '2026-07-27T12:00:00Z',
+  },
   welcome: { firstName: 'Ada', dashboardUrl: `${baseUrl}/dashboard` },
   payment_confirmed: {
     firstName: 'Ada', schoolName: 'Kanvise Demo School', programmeName: 'WAEC Physics',

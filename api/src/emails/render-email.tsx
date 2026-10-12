@@ -9,6 +9,7 @@ import { MockPublishedEmail } from './templates/mock-published'
 import { PaymentConfirmedEmail } from './templates/payment-confirmed'
 import { SubmissionGradedEmail } from './templates/submission-graded'
 import { TutorInvitationEmail } from './templates/tutor-invitation'
+import { StudentInvitationEmail } from './templates/student-invitation'
 import { WelcomeEmail } from './templates/welcome'
 import { 
   WelcomePilotEmail, 
@@ -23,6 +24,7 @@ import type { EmailEventName, EmailTemplateInputs } from './types'
 
 const linkFields: { [K in EmailEventName]: Array<keyof EmailTemplateInputs[K]> } = {
   tutor_invitation: ['inviteUrl'],
+  student_invitation: ['inviteUrl'],
   welcome: ['dashboardUrl'],
   payment_confirmed: ['dashboardUrl'],
   live_class_reminder: ['joinUrl'],
@@ -51,6 +53,7 @@ function assertAbsoluteWebUrl(field: string, value: unknown): void {
 function buildEmail<K extends EmailEventName>(event: K, input: EmailTemplateInputs[K], logoUrl: string): ReactElement {
   switch (event) {
     case 'tutor_invitation': return <TutorInvitationEmail {...input as EmailTemplateInputs['tutor_invitation']} logoUrl={logoUrl} />
+    case 'student_invitation': return <StudentInvitationEmail {...input as EmailTemplateInputs['student_invitation']} logoUrl={logoUrl} />
     case 'welcome': {
       const w = input as EmailTemplateInputs['welcome']
       return w.role === 'admin' || w.role === 'tutor'
@@ -87,4 +90,3 @@ export async function renderEmail<K extends EmailEventName>(event: K, input: Ema
     text: await render(email, { plainText: true }),
   }
 }
-
