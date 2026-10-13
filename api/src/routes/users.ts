@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
 import { publicFileUrl } from "../storage/r2";
+import { createAccountInvitation } from '../lib/account-invitations'
+import { sendStudentInvitation } from '../emails/send-student-invitation'
 
 type Variables = {
   user: any;
@@ -155,17 +157,25 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
             invited_by_name: invitedByName,
             app_url: frontendUrl,
           };
-          const { data: invite, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(row.email, {
-            // Admin invites do not support PKCE. Send the token hash to the
-            // review route, which verifies it before password setup.
-            redirectTo: `${frontendUrl}/auth/invitation`,
-            data: invitationData,
+          const durable = await createAccountInvitation({
+            schoolId: admin.school_id,
+            invitedBy: admin.id,
+            role: 'student',
+            email: row.email,
+            studentProfileId: student.id,
+            metadata: invitationData,
           });
-          if (inviteError || !invite.user) throw new Error(inviteError?.message || 'Could not send activation email');
-          const { error: profileError } = await supabase.from('user_profiles').update({ supabase_auth_id: invite.user.id, onboarding_status: 'invited' } as any).eq('id', student.id);
+          const inviteUrl = `${frontendUrl}/invite?token=${encodeURIComponent(durable.token)}`;
+          await sendStudentInvitation({
+            to: row.email,
+            inviteUrl,
+            invitedByName,
+            schoolName: school.name,
+            programmeName,
+            expiresAt: durable.expiresAt,
+          });
+          const { error: profileError } = await supabase.from('user_profiles').update({ onboarding_status: 'invited' } as any).eq('id', student.id);
           if (profileError) throw profileError;
-          const { error: metadataError } = await supabase.auth.admin.updateUserById(invite.user.id, { user_metadata: invitationData, app_metadata: { kanvise_role: 'student', role: 'student', school_id: admin.school_id, kanvise_user_id: student.kanvise_user_id, profile_id: student.id } });
-          if (metadataError) throw metadataError;
           summary.invited += 1;
         }
       } catch (error: any) {

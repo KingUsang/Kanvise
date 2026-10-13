@@ -84,6 +84,8 @@ export async function updateSession(request: NextRequest) {
     // Redirect logged in users away from auth routes (unless they are doing a password reset or similar)
     const isPasswordSetupRoute = request.nextUrl.pathname.includes('reset-password')
       || request.nextUrl.pathname.includes('accept-invitation')
+      || request.nextUrl.pathname.includes('complete-invitation')
+      || request.nextUrl.pathname.includes('complete-profile')
       || request.nextUrl.pathname.includes('/auth/invitation')
     if (isAuthRoute && !isPasswordSetupRoute) {
       const url = request.nextUrl.clone()

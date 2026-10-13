@@ -18,6 +18,12 @@ const cases: Array<{
     link: 'https://kanvise.com/join?token=abc',
   },
   {
+    event: 'student_invitation',
+    input: { inviteUrl: 'https://kanvise.com/invite?token=abc', invitedByName: 'Ada Okafor', schoolName: 'Bright Minds', programmeName: 'WAEC Physics', expiresAt: '2026-07-27T12:00:00Z' },
+    expected: ['Ada Okafor', 'Bright Minds', 'WAEC Physics', 'reopen this same link'],
+    link: 'https://kanvise.com/invite?token=abc',
+  },
+  {
     event: 'welcome',
     input: { firstName: 'Chidi', dashboardUrl: 'https://kanvise.com/dashboard' },
     expected: ['Chidi', 'Your Kanvise account is fully set up'],

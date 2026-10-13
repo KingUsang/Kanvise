@@ -20,9 +20,6 @@ ALTER TABLE public.live_classes
   ADD COLUMN IF NOT EXISTS provider_error_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS provider_error_message TEXT;
 
--- Earlier code marked the row live immediately after createRoom. Those rooms
--- were prepared, not proven to have started. Preserve active provider evidence
--- while correctly returning merely prepared rooms to ready.
 UPDATE public.live_classes
 SET status = 'ready',
     room_ready_at = COALESCE(room_ready_at, started_at, updated_at),

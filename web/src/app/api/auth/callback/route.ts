@@ -1,100 +1,66 @@
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { OAUTH_CONTEXT_COOKIE, readOAuthContext } from '@/lib/auth/oauth-context'
+import { postAuthDestination, type KanviseRole } from '@/lib/auth-continuation'
+import { getApiUrl } from '@/config/api'
+import { safeRedirectPath } from '@/lib/safe-redirect'
+
+function redirectOrigin(request: Request) {
+  const url = new URL(request.url)
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https'
+  return process.env.NODE_ENV === 'development' || !forwardedHost ? url.origin : `${forwardedProto}://${forwardedHost}`
+}
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
-  const role = searchParams.get('role') // from the email redirect url
-  const redirect = searchParams.get('redirect') // specific course redirect
-  const inviteToken = searchParams.get('invite_token')
+  const url = new URL(request.url)
+  const origin = redirectOrigin(request)
+  const code = url.searchParams.get('code')
+  const accountInvitationToken = url.searchParams.get('account_invitation_token')
 
-  if (code) {
-    const supabase = await createClient()
-    const { error, data } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (error) {
-      console.error('[auth/callback] Supabase code exchange failed:', error.message)
-    }
+  // Preserve the implicit-fragment handoff used by email invitation links.
+  if (!code && accountInvitationToken) {
+    const handoff = new URL('/auth/invitation/callback', origin)
+    handoff.searchParams.set('account_invitation_token', accountInvitationToken)
+    const handoffUrl = JSON.stringify(handoff.toString())
+    return new NextResponse(`<!doctype html><html><head><meta charset="utf-8"><title>Opening invitation</title></head><body><p>Opening your invitation…</p><script>window.location.replace(${handoffUrl} + window.location.hash)</script><noscript><a href="${handoff.toString()}">Continue</a></noscript></body></html>`, { headers: { 'content-type': 'text/html; charset=utf-8' } })
+  }
+  if (!code) return NextResponse.redirect(new URL('/auth/auth-code-error?reason=missing_code', origin))
 
-    if (!error && data.user) {
-      // Supabase's invite link has already proven that the recipient controls
-      // the invited mailbox. Let them choose their password and names in one
-      // final screen; do not send a second signup confirmation or OTP.
-      if (role === 'tutor' && inviteToken) {
-        return NextResponse.redirect(`${origin}/auth/complete-tutor-invite?invite_token=${encodeURIComponent(inviteToken)}`)
-      }
-
-      // If there is no role attached to the verification link, it might be a password reset flow
-      if (!role) {
-        return NextResponse.redirect(`${origin}${next}`)
-      }
-
-      // We need to call Hono to initialize the user profile
-      const user = data.user
-      // In a real browser context, we would need to pass the invite_token if the user is a tutor.
-      // However, we can't read sessionStorage from a Server Route.
-      // The Next.js API route could either:
-      // 1. Pass the token as a query parameter in the callback URL initially (when calling signUp).
-      // Since we didn't do that, we will handle `invite_token` by making the Client Component 
-      // check for the token after login and hit the profile/init endpoint itself if the server didn't.
-      // Alternatively, we can let the Client handle the profile initialization.
-
-      // For MVP, we will construct the Hono call here.
-      let profileInitOk = false
-      try {
-        const honoApiUrl = process.env.NEXT_PUBLIC_API_URL
-        
-        if (!honoApiUrl) throw new Error('NEXT_PUBLIC_API_URL is not configured')
-        const response = await fetch(`${honoApiUrl}/auth/profile/init`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${data.session.access_token}`
-          },
-          body: JSON.stringify({
-            supabase_auth_id: user.id,
-            email: user.email,
-            flow: role,
-            first_name: user.user_metadata?.first_name || '',
-            last_name: user.user_metadata?.last_name || '',
-            invite_token: inviteToken || undefined
-          })
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error(`[auth/callback] Profile initialization returned ${response.status}:`, errorText)
-        } else {
-          profileInitOk = true
-        }
-      } catch (err) {
-        console.error("[auth/callback] Could not initialize profile:", err)
-      }
-
-      // If we couldn't set up the account, don't pretend onboarding succeeded.
-      if (!profileInitOk) {
-        return NextResponse.redirect(`${origin}/auth/auth-code-error`)
-      }
-
-      // Redirecting...
-      let redirectUrl = origin
-      
-      if (role === 'admin') {
-        redirectUrl = `${origin}/dashboard/school-setup`
-      } else if (role === 'tutor') {
-        redirectUrl = `${origin}/dashboard`
-      } else if (redirect) {
-        redirectUrl = `${origin}${redirect}`
-      } else {
-        redirectUrl = `${origin}/dashboard/student`
-      }
-      
-      return NextResponse.redirect(redirectUrl)
-    }
+  const supabase = await createClient()
+  // The installed supabase-js version stores the matching PKCE verifier in
+  // its SSR cookie and accepts only the authorization code here.
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+  if (error || !data.session) {
+    console.error('[auth/callback] code exchange failed', error?.message)
+    return NextResponse.redirect(new URL('/auth/auth-code-error?reason=exchange_failed', origin))
   }
 
-  // Return the user to an error page with some instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  const context = readOAuthContext((await cookies()).get(OAUTH_CONTEXT_COOKIE)?.value)
+  if (!context) {
+    // Compatibility for existing email confirmation/recovery/invitation links
+    // that already target this callback and do not carry our Google context.
+    if (accountInvitationToken) return NextResponse.redirect(new URL(`/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`, origin))
+    const role = url.searchParams.get('role')
+    const inviteToken = url.searchParams.get('invite_token')
+    if (role === 'tutor' && inviteToken) return NextResponse.redirect(new URL(`/auth/complete-tutor-invite?invite_token=${encodeURIComponent(inviteToken)}`, origin))
+    const next = safeRedirectPath(url.searchParams.get('next'))
+    if (!role) return NextResponse.redirect(new URL(next || '/', origin))
+
+    const init = await fetch(`${getApiUrl()}/auth/profile/init`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ flow: role, first_name: data.user.user_metadata?.first_name || '', last_name: data.user.user_metadata?.last_name || '', invite_token: inviteToken || undefined }) })
+    if (!init.ok) return NextResponse.redirect(new URL('/auth/auth-code-error?reason=profile_init_failed', origin))
+    return NextResponse.redirect(new URL(role === 'admin' ? '/dashboard/school-setup' : role === 'student' ? '/dashboard/student' : '/dashboard', origin))
+  }
+
+  const profileResponse = await fetch(`${getApiUrl()}/auth/me`, { headers: { Authorization: `Bearer ${data.session.access_token}` }, cache: 'no-store' })
+  if (profileResponse.ok && context.intent === 'login') {
+    const body = await profileResponse.json().catch(() => null)
+    const destination = postAuthDestination({ role: body?.user?.role as KanviseRole, schoolId: body?.user?.school_id, redirect: context.returnTo })
+    const response = NextResponse.redirect(new URL(destination, origin))
+    response.cookies.delete(OAUTH_CONTEXT_COOKIE)
+    return response
+  }
+
+  return NextResponse.redirect(new URL('/auth/complete-profile', origin))
 }

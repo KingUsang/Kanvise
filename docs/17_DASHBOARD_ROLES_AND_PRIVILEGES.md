@@ -32,6 +32,18 @@ tutors. The explicit Course assignment is the source of truth.
 | Notes | Tutor capability | Available only when the Admin is assigned to a Course; manage notes for assigned Courses | Manage notes for assigned Courses |
 | Assignments | Tutor capability | Available only when the Admin is assigned to a Course; manage and grade assigned Courses | Manage and grade assigned Courses |
 
+The centre-wide **Tutors** and **Students** pages remain Admin-only. Inside an
+individual Class workspace, **Tutors** is shown only to a centre Admin, while
+**Students** is available to the Admin and to Tutors assigned to that Class.
+Assigned Tutors receive a read-only teaching roster; invitation, enrolment and
+removal controls remain Admin-only. Independent accounts never receive a
+Tutors/Teaching Team surface.
+
+The staff mobile navigation uses Home, Classes, Mocks and Calendar. Admin
+accounts also receive More: centre Admins see Teaching Team, Students,
+Payments, Timetable and Settings; independent Admin/Tutors omit Teaching Team
+and the centre timetable.
+
 ## Enforcement layers
 
 1. Next.js middleware separates Student routes and rejects Tutor visits to

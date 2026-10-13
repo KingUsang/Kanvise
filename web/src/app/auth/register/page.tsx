@@ -9,6 +9,7 @@ import { safeRedirectPath } from '@/lib/safe-redirect'
 import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, PASSWORD_REQUIREMENTS } from '@/lib/password-policy'
 import { loginHref as buildLoginHref, postAuthDestination } from '@/lib/auth-continuation'
 import { getApiUrl } from '@/config/api'
+import { AuthMethodDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 
 function RegisterContent() {
   const router = useRouter();
@@ -203,6 +204,9 @@ function RegisterContent() {
             </header>
 
             {error && <div className="mb-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+
+            <GoogleAuthButton href={`/api/auth/google?intent=${isStudentFlow ? 'student' : 'educator'}&account_type=${accountType}${redirectParam ? `&return_to=${encodeURIComponent(redirectParam)}` : ''}${studentRegistrationToken ? `&registration_intent=${encodeURIComponent(studentRegistrationToken)}` : ''}`} />
+            <AuthMethodDivider />
 
             <form onSubmit={handleRegister} className="space-y-5">
               {!isStudentFlow && <fieldset className="grid grid-cols-2 gap-3" aria-label="Account type">

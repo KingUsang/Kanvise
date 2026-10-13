@@ -68,13 +68,21 @@ describe('programme setup', () => {
   })
 
   it('passes tenant identity, generated slugs, tutor ids, and unpublished-only input to the transaction', async () => {
-    const response = await post('/setup', { name: 'JAMB Chemistry', price: 15000, is_published: true, subjects: [{ name: 'Organic Chemistry', tutor_ids: ['tutor-1'] }] })
+    const response = await programmesRouter.request('/setup', { method: 'POST', headers: { 'content-type': 'application/json', 'Idempotency-Key': 'c62ed60d-47cb-4d9a-9797-fbc390488f98' }, body: JSON.stringify({ name: 'JAMB Chemistry', price: 15000, is_published: true, subjects: [{ name: 'Organic Chemistry', tutor_ids: ['tutor-1'] }] }) })
     expect(response.status).toBe(201)
     expect(mocks.rpc).toHaveBeenCalledWith('setup_programme', expect.objectContaining({
       p_school_id: 'school-1', p_created_by: 'admin-1', p_slug: 'jamb-chemistry',
+      p_creation_key: 'c62ed60d-47cb-4d9a-9797-fbc390488f98',
       p_subjects: [expect.objectContaining({ slug: 'jamb-chemistry-organic-chemistry', tutor_ids: ['tutor-1'] })],
     }))
     expect(JSON.stringify(mocks.rpc.mock.calls[0][1])).not.toContain('is_published')
+  })
+
+  it('returns a recovered class for a repeated idempotent setup', async () => {
+    mocks.rpc.mockResolvedValue({ data: { programme: { id: 'programme-1' }, courses: [], replayed: true }, error: null })
+    const response = await programmesRouter.request('/setup', { method: 'POST', headers: { 'content-type': 'application/json', 'Idempotency-Key': 'c62ed60d-47cb-4d9a-9797-fbc390488f98' }, body: JSON.stringify({ name: 'JAMB Chemistry', price: 0, subjects: [{ name: 'Chemistry' }] }) })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ data: { programme: { id: 'programme-1' }, replayed: true } })
   })
 
   it('returns a tenant-safe error when a tutor is outside the centre', async () => {

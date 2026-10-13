@@ -40,7 +40,8 @@ import { AssignmentsClient } from "@/components/dashboard/assignments/assignment
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
 
-type Subject = { id: string; name: string };
+type Subject = { id: string; name: string; tutor_ids?: string[] };
+type TutorPerson = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string };
 type ClassData = {
   id: string;
   name: string;
@@ -140,6 +141,7 @@ type Tab =
   | "schedule"
   | "assessments"
   | "materials"
+  | "tutors"
   | "learners"
   | "performance";
 
@@ -148,6 +150,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "schedule", label: "Schedule" },
   { id: "assessments", label: "Assessments" },
   { id: "materials", label: "Materials" },
+  { id: "tutors", label: "Tutors" },
   { id: "learners", label: "Students" },
   { id: "performance", label: "Performance" },
 ];
@@ -167,10 +170,14 @@ export function ClassWorkspaceClient({
   classId,
   token,
   canManageStudents = false,
+  canManageClass = false,
+  canManageTutors = false,
 }: {
   classId: string;
   token: string;
   canManageStudents?: boolean;
+  canManageClass?: boolean;
+  canManageTutors?: boolean;
 }) {
   const api = process.env.NEXT_PUBLIC_API_URL;
   const queryClient = useQueryClient();
@@ -195,7 +202,7 @@ export function ClassWorkspaceClient({
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
     if (requestedTab && tabs.some((item) => item.id === requestedTab)) {
-      setActiveTab(requestedTab as Tab);
+      setActiveTab(requestedTab === 'tutors' && !canManageTutors ? 'overview' : requestedTab as Tab);
     } else {
       setActiveTab("overview");
     }
@@ -210,7 +217,9 @@ export function ClassWorkspaceClient({
         `${url.pathname}${url.search}${url.hash}`,
       );
     }
-  }, [searchParams, canManageStudents]);
+    const requestedSubject = searchParams.get('subject');
+    if (requestedSubject) setActiveSubject(requestedSubject);
+  }, [searchParams, canManageStudents, canManageTutors]);
 
   const classQuery = useQuery({
     queryKey: ["class-workspace", classId],
@@ -225,6 +234,17 @@ export function ClassWorkspaceClient({
     refetchOnWindowFocus: true,
   });
   const data = classQuery.data;
+  const tutorsQuery = useQuery({
+    queryKey: ['class-tutors', classId],
+    queryFn: async () => {
+      const response = await authenticatedApiFetch(`${api}/users?roles=admin,tutor`);
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Could not load tutors');
+      return (body?.data || []) as TutorPerson[];
+    },
+    enabled: activeTab === 'tutors' && canManageTutors,
+    staleTime: 60_000,
+  });
   const scheduleQuery = useQuery({
     queryKey: ["class-schedule", classId],
     queryFn: async () => {
@@ -439,14 +459,12 @@ export function ClassWorkspaceClient({
                 {data.description ? ` · ${data.description}` : ""}
               </p>
             </div>
-            <button
-              type="button"
-              disabled
-              title="Subject management will be enabled with the class update flow."
+            {canManageClass ? <Link
+              href={`/dashboard/classes/${classId}/subjects/new`}
               className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#312783] px-3.5 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70 sm:w-fit"
             >
               <Plus size={17} /> Add subject
-            </button>
+            </Link> : null}
           </div>
           {data.courses.length > 1 ? (
             <div className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none]">
@@ -471,7 +489,7 @@ export function ClassWorkspaceClient({
           ) : null}
         </header>
         <div className="mt-2">
-          <WorkspaceRail classId={classId} activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} />
+          <WorkspaceRail classId={classId} activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} />
           <div className="min-w-0">
             {activeTab === "overview" &&
               (scheduleQuery.isPending ||
@@ -678,6 +696,21 @@ export function ClassWorkspaceClient({
                   />
                 </div>
               ))}
+            {activeTab === 'tutors' && canManageTutors ? (
+              <ClassTutorsPanel
+                classId={classId}
+                subjects={data.courses}
+                tutors={tutorsQuery.data || []}
+                loading={tutorsQuery.isPending}
+                onChanged={async () => {
+                  await Promise.all([
+                    queryClient.invalidateQueries({ queryKey: ['class-workspace', classId] }),
+                    queryClient.invalidateQueries({ queryKey: ['class-tutors', classId] }),
+                    queryClient.invalidateQueries({ queryKey: ['tutors'] }),
+                  ]);
+                }}
+              />
+            ) : null}
             {activeTab === "performance" &&
               (insightsQuery.isPending ? (
                 <WorkspaceSectionLoading cards={3} />
@@ -771,14 +804,79 @@ export function ClassWorkspaceClient({
   );
 }
 
+function ClassTutorsPanel({
+  classId,
+  subjects,
+  tutors,
+  loading,
+  onChanged,
+}: {
+  classId: string;
+  subjects: Subject[];
+  tutors: TutorPerson[];
+  loading: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const api = process.env.NEXT_PUBLIC_API_URL;
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  async function toggle(subject: Subject, tutorId: string) {
+    const assigned = subject.tutor_ids?.includes(tutorId) || false;
+    const key = `${subject.id}:${tutorId}`;
+    setUpdating(key);
+    try {
+      const response = await authenticatedApiFetch(
+        `${api}/courses/${subject.id}/tutors${assigned ? `/${tutorId}` : ''}`,
+        {
+          method: assigned ? 'DELETE' : 'POST',
+          ...(assigned ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tutor_id: tutorId }) }),
+        },
+      );
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Could not update this tutor');
+      await onChanged();
+    } catch (error) {
+      const { toast } = await import('sonner');
+      toast.error('Could not update tutor', { description: error instanceof Error ? error.message : 'Try again.' });
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  return <section className="mt-5 space-y-4">
+    <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-dashboard-outline bg-white p-5 shadow-dashboard-card">
+      <div><h2 className="text-lg font-bold text-[#27242d]">Class tutors</h2><p className="mt-1 text-sm text-dashboard-muted">Assign members of your teaching team to the subjects they teach.</p></div>
+      <Link href={`/dashboard/tutors?class=${classId}`} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#312783] px-4 text-sm font-bold text-[#312783]">Invite tutor</Link>
+    </div>
+    {loading ? <WorkspaceSectionLoading cards={2} /> : subjects.map(subject => <article key={subject.id} className="rounded-2xl border border-dashboard-outline bg-white p-5 shadow-dashboard-card">
+      <h3 className="font-bold text-[#27242d]">{subject.name}</h3>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {tutors.map(tutor => {
+          const checked = subject.tutor_ids?.includes(tutor.id) || false;
+          const key = `${subject.id}:${tutor.id}`;
+          const name = [tutor.first_name, tutor.last_name].filter(Boolean).join(' ') || tutor.email || 'Unnamed tutor';
+          return <label key={tutor.id} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm ${checked ? 'border-[#312783] bg-[#f1efff]' : 'border-dashboard-outline bg-white'}`}>
+            <input type="checkbox" checked={checked} disabled={updating !== null} onChange={() => void toggle(subject, tutor.id)} className="size-4 accent-[#312783]" />
+            <span className="font-semibold text-[#36313b]">{name}</span>
+            {updating === key ? <span className="ml-auto text-xs text-dashboard-muted">Saving…</span> : null}
+          </label>;
+        })}
+        {!tutors.length ? <p className="text-sm text-dashboard-muted">Invite a tutor to your centre before assigning this subject.</p> : null}
+      </div>
+    </article>)}
+  </section>;
+}
+
 function WorkspaceRail({
   classId,
   activeTab,
   isOneToOne,
+  canManageTutors,
 }: {
   classId: string;
   activeTab: Tab;
   isOneToOne: boolean;
+  canManageTutors: boolean;
 }) {
   return (
     <section className="border-b border-dashboard-outline">
@@ -786,7 +884,7 @@ function WorkspaceRail({
         aria-label="Class workspace"
         className="flex gap-1 overflow-x-auto [scrollbar-width:none]"
       >
-        {tabs.map((tab) => (
+        {tabs.filter(tab => tab.id !== 'tutors' || canManageTutors).map((tab) => (
           <Link
             key={tab.id}
             href={`/dashboard/classes/${classId}?tab=${tab.id}`}

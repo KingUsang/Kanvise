@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   generateLink: vi.fn(),
   sendTutorInvitation: vi.fn(),
+  createAccountInvitation: vi.fn(),
 }))
 
 vi.mock('../lib/supabase', () => ({
@@ -12,6 +13,10 @@ vi.mock('../lib/supabase', () => ({
 
 vi.mock('../emails/send-tutor-invitation', () => ({
   sendTutorInvitation: mocks.sendTutorInvitation,
+}))
+
+vi.mock('../lib/account-invitations', () => ({
+  createAccountInvitation: mocks.createAccountInvitation,
 }))
 
 vi.mock('../middleware/auth', () => ({
@@ -67,6 +72,11 @@ describe('POST /schools/me/invite/tutor', () => {
       data: { properties: { action_link: 'https://project.supabase.co/auth/v1/verify?token=one-time' } },
       error: null,
     })
+    mocks.createAccountInvitation.mockResolvedValue({
+      token: 'durable-token',
+      expiresAt: insertedInvite.expires_at,
+      invitation: { id: 'account-invite-1' },
+    })
     mocks.sendTutorInvitation.mockRejectedValue(new Error('provider unavailable'))
 
     const response = await schoolsRouter.request('/me/invite/tutor', {
@@ -79,9 +89,10 @@ describe('POST /schools/me/invite/tutor', () => {
     expect(response.status).toBe(201)
     expect(body.data.email_sent).toBe(false)
     expect(body.data.email_id).toBeNull()
-    expect(body.data.invite_url).toBe('https://project.supabase.co/auth/v1/verify?token=one-time')
+    expect(body.data.invite_url).toBe('https://kanvise.com/invite?token=durable-token')
     expect(body.data.expires_at).toBe(insertedInvite.expires_at)
     expect(mocks.sendTutorInvitation).toHaveBeenCalledOnce()
     expect(mocks.sendTutorInvitation.mock.calls[0][0].inviteUrl).toBe(body.data.invite_url)
+    expect(mocks.generateLink).not.toHaveBeenCalled()
   })
 })
