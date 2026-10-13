@@ -4,14 +4,14 @@ import { canAccessDashboardPath, getDashboardNavItems, getDashboardWorkspaceForP
 describe('dashboard workspaces', () => {
   it('gives an admin-tutor the mobile work areas that matter while teaching', () => {
     expect(getDashboardWorkspaces({ isAdmin: true, isTutor: true }).map(item => item.label))
-      .toEqual(['Home', 'Classes', 'Calendar', 'Settings'])
+      .toEqual(['Home', 'Classes', 'Mocks', 'Calendar', 'More'])
   })
 
   it('only shows areas the current role can use', () => {
     expect(getDashboardWorkspaces({ isAdmin: false, isTutor: true }).map(item => item.label))
-      .toEqual(['Home', 'Classes', 'Calendar'])
+      .toEqual(['Home', 'Classes', 'Mocks', 'Calendar'])
     expect(getDashboardWorkspaces({ isAdmin: true, isTutor: false }).map(item => item.label))
-      .toEqual(['Home', 'Classes', 'Calendar', 'Settings'])
+      .toEqual(['Home', 'Classes', 'Mocks', 'Calendar', 'More'])
   })
 
   it('shows only the truthful setup destination until a new centre exists', () => {

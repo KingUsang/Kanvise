@@ -37,7 +37,9 @@ export function ClassBuilder() {
   const [subjects, setSubjects] = useState<SubjectRow[]>([])
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [submissionAction, setSubmissionAction] = useState<'draft' | 'publish' | null>(null)
+  const submissionLock = useRef(false)
+  const creationKey = useRef(crypto.randomUUID())
   const firstInputRef = useRef<HTMLInputElement>(null)
 
   const independent = accountType === 'independent'
@@ -100,18 +102,20 @@ export function ClassBuilder() {
   const isReady = Boolean(name.trim()) && subjectNamesValid && feeIsValid
 
   async function saveClass(publish = false) {
+    if (submissionLock.current) return
     if (!name.trim()) return toast.error('Give this class a name')
     if (!subjectNamesValid) return toast.error('Add a name to every subject and remove duplicates')
     if (!feeIsValid) return toast.error('Enter a valid class fee')
     if (isPaid && !payoutReady) return toast.error('Set up your payout account before creating a paid class', { description: 'Students cannot pay until you add where your earnings should be sent.' })
     if (publish && !independent && subjects.some(subject => !subject.tutorId)) return toast.error('Assign a tutor to every subject before publishing')
-    setSaving(true)
+    submissionLock.current = true
+    setSubmissionAction(publish ? 'publish' : 'draft')
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Your session has expired')
       const response = await fetch(`${apiUrl}/classes/setup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, 'Idempotency-Key': creationKey.current },
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim(),
@@ -124,13 +128,16 @@ export function ClassBuilder() {
         }),
       })
       const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.error || 'Could not create this class')
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['programmes'] }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
-      ])
+      if (!response.ok) {
+        if (response.status === 409 && body?.code === 'CLASS_NAME_TAKEN' && body?.existing_class_id) {
+          toast.error('A class with this name already exists', {
+            description: 'Open the existing class or choose a different name.',
+            action: { label: 'Open class', onClick: () => router.push(`/dashboard/classes/${body.existing_class_id}`) },
+          })
+          return
+        }
+        throw new Error(body?.error || 'Could not create this class')
+      }
       const classId = body.data.programme.id as string
       if (publish) {
         const publishResponse = await fetch(`${apiUrl}/classes/${classId}/publish`, {
@@ -147,10 +154,17 @@ export function ClassBuilder() {
         toast.success('Draft class saved', { description: 'Students cannot see it yet. Add students, sessions and teaching materials before publishing.' })
       }
       router.push(`/dashboard/classes/${classId}${studentMode === 'one_to_one' ? '?tab=learners&add_student=true' : ''}`)
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['programmes'] }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
+      ])
     } catch (error) {
       toast.error('Could not save class', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
-      setSaving(false)
+      submissionLock.current = false
+      setSubmissionAction(null)
     }
   }
 
@@ -225,7 +239,7 @@ export function ClassBuilder() {
 
           <details className="rounded-xl border border-[#ded9e0] bg-[#fcfbff] p-4"><summary className="cursor-pointer text-sm font-bold text-[#312783]">Add a description <span className="font-normal text-dashboard-muted">(optional)</span></summary><textarea value={description} onChange={event => setDescription(event.target.value)} rows={4} placeholder="What are your students preparing for?" className="mt-4 w-full rounded-lg border border-[#beb8c5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#312783] focus:ring-4 focus:ring-[#312783]/10" /></details>
         </div>
-        <footer className="flex flex-col-reverse gap-3 border-t border-dashboard-outline bg-[#fbf9f8] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8"><Link href="/dashboard/classes" className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-bold text-[#514b5b] hover:bg-white">Cancel</Link><div className="flex flex-col gap-2 sm:flex-row"><button type="button" disabled={!isReady || saving} onClick={() => void saveClass(false)} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#312783] bg-white px-5 text-sm font-bold text-[#312783] transition hover:bg-[#f1efff] disabled:cursor-not-allowed disabled:opacity-45">{saving ? 'Saving…' : 'Save draft'}</button><button type="button" disabled={!isReady || saving} onClick={() => void saveClass(true)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#312783] px-5 text-sm font-bold text-white transition hover:bg-[#241c70] disabled:cursor-not-allowed disabled:opacity-45">{saving ? 'Publishing…' : 'Publish class'}</button></div></footer>
+        <footer className="flex flex-col-reverse gap-3 border-t border-dashboard-outline bg-[#fbf9f8] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8"><Link href="/dashboard/classes" className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-bold text-[#514b5b] hover:bg-white">Cancel</Link><div className="flex flex-col gap-2 sm:flex-row"><button type="button" disabled={!isReady || submissionAction !== null} onClick={() => void saveClass(false)} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#312783] bg-white px-5 text-sm font-bold text-[#312783] transition hover:bg-[#f1efff] disabled:cursor-not-allowed disabled:opacity-45">{submissionAction === 'draft' ? 'Saving…' : 'Save draft'}</button><button type="button" disabled={!isReady || submissionAction !== null} onClick={() => void saveClass(true)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#312783] px-5 text-sm font-bold text-white transition hover:bg-[#241c70] disabled:cursor-not-allowed disabled:opacity-45">{submissionAction === 'publish' ? 'Publishing…' : 'Publish class'}</button></div></footer>
       </section>
 
       <aside className="h-fit rounded-2xl border border-[#ded9e0] bg-[#f8f7ff] p-5 lg:sticky lg:top-6"><p className="text-xs font-bold uppercase tracking-[.14em] text-[#6d61ab]">What happens next</p><ol className="mt-4 space-y-4 text-sm text-[#514b5b]"><li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#312783] text-xs font-bold text-white">1</span><span><strong className="block text-[#27242d]">Save the draft</strong>It is visible only to your team.</span></li><li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#a8a1d0] text-xs font-bold text-[#312783]">2</span><span><strong className="block text-[#27242d]">Set up the class</strong>Add students, schedule sessions, and organise materials.</span></li><li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#a8a1d0] text-xs font-bold text-[#312783]">3</span><span><strong className="block text-[#27242d]">Publish when ready</strong>Students can then enrol and access the class.</span></li></ol></aside>

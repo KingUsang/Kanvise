@@ -7,6 +7,8 @@ function subjectValue(value: string): string {
 export const emailSubjects = {
   tutor_invitation: (input: EmailTemplateInputs['tutor_invitation']) =>
     `You’re invited to teach at ${subjectValue(input.schoolName)}`,
+  student_invitation: (input: EmailTemplateInputs['student_invitation']) =>
+    `You’re invited to ${subjectValue(input.programmeName)}`,
   welcome: (input: EmailTemplateInputs['welcome']) =>
     input.role === 'admin' || input.role === 'tutor' 
       ? 'Welcome to Kanvise 👋' 
@@ -32,4 +34,3 @@ export const emailSubjects = {
   kavi_challenge: () => `You’ve seen the basics. Now try this 👀`,
   pilot_ending: () => `You were here before everyone else 💛`,
 } satisfies { [K in keyof EmailTemplateInputs]: (input: EmailTemplateInputs[K]) => string }
-

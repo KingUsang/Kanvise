@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole, Variables } from '../middleware/auth'
-import { generateInviteToken } from '../lib/invites'
 import { sendTutorInvitation } from '../emails/send-tutor-invitation'
+import { createAccountInvitation } from '../lib/account-invitations'
 import { isReservedSchoolSlug, normalizeSchoolProfileUpdate, schoolSlugCandidates, SchoolProfileValidationError } from '../lib/school-profile'
 import type { TablesUpdate } from '../lib/database.types'
 
@@ -219,16 +219,13 @@ schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
     .eq('status', 'pending')
     .maybeSingle()
 
-  if (existing && new Date(existing.expires_at).getTime() > Date.now()) {
-    return c.json({
-      error: 'A pending invite already exists for this email. Revoke it first to generate a new link.',
-      code: 'DUPLICATE_INVITE'
-    }, 409)
-  }
   if (existing) {
     await supabase
       .from('tutor_invites')
-      .update({ status: 'expired', updated_at: new Date().toISOString() })
+      .update({
+        status: new Date(existing.expires_at).getTime() > Date.now() ? 'revoked' : 'expired',
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', existing.id)
       .eq('school_id', user.school_id)
   }
@@ -252,25 +249,15 @@ schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
     return c.json({ error: insertError.message }, 500)
   }
 
-  // Bind the signed link to this exact database row and recipient. Revocation,
-  // expiry and single-use status are therefore enforced during acceptance.
-  const token = generateInviteToken(invite.id, user.school_id, invite.email)
-
   const appUrl = process.env.FRONTEND_URL!
-  // Supabase generates the one-time action link. We send that link through our
-  // branded Resend template, rather than first sending a Kanvise link and then
-  // making the tutor complete a second Supabase verification email.
-  const redirectTo = `${appUrl}/api/auth/callback?role=tutor&invite_token=${encodeURIComponent(token)}`
-  const { data: generatedLink, error: generatedLinkError } = await supabase.auth.admin.generateLink({
-    type: 'invite',
+  const durable = await createAccountInvitation({
+    schoolId: user.school_id,
+    invitedBy: user.id,
+    role: 'tutor',
     email: invite.email,
-    options: { redirectTo },
+    tutorInviteId: invite.id,
   })
-
-  if (generatedLinkError || !generatedLink?.properties?.action_link) {
-    return c.json({ error: generatedLinkError?.message || 'Could not create the tutor invitation' }, 502)
-  }
-  const inviteUrl = generatedLink.properties.action_link
+  const inviteUrl = `${appUrl.replace(/\/$/, '')}/invite?token=${encodeURIComponent(durable.token)}`
 
   const { data: school } = await supabase
     .from('schools')
@@ -373,6 +360,15 @@ schoolsRouter.post('/me/invites/:id/revoke', requireRole('admin'), async (c) => 
 
   if (updateError) {
     return c.json({ error: updateError.message }, 500)
+  }
+
+  const { error: durableRevokeError } = await (supabase as any)
+    .from('account_invitations')
+    .update({ status: 'revoked', updated_at: new Date().toISOString() })
+    .eq('tutor_invite_id', id)
+    .eq('status', 'pending')
+  if (durableRevokeError) {
+    return c.json({ error: 'The tutor invite was revoked, but its account link could not be closed' }, 500)
   }
 
   return c.json({ message: 'Invite revoked successfully' })

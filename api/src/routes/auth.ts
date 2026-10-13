@@ -5,8 +5,10 @@ import { validateInviteToken } from '../lib/invites'
 import { ensureWelcomeEmail } from '../emails/ensure-welcome-email'
 import type { TablesUpdate } from '../lib/database.types'
 import { createHash } from 'node:crypto'
+import { accountInvitationStatus, consumeAccountInvitation, findAccountInvitation, invitationTokenHash } from '../lib/account-invitations'
 
 export const authRouter = new Hono<{ Variables: Variables }>()
+const invitationStarts = new Map<string, { count: number; resetAt: number }>()
 
 // This is intentionally public: the holder of an invite link needs to know
 // which email it was issued to before they can authenticate. The signed token
@@ -48,6 +50,101 @@ authRouter.post('/tutor-invite/preview', async (c) => {
   }
 })
 
+authRouter.post('/invitation/preview', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const token = typeof body?.token === 'string' ? body.token : ''
+  const invitation = await findAccountInvitation(token).catch(() => null)
+  if (!invitation) return c.json({ error: 'This invitation link is invalid', code: 'INVITATION_INVALID' }, 404)
+
+  const status = accountInvitationStatus(invitation)
+  const school = Array.isArray(invitation.school) ? invitation.school[0] : invitation.school
+  return c.json({ data: {
+    role: invitation.role,
+    email: invitation.email,
+    school_name: school?.name || 'your tutorial centre',
+    status,
+    expires_at: invitation.expires_at,
+    metadata: invitation.metadata || {},
+  } })
+})
+
+authRouter.post('/invitation/start', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const token = typeof body?.token === 'string' ? body.token : ''
+  const invitation = await findAccountInvitation(token).catch(() => null)
+  if (!invitation) return c.json({ error: 'This invitation link is invalid', code: 'INVITATION_INVALID' }, 404)
+  const rateKey = invitationTokenHash(token)
+  const now = Date.now()
+  const bucket = invitationStarts.get(rateKey)
+  if (bucket && bucket.resetAt > now && bucket.count >= 5) {
+    return c.json({ error: 'Too many invitation attempts. Wait a few minutes and try again.', code: 'INVITATION_RATE_LIMITED' }, 429)
+  }
+  invitationStarts.set(rateKey, bucket && bucket.resetAt > now
+    ? { ...bucket, count: bucket.count + 1 }
+    : { count: 1, resetAt: now + 10 * 60_000 })
+  if (invitation.status !== 'pending') return c.json({ error: 'This invitation is no longer pending', code: `INVITATION_${String(invitation.status).toUpperCase()}` }, 409)
+  if (new Date(invitation.expires_at).getTime() <= Date.now()) {
+    await (supabase as any).from('account_invitations').update({ status: 'expired', updated_at: new Date().toISOString() }).eq('id', invitation.id).eq('status', 'pending')
+    return c.json({ error: 'This invitation has expired', code: 'INVITATION_EXPIRED' }, 410)
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '')
+  if (!frontendUrl) return c.json({ error: 'Invitations are temporarily unavailable' }, 503)
+  // Keep the existing allow-listed callback URL. It hands the browser off to
+  // the invitation callback because Supabase action links finish with an
+  // implicit-grant session in the URL fragment (`#access_token=...`).
+  const redirectTo = `${frontendUrl}/api/auth/callback?account_invitation_token=${encodeURIComponent(token)}`
+  const linkType = invitation.supabase_auth_id ? 'magiclink' : 'invite'
+  const { data: generated, error } = await supabase.auth.admin.generateLink({
+    type: linkType as 'invite' | 'magiclink',
+    email: invitation.email,
+    options: {
+      redirectTo,
+      data: {
+        ...(invitation.metadata || {}),
+        invitation_role: invitation.role,
+        school_id: invitation.school_id,
+      },
+    },
+  })
+  if (error || !generated?.properties?.action_link || !generated.user) {
+    console.error('[auth/invitation/start] generateLink failed', {
+      invitationId: invitation.id,
+      role: invitation.role,
+      message: error?.message || 'missing action link',
+    })
+    return c.json({ error: error?.message || 'Could not start this invitation' }, 502)
+  }
+
+  const actionUrl = new URL(generated.properties.action_link)
+  console.info('[auth/invitation/start] generated action link', {
+    invitationId: invitation.id,
+    role: invitation.role,
+    host: actionUrl.host,
+    path: actionUrl.pathname,
+    hasRedirect: actionUrl.searchParams.has('redirect_to'),
+  })
+
+  const { error: updateError } = await (supabase as any).from('account_invitations').update({
+    supabase_auth_id: generated.user.id,
+    auth_started_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq('id', invitation.id).eq('status', 'pending')
+  if (updateError) return c.json({ error: 'Could not save invitation progress' }, 500)
+
+  if (invitation.role === 'student' && invitation.student_profile_id) {
+    await supabase.from('user_profiles').update({ supabase_auth_id: generated.user.id, onboarding_status: 'invited' } as any).eq('id', invitation.student_profile_id)
+    await supabase.auth.admin.updateUserById(generated.user.id, {
+      app_metadata: {
+        role: 'student', kanvise_role: 'student', school_id: invitation.school_id,
+        profile_id: invitation.student_profile_id,
+      },
+    })
+  }
+
+  return c.json({ data: { action_url: generated.properties.action_link } })
+})
+
 async function deliverWelcome(profile: any, email: string) {
   try {
     const frontendUrl = process.env.FRONTEND_URL
@@ -73,7 +170,7 @@ authRouter.use('*', tenantMiddleware)
 
 authRouter.post('/profile/init', async (c) => {
   const body = await c.req.json()
-  const { flow, first_name, last_name, invite_token, student_registration_token } = body
+  const { flow, first_name, last_name, invite_token, account_invitation_token, student_registration_token } = body
   const user = c.get('user')
   const jwtPayload = c.get('jwt_payload')
   const supabaseAuthId = user.supabase_auth_id
@@ -101,15 +198,26 @@ authRouter.post('/profile/init', async (c) => {
   } else return c.json({ error: 'A valid registration flow is required' }, 400)
 
   let tutorInvite: ReturnType<typeof validateInviteToken> | null = null
+  let accountInvitation: any = null
   if (role === 'tutor') {
-    if (!invite_token) return c.json({ error: 'Invite token required for tutors' }, 400)
-    try {
-      tutorInvite = validateInviteToken(invite_token)
-      if (String(tutorInvite.email).toLowerCase() !== String(email).toLowerCase()) {
-        return c.json({ error: 'This invitation was sent to a different email address' }, 403)
+    if (account_invitation_token) {
+      accountInvitation = await findAccountInvitation(String(account_invitation_token)).catch(() => null)
+      if (!accountInvitation || accountInvitation.role !== 'tutor') return c.json({ error: 'This tutor invitation is invalid' }, 400)
+      if (String(accountInvitation.email).toLowerCase() !== String(email).toLowerCase()) return c.json({ error: 'This invitation was sent to a different email address' }, 403)
+      const replay = accountInvitation.status === 'accepted' && accountInvitation.supabase_auth_id === supabaseAuthId
+      if (!replay && (accountInvitation.status !== 'pending' || new Date(accountInvitation.expires_at).getTime() <= Date.now())) {
+        return c.json({ error: 'This tutor invitation is no longer active' }, 400)
       }
-    } catch (e: any) {
-      return c.json({ error: e.message || 'Invalid invite token' }, 400)
+    } else {
+      if (!invite_token) return c.json({ error: 'Invite token required for tutors' }, 400)
+      try {
+        tutorInvite = validateInviteToken(invite_token)
+        if (String(tutorInvite.email).toLowerCase() !== String(email).toLowerCase()) {
+          return c.json({ error: 'This invitation was sent to a different email address' }, 403)
+        }
+      } catch (e: any) {
+        return c.json({ error: e.message || 'Invalid invite token' }, 400)
+      }
     }
   }
 
@@ -120,12 +228,14 @@ authRouter.post('/profile/init', async (c) => {
     .maybeSingle()
 
   if (existingProfile) {
-    if (role === 'tutor' && (existingProfile.role !== 'tutor' || existingProfile.school_id !== tutorInvite?.school_id)) {
+    const invitedSchoolId = accountInvitation?.school_id || tutorInvite?.school_id
+    if (role === 'tutor' && (existingProfile.role !== 'tutor' || existingProfile.school_id !== invitedSchoolId)) {
       return c.json({ error: 'This Kanvise account already belongs to a different centre' }, 409)
     }
     if (role !== 'tutor' && existingProfile.role !== role) {
       return c.json({ error: `This email already belongs to a ${existingProfile.role} account` }, 409)
     }
+    if (accountInvitation) await consumeAccountInvitation(String(account_invitation_token), email, supabaseAuthId)
     const welcome = await deliverWelcome(existingProfile, email)
     return c.json({
       profile: existingProfile,
@@ -152,7 +262,9 @@ authRouter.post('/profile/init', async (c) => {
   let schoolId = null
 
   if (role === 'tutor') {
-    try {
+    if (accountInvitation) {
+      schoolId = accountInvitation.school_id
+    } else try {
       const { data: claimed, error: claimError } = await supabase.rpc('consume_tutor_invite', {
         p_invite_id: tutorInvite!.invite_id,
         p_email: email,
@@ -240,6 +352,14 @@ authRouter.post('/profile/init', async (c) => {
     }
   })
 
+  if (accountInvitation) {
+    try {
+      await consumeAccountInvitation(String(account_invitation_token), email, supabaseAuthId)
+    } catch (consumeError: any) {
+      return c.json({ error: consumeError?.message || 'Invitation could not be completed' }, 409)
+    }
+  }
+
   const welcome = await deliverWelcome(profile, email)
 
   return c.json({
@@ -272,12 +392,27 @@ authRouter.post('/profile/activate', async (c) => {
     return c.json({ error: 'Enter your first and last name', code: 'VALIDATION_ERROR' }, 400)
   }
 
+  const invitationToken = String(body.account_invitation_token || '')
+  if (invitationToken) {
+    const invitation = await findAccountInvitation(invitationToken).catch(() => null)
+    if (!invitation || invitation.role !== 'student' || invitation.student_profile_id !== user.id) {
+      return c.json({ error: 'This student invitation is invalid', code: 'INVITATION_INVALID' }, 400)
+    }
+  }
+
   const { error } = await supabase.from('user_profiles')
     .update({ first_name: firstName, last_name: lastName, onboarding_status: 'active', activated_at: new Date().toISOString() } as any)
     .eq('id', user.id)
     .eq('role', 'student')
 
   if (error) return c.json({ error: error.message }, 500)
+  if (invitationToken) {
+    try {
+      await consumeAccountInvitation(invitationToken, String(user.email || ''), user.supabase_auth_id)
+    } catch (consumeError: any) {
+      return c.json({ error: consumeError?.message || 'Invitation could not be completed' }, 409)
+    }
+  }
   return c.json({ message: 'Student profile activated' })
 })
 

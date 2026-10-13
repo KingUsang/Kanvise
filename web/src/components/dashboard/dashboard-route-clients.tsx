@@ -77,6 +77,8 @@ export function ClassWorkspaceRouteClient({ classId }: { classId: string }) {
       classId={classId}
       token={query.data.token}
       canManageStudents={query.data.capabilities.isAdmin}
+      canManageClass={query.data.capabilities.isAdmin}
+      canManageTutors={query.data.capabilities.isAdmin && query.data.capabilities.organisationType === 'centre'}
     />
   );
 }

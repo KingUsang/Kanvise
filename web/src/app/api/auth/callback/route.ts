@@ -9,6 +9,13 @@ export async function GET(request: Request) {
   const role = searchParams.get('role') // from the email redirect url
   const redirect = searchParams.get('redirect') // specific course redirect
   const inviteToken = searchParams.get('invite_token')
+  const accountInvitationToken = searchParams.get('account_invitation_token')
+
+  console.info('[auth/callback] received invitation callback', {
+    hasCode: Boolean(code),
+    hasAccountInvitation: Boolean(accountInvitationToken),
+    hasRole: Boolean(role),
+  })
 
   if (code) {
     const supabase = await createClient()
@@ -19,6 +26,10 @@ export async function GET(request: Request) {
     }
 
     if (!error && data.user) {
+      if (accountInvitationToken) {
+        console.info('[auth/callback] redirecting to complete invitation')
+        return NextResponse.redirect(`${origin}/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`)
+      }
       // Supabase's invite link has already proven that the recipient controls
       // the invited mailbox. Let them choose their password and names in one
       // final screen; do not send a second signup confirmation or OTP.
@@ -93,6 +104,28 @@ export async function GET(request: Request) {
       
       return NextResponse.redirect(redirectUrl)
     }
+  }
+
+  if (accountInvitationToken) {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getSession()
+    if (data.session) {
+      console.info('[auth/callback] existing invitation session found; completing invitation')
+      return NextResponse.redirect(`${origin}/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`)
+    }
+
+    // The access and refresh tokens from an admin-generated action link are
+    // in the URL fragment. Fragments never reach this server route, so return
+    // a browser handoff that preserves the fragment for Supabase's browser
+    // client to consume. This keeps the existing, allow-listed callback URL
+    // compatible with the newer invitation flow.
+    const handoff = new URL(`${origin}/auth/invitation/callback`)
+    handoff.searchParams.set('account_invitation_token', accountInvitationToken)
+    const handoffUrl = JSON.stringify(handoff.toString())
+    console.info('[auth/callback] handing invitation fragment to browser callback')
+    return new NextResponse(`<!doctype html><html><head><meta charset="utf-8"><title>Opening invitation</title></head><body><p>Opening your invitation…</p><script>window.location.replace(${handoffUrl} + window.location.hash)</script><noscript><a href="${handoff.toString()}">Continue</a></noscript></body></html>`, {
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    })
   }
 
   // Return the user to an error page with some instructions

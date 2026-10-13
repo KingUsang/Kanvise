@@ -5,6 +5,10 @@ export type TutorInvitationEmailInput = {
   expiresAt: string
 }
 
+export type StudentInvitationEmailInput = TutorInvitationEmailInput & {
+  programmeName: string
+}
+
 export type WelcomeEmailInput = {
   firstName: string
   dashboardUrl: string
@@ -76,6 +80,7 @@ export type LifecycleDripEmailInput = {
 
 export type EmailTemplateInputs = {
   tutor_invitation: TutorInvitationEmailInput
+  student_invitation: StudentInvitationEmailInput
   welcome: WelcomeEmailInput
   payment_confirmed: PaymentConfirmedEmailInput
   live_class_reminder: LiveClassReminderEmailInput
@@ -93,4 +98,3 @@ export type EmailTemplateInputs = {
 }
 
 export type EmailEventName = keyof EmailTemplateInputs
-
