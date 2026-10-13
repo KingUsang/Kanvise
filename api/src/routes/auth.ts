@@ -90,6 +90,9 @@ authRouter.post('/invitation/start', async (c) => {
 
   const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '')
   if (!frontendUrl) return c.json({ error: 'Invitations are temporarily unavailable' }, 503)
+  // Keep the existing allow-listed callback URL. It hands the browser off to
+  // the invitation callback because Supabase action links finish with an
+  // implicit-grant session in the URL fragment (`#access_token=...`).
   const redirectTo = `${frontendUrl}/api/auth/callback?account_invitation_token=${encodeURIComponent(token)}`
   const linkType = invitation.supabase_auth_id ? 'magiclink' : 'invite'
   const { data: generated, error } = await supabase.auth.admin.generateLink({
