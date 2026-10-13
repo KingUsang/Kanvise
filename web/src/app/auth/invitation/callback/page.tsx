@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { createInvitationCallbackClient } from "@/lib/supabase/client"
 
 const TRACE_KEY = "kanvise.invitation.trace"
 
@@ -23,7 +23,7 @@ function trace(event: string, details: Record<string, unknown> = {}) {
 
 function InvitationCallbackContent() {
   const params = useSearchParams()
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createInvitationCallbackClient(), [])
   const token = params.get("account_invitation_token") || ""
   const started = useRef(false)
   const [error, setError] = useState("")
