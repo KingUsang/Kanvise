@@ -10,6 +10,7 @@ import { safeRedirectPath } from "@/lib/safe-redirect";
 import { getApiUrl } from '@/config/api'
 import { postAuthDestination, studentRegisterHref, type KanviseRole } from '@/lib/auth-continuation'
 import { createStudentRegistrationIntent } from '@/lib/student-registration'
+import { AuthMethodDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 
 function LoginContent() {
   const router = useRouter();
@@ -85,6 +86,17 @@ function LoginContent() {
     }
   }
 
+  const googleHref = `/api/auth/google?intent=${flow === 'student' ? 'student' : 'login'}${redirectParams ? `&return_to=${encodeURIComponent(redirectParams)}` : ''}${registrationIntent ? `&registration_intent=${encodeURIComponent(registrationIntent)}` : ''}`
+  const handleGoogle = async (event: MouseEvent<HTMLAnchorElement>) => {
+    if (flow !== 'student' || registrationIntent) return
+    event.preventDefault(); setLoading(true); setError(null)
+    try {
+      if (!redirectParams) throw new Error('Open the programme or mock you want to join, then continue with Google.')
+      const intent = await createStudentRegistrationIntent(redirectParams)
+      window.location.assign(`/api/auth/google?intent=student&return_to=${encodeURIComponent(redirectParams)}&registration_intent=${encodeURIComponent(intent)}`)
+    } catch (googleError) { setError(googleError instanceof Error ? googleError.message : 'Could not start Google sign-in'); setLoading(false) }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-kv-soft" style={{
       backgroundImage: 'radial-gradient(var(--kv-rodeo-dust) 0.5px, transparent 0.5px), radial-gradient(var(--kv-rodeo-dust) 0.5px, var(--kv-bg-soft) 0.5px)',
@@ -96,7 +108,6 @@ function LoginContent() {
           {/* Logo Section */}
           <div className="mb-8">
             <AuthLogo />
-            <p className="text-sm text-kv-dark/70 font-light mt-1 uppercase tracking-widest text-center">Teaching, understood</p>
           </div>
 
           {reason === "session_expired" && (
@@ -111,6 +122,8 @@ function LoginContent() {
             </div>
           )}
 
+          <GoogleAuthButton href={googleHref} onClick={handleGoogle} label="Continue with Google" />
+          <AuthMethodDivider />
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Email Field */}
