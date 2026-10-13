@@ -1,4 +1,5 @@
 import { extractPdfText } from "./mock-pdf-text";
+import { performance } from "node:perf_hooks";
 
 export const MAX_MOCK_PDF_SIZE_BYTES = 15 * 1024 * 1024;
 
@@ -119,17 +120,34 @@ function normalizeQuestions(value: any): ImportedMockQuestion[] {
   });
 }
 
-const extractionPrompt = `You are importing an examination document into Kanvise, a Nigerian mock-exam platform.
+// Temporary latency diagnostic: keep the response schema unchanged while removing
+// the long extraction instructions. Restore the full prompt after the A/B test.
+const extractionPrompt = `Extract every question from the document.
 
-Extract every question exactly as it appears. The document may have any layout: scanned pages, columns, tables, diagrams, equations, mixed subjects, separate answer keys, or no answer key. Do not assume a fixed template and do not invent missing answers. When the document contains an answer key, is_correct must reproduce that key exactly, even if you believe the source answer is academically wrong. In that case preserve the source answer and add a review reason explaining the suspected source error; never silently substitute your own answer. The answer-key reference is metadata only: never copy its explanations, calculations, worked solutions, corrected formulae, or final-answer text into question_text, option_text, equation_latex, chemistry_latex, or grading_rubric. Student-visible content must come only from the question paper section.
+Return valid JSON matching the supplied schema. Preserve question wording, options,
+marks, subjects, source pages, and answer-key correctness. Do not add explanations
+or extra text outside the JSON. Use empty strings and review_reasons for missing or
+uncertain information. For MCQs, preserve the source answer exactly.
 
-Return one question per object. Set subject_name to the document's subject heading for that question (for example Use of English, Physics, Chemistry or Mathematics). Carry the most recent clear subject heading across following pages until another heading begins. Use an empty subject_name and add a review reason when the subject cannot be determined confidently. Use question_type=mcq only when the question has selectable answer options; otherwise use theory. For question_text and option_text, return only the ordinary-language prose. Do not repeat a mathematical or chemical expression in those text fields when you also return that expression as LaTeX. Put each mathematical expression once in equation_latex and each chemical formula or reaction once in chemistry_latex, using proper subscripts and superscripts (for example 110111_{2} + 10100_{2}). A text field may be empty when its entire content is represented by its LaTeX field. Use an empty string for whichever notation field does not apply. If an image, diagram, table, or equation is important but cannot be represented faithfully, add a short review_reasons entry. If an answer is missing or uncertain, leave every option is_correct=false and add a review reason. Record the source page when the document makes it possible. Keep mixed subjects together as one mock and label each question with its subject; do not reject mixed-subject documents.`;
+`;
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 
 // A 429 often carries a minute/day quota reset and retrying immediately only
 // burns request time. Capacity/server failures are safe to retry briefly.
 const TRANSIENT_GEMINI_STATUSES = new Set([500, 502, 503, 504]);
+
+type PdfImportLogMetadata = {
+  model: string;
+  file_size_bytes?: number;
+  page_count?: number | null;
+  extracted_text_characters?: number;
+  processing_mode: "text" | "visual" | "both";
+};
+
+function elapsedMs(startedAt: number) {
+  return Math.round((performance.now() - startedAt) * 100) / 100;
+}
 
 function retryDelayMs(response: Response, attempt: number) {
   const retryAfterSeconds = Number(response.headers.get("retry-after"));
@@ -140,76 +158,134 @@ function retryDelayMs(response: Response, attempt: number) {
 }
 
 async function requestGemini(url: string, init: RequestInit) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const response = await fetch(url, init);
-    const body: any = await response.json().catch(() => null);
-    if (response.ok) return body;
+  let retryCount = 0;
+  try {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const response = await fetch(url, init);
+      const body: any = await response.json().catch(() => null);
+      if (response.ok) return { body, retryCount };
 
-    const message = stringValue(body?.error?.message) || "Gemini could not process this PDF";
-    if (!TRANSIENT_GEMINI_STATUSES.has(response.status) || attempt === 2) throw new Error(message);
-    const delayMs = retryDelayMs(response, attempt);
-    console.warn("[mocks] Retrying transient Gemini import failure", { status: response.status, attempt: attempt + 1, delay_ms: delayMs });
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
+      const message = stringValue(body?.error?.message) || "Gemini could not process this PDF";
+      if (!TRANSIENT_GEMINI_STATUSES.has(response.status) || attempt === 2) {
+        const error = new Error(message);
+        Object.assign(error, {
+          geminiStatus: response.status,
+          geminiStatusText: response.statusText,
+          geminiErrorCode: body?.error?.code,
+          geminiErrorStatus: body?.error?.status,
+          geminiRetryCount: retryCount,
+        });
+        throw error;
+      }
+      const delayMs = retryDelayMs(response, attempt);
+      retryCount += 1;
+      console.warn("[mocks] Retrying transient Gemini import failure", { status: response.status, attempt: attempt + 1, delay_ms: delayMs });
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  } catch (error) {
+    if (error instanceof Error) Object.assign(error, { geminiRetryCount: retryCount });
+    throw error;
   }
   throw new Error("Gemini could not process this PDF");
 }
 
-async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null, initialWarnings: string[] = []): Promise<MockPdfImportResult> {
+async function callGemini(parts: GeminiPart[], fallbackPageCount: number | null, initialWarnings: string[] = [], metadata?: PdfImportLogMetadata): Promise<MockPdfImportResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("AI document import is not configured yet. Add GEMINI_API_KEY to the API environment.");
 
   const model = process.env.GEMINI_MOCK_IMPORT_MODEL || "gemini-2.5-flash";
-
-  const body = await requestGemini(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-        responseSchema,
-      },
-    }),
-  });
-  const rawText = body?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text || "").join("") || "";
-  let parsed: any;
+  const logMetadata = { model, processing_mode: metadata?.processing_mode || "both", ...metadata };
+  const geminiStartedAt = performance.now();
+  let requestResult: { body: any; retryCount: number };
   try {
-    parsed = JSON.parse(rawText);
-  } catch {
-    throw new Error("Gemini returned an invalid import response. Please try the PDF again.");
-  }
-  const questions = normalizeQuestions(parsed.questions);
-  const warnings: string[] = Array.isArray(parsed.warnings)
-    ? parsed.warnings.map((warning: unknown): string => stringValue(warning)).filter((warning: string): boolean => Boolean(warning))
-    : [];
-  if (questions.length === 0) warnings.push("No questions were found. Check that the PDF contains an examination paper.");
-  const usage = body?.usageMetadata;
-  if (usage) {
-    console.info("[mocks] Gemini import usage", {
-      model,
-      prompt_tokens: usage.promptTokenCount,
-      output_tokens: usage.candidatesTokenCount,
-      total_tokens: usage.totalTokenCount,
+    requestResult = await requestGemini(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: 0.1,
+          thinkingConfig: { thinkingBudget: 0 },
+          responseMimeType: "application/json",
+          responseSchema,
+        },
+      }),
     });
+    console.info("[mocks] PDF import Gemini performance", { stage: "gemini_api_call", status: "success", duration_ms: elapsedMs(geminiStartedAt), retry_count: requestResult.retryCount, ...logMetadata });
+  } catch (error) {
+    console.error("[mocks] PDF import Gemini performance", {
+      stage: "gemini_api_call",
+      status: "failure",
+      duration_ms: elapsedMs(geminiStartedAt),
+      retry_count: Number((error as any)?.geminiRetryCount || 0),
+      ...logMetadata,
+      error_type: error instanceof Error ? error.name : "UnknownError",
+      provider_status: (error as any)?.geminiStatus,
+      provider_status_text: (error as any)?.geminiStatusText,
+      provider_error_code: (error as any)?.geminiErrorCode,
+      provider_error_status: (error as any)?.geminiErrorStatus,
+      provider_message: error instanceof Error ? error.message.slice(0, 300) : undefined,
+    });
+    throw error;
   }
-  return {
-    questions,
-    warnings: [...new Set([...initialWarnings, ...warnings])],
-    // PDF.js is authoritative for real PDFs. Models can under-count blank,
-    // cover, or answer-key pages even when all question data is present.
-    page_count: fallbackPageCount ?? (Number.isInteger(parsed.page_count) ? parsed.page_count : null),
-  };
+  const responseProcessingStartedAt = performance.now();
+  let questionCount = 0;
+  try {
+    const body = requestResult.body;
+    const rawText = body?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text || "").join("") || "";
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      throw new Error("Gemini returned an invalid import response. Please try the PDF again.");
+    }
+    const questions = normalizeQuestions(parsed.questions);
+    questionCount = questions.length;
+    const warnings: string[] = Array.isArray(parsed.warnings)
+      ? parsed.warnings.map((warning: unknown): string => stringValue(warning)).filter((warning: string): boolean => Boolean(warning))
+      : [];
+    if (questions.length === 0) warnings.push("No questions were found. Check that the PDF contains an examination paper.");
+    const usage = body?.usageMetadata;
+    if (usage) {
+      console.info("[mocks] Gemini import usage", {
+        model,
+        prompt_tokens: usage.promptTokenCount,
+        output_tokens: usage.candidatesTokenCount,
+        thinking_tokens: usage.thoughtsTokenCount,
+        total_tokens: usage.totalTokenCount,
+      });
+    }
+    console.info("[mocks] PDF import response performance", { stage: "response_parsing_normalization_validation", status: "success", duration_ms: elapsedMs(responseProcessingStartedAt), retry_count: requestResult.retryCount, question_count: questionCount, ...logMetadata });
+    return {
+      questions,
+      warnings: [...new Set([...initialWarnings, ...warnings])],
+      page_count: fallbackPageCount ?? (Number.isInteger(parsed.page_count) ? parsed.page_count : null),
+    };
+  } catch (error) {
+    console.error("[mocks] PDF import response performance", { stage: "response_parsing_normalization_validation", status: "failure", duration_ms: elapsedMs(responseProcessingStartedAt), retry_count: requestResult.retryCount, question_count: questionCount, ...logMetadata, error_type: error instanceof Error ? error.name : "UnknownError" });
+    throw error;
+  }
 }
 
 export async function importQuestionsFromPdf(buffer: Uint8Array): Promise<MockPdfImportResult> {
-  const extracted = await extractPdfText(buffer);
-  if (!extracted.has_readable_text) {
+  const preparationStartedAt = performance.now();
+  let extractedTextCharacters = 0;
+  let pageCount: number | null = null;
+  let processingMode: PdfImportLogMetadata["processing_mode"] = "text";
+  let preparationComplete = false;
+  try {
+    const extracted = await extractPdfText(buffer);
+    pageCount = extracted.page_count;
+    extractedTextCharacters = extracted.pages.reduce((total, page) => total + page.text.length, 0);
+    if (!extracted.has_readable_text) {
+      processingMode = "visual";
+      console.info("[mocks] PDF import preparation performance", { stage: "pdf_text_extraction_preparation", status: "success", duration_ms: elapsedMs(preparationStartedAt), file_size_bytes: buffer.byteLength, page_count: pageCount, extracted_text_characters: extractedTextCharacters, processing_mode: processingMode });
+      preparationComplete = true;
     return callGemini([
       { inline_data: { mime_type: "application/pdf", data: Buffer.from(buffer).toString("base64") } },
       { text: extractionPrompt },
-    ], extracted.page_count, ["This appears to be a scanned PDF, so it was read visually. Review diagrams and answer keys before publishing."]);
-  }
+      ], extracted.page_count, ["This appears to be a scanned PDF, so it was read visually. Review diagrams and answer keys before publishing."], { model: process.env.GEMINI_MOCK_IMPORT_MODEL || "gemini-2.5-flash", file_size_bytes: buffer.byteLength, page_count: pageCount, extracted_text_characters: extractedTextCharacters, processing_mode: processingMode });
+    }
 
   const imagePages = extracted.pages.filter((page) => page.has_embedded_image).map((page) => page.page_number);
   const questionPaperPages: string[] = [];
@@ -238,19 +314,27 @@ export async function importQuestionsFromPdf(buffer: Uint8Array): Promise<MockPd
     ? `Pages ${imagePages.join(", ")} contain embedded images or diagrams. Their question text was imported, but review those questions before publishing because figure crops are not attached yet.`
     : "";
   const initialWarnings = visualWarning ? [visualWarning] : [];
+  processingMode = "both";
+  console.info("[mocks] PDF import preparation performance", { stage: "pdf_text_extraction_preparation", status: "success", duration_ms: elapsedMs(preparationStartedAt), file_size_bytes: buffer.byteLength, page_count: pageCount, extracted_text_characters: extractedTextCharacters, processing_mode: processingMode });
+  preparationComplete = true;
   try {
     return await callGemini([
       { inline_data: { mime_type: "application/pdf", data: Buffer.from(buffer).toString("base64") } },
       { text: `Use the attached PDF as the visual reference for layout, mathematical notation, tables, and diagrams. The following text was extracted locally and separates the question paper from its answer key; its page markers and section boundary are authoritative. Do not copy answer-key workings into student-visible fields.\n\n${sourceText}` },
       { text: extractionPrompt },
-    ], extracted.page_count, initialWarnings);
+    ], extracted.page_count, initialWarnings, { model: process.env.GEMINI_MOCK_IMPORT_MODEL || "gemini-2.5-flash", file_size_bytes: buffer.byteLength, page_count: pageCount, extracted_text_characters: extractedTextCharacters, processing_mode: processingMode });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!/document has no pages|invalid (?:pdf|document)|could not parse (?:the )?(?:pdf|document)/i.test(message)) throw error;
+    processingMode = "text";
     return callGemini([
       { text: `The following is locally extracted PDF text. Its page markers and QUESTION PAPER / ANSWER-KEY REFERENCE boundary are authoritative. Do not copy answer-key workings into student-visible fields.\n\n${sourceText}` },
       { text: extractionPrompt },
-    ], extracted.page_count, [...initialWarnings, "Gemini could not read this PDF visually, so Kanvise used its locally extracted text. Review mathematical layout before publishing."]);
+    ], extracted.page_count, [...initialWarnings, "Gemini could not read this PDF visually, so Kanvise used its locally extracted text. Review mathematical layout before publishing."], { model: process.env.GEMINI_MOCK_IMPORT_MODEL || "gemini-2.5-flash", file_size_bytes: buffer.byteLength, page_count: pageCount, extracted_text_characters: extractedTextCharacters, processing_mode: processingMode });
+  }
+  } catch (error) {
+    if (!preparationComplete) console.error("[mocks] PDF import preparation performance", { stage: "pdf_text_extraction_preparation", status: "failure", duration_ms: elapsedMs(preparationStartedAt), file_size_bytes: buffer.byteLength, page_count: pageCount, extracted_text_characters: extractedTextCharacters, processing_mode: processingMode, error_type: error instanceof Error ? error.name : "UnknownError" });
+    throw error;
   }
 }
 

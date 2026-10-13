@@ -15,6 +15,22 @@ function setSentryUserContext(user: { id?: string; kanvise_user_id?: string; sch
   if (user.school_id) Sentry.setTag('school_id', user.school_id)
 }
 
+function tokenShape(token: string) {
+  const segments = token.split('.')
+  const invalidCharacters = [...token]
+    .map((character, index) => ({ character, index }))
+    .filter(({ character }) => !/[A-Za-z0-9_.-]/.test(character))
+  return {
+    token_length: token.length,
+    segment_count: segments.length,
+    segment_lengths: segments.map((segment) => segment.length),
+    has_whitespace: /\s/.test(token),
+    has_non_base64url_characters: /[^A-Za-z0-9_.-]/.test(token),
+    invalid_character_positions: invalidCharacters.map(({ index }) => index),
+    invalid_character_codepoints: invalidCharacters.map(({ character }) => character.codePointAt(0)),
+  }
+}
+
 export function resolveTrustedProfileClaims(jwtPayload: any) {
   const appMetadata = jwtPayload?.app_metadata || {}
   const role = appMetadata.kanvise_role || appMetadata.role
@@ -82,7 +98,12 @@ export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
     c.set('jwt_payload', payload)
     await next()
   } catch (error: any) {
-    console.error('[JWT] Verification failed:', error)
+    console.error('[JWT] Verification failed', {
+      ...tokenShape(token || ''),
+      error_name: error?.name || 'UnknownError',
+      error_message: error?.message || 'Unknown verification error',
+      request_path: new URL(c.req.url).pathname,
+    })
     if (error.name === 'JwtTokenExpired') {
       return c.json({ error: 'Token has expired', code: 'TOKEN_EXPIRED' }, 401)
     }

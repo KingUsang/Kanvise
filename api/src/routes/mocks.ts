@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { performance } from "node:perf_hooks";
 import { supabase } from "../lib/supabase";
 import { BANK_QUESTION_TYPE_RELATION } from "../lib/postgrest-selects";
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from "../middleware/auth";
@@ -266,14 +267,21 @@ function importFailure(error: unknown, source: "PDF" | "Word document"): ImportF
 }
 
 mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
+  const requestStartedAt = performance.now();
   const jobId = /^[a-zA-Z0-9_-]{6,64}$/.test(c.req.header("x-import-job-id") || "") ? c.req.header("x-import-job-id")! : crypto.randomUUID();
   c.header("X-Import-Job-ID", jobId);
-  const contentLength = Number(c.req.header("content-length") || 0);
-  if (contentLength > MAX_MOCK_PDF_SIZE_BYTES + 1024 * 1024) {
-    return c.json({ error: "PDFs must be 15 MB or smaller", code: "PDF_TOO_LARGE" }, 413);
-  }
-
+  let fileSizeBytes: number | undefined;
+  let pageCount: number | null | undefined;
+  let extractedTextCharacters: number | undefined;
+  let questionCount: number | undefined;
+  let processingMode: "text" | "visual" | "both" | undefined;
+  let outcome = "failure";
   try {
+    const contentLength = Number(c.req.header("content-length") || 0);
+    if (contentLength > MAX_MOCK_PDF_SIZE_BYTES + 1024 * 1024) {
+      return c.json({ error: "PDFs must be 15 MB or smaller", code: "PDF_TOO_LARGE" }, 413);
+    }
+
     const body = await c.req.parseBody();
     const file = body.file;
     if (!(file instanceof File)) {
@@ -282,6 +290,7 @@ mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
     if (file.size > MAX_MOCK_PDF_SIZE_BYTES) {
       return c.json({ error: "PDFs must be 15 MB or smaller", code: "PDF_TOO_LARGE" }, 413);
     }
+    fileSizeBytes = file.size;
     const looksLikePdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
     if (!looksLikePdf) {
       return c.json({ error: "Only PDF files can be imported here", code: "INVALID_PDF_TYPE" }, 400);
@@ -289,12 +298,16 @@ mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
 
     console.info("[mocks] PDF import started", { job_id: jobId, file_size_bytes: file.size });
     const result = await importQuestionsFromPdf(new Uint8Array(await file.arrayBuffer()));
+    pageCount = result.page_count;
+    questionCount = result.questions.length;
+    extractedTextCharacters = undefined;
     if (result.questions.length === 0) {
       return c.json({
         error: result.warnings[0] || "No questions could be recognised in this PDF",
         code: "NO_QUESTIONS_FOUND",
       }, 422);
     }
+    outcome = "success";
     console.info("[mocks] PDF import completed", { job_id: jobId, question_count: result.questions.length });
     return c.json({ data: { ...result, job_id: jobId } });
   } catch (error) {
@@ -302,9 +315,21 @@ mocksRouter.post("/import/pdf", requireTutorOrAdmin, async (c) => {
     console.error("[mocks] PDF import failed", {
       code: problem.code,
       retryable: problem.retryable,
-      diagnostic: error instanceof Error ? error.message : String(error),
+      error_type: error instanceof Error ? error.name : "UnknownError",
     });
     return c.json(problem, 422);
+  } finally {
+    console.info("[mocks] PDF import request performance", {
+      stage: "pdf_import_request",
+      status: outcome,
+      duration_ms: Math.round((performance.now() - requestStartedAt) * 100) / 100,
+      job_id: jobId,
+      file_size_bytes: fileSizeBytes,
+      page_count: pageCount,
+      extracted_text_characters: extractedTextCharacters,
+      question_count: questionCount,
+      processing_mode: processingMode,
+    });
   }
 });
 

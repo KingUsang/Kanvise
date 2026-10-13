@@ -4,6 +4,17 @@ import { createClient } from './supabase/client'
 
 const refreshes = new WeakMap<SupabaseClient, Promise<string | null>>()
 
+function tokenShape(token: string) {
+  const segments = token.split('.')
+  return {
+    token_length: token.length,
+    segment_count: segments.length,
+    segment_lengths: segments.map((segment) => segment.length),
+    has_whitespace: /\s/.test(token),
+    has_non_base64url_characters: /[^A-Za-z0-9_.-]/.test(token),
+  }
+}
+
 function refreshOnce(supabase: SupabaseClient) {
   const existing = refreshes.get(supabase)
   if (existing) return existing
@@ -34,15 +45,9 @@ export async function authenticatedFetch(
   const suppliedToken = typeof accessTokenOrInit === 'string' ? accessTokenOrInit : undefined
   const init = typeof accessTokenOrInit === 'string' ? maybeInit : (accessTokenOrInit ?? {})
   const request = (token: string) => {
-    // Normalise then replace the header. A few older callers supplied the
-    // server-rendered token themselves; leaving that lower-cased header in
-    // place alongside this one causes browsers to combine both values.
-    const headers = Object.fromEntries(new Headers(init.headers).entries())
-    delete headers.authorization
-    return fetch(input, {
-      ...init,
-      headers: { ...headers, Authorization: `Bearer ${token}` },
-    })
+    const headers = new Headers(init.headers)
+    headers.set('Authorization', `Bearer ${token}`)
+    return fetch(input, { ...init, headers })
   }
 
   const accessToken = suppliedToken ?? await getCurrentAccessToken(supabase)
@@ -50,8 +55,21 @@ export async function authenticatedFetch(
   let response = await request(accessToken)
   if (!await isExpiredAccessTokenResponse(response)) return response
 
+  if (response.status === 401) {
+    console.warn('[auth] API rejected access token; attempting one refresh', {
+      source: suppliedToken ? 'supplied_token' : 'browser_session',
+      ...tokenShape(accessToken),
+      request_path: typeof input === 'string' ? new URL(input, window.location.origin).pathname : 'request',
+    })
+  }
+
   const freshToken = await refreshOnce(supabase)
   if (!freshToken) return sessionEndedResponse()
+  console.warn('[auth] Retrying with refreshed access token', {
+    source: 'refreshed_browser_session',
+    ...tokenShape(freshToken),
+    request_path: typeof input === 'string' ? new URL(input, window.location.origin).pathname : 'request',
+  })
   response = await request(freshToken)
   return response
 }
