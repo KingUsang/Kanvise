@@ -113,8 +113,19 @@ export async function GET(request: Request) {
       console.info('[auth/callback] existing invitation session found; completing invitation')
       return NextResponse.redirect(`${origin}/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`)
     }
-    console.warn('[auth/callback] invitation callback has no session; returning to invite page')
-    return NextResponse.redirect(`${origin}/invite?token=${encodeURIComponent(accountInvitationToken)}&notice=session-expired`)
+
+    // The access and refresh tokens from an admin-generated action link are
+    // in the URL fragment. Fragments never reach this server route, so return
+    // a browser handoff that preserves the fragment for Supabase's browser
+    // client to consume. This keeps the existing, allow-listed callback URL
+    // compatible with the newer invitation flow.
+    const handoff = new URL(`${origin}/auth/invitation/callback`)
+    handoff.searchParams.set('account_invitation_token', accountInvitationToken)
+    const handoffUrl = JSON.stringify(handoff.toString())
+    console.info('[auth/callback] handing invitation fragment to browser callback')
+    return new NextResponse(`<!doctype html><html><head><meta charset="utf-8"><title>Opening invitation</title></head><body><p>Opening your invitation…</p><script>window.location.replace(${handoffUrl} + window.location.hash)</script><noscript><a href="${handoff.toString()}">Continue</a></noscript></body></html>`, {
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    })
   }
 
   // Return the user to an error page with some instructions
