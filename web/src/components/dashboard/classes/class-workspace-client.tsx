@@ -169,12 +169,16 @@ const activityFormat = new Intl.DateTimeFormat(undefined, {
 export function ClassWorkspaceClient({
   classId,
   token,
+  viewerId,
+  isTutor = false,
   canManageStudents = false,
   canManageClass = false,
   canManageTutors = false,
 }: {
   classId: string;
   token: string;
+  viewerId?: string;
+  isTutor?: boolean;
   canManageStudents?: boolean;
   canManageClass?: boolean;
   canManageTutors?: boolean;
@@ -799,6 +803,8 @@ export function ClassWorkspaceClient({
         classId={classId}
         subjects={data.courses}
         initialCourseId={activeSubject === "all" ? undefined : activeSubject}
+        viewerId={viewerId}
+        isTutor={isTutor}
       />
     </>
   );

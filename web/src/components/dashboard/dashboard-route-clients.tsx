@@ -76,6 +76,8 @@ export function ClassWorkspaceRouteClient({ classId }: { classId: string }) {
     <ClassWorkspaceClient
       classId={classId}
       token={query.data.token}
+      viewerId={query.data.user.id}
+      isTutor={query.data.capabilities.isTutor && !query.data.capabilities.isAdmin}
       canManageStudents={query.data.capabilities.isAdmin}
       canManageClass={query.data.capabilities.isAdmin}
       canManageTutors={query.data.capabilities.isAdmin && query.data.capabilities.organisationType === 'centre'}
