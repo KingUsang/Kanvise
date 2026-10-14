@@ -9,7 +9,7 @@ import {
 } from '../middleware/auth'
 import type { TenantVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
-import { createPresignedDownload } from '../storage/r2'
+import { createPresignedDownload, privateObjectExists } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
 import { ensurePlugNmeetReady, isPlugNmeetHealthy } from '../plugnmeet/classroom-lifecycle'
@@ -616,6 +616,10 @@ liveClassesRouter.get('/:id/recording', async (c) => {
   let playbackUrl: string | null = null
   if (data.r2_file_key) {
     try {
+      if (!await privateObjectExists(data.r2_file_key, String(access.liveClass.school_id))) {
+        console.warn('[recording] ready recording object is missing', { recording_id: data.id, live_class_id: access.liveClass.id, file_key: data.r2_file_key })
+        return c.json({ error: 'The recording file is no longer available.', code: 'RECORDING_NOT_AVAILABLE' }, 404)
+      }
       const download = c.req.query('download') === '1'
       const safeTitle = String(access.liveClass.title || 'kanvise-class-recording')
         .replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 100) || 'kanvise-class-recording'
