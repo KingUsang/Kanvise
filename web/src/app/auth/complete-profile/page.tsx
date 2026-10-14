@@ -6,13 +6,13 @@ import { ArrowRight, Loader2 } from 'lucide-react'
 import { AuthAlert, authInputClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
 import { createClient } from '@/lib/supabase/client'
 
-type Context = { intent: 'login' | 'educator' | 'student' | 'invitation'; account_type?: 'independent' | 'centre'; email: string; first_name: string; last_name: string; invitation_token?: string; invitation?: { role: 'tutor' | 'student'; school_name: string; metadata?: { programme_name?: string } } }
+type Context = { intent: 'login' | 'educator' | 'student' | 'invitation'; account_type?: 'independent' | 'centre'; agency_name?: string; email: string; first_name: string; last_name: string; invitation_token?: string; invitation?: { role: 'tutor' | 'student'; school_name: string; metadata?: { programme_name?: string } } }
 
 export default function CompleteProfilePage() {
   const [context, setContext] = useState<Context | null>(null)
   const [fullName, setFullName] = useState(''), [centreName, setCentreName] = useState('')
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [error, setError] = useState(''), [emailMismatch, setEmailMismatch] = useState(false)
-  useEffect(() => { void fetch('/api/auth/oauth-context', { cache: 'no-store' }).then(async response => { const body = await response.json().catch(() => null); if (!response.ok || !body?.data) throw new Error('oauth_context_unavailable'); setContext(body.data); setFullName(`${body.data.first_name || ''} ${body.data.last_name || ''}`.trim()) }).catch(() => setError("Your sign-in couldn't be completed. Open the sign-in page and try again.")).finally(() => setLoading(false)) }, [])
+  useEffect(() => { void fetch('/api/auth/oauth-context', { cache: 'no-store' }).then(async response => { const body = await response.json().catch(() => null); if (!response.ok || !body?.data) throw new Error('oauth_context_unavailable'); setContext(body.data); setFullName(`${body.data.first_name || ''} ${body.data.last_name || ''}`.trim()); setCentreName(body.data.agency_name || '') }).catch(() => setError("Your sign-in couldn't be completed. Open the sign-in page and try again.")).finally(() => setLoading(false)) }, [])
 
   async function complete(event: React.FormEvent) {
     event.preventDefault(); if (!context) return

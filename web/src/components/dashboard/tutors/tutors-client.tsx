@@ -130,7 +130,7 @@ export function TutorsClient() {
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ])
       toast.success(json.data.email_sent ? 'Invitation emailed to the tutor' : 'Invitation link created', {
-        description: json.data.email_sent ? 'They can use the email to join your centre.' : 'The email could not be sent. Copy and share the link yourself.'
+        description: json.data.email_sent ? 'They can use the email to join your tutorial agency.' : 'The email could not be sent. Copy and share the link yourself.'
       })
     } catch (err: any) {
       setInviteError(err.message)
@@ -273,7 +273,7 @@ export function TutorsClient() {
       {/* ── Page Header ── */}
       <DashboardPageHeader
         title="Tutors"
-        description="Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself."
+        description="Invite tutors to your tutorial agency and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself."
       />
 
       {/* ── Bento Grid Layout ── */}
@@ -287,14 +287,14 @@ export function TutorsClient() {
                 <div className="w-8 h-8 rounded bg-[#2e2877]/10 flex items-center justify-center text-[#2e2877]">
                   <span className="material-symbols-outlined icon-fill">school</span>
                 </div>
-                <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Tutors in your centre</h3>
+                <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Tutors in your tutorial agency</h3>
               </div>
             </div>
 
             <div className="divide-y divide-dashboard-outline/50 sm:hidden">
               {isLoading ? <p className="p-6 text-center text-sm text-[#474551]">Loading tutors…</p>
                 : loadError ? <div className="p-6 text-center text-sm text-[#474551]"><p>{loadError}</p><button type="button" onClick={() => void tutorsQuery.refetch()} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button></div>
-                : tutors.length === 0 ? <div className="p-8 text-center text-[#474551]"><span className="material-symbols-outlined mb-2 text-[44px] text-[#c8c5d2]">group_off</span><p className="font-medium">No tutors yet</p><p className="mx-auto mt-1 max-w-sm text-sm">You are currently teaching on your own. Invite someone only when another tutor needs access to teach subjects in your centre.</p></div>
+                : tutors.length === 0 ? <div className="p-8 text-center text-[#474551]"><span className="material-symbols-outlined mb-2 text-[44px] text-[#c8c5d2]">group_off</span><p className="font-medium">No tutors yet</p><p className="mx-auto mt-1 max-w-sm text-sm">You are currently teaching on your own. Invite someone only when another tutor needs access to teach subjects in your tutorial agency.</p></div>
                 : tutors.map((tutor) => { const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase(); const isRemoving = removingId === tutor.id; return <article key={tutor.id} className={`p-4 ${isRemoving ? 'opacity-40' : ''}`}><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#e4e2e1] font-bold text-[#474551]">{initials}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-[#1b1c1c]">{tutor.first_name} {tutor.last_name}</h2><p className="truncate text-xs text-[#474551]">{tutor.email}</p><p className="mt-2 text-xs text-[#474551]">{tutor.courses.length ? tutor.courses.map(course => course.name).join(', ') : 'No assigned subjects'}</p></div><button onClick={() => setConfirmation({ type: 'remove', id: tutor.id, name: `${tutor.first_name} ${tutor.last_name}` })} disabled={isRemoving} className="shrink-0 rounded p-2 text-[#ba1a1a] disabled:opacity-30" aria-label={`Remove ${tutor.first_name} ${tutor.last_name}`}><span className="material-symbols-outlined">person_remove</span></button></div></article> })}
             </div>
             <div className="hidden overflow-x-auto sm:block">
@@ -323,7 +323,7 @@ export function TutorsClient() {
                       <td colSpan={3} className="py-12 text-center text-[#474551]">
                         <span className="material-symbols-outlined text-[48px] text-[#c8c5d2] mb-2">group_off</span>
                         <p className="font-medium">No tutors yet</p>
-                        <p className="text-sm mt-1 max-w-sm mx-auto">You are currently teaching on your own. Invite someone only when another tutor needs access to teach Subjects in your centre.</p>
+                        <p className="text-sm mt-1 max-w-sm mx-auto">You are currently teaching on your own. Invite someone only when another tutor needs access to teach Subjects in your tutorial agency.</p>
                       </td>
                     </tr>
                   ) : (
@@ -441,7 +441,7 @@ export function TutorsClient() {
             
             <h3 className="text-[20px] font-semibold mb-2 relative z-10">Invite a tutor</h3>
             <p className="text-[14px] text-white/80 mb-6 relative z-10">
-              Enter their email address. We will email them a link to join your centre, and you can also copy the link yourself.
+              Enter their email address. We will email them a link to join your tutorial agency, and you can also copy the link yourself.
             </p>
             
             <form onSubmit={handleInvite} className="flex flex-col gap-4 relative z-10">
@@ -594,7 +594,7 @@ export function TutorsClient() {
             <h3 className="text-xl font-bold text-[#1b1c1c]">{confirmation.type === 'remove' ? 'Remove this tutor?' : 'Cancel this invitation?'}</h3>
             <p className="mt-2 text-sm leading-6 text-[#474551]">
               {confirmation.type === 'remove'
-                ? `${confirmation.name} will lose access to your centre. Their previous teaching records will be kept.`
+                ? `${confirmation.name} will lose access to your tutorial agency. Their previous teaching records will be kept.`
                 : `The invitation sent to ${confirmation.email} will stop working.`}
             </p>
             <div className="mt-6 flex justify-end gap-3">

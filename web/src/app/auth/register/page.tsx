@@ -218,6 +218,13 @@ function RegisterContent() {
     setResendLoading(false);
   };
 
+  const handleGoogleStart = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!isStudentFlow && accountType === 'centre' && !centreName.trim()) {
+      event.preventDefault();
+      setError('Enter your tutorial agency name before continuing with Google.');
+    }
+  };
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8">
       <section className="grid w-full max-w-[1120px] overflow-hidden rounded-[20px] border border-[#e1e0e6] bg-white sm:rounded-[24px] lg:grid-cols-[.95fr_1.05fr]">
@@ -246,7 +253,7 @@ function RegisterContent() {
               </div>
               <p className="mt-3 text-sm leading-5 text-[#625e6e]">{accountType === 'independent' ? 'For tutors managing their own students and classes.' : 'For teams managing tutors, programmes and students.'}</p>
             </fieldset>}
-            <GoogleAuthButton href={`/api/auth/google?intent=${isStudentFlow ? 'student' : 'educator'}${!isStudentFlow ? `&account_type=${accountType}` : ''}${redirectParam ? `&return_to=${encodeURIComponent(redirectParam)}` : ''}${studentRegistrationToken ? `&registration_intent=${encodeURIComponent(studentRegistrationToken)}` : ''}`} />
+            <GoogleAuthButton onClick={handleGoogleStart} href={`/api/auth/google?intent=${isStudentFlow ? 'student' : 'educator'}${!isStudentFlow ? `&account_type=${accountType}` : ''}${accountType === 'centre' && centreName.trim() ? `&agency_name=${encodeURIComponent(centreName.trim())}` : ''}${redirectParam ? `&return_to=${encodeURIComponent(redirectParam)}` : ''}${studentRegistrationToken ? `&registration_intent=${encodeURIComponent(studentRegistrationToken)}` : ''}`} />
             <AuthMethodDivider />
 
             <form onSubmit={handleRegister} className="space-y-5">

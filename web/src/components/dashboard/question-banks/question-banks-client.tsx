@@ -232,7 +232,7 @@ export function QuestionBanksClient() {
       <DashboardPageHeader
         className="mb-7 border-b border-dashboard-outline pb-6"
         title="Question Banks"
-        description="Keep your best questions in one place, share useful ones with tutors in your centre, and reuse them when building mocks."
+        description="Keep your best questions in one place, share useful ones with tutors in your tutorial agency, and reuse them when building mocks."
         actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-dashboard-accent/90">
           <span className="material-symbols-outlined text-xl">create_new_folder</span>Create a bank
         </button>}
@@ -249,7 +249,7 @@ export function QuestionBanksClient() {
               <div className="rounded-lg border border-dashed border-[#c8c5d2] px-4 py-8 text-center">
                 <span className="material-symbols-outlined text-3xl text-[#8b8792]">inventory_2</span>
                 <p className="mt-2 text-sm font-semibold text-[#33313a]">No question banks yet</p>
-                <p className="mt-1 text-xs leading-5 text-[#6d6974]">Create a private bank for yourself or a centre bank your tutors can use.</p>
+                <p className="mt-1 text-xs leading-5 text-[#6d6974]">Create a private bank for yourself or a shared bank your tutors can use.</p>
               </div>
             ) : banks.map(bank => (
               <button key={bank.id} onClick={() => setSelectedBankId(bank.id)} className={`w-full rounded-lg border p-3 text-left transition ${selectedBankId === bank.id ? 'border-[#8f6b4b] bg-[#f8f3ed] shadow-sm' : 'border-transparent hover:border-[#e4e0dc] hover:bg-[#faf8f6]'}`}>
@@ -257,7 +257,7 @@ export function QuestionBanksClient() {
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${bank.visibility === 'centre' ? 'bg-[#e8e6ff] text-[#2e2877]' : 'bg-[#f3e8df] text-[#8a440e]'}`}>{initials(bank.name)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-[#27252d]">{bank.name}</span>
-                    <span className="mt-1 flex items-center gap-1 text-xs text-[#6d6974]"><span className="material-symbols-outlined text-sm">{bank.visibility === 'centre' ? 'groups' : 'lock'}</span>{bank.visibility === 'centre' ? 'Centre bank' : 'Private'} · {bank.question_count} questions</span>
+                    <span className="mt-1 flex items-center gap-1 text-xs text-[#6d6974]"><span className="material-symbols-outlined text-sm">{bank.visibility === 'centre' ? 'groups' : 'lock'}</span>{bank.visibility === 'centre' ? 'Shared bank' : 'Private'} · {bank.question_count} questions</span>
                   </span>
                 </div>
               </button>
@@ -279,7 +279,7 @@ export function QuestionBanksClient() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-xl font-bold text-[#1b1c1c] md:text-2xl">{selectedBank.name}</h2>
-                      <span className="rounded-full bg-[#f3efec] px-2.5 py-1 text-[11px] font-semibold text-[#5f5b66]">{selectedBank.visibility === 'centre' ? 'Shared with centre' : 'Only you'}</span>
+                      <span className="rounded-full bg-[#f3efec] px-2.5 py-1 text-[11px] font-semibold text-[#5f5b66]">{selectedBank.visibility === 'centre' ? 'Shared with your tutorial agency' : 'Only you'}</span>
                     </div>
                     <p className="mt-1 text-sm text-[#6d6974]">{selectedBank.description || `Updated ${formattedDate(selectedBank.updated_at)}`}</p>
                   </div>

@@ -57,7 +57,7 @@ export default function StudentLearnPage() {
     </section> : <section className="mt-7 rounded-2xl border border-[#e3ded9] bg-white px-5 py-14 text-center">
       <BookOpen className="mx-auto text-[#aaa4ad]" />
       <h2 className="mt-4 text-lg font-semibold">No programme subjects yet</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Your centre has enrolled your account, but no published subjects are available yet. Check back later or contact the centre.</p>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Your tutorial agency has enrolled your account, but no published subjects are available yet. Check back later or contact the tutorial agency.</p>
     </section>}
   </main>;
 }

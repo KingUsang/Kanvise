@@ -32,6 +32,7 @@ export async function GET(request: Request) {
       registrationIntent,
       invitationToken,
       accountType: url.searchParams.get('account_type') === 'centre' ? 'centre' : 'independent',
+      agencyName: url.searchParams.get('agency_name') || undefined,
     }), {
       httpOnly: true,
       sameSite: 'lax',

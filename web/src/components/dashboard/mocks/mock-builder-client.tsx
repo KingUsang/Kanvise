@@ -1533,7 +1533,7 @@ export function MockBuilderClient({
       toast.error(
         classContext
           ? "Add a quiz title before continuing"
-          : "Add a mock title and choose a valid centre target",
+          : "Add a mock title and choose a valid tutorial agency target",
       );
       return;
     }
@@ -3179,7 +3179,7 @@ export function MockBuilderClient({
               <p className="mt-2 text-xs leading-5 text-[#716c76]">
                 {centreAccessEnabled
                   ? "Only students enrolled in every selected programme subject will receive this mock."
-                  : "Add the subjects in this exam yourself. They are not connected to your centre."}
+                  : "Add the subjects in this exam yourself. They are not connected to your tutorial agency."}
               </p>
             </div>
             {selectedSubjectCourses.length === 0 ? (

@@ -12,6 +12,7 @@ export type OAuthContext = {
   registrationIntent?: string
   invitationToken?: string
   accountType?: 'independent' | 'centre'
+  agencyName?: string
   issuedAt: number
   expiresAt: number
 }
@@ -37,6 +38,7 @@ export function createOAuthContext(input: Omit<OAuthContext, 'issuedAt' | 'expir
     issuedAt: now,
     expiresAt: now + OAUTH_CONTEXT_TTL_SECONDS * 1000,
   }
+  if (context.agencyName) context.agencyName = context.agencyName.trim().slice(0, 120) || undefined
   const payload = encode(JSON.stringify(context))
   return `${payload}.${signature(payload)}`
 }
@@ -56,6 +58,7 @@ export function readOAuthContext(value: string | undefined, now = Date.now()): O
     if (context.returnTo && !safeRedirectPath(context.returnTo)) return null
     if (context.intent === 'student' && !context.registrationIntent) return null
     if (context.intent === 'invitation' && !context.invitationToken) return null
+    if (context.agencyName && (context.intent !== 'educator' || context.accountType !== 'centre')) return null
     return context
   } catch {
     return null

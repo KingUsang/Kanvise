@@ -14,14 +14,14 @@ afterEach(() => cleanup())
 describe('CompleteProfilePage', () => {
   it('only asks an educator agency administrator for the required agency name', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: {
-      intent: 'educator', account_type: 'centre', email: 'owner@example.com', first_name: 'Ada', last_name: 'Okafor',
+      intent: 'educator', account_type: 'centre', agency_name: 'Bright Future Tutorials', email: 'owner@example.com', first_name: 'Ada', last_name: 'Okafor',
     } }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
 
     render(<CompleteProfilePage />)
 
     expect(await screen.findByRole('heading', { name: 'Let’s finish setting up your account' })).toBeInTheDocument()
     expect(screen.getByLabelText('Full name')).toHaveValue('Ada Okafor')
-    expect(screen.getByLabelText('Tutorial agency name')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tutorial agency name')).toHaveValue('Bright Future Tutorials')
   })
 
   it('preserves student context without presenting educator setup choices', async () => {

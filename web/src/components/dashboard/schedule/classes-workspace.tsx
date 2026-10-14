@@ -536,7 +536,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           <>
             <div
               ref={calendarGridRef}
-              className="hidden overflow-auto md:block md:max-h-[calc(100vh-260px)]"
+              className="hidden overflow-auto md:block md:max-h-[calc(100vh-190px)]"
             >
               <div className="grid min-w-[1020px] grid-cols-[72px_repeat(7,minmax(132px,1fr))]">
                 <div className="sticky left-0 top-0 z-30 border-b border-r border-[#eeeae6] bg-white" />
@@ -559,7 +559,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                   const hour = startHour + offset;
                   return (
                     <div key={hour} className="contents">
-                      <div className="sticky left-0 z-10 min-h-[74px] border-b border-r border-[#eeeae6] bg-white px-2 pt-2 text-right text-xs font-semibold text-[#8b8580]">
+                      <div className="sticky left-0 z-10 min-h-[92px] border-b border-r border-[#eeeae6] bg-white px-2 pt-2 text-right text-xs font-semibold text-[#8b8580]">
                         {String(hour).padStart(2, "0")}:00
                       </div>
                       {days.map((day) => {
@@ -571,7 +571,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                         return (
                           <div
                             key={`${dateInput(day)}-${hour}`}
-                            className="relative min-h-[74px] border-b border-r border-[#f0eded] p-1.5 last:border-r-0"
+                            className="relative min-h-[92px] border-b border-r border-[#f0eded] p-1.5 last:border-r-0"
                           >
                             <button
                               onClick={() => open(day, hour)}

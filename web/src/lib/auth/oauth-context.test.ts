@@ -17,6 +17,11 @@ describe('OAuth context', () => {
     expect(readOAuthContext(signed, 2_000)?.returnTo).toBeUndefined()
   })
 
+  it('keeps a tutorial agency name only for the educator agency flow', () => {
+    const signed = createOAuthContext({ intent: 'educator', accountType: 'centre', agencyName: ' Bright Future Tutorials ' }, 1_000)
+    expect(readOAuthContext(signed, 2_000)?.agencyName).toBe('Bright Future Tutorials')
+  })
+
   it('treats a missing server secret as no OAuth context', () => {
     const signed = createOAuthContext({ intent: 'login' })
     delete process.env.AUTH_CONTEXT_SECRET

@@ -37,7 +37,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   const navigateTo = (href: string) => {
     if (capabilities.setupRequired && href !== '/dashboard/school-setup') {
       setIsSearchOpen(false)
-      toast.info('Create your centre first', {
+      toast.info('Create your tutorial agency first', {
         description: 'This page will unlock as soon as you complete the required setup.',
       })
       return
