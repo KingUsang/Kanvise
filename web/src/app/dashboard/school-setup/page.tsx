@@ -28,12 +28,12 @@ export default async function SchoolSetupPage() {
   if (!res.ok && !isNewAdmin) {
     return (
       <div className="p-8 text-center text-red-500">
-        We could not load your centre details. Please refresh the page and try again.
+        We could not load your tutorial agency details. Please refresh the page and try again.
       </div>
     )
   }
 
-  // A missing centre is the expected first-login state for an Admin. Passing
+  // A missing tutorial agency is the expected first-login state for an Admin. Passing
   // null opens the creation form, which submits to POST /schools.
   const schoolData = res.ok ? responseBody?.data : null
 

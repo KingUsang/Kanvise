@@ -2,12 +2,12 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { SchoolSetupForm, slugifyCentreName, withCacheVersion } from './school-setup-form'
+import { SchoolSetupForm, slugifyTutorialAgencyName, withCacheVersion } from './school-setup-form'
 
-describe('centre setup helpers', () => {
-  it('generates a stable student-page slug from the centre name', () => {
-    expect(slugifyCentreName('  Emmanuel’s JAMB & WAEC Centre  ')).toBe('emmanuel-s-jamb-waec-centre')
-    expect(slugifyCentreName('---')).toBe('')
+describe('tutorial agency setup helpers', () => {
+  it('generates a stable student-page slug from the tutorial agency name', () => {
+    expect(slugifyTutorialAgencyName('  Emmanuel’s JAMB & WAEC Centre  ')).toBe('emmanuel-s-jamb-waec-centre')
+    expect(slugifyTutorialAgencyName('---')).toBe('')
   })
 
   it('cache-busts new media previews without damaging existing query strings', () => {
@@ -15,15 +15,15 @@ describe('centre setup helpers', () => {
     expect(withCacheVersion('https://cdn.example.com/logo.png?width=200', 42)).toBe('https://cdn.example.com/logo.png?width=200&v=42')
   })
 
-  it('keeps first-time setup to the centre name and a generated link preview', async () => {
+  it('keeps first-time setup to the tutorial agency name and a generated link preview', async () => {
     const user = userEvent.setup()
     render(React.createElement(SchoolSetupForm, { initialData: null }))
 
-    expect(screen.getByRole('heading', { name: 'Name your centre' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Name your tutorial agency' })).toBeInTheDocument()
     expect(screen.getAllByRole('textbox')).toHaveLength(1)
     expect(screen.queryByText('Photos and Welcome Video')).not.toBeInTheDocument()
 
-    await user.type(screen.getByLabelText('Centre name'), 'Bright Future Tutorials')
+    await user.type(screen.getByLabelText('Tutorial agency name'), 'Bright Future Tutorials')
     expect(screen.getByText(/bright-future-tutorials$/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Continue to dashboard' })).toBeEnabled()
   })
@@ -37,7 +37,7 @@ describe('centre setup helpers', () => {
     expect(screen.queryByRole('button', { name: 'Discard' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
 
-    await user.type(screen.getByLabelText('Centre Name *'), ' Academy')
+    await user.type(screen.getByLabelText('Tutorial agency name *'), ' Academy')
     expect(screen.getByRole('button', { name: 'Discard' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled()
   })
