@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, KeyRound, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { AuthLogo } from "@/components/auth/auth-logo"
 import { createClient } from "@/lib/supabase/client"
+import { authPrimaryButtonClass } from '@/components/auth/auth-ui'
 
-const INVALID_INVITATION = "This invitation link has expired or was already used. Ask your tutorial centre to invite you again."
+const INVALID_INVITATION = "This invitation link has expired or was already used. Ask your tutorial agency to invite you again."
 
 export default function InvitationPage() {
   const router = useRouter()
@@ -57,34 +57,27 @@ export default function InvitationPage() {
     router.refresh()
   }
 
-  return <div className="min-h-screen bg-surface-container-low p-6 font-body-md text-on-surface sm:flex sm:items-center sm:justify-center">
-    <main className="w-full max-w-[480px]">
-      <AuthLogo className="mb-stack-lg" />
-      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-8 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-10">
-        {checking ? <div className="flex items-center justify-center gap-3 py-12 text-on-surface-variant"><Loader2 className="h-5 w-5 animate-spin" />Opening your invitation…</div> : error ? <>
-          <header>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Invitation unavailable</p>
-            <h1 className="mt-3 font-headline-lg text-headline-lg font-bold tracking-tight">This link cannot be used</h1>
-            <p role="alert" className="mt-3 text-sm leading-6 text-on-surface-variant">{error}</p>
+  return <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8">
+      <section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12">
+        <Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>
+        {checking ? <div className="flex min-h-56 items-center justify-center gap-3 text-sm text-[#625e6e]"><Loader2 className="h-5 w-5 animate-spin" />Opening your invitation…</div> : error ? <>
+          <header className="text-center">
+            <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">This link can’t be used</h1>
+            <p role="alert" className="mt-3 text-sm leading-6 text-[#625e6e]">{error}</p>
           </header>
           <div className="mt-8 grid gap-3">
-            <Link href="/auth/login" className="rounded-lg bg-secondary px-6 py-4 text-center font-semibold text-on-secondary">Go to login</Link>
-            <Link href="/auth/forgot-password" className="rounded-lg border border-outline-variant px-6 py-4 text-center font-semibold text-primary">I already have an account</Link>
+            <Link href="/auth/login" className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#994704] px-6 text-sm font-semibold text-white"><ArrowLeft aria-hidden size={16}/>Back to sign in</Link>
+            <Link href="/auth/forgot-password" className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#d7d5df] px-6 text-sm font-medium text-[#2e2877]"><KeyRound aria-hidden size={16}/>Reset password</Link>
           </div>
         </> : <>
-          <header>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Student invitation</p>
-            <h1 className="mt-3 font-headline-lg text-headline-lg font-bold tracking-tight">You’ve been invited to Kanvise</h1>
-            <p className="mt-3 text-sm leading-6 text-on-surface-variant">Continue to confirm this invitation, create your password, and open your learning dashboard.</p>
+          <header className="text-center">
+            <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">You’ve been invited</h1>
+            <p className="mt-3 text-sm leading-6 text-[#625e6e]">Continue to confirm your invitation and finish setting up your account.</p>
           </header>
-          <div className="mt-6 rounded-lg border border-outline-variant bg-surface p-4 text-sm leading-6 text-on-surface-variant">
-            This one-time invitation is confirmed only when you press the button below. If you were not expecting it, close this page.
-          </div>
-          <button type="button" disabled={verifying} onClick={() => void continueToSetup()} className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-6 py-4 font-semibold text-on-secondary disabled:opacity-70">
-            {verifying ? <><Loader2 className="h-5 w-5 animate-spin" />Confirming invitation…</> : "Continue to account setup"}
+          <button type="button" disabled={verifying} onClick={() => void continueToSetup()} className={`${authPrimaryButtonClass} mt-8`}>
+            {verifying ? <><Loader2 className="h-5 w-5 animate-spin" />Confirming invitation…</> : <>Continue<ArrowRight size={16}/></>}
           </button>
         </>}
       </section>
-    </main>
-  </div>
+  </main>
 }

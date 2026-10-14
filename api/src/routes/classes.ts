@@ -150,7 +150,7 @@ classesRouter.get('/timetable', ...classAccessMiddleware(), async (c) => {
       .maybeSingle()
     if (schoolError) throw schoolError
     if (school?.account_type === 'independent') {
-      return c.json({ error: 'Timetable is available for tutorial centres', code: 'CENTRE_TIMETABLE_UNAVAILABLE' }, 403)
+      return c.json({ error: 'Timetable is available for tutorial agencies', code: 'CENTRE_TIMETABLE_UNAVAILABLE' }, 403)
     }
     let query = (supabase as any).from('class_timetable_slots')
       .select('id, course_id, tutor_id, weekday, start_time, duration_minutes, starts_on, ends_on, title, source, recurrence_group_id, timetable_id, course:courses(id, name, programme_id, programme:programmes(id, name)), tutor:user_profiles!class_timetable_slots_tutor_id_fkey(id, first_name, last_name)')

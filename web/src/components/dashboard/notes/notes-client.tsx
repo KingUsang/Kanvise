@@ -368,7 +368,7 @@ export function NotesClient({ session }: NotesClientProps) {
                     ))}
                   </select>
                   {courses.length === 0 && !loadError && (
-                    <p className="mt-2 text-sm text-dashboard-muted">Create a subject or ask your centre admin to assign you to one first.</p>
+                    <p className="mt-2 text-sm text-dashboard-muted">Create a subject or ask your agency administrator to assign you to one first.</p>
                   )}
                 </div>
                 

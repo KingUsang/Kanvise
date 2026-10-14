@@ -25,7 +25,7 @@ describe('dashboard workspaces', () => {
     expect(getDashboardWorkspaceForPath('/dashboard/students')).toBe('centre')
   })
 
-  it('keeps tutor management exclusive to centre admins', () => {
+  it('keeps tutor management exclusive to agency administrators', () => {
     expect(getDashboardNavItems({ isAdmin: true, isTutor: false }).some(item => item.href === '/dashboard/tutors')).toBe(true)
     const independentTutor = { isAdmin: false, isTutor: true, organisationType: 'independent' as const }
     const independentAdminTutor = { isAdmin: true, isTutor: true, organisationType: 'independent' as const }

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getApiUrl } from '@/config/api'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
+import { ArrowRight, Loader2 } from 'lucide-react'
 
 type PaymentState = "loading" | "pending" | "success" | "failed" | "error";
 type PurchaseKind = 'enrolment' | 'mock'
@@ -116,27 +117,21 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
     }
   }
 
-  const icon = state === "success" ? "check_circle" : state === "failed" || state === "error" ? "error" : "progress_activity";
   return (
-    <main className="min-h-screen bg-kv-soft px-4 py-16 flex items-center justify-center">
-      <section className="w-full max-w-lg rounded-3xl bg-white p-8 text-center shadow-[0_16px_60px_rgba(46,40,119,0.12)]">
-        <span className={`material-symbols-outlined text-6xl ${state === "success" ? "text-green-600" : state === "failed" || state === "error" ? "text-error" : "text-kv-blue animate-spin"}`}>
-          {icon}
-        </span>
-        <h1 className="mt-5 text-2xl font-bold text-kv-dark">
+    <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8">
+      <section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 text-center sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12">
+        <Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>
+        <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">
           {state === "success" ? (purchaseKind === 'mock' ? 'Mock unlocked' : 'You’re enrolled') : state === "failed" ? "Payment incomplete" : "Checking payment"}
         </h1>
-        <p className="mt-3 text-on-surface-variant">{message}</p>
-        {reference && <p className="mt-5 break-all text-xs text-outline">Reference: {reference}</p>}
+        <p className="mt-3 text-sm leading-6 text-[#625e6e]">{message}</p>
+        {reference && <p className="mt-5 break-all text-xs text-[#8b8794]">Reference: {reference}</p>}
         {state === 'success' && purchaseKind === 'mock' && mockOfferId ? (
-          <button onClick={() => void startMock()} disabled={startingMock} className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90 disabled:opacity-60">
-            {startingMock ? 'Starting mock…' : 'Start mock'}
+          <button onClick={() => void startMock()} disabled={startingMock} className="mx-auto mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-6 text-sm font-semibold text-white disabled:opacity-60">
+            {startingMock ? <><Loader2 className="animate-spin" size={17}/>Starting mock…</> : <>Start mock<ArrowRight size={16}/></>}
           </button>
-        ) : (
-          <Link href={purchaseKind === 'mock' ? '/dashboard/student/mocks?view=unlocked' : '/dashboard/student'} className="mt-7 inline-flex rounded-xl bg-kv-blue px-6 py-3 font-semibold text-white hover:opacity-90">
-            {purchaseKind === 'mock' ? 'Go to mocks' : 'Go to my learning'}
-          </Link>
-        )}
+        ) : state === 'success' ? <Link href={purchaseKind === 'mock' ? '/dashboard/student/mocks?view=unlocked' : '/dashboard/student'} className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-6 text-sm font-semibold text-white">{purchaseKind === 'mock' ? 'Go to mocks' : 'Open my learning'}<ArrowRight size={16}/></Link>
+          : state === 'failed' || state === 'error' ? <Link href={message.toLowerCase().includes('sign in') ? '/auth/login' : '/dashboard/student'} className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#d7d5df] px-6 text-sm font-medium text-[#2e2877]">{message.toLowerCase().includes('sign in') ? 'Sign in' : 'Go to my learning'}<ArrowRight size={16}/></Link> : null}
       </section>
     </main>
   );

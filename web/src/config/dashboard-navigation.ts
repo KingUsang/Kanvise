@@ -67,7 +67,7 @@ export function getDashboardNavItems(capabilities: DashboardCapabilities) {
 }
 
 export function getDashboardWorkspaces(capabilities: DashboardCapabilities) {
-  // A new centre admin has exactly one available task. Showing the usual tabs
+  // A new agency administrator has exactly one available task. Showing the usual tabs
   // only to redirect every tap back here makes the mobile navigation feel
   // broken, so represent setup as its own truthful destination.
   if (capabilities.setupRequired) {

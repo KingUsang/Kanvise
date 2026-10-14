@@ -44,7 +44,7 @@ export default function StudentLearnPage() {
     <header>
       <p className="text-sm font-medium text-[#994704]">Your programme</p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">Learn</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Live classes, assignments and study materials from your tutorial centre are together here.</p>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Live classes, assignments and study materials from your tutorial agency are together here.</p>
     </header>
 
     {data.course_count > 0 ? <section className="mt-7 grid gap-4 md:grid-cols-3">

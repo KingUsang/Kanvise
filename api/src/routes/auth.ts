@@ -41,7 +41,7 @@ authRouter.post('/tutor-invite/preview', async (c) => {
     return c.json({
       data: {
         email: invite.email,
-        school_name: school?.name || 'this tutorial centre',
+        school_name: school?.name || 'this tutorial agency',
         expires_at: invite.expires_at,
       },
     })
@@ -61,7 +61,7 @@ authRouter.post('/invitation/preview', async (c) => {
   return c.json({ data: {
     role: invitation.role,
     email: invitation.email,
-    school_name: school?.name || 'your tutorial centre',
+    school_name: school?.name || 'your tutorial agency',
     status,
     expires_at: invitation.expires_at,
     metadata: invitation.metadata || {},
@@ -113,7 +113,7 @@ authRouter.post('/invitation/start', async (c) => {
       role: invitation.role,
       message: error?.message || 'missing action link',
     })
-    return c.json({ error: error?.message || 'Could not start this invitation' }, 502)
+    return c.json({ error: 'We could not start this invitation right now', code: 'INVITATION_START_FAILED' }, 502)
   }
 
   const actionUrl = new URL(generated.properties.action_link)
@@ -234,7 +234,7 @@ authRouter.post('/profile/init', async (c) => {
   if (existingProfile) {
     const invitedSchoolId = accountInvitation?.school_id || tutorInvite?.school_id
     if (role === 'tutor' && (existingProfile.role !== 'tutor' || existingProfile.school_id !== invitedSchoolId)) {
-      return c.json({ error: 'This Kanvise account already belongs to a different centre' }, 409)
+      return c.json({ error: 'This Kanvise account already belongs to a different tutorial agency' }, 409)
     }
     if (role !== 'tutor' && existingProfile.role !== role) {
       return c.json({ error: `This email already belongs to a ${existingProfile.role} account` }, 409)

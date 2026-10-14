@@ -126,7 +126,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     if (metadataError) {
       console.error('[schools] School created but trusted tenant claim update failed:', metadataError)
       return c.json({
-        error: 'Your centre was created, but your session could not be updated. Please sign in again.',
+        error: 'Your tutorial agency was created, but your session could not be updated. Please sign in again.',
         code: 'SESSION_UPDATE_REQUIRED',
       }, 503)
     }

@@ -247,7 +247,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-dashboard-muted" />
                 </div>
                 {courses.length === 0 && !isFetching && (
-                  <p className="text-xs leading-5 text-dashboard-muted">No subjects are available. Ask the centre admin to create a subject or assign one to you.</p>
+                  <p className="text-xs leading-5 text-dashboard-muted">No subjects are available. Ask the agency administrator to create a subject or assign one to you.</p>
                 )}
               </div>
 

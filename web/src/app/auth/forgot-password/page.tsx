@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
+import { ArrowLeft, Check, Loader2, Send } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { AuthLogo } from "@/components/auth/auth-logo"
+import { AuthAlert, AuthHeading, authInputClass, authPrimaryButtonClass } from "@/components/auth/auth-ui"
+import { VerificationCodeInput } from '@/components/auth/verification-code-input'
+import { recoveryRequestErrorMessage, verificationErrorMessage } from '@/lib/auth-error-message'
+import { maskEmail } from '@/lib/mask-email'
 
 type Step = "email" | "code"
 
@@ -31,7 +34,7 @@ export default function ForgotPasswordPage() {
     setError(null)
     const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email)
     setLoading(false)
-    if (recoveryError) return setError(recoveryError.message)
+    if (recoveryError) return setError(recoveryRequestErrorMessage(recoveryError))
     setCode("")
     setResendIn(60)
     setStep("code")
@@ -48,34 +51,35 @@ export default function ForgotPasswordPage() {
       type: "recovery",
     })
     setLoading(false)
-    if (verificationError || !data.session) return setError(verificationError?.message || "That code is invalid or has expired.")
+    if (verificationError || !data.session) return setError(verificationErrorMessage(verificationError))
     router.push("/auth/reset-password")
     router.refresh()
   }
 
-  return <div className="min-h-screen bg-surface-container-low p-6 font-body-md text-on-surface sm:flex sm:items-center sm:justify-center">
-    <main className="w-full max-w-[480px]">
-      <AuthLogo className="mb-stack-lg" />
-      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-8 shadow-[0px_4px_20px_rgba(61,61,61,0.08)] sm:p-10">
+  return <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8">
+    <section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12">
+      <div className="mx-auto w-full max-w-[404px]">
+        <Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>
         {step === "email" ? <>
-          <header className="mb-stack-lg"><h1 className="font-headline-lg text-headline-lg font-bold tracking-tight">Reset your password</h1><p className="mt-2 text-sm leading-6 text-on-surface-variant">Enter your email address and we’ll send a six-digit reset code.</p></header>
+          <div className="text-center [&_p]:mx-auto"><AuthHeading title="Reset your password" description="Enter the email associated with your Kanvise account. We’ll guide you through resetting your password." /></div>
           <form className="space-y-6" onSubmit={sendCode}>
-            <label className="block text-sm font-semibold" htmlFor="email">Email address<input id="email" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-lg border border-outline-variant bg-surface px-4 py-3 outline-none focus:border-primary" /></label>
-            {error && <p role="alert" className="rounded-lg border border-error/20 bg-error-container p-3 text-sm text-on-error-container">{error}</p>}
-            <button disabled={loading} type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-6 py-4 font-semibold text-on-secondary disabled:opacity-70">{loading ? <><Loader2 className="h-5 w-5 animate-spin" />Sending code…</> : "Send reset code"}</button>
+            <label className="block text-sm font-medium text-[#302c39]" htmlFor="email">Email address<input id="email" required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className={`mt-2 ${authInputClass}`} /></label>
+            {error && <AuthAlert>{error}</AuthAlert>}
+            <button disabled={loading} type="submit" className={authPrimaryButtonClass}>{loading ? <><Loader2 className="h-5 w-5 animate-spin" />Sending code…</> : <>Send recovery code<Send size={16}/></>}</button>
           </form>
+          <p className="mt-5 text-center text-sm leading-6 text-[#625e6e]">Usually sign in with Google? <Link href="/auth/login" className="font-medium text-[#2e2877] hover:underline">Return to sign in</Link> and choose Google.</p>
         </> : <>
-          <header className="mb-stack-lg"><h1 className="font-headline-lg text-headline-lg font-bold tracking-tight">Check your email</h1><p className="mt-2 text-sm leading-6 text-on-surface-variant">Enter the six-digit code sent to <strong>{email}</strong>. It expires in one hour.</p></header>
+          <div className="text-center [&_p]:mx-auto"><AuthHeading title="Check your email" description={<>Enter the recovery code sent to <span className="font-medium text-[#302c39]">{maskEmail(email)}</span>.</>} /></div>
           <form className="space-y-6" onSubmit={verifyCode}>
-            <label className="block text-sm font-semibold" htmlFor="recovery-code">Reset code<input id="recovery-code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} placeholder="123456" className="mt-2 w-full rounded-lg border border-outline-variant bg-surface px-4 py-3 text-center text-2xl font-semibold tracking-[0.45em] outline-none focus:border-primary" /></label>
-            {error && <p role="alert" className="rounded-lg border border-error/20 bg-error-container p-3 text-sm text-on-error-container">{error}</p>}
-            <button disabled={loading || code.length !== 6} type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-6 py-4 font-semibold text-on-secondary disabled:opacity-70">{loading ? <><Loader2 className="h-5 w-5 animate-spin" />Verifying…</> : "Continue"}</button>
+            <VerificationCodeInput id="recovery-code" label="Recovery code" value={code} onChange={setCode} disabled={loading} />
+            {error && <AuthAlert>{error}</AuthAlert>}
+            <button disabled={loading || code.length !== 6} type="submit" className={authPrimaryButtonClass}>{loading ? <><Loader2 className="h-5 w-5 animate-spin" />Verifying…</> : <>Verify code<Check size={16}/></>}</button>
           </form>
-          <div className="mt-6 text-center text-sm text-on-surface-variant">Didn’t receive it? {resendIn ? <span>Resend available in {resendIn}s</span> : <button type="button" onClick={() => void sendCode()} className="font-semibold text-primary hover:underline">Resend code</button>}</div>
-          <button type="button" onClick={() => { setStep("email"); setError(null); setCode("") }} className="mt-4 w-full text-sm font-medium text-on-surface-variant hover:text-primary">Use a different email address</button>
+          <div className="mt-6 text-center text-sm text-[#625e6e]">{resendIn ? <span>Resend code in 0:{String(resendIn).padStart(2, '0')}</span> : <button type="button" onClick={() => void sendCode()} className="font-semibold text-[#2e2877] hover:underline">Resend code</button>}</div>
+          <button type="button" onClick={() => { setStep("email"); setError(null); setCode("") }} className="mt-4 w-full text-sm font-semibold text-[#625e6e] hover:text-[#2e2877]">Use a different email</button>
         </>}
-        <footer className="mt-8 border-t border-outline-variant pt-6 text-center"><Link href="/auth/login" className="text-sm font-semibold text-primary hover:underline">Back to login</Link></footer>
-      </section>
-    </main>
-  </div>
+        <footer className="mt-8 border-t border-[#e8e5ee] pt-6 text-center"><Link href="/auth/login" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2e2877] hover:underline"><ArrowLeft size={15}/>Back to sign in</Link></footer>
+      </div>
+    </section>
+  </main>
 }

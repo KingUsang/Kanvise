@@ -10,7 +10,7 @@ const auth = vi.hoisted(() => ({
   resend: vi.fn(),
 }))
 
-const navigation = vi.hoisted(() => ({ pathname: '/auth/register' }))
+const navigation = vi.hoisted(() => ({ pathname: '/auth/register', search: '' }))
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({ auth }),
@@ -19,16 +19,17 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('next/navigation', () => ({
   usePathname: () => navigation.pathname,
   useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(navigation.search),
 }))
 
 import RegisterPage from './page'
 
-describe('centre registration', () => {
+describe('tutorial agency registration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://api.example.test')
     navigation.pathname = '/auth/register'
+    navigation.search = ''
     auth.signUp.mockResolvedValue({ error: null })
     auth.verifyOtp.mockResolvedValue({
       data: {
@@ -54,14 +55,13 @@ describe('centre registration', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ school: { id: 'school-1' } }), { status: 200 })))
   })
 
-  it('collects the centre name and creates the centre after email verification', async () => {
+  it('collects the agency name and creates its workspace after email verification', async () => {
     const user = userEvent.setup()
     render(<RegisterPage />)
 
-    await user.click(screen.getByRole('button', { name: /I run a tutorial centre/i }))
-    fireEvent.change(screen.getByLabelText('Tutorial centre name'), { target: { value: 'Bright Future Tutorials' } })
-    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Emmanuel' } })
-    fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Usang' } })
+    await user.click(screen.getByRole('button', { name: 'Tutorial agency' }))
+    fireEvent.change(screen.getByLabelText('Tutorial agency name'), { target: { value: 'Bright Future Tutorials' } })
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Emmanuel Usang' } })
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'owner@example.com' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'SecurePass1!' } })
     await user.click(screen.getByRole('button', { name: 'Create account' }))
@@ -77,7 +77,7 @@ describe('centre registration', () => {
       },
     }))
 
-    fireEvent.change(await screen.findByLabelText('Verification code'), { target: { value: '123456' } })
+    fireEvent.change(await screen.findByLabelText('Verification code, digit 1 of 6'), { target: { value: '123456' } })
     await user.click(screen.getByRole('button', { name: 'Verify email' }))
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
@@ -94,14 +94,24 @@ describe('centre registration', () => {
       headers: expect.objectContaining({ Authorization: 'Bearer profile-token' }),
       body: JSON.stringify({ name: 'Bright Future Tutorials', account_type: 'centre' }),
     })
-    expect(await screen.findByText(/centre was created, but the dashboard session could not be refreshed/i)).toBeInTheDocument()
+    expect(await screen.findByText(/email was verified, but Kanvise couldn't finish setting up your account/i)).toBeInTheDocument()
   })
 
-  it('does not add centre setup fields to student registration', () => {
+  it('does not show a generic learner signup form without a programme or invitation context', () => {
     navigation.pathname = '/auth/register/student'
     render(<RegisterPage />)
 
-    expect(screen.queryByLabelText('Tutorial centre name')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Join your programme' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Tutorial agency name')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Choose a programme first' })).toBeInTheDocument()
+  })
+
+  it('keeps educator choices out of contextual learner registration', () => {
+    navigation.pathname = '/auth/register/student'
+    navigation.search = 'intent=student-registration-token'
+    render(<RegisterPage />)
+
+    expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument()
+    expect(screen.queryByText('Independent tutor')).not.toBeInTheDocument()
   })
 })

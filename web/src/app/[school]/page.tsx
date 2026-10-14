@@ -70,7 +70,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
             <div className="text-white pb-2 flex-grow">
               <h1 className="font-display-lg text-headline-lg-mobile md:text-display-lg mb-2">{school.name}</h1>
               <p className="font-body-lg text-body-md md:text-body-lg opacity-90 max-w-2xl mb-4">
-                {school.description || "Explore the programmes currently available from this tutorial centre."}
+                {school.description || "Explore the programmes currently available from this tutorial agency."}
               </p>
             </div>
           </div>

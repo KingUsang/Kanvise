@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { toast } from "sonner";
+import { ArrowRight, Loader2 } from 'lucide-react'
 
 interface CheckoutButtonProps {
   schoolSlug: string;
@@ -15,6 +16,8 @@ interface CheckoutButtonProps {
 
 export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseId, price }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [alreadyEnrolled, setAlreadyEnrolled] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const shouldAutoStartCheckout = searchParams.get("checkout") === "true";
@@ -22,9 +25,16 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
   const idempotencyKeyRef = useRef<string | null>(null);
   const autoStartTriggeredRef = useRef(false);
   const isFree = Number(price) === 0;
+  const isProgramme = Boolean(programmeId)
+  const actionLabel = isProgramme ? 'Join programme' : isFree ? 'Enrol for free' : `Enrol now · ₦${price.toLocaleString()}`
 
   const handleCheckout = async () => {
+    if (alreadyEnrolled) {
+      window.location.assign('/dashboard/student')
+      return
+    }
     setLoading(true);
+    setError('')
 
     try {
       // Check auth state
@@ -52,7 +62,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
         throw new Error(profileBody?.error || "Could not verify your account");
       }
       if (profileBody?.user?.role !== "student") {
-        throw new Error("Please use a student account to enrol in this programme.");
+        throw new Error(isProgramme ? 'Please use a student account to join this programme.' : 'Please use a student account to continue.');
       }
 
       // Check role - only students can enrol
@@ -79,6 +89,11 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.code === 'ALREADY_ENROLLED') {
+          idempotencyKeyRef.current = null
+          setAlreadyEnrolled(true)
+          return
+        }
         if (data.code !== "PAYMENT_INITIALIZING") idempotencyKeyRef.current = null;
         throw new Error(data.error || "Checkout failed");
       }
@@ -97,7 +112,9 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
 
     } catch (err: any) {
       console.error("Checkout Error:", err);
-      toast.error(err.message || "An error occurred during checkout.");
+      const message = err.message || (isProgramme ? "We couldn't start joining this programme. Try again." : 'We could not start enrolment. Try again.')
+      setError(message)
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -110,14 +127,14 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
     void handleCheckout();
   }, [shouldAutoStartCheckout]);
 
-  return (
+  return (<div>
     <button
       onClick={handleCheckout}
       disabled={loading}
-      className="w-full bg-secondary text-white py-5 rounded-xl font-bold text-lg hover:opacity-90 transform active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white transition hover:bg-[#7d3903] focus:outline-none focus:ring-4 focus:ring-[#994704]/20 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {loading ? (isFree ? "Enrolling..." : "Opening secure checkout...") : (isFree ? "Enrol for free" : `Enrol now · ₦${price.toLocaleString()}`)}
-      {!loading && <span className="material-symbols-outlined">{isFree ? "school" : "payments"}</span>}
+      {loading ? <><Loader2 size={17} className="animate-spin"/>{isProgramme && isFree ? 'Joining…' : isFree ? 'Enrolling…' : 'Opening checkout…'}</> : <>{alreadyEnrolled ? 'Open programme' : actionLabel}<ArrowRight size={16}/></>}
     </button>
-  );
+    {alreadyEnrolled ? <p className="mt-3 text-center text-sm text-[#17653a]">You’re already enrolled in this programme.</p> : error ? <p role="alert" className="mt-3 text-center text-sm leading-5 text-[#a33a2b]">{error}</p> : null}
+  </div>);
 }

@@ -354,7 +354,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                 <span className="material-symbols-outlined text-[#994704]">perm_media</span>
                 Photos and Welcome Video <span className="text-sm font-normal text-[#787582]">(optional)</span>
               </h3>
-              <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so students know they are enrolling with the right tutorial centre.</p>
+              <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so students know they are enrolling with the right tutorial agency.</p>
               {!canUploadMedia && <p className="mt-2 text-xs font-medium text-[#994704]">Save your centre details first, then you can add photos and a welcome video.</p>}
               </div>
 

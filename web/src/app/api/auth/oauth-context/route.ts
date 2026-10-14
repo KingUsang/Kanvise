@@ -22,6 +22,7 @@ export async function GET() {
     intent: context.intent, account_type: context.accountType, email: user.email,
     first_name: user.user_metadata?.first_name || fullName[0] || '',
     last_name: user.user_metadata?.last_name || fullName.slice(1).join(' ') || '',
+    invitation_token: context.intent === 'invitation' ? context.invitationToken : undefined,
     invitation,
   } })
 }

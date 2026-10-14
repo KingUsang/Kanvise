@@ -99,7 +99,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
       .single();
     if (schoolError || !school) throw schoolError || new Error('Could not load your centre');
     const programmeNames = new Map((programmes || []).map((programme) => [programme.id, programme.name]));
-    const invitedByName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Your centre administrator';
+    const invitedByName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Your agency administrator';
 
     const emails = [...new Set(normalizedRows.map((row) => row.email).filter((email): email is string => Boolean(email)))];
     const { data: existingProfiles, error: existingError } = emails.length ? await supabase

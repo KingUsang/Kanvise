@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   const firstName = String(body?.first_name || '').trim(), lastName = String(body?.last_name || '').trim(), centreName = String(body?.centre_name || '').trim()
   if (!firstName || !lastName) return NextResponse.json({ error: 'Enter your first and last name.' }, { status: 400 })
-  if (context.intent === 'educator' && context.accountType === 'centre' && !centreName) return NextResponse.json({ error: 'Enter your tutorial centre name.' }, { status: 400 })
+  if (context.intent === 'educator' && context.accountType === 'centre' && !centreName) return NextResponse.json({ error: 'Enter your tutorial agency name.' }, { status: 400 })
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Your Google session has expired. Start again.' }, { status: 401 })
@@ -29,7 +29,15 @@ export async function POST(request: Request) {
   const flow = context.intent === 'student' ? 'student' : context.intent === 'invitation' ? invitationRole : context.accountType === 'centre' ? 'centre' : 'independent'
   const init = await fetch(`${getApiUrl()}/auth/profile/init`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ flow, first_name: firstName, last_name: lastName, student_registration_token: context.registrationIntent, account_invitation_token: context.invitationToken }) })
   const initBody = await init.json().catch(() => null)
-  if (!init.ok) return NextResponse.json({ error: initBody?.error || 'Your Kanvise profile could not be completed.' }, { status: init.status })
+  if (!init.ok) {
+    const invitationEmailMismatch = context.intent === 'invitation'
+      && init.status === 403
+      && initBody?.error === 'This invitation was sent to a different email address'
+    return NextResponse.json({
+      error: invitationEmailMismatch ? 'This invitation was sent to a different email address. Sign in with the invited account to continue.' : initBody?.error || 'Your Kanvise profile could not be completed.',
+      code: invitationEmailMismatch ? 'INVITATION_EMAIL_MISMATCH' : undefined,
+    }, { status: init.status })
+  }
 
   let schoolId = initBody?.profile?.school_id || null
   if (flow === 'centre' || flow === 'independent') {

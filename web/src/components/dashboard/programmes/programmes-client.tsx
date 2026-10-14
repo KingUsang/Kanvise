@@ -153,7 +153,7 @@ export function ProgrammesClient() {
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
           <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first class</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Add the subjects, learners and sessions you will teach together.</p>
-          {canCreate ? <Link href="/dashboard/classes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create class</Link> : <p className="mt-5 text-sm text-[#474551]">Your centre admin creates classes and assigns you the subjects you teach.</p>}
+          {canCreate ? <Link href="/dashboard/classes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create class</Link> : <p className="mt-5 text-sm text-[#474551]">Your agency administrator creates classes and assigns you the subjects you teach.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

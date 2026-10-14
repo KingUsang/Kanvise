@@ -80,7 +80,7 @@ export default async function ProgrammePage({
             <span>{school?.name || "All programmes"}</span>
           </Link>
           {isDraftPreview ? <span className="rounded-lg bg-[#f0efff] px-4 py-2 text-sm font-semibold text-[#2e2877]">Draft preview</span> : <Link href="#enrol" className="rounded-lg bg-[#994704] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#753400]">
-            {isFree ? "Enrol for free" : "Enrol now"}
+            Join programme
           </Link>}
         </div>
       </header>
@@ -130,7 +130,7 @@ export default async function ProgrammePage({
                 price={price}
                 programmeSlug={programmeSlug}
               /><p className="mt-3 text-center text-xs leading-5 text-[#6a6874]">
-                {isFree ? "Create a student account or sign in to start learning." : "You’ll be asked to sign in or create a student account before payment."}
+                {isFree ? "Create a student account or sign in to join." : "You’ll be asked to sign in or create a student account before payment."}
               </p></>}
             </aside>
           </div>
@@ -198,7 +198,7 @@ export default async function ProgrammePage({
               <nav className="mt-4 space-y-3 text-sm">
                 {itemCount > 0 && <a href="#curriculum" className="block text-[#474551] hover:text-[#2e2877]">Subjects included</a>}
                 {tutors.length > 0 && <a href="#tutor" className="block text-[#474551] hover:text-[#2e2877]">Instructor</a>}
-                {!isDraftPreview && <a href="#enrol" className="block font-semibold text-[#994704]">{isFree ? "Enrol for free" : "Enrol now"}</a>}
+                {!isDraftPreview && <a href="#enrol" className="block font-semibold text-[#994704]">Join programme</a>}
               </nav>
             </div>
           </aside>

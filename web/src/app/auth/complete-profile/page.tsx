@@ -2,35 +2,50 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Building2, Loader2, UserRound } from 'lucide-react'
-import { AuthLogo } from '@/components/auth/auth-logo'
+import { ArrowRight, Loader2 } from 'lucide-react'
+import { AuthAlert, authInputClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
+import { createClient } from '@/lib/supabase/client'
 
-type Context = { intent: 'login' | 'educator' | 'student' | 'invitation'; account_type?: 'independent' | 'centre'; email: string; first_name: string; last_name: string; invitation?: { role: 'tutor' | 'student'; school_name: string; metadata?: { programme_name?: string } } }
+type Context = { intent: 'login' | 'educator' | 'student' | 'invitation'; account_type?: 'independent' | 'centre'; email: string; first_name: string; last_name: string; invitation_token?: string; invitation?: { role: 'tutor' | 'student'; school_name: string; metadata?: { programme_name?: string } } }
 
 export default function CompleteProfilePage() {
   const [context, setContext] = useState<Context | null>(null)
-  const [firstName, setFirstName] = useState(''), [lastName, setLastName] = useState(''), [centreName, setCentreName] = useState('')
-  const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [error, setError] = useState('')
-  useEffect(() => { void fetch('/api/auth/oauth-context', { cache: 'no-store' }).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error); setContext(body.data); setFirstName(body.data.first_name); setLastName(body.data.last_name) }).catch(reason => setError(reason.message || 'Your sign-in could not be completed.')).finally(() => setLoading(false)) }, [])
+  const [fullName, setFullName] = useState(''), [centreName, setCentreName] = useState('')
+  const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [error, setError] = useState(''), [emailMismatch, setEmailMismatch] = useState(false)
+  useEffect(() => { void fetch('/api/auth/oauth-context', { cache: 'no-store' }).then(async response => { const body = await response.json().catch(() => null); if (!response.ok || !body?.data) throw new Error('oauth_context_unavailable'); setContext(body.data); setFullName(`${body.data.first_name || ''} ${body.data.last_name || ''}`.trim()) }).catch(() => setError("Your sign-in couldn't be completed. Open the sign-in page and try again.")).finally(() => setLoading(false)) }, [])
 
   async function complete(event: React.FormEvent) {
     event.preventDefault(); if (!context) return
+    const parts = fullName.trim().split(/\s+/), firstName = parts.slice(0, -1).join(' '), lastName = parts.at(-1) || ''
+    if (!firstName || !lastName) { setError('Enter your full name.'); return }
     setSaving(true); setError('')
     try {
       const response = await fetch('/api/auth/oauth-complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ first_name: firstName, last_name: lastName, centre_name: centreName, invitation_role: context.invitation?.role }) })
-      const body = await response.json(); if (!response.ok) throw new Error(body.error || 'Your account could not be completed.')
+      const body = await response.json().catch(() => null)
+      if (body?.code === 'INVITATION_EMAIL_MISMATCH') {
+        setEmailMismatch(true)
+        setError('This invitation was sent to a different email address. Sign in with the invited account to continue.')
+        setSaving(false)
+        return
+      }
+      if (!response.ok || !body?.destination) throw new Error('oauth_completion_failed')
       window.location.assign(body.destination)
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Your account could not be completed.'); setSaving(false) }
+    } catch { setError("We couldn't finish setting up your account. Try again."); setSaving(false) }
   }
 
-  const heading = context?.intent === 'invitation' ? `Join ${context.invitation?.school_name || 'your tutorial centre'}` : context?.intent === 'student' ? 'Finish joining your programme' : 'Finish setting up your account'
-  return <main className="min-h-screen bg-[#f7f5f3] px-4 py-8 sm:flex sm:items-center sm:justify-center sm:py-12"><section className="mx-auto w-full max-w-xl rounded-2xl border border-[#e4e2e1] bg-white p-6 shadow-[0_12px_40px_rgba(46,40,119,.08)] sm:p-10"><AuthLogo className="mb-8"/>
+  async function switchAccount() {
+    await createClient().auth.signOut()
+    window.location.assign(context?.invitation_token ? `/invite?token=${encodeURIComponent(context.invitation_token)}` : '/auth/login')
+  }
+
+  const heading = context?.intent === 'invitation' ? `Join ${context.invitation?.school_name || 'your tutorial agency'}` : context?.intent === 'student' ? 'Finish joining your programme' : 'Let’s finish setting up your account'
+  return <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8"><section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12"><Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>
     {loading ? <div className="flex min-h-56 items-center justify-center gap-3 text-[#474551]"><Loader2 className="animate-spin"/>Opening your account…</div>
-      : !context ? <div className="py-8 text-center"><h1 className="text-3xl font-bold text-[#2e2877]">Sign-in session unavailable</h1><p role="alert" className="mt-3 text-sm text-[#6a6874]">{error}</p><Link href="/auth/login" className="mt-7 inline-flex rounded-xl bg-[#2e2877] px-5 py-3 font-semibold text-white">Return to login</Link></div>
-      : <><header className="mb-7 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f0edff] text-[#2e2877]">{context.account_type === 'centre' ? <Building2/> : <UserRound/>}</span><h1 className="mt-4 text-3xl font-bold text-[#2e2877]">{heading}</h1><p className="mt-2 text-sm leading-6 text-[#6a6874]">Signed in as <strong className="text-[#1b1c1c]">{context.email}</strong>. Confirm how your name should appear.</p>{context.invitation?.metadata?.programme_name && <p className="mt-2 rounded-xl bg-[#f5f3ff] p-3 text-sm text-[#2e2877]">Programme: {context.invitation.metadata.programme_name}</p>}</header>
-      {error && <p role="alert" className="mb-5 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      <form onSubmit={complete} className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><Field label="First name" value={firstName} onChange={setFirstName}/><Field label="Last name" value={lastName} onChange={setLastName}/></div>{context.intent === 'educator' && context.account_type === 'centre' && <Field label="Tutorial centre name" value={centreName} onChange={setCentreName}/>}<button disabled={saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 font-bold text-white disabled:opacity-60">{saving && <Loader2 className="animate-spin" size={18}/>} {saving ? 'Finishing account…' : 'Continue to Kanvise'}</button></form></>}
+      : !context ? <div className="py-6 text-center"><h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Your session has expired</h1><p role="alert" className="mt-3 text-sm leading-6 text-[#625e6e]">{error}</p><Link href="/auth/login" className="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white">Back to sign in</Link></div>
+      : <><header className="mb-7 text-center"><h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">{heading}</h1><p className="mt-3 text-sm leading-6 text-[#625e6e]">Signed in as <span className="font-medium text-[#302c39]">{context.email}</span>.</p>{context.invitation?.metadata?.programme_name && <p className="mt-3 rounded-xl border border-[#dedbec] bg-[#f7f6fc] p-3 text-sm text-[#2e2877]">{context.invitation.metadata.programme_name}</p>}</header>
+      {error && <AuthAlert>{error}</AuthAlert>}
+      <form onSubmit={complete} className="space-y-5"><Field label="Full name" value={fullName} onChange={setFullName}/>{context.intent === 'educator' && context.account_type === 'centre' && <Field label="Tutorial agency name" value={centreName} onChange={setCentreName}/>}<button disabled={saving} className={authPrimaryButtonClass}>{saving ? <><Loader2 className="animate-spin" size={18}/>Finishing account…</> : <>Continue<ArrowRight size={16}/></>}</button></form>{emailMismatch && <button type="button" onClick={() => void switchAccount()} className="mt-4 w-full text-center text-sm font-medium text-[#2e2877] hover:underline">Use the invited account instead</button>}</>}
   </section></main>
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="block text-sm font-semibold text-[#474551]">{label}<input required value={value} onChange={event => onChange(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-[#c8c5d2] px-4 font-normal text-[#1b1c1c] outline-none focus:border-[#2e2877] focus:ring-2 focus:ring-[#2e2877]/15"/></label> }
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="block text-sm font-medium text-[#302c39]">{label}<input required value={value} onChange={event => onChange(event.target.value)} className={`${authInputClass} mt-2`}/></label> }
