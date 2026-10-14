@@ -34,4 +34,10 @@ describe('dashboard workspaces', () => {
     expect(canAccessDashboardPath('/dashboard/tutors', independentTutor)).toBe(false)
     expect(canAccessDashboardPath('/dashboard/tutors', independentAdminTutor)).toBe(false)
   })
+
+  it('makes the shared profile available to tutors and administrators', () => {
+    expect(canAccessDashboardPath('/dashboard/profile', { isAdmin: false, isTutor: true })).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/profile', { isAdmin: true, isTutor: false })).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/profile', { isAdmin: false, isTutor: false })).toBe(false)
+  })
 })

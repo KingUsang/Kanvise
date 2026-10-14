@@ -153,6 +153,16 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
               role="menu"
               className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-lg border border-[#c8c5d2] bg-white shadow-[0_12px_32px_rgba(46,40,119,0.16)]"
             >
+              <Link
+                href="/dashboard/profile"
+                role="menuitem"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#1b1c1c] hover:bg-[#f5f3f2] focus:bg-[#f5f3f2] focus:outline-none"
+              >
+                <span className="material-symbols-outlined text-[20px] text-[#2e2877]">account_circle</span>
+                <span>Profile</span>
+              </Link>
               <button
                 type="button"
                 role="menuitem"

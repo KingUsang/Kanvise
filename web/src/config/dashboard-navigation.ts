@@ -37,6 +37,7 @@ export const dashboardWorkspaces: DashboardWorkspace[] = [
 export const dashboardNavItems: DashboardNavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'space_dashboard', area: 'home', access: 'all', keywords: ['home', 'overview'] },
   { label: 'More', href: '/dashboard/more', icon: 'more_horiz', area: 'centre', access: 'admin', keywords: ['more', 'centre', 'management'] },
+  { label: 'Profile', href: '/dashboard/profile', icon: 'account_circle', area: 'home', access: 'shared', keywords: ['profile', 'account', 'name', 'photo', 'bio'] },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings', area: 'centre', access: 'admin', keywords: ['settings', 'centre', 'school', 'branding', 'profile'] },
   { label: 'School Setup', href: '/dashboard/school-setup', icon: 'settings_applications', area: 'centre', access: 'admin', keywords: ['school', 'identity', 'branding', 'setup'] },
   { label: 'Tutors', href: '/dashboard/tutors', icon: 'groups_3', area: 'centre', access: 'admin', keywords: ['tutors', 'teachers', 'invites', 'directory'] },

@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getApiUrl } from '@/config/api'
 import { SchoolSetupForm } from '@/components/dashboard/setup/school-setup-form'
-import { AccountProfileSettings } from '@/components/dashboard/settings/account-profile-settings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -16,5 +15,5 @@ export default async function SettingsPage() {
   const body = await response.json().catch(() => null)
   if (!response.ok) redirect('/dashboard/school-setup')
 
-  return <div className="animate-in fade-in duration-500"><AccountProfileSettings/><SchoolSetupForm initialData={body?.data} /></div>
+  return <div className="animate-in fade-in duration-500"><SchoolSetupForm initialData={body?.data} /></div>
 }
