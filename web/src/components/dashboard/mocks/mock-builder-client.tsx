@@ -3394,7 +3394,7 @@ export function MockBuilderClient({
                   <h2 className="mt-1 text-2xl font-bold text-[#180d62]">
                     {classContext ? "Create quiz" : "Upload your mock paper"}
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#716c76]">
+                  <p className="mt-2 text-sm leading-6 text-[#716c76]">
                     Upload one PDF or DOCX and Kanvise will extract the
                     questions, detect subjects and prepare an editable draft.
                     No file? You can continue and build it manually.
