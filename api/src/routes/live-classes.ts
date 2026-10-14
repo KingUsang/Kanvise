@@ -187,7 +187,11 @@ liveClassesRouter.get('/:id/readiness', async (c) => {
 liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
-  const { course_id, tutor_id, title, scheduled_at, duration_minutes } = body
+  const { course_id, title, scheduled_at, duration_minutes } = body
+  // A tutor can only create a class for themselves. Resolve that server-side
+  // so the UI never needs to collect or trust a tutor selection for them.
+  const requestedTutorId = typeof body.tutor_id === 'string' ? body.tutor_id : ''
+  const tutor_id = user.role === 'tutor' ? user.id : requestedTutorId
   const accessMode = body.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners'
   const isRecurring = body.recurrence === 'weekly'
   const recurrenceDays = Array.isArray(body.recurrence_days)
@@ -205,10 +209,6 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
 
   if (typeof duration_minutes !== 'number' || duration_minutes < 15 || duration_minutes > 240) {
     return c.json({ error: 'Duration must be between 15 and 240 minutes', code: 'INVALID_DURATION' }, 400)
-  }
-
-  if (user.role === 'tutor' && tutor_id !== user.id) {
-    return c.json({ error: 'Tutors can only schedule live classes for themselves', code: 'FORBIDDEN' }, 403)
   }
 
   if (accessMode === 'anyone_with_link' && isRecurring) {

@@ -447,6 +447,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   const availableTutors = eligibleTutorIds.length
     ? tutors.filter((item) => eligibleTutorIds.includes(item.id))
     : tutors;
+  const canChooseTutor = capabilities.isAdmin && !composer?.existing;
   // DashboardShell owns the page gutter. Calendar must not add another layer
   // of horizontal padding or it visibly drifts from the other workspace pages.
   return (
@@ -903,7 +904,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                   )}
                 </>
               )}
-              {capabilities.isAdmin && !composer.existing && (
+              {canChooseTutor && (
                 <label className="block text-sm font-semibold">
                   Tutor
                   <select
