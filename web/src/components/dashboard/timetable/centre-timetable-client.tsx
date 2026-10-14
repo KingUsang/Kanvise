@@ -209,7 +209,7 @@ export function CentreTimetableClient(_: Props) {
       <header className="flex flex-col gap-4 border-b border-[#e5e1dd] pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
-            Tutorial agency operations
+            Tutoring agency operations
           </p>
           <h1 className="mt-1 text-3xl font-bold text-[#180d62]">Timetable</h1>
           <p className="mt-2 text-sm text-[#66616c]">
@@ -465,7 +465,7 @@ export function CentreTimetableClient(_: Props) {
         )}
       </section>
       <p className="mt-4 text-xs leading-5 text-[#66616c]">
-        This view reflects recurring teaching slots across the tutorial agency. Scroll to
+        This view reflects recurring teaching slots across the tutoring agency. Scroll to
         see evening sessions; manage a dated session from Calendar.
       </p>
     </main>

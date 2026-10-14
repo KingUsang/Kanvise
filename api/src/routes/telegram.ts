@@ -114,7 +114,7 @@ telegramRouter.post('/paid-access/challenges', requireRole('student'), async (c)
     , supabase.from('enrolments').select('id').eq('school_id', user.school_id).eq('student_id', user.id).limit(1).maybeSingle(),
   ])
   if (error || enrolmentError) return c.json({ error: 'Could not prepare Telegram access' }, 500)
-  if (!paidChat) return c.json({ error: 'This tutorial agency does not use a paid Telegram class group', code: 'PAID_TELEGRAM_NOT_ENABLED' }, 404)
+  if (!paidChat) return c.json({ error: 'This tutoring agency does not use a paid Telegram class group', code: 'PAID_TELEGRAM_NOT_ENABLED' }, 404)
   if (!enrolment) return c.json({ error: 'An active paid enrolment is required for this Telegram class.', code: 'PAID_ENROLMENT_REQUIRED' }, 403)
   const token = createCode()
   const { error: insertError } = await telegramDb.from('telegram_link_challenges').insert({

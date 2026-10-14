@@ -72,7 +72,7 @@ export function classroomAccessError(reason: ClassroomAccessFailure) {
     case 'missing':
       return { status: 404 as const, error: 'Class not found', code: 'NOT_FOUND' }
     case 'wrong_school':
-      return { status: 403 as const, error: 'This class belongs to a different tutorial agency', code: 'WRONG_SCHOOL' }
+      return { status: 403 as const, error: 'This class belongs to a different tutoring agency', code: 'WRONG_SCHOOL' }
     case 'not_enrolled':
       return { status: 403 as const, error: 'You are not enrolled in this class', code: 'NOT_ENROLLED' }
     case 'not_assigned_tutor':

@@ -154,6 +154,6 @@ function toDueMock(mock: any): DueMock {
     title: mock.title,
     courseName: audienceScope === 'programme'
       ? (mock.programme as any)?.name || 'Your programme'
-      : (mock.course as any)?.name || 'Your tutorial agency',
+      : (mock.course as any)?.name || 'Your tutoring agency',
   }
 }

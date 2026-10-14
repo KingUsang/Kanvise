@@ -142,7 +142,7 @@ export function MocksManagementClient({
     if (mock.audience_scope === "direct_link") return "Standalone mock";
     if (mock.audience_scope === "combination") return "Subject combination";
     if (mock.audience_scope === "programme") return "Class assessment";
-    if (mock.audience_scope === "school") return "Tutorial agency-wide";
+    if (mock.audience_scope === "school") return "Tutoring agency-wide";
     return "Unassigned draft";
   };
 

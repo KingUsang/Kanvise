@@ -21,7 +21,7 @@ describe('CompleteProfilePage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Let’s finish setting up your account' })).toBeInTheDocument()
     expect(screen.getByLabelText('Full name')).toHaveValue('Ada Okafor')
-    expect(screen.getByLabelText('Tutorial agency name')).toHaveValue('Bright Future Tutorials')
+    expect(screen.getByLabelText('Tutoring agency name')).toHaveValue('Bright Future Tutorials')
   })
 
   it('preserves student context without presenting educator setup choices', async () => {
@@ -32,7 +32,7 @@ describe('CompleteProfilePage', () => {
     render(<CompleteProfilePage />)
 
     expect(await screen.findByRole('heading', { name: 'Finish joining your programme' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Tutorial agency name')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Tutoring agency name')).not.toBeInTheDocument()
     expect(screen.queryByText('Independent tutor')).not.toBeInTheDocument()
   })
 

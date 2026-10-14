@@ -152,7 +152,7 @@ export function ProgrammesClient() {
         <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-16 text-center">
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
           <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">{canCreate ? 'Create your first class' : 'No classes assigned yet'}</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">{canCreate ? 'Add the subjects, learners and sessions you will teach together.' : 'Your tutorial agency administrator creates classes and assigns you the subjects you teach.'}</p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">{canCreate ? 'Add the subjects, learners and sessions you will teach together.' : 'Your tutoring agency administrator creates classes and assigns you the subjects you teach.'}</p>
           {canCreate ? <Link href="/dashboard/classes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create class</Link> : null}
         </div>
       ) : (

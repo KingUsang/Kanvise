@@ -8,6 +8,7 @@ import { startNavigationProgress } from '@/components/navigation/NavigationProgr
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { detachBrowserPushOnLogout } from '@/lib/push-notifications'
+import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 
 interface TopBarProps {
   user: {
@@ -37,7 +38,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   const navigateTo = (href: string) => {
     if (capabilities.setupRequired && href !== '/dashboard/school-setup') {
       setIsSearchOpen(false)
-      toast.info('Create your tutorial agency first', {
+      toast.info('Create your tutoring agency first', {
         description: 'This page will unlock as soon as you complete the required setup.',
       })
       return
@@ -122,6 +123,9 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
       
       {/* User identity */}
       <div className="flex items-center space-x-3 sm:space-x-6">
+        <div className="md:hidden">
+          <FeedbackDialog compact />
+        </div>
         <div className="relative">
           <button
             type="button"

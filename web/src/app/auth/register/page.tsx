@@ -64,7 +64,7 @@ function RegisterContent() {
       setError("Enter your full name"); return;
     }
     if (!isStudentFlow && accountType === 'centre' && !centreName.trim()) {
-      setError("Enter your tutorial agency name"); return;
+      setError("Enter your tutoring agency name"); return;
     }
     setLoading(true);
     setError(null);
@@ -161,14 +161,14 @@ function RegisterContent() {
       });
       const centreBody = await centreResponse.json().catch(() => null);
       if (!centreResponse.ok && centreBody?.code !== "SCHOOL_ALREADY_CONFIGURED") {
-        throw new Error(centreBody?.error || "Your account was created, but your tutorial agency could not be set up");
+        throw new Error(centreBody?.error || "Your account was created, but your tutoring agency could not be set up");
       }
 
       // Centre creation updates trusted app_metadata; refresh before the
       // dashboard middleware evaluates school access.
       const { data: centreSession, error: centreRefreshError } = await supabase.auth.refreshSession();
       if (centreRefreshError || !centreSession.session?.user.app_metadata?.school_id) {
-        throw new Error("Your tutorial agency was created, but the dashboard session could not be refreshed. Please sign in again.");
+        throw new Error("Your tutoring agency was created, but the dashboard session could not be refreshed. Please sign in again.");
       }
     }
 
@@ -221,7 +221,7 @@ function RegisterContent() {
   const handleGoogleStart = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (!isStudentFlow && accountType === 'centre' && !centreName.trim()) {
       event.preventDefault();
-      setError('Enter your tutorial agency name before continuing with Google.');
+      setError('Enter your tutoring agency name before continuing with Google.');
     }
   };
 
@@ -249,7 +249,7 @@ function RegisterContent() {
             {!isStudentFlow && <fieldset className="mb-6" aria-label="Account type"><legend className="mb-2.5 text-sm font-medium text-[#302c39]">Account type</legend>
               <div className="grid grid-cols-2 gap-1 rounded-xl border border-[#dedce5] bg-[#f6f6f8] p-1">
               <button type="button" onClick={() => setAccountType('independent')} aria-pressed={accountType === 'independent'} className={`min-h-11 rounded-lg px-3 text-sm font-medium transition ${accountType === 'independent' ? 'bg-white text-[#211969] shadow-[0_1px_4px_rgba(27,28,28,.10)]' : 'text-[#696572] hover:text-[#2e2877]'}`}>Independent tutor</button>
-              <button type="button" onClick={() => setAccountType('centre')} aria-pressed={accountType === 'centre'} className={`min-h-11 rounded-lg px-3 text-sm font-medium transition ${accountType === 'centre' ? 'bg-white text-[#211969] shadow-[0_1px_4px_rgba(27,28,28,.10)]' : 'text-[#696572] hover:text-[#2e2877]'}`}>Tutorial agency</button>
+              <button type="button" onClick={() => setAccountType('centre')} aria-pressed={accountType === 'centre'} className={`min-h-11 rounded-lg px-3 text-sm font-medium transition ${accountType === 'centre' ? 'bg-white text-[#211969] shadow-[0_1px_4px_rgba(27,28,28,.10)]' : 'text-[#696572] hover:text-[#2e2877]'}`}>Tutoring agency</button>
               </div>
               <p className="mt-3 text-sm leading-5 text-[#625e6e]">{accountType === 'independent' ? 'For tutors managing their own students and classes.' : 'For teams managing tutors, programmes and students.'}</p>
             </fieldset>}
@@ -257,7 +257,7 @@ function RegisterContent() {
             <AuthMethodDivider />
 
             <form onSubmit={handleRegister} className="space-y-5">
-              {!isStudentFlow && accountType === 'centre' && <Field label="Tutorial agency name" icon={<Building2 size={18} />} value={centreName} onChange={setCentreName} placeholder="Bright Future Tutorials" />}
+              {!isStudentFlow && accountType === 'centre' && <Field label="Tutoring agency name" icon={<Building2 size={18} />} value={centreName} onChange={setCentreName} placeholder="Bright Future Tutorials" />}
               <Field label="Full name" icon={<User size={18} />} value={fullName} onChange={setFullName} placeholder="John Doe" />
               <Field label="Email address" icon={<Mail size={18} />} type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
               <div>

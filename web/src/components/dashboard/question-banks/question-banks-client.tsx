@@ -232,7 +232,7 @@ export function QuestionBanksClient() {
       <DashboardPageHeader
         className="mb-7 border-b border-dashboard-outline pb-6"
         title="Question Banks"
-        description="Keep your best questions in one place, share useful ones with tutors in your tutorial agency, and reuse them when building mocks."
+        description="Keep your best questions in one place, share useful ones with tutors in your tutoring agency, and reuse them when building mocks."
         actions={<button onClick={() => setShowCreateBank(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-dashboard-accent/90">
           <span className="material-symbols-outlined text-xl">create_new_folder</span>Create a bank
         </button>}
@@ -279,7 +279,7 @@ export function QuestionBanksClient() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-xl font-bold text-[#1b1c1c] md:text-2xl">{selectedBank.name}</h2>
-                      <span className="rounded-full bg-[#f3efec] px-2.5 py-1 text-[11px] font-semibold text-[#5f5b66]">{selectedBank.visibility === 'centre' ? 'Shared with your tutorial agency' : 'Only you'}</span>
+                      <span className="rounded-full bg-[#f3efec] px-2.5 py-1 text-[11px] font-semibold text-[#5f5b66]">{selectedBank.visibility === 'centre' ? 'Shared with your tutoring agency' : 'Only you'}</span>
                     </div>
                     <p className="mt-1 text-sm text-[#6d6974]">{selectedBank.description || `Updated ${formattedDate(selectedBank.updated_at)}`}</p>
                   </div>

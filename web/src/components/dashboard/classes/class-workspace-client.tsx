@@ -867,7 +867,7 @@ function ClassTutorsPanel({
             {updating === key ? <span className="ml-auto text-xs text-dashboard-muted">Saving…</span> : null}
           </label>;
         })}
-        {!tutors.length ? <p className="text-sm text-dashboard-muted">Invite a tutor to your tutorial agency before assigning this subject.</p> : null}
+        {!tutors.length ? <p className="text-sm text-dashboard-muted">Invite a tutor to your tutoring agency before assigning this subject.</p> : null}
       </div>
     </article>)}
   </section>;

@@ -113,7 +113,7 @@ promosRouter.patch("/:id", async (c) => {
     .single();
 
   if (findErr || !existing) {
-    return c.json({ error: "Promo banner not found in this tutorial agency", code: "NOT_FOUND" }, 404);
+    return c.json({ error: "Promo banner not found in this tutoring agency", code: "NOT_FOUND" }, 404);
   }
 
   if (body.image_key !== undefined) {

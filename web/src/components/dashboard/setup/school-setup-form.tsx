@@ -79,7 +79,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
     setSaveStatus('idle')
     try {
       const apiUrl = getApiUrl()
-      if (!initialData?.id) throw new Error('Save your tutorial agency details before uploading media')
+      if (!initialData?.id) throw new Error('Save your tutoring agency details before uploading media')
       const metadata = {
         file_name: file.name,
         content_type: file.type,
@@ -128,7 +128,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) {
-      toast.error('Enter your tutorial agency name')
+      toast.error('Enter your tutoring agency name')
       return
     }
     if (!isFirstSetup && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formData.slug)) {
@@ -147,7 +147,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
       const refreshSetupSession = async () => {
         const { data: refreshed, error: refreshError } = await createClient().auth.refreshSession()
         if (refreshError || !refreshed.session?.user.app_metadata?.school_id) {
-          throw new Error('Your tutorial agency exists, but the dashboard session could not be refreshed. Please sign out and sign in again.')
+          throw new Error('Your tutoring agency exists, but the dashboard session could not be refreshed. Please sign out and sign in again.')
         }
       }
 
@@ -172,7 +172,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
       setSaveStatus('success')
       if (isFirstSetup) {
         await refreshSetupSession()
-        toast.success('Your tutorial agency is ready')
+        toast.success('Your tutoring agency is ready')
         // Dashboard layouts persist across soft navigation. A full navigation
         // rebuilds the shell with setupRequired=false from the refreshed JWT.
         window.location.assign('/dashboard')
@@ -188,10 +188,10 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
       }
       setFormData(normalizedFormData)
       setSavedFormData(normalizedFormData)
-      toast.success('Tutorial agency details saved')
+      toast.success('Tutoring agency details saved')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (err: any) {
-      toast.error(isFirstSetup ? 'Could not create your tutorial agency' : 'Could not save tutorial agency details', {
+      toast.error(isFirstSetup ? 'Could not create your tutoring agency' : 'Could not save tutoring agency details', {
         description: err.message,
       })
     } finally {
@@ -221,11 +221,11 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
             <span className="material-symbols-outlined">school</span>
           </div>
           <DashboardPageHeader
-            title="Name your tutorial agency"
+            title="Name your tutoring agency"
             description="This is the name students will recognise. You can add your logo, contact details and other information later."
           />
 
-          <label htmlFor="name" className="mt-7 block text-sm font-semibold text-[#1b1c1c]">Tutorial agency name</label>
+          <label htmlFor="name" className="mt-7 block text-sm font-semibold text-[#1b1c1c]">Tutoring agency name</label>
           <input
             id="name"
             type="text"
@@ -246,7 +246,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
 
           <button type="submit" disabled={isSaving || !formData.name.trim()} className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-dashboard-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
             {isSaving && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}
-            {isSaving ? 'Creating your tutorial agency…' : 'Continue to dashboard'}
+            {isSaving ? 'Creating your tutoring agency…' : 'Continue to dashboard'}
           </button>
         </form>
       </div>
@@ -258,8 +258,8 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
       {/* Page Header & Global Actions */}
       <DashboardPageHeader
         className="mb-6"
-        title="Tutorial agency profile"
-        description="Manage what students see on your public tutorial agency page."
+        title="Tutoring agency profile"
+        description="Manage what students see on your public tutoring agency page."
       />
 
       {/* Bento Grid Layout */}
@@ -273,9 +273,9 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
             <div className="border-b border-[#c8c5d2] pb-4 mb-6">
               <h3 className="text-xl font-semibold text-[#180d62] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#994704]">info</span>
-                About your tutorial agency
+                About your tutoring agency
               </h3>
-              <p className="mt-1 text-sm text-[#474551]">The tutorial agency name and student page link are required. The introduction is optional.</p>
+              <p className="mt-1 text-sm text-[#474551]">The tutoring agency name and student page link are required. The introduction is optional.</p>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -283,7 +283,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                 {/* Institution Name */}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="name" className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">
-                    Tutorial agency name <span className="text-[#ba1a1a]">*</span>
+                    Tutoring agency name <span className="text-[#ba1a1a]">*</span>
                   </label>
                   <input
                     id="name"
@@ -320,7 +320,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
               {/* Description */}
               <div className="flex flex-col gap-2">
                 <label htmlFor="description" className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">
-                  Tell students about your tutorial agency <span className="normal-case tracking-normal text-[#787582]">(optional)</span>
+                  Tell students about your tutoring agency <span className="normal-case tracking-normal text-[#787582]">(optional)</span>
                 </label>
                 <textarea
                   id="description"
@@ -329,7 +329,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   value={formData.description}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c] resize-none"
-                  placeholder="Tell students what you teach, the exams you prepare them for, and what makes your tutorial agency different."
+                  placeholder="Tell students what you teach, the exams you prepare them for, and what makes your tutoring agency different."
                 />
                 <p className="text-[11px] text-[#787582] text-right mt-1">
                   {formData.description.length} / 500 characters
@@ -354,17 +354,17 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                 <span className="material-symbols-outlined text-[#994704]">perm_media</span>
                 Photos and Welcome Video <span className="text-sm font-normal text-[#787582]">(optional)</span>
               </h3>
-              <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so students know they are enrolling with the right tutorial agency.</p>
-              {!canUploadMedia && <p className="mt-2 text-xs font-medium text-[#994704]">Save your tutorial agency details first, then you can add photos and a welcome video.</p>}
+              <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so students know they are enrolling with the right tutoring agency.</p>
+              {!canUploadMedia && <p className="mt-2 text-xs font-medium text-[#994704]">Save your tutoring agency details first, then you can add photos and a welcome video.</p>}
               </div>
 
             <div className="flex flex-col gap-8">
               <div>
-                <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Tutorial agency logo <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
-                <p className="mb-3 text-xs leading-5 text-[#787582]">Shown beside your tutorial agency name on the student enrolment page.</p>
+                <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Tutoring agency logo <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
+                <p className="mb-3 text-xs leading-5 text-[#787582]">Shown beside your tutoring agency name on the student enrolment page.</p>
                 <label className={`relative flex min-h-36 w-full overflow-hidden rounded-lg border-2 border-dashed border-[#c8c5d2] bg-[#f5f3f2] p-5 transition-colors ${canUploadMedia ? 'cursor-pointer hover:border-[#2e2877]' : 'cursor-not-allowed opacity-60'}`}>
                   <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('logo', event.target.files?.[0])} />
-                  {mediaUrls.logo ? <img src={mediaUrls.logo} alt="Tutorial agency logo preview" className="absolute inset-0 h-full w-full object-contain p-4" /> : <div className="absolute inset-0 flex items-center justify-center bg-[#180d62] text-3xl font-bold text-white">{initials}</div>}
+                  {mediaUrls.logo ? <img src={mediaUrls.logo} alt="Tutoring agency logo preview" className="absolute inset-0 h-full w-full object-contain p-4" /> : <div className="absolute inset-0 flex items-center justify-center bg-[#180d62] text-3xl font-bold text-white">{initials}</div>}
                   <div className="relative z-10 mt-auto w-full rounded-md bg-white/95 px-3 py-2 text-[#180d62] shadow-sm backdrop-blur">
                     {uploadingMedia === 'logo' ? <UploadStatus label="Uploading logo" progress={uploadProgress} /> : <p className="flex items-center justify-center gap-2 text-xs font-semibold"><span className="material-symbols-outlined text-base">upload</span>{mediaUrls.logo ? 'Replace logo' : 'Upload logo'} · JPG, PNG or WebP</p>}
                   </div>
@@ -376,7 +376,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                 <p className="mb-3 text-xs leading-5 text-[#787582]">A wide image at the top of your student enrolment page. A classroom or teaching photo works well.</p>
                 <label className={`relative flex min-h-40 w-full overflow-hidden rounded-lg border-2 border-dashed border-[#c8c5d2] bg-[#f5f3f2] p-5 transition-colors ${canUploadMedia ? 'cursor-pointer hover:border-[#2e2877]' : 'cursor-not-allowed opacity-60'}`}>
                   <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('banner', event.target.files?.[0])} />
-                  {mediaUrls.banner ? <img src={mediaUrls.banner} alt="Tutorial agency cover preview" className="absolute inset-0 h-full w-full object-cover" /> : (
+                  {mediaUrls.banner ? <img src={mediaUrls.banner} alt="Tutoring agency cover preview" className="absolute inset-0 h-full w-full object-cover" /> : (
                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#180d62_1px,transparent_1px)] [background-size:16px_16px]"></div>
                   )}
                   <div className="relative z-10 mt-auto w-full rounded-md bg-white/95 px-3 py-2 text-[#180d62] shadow-sm backdrop-blur">
@@ -387,7 +387,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
 
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Welcome Video <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
-                <p className="mb-3 text-xs leading-5 text-[#787582]">A short message introducing your tutorial agency, teaching approach, or exam-preparation programme.</p>
+                <p className="mb-3 text-xs leading-5 text-[#787582]">A short message introducing your tutoring agency, teaching approach, or exam-preparation programme.</p>
                 {mediaUrls.video_intro && <video src={mediaUrls.video_intro} controls preload="metadata" className="mb-3 aspect-video w-full rounded-lg bg-black object-contain" aria-label="Welcome video preview" />}
                 <label className={`flex min-h-12 w-full items-center justify-between gap-4 rounded border border-[#c8c5d2] bg-[#fbf9f8] px-4 py-3 transition-colors ${canUploadMedia ? 'hover:bg-[#f5f3f2] cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
                   <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('video_intro', event.target.files?.[0])} />
@@ -478,7 +478,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
             </summary>
             <div className="border-t border-[#e4e2e1] p-5">
               <div className="mb-5">
-              <p className="mt-1 text-sm text-[#474551]">Optional links that help students learn more about your tutorial agency.</p>
+              <p className="mt-1 text-sm text-[#474551]">Optional links that help students learn more about your tutoring agency.</p>
               </div>
             <div className="flex flex-col gap-4">
               <div className="relative">

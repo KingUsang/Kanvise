@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   const firstName = String(body?.first_name || '').trim(), lastName = String(body?.last_name || '').trim(), centreName = String(body?.centre_name || '').trim()
   if (!firstName || !lastName) return NextResponse.json({ error: 'Enter your first and last name.' }, { status: 400 })
-  if (context.intent === 'educator' && context.accountType === 'centre' && !centreName) return NextResponse.json({ error: 'Enter your tutorial agency name.' }, { status: 400 })
+  if (context.intent === 'educator' && context.accountType === 'centre' && !centreName) return NextResponse.json({ error: 'Enter your tutoring agency name.' }, { status: 400 })
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Your Google session has expired. Start again.' }, { status: 401 })

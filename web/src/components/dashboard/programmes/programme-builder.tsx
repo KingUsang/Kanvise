@@ -250,7 +250,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
 
   async function persist(publish: boolean) {
     if (!detailsReady || !subjectsReady) return toast.error('Complete the programme details and subjects first')
-    if (isPaid && !payoutReady) return toast.error('Add a bank account before saving a paid programme', { description: 'Set up where your tutorial agency receives payments, then return here.' })
+    if (isPaid && !payoutReady) return toast.error('Add a bank account before saving a paid programme', { description: 'Set up where your tutoring agency receives payments, then return here.' })
     if (publish && !tutorsReady) return toast.error('Assign at least one tutor to every subject before publishing')
     setSaving(true)
     setSaveStage('saving')

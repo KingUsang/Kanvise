@@ -1038,7 +1038,7 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
       programmeId: data.programme_id,
       audienceScope: publishedAudience as 'course' | 'programme' | 'school',
       title: data.title,
-      courseName: (publishedAudience === "programme" ? (data.programme as any)?.name : (data.course as any)?.name) || "Your tutorial agency",
+      courseName: (publishedAudience === "programme" ? (data.programme as any)?.name : (data.course as any)?.name) || "Your tutoring agency",
       closesAt: data.closes_at,
     }) : { failures: [] };
   if (notification.failures.length === 0) {

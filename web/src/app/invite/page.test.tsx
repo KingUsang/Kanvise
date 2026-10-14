@@ -36,7 +36,7 @@ describe('canonical invitation page', () => {
     expect(screen.getAllByText('WAEC Mathematics').length).toBeGreaterThan(0)
     expect(screen.getAllByText('learner@example.com').length).toBeGreaterThan(0)
     expect(screen.queryByText('Independent tutor')).not.toBeInTheDocument()
-    expect(screen.queryByText('Tutorial agency')).not.toBeInTheDocument()
+    expect(screen.queryByText('Tutoring agency')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', expect.stringContaining('intent=invitation'))
   })
 

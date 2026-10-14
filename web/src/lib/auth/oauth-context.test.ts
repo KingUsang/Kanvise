@@ -17,7 +17,7 @@ describe('OAuth context', () => {
     expect(readOAuthContext(signed, 2_000)?.returnTo).toBeUndefined()
   })
 
-  it('keeps a tutorial agency name only for the educator agency flow', () => {
+  it('keeps a tutoring agency name only for the educator agency flow', () => {
     const signed = createOAuthContext({ intent: 'educator', accountType: 'centre', agencyName: ' Bright Future Tutorials ' }, 1_000)
     expect(readOAuthContext(signed, 2_000)?.agencyName).toBe('Bright Future Tutorials')
   })

@@ -24,7 +24,7 @@ vi.mock('next/navigation', () => ({
 
 import RegisterPage from './page'
 
-describe('tutorial agency registration', () => {
+describe('tutoring agency registration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://api.example.test')
@@ -59,8 +59,8 @@ describe('tutorial agency registration', () => {
     const user = userEvent.setup()
     render(<RegisterPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Tutorial agency' }))
-    fireEvent.change(screen.getByLabelText('Tutorial agency name'), { target: { value: 'Bright Future Tutorials' } })
+    await user.click(screen.getByRole('button', { name: 'Tutoring agency' }))
+    fireEvent.change(screen.getByLabelText('Tutoring agency name'), { target: { value: 'Bright Future Tutorials' } })
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Emmanuel Usang' } })
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'owner@example.com' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'SecurePass1!' } })
@@ -101,7 +101,7 @@ describe('tutorial agency registration', () => {
     navigation.pathname = '/auth/register/student'
     render(<RegisterPage />)
 
-    expect(screen.queryByLabelText('Tutorial agency name')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Tutoring agency name')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Choose a programme first' })).toBeInTheDocument()
   })
