@@ -22,6 +22,8 @@ type Session = {
   scheduled_at: string;
   duration_minutes?: number | null;
   status: "scheduled" | "live" | "completed" | "cancelled";
+  access_mode?: "anyone_with_link" | "enrolled_learners";
+  share_url?: string | null;
   course?: { name?: string | null } | null;
   courses?: { name?: string | null } | null;
 };
@@ -154,7 +156,7 @@ export function SessionDetailClient({
               type="button"
               onClick={() =>
                 void navigator.clipboard
-                  .writeText(window.location.origin + "/class/" + session.id)
+                  .writeText(session.share_url || window.location.origin + "/class/" + session.id)
                   .then(() => toast.success("Live class link copied"))
               }
               className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#312783] px-4 text-sm font-bold text-[#312783] hover:bg-[#f1efff]"
@@ -165,7 +167,7 @@ export function SessionDetailClient({
             <a
               target="_blank"
               rel="noopener noreferrer"
-              href={`/class/${session.id}`}
+              href={session.share_url || `/class/${session.id}`}
               className="inline-flex min-h-10 w-fit items-center gap-2 rounded-lg bg-[#312783] px-4 text-sm font-bold text-white"
             >
               {session.status === "live"
@@ -253,7 +255,7 @@ function Details({
   ends: Date;
   participants: number;
 }) {
-  const classroom = `/class/${session.id}`;
+  const classroom = session.share_url || `/class/${session.id}`;
   const canEnter = session.status === "scheduled" || session.status === "live";
   return (
     <section className="mt-5 grid max-w-4xl gap-4 md:grid-cols-2">

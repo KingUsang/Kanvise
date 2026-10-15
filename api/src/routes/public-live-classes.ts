@@ -31,7 +31,7 @@ async function findClass(identifier: string) {
   return data
 }
 
-function publicClassData(liveClass: any) {
+function publicClassData(liveClass: any, viewer?: any) {
   // A share-link visitor should wait while the tutor's room is being prepared,
   // and should never be offered a class which is ending or unverified.
   const status = liveClass.status === 'starting' || liveClass.status === 'ready'
@@ -46,6 +46,7 @@ function publicClassData(liveClass: any) {
     centre_name: liveClass.school?.name || 'Kanvise centre',
     centre_logo_url: liveClass.school?.logo_url || null,
     access_mode: liveClass.access_mode,
+    can_host: Boolean(viewer && viewer.role === 'tutor' && viewer.id === liveClass.tutor_id),
   }
 }
 
@@ -136,10 +137,30 @@ publicLiveClassesRouter.get('/:shareToken', async c => {
   try {
     const liveClass = await findClass(c.req.param('shareToken')!)
     if (!liveClass) return c.json({ error: 'This class link is unavailable', code: 'LINK_UNAVAILABLE' }, 404)
-    return c.json({ data: publicClassData(liveClass) })
+    const viewer = await recognisedMember(c, liveClass)
+    return c.json({ data: publicClassData(liveClass, viewer) })
   } catch (error) {
     console.error('[public-live-class] lookup failed', error)
     return c.json({ error: 'Could not load this live class', code: 'LOOKUP_FAILED' }, 500)
+  }
+})
+
+// A public link is the canonical browser URL for anyone-with-link classes.
+// Only the assigned tutor may promote that URL into the authenticated host
+// flow; all other visitors continue using the guest join route below.
+publicLiveClassesRouter.post('/:shareToken/enter', async c => {
+  try {
+    const liveClass = await findClass(c.req.param('shareToken')!)
+    if (!liveClass || liveClass.share_link_revoked_at) return c.json({ error: 'This class link is unavailable', code: 'LINK_UNAVAILABLE' }, 404)
+    if (liveClass.access_mode !== 'anyone_with_link') return c.json({ error: 'This class is for enrolled learners only', code: 'ENROLLED_ONLY' }, 403)
+    const viewer = await recognisedMember(c, liveClass)
+    if (!viewer || viewer.role !== 'tutor' || viewer.id !== liveClass.tutor_id) {
+      return c.json({ error: 'Only the assigned tutor can enter this class as host', code: 'NOT_CLASS_TUTOR' }, 403)
+    }
+    return c.redirect(`/live-classes/${liveClass.id}/enter`, 307)
+  } catch (error) {
+    console.error('[public-live-class] host entry failed', error)
+    return c.json({ error: 'Could not open this class. Please try again.', code: 'HOST_ENTRY_FAILED' }, 500)
   }
 })
 

@@ -59,6 +59,7 @@ type LiveClass = {
   status: string;
   course_id: string;
   course?: { name: string } | null;
+  share_url?: string | null;
 };
 type Mock = {
   id: string;
@@ -594,7 +595,7 @@ export function ClassWorkspaceClient({
                     }
                     onStartSession={(session) =>
                       window.open(
-                        `/class/${session.id}`,
+                        session.shareUrl || `/class/${session.id}`,
                         "_blank",
                         "noopener,noreferrer"
                       )
@@ -1113,6 +1114,7 @@ function toSessionItem(session: LiveClass): ClassSessionItem {
     subject: session.course?.name || "Subject",
     startsAt: session.scheduled_at,
     status,
+    shareUrl: session.share_url,
   };
 }
 function toAssessmentItem(mock: Mock, data: ClassData): ClassAssessmentItem {
