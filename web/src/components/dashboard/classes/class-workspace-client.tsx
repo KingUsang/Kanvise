@@ -716,7 +716,7 @@ export function ClassWorkspaceClient({
                 </div>
               ))}
             {activeTab === "learners" &&
-              (insightsQuery.isPending || studentRosterQuery.isPending ? (
+              (insightsQuery.isPending || (canManageStudents && studentRosterQuery.isPending) ? (
                 <WorkspaceSectionLoading cards={3} />
               ) : (
                 <div className="mt-5">
