@@ -18,11 +18,18 @@ When the implementation and the documents conflict, identify the conflict
 explicitly before extending the implementation. Do not make remote database or
 deployment changes based on an assumption.
 
-## Branching rule
+## Branch, worktree, and release workflow
 
-Every new feature, fix, hotfix, refactor, or diagnostic change must be
-developed on a new Git branch created for that work. Do not continue unrelated
-work on an existing feature branch, and do not merge `main` into an unrelated
-branch just to make the branch current. Before changing code, check the current
-branch and worktree; if the work belongs elsewhere, preserve the existing work
-and create or switch to the appropriate branch first.
+1. Start every feature, fix, hotfix, refactor, or diagnostic change from the
+   latest `origin/staging`.
+2. Give each task its own Git branch and separate worktree. Do not continue
+   unrelated work on an existing feature branch, and do not merge `main` into
+   an unrelated branch just to make it current. Before changing code, check the
+   current branch and worktree; preserve existing work and switch to the task's
+   proper branch and worktree when necessary.
+3. Commit and push the task branch when its implementation and checks pass.
+4. Review the feature branch and merge it into `staging`.
+5. Deploy both the Vercel frontend and API from `staging`.
+6. Test the actual staging environment, not only local builds or unit tests.
+7. After the release is approved, open a `staging` to `main` pull request.
+8. Production deployments must come only from `main`.
