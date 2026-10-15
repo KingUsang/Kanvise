@@ -1,5 +1,19 @@
 # Directory research scripts
 
+## API deployment
+
+`operations/deploy-api-on-oracle.sh` is invoked only by the protected
+`staging` and `main` GitHub Actions workflow on the repository-scoped Oracle
+runner. It validates the environment-specific target, swaps the verified API
+artifact, restarts the matching systemd unit, checks local and public health,
+and restores the prior artifact if deployment fails. Operational details live
+in `docs/operations/oracle-api-deployment.md`.
+
+Do not run the deployment script manually unless following the documented
+recovery procedure and providing all required deployment environment values.
+
+## Research utilities
+
 `superprof-leads.mjs` exports only information displayed in public Superprof search-result cards. It does not sign in, message anyone, collect contact details, or bypass access controls.
 
 ```bash
