@@ -107,6 +107,13 @@ type LearnerSignal = {
   last_activity: string | null;
   attention: "Needs attention" | "On track" | "No signal yet";
 };
+type StudentRosterEntry = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  pending_enrolments?: Array<{ programme_id?: string | null }>;
+};
 type Topic = {
   topic: string;
   score: number;
@@ -256,6 +263,17 @@ export function ClassWorkspaceClient({
     },
     enabled: activeTab === 'tutors' && canManageTutors,
     staleTime: 60_000,
+  });
+  const studentRosterQuery = useQuery({
+    queryKey: ['class-student-roster', classId],
+    queryFn: async () => {
+      const response = await authenticatedApiFetch(`${api}/users/students`);
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Could not load invited students');
+      return (body?.data || []) as StudentRosterEntry[];
+    },
+    enabled: activeTab === 'learners' && canManageStudents,
+    staleTime: 30_000,
   });
   const scheduleQuery = useQuery({
     queryKey: ["class-schedule", classId],
@@ -688,12 +706,12 @@ export function ClassWorkspaceClient({
                 </div>
               ))}
             {activeTab === "learners" &&
-              (insightsQuery.isPending ? (
+              (insightsQuery.isPending || studentRosterQuery.isPending ? (
                 <WorkspaceSectionLoading cards={3} />
               ) : (
                 <div className="mt-5">
                   <ClassLearnersPanel
-                    learners={(insights?.learners || []).map(toLearnerRow)}
+                    learners={mergeLearnersWithPendingInvitations(insights?.learners || [], studentRosterQuery.data || [], classId)}
                     onInvite={
                       canManageStudents
                         ? () => setShowStudentInvite(true)
@@ -776,6 +794,9 @@ export function ClassWorkspaceClient({
           await Promise.all([
             queryClient.invalidateQueries({
               queryKey: ["class-insights", classId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["class-student-roster", classId],
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.summary,
@@ -1165,6 +1186,18 @@ function toLearnerRow(learner: LearnerSignal): LearnerRow {
           : "no_signal",
     attentionReason: attentionReason(learner),
   };
+}
+function mergeLearnersWithPendingInvitations(learners: LearnerSignal[], students: StudentRosterEntry[], classId: string): LearnerRow[] {
+  const activeIds = new Set(learners.map((learner) => learner.id));
+  const pending = students
+    .filter((student) => !activeIds.has(student.id) && student.pending_enrolments?.some((item) => item.programme_id === classId))
+    .map((student): LearnerRow => ({
+      id: student.id,
+      name: [student.first_name, student.last_name].filter(Boolean).join(' ') || student.email || 'Invited student',
+      attention: 'no_signal',
+      invitationPending: true,
+    }));
+  return [...pending, ...learners.map(toLearnerRow)];
 }
 function ClassPerformance({
   insights,
