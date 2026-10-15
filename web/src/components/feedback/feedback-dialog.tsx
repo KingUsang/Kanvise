@@ -1,6 +1,7 @@
 'use client'
 
 import { useId, useState } from 'react'
+import { createPortal } from 'react-dom'
 import * as Sentry from '@sentry/nextjs'
 import { MessageCircle, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -62,7 +63,7 @@ export function FeedbackDialog({ compact = false }: { compact?: boolean }) {
 
   return <>
     <button type="button" aria-label="Report a problem" title="Report a problem" onClick={() => { setOpen(true); setState('idle') }} className={compact ? 'flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-[#474551] hover:bg-[#f5f3f2] hover:text-[#2e2877] sm:gap-2 sm:px-2.5 sm:text-sm' : 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/72 hover:bg-white/8 hover:text-white'}><MessageCircle size={18} className="shrink-0" />Report a problem</button>
-    {open && <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#17132e]/60 p-4">
+    {open ? createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#17132e]/60 p-4">
       <form onSubmit={submit} className="my-auto min-w-0 max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-white p-5 text-[#25202d] shadow-2xl sm:p-6">
         <div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-[#25202d]">Help improve Kanvise</h2><p className="mt-1 text-sm leading-5 text-[#625d69]">Tell us what happened or what you would like us to build.</p></div><button type="button" onClick={() => setOpen(false)} aria-label="Close" className="rounded-lg p-1.5 text-[#625d69] hover:bg-[#f3f0f5]"><X size={20} /></button></div>
         <div className="mt-5 flex gap-2 rounded-xl bg-[#f5f2f7] p-1"><button type="button" onClick={() => setKind('bug')} className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${kind === 'bug' ? 'bg-[#2e2877] text-white shadow-sm' : 'text-[#514c58] hover:bg-white'}`}>Report a problem</button><button type="button" onClick={() => setKind('feature')} className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${kind === 'feature' ? 'bg-[#2e2877] text-white shadow-sm' : 'text-[#514c58] hover:bg-white'}`}>Suggest a feature</button></div>
@@ -76,6 +77,6 @@ export function FeedbackDialog({ compact = false }: { compact?: boolean }) {
         {state === 'error' && <p role="alert" className="mt-4 rounded-lg bg-[#fff0ef] px-3 py-2 text-sm text-[#a6241d]">We could not send that report. Please try again.</p>}
         <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-[#514c58] hover:bg-[#f3f0f5]">Cancel</button><button disabled={state === 'sending'} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white hover:bg-[#211c60] disabled:cursor-not-allowed disabled:opacity-60">{state === 'sending' ? 'Sending…' : 'Send report'}</button></div>
       </form>
-    </div>}
+    </div>, document.body) : null}
   </>
 }
