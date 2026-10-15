@@ -1,3 +1,5 @@
+import { supabase } from './supabase'
+
 export type StudentEnrolment = {
   programme_id: string | null
   sub_programme_id: string | null
@@ -8,6 +10,23 @@ export type StudentCourse = {
   id: string
   programme_id: string | null
   sub_programme_id: string | null
+}
+
+/**
+ * Builds the PostgREST predicate for every enrolment that grants access to a
+ * course. Keep this aligned with resolveStudentCourses: a programme purchase
+ * grants its courses, including courses nested inside one of its
+ * sub-programmes.
+ */
+export function courseAccessEnrolmentFilter(
+  course: StudentCourse,
+  subProgramme?: { id: string; programme_id: string } | null,
+) {
+  const filters = [`course_id.eq.${course.id}`]
+  if (course.programme_id) filters.push(`programme_id.eq.${course.programme_id}`)
+  if (course.sub_programme_id) filters.push(`sub_programme_id.eq.${course.sub_programme_id}`)
+  if (subProgramme?.programme_id) filters.push(`programme_id.eq.${subProgramme.programme_id}`)
+  return filters.join(',')
 }
 
 export function resolveStudentCourses<T extends StudentCourse>(
@@ -38,4 +57,3 @@ export async function loadStudentCourseIds(studentId: string, schoolId: string) 
   }
   return resolveStudentCourses(enrolments || [], courses || [], subProgrammes || []).map((course) => course.id)
 }
-import { supabase } from './supabase'

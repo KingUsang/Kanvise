@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { courseAccessEnrolmentFilter, type StudentCourse } from '../lib/student-course-access'
 import type { NotificationEvent, NotificationRecipient, RecipientSelector } from './types'
 
 export type DeliveryRecord = {
@@ -43,11 +44,44 @@ export const notificationRepository: NotificationRepository = {
     } else if (!selector.enrolment.id) {
       return []
     } else {
-      const column = `${selector.enrolment.type}_id`
-      const { data, error } = await supabase.from('enrolments')
-        .select('student_id')
-        .eq('school_id', schoolId)
-        .eq(column, selector.enrolment.id)
+      let data: Array<{ student_id: string }> | null
+      let error: unknown
+
+      if (selector.enrolment.type === 'course') {
+        const { data: course, error: courseError } = await supabase.from('courses')
+          .select('id, programme_id, sub_programme_id')
+          .eq('id', selector.enrolment.id)
+          .eq('school_id', schoolId)
+          .maybeSingle()
+        if (courseError) throw courseError
+        if (!course) return []
+
+        let subProgramme: { id: string; programme_id: string } | null = null
+        if (course.sub_programme_id) {
+          const { data: parent, error: parentError } = await supabase.from('sub_programmes')
+            .select('id, programme_id')
+            .eq('id', course.sub_programme_id)
+            .eq('school_id', schoolId)
+            .maybeSingle()
+          if (parentError) throw parentError
+          subProgramme = parent
+        }
+
+        const result = await supabase.from('enrolments')
+          .select('student_id')
+          .eq('school_id', schoolId)
+          .or(courseAccessEnrolmentFilter(course as StudentCourse, subProgramme))
+        data = result.data
+        error = result.error
+      } else {
+        const column = `${selector.enrolment.type}_id`
+        const result = await supabase.from('enrolments')
+          .select('student_id')
+          .eq('school_id', schoolId)
+          .eq(column, selector.enrolment.id)
+        data = result.data
+        error = result.error
+      }
       if (error) throw error
       recipientIds = [...new Set((data || []).map((row) => row.student_id as string))]
     }
