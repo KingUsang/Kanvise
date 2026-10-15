@@ -77,7 +77,7 @@ export default async function ProgrammePage({
                 {(school?.name || "K").slice(0, 2).toUpperCase()}
               </span>
             )}
-            <span>{school?.name || "All programmes"}</span>
+            <span>{school?.name || "All classes"}</span>
           </Link>
           {isDraftPreview ? <span className="rounded-lg bg-[#f0efff] px-4 py-2 text-sm font-semibold text-[#2e2877]">Draft preview</span> : <Link href="#enrol" className="rounded-lg bg-[#994704] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#753400]">
             Join programme
@@ -89,7 +89,7 @@ export default async function ProgrammePage({
         <section className="border-b border-[#e4e2e1] bg-white">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 lg:grid-cols-[1fr_360px] lg:px-8 lg:py-16">
             <div className="max-w-3xl">
-              <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Programme</p>
+              <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Class</p>
               {isDraftPreview && <p className="mb-4 inline-flex rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-[#2e2877]">Private draft preview — students cannot see this yet</p>}
               <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-[-0.03em] text-[#2e2877] md:text-5xl">
                 {programme.name}
@@ -121,7 +121,7 @@ export default async function ProgrammePage({
             </div>
 
             <aside id="enrol" className="h-fit rounded-xl border border-[#c8c5d2] bg-[#fbf9f8] p-6 shadow-sm lg:sticky lg:top-24">
-              <p className="text-sm font-medium text-[#474551]">{isFree ? "Free programme" : "Programme fee"}</p>
+              <p className="text-sm font-medium text-[#474551]">{isFree ? "Free class" : "Class fee"}</p>
               <p className="mt-2 text-3xl font-bold text-[#2e2877]">{formatPrice(price)}</p>
               <div className="my-6 border-t border-[#e4e2e1]" />
               {isDraftPreview ? <p className="text-sm leading-6 text-[#474551]">This is how the enrolment page will look after you publish. Enrolment is disabled while it remains a draft.</p> : <><CheckoutButton
@@ -198,7 +198,7 @@ export default async function ProgrammePage({
               <nav className="mt-4 space-y-3 text-sm">
                 {itemCount > 0 && <a href="#curriculum" className="block text-[#474551] hover:text-[#2e2877]">Subjects included</a>}
                 {tutors.length > 0 && <a href="#tutor" className="block text-[#474551] hover:text-[#2e2877]">Instructor</a>}
-                {!isDraftPreview && <a href="#enrol" className="block font-semibold text-[#994704]">Join programme</a>}
+                {!isDraftPreview && <a href="#enrol" className="block font-semibold text-[#994704]">Join class</a>}
               </nav>
             </div>
           </aside>
@@ -208,7 +208,7 @@ export default async function ProgrammePage({
       <footer className="border-t border-[#e4e2e1] bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-8 text-sm text-[#6a6874] sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <span>{school?.name || "Kanvise"}</span>
-          <Link href={`/${schoolSlug}`} className="hover:text-[#2e2877]">View all programmes</Link>
+          <Link href={`/${schoolSlug}`} className="hover:text-[#2e2877]">View all classes</Link>
         </div>
       </footer>
     </div>

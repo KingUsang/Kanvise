@@ -115,7 +115,7 @@ export default function StudentsPage() {
   }
 
   function downloadTemplate() {
-    const content = "first_name,last_name,email,phone,programme\nAda,Okafor,ada@example.com,08012345678,JAMB Science";
+    const content = "first_name,last_name,email,phone,class\nAda,Okafor,ada@example.com,08012345678,JAMB Science";
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([content], { type: "text/csv" }));
     link.download = "kanvise-student-import-template.csv";
@@ -134,13 +134,13 @@ export default function StudentsPage() {
         if (errors.length) { setCsvError("We could not read that CSV file. Download the template and try again."); return; }
         const names = new Map(programmes.map((programme) => [programme.name.trim().toLowerCase(), programme.id]));
         const rows = data.map((item, index) => {
-          const programmeName = String(item.programme || "").trim();
+          const programmeName = String(item.class || item.programme || "").trim();
           const programme_id = names.get(programmeName.toLowerCase()) || "";
           const email = String(item.email || "").trim();
           const error = !email
             ? "Email address is required"
             : !programme_id
-              ? `Programme “${programmeName || "(missing)"}” was not found`
+              ? `Class “${programmeName || "(missing)"}” was not found`
               : undefined;
           return { row: index + 2, first_name: String(item.first_name || "").trim(), last_name: String(item.last_name || "").trim(), email, phone: String(item.phone || "").trim(), programme_id, error };
         });
@@ -240,7 +240,7 @@ export default function StudentsPage() {
             <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={downloadTemplate} className="rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Download template</button><label className="cursor-pointer rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Choose another CSV<input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleCsvFile} /></label></div>
             {csvError && <div className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">{csvError}</div>}
             {importSummary && <div className="mt-4 rounded bg-green-50 p-3 text-sm text-green-800">{importSummary}</div>}
-            {csvRows.length > 0 && <div className="mt-5 overflow-x-auto rounded-dashboard-control border border-dashboard-outline"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-dashboard-surface-subtle"><tr><th className="p-3">Row</th><th className="p-3">Student</th><th className="p-3">Contact</th><th className="p-3">Programme</th><th className="p-3">Status</th></tr></thead><tbody>{csvRows.slice(0, 100).map((row) => <tr key={row.row} className="border-t border-dashboard-outline/50"><td className="p-3">{row.row}</td><td className="p-3">{row.first_name} {row.last_name}</td><td className="p-3">{row.email || row.phone || "—"}</td><td className="p-3">{programmes.find((programme) => programme.id === row.programme_id)?.name || "—"}</td><td className={`p-3 ${row.error ? "text-red-700" : "text-green-700"}`}>{row.error || "Ready"}</td></tr>)}</tbody></table></div>}
+            {csvRows.length > 0 && <div className="mt-5 overflow-x-auto rounded-dashboard-control border border-dashboard-outline"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-dashboard-surface-subtle"><tr><th className="p-3">Row</th><th className="p-3">Student</th><th className="p-3">Contact</th><th className="p-3">Class</th><th className="p-3">Status</th></tr></thead><tbody>{csvRows.slice(0, 100).map((row) => <tr key={row.row} className="border-t border-dashboard-outline/50"><td className="p-3">{row.row}</td><td className="p-3">{row.first_name} {row.last_name}</td><td className="p-3">{row.email || row.phone || "—"}</td><td className="p-3">{programmes.find((programme) => programme.id === row.programme_id)?.name || "—"}</td><td className={`p-3 ${row.error ? "text-red-700" : "text-green-700"}`}>{row.error || "Ready"}</td></tr>)}</tbody></table></div>}
             {csvRows.length > 100 && <p className="mt-2 text-xs text-gray-500">Showing the first 100 of {csvRows.length} students.</p>}
             <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button type="button" onClick={() => void importCsv()} disabled={importingCsv || !csvRows.length || csvRows.some((row) => row.error)} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{importingCsv ? "Importing…" : `Import ${csvRows.length} students`}</button></div>
           </div>

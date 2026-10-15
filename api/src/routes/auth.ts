@@ -197,7 +197,7 @@ authRouter.post('/profile/init', async (c) => {
     const tokenHash = createHash('sha256').update(student_registration_token).digest('hex')
     const intents = (supabase as any).from('registration_intents')
     const { data: intent, error: intentError } = await intents.select('*').eq('token_hash', tokenHash).eq('kind', 'student').is('consumed_at', null).gt('expires_at', new Date().toISOString()).maybeSingle()
-    if (intentError || !intent) return c.json({ error: 'Student registration has expired. Return to the programme or mock and try again.' }, 400)
+    if (intentError || !intent) return c.json({ error: 'Student registration has expired. Return to the class or mock and try again.' }, 400)
     studentIntent = intent
     role = 'student'
   } else return c.json({ error: 'A valid registration flow is required' }, 400)

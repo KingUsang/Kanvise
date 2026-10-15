@@ -82,7 +82,7 @@ function LoginContent() {
       const intent = await createStudentRegistrationIntent(redirectParams)
       router.push(studentRegisterHref({ redirect: redirectParams, intent }))
     } catch {
-      setError("We couldn't start your programme registration right now. Try again.")
+      setError("We couldn't start your class registration right now. Try again.")
       setRegisterLoading(false)
     }
   }
@@ -92,7 +92,7 @@ function LoginContent() {
     if (flow !== 'student' || registrationIntent) return
     event.preventDefault(); setLoading(true); setError(null)
     try {
-      if (!redirectParams) throw new Error('Open the programme or mock you want to join, then continue with Google.')
+      if (!redirectParams) throw new Error('Open the class or mock you want to join, then continue with Google.')
       const intent = await createStudentRegistrationIntent(redirectParams)
       window.location.assign(`/api/auth/google?intent=student&return_to=${encodeURIComponent(redirectParams)}&registration_intent=${encodeURIComponent(intent)}`)
     } catch { setError("We couldn't start Google sign-in right now. Try again."); setLoading(false) }
@@ -105,7 +105,7 @@ function LoginContent() {
             <img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" />
           </Link>
       <div className="text-center [&_p]:mx-auto">
-        <AuthHeading title="Welcome back to Kanvise" description={flow === 'student' ? 'Sign in to continue joining your programme.' : 'Sign in to continue to Kanvise.'} />
+        <AuthHeading title="Welcome back to Kanvise" description={flow === 'student' ? 'Sign in to continue joining your class.' : 'Sign in to continue to Kanvise.'} />
       </div>
       {reason === 'session_expired' ? <AuthAlert tone="info">Your session has expired. Sign in to continue.</AuthAlert> : null}
       {error ? <AuthAlert>{error}</AuthAlert> : null}

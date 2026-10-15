@@ -38,7 +38,7 @@ describe('CheckoutButton', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Join programme' }))
 
-    expect(await screen.findByRole('button', { name: 'Open programme' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Open class' })).toBeInTheDocument()
     expect(screen.getByText('You’re already enrolled in this programme.')).toBeInTheDocument()
     expect(mocks.toastError).not.toHaveBeenCalled()
   })
