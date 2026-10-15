@@ -12,6 +12,8 @@ import { createClient } from '@/lib/supabase/client';
 import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import { getApiUrl } from '@/config/api';
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog';
+import { BrowserPushPrompt } from '@/components/pwa/browser-push-prompt';
+import { BrowserPushEngagementTracker } from '@/components/pwa/browser-push-engagement-tracker';
 import type { StudentDashboardData } from '@/lib/student-dashboard';
 
 const navigation = [
@@ -92,6 +94,7 @@ export function StudentShell({ children, studentName = 'Student', schoolName = '
   const mobileNavigation = resolvedCentreLearning ? mobileProgrammeNavigation : mobileStandaloneNavigation;
 
   return <div className="min-h-screen bg-[#f8f7f5] text-[#25232d]">
+    <BrowserPushEngagementTracker />
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-[#2e2877] lg:flex">{nav}</aside>
     <div className="lg:pl-64">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#e7e3df] bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-10">
@@ -109,5 +112,6 @@ export function StudentShell({ children, studentName = 'Student', schoolName = '
         {mobileNavigation.map(item => { const active = isActive(item.activeHref || item.href.split('?')[0] || item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`flex h-14 min-w-0 flex-col items-center justify-center gap-0 px-1 text-[10px] font-semibold leading-none ${active ? "text-[#2e2877]" : "text-[#716c76]"}`}><span className={`flex h-7 w-7 items-center justify-center rounded-full ${active ? "bg-[#eeeafe]" : ""}`}><item.icon size={19} strokeWidth={active ? 2.5 : 2} /></span><span className="mt-0.5 h-4 w-full truncate text-center text-[10px] leading-4">{item.label}</span></Link> })}
       </div>
     </nav>
+    <BrowserPushPrompt />
   </div>;
 }
