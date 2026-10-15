@@ -39,6 +39,7 @@ import { SubmissionsClient } from "../assignments/submissions-client";
 import { AssignmentsClient } from "@/components/dashboard/assignments/assignments-client";
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
+import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
 
 type Subject = { id: string; name: string; tutor_ids?: string[] };
 type TutorPerson = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string };
@@ -209,6 +210,10 @@ export function ClassWorkspaceClient({
   const [selectedLearnerId, setSelectedLearnerId] = useState<string | null>(
     null,
   );
+  const navigate = (href: string) => {
+    startNavigationProgress();
+    router.push(href);
+  };
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
@@ -498,7 +503,7 @@ export function ClassWorkspaceClient({
               <SubjectChip
                 label="All subjects"
                 active={activeSubject === "all"}
-                onClick={() => selectWorkspaceSubject(classId, "all", activeTab)}
+                onClick={() => navigate(workspaceSubjectHref(classId, "all", activeTab))}
               >
                 All subjects
               </SubjectChip>
@@ -507,7 +512,7 @@ export function ClassWorkspaceClient({
                   key={subject.id}
                   label={subject.name}
                   active={activeSubject === subject.id}
-                  onClick={() => selectWorkspaceSubject(classId, subject.id, activeTab)}
+                  onClick={() => navigate(workspaceSubjectHref(classId, subject.id, activeTab))}
                 >
                   {subject.name}
                 </SubjectChip>
@@ -517,15 +522,7 @@ export function ClassWorkspaceClient({
         </header>
         <div className="mt-2">
           <WorkspaceRail activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} onSelect={(tab) => {
-            setActiveTab(tab)
-            const url = new URL(window.location.href)
-            url.searchParams.set('tab', tab)
-            url.searchParams.delete('assessment')
-            url.searchParams.delete('assessment_id')
-            url.searchParams.delete('assessment_mode')
-            url.searchParams.delete('session_id')
-            url.searchParams.delete('create')
-            window.history.pushState(null, '', `${url.pathname}${url.search}${url.hash}`)
+            navigate(`/dashboard/classes/${classId}?tab=${tab}${activeSubject === 'all' ? '' : `&subject=${encodeURIComponent(activeSubject)}`}`)
           }} />
           <div className="min-w-0">
             {activeTab === "overview" &&
@@ -546,16 +543,16 @@ export function ClassWorkspaceClient({
                   needsAttention={needsAttention}
                   selectedName={selectedName}
                   subjects={data.courses}
-                  onSelectSubject={(subjectId) => selectWorkspaceSubject(classId, subjectId, 'overview')}
+                  onSelectSubject={(subjectId) => navigate(workspaceSubjectHref(classId, subjectId, 'overview'))}
                   onCreateAssessment={() => {
-                    router.push(
+                    navigate(
                       `/dashboard/classes/${classId}?tab=assessments${subjectSuffix}`,
                     );
                     setOpenAssessmentCreator((value) => value + 1);
                   }}
                   onOpenSchedule={() => setShowSessionComposer(true)}
                   onAddMaterial={() => {
-                    router.push(`/dashboard/classes/${classId}?tab=materials`);
+                    navigate(`/dashboard/classes/${classId}?tab=materials`);
                     setShowMaterialUpload(true);
                   }}
                 />
@@ -608,7 +605,7 @@ export function ClassWorkspaceClient({
             {activeTab === "assessments" &&
               (assessmentView === "assignment" && assessmentId ? (
                 <section className="mt-5">
-                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} />
+                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   <SubmissionsClient
                     assignmentId={assessmentId}
                     session={{ access_token: token }}
@@ -617,7 +614,7 @@ export function ClassWorkspaceClient({
                 </section>
               ) : assessmentView === "quiz" && assessmentId ? (
                 <section className="mt-5">
-                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} />
+                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   {assessmentMode === "builder" ? (
                     <MockBuilderClient token={token} embedded />
                   ) : (
@@ -657,7 +654,7 @@ export function ClassWorkspaceClient({
                 </section>
               ) : isCreatingAssignment ? (
                 <section className="mt-5">
-                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} />
+                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   <AssignmentsClient embedded />
                 </section>
               ) : mocksQuery.isPending || assignmentsQuery.isPending ? (
@@ -1038,15 +1035,11 @@ function LearnerDetailSheet({
   );
 }
 
-function navigate(href: string) {
-  window.location.assign(href);
-}
-
-function ClassAssessmentBackButton({ classId, subjectId }: { classId: string; subjectId: string }) {
+function ClassAssessmentBackButton({ classId, subjectId, onNavigate }: { classId: string; subjectId: string; onNavigate: (href: string) => void }) {
   return (
     <button
       type="button"
-      onClick={() => navigate(`/dashboard/classes/${classId}?tab=assessments${subjectId === 'all' ? '' : `&subject=${encodeURIComponent(subjectId)}`}`)}
+      onClick={() => onNavigate(`/dashboard/classes/${classId}?tab=assessments${subjectId === 'all' ? '' : `&subject=${encodeURIComponent(subjectId)}`}`)}
       className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#312783] bg-white px-3.5 text-sm font-bold text-[#312783] hover:bg-[#f1efff]"
     >
       <ArrowLeft size={16} /> Back to assessments
@@ -1054,10 +1047,10 @@ function ClassAssessmentBackButton({ classId, subjectId }: { classId: string; su
   );
 }
 
-function selectWorkspaceSubject(classId: string, subjectId: string, tab: Tab) {
+function workspaceSubjectHref(classId: string, subjectId: string, tab: Tab) {
   const params = new URLSearchParams({ tab })
   if (subjectId !== 'all') params.set('subject', subjectId)
-  navigate(`/dashboard/classes/${classId}?${params.toString()}`)
+  return `/dashboard/classes/${classId}?${params.toString()}`
 }
 const weekdays = [
   "Monday",

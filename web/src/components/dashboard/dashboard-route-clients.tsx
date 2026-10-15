@@ -6,10 +6,15 @@ import { CentreTimetableClient } from "@/components/dashboard/timetable/centre-t
 import { ClassWorkspaceClient } from "@/components/dashboard/classes/class-workspace-client";
 import { useDashboardSession } from "@/lib/dashboard-session";
 
-function RouteLoading({ label }: { label: string }) {
+function RouteLoading() {
   return (
-    <div className="flex min-h-[18rem] items-center justify-center text-sm text-[#66616c]">
-      Loading {label}…
+    <div className="animate-pulse space-y-5" aria-busy="true" aria-label="Loading page">
+      <div className="h-7 w-48 rounded bg-[#e9e6e5]" />
+      <div className="h-4 w-80 max-w-full rounded bg-[#f1eeee]" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="h-44 rounded-2xl border border-dashboard-outline bg-white" />
+        <div className="h-44 rounded-2xl border border-dashboard-outline bg-white" />
+      </div>
     </div>
   );
 }
@@ -39,7 +44,7 @@ function RouteError({
 
 export function ScheduleRouteClient() {
   const query = useDashboardSession();
-  if (query.isPending) return <RouteLoading label="calendar" />;
+  if (query.isPending) return <RouteLoading />;
   if (query.isError) return <RouteError query={query} />;
   return (
     <ClassesWorkspace
@@ -51,7 +56,7 @@ export function ScheduleRouteClient() {
 
 export function MocksRouteClient() {
   const query = useDashboardSession();
-  if (query.isPending) return <RouteLoading label="mocks" />;
+  if (query.isPending) return <RouteLoading />;
   if (query.isError) return <RouteError query={query} />;
   return (
     <MocksManagementClient
@@ -63,14 +68,14 @@ export function MocksRouteClient() {
 
 export function TimetableRouteClient() {
   const query = useDashboardSession();
-  if (query.isPending) return <RouteLoading label="timetable" />;
+  if (query.isPending) return <RouteLoading />;
   if (query.isError) return <RouteError query={query} />;
   return <CentreTimetableClient />;
 }
 
 export function ClassWorkspaceRouteClient({ classId }: { classId: string }) {
   const query = useDashboardSession();
-  if (query.isPending) return <RouteLoading label="class workspace" />;
+  if (query.isPending) return <RouteLoading />;
   if (query.isError) return <RouteError query={query} />;
   return (
     <ClassWorkspaceClient
