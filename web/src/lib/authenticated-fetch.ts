@@ -55,9 +55,9 @@ export async function authenticatedFetch(
         ...init,
         headers: { ...headers, Authorization: `Bearer ${token}` },
       })
-      if (response.status >= 500) {
-        Sentry.captureMessage('Browser API request returned a server error', {
-          level: 'error',
+      if (response.status === 409 || response.status >= 500) {
+        Sentry.captureMessage('Browser API request returned a handled failure', {
+          level: response.status >= 500 ? 'error' : 'warning',
           tags: {
             http_status: String(response.status),
             http_method: init.method || 'GET',
