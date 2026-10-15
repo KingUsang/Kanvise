@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
-import { createInvitationCallbackClient } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
+import { readInvitationSessionFragment } from "@/lib/invitation-session"
 
 const TRACE_KEY = "kanvise.invitation.trace"
 
@@ -23,7 +24,7 @@ function trace(event: string, details: Record<string, unknown> = {}) {
 
 function InvitationCallbackContent() {
   const params = useSearchParams()
-  const supabase = useMemo(() => createInvitationCallbackClient(), [])
+  const supabase = useMemo(() => createClient(), [])
   const token = params.get("account_invitation_token") || ""
   const started = useRef(false)
   const [error, setError] = useState("")
@@ -45,10 +46,23 @@ function InvitationCallbackContent() {
         hasCode: Boolean(params.get("code")),
       })
 
-      // getSession waits for the browser client to initialize. During that
-      // initialization Supabase consumes the access/refresh tokens in the
-      // URL fragment and persists the session in its SSR cookie storage.
-      const { data, error: sessionError } = await supabase.auth.getSession()
+      // Admin-generated Supabase action links return an implicit-grant
+      // session in the URL fragment. @supabase/ssr deliberately forces PKCE,
+      // so it will not consume that fragment automatically. Transfer the
+      // tokens into the normal cookie-backed client explicitly.
+      const fragment = readInvitationSessionFragment(window.location.hash)
+      window.history.replaceState({}, "", `/auth/invitation/callback?account_invitation_token=${encodeURIComponent(token)}`)
+
+      if (fragment.error) {
+        trace("invalid session fragment", { message: fragment.error })
+        if (live) setError(fragment.error)
+        return
+      }
+
+      const { data, error: sessionError } = await supabase.auth.setSession({
+        access_token: fragment.accessToken,
+        refresh_token: fragment.refreshToken,
+      })
       trace("session handoff", {
         hasSession: Boolean(data.session),
         hasUser: Boolean(data.session?.user),
@@ -60,9 +74,6 @@ function InvitationCallbackContent() {
         return
       }
 
-      // Do not carry the access token in browser history while the next page
-      // loads. The Supabase client has already persisted it at this point.
-      window.history.replaceState({}, "", `/auth/invitation/callback?account_invitation_token=${encodeURIComponent(token)}`)
       window.location.replace(`/auth/complete-invitation?token=${encodeURIComponent(token)}`)
     }
 

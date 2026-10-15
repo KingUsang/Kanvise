@@ -85,6 +85,7 @@ export async function updateSession(request: NextRequest) {
     const isPasswordSetupRoute = request.nextUrl.pathname.includes('reset-password')
       || request.nextUrl.pathname.includes('accept-invitation')
       || request.nextUrl.pathname.includes('complete-invitation')
+      || request.nextUrl.pathname.includes('complete-profile')
       || request.nextUrl.pathname.includes('/auth/invitation')
     if (isAuthRoute && !isPasswordSetupRoute) {
       const url = request.nextUrl.clone()

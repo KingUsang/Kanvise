@@ -5,6 +5,7 @@ import Link from "next/link"
 import { CheckCircle2, Loader2, Mail } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { AuthMethodDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 
 type Invitation = { role: 'tutor' | 'student'; email: string; school_name: string; status: string; expires_at: string; metadata?: { programme_name?: string } }
 const INVITATION_TRACE_KEY = 'kanvise.invitation.trace'
@@ -98,7 +99,7 @@ function InviteContent() {
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#f5f3ff] text-[#2e2877]"><Mail /></div>
           <header className="text-center"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">{invitation.role} invitation</p><h1 className="mt-2 text-3xl font-bold text-[#2e2877]">Join {invitation.school_name}</h1><p className="mt-3 text-sm leading-6 text-[#6a6874]">Continue as <strong>{invitation.email}</strong>{invitation.metadata?.programme_name ? ` to access ${invitation.metadata.programme_name}` : ''}.</p></header>
           {error && <p role="alert" className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          <button onClick={() => void continueInvitation()} disabled={starting} className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-[#994704] px-6 py-4 font-bold text-white disabled:opacity-60">{starting ? <><Loader2 className="animate-spin" size={18}/>Preparing account…</> : <><CheckCircle2 size={18}/>Continue to account setup</>}</button>
+          <div className="mt-8"><GoogleAuthButton href={`/api/auth/google?intent=invitation&invitation_token=${encodeURIComponent(token)}`} label="Continue with Google"/><AuthMethodDivider/><button onClick={() => void continueInvitation()} disabled={starting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-6 py-4 font-bold text-white disabled:opacity-60">{starting ? <><Loader2 className="animate-spin" size={18}/>Sending secure email…</> : <><CheckCircle2 size={18}/>Continue with email</>}</button><p className="mt-3 text-center text-xs leading-5 text-[#787582]">Use the same email address the invitation was sent to.</p></div>
         </> : null}
     </section>
   </main>
