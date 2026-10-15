@@ -216,7 +216,7 @@ export default function StudentsPage() {
           </div>
         </div>
       ) : (
-        <StudentsTable students={students} onStudentRemoved={(studentId) => setStudents((current) => current.filter((student) => student.id !== studentId))} />
+        <StudentsTable students={students} onStudentRemoved={(studentId) => setStudents((current) => current.filter((student) => student.id !== studentId))} onStudentsChanged={() => void fetchStudents()} />
       )}
 
       {addingStudent && (

@@ -316,6 +316,82 @@ usersRouter.get("/students", enforceAdmin, async (c) => {
   }
 });
 
+// POST /users/students/:id/invitation/resend — replace a pending activation
+// link. Creating the invitation expires any older pending link for this email.
+usersRouter.post('/students/:id/invitation/resend', enforceAdmin, async (c) => {
+  try {
+    const admin = c.get('user');
+    if (!admin.school_id) return c.json({ error: 'Set up your centre before managing invitations', code: 'NO_SCHOOL' }, 400);
+    const studentId = c.req.param('id');
+    const { data: student, error: studentError } = await supabase
+      .from('user_profiles')
+      .select('id, email, first_name, last_name, onboarding_status')
+      .eq('id', studentId).eq('school_id', admin.school_id).eq('role', 'student').maybeSingle();
+    if (studentError) throw studentError;
+    if (!student) return c.json({ error: 'Student not found', code: 'NOT_FOUND' }, 404);
+    if (student.onboarding_status === 'active') return c.json({ error: 'This student has already accepted their invitation', code: 'STUDENT_ACTIVE' }, 409);
+    if (!student.email) return c.json({ error: 'This student has no email address', code: 'EMAIL_REQUIRED' }, 400);
+
+    const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '');
+    if (!frontendUrl) return c.json({ error: 'Student invitations are not configured', code: 'INVITATIONS_UNAVAILABLE' }, 503);
+    const [{ data: school, error: schoolError }, { data: pendingTargets, error: pendingError }] = await Promise.all([
+      supabase.from('schools').select('name').eq('id', admin.school_id).single(),
+      (supabase as any).from('pending_student_enrolments').select('programmes(name)').eq('school_id', admin.school_id).eq('student_profile_id', student.id),
+    ]);
+    if (schoolError || !school) throw schoolError || new Error('Could not load your centre');
+    if (pendingError) throw pendingError;
+    const firstTarget = pendingTargets?.[0]?.programmes;
+    const className = Array.isArray(firstTarget) ? firstTarget[0]?.name : firstTarget?.name;
+    const invitedByName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Your agency administrator';
+    const durable = await createAccountInvitation({
+      schoolId: admin.school_id,
+      invitedBy: admin.id,
+      role: 'student',
+      email: student.email,
+      studentProfileId: student.id,
+      metadata: {
+        first_name: student.first_name || '', last_name: student.last_name || '', school_name: school.name,
+        programme_name: className || 'your centre', invited_by_name: invitedByName, app_url: frontendUrl,
+      },
+    });
+    await sendStudentInvitation({
+      to: student.email,
+      inviteUrl: `${frontendUrl}/invite?token=${encodeURIComponent(durable.token)}`,
+      invitedByName, schoolName: school.name, programmeName: className || 'your centre', expiresAt: durable.expiresAt,
+    });
+    await supabase.from('user_profiles').update({ onboarding_status: 'invited' } as any).eq('id', student.id);
+    return c.json({ data: { expires_at: durable.expiresAt }, message: 'Invitation resent' });
+  } catch (error: any) {
+    return c.json({ error: error.message || 'Could not resend invitation' }, 500);
+  }
+});
+
+// DELETE /users/students/:id/invitation — cancel an unaccepted invitation and
+// every class target that was waiting on that acceptance. Accepted enrolments
+// are never touched by this endpoint.
+usersRouter.delete('/students/:id/invitation', enforceAdmin, async (c) => {
+  try {
+    const admin = c.get('user');
+    if (!admin.school_id) return c.json({ error: 'Set up your centre before managing invitations', code: 'NO_SCHOOL' }, 400);
+    const studentId = c.req.param('id');
+    const { data: student, error: studentError } = await supabase
+      .from('user_profiles').select('id, onboarding_status').eq('id', studentId).eq('school_id', admin.school_id).eq('role', 'student').maybeSingle();
+    if (studentError) throw studentError;
+    if (!student) return c.json({ error: 'Student not found', code: 'NOT_FOUND' }, 404);
+    if (student.onboarding_status === 'active') return c.json({ error: 'Accepted students cannot have their invitation cancelled', code: 'STUDENT_ACTIVE' }, 409);
+    const now = new Date().toISOString();
+    const [{ error: invitationError }, { error: pendingError }, { error: profileError }] = await Promise.all([
+      (supabase as any).from('account_invitations').update({ status: 'cancelled', updated_at: now }).eq('school_id', admin.school_id).eq('student_profile_id', student.id).eq('status', 'pending'),
+      (supabase as any).from('pending_student_enrolments').delete().eq('school_id', admin.school_id).eq('student_profile_id', student.id),
+      supabase.from('user_profiles').update({ onboarding_status: 'not_invited' } as any).eq('id', student.id),
+    ]);
+    if (invitationError || pendingError || profileError) throw invitationError || pendingError || profileError;
+    return c.json({ message: 'Invitation cancelled' });
+  } catch (error: any) {
+    return c.json({ error: error.message || 'Could not cancel invitation' }, 500);
+  }
+});
+
 // GET /users — List all users in the school, filterable by role
 usersRouter.get("/", enforceAdmin, async (c) => {
   try {

@@ -4,13 +4,37 @@ import { useEffect, useState } from "react";
 import { X, Loader2, BookOpen, Clock, AlertCircle, ReceiptText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function StudentDetailsSheet({ student, onClose, onRemoved }: { student: any, onClose: () => void, onRemoved: () => void }) {
+export default function StudentDetailsSheet({ student, onClose, onRemoved, onChanged }: { student: any, onClose: () => void, onRemoved: () => void, onChanged: () => void }) {
   const [enrolments, setEnrolments] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const [confirmRemoval, setConfirmRemoval] = useState(false);
+  const [invitationAction, setInvitationAction] = useState<"resend" | "cancel" | null>(null);
+  const [confirmCancelInvitation, setConfirmCancelInvitation] = useState(false);
+
+  const manageInvitation = async (action: "resend" | "cancel") => {
+    setInvitationAction(action);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!session || !apiUrl) throw new Error('Your session is unavailable');
+      const response = await fetch(`${apiUrl}/users/students/${encodeURIComponent(student.id)}/invitation${action === 'resend' ? '/resend' : ''}`, {
+        method: action === 'resend' ? 'POST' : 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || `Could not ${action} invitation`);
+      onChanged();
+      if (action === 'cancel') onClose();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : `Could not ${action} invitation`);
+    } finally {
+      setInvitationAction(null);
+    }
+  };
 
   const removeStudent = async () => {
     setRemoving(true);
@@ -137,6 +161,15 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
             )}
           </div>
 
+          {student.onboarding_status !== 'active' && <div className="mb-6 rounded-dashboard-panel border border-amber-200 bg-amber-50 p-4">
+            <h4 className="font-bold text-amber-900">Invitation pending</h4>
+            <p className="mt-1 text-sm leading-5 text-amber-800">This student will gain class access only after accepting the invitation.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={() => void manageInvitation('resend')} disabled={invitationAction !== null} className="rounded border border-amber-700 bg-white px-3 py-2 text-sm font-semibold text-amber-900 disabled:opacity-50">{invitationAction === 'resend' ? 'Sending…' : 'Resend invitation'}</button>
+              <button type="button" onClick={() => setConfirmCancelInvitation(true)} disabled={invitationAction !== null} className="rounded border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel invitation</button>
+            </div>
+          </div>}
+
           <div className="mb-6">
             <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-400">
               <ReceiptText size={16} />
@@ -192,6 +225,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
           </div>
         </div>
       )}
+      {confirmCancelInvitation && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl"><h3 className="text-xl font-bold text-dashboard-foreground">Cancel this invitation?</h3><p className="mt-2 text-sm leading-6 text-gray-600">The email link and all pending class assignments for this student will be cancelled. Accepted enrolments are unaffected.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmCancelInvitation(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep invitation</button><button type="button" onClick={() => { setConfirmCancelInvitation(false); void manageInvitation('cancel'); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Cancel invitation</button></div></div></div>}
     </>
   );
 }
