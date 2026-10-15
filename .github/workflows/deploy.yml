@@ -114,6 +114,16 @@ jobs:
       - name: Verify deployed API health
         env:
           API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+          EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          EXPECTED_ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
         run: |
           test -n "$API_HEALTH_URL"
-          curl --fail --show-error --silent --retry 5 --retry-delay 5 "$API_HEALTH_URL/health"
+          curl --fail --show-error --silent --retry 5 --retry-delay 5 "$API_HEALTH_URL/health" \
+            | node -e '
+                let body = "";
+                process.stdin.on("data", chunk => { body += chunk });
+                process.stdin.on("end", () => {
+                  const health = JSON.parse(body);
+                  if (health.status !== "ok" || health.release_sha !== process.env.EXPECTED_RELEASE_SHA || health.environment !== process.env.EXPECTED_ENVIRONMENT) process.exit(1);
+                });
+              '

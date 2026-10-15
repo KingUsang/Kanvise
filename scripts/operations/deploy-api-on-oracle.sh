@@ -51,6 +51,20 @@ rm -rf "${next_dist}" "${previous_dist}"
 install -d -m 0755 "${next_dist}"
 cp -a "${artifact_dir}/." "${next_dist}/"
 test -f "${next_dist}/index.js"
+printf '{"release_sha":"%s","environment":"%s"}\n' "${release_sha}" "${deploy_environment}" > "${next_dist}/release.json"
+
+verify_health() {
+  local health_url=$1
+  curl --fail --silent --show-error --retry 8 --retry-connrefused --retry-delay 2 "${health_url}" \
+    | node -e '
+        let body = "";
+        process.stdin.on("data", chunk => { body += chunk });
+        process.stdin.on("end", () => {
+          const health = JSON.parse(body);
+          if (health.status !== "ok" || health.release_sha !== process.argv[1] || health.environment !== process.argv[2]) process.exit(1);
+        });
+      ' "${release_sha}" "${deploy_environment}"
+}
 
 for manifest in package.json package-lock.json api/package.json; do
   install -D -m 0644 "${deploy_root}/${manifest}" "${manifest_backup}/${manifest}"
@@ -80,8 +94,8 @@ mv "${deploy_root}/api/dist" "${previous_dist}"
 mv "${next_dist}" "${deploy_root}/api/dist"
 
 if ! sudo -n systemctl restart "${service_name}" \
-  || ! curl --fail --silent --show-error --retry 8 --retry-connrefused --retry-delay 2 "http://127.0.0.1:${app_port}/health" >/dev/null \
-  || ! curl --fail --silent --show-error --retry 8 --retry-delay 3 "${public_health_url}" >/dev/null; then
+  || ! verify_health "http://127.0.0.1:${app_port}/health" \
+  || ! verify_health "${public_health_url}"; then
   rm -rf "${deploy_root}/api/dist"
   mv "${previous_dist}" "${deploy_root}/api/dist"
   if [[ ${dependencies_changed} == true ]]; then
