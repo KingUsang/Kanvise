@@ -134,12 +134,6 @@ authRouter.post('/invitation/start', async (c) => {
 
   if (invitation.role === 'student' && invitation.student_profile_id) {
     await supabase.from('user_profiles').update({ supabase_auth_id: generated.user.id, onboarding_status: 'invited' } as any).eq('id', invitation.student_profile_id)
-    await supabase.auth.admin.updateUserById(generated.user.id, {
-      app_metadata: {
-        role: 'student', kanvise_role: 'student', school_id: invitation.school_id,
-        profile_id: invitation.student_profile_id,
-      },
-    })
   }
 
   return c.json({ data: { action_url: generated.properties.action_link } })
@@ -261,11 +255,11 @@ authRouter.post('/profile/init', async (c) => {
       .select('*')
       .single()
     if (rosterError || !rosterProfile) return c.json({ error: rosterError?.message || 'Student profile could not be activated' }, 409)
+    await consumeAccountInvitation(String(account_invitation_token), email, supabaseAuthId)
     await supabase.auth.admin.updateUserById(supabaseAuthId, {
       user_metadata: { first_name, last_name },
       app_metadata: { ...(jwtPayload.app_metadata || {}), role: 'student', kanvise_role: 'student', school_id: rosterProfile.school_id, kanvise_user_id: rosterProfile.kanvise_user_id, profile_id: rosterProfile.id },
     })
-    await consumeAccountInvitation(String(account_invitation_token), email, supabaseAuthId)
     const welcome = await deliverWelcome(rosterProfile, email)
     return c.json({ profile: rosterProfile, created: false, welcome_email_sent: welcome.sent, welcome_email_id: welcome.id, welcome_email_already_sent: welcome.alreadySent })
   }
@@ -439,6 +433,16 @@ authRouter.post('/profile/activate', async (c) => {
       return c.json({ error: consumeError?.message || 'Invitation could not be completed' }, 409)
     }
   }
+  await supabase.auth.admin.updateUserById(user.supabase_auth_id, {
+    user_metadata: { first_name: firstName, last_name: lastName },
+    app_metadata: {
+      role: 'student',
+      kanvise_role: 'student',
+      school_id: user.school_id,
+      kanvise_user_id: user.kanvise_user_id,
+      profile_id: user.id,
+    },
+  })
   return c.json({ message: 'Student profile activated' })
 })
 

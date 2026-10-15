@@ -42,15 +42,15 @@ describe('student import access and validation', () => {
     expect(mocks.from).not.toHaveBeenCalled()
   })
 
-  it('allows the invited student to supply their own name later', async () => {
+  it('validates the invitation email before querying the database', async () => {
     const response = await usersRouter.request('/students/import', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ students: [{ email: 'student@example.test' }] }),
+      body: JSON.stringify({ students: [{ email: 'not-an-email' }] }),
     })
 
     expect(response.status).toBe(400)
     const body = await response.json() as any
-    expect(body.errors[0].errors).toEqual(['Choose a programme'])
+    expect(body.errors[0].errors).toEqual(['Email address is invalid'])
   })
 
   it('does not treat a phone number as an activation method', async () => {
