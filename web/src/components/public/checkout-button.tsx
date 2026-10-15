@@ -62,7 +62,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
         throw new Error(profileBody?.error || "Could not verify your account");
       }
       if (profileBody?.user?.role !== "student") {
-        throw new Error(isProgramme ? 'Please use a student account to join this programme.' : 'Please use a student account to continue.');
+        throw new Error(isProgramme ? 'Please use a student account to join this class.' : 'Please use a student account to continue.');
       }
 
       // Check role - only students can enrol
@@ -112,7 +112,7 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
 
     } catch (err: any) {
       console.error("Checkout Error:", err);
-      const message = err.message || (isProgramme ? "We couldn't start joining this programme. Try again." : 'We could not start enrolment. Try again.')
+      const message = err.message || (isProgramme ? "We couldn't start joining this class. Try again." : 'We could not start enrolment. Try again.')
       setError(message)
       toast.error(message);
     } finally {
@@ -133,8 +133,8 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
       disabled={loading}
       className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white transition hover:bg-[#7d3903] focus:outline-none focus:ring-4 focus:ring-[#994704]/20 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {loading ? <><Loader2 size={17} className="animate-spin"/>{isProgramme && isFree ? 'Joining…' : isFree ? 'Enrolling…' : 'Opening checkout…'}</> : <>{alreadyEnrolled ? 'Open programme' : actionLabel}<ArrowRight size={16}/></>}
+      {loading ? <><Loader2 size={17} className="animate-spin"/>{isProgramme && isFree ? 'Joining…' : isFree ? 'Enrolling…' : 'Opening checkout…'}</> : <>{alreadyEnrolled ? 'Open class' : actionLabel}<ArrowRight size={16}/></>}
     </button>
-    {alreadyEnrolled ? <p className="mt-3 text-center text-sm text-[#17653a]">You’re already enrolled in this programme.</p> : error ? <p role="alert" className="mt-3 text-center text-sm leading-5 text-[#a33a2b]">{error}</p> : null}
+    {alreadyEnrolled ? <p className="mt-3 text-center text-sm text-[#17653a]">You’re already enrolled in this class.</p> : error ? <p role="alert" className="mt-3 text-center text-sm leading-5 text-[#a33a2b]">{error}</p> : null}
   </div>);
 }

@@ -104,12 +104,12 @@ export function ProgrammesClient() {
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.code === 'ACTIVE_ENROLMENTS_EXIST'
-        ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
-        : body?.error || 'Could not delete programme')
+        ? 'This class has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+        : body?.error || 'Could not delete class')
       toast.success('Class deleted')
       await queryClient.invalidateQueries({ queryKey: ['programmes'] })
     } catch (error) {
-      toast.error('Could not delete programme', { description: error instanceof Error ? error.message : 'Please try again.' })
+      toast.error('Could not delete class', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setDeletingId(null)
     }
@@ -179,7 +179,7 @@ export function ProgrammesClient() {
               <div className="flex flex-wrap gap-2 p-4">
                 <Link href={programme.courses_count ? `/dashboard/classes/${programme.id}` : `/dashboard/classes/new`} className="rounded bg-[#2e2877] px-3.5 py-2 text-xs font-semibold text-white">{programme.courses_count ? 'Open class' : 'Continue setup'}</Link>
                 {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}${programme.is_published ? '' : `?preview=${programme.id}`}`} target="_blank" rel="noreferrer" className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Preview enrolment page</a>}
-                {schoolSlug && <button onClick={() => void copyLink(programme)} className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Copy enrolment link</button>}
+                {schoolSlug && programme.is_published && <button onClick={() => void copyLink(programme)} className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Copy enrolment link</button>}
                 {canCreate && !programme.is_published && <button disabled={publishingId === programme.id} onClick={() => void publish(programme)} className="ml-auto rounded border border-[#994704] px-3.5 py-2 text-xs font-semibold text-[#994704] disabled:opacity-50">{publishingId === programme.id ? 'Publishing…' : 'Publish'}</button>}
                 {canCreate && <button disabled={deletingId === programme.id} onClick={() => void deleteProgramme(programme)} className={`${programme.is_published ? '' : 'ml-auto'} rounded border border-[#ba1a1a]/40 px-3.5 py-2 text-xs font-semibold text-[#ba1a1a] disabled:opacity-50`}>{deletingId === programme.id ? 'Deleting…' : 'Delete'}</button>}
               </div>

@@ -107,6 +107,13 @@ type LearnerSignal = {
   last_activity: string | null;
   attention: "Needs attention" | "On track" | "No signal yet";
 };
+type StudentRosterEntry = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  pending_enrolments?: Array<{ programme_id?: string | null }>;
+};
 type Topic = {
   topic: string;
   score: number;
@@ -256,6 +263,17 @@ export function ClassWorkspaceClient({
     },
     enabled: activeTab === 'tutors' && canManageTutors,
     staleTime: 60_000,
+  });
+  const studentRosterQuery = useQuery({
+    queryKey: ['class-student-roster', classId],
+    queryFn: async () => {
+      const response = await authenticatedApiFetch(`${api}/users/students`);
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Could not load invited students');
+      return (body?.data || []) as StudentRosterEntry[];
+    },
+    enabled: activeTab === 'learners' && canManageStudents,
+    staleTime: 30_000,
   });
   const scheduleQuery = useQuery({
     queryKey: ["class-schedule", classId],
@@ -498,7 +516,17 @@ export function ClassWorkspaceClient({
           ) : null}
         </header>
         <div className="mt-2">
-          <WorkspaceRail classId={classId} activeTab={activeTab} activeSubject={activeSubject} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} />
+          <WorkspaceRail activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} onSelect={(tab) => {
+            setActiveTab(tab)
+            const url = new URL(window.location.href)
+            url.searchParams.set('tab', tab)
+            url.searchParams.delete('assessment')
+            url.searchParams.delete('assessment_id')
+            url.searchParams.delete('assessment_mode')
+            url.searchParams.delete('session_id')
+            url.searchParams.delete('create')
+            window.history.pushState(null, '', `${url.pathname}${url.search}${url.hash}`)
+          }} />
           <div className="min-w-0">
             {activeTab === "overview" &&
               (scheduleQuery.isPending ||
@@ -688,12 +716,12 @@ export function ClassWorkspaceClient({
                 </div>
               ))}
             {activeTab === "learners" &&
-              (insightsQuery.isPending ? (
+              (insightsQuery.isPending || (canManageStudents && studentRosterQuery.isPending) ? (
                 <WorkspaceSectionLoading cards={3} />
               ) : (
                 <div className="mt-5">
                   <ClassLearnersPanel
-                    learners={(insights?.learners || []).map(toLearnerRow)}
+                    learners={mergeLearnersWithPendingInvitations(insights?.learners || [], studentRosterQuery.data || [], classId)}
                     onInvite={
                       canManageStudents
                         ? () => setShowStudentInvite(true)
@@ -776,6 +804,9 @@ export function ClassWorkspaceClient({
           await Promise.all([
             queryClient.invalidateQueries({
               queryKey: ["class-insights", classId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["class-student-roster", classId],
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.summary,
@@ -879,17 +910,15 @@ function ClassTutorsPanel({
 }
 
 function WorkspaceRail({
-  classId,
   activeTab,
-  activeSubject,
   isOneToOne,
   canManageTutors,
+  onSelect,
 }: {
-  classId: string;
   activeTab: Tab;
-  activeSubject: string;
   isOneToOne: boolean;
   canManageTutors: boolean;
+  onSelect: (tab: Tab) => void;
 }) {
   return (
     <section className="border-b border-dashboard-outline">
@@ -898,14 +927,15 @@ function WorkspaceRail({
         className="flex gap-1 overflow-x-auto [scrollbar-width:none]"
       >
         {tabs.filter(tab => tab.id !== 'tutors' || canManageTutors).map((tab) => (
-          <Link
+          <button
+            type="button"
             key={tab.id}
-            href={`/dashboard/classes/${classId}?tab=${tab.id}${activeSubject === 'all' ? '' : `&subject=${encodeURIComponent(activeSubject)}`}`}
+            onClick={() => onSelect(tab.id)}
             aria-current={activeTab === tab.id ? "page" : undefined}
             className={`relative min-h-12 shrink-0 border-b-[3px] px-4 py-3 text-left text-sm font-semibold transition ${activeTab === tab.id ? "border-[#994704] text-[#211969]" : "border-transparent text-[#625e69] hover:text-[#211969]"}`}
           >
             {tab.id === "learners" && isOneToOne ? "Student" : tab.label}
-          </Link>
+          </button>
         ))}
       </nav>
     </section>
@@ -1165,6 +1195,18 @@ function toLearnerRow(learner: LearnerSignal): LearnerRow {
           : "no_signal",
     attentionReason: attentionReason(learner),
   };
+}
+function mergeLearnersWithPendingInvitations(learners: LearnerSignal[], students: StudentRosterEntry[], classId: string): LearnerRow[] {
+  const activeIds = new Set(learners.map((learner) => learner.id));
+  const pending = students
+    .filter((student) => !activeIds.has(student.id) && student.pending_enrolments?.some((item) => item.programme_id === classId))
+    .map((student): LearnerRow => ({
+      id: student.id,
+      name: [student.first_name, student.last_name].filter(Boolean).join(' ') || student.email || 'Invited student',
+      attention: 'no_signal',
+      invitationPending: true,
+    }));
+  return [...pending, ...learners.map(toLearnerRow)];
 }
 function ClassPerformance({
   insights,

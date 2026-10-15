@@ -48,7 +48,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
             Explore programmes
           </Link>
         </div>
-        <a href="#programmes" className="md:hidden text-sm font-semibold text-[#994704]">Programmes</a>
+        <a href="#programmes" className="md:hidden text-sm font-semibold text-[#994704]">Classes</a>
       </header>
 
       {/* Main Content */}
@@ -121,13 +121,13 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
             {/* Product Catalog (Programmes) */}
             <section id="programmes">
               <div className="flex justify-between items-end mb-6 border-b border-[#C2B59B] pb-2">
-                <h2 className="font-headline-md text-headline-md text-primary">Our Programmes</h2>
+                <h2 className="font-headline-md text-headline-md text-primary">Our classes</h2>
                 <span className="font-label-md text-label-md text-on-surface-variant">{programmes.length} available</span>
               </div>
 
               {programmes.length === 0 && (
                 <div className="text-center p-12 border border-outline-variant rounded bg-surface-container-low">
-                    <p className="text-on-surface-variant font-medium">No published programmes available right now.</p>
+                    <p className="text-on-surface-variant font-medium">No published classes available right now.</p>
                 </div>
               )}
 
@@ -141,7 +141,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
                             <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mb-4">{prog.description}</p>
                             <div className="mt-auto flex items-center justify-between border-t border-[#C2B59B] pt-4">
                                 <div className="font-headline-sm text-headline-sm text-secondary font-bold">{Number(prog.price) === 0 ? 'Free' : new Intl.NumberFormat('en-NG', { style: 'currency', currency: prog.currency || 'NGN', maximumFractionDigits: 0 }).format(Number(prog.price))}</div>
-                                <span className="font-label-md text-label-md text-primary">View programme →</span>
+                                <span className="font-label-md text-label-md text-primary">View class →</span>
                             </div>
                         </div>
                     </Link>
@@ -179,7 +179,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
       <footer className="w-full py-10 px-6 md:px-margin-desktop flex flex-col md:flex-row justify-between items-start gap-gutter bg-primary text-on-primary font-body-sm text-body-sm mt-stack-lg border-t-4 border-secondary">
         <div>
           <div className="font-headline-sm text-headline-sm font-black text-on-primary">{school.name}</div>
-          <p className="mt-2 text-primary-fixed-dim/80">Programmes and student learning are powered by Kanvise.</p>
+          <p className="mt-2 text-primary-fixed-dim/80">Classes and student learning are powered by Kanvise.</p>
         </div>
         {school.contact_email && <a className="text-primary-fixed-dim/80 hover:text-secondary-fixed" href={`mailto:${school.contact_email}`}>Contact {school.name}</a>}
       </footer>

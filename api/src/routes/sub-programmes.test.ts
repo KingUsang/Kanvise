@@ -77,7 +77,7 @@ describe('DELETE /sub-programmes/:id', () => {
     const response = await subProgrammesRouter.request('/sub-1', { method: 'DELETE' })
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ message: 'Sub-programme deleted' })
+    expect(await response.json()).toEqual({ message: 'Class section deleted' })
     expect(deleteQuery.delete).toHaveBeenCalledOnce()
     expect(deleteQuery.eq).toHaveBeenCalledWith('school_id', 'school-1')
   })

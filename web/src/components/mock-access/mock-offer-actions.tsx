@@ -90,7 +90,7 @@ export function MockOfferActions({
           router.push(`/dashboard/student/mocks/attempt/${attempt.data.attempt_id}`)
           return
         }
-        if (centrePreflight.status !== 404) throw new Error(centreBody?.error || 'Could not check your programme access')
+        if (centrePreflight.status !== 404) throw new Error(centreBody?.error || 'Could not check your class access')
       }
 
       const preflight = await authenticatedFetch(supabase, `${getApiUrl()}/mock/${offerId}/preflight`, { cache: 'no-store' })
