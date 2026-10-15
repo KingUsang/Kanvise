@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Download, Edit, Search, FileText, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Download, Edit, Search, FileText, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
@@ -128,6 +129,7 @@ export function SubmissionsClient({ assignmentId, session, embedded = false }: {
       {!embedded && <DashboardPageHeader
         className="mb-8 border-b border-dashboard-outline pb-6"
         title="Submission review"
+        breadcrumb={<Link href="/dashboard/assignments" className="inline-flex items-center gap-2 font-semibold text-dashboard-primary hover:underline"><ArrowLeft size={16} /> Back to assignments</Link>}
         description={<span className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             {summary.total_reviewed} of {summary.total_submitted} submissions reviewed
