@@ -45,7 +45,7 @@ export default function StudentDashboardPage() {
     </main>
   }
 
-  return <main className="mx-auto min-w-0 max-w-[1440px] overflow-x-clip px-4 py-5 pb-24 sm:px-6 sm:py-6 lg:px-10 lg:py-9">
+  return <main className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-clip px-4 py-5 pb-24 sm:px-6 sm:py-6 lg:px-10 lg:py-9">
     <section className="min-w-0 rounded-2xl bg-[#2e2877] px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-9">
       <p className="text-sm text-white/70">{data.school?.name || "Kanvise"}</p>
       <div className="mt-2 flex flex-col justify-between gap-5 md:flex-row md:items-end">
@@ -55,9 +55,9 @@ export default function StudentDashboardPage() {
     </section>
 
     {data.course_count === 0 ? <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white p-8 text-center"><BookOpen className="mx-auto text-[#2e2877]" /><h2 className="mt-4 text-xl font-semibold">Your learning space is ready</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Once you join a class, your lessons and learning materials will appear here.</p></section> :
-    <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="space-y-6">
-        <section className="rounded-2xl border border-[#e5e1dd] bg-white p-5 sm:p-6">
+    <div data-testid="student-dashboard-grid" className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="min-w-0 space-y-6">
+        <section className="min-w-0 rounded-2xl border border-[#e5e1dd] bg-white p-5 sm:p-6">
           <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-[#8a6570]">Up next</p><h2 className="mt-1 text-xl font-semibold">Today’s class</h2></div><CalendarDays className="text-[#2e2877]" size={22} /></div>
           {nextClass ? <div className="mt-5 rounded-2xl border-l-4 border-[#c26627] bg-[#faf8f5] p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
             <div className="flex min-w-0 gap-3 sm:gap-4"><div className="w-16 shrink-0 border-r border-[#ded8d2] pr-3 sm:pr-4"><p className="text-base font-semibold text-[#2e2877] sm:text-lg">{formatTime(nextClass.scheduled_at)}</p><p className="break-words text-xs text-[#77727e]">{formatDate(nextClass.scheduled_at)}</p></div><div className="min-w-0"><p className="break-words font-semibold">{nextClass.title}</p><p className="mt-1 break-words text-sm text-[#716c76]">{nextClass.course_name} · {nextClass.duration_minutes} mins</p></div></div>
@@ -70,7 +70,7 @@ export default function StudentDashboardPage() {
         </section>
       </div>
 
-      <aside className="space-y-6">
+      <aside className="min-w-0 space-y-6">
         <section className="min-w-0 rounded-2xl border border-[#e5e1dd] bg-white p-5"><div className="flex items-center gap-2"><Clock3 size={19} className="shrink-0 text-[#994704]" /><h2 className="min-w-0 font-semibold">Assignments due</h2></div><div className="mt-4 min-w-0 space-y-3">{data.assignments_due.length ? data.assignments_due.map((item) => <Link key={item.id} href="/dashboard/student/assignments" className="block min-w-0 rounded-xl border-l-2 border-[#c26627] bg-[#faf8f5] p-3"><p className="break-words text-sm font-medium">{item.title}</p><p className="mt-1 break-words text-xs text-[#716c76]">{item.course_name}</p><p className="mt-2 text-xs font-semibold text-[#994704]">Due {relativeDate(item.deadline_at)}</p></Link>) : <p className="rounded-xl bg-[#faf8f5] p-4 text-sm text-[#716c76]">You have no outstanding assignments.</p>}</div></section>
         {data.upcoming_classes.length > 1 && <section className="rounded-2xl border border-[#e5e1dd] bg-white p-5"><h2 className="font-semibold">Coming up</h2><div className="mt-3 space-y-3">{data.upcoming_classes.slice(1, 4).map((item) => <div key={item.id} className="border-b border-[#eeeae6] pb-3 last:border-0 last:pb-0"><p className="text-sm font-medium">{item.title}</p><p className="mt-1 text-xs text-[#716c76]">{formatDate(item.scheduled_at)} · {formatTime(item.scheduled_at)}</p></div>)}</div></section>}
       </aside>
