@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import {
   clearProgrammeDraft,
   loadProgrammeDraft,
@@ -281,6 +282,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       if (!uploadFailed) {
         await queryClient.invalidateQueries({ queryKey: ['programmes'] })
         router.refresh()
+        startNavigationProgress()
         router.push('/dashboard/programmes')
       }
     } catch (error) {
@@ -295,6 +297,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const discard = () => {
     if (!window.confirm('Discard the class draft saved on this device?')) return
     if (identity) clearProgrammeDraft(identity.school_id, identity.id, programmeId || 'new')
+    startNavigationProgress()
     router.push('/dashboard/programmes')
   }
 

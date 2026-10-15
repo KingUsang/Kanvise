@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { dashboardQueryKeys } from '@/lib/dashboard-session'
+import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 
 type Tutor = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role?: string }
 type Viewer = { id: string; role?: string; school_id?: string | null }
@@ -132,7 +133,7 @@ export function ClassBuilder() {
         if (response.status === 409 && body?.code === 'CLASS_NAME_TAKEN' && body?.existing_class_id) {
           toast.error('A class with this name already exists', {
             description: 'Open the existing class or choose a different name.',
-            action: { label: 'Open class', onClick: () => router.push(`/dashboard/classes/${body.existing_class_id}`) },
+            action: { label: 'Open class', onClick: () => { startNavigationProgress(); router.push(`/dashboard/classes/${body.existing_class_id}`) } },
           })
           return
         }
@@ -153,6 +154,7 @@ export function ClassBuilder() {
       } else {
         toast.success('Draft class saved', { description: 'Students cannot see it yet. Add students, sessions and teaching materials before publishing.' })
       }
+      startNavigationProgress()
       router.push(`/dashboard/classes/${classId}${studentMode === 'one_to_one' ? '?tab=learners&add_student=true' : ''}`)
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['programmes'] }),
