@@ -27,9 +27,9 @@ app.use("/*", sentry(app));
 // have produced the response while keeping the response body out of Sentry.
 app.use("/*", async (c, next) => {
   await next();
-  if (c.res.status >= 500) {
-    Sentry.captureMessage("API request returned a server error", {
-      level: "error",
+  if (c.res.status === 409 || c.res.status >= 500) {
+    Sentry.captureMessage("API request returned a handled failure", {
+      level: c.res.status >= 500 ? "error" : "warning",
       tags: {
         http_status: String(c.res.status),
         http_method: c.req.method,
