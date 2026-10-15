@@ -125,7 +125,7 @@ webhooksRouter.post('/plugnmeet', async (c) => {
     const { data: record } = await (supabase as any).from('attendance_records').select('id, joined_at').eq('live_class_id', liveClass.id).eq('student_id', participantIdentity).is('left_at', null).order('joined_at', { ascending: false }).limit(1).maybeSingle()
     if (record) await (supabase as any).from('attendance_records').update({ left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(record.joined_at).getTime()) / 1000)) }).eq('id', record.id)
   }
-  if (eventName === 'room_finished' || eventName === 'analytics_proceeded') {
+  if (eventName === 'room_finished' && liveClass.status === 'ending') {
     const endedAt = new Date().toISOString()
     await (supabase as any).from('live_classes').update({
       status: 'completed', provider_room_status: 'ended', provider_room_checked_at: endedAt,
@@ -134,6 +134,15 @@ webhooksRouter.post('/plugnmeet', async (c) => {
     // Keep the first terminal provider observation when delivery is retried.
     await (supabase as any).from('live_classes').update({ ended_at: endedAt })
       .eq('id', liveClass.id).is('ended_at', null)
+  }
+  if (eventName === 'room_finished' && liveClass.status !== 'ending') {
+    // PlugNmeet rooms are disposable. Network loss can leave an older room
+    // empty and trigger its provider timeout; that must not end the durable
+    // Kanvise class. Atomically prepare a new generation for the tutor.
+    await (supabase as any).rpc('prepare_live_class_provider_recovery', {
+      p_live_class_id: liveClass.id,
+      p_provider_room_id: roomId,
+    })
   }
   if (eventName === 'room_finished') {
     const endedAt = new Date()
@@ -222,7 +231,7 @@ webhooksRouter.post('/plugnmeet-recording-upload', async (c) => {
   const fileSizeBytes = Number(input.file_size_bytes)
   if (!roomId || !recordingId || !fileKey || !Number.isInteger(fileSizeBytes) || fileSizeBytes <= 0) return c.text('Invalid recording upload payload', 400)
   const { data: liveClass } = await (supabase as any).from('live_classes')
-    .select('id, school_id, status, classroom_provider').eq('provider_room_id', roomId).maybeSingle()
+    .select('id, school_id, course_id, status, classroom_provider').eq('provider_room_id', roomId).maybeSingle()
   if (!liveClass || liveClass.classroom_provider !== 'plugnmeet') return c.text('Unknown room', 404)
   const verified = await verifyPrivateUpload({ fileKey, schoolId: liveClass.school_id, entityType: 'live_class_recording', contextId: liveClass.id, contentType, fileSizeBytes })
   const { error } = await (supabase as any).from('live_class_recording_segments').upsert({
@@ -238,10 +247,12 @@ webhooksRouter.post('/plugnmeet-recording-upload', async (c) => {
       checksum: verified.checksum, ended_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }).eq('id', finalRecording.id)
     if (finalError) throw finalError
-    const { error: jobError } = await (supabase as any).from('live_class_jobs').upsert({
-      job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString(),
-    }, { onConflict: 'job_type,live_class_id' })
-    if (jobError) throw jobError
+    if (liveClass.course_id) {
+      const { error: jobError } = await (supabase as any).from('live_class_jobs').upsert({
+        job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString(),
+      }, { onConflict: 'job_type,live_class_id' })
+      if (jobError) throw jobError
+    }
   }
   if (liveClass.status === 'completed' && !finalRecording) {
     const { data: finalizeJob } = await (supabase as any).from('live_class_jobs')

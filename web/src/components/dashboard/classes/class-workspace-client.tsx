@@ -569,7 +569,7 @@ export function ClassWorkspaceClient({
                     }
                     onStartSession={(session) =>
                       window.open(
-                        `/class/${session.id}${session.status === "live" ? "" : "?start=true"}`,
+                        `/class/${session.id}`,
                         "_blank",
                         "noopener,noreferrer"
                       )

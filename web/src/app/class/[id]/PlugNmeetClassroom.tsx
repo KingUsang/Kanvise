@@ -12,6 +12,7 @@ type Props = {
   classId: string
   classTitle: string
   isHost: boolean
+  shareUrl?: string
 }
 
 declare global {
@@ -23,11 +24,12 @@ function assetUrl(serverUrl: string, kind: 'css' | 'js', file: string) {
   return `${serverUrl.replace(/\/$/, '')}/assets/${kind}/${file.replace(/^\//, '')}`
 }
 
-export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clientFiles, classId, classTitle, isHost }: Props) {
+export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clientFiles, classId, classTitle, isHost, shareUrl = '' }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [issue, setIssue] = useState<string | null>(null)
   const [mounting, setMounting] = useState(true)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [copied, setCopied] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -72,6 +74,8 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       stopMicTrackOnMute: true,
       focusActiveSpeakerWebcam: true,
       maxNumDisplayWebcams: { desktop: 4, tablet: 2, mobile: 1 },
+      meetingShareUrl: shareUrl,
+      showPoorConnectionNotification: false,
       // Kanvise classrooms always use PlugNmeet's supported light theme. The
       // colour customisation API only applies consistently in that theme, and
       // keeping the toggle disabled prevents a saved provider preference from
@@ -154,34 +158,27 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       delete window.plugNmeetConfig
       delete window.__kanvisePlugNmeetReady
     }
-  }, [clientFiles.css_files, clientFiles.js_files, joinToken, roomId, serverUrl])
+  }, [clientFiles.css_files, clientFiles.js_files, joinToken, roomId, serverUrl, shareUrl])
 
   return (
     <>
       {/* PlugNmeet's own CSS establishes the document and mount height, including
           its mobile safe-area behaviour. Do not wrap this in a Kanvise viewport. */}
       <div ref={rootRef} id="plugNmeet-app" data-kanvise-class-id={classId} aria-label={`${classTitle} classroom`} />
+      {isHost && shareUrl && !mounting && !issue ? <button
+        type="button"
+        onClick={() => void navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1800) })}
+        className="fixed right-3 top-3 z-[60] inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/70 bg-white/95 px-3 text-sm font-semibold text-[#312783] shadow-lg backdrop-blur"
+        aria-label="Copy class link"
+      ><span className="material-symbols-outlined text-lg" aria-hidden="true">link</span>{copied ? 'Copied' : 'Copy class link'}</button> : null}
       {mounting && !issue ? (
-        <main className="fixed inset-0 z-20 flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans" aria-live="polite">
-          <section className="w-full max-w-md">
-            <div className="mb-6">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
-                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" /></span>
-                LIVE CLASS
-              </span>
-              <h1 className="mt-3 text-2xl font-bold leading-tight text-[#180d62]">{classTitle}</h1>
-            </div>
-            <div className="rounded-2xl border border-[#e5e1dd] bg-white p-6 shadow-sm">
-              <div className="flex items-start gap-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ece9f8]">
-                  <span className="material-symbols-outlined animate-spin text-[1.1rem] text-[#2e2877]">progress_activity</span>
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-[#180d62]">Opening live classroom</p>
-                  <p className="mt-0.5 text-xs text-[#66616c]">Connecting you to the live class</p>
-                </div>
-              </div>
-              <p className="mt-5 text-sm leading-relaxed text-[#66616c]">Your classroom is ready. We&apos;re loading the meeting controls now…</p>
+        <main className="fixed inset-0 z-20 flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-6 font-sans" aria-live="polite">
+          <section className="w-full max-w-sm text-center">
+            <img src="/kanvise_logo_small_blue.png" alt="Kanvise" width="48" height="48" className="mx-auto h-12 w-12 object-contain" />
+            <h1 className="mt-6 text-xl font-semibold text-[#180d62]">{classTitle}</h1>
+            <div className="mt-8 flex items-center justify-center gap-3 text-sm font-medium text-[#474551]">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#d9d5e8] border-t-[#312783]" aria-hidden="true" />
+              <span>Connecting to class</span>
             </div>
           </section>
         </main>
