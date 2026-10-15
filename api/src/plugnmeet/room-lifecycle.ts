@@ -33,19 +33,27 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
       if (liveClass.status === 'starting' || liveClass.status === 'ready') {
         // Nobody entered before PlugNmeet's empty timeout. The scheduled class
         // can safely be started again with the same Kanvise class ID.
-        const { error: resetError } = await (supabase as any).from('live_classes').update({
-          status: 'scheduled', provider_room_status: 'ended', provider_room_checked_at: now.toISOString(),
-          provider_error_at: null, provider_error_message: null,
-        }).eq('id', liveClass.id).eq('status', liveClass.status)
+        const { error: resetError } = await (supabase as any).rpc('prepare_live_class_provider_recovery', {
+          p_live_class_id: liveClass.id, p_provider_room_id: roomId,
+        })
         if (resetError) throw resetError
         reset += 1
         continue
       }
-      const { error: updateError } = await (supabase as any).from('live_classes')
-        .update({ status: 'completed', ended_at: now.toISOString(), provider_room_status: 'ended', provider_room_checked_at: now.toISOString() })
-        .eq('id', liveClass.id).eq('status', liveClass.status)
-      if (updateError) throw updateError
-      completed += 1
+      const deadline = new Date(new Date(liveClass.scheduled_at).getTime() + (Number(liveClass.duration_minutes || 240) + 60) * 60_000)
+      if (liveClass.status === 'ending' || now >= deadline) {
+        const { error: updateError } = await (supabase as any).from('live_classes')
+          .update({ status: 'completed', ended_at: now.toISOString(), provider_room_status: 'ended', provider_room_checked_at: now.toISOString() })
+          .eq('id', liveClass.id).eq('status', liveClass.status)
+        if (updateError) throw updateError
+        completed += 1
+      } else {
+        const { error: recoveryError } = await (supabase as any).rpc('prepare_live_class_provider_recovery', {
+          p_live_class_id: liveClass.id, p_provider_room_id: roomId,
+        })
+        if (recoveryError) throw recoveryError
+        reset += 1
+      }
     } catch (error) {
       // A temporary outage must never immediately end a potentially active
       // class. But a 15-minute class cannot truthfully remain "live" for days:

@@ -35,9 +35,11 @@ describe('PlugNmeet provider contract', () => {
     expect(enrolledRoomFeatures().end_to_end_encryption_features.is_enabled).toBe(false)
   })
 
-  it('creates a restricted guest room on the same PlugNmeet server', () => {
+  it('creates a guest room with manual cloud recording on the same PlugNmeet server', () => {
     const request = createGuestRoomRequest({ roomId: 'guest-1', title: 'Try class', schoolId: 'school-1', courseId: null })
-    expect(request.metadata.room_features.recording_features.is_allow).toBe(false)
+    expect(request.metadata.room_features.recording_features.is_allow).toBe(true)
+    expect(request.metadata.room_features.recording_features.is_allow_cloud).toBe(true)
+    expect(request.metadata.room_features.recording_features.enable_auto_cloud_recording).toBe(false)
     expect(request.metadata.room_features.enable_analytics).toBe(false)
     expect(request.metadata.room_features.insights_features.is_allow).toBe(false)
     expect(request.metadata.extra_data.course_id).toBe('')

@@ -300,7 +300,7 @@ export function DashboardHomeClient() {
                     <a
                       target="_blank"
                       rel="noopener noreferrer"
-                      href={`/class/${item.id}?start=true`}
+                      href={`/class/${item.id}`}
                       className="ml-auto inline-flex min-h-10 items-center rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white"
                     >
                       {item.status === "live" ? "Join" : "Start"}

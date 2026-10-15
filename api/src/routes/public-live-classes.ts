@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
 import { supabase } from '../lib/supabase'
-import { createPresignedDownload } from '../storage/r2'
+import { createPresignedDownload, privateObjectExists } from '../storage/r2'
 import { getPlugNmeetClientConfig, providerForClass } from '../plugnmeet/provider'
 
 export const publicLiveClassesRouter = new Hono()
@@ -105,6 +105,29 @@ publicLiveClassesRouter.get('/by-id/:classId', async c => {
   } catch (error) {
     console.error('[public-live-class] by-id lookup failed', error)
     return c.json({ error: 'Could not load this live class', code: 'LOOKUP_FAILED' }, 500)
+  }
+})
+
+publicLiveClassesRouter.get('/recordings/:token', async c => {
+  try {
+    const token = c.req.param('token') || ''
+    if (!/^[A-Za-z0-9_-]{40,}$/.test(token)) return c.json({ error: 'Recording link unavailable', code: 'LINK_UNAVAILABLE' }, 404)
+    const { data: link } = await db.from('live_class_recording_share_links')
+      .select('live_class_id, school_id').eq('token_hash', tokenHash(token)).is('revoked_at', null).maybeSingle()
+    if (!link) return c.json({ error: 'Recording link unavailable', code: 'LINK_UNAVAILABLE' }, 404)
+    const [{ data: liveClass }, { data: recording }] = await Promise.all([
+      db.from('live_classes').select('id, title, scheduled_at, tutor:user_profiles!live_classes_tutor_id_fkey(first_name,last_name), course:courses(name)').eq('id', link.live_class_id).eq('school_id', link.school_id).maybeSingle(),
+      db.from('live_class_recordings').select('id, r2_file_key, content_type, status').eq('live_class_id', link.live_class_id).eq('status', 'ready').maybeSingle(),
+    ])
+    if (!liveClass || !recording?.r2_file_key) return c.json({ error: 'Recording is not ready', code: 'RECORDING_NOT_READY' }, 404)
+    if (!(await privateObjectExists(recording.r2_file_key, String(link.school_id)))) {
+      return c.json({ error: 'This recording is not available yet' }, 404)
+    }
+    const playbackUrl = await createPresignedDownload(recording.r2_file_key, String(link.school_id), 600)
+    return c.json({ data: { recording_id: recording.id, playback_url: playbackUrl, playback_expires_at: new Date(Date.now() + 600_000).toISOString(), class: liveClass } })
+  } catch (error) {
+    console.error('[public-recording] playback failed', error)
+    return c.json({ error: 'Could not open this recording', code: 'PLAYBACK_FAILED' }, 500)
   }
 })
 
