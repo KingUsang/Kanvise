@@ -101,18 +101,22 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
 
   if (trustedClaims) {
     let resolvedClaims = trustedClaims
-    // A first centre enrolment can commit between access-token issuance and
-    // the next refresh. Consult the canonical profile only for this transition
-    // state so a stale null claim cannot serve the standalone-student view.
-    if (trustedClaims.role === 'student' && !trustedClaims.school_id) {
+    // Student activation state is canonical in Postgres. Check it even when an
+    // older token already contains claims so a pre-acceptance session cannot
+    // enter the dashboard.
+    if (trustedClaims.role === 'student') {
       const { data: currentProfile } = await supabase
         .from('user_profiles')
-        .select('school_id, is_active')
+        .select('school_id, is_active, onboarding_status')
         .eq('id', trustedClaims.id)
         .eq('supabase_auth_id', supabaseAuthId)
         .maybeSingle()
       if (currentProfile?.is_active === false) {
         return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
+      }
+      const invitationCompletion = c.req.path.includes('/auth/profile/activate') || c.req.path.includes('/auth/profile/init')
+      if (currentProfile?.onboarding_status !== 'active' && !invitationCompletion) {
+        return c.json({ error: 'Accept your invitation to finish setting up this account', code: 'ACCOUNT_PENDING' }, 403)
       }
       if (currentProfile?.school_id) resolvedClaims = { ...trustedClaims, school_id: currentProfile.school_id }
     }
@@ -124,7 +128,7 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   // Slow path - lookup from DB
   const { data: profile, error } = await supabase
     .from('user_profiles')
-    .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active')
+    .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active, onboarding_status')
     .eq('supabase_auth_id', supabaseAuthId)
     .single()
     
@@ -139,6 +143,11 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
 
   if (profile.is_active === false) {
     return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
+  }
+
+  const invitationCompletion = c.req.path.includes('/auth/profile/activate') || c.req.path.includes('/auth/profile/init')
+  if (profile.role === 'student' && profile.onboarding_status !== 'active' && !invitationCompletion) {
+    return c.json({ error: 'Accept your invitation to finish setting up this account', code: 'ACCOUNT_PENDING' }, 403)
   }
   
   const resolvedUser = {
@@ -159,6 +168,7 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   // if the Auth admin update is temporarily unavailable. The new claims take
   // effect when Supabase next refreshes the user's token.
   try {
+    if (profile.role === 'student' && profile.onboarding_status !== 'active') return await next()
     await supabase.auth.admin.updateUserById(supabaseAuthId, {
       app_metadata: {
         ...(jwtPayload.app_metadata || {}),

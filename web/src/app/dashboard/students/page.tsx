@@ -37,7 +37,6 @@ export default function StudentsPage() {
   const [addStudentError, setAddStudentError] = useState<string | null>(null);
   const [studentEmail, setStudentEmail] = useState("");
   const [programmes, setProgrammes] = useState<Array<{ id: string; name: string }>>([]);
-  const [programmeId, setProgrammeId] = useState("");
   const [csvRows, setCsvRows] = useState<Array<{ first_name: string; last_name: string; email: string; phone: string; programme_id: string; row: number; error?: string }>>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [importingCsv, setImportingCsv] = useState(false);
@@ -96,11 +95,10 @@ export default function StudentsPage() {
     try {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!programmeId) throw new Error("Choose the programme this student is enrolled in");
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/students/import`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ students: [{ email: studentEmail, programme_id: programmeId }], send_invitations: true }),
+        body: JSON.stringify({ students: [{ email: studentEmail }], send_invitations: true }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not add student");
@@ -108,7 +106,6 @@ export default function StudentsPage() {
 
       setAddingStudent(false);
       setStudentEmail("");
-      setProgrammeId("");
       await fetchStudents();
     } catch (err) {
       setAddStudentError(err instanceof Error ? err.message : "Could not add student");
@@ -226,12 +223,11 @@ export default function StudentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="add-student-title">
           <form onSubmit={addStudent} className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
-              <div><h2 id="add-student-title" className="text-xl font-bold text-dashboard-foreground">Invite a student</h2><p className="mt-1 text-sm leading-6 text-dashboard-muted">Choose what they can access. The student enters their own name and password from the email.</p></div>
+              <div><h2 id="add-student-title" className="text-xl font-bold text-dashboard-foreground">Invite a student</h2><p className="mt-1 text-sm leading-6 text-dashboard-muted">They enter their own name and password from the email. Add them to a class now or later.</p></div>
               <button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} aria-label="Close" className="rounded p-1 text-gray-500 hover:bg-gray-100"><X size={20} /></button>
             </div>
             {addStudentError && <div className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{addStudentError}</div>}
             <label className="mt-5 block text-sm font-semibold text-dashboard-foreground">Email address<input required type="email" value={studentEmail} onChange={(event) => setStudentEmail(event.target.value)} className="mt-1.5 w-full rounded-dashboard-control border border-dashboard-outline px-3 py-2.5 font-normal outline-none focus:border-dashboard-primary" /></label>
-            <label className="mt-4 block text-sm font-semibold text-dashboard-foreground">Programme<select required value={programmeId} onChange={(event) => setProgrammeId(event.target.value)} className="mt-1.5 w-full rounded-dashboard-control border border-dashboard-outline bg-white px-3 py-2.5 font-normal outline-none focus:border-dashboard-primary"><option value="">Choose a programme</option>{programmes.map((programme) => <option key={programme.id} value={programme.id}>{programme.name}</option>)}</select></label>
             <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button disabled={submittingStudent} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submittingStudent ? "Sending…" : "Add & invite"}</button></div>
           </form>
         </div>
