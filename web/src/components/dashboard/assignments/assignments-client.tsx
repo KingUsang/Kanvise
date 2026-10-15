@@ -62,6 +62,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
         if (!classRes.ok) throw new Error(classBody?.error || "Could not load this class");
         const classSubjectIds = new Set((classBody?.data?.courses || []).map((course: any) => course.id));
         visibleCourses = loadedCourses.filter((course: any) => classSubjectIds.has(course.id));
+        if (contextualCourseId) visibleCourses = visibleCourses.filter((course: any) => course.id === contextualCourseId);
         setClassContextName(classBody?.data?.name || "This class");
       }
       setCourses(visibleCourses);
@@ -167,7 +168,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
           queryClient.invalidateQueries({ queryKey: ["class-insights", classContextId] }),
         ]);
         startNavigationProgress();
-        router.push(`/dashboard/classes/${classContextId}?tab=assessments`);
+        router.push(`/dashboard/classes/${classContextId}?tab=assessments${contextualCourseId ? `&subject=${encodeURIComponent(contextualCourseId)}` : ''}`);
         return;
       }
       setTitle("");
@@ -237,6 +238,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
                     id="course-select"
                     value={courseId}
                     onChange={(e) => setCourseId(e.target.value)}
+                    disabled={Boolean(contextualCourseId)}
                     className="w-full cursor-pointer appearance-none rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-base text-dashboard-foreground outline-none focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"
                   >
                     <option disabled value="">Select a Subject...</option>
