@@ -3142,7 +3142,7 @@ export function MockBuilderClient({
                     }}
                     className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"
                   >
-                    <option value="">Choose a programme subject</option>
+                    <option value="">Choose a class subject</option>
                     {availableSubjectCourses.map((course) => (
                       <option key={course.id} value={course.id}>
                         {mockCourseLabel(course)}

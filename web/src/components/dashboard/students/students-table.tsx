@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
 
-export default function StudentsTable({ students, onStudentRemoved }: { students: any[], onStudentRemoved: (studentId: string) => void }) {
+export default function StudentsTable({ students, onStudentRemoved, onStudentsChanged }: { students: any[], onStudentRemoved: (studentId: string) => void, onStudentsChanged: () => void }) {
   const [programmeFilter, setProgrammeFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,8 +27,8 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
     const progs = new Map<string, string>();
     students.forEach(student => {
       (student.enrolments || []).forEach((enr: any) => {
-        if (enr.programmes?.id) progs.set(`programme:${enr.programmes.id}`, `Programme — ${enr.programmes.name}`);
-        if (enr.sub_programmes?.id) progs.set(`sub_programme:${enr.sub_programmes.id}`, `Sub-programme — ${enr.sub_programmes.name}`);
+        if (enr.programmes?.id) progs.set(`programme:${enr.programmes.id}`, `Class — ${enr.programmes.name}`);
+        if (enr.sub_programmes?.id) progs.set(`sub_programme:${enr.sub_programmes.id}`, `Class section — ${enr.sub_programmes.name}`);
         if (enr.courses?.id) progs.set(`course:${enr.courses.id}`, `Subject — ${enr.courses.name}`);
       });
     });
@@ -193,6 +193,7 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
             onStudentRemoved(selectedStudent.id);
             setSelectedStudent(null);
           }}
+          onChanged={onStudentsChanged}
         />
       )}
     </div>
