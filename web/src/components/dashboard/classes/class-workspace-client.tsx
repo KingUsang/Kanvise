@@ -516,7 +516,17 @@ export function ClassWorkspaceClient({
           ) : null}
         </header>
         <div className="mt-2">
-          <WorkspaceRail classId={classId} activeTab={activeTab} activeSubject={activeSubject} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} />
+          <WorkspaceRail activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} onSelect={(tab) => {
+            setActiveTab(tab)
+            const url = new URL(window.location.href)
+            url.searchParams.set('tab', tab)
+            url.searchParams.delete('assessment')
+            url.searchParams.delete('assessment_id')
+            url.searchParams.delete('assessment_mode')
+            url.searchParams.delete('session_id')
+            url.searchParams.delete('create')
+            window.history.pushState(null, '', `${url.pathname}${url.search}${url.hash}`)
+          }} />
           <div className="min-w-0">
             {activeTab === "overview" &&
               (scheduleQuery.isPending ||
@@ -900,17 +910,15 @@ function ClassTutorsPanel({
 }
 
 function WorkspaceRail({
-  classId,
   activeTab,
-  activeSubject,
   isOneToOne,
   canManageTutors,
+  onSelect,
 }: {
-  classId: string;
   activeTab: Tab;
-  activeSubject: string;
   isOneToOne: boolean;
   canManageTutors: boolean;
+  onSelect: (tab: Tab) => void;
 }) {
   return (
     <section className="border-b border-dashboard-outline">
@@ -919,14 +927,15 @@ function WorkspaceRail({
         className="flex gap-1 overflow-x-auto [scrollbar-width:none]"
       >
         {tabs.filter(tab => tab.id !== 'tutors' || canManageTutors).map((tab) => (
-          <Link
+          <button
+            type="button"
             key={tab.id}
-            href={`/dashboard/classes/${classId}?tab=${tab.id}${activeSubject === 'all' ? '' : `&subject=${encodeURIComponent(activeSubject)}`}`}
+            onClick={() => onSelect(tab.id)}
             aria-current={activeTab === tab.id ? "page" : undefined}
             className={`relative min-h-12 shrink-0 border-b-[3px] px-4 py-3 text-left text-sm font-semibold transition ${activeTab === tab.id ? "border-[#994704] text-[#211969]" : "border-transparent text-[#625e69] hover:text-[#211969]"}`}
           >
             {tab.id === "learners" && isOneToOne ? "Student" : tab.label}
-          </Link>
+          </button>
         ))}
       </nav>
     </section>

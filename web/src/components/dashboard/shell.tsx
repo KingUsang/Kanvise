@@ -41,8 +41,19 @@ export function DashboardShell({
 
   if (!setupRequired && sessionQuery.isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f3f2] font-sans text-sm text-[#474551]">
-        Opening your workspace…
+      <div className="min-h-screen bg-[#f5f3f2] p-4 sm:p-6" aria-label="Loading dashboard">
+        <div className="mx-auto flex max-w-[1440px] animate-pulse gap-6">
+          <div className="hidden h-[calc(100vh-3rem)] w-64 rounded-2xl bg-[#e7e3e1] lg:block" />
+          <div className="min-w-0 flex-1 space-y-5">
+            <div className="h-14 rounded-2xl bg-white" />
+            <div className="h-28 rounded-2xl bg-white" />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="h-44 rounded-2xl bg-white" />
+              <div className="h-44 rounded-2xl bg-white" />
+              <div className="h-44 rounded-2xl bg-white" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
