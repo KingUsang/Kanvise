@@ -113,9 +113,9 @@ export function AttendanceClient() {
         <h3 className="text-[12px] font-semibold text-[#474551] mb-4 uppercase tracking-wider">Filter attendance</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Programme</label>
+            <label className="text-[10px] font-bold text-[#787582] uppercase tracking-wider mb-1">Class</label>
             <select value={programmeId} onChange={handleProgrammeChange} className="w-full border border-[#c2b59b] rounded text-[14px] p-2.5 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] bg-[#fbf9f8] outline-none">
-              <option value="">All Programmes</option>
+              <option value="">All classes</option>
               {availableProgrammes?.map(p => (
                  <option key={p.id} value={p.id}>{p.name}</option>
               ))}

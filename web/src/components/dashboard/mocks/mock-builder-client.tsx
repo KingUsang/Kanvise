@@ -786,6 +786,9 @@ export function MockBuilderClient({
   const centreAccessEnabled = accessMode === "centre" || accessMode === "both";
   const shareLinkEnabled = accessMode === "direct" || accessMode === "both";
   const selectedSubjectSections = subjectSections;
+  const scopedClassCourses = contextualCourseId
+    ? (classContext?.courses || []).filter((subject) => subject.id === contextualCourseId)
+    : classContext?.courses || [];
   const programmeOptions = Array.from(
     new Map(
       courses
@@ -806,7 +809,7 @@ export function MockBuilderClient({
   }>;
   const coursesForSelectedProgramme = classContext
     ? courses.filter((course) =>
-        classContext.courses.some((subject) => subject.id === course.id),
+        scopedClassCourses.some((subject) => subject.id === course.id),
       )
     : centreAccessEnabled && programmeFilterId
       ? courses.filter((course) => course.programme_id === programmeFilterId)
@@ -1805,7 +1808,7 @@ export function MockBuilderClient({
         startNavigationProgress();
         router.push(
           classContext
-            ? `/dashboard/classes/${classContext.id}?tab=assessments`
+            ? `/dashboard/classes/${classContext.id}?tab=assessments${contextualCourseId ? `&subject=${encodeURIComponent(contextualCourseId)}` : ""}`
             : "/dashboard/mocks",
         );
       } else {
@@ -3139,7 +3142,7 @@ export function MockBuilderClient({
                     }}
                     className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"
                   >
-                    <option value="">Choose a programme subject</option>
+                    <option value="">Choose a class subject</option>
                     {availableSubjectCourses.map((course) => (
                       <option key={course.id} value={course.id}>
                         {mockCourseLabel(course)}
@@ -3458,7 +3461,7 @@ export function MockBuilderClient({
                     )}
                 </div>
               )}
-              {(subjectSections.length > 0 || classContext?.courses.length) && (
+              {(subjectSections.length > 0 || scopedClassCourses.length > 0) && (
                 <div className="mt-5 rounded-xl border border-[#e4e2e1] bg-white">
                   <div className="flex items-center justify-between border-b border-[#e4e2e1] px-4 py-3">
                     <h3 className="text-sm font-bold text-[#27242d]">
@@ -3473,7 +3476,7 @@ export function MockBuilderClient({
                   <div className="divide-y divide-[#eeeae6]">
                     {(subjectSections.length
                       ? subjectSections
-                      : (classContext?.courses || []).map((subject) => ({
+                      : scopedClassCourses.map((subject) => ({
                           id: subject.id,
                           name: subject.name,
                           courseId: subject.id,

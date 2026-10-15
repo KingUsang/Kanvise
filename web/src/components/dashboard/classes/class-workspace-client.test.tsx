@@ -74,10 +74,7 @@ describe('ClassWorkspaceClient data loading', () => {
       throw new Error(`Unexpected request ${input}`)
     }))
 
-    const view = renderWorkspace()
-    await screen.findAllByRole('link', { name: 'Students' })
     window.history.pushState({}, '', '?tab=learners')
-    view.unmount()
     renderWorkspace()
     fireEvent.click(await screen.findByRole('button', { name: /Emeka Okoro/ }))
     expect(await screen.findByRole('dialog', { name: 'Learner evidence' })).toBeTruthy()

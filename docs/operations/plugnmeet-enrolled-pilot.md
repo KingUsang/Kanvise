@@ -1,8 +1,8 @@
 # PlugNmeet enrolled-class pilot runbook
 
 This pilot uses the repurposed PlugNmeet VM for both classroom profiles.
-Enrolled rooms have the learning/recording layer; guest/link rooms are a
-restricted PlugNmeet preview profile.
+Enrolled rooms have the full learning/recording layer; guest/link rooms use a
+restricted PlugNmeet profile with manual cloud recording and no AI recap.
 
 ## Enablement
 
@@ -20,6 +20,7 @@ RECORDER_CALLBACK_SECRET=<long-random-shared-secret>
 RECORDER_FLEET_ENABLED=true
 RECORDER_FLEET_CONTROLLER_URL=<recorder-controller-function-url>
 RECORDER_FLEET_CONTROLLER_SECRET=<long-random-shared-secret>
+CLASS_LINK_ENCRYPTION_KEY=<base64-encoded-32-byte-key>
 PLUGNMEET_WORKER_CONTROL_ENABLED=true
 PLUGNMEET_HEALTH_URL=https://<plugnmeet-host>
 AZURE_PLUGNMEET_RESOURCE_GROUP=<azure-resource-group>
@@ -53,16 +54,16 @@ copyright_conf:
   allow_override: true
 ```
 
-The PlugNmeet server is currently the repurposed Azure `kanvise-livekit` VM.
+The PlugNmeet server is currently hosted on the Oracle classroom VM.
 It owns the classroom media stack and TURN (`livekit.kanvise.com` and
 `turn.kanvise.com`). The PlugNmeet recorder is intentionally not enabled on
 that VM. Recording capture is a separate AWS on-demand worker; do not treat
-Azure as a recorder.
+the Oracle classroom VM as a recorder.
 
 The installation guide requires a clean Ubuntu/Debian host with a public IP,
 TLS, and the PlugNmeet and TURN subdomains; production guidance calls for at
 least 4 CPU cores, 4 GB RAM, and 100 Mbps bandwidth, with 8+ cores/RAM
-recommended when recording. The Azure VM meets the classroom requirement.
+recommended when recording. The Oracle VM meets the classroom requirement.
 The client asset response must be reachable from the Kanvise browser over HTTPS.
 
 The PlugNmeet client is loaded by defining `window.plugNmeetConfig`, creating
@@ -88,7 +89,9 @@ to `/webhooks/plugnmeet-recording-upload`. Kanvise verifies the R2 object
 before marking it playable. Deepgram then reads the R2 object and Gemini makes
 a tutor-editable summary draft. A stopped/restarted recording is stored as
 segments; PlugNmeet merges them asynchronously before the student-facing R2
-recording is published. Guest/link classes do not enter this pipeline.
+recording is published. Guest/link recordings use the same verified R2
+delivery, but skip transcription and recap generation. Tutors can create and
+revoke an opaque playback link; the raw R2 URL remains short-lived.
 
 Install [`post-transcoding-r2.sh`](../../infra/plugnmeet-recorder/post-transcoding-r2.sh)
 on the recorder, make it executable, install `curl`, `jq`, and `openssl`, and
@@ -129,8 +132,9 @@ Use one pilot school, one tutor, three enrolled students, and one administrator:
 6. Enable Polls, use PlugNmeet's native Generate with AI flow, edit the draft,
    and run one quiz.
 7. End the room and verify webhook idempotency and attendance records.
-8. Join a guest/link class and confirm it uses PlugNmeet with recording,
-   analytics and summaries unavailable.
+8. Join a guest/link class, start a manual cloud recording, and verify the
+   tutor can create and revoke its playback link while analytics and summaries
+   remain unavailable.
 
 Rollback is the reversible operation of setting
 `PLUGNMEET_ENROLLED_ENABLED=false` or removing a school from

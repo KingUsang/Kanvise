@@ -387,7 +387,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
 
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Welcome Video <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
-                <p className="mb-3 text-xs leading-5 text-[#787582]">A short message introducing your tutoring agency, teaching approach, or exam-preparation programme.</p>
+                <p className="mb-3 text-xs leading-5 text-[#787582]">A short message introducing your tutoring agency, teaching approach, or exam-preparation class.</p>
                 {mediaUrls.video_intro && <video src={mediaUrls.video_intro} controls preload="metadata" className="mb-3 aspect-video w-full rounded-lg bg-black object-contain" aria-label="Welcome video preview" />}
                 <label className={`flex min-h-12 w-full items-center justify-between gap-4 rounded border border-[#c8c5d2] bg-[#fbf9f8] px-4 py-3 transition-colors ${canUploadMedia ? 'hover:bg-[#f5f3f2] cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
                   <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('video_intro', event.target.files?.[0])} />

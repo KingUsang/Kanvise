@@ -38,7 +38,7 @@ export default function CompleteProfilePage() {
     window.location.assign(context?.invitation_token ? `/invite?token=${encodeURIComponent(context.invitation_token)}` : '/auth/login')
   }
 
-  const heading = context?.intent === 'invitation' ? `Join ${context.invitation?.school_name || 'your tutoring agency'}` : context?.intent === 'student' ? 'Finish joining your programme' : 'Let’s finish setting up your account'
+  const heading = context?.intent === 'invitation' ? `Join ${context.invitation?.school_name || 'your tutoring agency'}` : context?.intent === 'student' ? 'Finish joining your class' : 'Let’s finish setting up your account'
   return <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8"><section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12"><Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>
     {loading ? <div className="flex min-h-56 items-center justify-center gap-3 text-[#474551]"><Loader2 className="animate-spin"/>Opening your account…</div>
       : !context ? <div className="py-6 text-center"><h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Your session has expired</h1><p role="alert" className="mt-3 text-sm leading-6 text-[#625e6e]">{error}</p><Link href="/auth/login" className="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white">Back to sign in</Link></div>

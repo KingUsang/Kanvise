@@ -31,7 +31,7 @@ describe('CompleteProfilePage', () => {
 
     render(<CompleteProfilePage />)
 
-    expect(await screen.findByRole('heading', { name: 'Finish joining your programme' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Finish joining your class' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Tutoring agency name')).not.toBeInTheDocument()
     expect(screen.queryByText('Independent tutor')).not.toBeInTheDocument()
   })

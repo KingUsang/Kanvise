@@ -1,8 +1,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import * as Sentry from '@sentry/nextjs'
 import { getCurrentAccessToken, refreshAccessToken } from './auth-session'
 import { createClient } from './supabase/client'
 
 const refreshes = new WeakMap<SupabaseClient, Promise<string | null>>()
+
+function requestPath(input: RequestInfo | URL) {
+  try {
+    if (typeof input === 'string') return new URL(input, window.location.origin).pathname
+    if (input instanceof URL) return input.pathname
+    return new URL(input.url, window.location.origin).pathname
+  } catch {
+    return 'unknown'
+  }
+}
 
 function refreshOnce(supabase: SupabaseClient) {
   const existing = refreshes.get(supabase)
@@ -33,16 +44,38 @@ export async function authenticatedFetch(
 ) {
   const suppliedToken = typeof accessTokenOrInit === 'string' ? accessTokenOrInit : undefined
   const init = typeof accessTokenOrInit === 'string' ? maybeInit : (accessTokenOrInit ?? {})
-  const request = (token: string) => {
+  const request = async (token: string) => {
     // Normalise then replace the header. A few older callers supplied the
     // server-rendered token themselves; leaving that lower-cased header in
     // place alongside this one causes browsers to combine both values.
     const headers = Object.fromEntries(new Headers(init.headers).entries())
     delete headers.authorization
-    return fetch(input, {
-      ...init,
-      headers: { ...headers, Authorization: `Bearer ${token}` },
-    })
+    try {
+      const response = await fetch(input, {
+        ...init,
+        headers: { ...headers, Authorization: `Bearer ${token}` },
+      })
+      if (response.status === 409 || response.status >= 500) {
+        Sentry.captureMessage('Browser API request returned a handled failure', {
+          level: response.status >= 500 ? 'error' : 'warning',
+          tags: {
+            http_status: String(response.status),
+            http_method: init.method || 'GET',
+            api_path: requestPath(input),
+          },
+        })
+      }
+      return response
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: {
+          http_method: init.method || 'GET',
+          api_path: requestPath(input),
+          failure_type: 'network',
+        },
+      })
+      throw error
+    }
   }
 
   const accessToken = suppliedToken ?? await getCurrentAccessToken(supabase)

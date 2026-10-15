@@ -2,6 +2,7 @@ import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import * as Sentry from "@sentry/node";
 // TypeScript's legacy Node resolution cannot resolve the SDK's runtime-specific
 // export, while Node resolves it correctly at runtime.
 const { sentry } = require("@sentry/hono/node") as {
@@ -21,6 +22,22 @@ const app = new Hono();
 // Middleware
 // Sentry starts before route middleware so it captures unhandled 5xx responses.
 app.use("/*", sentry(app));
+// Handled 5xx responses (including intentional 503s) do not throw, so the
+// error middleware cannot report them by itself. Capture them after routes
+// have produced the response while keeping the response body out of Sentry.
+app.use("/*", async (c, next) => {
+  await next();
+  if (c.res.status === 409 || c.res.status >= 500) {
+    Sentry.captureMessage("API request returned a handled failure", {
+      level: c.res.status >= 500 ? "error" : "warning",
+      tags: {
+        http_status: String(c.res.status),
+        http_method: c.req.method,
+        api_path: c.req.path,
+      },
+    });
+  }
+});
 app.use("/*", cors({
   origin: (origin) => resolveCorsOrigin(origin),
   credentials: true,

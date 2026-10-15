@@ -69,7 +69,7 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
           setPurchaseKind(kind)
           if (kind === 'mock') setMockOfferId(body.data.offer_id || body.data.offer?.id || null)
           setState("success");
-          setMessage(kind === 'mock' ? 'Payment confirmed. Your mock is ready when you are.' : 'Payment confirmed. Your programme access is ready.');
+          setMessage(kind === 'mock' ? 'Payment confirmed. Your mock is ready when you are.' : 'Payment confirmed. Your class access is ready.');
           return;
         }
         if (body.data.status === "failed") {

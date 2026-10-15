@@ -416,7 +416,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     });
     const body = await response.json();
     if (!response.ok) return toast.error(body.error || "Could not start this live class");
-    window.open(`/class/${item.id}?start=true`, "_blank", "noopener,noreferrer");
+    window.open(`/class/${item.id}`, "_blank", "noopener,noreferrer");
   }
   async function copyClassroomLink(value: string) {
     try {
@@ -1035,7 +1035,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                     <a
                       target="_blank"
                       rel="noopener noreferrer"
-                      href={`/class/${composer.existing!.id}?start=true`}
+                      href={`/class/${composer.existing!.id}`}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2e2877] text-sm font-semibold text-white hover:bg-[#1a1555]"
                     >
                       <Video size={16} />

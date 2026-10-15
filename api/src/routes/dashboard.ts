@@ -472,7 +472,7 @@ dashboardRouter.get("/student", async (c) => {
         title: item.title,
         course_name:
           item.audience_scope === "programme"
-            ? (item.programme as any)?.name || "Programme"
+            ? (item.programme as any)?.name || "Class"
             : item.audience_scope === "school"
               ? "Entire centre"
               : (item.course as any)?.name ||

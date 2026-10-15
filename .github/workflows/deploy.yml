@@ -1,4 +1,4 @@
-name: Verify and deploy API to Azure
+name: Verify and deploy API
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - 'api/**'
       - 'supabase/migrations/**'
+      - 'scripts/operations/deploy-api-on-oracle.sh'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -13,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: azure-api-${{ github.ref_name }}
+  group: api-deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -93,7 +94,7 @@ jobs:
     if: >-
       always() && needs.verify.result == 'success' &&
       (needs.migrations.result == 'success' || needs.migrations.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, ARM64, oracle, kanvise-api]
     timeout-minutes: 15
     environment: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
     steps:
@@ -102,106 +103,27 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: api-dist
-          path: api/dist
-      - name: Upload compiled API to server
-        uses: appleboy/scp-action@v1.0.0
-        with:
-          host: ${{ secrets.AZURE_API_HOST }}
-          username: ${{ secrets.AZURE_API_USER }}
-          key: ${{ secrets.AZURE_API_SSH_KEY }}
-          port: ${{ secrets.AZURE_API_PORT || 22 }}
-          timeout: 30s
-          command_timeout: 10m
-          source: api/dist/*
-          target: /tmp/kanvise-api-${{ github.sha }}/dist
-          strip_components: 2
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.5
+          path: ${{ runner.temp }}/kanvise-api-${{ github.sha }}
+      - name: Deploy verified API artifact locally on Oracle
         env:
-          DEPLOY_BRANCH: ${{ github.ref_name }}
-          DEPLOY_DIRECTORY: ${{ vars.DEPLOY_DIRECTORY }}
-          PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
-          APP_PORT: ${{ vars.APP_PORT }}
-          SYSTEMD_SERVICE: ${{ github.ref_name == 'main' && 'kanvise-production-api' || 'kanvise-staging-api' }}
+          DEPLOY_ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+          DEPLOY_ARTIFACT_DIR: ${{ runner.temp }}/kanvise-api-${{ github.sha }}
           RELEASE_SHA: ${{ github.sha }}
-          NODE_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
-          SCHEDULED_JOBS_ENABLED: ${{ vars.SCHEDULED_JOBS_ENABLED }}
-          TELEGRAM_ENABLED: ${{ vars.TELEGRAM_ENABLED }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
-          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
-          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-          CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
-        with:
-          host: ${{ secrets.AZURE_API_HOST }}
-          username: ${{ secrets.AZURE_API_USER }}
-          key: ${{ secrets.AZURE_API_SSH_KEY }}
-          port: ${{ secrets.AZURE_API_PORT || 22 }}
-          timeout: 30s
-          command_timeout: 10m
-          envs: DEPLOY_BRANCH,DEPLOY_DIRECTORY,APP_PORT,SYSTEMD_SERVICE,RELEASE_SHA,NODE_ENV,SCHEDULED_JOBS_ENABLED,TELEGRAM_ENABLED,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_WEBHOOK_SECRET,FRONTEND_URL,CORS_ALLOWED_ORIGINS
-          script: |
-            set -eu
-            test -n "$DEPLOY_DIRECTORY"
-            test -n "$APP_PORT"
-            test -n "$SYSTEMD_SERVICE"
-            test -n "$RELEASE_SHA"
-            test -n "$SCHEDULED_JOBS_ENABLED"
-            test -n "$TELEGRAM_ENABLED"
-            if test "$TELEGRAM_ENABLED" = "true"; then
-              test -n "$TELEGRAM_BOT_TOKEN"
-              test -n "$TELEGRAM_BOT_USERNAME"
-              test -n "$TELEGRAM_WEBHOOK_SECRET"
-            fi
-            test -n "$FRONTEND_URL"
-            test -n "$CORS_ALLOWED_ORIGINS"
-            case "$APP_PORT" in
-              *[!0-9]*|'') echo "APP_PORT must be numeric" >&2; exit 1 ;;
-            esac
-            case "$DEPLOY_DIRECTORY" in
-              /root/Kanvise-*) ;;
-              *) echo "DEPLOY_DIRECTORY must be an isolated /root/Kanvise-* directory" >&2; exit 1 ;;
-            esac
-            case "$SYSTEMD_SERVICE" in
-              kanvise-production-api|kanvise-staging-api) ;;
-              *) echo "Unexpected systemd service" >&2; exit 1 ;;
-            esac
-            case "$RELEASE_SHA" in
-              *[!0-9a-f]*|'') echo "Invalid release SHA" >&2; exit 1 ;;
-            esac
-            RELEASE_DIRECTORY="/tmp/kanvise-api-${RELEASE_SHA}"
-            test -f "$RELEASE_DIRECTORY/dist/index.js"
-            sudo -n true
-            if test -n "$(sudo git -C "$DEPLOY_DIRECTORY" status --porcelain)"; then
-              echo "Refusing to deploy over a dirty checkout: $DEPLOY_DIRECTORY" >&2
-              exit 1
-            fi
-            sudo git -C "$DEPLOY_DIRECTORY" fetch origin "$DEPLOY_BRANCH"
-            sudo git -C "$DEPLOY_DIRECTORY" checkout "$DEPLOY_BRANCH"
-            sudo git -C "$DEPLOY_DIRECTORY" pull --ff-only origin "$DEPLOY_BRANCH"
-            sudo npm ci --prefix "$DEPLOY_DIRECTORY" --workspace=api --omit=dev --ignore-scripts --no-audit --no-fund
-            sudo rm -rf "$DEPLOY_DIRECTORY/api/dist.previous"
-            if test -d "$DEPLOY_DIRECTORY/api/dist"; then
-              sudo mv "$DEPLOY_DIRECTORY/api/dist" "$DEPLOY_DIRECTORY/api/dist.previous"
-            fi
-            # An older broken deployment could leave api/dist/dist behind.
-            # Ensure the target itself is absent so mv performs a rename rather
-            # than nesting the new artifact inside an existing directory.
-            sudo rm -rf "$DEPLOY_DIRECTORY/api/dist"
-            sudo mv "$RELEASE_DIRECTORY/dist" "$DEPLOY_DIRECTORY/api/dist"
-            if ! sudo systemctl restart "$SYSTEMD_SERVICE" || ! curl --fail --show-error --silent --retry 8 --retry-connrefused --retry-delay 2 "http://127.0.0.1:${APP_PORT}/health"; then
-              sudo rm -rf "$DEPLOY_DIRECTORY/api/dist"
-              if test -d "$DEPLOY_DIRECTORY/api/dist.previous"; then
-                sudo mv "$DEPLOY_DIRECTORY/api/dist.previous" "$DEPLOY_DIRECTORY/api/dist"
-                sudo systemctl restart "$SYSTEMD_SERVICE"
-              fi
-              exit 1
-            fi
-            sudo rm -rf "$DEPLOY_DIRECTORY/api/dist.previous" "$RELEASE_DIRECTORY"
+        run: bash scripts/operations/deploy-api-on-oracle.sh
 
       - name: Verify deployed API health
         env:
           API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+          EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          EXPECTED_ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
         run: |
           test -n "$API_HEALTH_URL"
-          curl --fail --show-error --silent --retry 5 --retry-delay 5 "$API_HEALTH_URL/health"
+          curl --fail --show-error --silent --retry 5 --retry-delay 5 "$API_HEALTH_URL/health" \
+            | node -e '
+                let body = "";
+                process.stdin.on("data", chunk => { body += chunk });
+                process.stdin.on("end", () => {
+                  const health = JSON.parse(body);
+                  if (health.status !== "ok" || health.release_sha !== process.env.EXPECTED_RELEASE_SHA || health.environment !== process.env.EXPECTED_ENVIRONMENT) process.exit(1);
+                });
+              '

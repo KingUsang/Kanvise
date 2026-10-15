@@ -4,14 +4,11 @@ import PreparingClassroom from './PreparingClassroom'
 
 interface PageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ start?: string }>
 }
 
-export default async function Page({ params, searchParams }: PageProps) {
+export default async function Page({ params }: PageProps) {
   const resolvedParams = await params
-  const resolvedSearchParams = await searchParams
   const classId = resolvedParams.id
-  const isStarting = resolvedSearchParams.start === 'true' // Tutor provides ?start=true
 
   // ── 1. Get the authenticated user's session from the cookie ────────────────
   const cookieStore = await cookies()
@@ -96,11 +93,7 @@ export default async function Page({ params, searchParams }: PageProps) {
   // retries and the eventual handoff to the provider UI.
   return <PreparingClassroom
     classId={classId}
-    isStarting={isStarting}
     classTitle="Your live class"
     courseName={null}
-    isHost={isStarting}
-    studentName={session.user.user_metadata?.first_name || 'Tutor'}
-    studentId={session.user.id}
   />
 }

@@ -211,7 +211,9 @@ export function createGuestRoomRequest(input: {
   const features = enrolledRoomFeatures()
   features.enable_analytics = false
   features.recording_features = {
-    is_allow: false, is_allow_cloud: false, is_allow_local: false,
+    // Shared classes are recordable too. Only the authenticated tutor receives
+    // moderator permissions, so anonymous guests cannot control recording.
+    is_allow: true, is_allow_cloud: true, is_allow_local: false,
     enable_auto_cloud_recording: false, only_record_admin_webcams: false,
   }
   features.insights_features = { is_allow: false }

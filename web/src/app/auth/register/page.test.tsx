@@ -103,7 +103,7 @@ describe('tutoring agency registration', () => {
 
     expect(screen.queryByLabelText('Tutoring agency name')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Choose a programme first' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Choose a class first' })).toBeInTheDocument()
   })
 
   it('keeps educator choices out of contextual learner registration', () => {

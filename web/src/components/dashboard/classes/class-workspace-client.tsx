@@ -39,6 +39,7 @@ import { SubmissionsClient } from "../assignments/submissions-client";
 import { AssignmentsClient } from "@/components/dashboard/assignments/assignments-client";
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
+import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
 
 type Subject = { id: string; name: string; tutor_ids?: string[] };
 type TutorPerson = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string };
@@ -106,6 +107,13 @@ type LearnerSignal = {
   attendance_rate: number | null;
   last_activity: string | null;
   attention: "Needs attention" | "On track" | "No signal yet";
+};
+type StudentRosterEntry = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  pending_enrolments?: Array<{ programme_id?: string | null }>;
 };
 type Topic = {
   topic: string;
@@ -202,6 +210,10 @@ export function ClassWorkspaceClient({
   const [selectedLearnerId, setSelectedLearnerId] = useState<string | null>(
     null,
   );
+  const navigate = (href: string) => {
+    startNavigationProgress();
+    router.push(href);
+  };
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
@@ -238,6 +250,14 @@ export function ClassWorkspaceClient({
     refetchOnWindowFocus: true,
   });
   const data = classQuery.data;
+  useEffect(() => {
+    if (!data || activeSubject === 'all' || data.courses.some((subject) => subject.id === activeSubject)) return
+    setActiveSubject('all')
+    const url = new URL(window.location.href)
+    url.searchParams.delete('subject')
+    url.searchParams.delete('course_id')
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  }, [activeSubject, data])
   const tutorsQuery = useQuery({
     queryKey: ['class-tutors', classId],
     queryFn: async () => {
@@ -248,6 +268,17 @@ export function ClassWorkspaceClient({
     },
     enabled: activeTab === 'tutors' && canManageTutors,
     staleTime: 60_000,
+  });
+  const studentRosterQuery = useQuery({
+    queryKey: ['class-student-roster', classId],
+    queryFn: async () => {
+      const response = await authenticatedApiFetch(`${api}/users/students`);
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Could not load invited students');
+      return (body?.data || []) as StudentRosterEntry[];
+    },
+    enabled: activeTab === 'learners' && canManageStudents,
+    staleTime: 30_000,
   });
   const scheduleQuery = useQuery({
     queryKey: ["class-schedule", classId],
@@ -379,6 +410,7 @@ export function ClassWorkspaceClient({
       ? null
       : data?.courses.find((subject) => subject.id === activeSubject);
   const selectedName = selectedSubject?.name || "All subjects";
+  const subjectSuffix = activeSubject === "all" ? "" : `&subject=${encodeURIComponent(activeSubject)}`;
   const classSessions = sessions.filter(
     (session) =>
       subjectIds.has(session.course_id) &&
@@ -390,11 +422,7 @@ export function ClassWorkspaceClient({
     );
     const isClassWide = mock.programme_id === classId;
     if (!belongsToVisibleSubject && !isClassWide) return false;
-    // Class-wide assessments apply across its subjects; a subject-scoped view
-    // keeps the matching subject plus any assessment that belongs to the whole class.
-    return (
-      activeSubject === "all" || mock.course_id === activeSubject || isClassWide
-    );
+    return activeSubject === "all" || mock.course_id === activeSubject;
   });
   const classAssignments = assignments.filter(
     (assignment) =>
@@ -475,7 +503,7 @@ export function ClassWorkspaceClient({
               <SubjectChip
                 label="All subjects"
                 active={activeSubject === "all"}
-                onClick={() => setActiveSubject("all")}
+                onClick={() => navigate(workspaceSubjectHref(classId, "all", activeTab))}
               >
                 All subjects
               </SubjectChip>
@@ -484,7 +512,7 @@ export function ClassWorkspaceClient({
                   key={subject.id}
                   label={subject.name}
                   active={activeSubject === subject.id}
-                  onClick={() => setActiveSubject(subject.id)}
+                  onClick={() => navigate(workspaceSubjectHref(classId, subject.id, activeTab))}
                 >
                   {subject.name}
                 </SubjectChip>
@@ -493,7 +521,9 @@ export function ClassWorkspaceClient({
           ) : null}
         </header>
         <div className="mt-2">
-          <WorkspaceRail classId={classId} activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} />
+          <WorkspaceRail activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} onSelect={(tab) => {
+            navigate(`/dashboard/classes/${classId}?tab=${tab}${activeSubject === 'all' ? '' : `&subject=${encodeURIComponent(activeSubject)}`}`)
+          }} />
           <div className="min-w-0">
             {activeTab === "overview" &&
               (scheduleQuery.isPending ||
@@ -513,16 +543,16 @@ export function ClassWorkspaceClient({
                   needsAttention={needsAttention}
                   selectedName={selectedName}
                   subjects={data.courses}
-                  onSelectSubject={setActiveSubject}
+                  onSelectSubject={(subjectId) => navigate(workspaceSubjectHref(classId, subjectId, 'overview'))}
                   onCreateAssessment={() => {
-                    router.push(
-                      `/dashboard/classes/${classId}?tab=assessments`,
+                    navigate(
+                      `/dashboard/classes/${classId}?tab=assessments${subjectSuffix}`,
                     );
                     setOpenAssessmentCreator((value) => value + 1);
                   }}
                   onOpenSchedule={() => setShowSessionComposer(true)}
                   onAddMaterial={() => {
-                    router.push(`/dashboard/classes/${classId}?tab=materials`);
+                    navigate(`/dashboard/classes/${classId}?tab=materials`);
                     setShowMaterialUpload(true);
                   }}
                 />
@@ -559,12 +589,12 @@ export function ClassWorkspaceClient({
                     onAddSession={() => setShowSessionComposer(true)}
                     onOpenSession={(session) =>
                       navigate(
-                        `/dashboard/classes/${classId}?tab=schedule&session_id=${session.id}`,
+                        `/dashboard/classes/${classId}?tab=schedule&session_id=${session.id}${subjectSuffix}`,
                       )
                     }
                     onStartSession={(session) =>
                       window.open(
-                        `/class/${session.id}${session.status === "live" ? "" : "?start=true"}`,
+                        `/class/${session.id}`,
                         "_blank",
                         "noopener,noreferrer"
                       )
@@ -575,7 +605,7 @@ export function ClassWorkspaceClient({
             {activeTab === "assessments" &&
               (assessmentView === "assignment" && assessmentId ? (
                 <section className="mt-5">
-                  <ClassAssessmentBackButton classId={classId} />
+                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   <SubmissionsClient
                     assignmentId={assessmentId}
                     session={{ access_token: token }}
@@ -584,7 +614,7 @@ export function ClassWorkspaceClient({
                 </section>
               ) : assessmentView === "quiz" && assessmentId ? (
                 <section className="mt-5">
-                  <ClassAssessmentBackButton classId={classId} />
+                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   {assessmentMode === "builder" ? (
                     <MockBuilderClient token={token} embedded />
                   ) : (
@@ -612,7 +642,7 @@ export function ClassWorkspaceClient({
                       type="button"
                       onClick={() =>
                         navigate(
-                          `/dashboard/classes/${classId}?tab=assessments`,
+                          `/dashboard/classes/${classId}?tab=assessments${subjectSuffix}`,
                         )
                       }
                       className="rounded-lg border border-[#312783] px-3.5 py-2 text-sm font-bold text-[#312783] hover:bg-[#f1efff]"
@@ -624,7 +654,7 @@ export function ClassWorkspaceClient({
                 </section>
               ) : isCreatingAssignment ? (
                 <section className="mt-5">
-                  <ClassAssessmentBackButton classId={classId} />
+                  <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   <AssignmentsClient embedded />
                 </section>
               ) : mocksQuery.isPending || assignmentsQuery.isPending ? (
@@ -638,20 +668,20 @@ export function ClassWorkspaceClient({
                     ]}
                     onCreate={() =>
                       navigate(
-                        `/dashboard/classes/${classId}?tab=assessments&create=quiz&class_id=${encodeURIComponent(classId)}${activeSubject === "all" ? "" : `&course_id=${encodeURIComponent(activeSubject)}`}`,
+                        `/dashboard/classes/${classId}?tab=assessments&create=quiz&class_id=${encodeURIComponent(classId)}${activeSubject === "all" ? "" : `&course_id=${encodeURIComponent(activeSubject)}&subject=${encodeURIComponent(activeSubject)}`}`,
                       )
                     }
                     onCreateAssignment={() =>
                       navigate(
-                        `/dashboard/classes/${classId}?tab=assessments&create=assignment&class_id=${encodeURIComponent(classId)}${activeSubject === "all" ? "" : `&course_id=${encodeURIComponent(activeSubject)}`}`,
+                        `/dashboard/classes/${classId}?tab=assessments&create=assignment&class_id=${encodeURIComponent(classId)}${activeSubject === "all" ? "" : `&course_id=${encodeURIComponent(activeSubject)}&subject=${encodeURIComponent(activeSubject)}`}`,
                       )
                     }
                     openCreateSignal={openAssessmentCreator}
                     onOpen={(assessment) =>
                       navigate(
                         assessment.type === "assignment"
-                          ? `/dashboard/classes/${classId}?tab=assessments&assessment=assignment&assessment_id=${assessment.id}`
-                          : `/dashboard/classes/${classId}?tab=assessments&assessment=quiz&assessment_id=${assessment.id}&assessment_mode=${assessment.status === "draft" ? "builder" : "results"}&class_id=${classId}`,
+                          ? `/dashboard/classes/${classId}?tab=assessments&assessment=assignment&assessment_id=${assessment.id}${subjectSuffix}`
+                          : `/dashboard/classes/${classId}?tab=assessments&assessment=quiz&assessment_id=${assessment.id}&assessment_mode=${assessment.status === "draft" ? "builder" : "results"}&class_id=${classId}${subjectSuffix}${activeSubject === "all" ? "" : `&course_id=${encodeURIComponent(activeSubject)}`}`,
                       )
                     }
                   />
@@ -683,12 +713,12 @@ export function ClassWorkspaceClient({
                 </div>
               ))}
             {activeTab === "learners" &&
-              (insightsQuery.isPending ? (
+              (insightsQuery.isPending || (canManageStudents && studentRosterQuery.isPending) ? (
                 <WorkspaceSectionLoading cards={3} />
               ) : (
                 <div className="mt-5">
                   <ClassLearnersPanel
-                    learners={(insights?.learners || []).map(toLearnerRow)}
+                    learners={mergeLearnersWithPendingInvitations(insights?.learners || [], studentRosterQuery.data || [], classId)}
                     onInvite={
                       canManageStudents
                         ? () => setShowStudentInvite(true)
@@ -703,7 +733,7 @@ export function ClassWorkspaceClient({
             {activeTab === 'tutors' && canManageTutors ? (
               <ClassTutorsPanel
                 classId={classId}
-                subjects={data.courses}
+                subjects={activeSubject === 'all' ? data.courses : data.courses.filter(subject => subject.id === activeSubject)}
                 tutors={tutorsQuery.data || []}
                 loading={tutorsQuery.isPending}
                 onChanged={async () => {
@@ -747,7 +777,7 @@ export function ClassWorkspaceClient({
       <ClassMaterialUploadDialog
         open={showMaterialUpload}
         onClose={() => setShowMaterialUpload(false)}
-        subjects={data.courses}
+        subjects={activeSubject === 'all' ? data.courses : data.courses.filter(subject => subject.id === activeSubject)}
         initialSubjectId={activeSubject === "all" ? null : activeSubject}
         api={api}
         onUploaded={async () => {
@@ -771,6 +801,9 @@ export function ClassWorkspaceClient({
           await Promise.all([
             queryClient.invalidateQueries({
               queryKey: ["class-insights", classId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["class-student-roster", classId],
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.summary,
@@ -801,7 +834,7 @@ export function ClassWorkspaceClient({
           ]);
         }}
         classId={classId}
-        subjects={data.courses}
+        subjects={activeSubject === 'all' ? data.courses : data.courses.filter(subject => subject.id === activeSubject)}
         initialCourseId={activeSubject === "all" ? undefined : activeSubject}
         viewerId={viewerId}
         isTutor={isTutor}
@@ -874,15 +907,15 @@ function ClassTutorsPanel({
 }
 
 function WorkspaceRail({
-  classId,
   activeTab,
   isOneToOne,
   canManageTutors,
+  onSelect,
 }: {
-  classId: string;
   activeTab: Tab;
   isOneToOne: boolean;
   canManageTutors: boolean;
+  onSelect: (tab: Tab) => void;
 }) {
   return (
     <section className="border-b border-dashboard-outline">
@@ -891,14 +924,15 @@ function WorkspaceRail({
         className="flex gap-1 overflow-x-auto [scrollbar-width:none]"
       >
         {tabs.filter(tab => tab.id !== 'tutors' || canManageTutors).map((tab) => (
-          <Link
+          <button
+            type="button"
             key={tab.id}
-            href={`/dashboard/classes/${classId}?tab=${tab.id}`}
+            onClick={() => onSelect(tab.id)}
             aria-current={activeTab === tab.id ? "page" : undefined}
             className={`relative min-h-12 shrink-0 border-b-[3px] px-4 py-3 text-left text-sm font-semibold transition ${activeTab === tab.id ? "border-[#994704] text-[#211969]" : "border-transparent text-[#625e69] hover:text-[#211969]"}`}
           >
             {tab.id === "learners" && isOneToOne ? "Student" : tab.label}
-          </Link>
+          </button>
         ))}
       </nav>
     </section>
@@ -1001,20 +1035,22 @@ function LearnerDetailSheet({
   );
 }
 
-function navigate(href: string) {
-  window.location.assign(href);
-}
-
-function ClassAssessmentBackButton({ classId }: { classId: string }) {
+function ClassAssessmentBackButton({ classId, subjectId, onNavigate }: { classId: string; subjectId: string; onNavigate: (href: string) => void }) {
   return (
     <button
       type="button"
-      onClick={() => navigate(`/dashboard/classes/${classId}?tab=assessments`)}
+      onClick={() => onNavigate(`/dashboard/classes/${classId}?tab=assessments${subjectId === 'all' ? '' : `&subject=${encodeURIComponent(subjectId)}`}`)}
       className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#312783] bg-white px-3.5 text-sm font-bold text-[#312783] hover:bg-[#f1efff]"
     >
       <ArrowLeft size={16} /> Back to assessments
     </button>
   );
+}
+
+function workspaceSubjectHref(classId: string, subjectId: string, tab: Tab) {
+  const params = new URLSearchParams({ tab })
+  if (subjectId !== 'all') params.set('subject', subjectId)
+  return `/dashboard/classes/${classId}?${params.toString()}`
 }
 const weekdays = [
   "Monday",
@@ -1152,6 +1188,18 @@ function toLearnerRow(learner: LearnerSignal): LearnerRow {
           : "no_signal",
     attentionReason: attentionReason(learner),
   };
+}
+function mergeLearnersWithPendingInvitations(learners: LearnerSignal[], students: StudentRosterEntry[], classId: string): LearnerRow[] {
+  const activeIds = new Set(learners.map((learner) => learner.id));
+  const pending = students
+    .filter((student) => !activeIds.has(student.id) && student.pending_enrolments?.some((item) => item.programme_id === classId))
+    .map((student): LearnerRow => ({
+      id: student.id,
+      name: [student.first_name, student.last_name].filter(Boolean).join(' ') || student.email || 'Invited student',
+      attention: 'no_signal',
+      invitationPending: true,
+    }));
+  return [...pending, ...learners.map(toLearnerRow)];
 }
 function ClassPerformance({
   insights,
