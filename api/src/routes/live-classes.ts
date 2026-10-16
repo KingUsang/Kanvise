@@ -549,7 +549,12 @@ liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
 // The canonical classroom URL never carries a role or `start=true` hint. The
 // server resolves the action from the durable class and authenticated profile.
 liveClassesRouter.post('/:id/enter', async (c) => {
-  const access = await requireClassroom(c)
+  const user = c.get('user')
+  const wantsAdminTakeover = c.req.query('takeover') === '1'
+  if (wantsAdminTakeover && user.role !== 'admin') {
+    return c.json({ error: 'Only an administrator can take over this class', code: 'ADMIN_REQUIRED' }, 403)
+  }
+  const access = await requireClassroom(c, wantsAdminTakeover ? 'takeover' : 'view')
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
 
@@ -574,7 +579,7 @@ liveClassesRouter.post('/:id/enter', async (c) => {
       ? 'Your tutor is opening the classroom.'
       : 'Your tutor has not started this live class yet.',
     code: 'WAITING_FOR_HOST',
-    data: { state: 'waiting_for_host', retry_after_ms: 4_000 },
+    data: { state: 'waiting_for_host', retry_after_ms: 4_000, can_takeover: user.role === 'admin' },
   }, 409)
 })
 
