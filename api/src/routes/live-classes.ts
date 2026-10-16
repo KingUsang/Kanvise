@@ -387,7 +387,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, classroom_provider, provider_room_status, provider_room_checked_at, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
 
@@ -427,6 +427,8 @@ liveClassesRouter.get('/', async (c) => {
       && !['active'].includes(item.provider_room_status) ? 'scheduled' : presentationStatus(item.status),
     recording_status: Array.isArray(item.recording) ? item.recording[0]?.status || null : item.recording?.status || null,
     recap_status: Array.isArray(item.recap) ? item.recap[0]?.status || null : item.recap?.status || null,
+    share_url: ['tutor', 'admin'].includes(user.role) ? classShareUrl(item) : null,
+    share_token_encrypted: undefined,
     recording: undefined,
     recap: undefined,
   }))
@@ -451,7 +453,13 @@ liveClassesRouter.delete('/series/:seriesId', requireRole('admin', 'tutor'), asy
 liveClassesRouter.get('/:id', async (c) => {
   const access = await requireClassroom(c, 'view', true)
   if ('response' in access) return access.response
-  return c.json({ data: { ...access.liveClass, status: presentationStatus(access.liveClass.status) } })
+  const user = c.get('user')
+  return c.json({ data: {
+    ...access.liveClass,
+    status: presentationStatus(access.liveClass.status),
+    share_url: ['tutor', 'admin'].includes(user.role) ? classShareUrl(access.liveClass as any) : null,
+    share_token_encrypted: undefined,
+  } })
 })
 
 // ── PATCH /live-classes/:id — Update a scheduled class (Admin, Tutor) ──────
