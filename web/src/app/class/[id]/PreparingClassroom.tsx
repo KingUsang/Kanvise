@@ -20,8 +20,10 @@ export default function PreparingClassroom({ classId, classTitle, courseName }: 
   const [phase, setPhase] = useState<Phase>("connecting");
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState<ClassroomToken | null>(null);
+  const [canTakeover, setCanTakeover] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const requestRef = useRef<Promise<ClassroomToken | null> | null>(null);
+  const takeoverRef = useRef(false);
   const supabaseRef = useRef(createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,7 +35,8 @@ export default function PreparingClassroom({ classId, classTitle, courseName }: 
       if (!navigator.onLine) { setPhase("offline"); return null; }
       const { data: { session } } = await supabaseRef.current.auth.getSession();
       if (!session) throw new Error("Your session has expired. Sign in again to continue.");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/enter`, {
+      const takeover = takeoverRef.current ? "?takeover=1" : "";
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/enter${takeover}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
         cache: "no-store", signal,
@@ -44,6 +47,7 @@ export default function PreparingClassroom({ classId, classTitle, courseName }: 
         return null;
       }
       if (response.status === 409 && body?.data?.state === "waiting_for_host") {
+        setCanTakeover(Boolean(body?.data?.can_takeover));
         setPhase("waiting_for_host");
         return null;
       }
@@ -84,6 +88,14 @@ export default function PreparingClassroom({ classId, classTitle, courseName }: 
     };
   }, [enter, retryKey]);
 
+  const startAsAdministrator = () => {
+    takeoverRef.current = true;
+    setCanTakeover(false);
+    setError(null);
+    setPhase("connecting");
+    setRetryKey((value) => value + 1);
+  };
+
   if (ready?.provider === "plugnmeet" && ready.join_token && ready.server_url && ready.client_files) {
     return <PlugNmeetClassroom
       roomId={ready.room_id || classId} joinToken={ready.join_token}
@@ -110,6 +122,7 @@ export default function PreparingClassroom({ classId, classTitle, courseName }: 
       </div>
       {phase === "offline" ? <p className="mt-2 text-sm text-[#77727e]">We’ll reconnect when your connection returns.</p> : null}
       <div className="mt-8 flex justify-center gap-3">
+        {canTakeover && phase === "waiting_for_host" ? <button type="button" onClick={startAsAdministrator} className="rounded-lg bg-[#312783] px-4 py-2.5 text-sm font-semibold text-white">Start as administrator</button> : null}
         {error ? <button type="button" onClick={() => { setError(null); setPhase("connecting"); setRetryKey((value) => value + 1); }} className="rounded-lg bg-[#312783] px-4 py-2.5 text-sm font-semibold text-white">Try again</button> : null}
         <Link href="/dashboard" className="rounded-lg border border-[#d8d3d0] px-4 py-2.5 text-sm font-semibold text-[#312783]">Back</Link>
       </div>
