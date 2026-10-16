@@ -151,7 +151,11 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
       disposed = true
       window.clearTimeout(startupTimer)
       window.clearTimeout(readyTimer)
-      try { window.plugNmeet?.leave?.() } catch { /* best effort */ }
+      // A React teardown also runs during refresh/reload. Calling PlugNmeet's
+      // explicit leave action here races the replacement connection and can
+      // strand the refreshed client on its disconnected screen. The browser
+      // transport closes naturally; reserve leave() for the user's confirmed
+      // Leave class action above.
       for (const node of cssNodes) node.remove()
       for (const node of scriptNodes) node.remove()
       document.cookie = `pnm_access_token=; Path=/; Max-Age=0; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
