@@ -16,6 +16,12 @@ The instance configuration must use 480p output with the
 Store: never bake API keys, R2 keys, or the recorder callback secret into an
 AMI or this repository.
 
+Keep `plugnmeet-recorder-capture.service` enabled at boot. When capacity drops
+to zero, the controller stops (but does not disable) capture before starting
+the transcoder and idle-stop worker. Disabling capture here leaves the next
+cold boot without a recorder because SSM is not online when the EC2 start
+request returns.
+
 Required API environment variables:
 
 - `RECORDER_FLEET_CONTROLLER_URL` — Lambda Function URL for the instance controller.
