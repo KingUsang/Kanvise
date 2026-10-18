@@ -238,20 +238,43 @@ export function createGuestRoomRequest(input: {
 async function request<T>(path: string, payload: Record<string, unknown>): Promise<PlugNmeetResponse<T>> {
   const { serverUrl, apiKey, apiSecret } = config()
   const body = JSON.stringify(payload)
-  const response = await fetch(`${serverUrl}/auth${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'API-KEY': apiKey,
-      'HASH-SIGNATURE': signPlugNmeetBody(body, apiSecret),
-    },
-    body,
-  })
-  const json = await response.json().catch(() => ({})) as PlugNmeetResponse<T>
-  if (!response.ok || json.status === false) {
-    throw new Error(`PlugNmeet ${path} failed (${response.status}): ${json.msg || 'unknown error'}`)
+  const roomId = typeof payload.room_id === 'string' ? payload.room_id : undefined
+  const startedAt = Date.now()
+  try {
+    const response = await fetch(`${serverUrl}/auth${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'API-KEY': apiKey,
+        'HASH-SIGNATURE': signPlugNmeetBody(body, apiSecret),
+      },
+      body,
+    })
+    const json = await response.json().catch(() => ({})) as PlugNmeetResponse<T>
+    if (!response.ok || json.status === false) {
+      console.error('live_class.plugnmeet_api_rejected', {
+        operation: path,
+        room_id: roomId,
+        http_status: response.status,
+        provider_status: json.status,
+        provider_status_code: json.status_code,
+        provider_message: json.msg || 'unknown error',
+        elapsed_ms: Date.now() - startedAt,
+      })
+      throw new Error(`PlugNmeet ${path} failed (${response.status}): ${json.msg || 'unknown error'}`)
+    }
+    return json
+  } catch (error) {
+    if (!(error instanceof Error && error.message.startsWith(`PlugNmeet ${path} failed`))) {
+      console.error('live_class.plugnmeet_api_transport_failed', {
+        operation: path,
+        room_id: roomId,
+        elapsed_ms: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+    throw error
   }
-  return json
 }
 
 export const plugNmeet = {

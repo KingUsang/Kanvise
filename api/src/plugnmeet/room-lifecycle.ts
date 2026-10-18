@@ -20,7 +20,14 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
     const roomId = String(liveClass.provider_room_id || liveClass.id)
     try {
       checked += 1
-      if (await plugNmeet.isRoomActive(roomId)) {
+      const active = await plugNmeet.isRoomActive(roomId)
+      console.info('live_class.plugnmeet_reconciliation_checked', {
+        class_id: liveClass.id,
+        room_id: roomId,
+        class_status: liveClass.status,
+        provider_active: active,
+      })
+      if (active) {
         // `isRoomActive` proves the provider room exists, not that a tutor or
         // learner joined. Only webhooks promote ready -> live.
         await (supabase as any).from('live_classes').update({
@@ -37,6 +44,9 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
           p_live_class_id: liveClass.id, p_provider_room_id: roomId,
         })
         if (resetError) throw resetError
+        console.warn('live_class.plugnmeet_recovery_prepared', {
+          class_id: liveClass.id, room_id: roomId, previous_status: liveClass.status, reason: 'provider_room_inactive',
+        })
         reset += 1
         continue
       }
@@ -52,6 +62,9 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
           p_live_class_id: liveClass.id, p_provider_room_id: roomId,
         })
         if (recoveryError) throw recoveryError
+        console.warn('live_class.plugnmeet_recovery_prepared', {
+          class_id: liveClass.id, room_id: roomId, previous_status: liveClass.status, reason: 'provider_room_inactive',
+        })
         reset += 1
       }
     } catch (error) {
@@ -68,7 +81,13 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
         provider_error_message: error instanceof Error ? error.message.slice(0, 500) : 'Provider state could not be checked',
       }).eq('id', liveClass.id).eq('status', liveClass.status)
       if (terminal) interrupted += 1
-      console.warn('[plugnmeet] room lifecycle reconciliation skipped room', { roomId, error })
+      console.warn('live_class.plugnmeet_reconciliation_failed', {
+        class_id: liveClass.id,
+        room_id: roomId,
+        class_status: liveClass.status,
+        marked_interrupted: terminal,
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
   return { name: 'plugnmeet_room_lifecycle', checked, completed, reset, interrupted }
