@@ -52,6 +52,7 @@ webhooksRouter.post('/plugnmeet', async (c) => {
   const eventName = String(event.event || '')
   const roomId = String(event.room?.room_id || event.room?.id || event.room_id || '') || null
   if (!eventId || !eventName) return c.text('OK', 200)
+  console.info('live_class.plugnmeet_webhook_received', { event_id: eventId, event_name: eventName, room_id: roomId })
 
   const { data: inserted, error: inboxError } = await (supabase as any).from('plugnmeet_webhook_inbox').upsert({
     provider_event_id: eventId,
@@ -75,6 +76,9 @@ webhooksRouter.post('/plugnmeet', async (c) => {
     .or(`provider_room_id.eq.${roomId},id.eq.${roomId}`)
     .maybeSingle()
   if (!liveClass || liveClass.classroom_provider !== 'plugnmeet') return c.text('OK', 200)
+  console.info('live_class.plugnmeet_webhook_matched', {
+    event_id: eventId, event_name: eventName, room_id: roomId, class_id: liveClass.id, class_status: liveClass.status,
+  })
 
   const participantIdentity = String(event.participant?.user_id || event.participant?.identity || '')
   const guestMatch = /^guest_([0-9a-f-]{36})$/i.exec(participantIdentity)
@@ -139,9 +143,19 @@ webhooksRouter.post('/plugnmeet', async (c) => {
     // PlugNmeet rooms are disposable. Network loss can leave an older room
     // empty and trigger its provider timeout; that must not end the durable
     // Kanvise class. Atomically prepare a new generation for the tutor.
-    await (supabase as any).rpc('prepare_live_class_provider_recovery', {
+    const { error: recoveryError } = await (supabase as any).rpc('prepare_live_class_provider_recovery', {
       p_live_class_id: liveClass.id,
       p_provider_room_id: roomId,
+    })
+    if (recoveryError) {
+      console.error('live_class.plugnmeet_webhook_recovery_failed', {
+        event_id: eventId, room_id: roomId, class_id: liveClass.id, class_status: liveClass.status,
+        error: recoveryError.message || String(recoveryError),
+      })
+      throw recoveryError
+    }
+    console.warn('live_class.plugnmeet_webhook_recovery_prepared', {
+      event_id: eventId, room_id: roomId, class_id: liveClass.id, previous_status: liveClass.status,
     })
   }
   if (eventName === 'room_finished') {

@@ -608,6 +608,16 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
 
   if (classroomProvider === 'plugnmeet') {
     if (liveClass.status === 'live' || liveClass.status === 'ready') {
+      console.info('live_class.reentry_requested', {
+        class_id: liveClass.id,
+        room_id: liveClass.provider_room_id || liveClass.id,
+        class_status: liveClass.status,
+        provider_room_status: liveClass.provider_room_status,
+        provider_room_checked_at: liveClass.provider_room_checked_at,
+        actor_id: user.id,
+        actor_role: user.role,
+        entry_route: 'start',
+      })
       wakeRecorderWithoutBlockingClassroom()
       const worker = await ensurePlugNmeetReady()
       if (worker.state === 'preparing') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
@@ -662,6 +672,16 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
 
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
     if (liveClass.status !== 'live') return c.json({ error: 'Your tutor has not started this live class yet. Please check back shortly.', code: 'CLASS_NOT_LIVE' }, 409)
+    console.info('live_class.reentry_requested', {
+      class_id: liveClass.id,
+      room_id: liveClass.provider_room_id || liveClass.id,
+      class_status: liveClass.status,
+      provider_room_status: liveClass.provider_room_status,
+      provider_room_checked_at: liveClass.provider_room_checked_at,
+      actor_id: user.id,
+      actor_role: user.role,
+      entry_route: 'join',
+    })
     wakeRecorderWithoutBlockingClassroom()
     const worker = await ensurePlugNmeetReady()
     if (worker.state === 'preparing') return c.json({ data: { id: liveClass.id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)

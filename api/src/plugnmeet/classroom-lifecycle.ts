@@ -65,12 +65,19 @@ async function classroomVmAction(action: 'start' | 'deallocate', fetcher: Fetche
 }
 
 export async function ensurePlugNmeetReady(fetcher: Fetcher = fetch, env = process.env): Promise<ClassroomReadiness> {
-  if (!enabled(env) || await isPlugNmeetHealthy(fetcher, env)) return { state: 'ready' }
+  const workerControlEnabled = enabled(env)
+  const healthy = await isPlugNmeetHealthy(fetcher, env)
+  if (!workerControlEnabled || healthy) return { state: 'ready' }
+  console.warn('live_class.plugnmeet_health_check_failed', { worker_control_enabled: workerControlEnabled })
   if (!startInFlight) startInFlight = classroomVmAction('start', fetcher, env).finally(() => { startInFlight = null })
   try {
     await startInFlight
+    console.info('live_class.plugnmeet_worker_start_requested')
     return { state: 'preparing' }
-  } catch {
+  } catch (error) {
+    console.error('live_class.plugnmeet_worker_start_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return { state: 'unavailable', message: 'We could not start the classroom just now. Please try again in a moment.' }
   }
 }
