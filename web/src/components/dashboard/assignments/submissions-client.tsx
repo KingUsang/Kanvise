@@ -10,8 +10,7 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-export function SubmissionsClient({ assignmentId, session, embedded = false }: { assignmentId: string; session: any; embedded?: boolean }) {
-  const fetch = authenticatedApiFetch;
+export function SubmissionsClient({ assignmentId, embedded = false }: { assignmentId: string; embedded?: boolean }) {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [assignment, setAssignment] = useState<any>(null);
   const [summary, setSummary] = useState({ total_submitted: 0, total_reviewed: 0 });
@@ -24,16 +23,10 @@ export function SubmissionsClient({ assignmentId, session, embedded = false }: {
   const [feedback, setFeedback] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const token = session?.access_token;
-
   const fetchSubmissions = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments/${assignmentId}/submissions`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments/${assignmentId}/submissions`);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || "Failed to load submissions");
@@ -57,10 +50,8 @@ export function SubmissionsClient({ assignmentId, session, embedded = false }: {
   };
 
   useEffect(() => {
-    if (token) {
-      fetchSubmissions();
-    }
-  }, [assignmentId, token]);
+    void fetchSubmissions();
+  }, [assignmentId]);
 
   const handleSelectSubmission = (sub: any) => {
     setSelectedSubmission(sub);
@@ -77,11 +68,10 @@ export function SubmissionsClient({ assignmentId, session, embedded = false }: {
 
     try {
       setIsSubmitting(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/submissions/${selectedSubmission.id}/review`, {
+      const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/submissions/${selectedSubmission.id}/review`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           score: Number(score),

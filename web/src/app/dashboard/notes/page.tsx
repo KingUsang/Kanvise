@@ -17,9 +17,13 @@ export default async function NotesPage() {
      redirect('/dashboard') // Students can't access this page yet, though they can fetch notes in their view.
   }
 
+  const profileId = typeof session.user.app_metadata?.profile_id === 'string'
+    ? session.user.app_metadata.profile_id
+    : null
+
   return (
     <div className="animate-in fade-in duration-500 h-full">
-      <NotesClient session={session} />
+      <NotesClient role={role} profileId={profileId} />
     </div>
   )
 }

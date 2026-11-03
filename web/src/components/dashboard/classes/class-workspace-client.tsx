@@ -574,7 +574,6 @@ export function ClassWorkspaceClient({
                   <ClassAssessmentBackButton classId={classId} />
                   <SubmissionsClient
                     assignmentId={assessmentId}
-                    session={{ access_token: token }}
                     embedded
                   />
                 </section>

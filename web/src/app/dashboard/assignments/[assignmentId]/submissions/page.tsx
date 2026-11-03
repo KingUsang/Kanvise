@@ -26,7 +26,7 @@ export default async function SubmissionsPage({
 
   return (
     <div className="h-full">
-      <SubmissionsClient assignmentId={assignmentId} session={session} />
+      <SubmissionsClient assignmentId={assignmentId} />
     </div>
   )
 }
