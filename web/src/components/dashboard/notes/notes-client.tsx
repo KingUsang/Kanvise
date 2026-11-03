@@ -37,6 +37,13 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
+async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.clone().json().catch(() => null) as { error?: unknown } | null
+  if (typeof body?.error === "string" && body.error) return body.error
+  if (response.status === 401) return "Your session has ended. Please sign in again."
+  return fallback
+}
+
 interface Note {
   id: string
   title: string
@@ -214,8 +221,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
       })
 
       if (!presignRes.ok) {
-        const error = await presignRes.json()
-        throw new Error(error.error || "Failed to get upload URL")
+        throw new Error(await responseErrorMessage(presignRes, "Failed to get upload URL"))
       }
 
       const { data: { presigned_url, file_key } } = await presignRes.json()
@@ -241,8 +247,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
       })
 
       if (!recordRes.ok) {
-        const error = await recordRes.json()
-        throw new Error(error.error || "Failed to record note")
+        throw new Error(await responseErrorMessage(recordRes, "Failed to record note"))
       }
 
       toast.success("Material shared with students.")
@@ -272,8 +277,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
       const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${noteId}`, { method: "DELETE" })
 
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || "Failed to delete note")
+        throw new Error(await responseErrorMessage(res, "Failed to delete note"))
       }
 
       toast.success("Resource deleted")

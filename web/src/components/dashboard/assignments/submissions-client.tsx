@@ -10,6 +10,13 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.clone().json().catch(() => null) as { error?: unknown } | null;
+  if (typeof body?.error === "string" && body.error) return body.error;
+  if (response.status === 401) return "Your session has ended. Please sign in again.";
+  return fallback;
+}
+
 export function SubmissionsClient({ assignmentId, embedded = false }: { assignmentId: string; embedded?: boolean }) {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [assignment, setAssignment] = useState<any>(null);
@@ -28,8 +35,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
       setIsLoading(true);
       const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments/${assignmentId}/submissions`);
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to load submissions");
+        throw new Error(await responseErrorMessage(res, "Failed to load submissions"));
       }
       const json = await res.json();
       setSubmissions(json.data || []);
@@ -80,8 +86,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to submit grade");
+        throw new Error(await responseErrorMessage(res, "Failed to submit grade"));
       }
 
       toast.success("Grade and feedback saved");
