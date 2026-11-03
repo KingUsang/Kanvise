@@ -136,15 +136,7 @@ function importErrorMessage(body: any, fileLabel: "PDF" | "Word document") {
   return `Kanvise could not import this ${fileLabel.toLowerCase()}. Your mock has not changed. Try another file or add questions manually.`;
 }
 
-export function MockBuilderClient({
-  token,
-  embedded = false,
-}: {
-  token: string;
-  embedded?: boolean;
-}) {
-  // Keep legacy call sites on the current Supabase session while this large
-  // editor is incrementally disentangled from its historical token prop.
+export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) {
   const fetch = authenticatedApiFetch;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -344,18 +336,11 @@ export function MockBuilderClient({
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const headers = { Authorization: `Bearer ${token}` };
         const [res, banksRes, classRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, { headers }),
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`,
-            { headers },
-          ),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks?page_size=100`),
           classContextId
-            ? fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/classes/${classContextId}`,
-                { headers },
-              )
+            ? fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${classContextId}`)
             : Promise.resolve(null),
         ]);
         if (!res.ok) {
@@ -437,15 +422,8 @@ export function MockBuilderClient({
       if (!editMockId) return;
       try {
         const [mockRes, assemblyRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}/assembly`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            },
-          ),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${editMockId}/assembly`),
         ]);
 
         if (mockRes.ok && assemblyRes.ok) {
@@ -608,7 +586,6 @@ export function MockBuilderClient({
       if (isEditMode) fetchMockData();
     });
   }, [
-    token,
     editMockId,
     isEditMode,
     router,
@@ -621,12 +598,7 @@ export function MockBuilderClient({
     const load = async () => {
       setIsLoadingBankQuestions(true);
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/question-banks/${selectedBankId}/questions?page_size=100`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/question-banks/${selectedBankId}/questions?page_size=100`);
         const body = await response.json();
         if (!response.ok)
           throw new Error(body.error || "Could not load questions");
@@ -641,7 +613,7 @@ export function MockBuilderClient({
       }
     };
     void load();
-  }, [selectedBankId, showBankPicker, token]);
+  }, [selectedBankId, showBankPicker]);
 
   const doChangeAccessMode = (value: AccessMode) => {
     setAccessMode(value);
@@ -1288,7 +1260,6 @@ export function MockBuilderClient({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
             "X-Import-Job-ID": job.id,
           },
           body: JSON.stringify({
@@ -1387,7 +1358,6 @@ export function MockBuilderClient({
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
             "X-Import-Job-ID": job.id,
           },
           body: formData,
@@ -1611,7 +1581,6 @@ export function MockBuilderClient({
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(payload),
           },
@@ -1631,7 +1600,6 @@ export function MockBuilderClient({
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(payload),
           },
@@ -1653,7 +1621,6 @@ export function MockBuilderClient({
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ questions }),
         },
@@ -1669,12 +1636,7 @@ export function MockBuilderClient({
         selectedBankQuestions.length > 0 ||
         deliveryMode === "subject_combination"
       ) {
-        const assemblyResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const assemblyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mocks/${mockId}/assembly`);
         const assemblyBody = await assemblyResponse.json().catch(() => null);
         if (!assemblyResponse.ok)
           throw new Error(
@@ -1739,7 +1701,6 @@ export function MockBuilderClient({
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               sections,
@@ -1766,7 +1727,6 @@ export function MockBuilderClient({
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
           },
         );

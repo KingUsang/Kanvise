@@ -168,13 +168,11 @@ const activityFormat = new Intl.DateTimeFormat(undefined, {
 
 export function ClassWorkspaceClient({
   classId,
-  token,
   canManageStudents = false,
   canManageClass = false,
   canManageTutors = false,
 }: {
   classId: string;
-  token: string;
   canManageStudents?: boolean;
   canManageClass?: boolean;
   canManageTutors?: boolean;
@@ -581,7 +579,7 @@ export function ClassWorkspaceClient({
                 <section className="mt-5">
                   <ClassAssessmentBackButton classId={classId} />
                   {assessmentMode === "builder" ? (
-                    <MockBuilderClient token={token} embedded />
+                    <MockBuilderClient embedded />
                   ) : (
                     <MockResultsClient
                       mockId={assessmentId}
@@ -615,7 +613,7 @@ export function ClassWorkspaceClient({
                       Back to assessments
                     </button>
                   </div>
-                  <MockBuilderClient token={token} embedded />
+                  <MockBuilderClient embedded />
                 </section>
               ) : isCreatingAssignment ? (
                 <section className="mt-5">

@@ -18,7 +18,7 @@ function response(body: unknown, status = 200) {
 
 function renderWorkspace() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><ClassWorkspaceClient classId="class-1" token="test-token" /></QueryClientProvider>)
+  return render(<QueryClientProvider client={queryClient}><ClassWorkspaceClient classId="class-1" /></QueryClientProvider>)
 }
 
 describe('ClassWorkspaceClient data loading', () => {

@@ -46,7 +46,7 @@ export async function authenticatedFetch(
   }
 
   const accessToken = suppliedToken ?? await getCurrentAccessToken(supabase)
-  if (!accessToken) return new Response(null, { status: 401, statusText: 'Unauthenticated' })
+  if (!accessToken) return sessionEndedResponse()
   let response = await request(accessToken)
   if (!await isExpiredAccessTokenResponse(response)) return response
 

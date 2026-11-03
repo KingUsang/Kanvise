@@ -84,6 +84,19 @@ describe('authenticatedFetch', () => {
     }))
   })
 
+  it('returns a parseable session-ended response when no current token exists', async () => {
+    const getSession = vi.fn().mockResolvedValue({ data: { session: null } })
+    const supabase = { auth: { getSession, onAuthStateChange: vi.fn(), refreshSession: vi.fn() } } as any
+
+    const response = await authenticatedFetch(supabase, '/dashboard/student')
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({
+      error: 'Your session has ended. Please sign in again.',
+      code: 'SESSION_EXPIRED',
+    })
+  })
+
   it('replaces a caller-supplied Authorization header instead of sending two bearer tokens', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
 
