@@ -1,3 +1,8 @@
+> [!WARNING]
+> **Document status: Evidence**
+>
+> The retained body is proposal, research, backlog, or incident evidence rather than approved product behavior, architecture authority, or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+
 # Live-class production incidents
 
 ## 2026-10-06 — Calendar cannot load live classes in production
