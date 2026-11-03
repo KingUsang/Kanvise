@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const sourceRoot = join(process.cwd(), 'src')
 const dataApiPattern = /\bsupabase\s*\.\s*(?:from|rpc|storage|functions)\b/
+const fileMutationPattern = /\b(?:appendFile|appendFileSync|mkdir|mkdirSync|rename|renameSync|rm|rmSync|rmdir|rmdirSync|unlink|unlinkSync|writeFile|writeFileSync)\s*\(/
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -21,6 +22,16 @@ describe('frontend architecture boundary', () => {
       .map((path) => path.replace(`${process.cwd()}/`, ''))
 
     expect(violations, 'Move Supabase table, RPC, Storage, or Function calls into the Hono API')
+      .toEqual([])
+  })
+
+  it('does not mutate the filesystem from Next route handlers', () => {
+    const violations = sourceFiles(sourceRoot)
+      .filter((path) => /[/\\]route\.tsx?$/.test(path))
+      .filter((path) => fileMutationPattern.test(readFileSync(path, 'utf8')))
+      .map((path) => path.replace(`${process.cwd()}/`, ''))
+
+    expect(violations, 'Remove filesystem mutation from Next route handlers')
       .toEqual([])
   })
 })
