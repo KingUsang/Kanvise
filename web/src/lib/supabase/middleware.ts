@@ -74,11 +74,9 @@ export async function updateSession(request: NextRequest) {
 
   if (claims) {
     // Route redirects improve UX only; API/RLS still enforce permissions.
-    // Prefer server-controlled app_metadata and retain a legacy fallback until
-    // existing sessions have refreshed.
+    // app_metadata is the only claim source accepted for role hints.
     const appMetadata = claims.app_metadata || {}
-    const userMetadata = claims.user_metadata || {}
-    const kanvise_role = appMetadata.kanvise_role || appMetadata.role || userMetadata.kanvise_role || 'student'
+    const kanvise_role = appMetadata.kanvise_role || appMetadata.role || 'student'
     const schoolId = appMetadata.school_id
     const needsAdminSetup = kanvise_role === 'admin' && !schoolId
     // Redirect logged in users away from auth routes (unless they are doing a password reset or similar)

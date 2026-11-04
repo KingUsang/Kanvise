@@ -29,12 +29,11 @@ export default async function DashboardLayout({
     redirect("/auth/login");
   }
 
-  // app_metadata is server-controlled and authoritative. user_metadata is a
-  // temporary display/redirect fallback for sessions issued before migration.
+  // app_metadata is server-controlled and authoritative. user_metadata is
+  // presentation data only.
   const role =
     user.app_metadata?.kanvise_role ||
     user.app_metadata?.role ||
-    user.user_metadata?.kanvise_role ||
     "student";
   const schoolId = user.app_metadata?.school_id;
 
