@@ -333,7 +333,7 @@ usersRouter.get("/", enforceAdmin, async (c) => {
   }
 });
 
-// DELETE /users/:id — Soft-remove a user from the school (sets school_id = null)
+// DELETE /users/:id — Revoke a user's current account authority while preserving history.
 usersRouter.delete("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
@@ -344,29 +344,26 @@ usersRouter.delete("/:id", enforceAdmin, async (c) => {
       return c.json({ error: "You cannot remove yourself from the school", code: "CANNOT_REMOVE_SELF" }, 403);
     }
 
-    // Verify the user belongs to this school
-    const { data: target, error: fetchError } = await supabase
-      .from("user_profiles")
-      .select("id, role, first_name, last_name, school_id")
-      .eq("id", id)
-      .eq("school_id", profile.school_id)
-      .single();
-
-    if (fetchError || !target) {
+    const { data: removal, error: removalError } = await (supabase as any).rpc('remove_user_from_school', {
+      p_target_user_id: id,
+      p_school_id: profile.school_id,
+    });
+    if (removalError) {
+      return c.json({ error: 'Could not remove this user right now', code: 'USER_REMOVAL_UNAVAILABLE' }, 503);
+    }
+    if (!removal?.found) {
       return c.json({ error: "User not found in this school", code: "USER_NOT_FOUND" }, 404);
     }
 
-    // Soft-delete: strip school linkage, preserving all historical rows
-    const { error: updateError } = await supabase
-      .from("user_profiles")
-      .update({ school_id: null })
-      .eq("id", id)
-      .eq("school_id", profile.school_id); // tenant-safe double-check
-
-    if (updateError) throw updateError;
+    if (removal.supabase_auth_id) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(removal.supabase_auth_id, { app_metadata: { school_id: null } });
+      if (authError) {
+        return c.json({ error: 'User removed, but session cleanup is pending', code: 'AUTH_PROJECTION_SYNC_FAILED' }, 503);
+      }
+    }
 
     return c.json({ message: "User removed from school" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: 'Could not remove this user right now', code: 'USER_REMOVAL_UNAVAILABLE' }, 503);
   }
 });
