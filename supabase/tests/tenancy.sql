@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(6);
+SELECT plan(8);
 
 SELECT has_table('public', 'account_memberships', 'general account membership table exists');
 SELECT has_index('public', 'account_memberships', 'account_memberships_person_status_idx', 'membership lookup index exists');
@@ -13,6 +13,26 @@ SELECT function_privs_are(
   'service_role',
   ARRAY['EXECUTE'],
   'legacy sync trigger is server-only'
+);
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.enrolments'::regclass
+      AND conname = 'enrolments_account_membership_fkey'
+      AND contype = 'f'
+  ),
+  'enrolments has the composite account-membership foreign key'
+);
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.student_programme_subjects'::regclass
+      AND conname = 'student_programme_subjects_account_membership_fkey'
+      AND contype = 'f'
+  ),
+  'student programme subjects has the composite account-membership foreign key'
 );
 
 INSERT INTO public.schools (id, name, slug)

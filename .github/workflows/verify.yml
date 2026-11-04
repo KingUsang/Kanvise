@@ -75,7 +75,9 @@ jobs:
           supabase start
           supabase db reset --local --no-seed
           supabase test db
-      - name: Generate local database types and verify the Batch D table is present
+      - name: Generate local database types and verify Batch D type drift
         run: |
           supabase gen types typescript --local --schema public > /tmp/database.types.ts
-          grep -q 'account_memberships:' /tmp/database.types.ts
+          node scripts/verify-batch-database-types.mjs \
+            api/src/lib/database.types.ts \
+            /tmp/database.types.ts

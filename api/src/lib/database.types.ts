@@ -681,6 +681,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "enrolments_account_membership_fkey"
+            columns: ["student_id", "school_id"]
+            isOneToOne: false
+            referencedRelation: "account_memberships"
+            referencedColumns: ["person_id", "school_id"]
+          },
+          {
             foreignKeyName: "enrolments_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
@@ -727,6 +734,72 @@ export type Database = {
             columns: ["sub_programme_id"]
             isOneToOne: false
             referencedRelation: "sub_programmes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_programme_subjects: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          programme_id: string
+          school_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          programme_id: string
+          school_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          programme_id?: string
+          school_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_programme_subjects_account_membership_fkey"
+            columns: ["student_id", "school_id"]
+            isOneToOne: false
+            referencedRelation: "account_memberships"
+            referencedColumns: ["person_id", "school_id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]

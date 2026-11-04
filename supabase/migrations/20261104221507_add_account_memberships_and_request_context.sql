@@ -106,20 +106,81 @@ ON public.student_centre_memberships
 FOR EACH ROW
 EXECUTE FUNCTION public.sync_account_membership_from_legacy_student();
 
--- New enrolments must reference a person/account pair represented by the
--- canonical membership. This is the first composite tenant constraint in the
--- migrated vertical and rejects a valid-ID/wrong-account relationship in SQL.
+-- Existing account-scoped relationships are evidence that the person was
+-- already associated with that account in the legacy model. Preserve those
+-- rows and make the inferred membership explicit before validating the new
+-- composite constraints. ON CONFLICT keeps an existing role/status decision
+-- authoritative; this does not rewrite or delete a relationship row.
+INSERT INTO public.account_memberships (person_id, school_id, role, status, source, revoked_at)
+SELECT DISTINCT relationship.student_id,
+       relationship.school_id,
+       'learner',
+       CASE WHEN profile.is_active THEN 'active' ELSE 'suspended' END,
+       'legacy_backfill',
+       CASE WHEN profile.is_active THEN NULL ELSE now() END
+FROM (
+  SELECT enrolment.student_id, enrolment.school_id
+  FROM public.enrolments AS enrolment
+  UNION
+  SELECT selection.student_id, selection.school_id
+  FROM public.student_programme_subjects AS selection
+) AS relationship
+JOIN public.user_profiles AS profile ON profile.id = relationship.student_id
+ON CONFLICT (person_id, school_id) DO NOTHING;
+
+-- Fail with a diagnostic instead of silently dropping or reassigning any
+-- historical relationship if the compatibility backfill ever changes.
+DO $$
+DECLARE
+  unresolved_count bigint;
+BEGIN
+  SELECT count(*)
+  INTO unresolved_count
+  FROM (
+    SELECT enrolment.student_id, enrolment.school_id
+    FROM public.enrolments AS enrolment
+    UNION
+    SELECT selection.student_id, selection.school_id
+    FROM public.student_programme_subjects AS selection
+  ) AS relationship
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.account_memberships AS membership
+    WHERE membership.person_id = relationship.student_id
+      AND membership.school_id = relationship.school_id
+  );
+
+  IF unresolved_count > 0 THEN
+    RAISE EXCEPTION
+      'ACCOUNT_MEMBERSHIP_BACKFILL_INCOMPLETE: % historical relationship(s) have no membership',
+      unresolved_count;
+  END IF;
+END;
+$$;
+
+-- Add the constraints without holding a validation scan in the ALTER TABLE
+-- lock, then validate them explicitly after the deterministic reconciliation.
+-- This keeps the rollout expand/migrate/contract-safe while still failing the
+-- migration if any historical row cannot be proven tenant-consistent.
 ALTER TABLE public.enrolments
   ADD CONSTRAINT enrolments_account_membership_fkey
   FOREIGN KEY (student_id, school_id)
   REFERENCES public.account_memberships (person_id, school_id)
-  ON DELETE RESTRICT;
+  ON DELETE RESTRICT
+  NOT VALID;
 
 ALTER TABLE public.student_programme_subjects
   ADD CONSTRAINT student_programme_subjects_account_membership_fkey
   FOREIGN KEY (student_id, school_id)
   REFERENCES public.account_memberships (person_id, school_id)
-  ON DELETE RESTRICT;
+  ON DELETE RESTRICT
+  NOT VALID;
+
+ALTER TABLE public.enrolments
+  VALIDATE CONSTRAINT enrolments_account_membership_fkey;
+
+ALTER TABLE public.student_programme_subjects
+  VALIDATE CONSTRAINT student_programme_subjects_account_membership_fkey;
 
 -- Keep the existing enrolment compatibility trigger, but harden its function
 -- boundary and ensure its legacy write also creates the canonical membership.
