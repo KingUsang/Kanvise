@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   user: { id: 'student-1', school_id: 'school-1', role: 'student' } as any,
+  account: { id: 'school-1', membershipId: 'membership-1', role: 'learner' } as any,
 }))
 
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
@@ -10,11 +11,13 @@ vi.mock('../storage/r2', () => ({ publicFileUrl: (key: string) => `https://media
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
-  requireRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
-    if (!roles.includes(c.get('user').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { c.set('account', mocks.account); await next() },
+  requireMembershipRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
+    if (!roles.includes(c.get('account').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)
     await next()
   },
+  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
+  requireRole: (...roles: string[]) => async (_c: any, next: () => Promise<void>) => next(),
 }))
 
 import { studentSettingsRouter } from './student-settings'
@@ -33,10 +36,11 @@ describe('student settings security', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.user = { id: 'student-1', school_id: 'school-1', role: 'student' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'learner' }
   })
 
   it('rejects non-students before reading profile data', async () => {
-    mocks.user.role = 'tutor'
+    mocks.account.role = 'tutor'
     const response = await studentSettingsRouter.request('/students/me/settings')
     expect(response.status).toBe(403)
     expect(mocks.from).not.toHaveBeenCalled()
@@ -65,7 +69,7 @@ describe('student settings security', () => {
     expect(response.status).toBe(200)
     expect(builder.payload).toEqual({ first_name: 'Ada' })
     expect(eqSpy).toHaveBeenCalledWith('id', 'student-1')
-    expect(eqSpy).toHaveBeenCalledWith('school_id', 'school-1')
-    expect(eqSpy).toHaveBeenCalledWith('role', 'student')
+    expect(eqSpy).not.toHaveBeenCalledWith('school_id', 'school-1')
+    expect(eqSpy).not.toHaveBeenCalledWith('role', 'student')
   })
 })

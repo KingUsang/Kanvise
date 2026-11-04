@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
-  updateUserById: vi.fn(),
   filters: [] as Array<{ table: string; args: unknown[] }>,
   operations: [] as Array<{ type: string; values: unknown }>,
   limits: [] as number[],
@@ -12,9 +11,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../lib/supabase', () => ({
-  supabase: { from: mocks.from, auth: { admin: { updateUserById: mocks.updateUserById } } },
+  supabase: { from: mocks.from },
 }))
 vi.mock('../middleware/auth', () => ({
+  ACCOUNT_CONTEXT_HEADER: 'X-Kanvise-Account-Id',
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
   requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
@@ -36,15 +36,12 @@ function query(table: string, result: any) {
   return value
 }
 
-function configureSelection({ membership, school, profile = { data: { supabase_auth_id: 'auth-1' }, error: null }, profileUpdate = { error: null } }: any) {
-  let profileQuery = 0
+function configureSelection({ membership, school }: any) {
   mocks.from.mockImplementation((table: string) => {
-    if (table === 'student_centre_memberships') return query(table, membership)
+    if (table === 'account_memberships') return query(table, membership)
     if (table === 'schools') return query(table, school)
-    if (table === 'user_profiles') return query(table, profileQuery++ === 0 ? profileUpdate : profile)
     throw new Error(`Unexpected table ${table}`)
   })
-  mocks.updateUserById.mockResolvedValue({ error: null })
 }
 
 async function selectCentre() {
@@ -73,8 +70,7 @@ describe('student centre selection safety', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ data: { school_id: 'school-2' } })
     expect(mocks.filters).toContainEqual({ table: 'schools', args: ['is_active', true] })
-    expect(mocks.operations).toHaveLength(1)
-    expect(mocks.updateUserById).toHaveBeenCalledWith('auth-1', { app_metadata: { school_id: 'school-2' } })
+    expect(mocks.operations).toHaveLength(0)
   })
 
   it('rejects an inactive or missing centre before any write', async () => {
@@ -88,7 +84,6 @@ describe('student centre selection safety', () => {
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toMatchObject({ code: 'FORBIDDEN' })
     expect(mocks.operations).toHaveLength(0)
-    expect(mocks.updateUserById).not.toHaveBeenCalled()
   })
 
   it('rejects an inactive or missing membership before resolving the centre', async () => {
@@ -102,9 +97,8 @@ describe('student centre selection safety', () => {
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toMatchObject({ code: 'FORBIDDEN' })
     expect(mocks.from).toHaveBeenCalledTimes(1)
-    expect(mocks.from).toHaveBeenCalledWith('student_centre_memberships')
+    expect(mocks.from).toHaveBeenCalledWith('account_memberships')
     expect(mocks.operations).toHaveLength(0)
-    expect(mocks.updateUserById).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -118,12 +112,11 @@ describe('student centre selection safety', () => {
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toEqual({ error: 'Could not verify this centre', code: 'CENTRE_SELECTION_UNAVAILABLE' })
     expect(mocks.operations).toHaveLength(0)
-    expect(mocks.updateUserById).not.toHaveBeenCalled()
   })
 
   it('returns the default bounded membership page and compatible metadata', async () => {
-    mocks.from.mockReturnValue(query('student_centre_memberships', {
-      data: [{ id: 'membership-1', school_id: 'school-1', joined_at: '2026-01-01T00:00:00.000Z', school: { id: 'school-1', name: 'Home Centre' } }],
+    mocks.from.mockReturnValue(query('account_memberships', {
+      data: [{ id: 'membership-1', school_id: 'school-1', role: 'learner', joined_at: '2026-01-01T00:00:00.000Z', school: { id: 'school-1', name: 'Home Centre' } }],
       error: null,
     }))
 
@@ -138,11 +131,11 @@ describe('student centre selection safety', () => {
   })
 
   it('honours a requested page size and fetches one extra row for continuation', async () => {
-    mocks.from.mockReturnValue(query('student_centre_memberships', {
+    mocks.from.mockReturnValue(query('account_memberships', {
       data: [
-        { id: 'membership-1', school_id: 'school-1', joined_at: '2026-01-01T00:00:00.000Z', school: { id: 'school-1', name: 'Home Centre' } },
-        { id: 'membership-2', school_id: 'school-2', joined_at: '2026-01-02T00:00:00.000Z', school: { id: 'school-2', name: 'Second Centre' } },
-        { id: 'membership-3', school_id: 'school-3', joined_at: '2026-01-03T00:00:00.000Z', school: { id: 'school-3', name: 'Third Centre' } },
+        { id: 'membership-1', school_id: 'school-1', role: 'learner', joined_at: '2026-01-01T00:00:00.000Z', school: { id: 'school-1', name: 'Home Centre' } },
+        { id: 'membership-2', school_id: 'school-2', role: 'learner', joined_at: '2026-01-02T00:00:00.000Z', school: { id: 'school-2', name: 'Second Centre' } },
+        { id: 'membership-3', school_id: 'school-3', role: 'learner', joined_at: '2026-01-03T00:00:00.000Z', school: { id: 'school-3', name: 'Third Centre' } },
       ],
       error: null,
     }))
@@ -158,15 +151,15 @@ describe('student centre selection safety', () => {
   })
 
   it('continues from an opaque cursor without losing learner scope', async () => {
-    const firstPage = query('student_centre_memberships', {
+    const firstPage = query('account_memberships', {
       data: [
-        { id: 'membership-1', school_id: 'school-1', joined_at: '2026-01-01T00:00:00.000Z', school: { id: 'school-1', name: 'Home Centre' } },
-        { id: 'membership-2', school_id: 'school-2', joined_at: '2026-01-02T00:00:00.000Z', school: { id: 'school-2', name: 'Second Centre' } },
-        { id: 'membership-3', school_id: 'school-3', joined_at: '2026-01-03T00:00:00.000Z', school: { id: 'school-3', name: 'Third Centre' } },
+        { id: 'membership-1', school_id: 'school-1', role: 'learner', joined_at: '2026-01-01T00:00:00.000Z', school: { id: 'school-1', name: 'Home Centre' } },
+        { id: 'membership-2', school_id: 'school-2', role: 'learner', joined_at: '2026-01-02T00:00:00.000Z', school: { id: 'school-2', name: 'Second Centre' } },
+        { id: 'membership-3', school_id: 'school-3', role: 'learner', joined_at: '2026-01-03T00:00:00.000Z', school: { id: 'school-3', name: 'Third Centre' } },
       ],
       error: null,
     })
-    const secondPage = query('student_centre_memberships', {
+    const secondPage = query('account_memberships', {
       data: [{ id: 'membership-3', school_id: 'school-3', joined_at: '2026-01-03T00:00:00.000Z', school: { id: 'school-3', name: 'Third Centre' } }],
       error: null,
     })
@@ -182,21 +175,21 @@ describe('student centre selection safety', () => {
     expect(secondBody.data.map((membership: any) => membership.id)).toEqual(['membership-3'])
     expect(mocks.cursorFilters).toHaveLength(1)
     expect(mocks.cursorFilters[0]).toContain('joined_at.gt.2026-01-02T00:00:00.000Z')
-    expect(mocks.filters.filter(({ args }) => args[0] === 'student_id')).toEqual([
-      { table: 'student_centre_memberships', args: ['student_id', 'student-1'] },
-      { table: 'student_centre_memberships', args: ['student_id', 'student-1'] },
+    expect(mocks.filters.filter(({ args }) => args[0] === 'person_id')).toEqual([
+      { table: 'account_memberships', args: ['person_id', 'student-1'] },
+      { table: 'account_memberships', args: ['person_id', 'student-1'] },
     ])
   })
 
   it('orders membership pages deterministically by joined time and id', async () => {
-    mocks.from.mockReturnValue(query('student_centre_memberships', { data: [], error: null }))
+    mocks.from.mockReturnValue(query('account_memberships', { data: [], error: null }))
 
     const response = await studentMembershipsRouter.request('/centres')
 
     expect(response.status).toBe(200)
     expect(mocks.orders).toEqual([
-      { table: 'student_centre_memberships', args: ['joined_at', { ascending: true }] },
-      { table: 'student_centre_memberships', args: ['id', { ascending: true }] },
+      { table: 'account_memberships', args: ['joined_at', { ascending: true }] },
+      { table: 'account_memberships', args: ['id', { ascending: true }] },
     ])
   })
 
@@ -209,7 +202,7 @@ describe('student centre selection safety', () => {
   })
 
   it('maps membership lookup failure to a safe server error', async () => {
-    mocks.from.mockReturnValue(query('student_centre_memberships', { data: null, error: { message: 'database unavailable' } }))
+    mocks.from.mockReturnValue(query('account_memberships', { data: null, error: { message: 'database unavailable' } }))
 
     const response = await studentMembershipsRouter.request('/centres')
 

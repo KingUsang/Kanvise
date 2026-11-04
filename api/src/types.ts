@@ -8,12 +8,21 @@ export type KanviseUser = {
   last_name?: string
 }
 
+export type MembershipRole = 'admin' | 'tutor' | 'learner'
+
+export type AccountContext = {
+  id: string
+  membershipId: string
+  role: MembershipRole
+}
+
 // For routers behind tenantMiddleware, which rejects requests without a school.
 export type TenantUser = KanviseUser & { school_id: string }
 
 export type AppVariables = {
   user: KanviseUser
   jwt_payload: any
+  account?: AccountContext
   tenant?: {
     id: string
     // other tenant fields if needed

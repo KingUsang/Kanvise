@@ -1,9 +1,18 @@
 # ADR 0001: Membership-scoped multi-account tenancy
 
 **Status:** Accepted
+**Approved:** 2026-11-04 by the product owner
 **Owner:** Kanvise engineering
 **Date:** 2026-10-30
 **Last verified:** 2026-10-30
+
+## Approval evidence
+
+The product owner's explicit approval for this named tenancy decision was
+carried in the Batch D Slice 25 durable brief and recorded by the OpenRig
+handoff `qitem-20261104221028-9c475820b2cd2d2a` on 2026-11-04. This evidence
+authorizes implementation of ADR 0001 only; it does not infer approval for any
+other ADR or for a remote database/deployment operation.
 
 ## Context
 

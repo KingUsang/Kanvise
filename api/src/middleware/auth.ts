@@ -1,6 +1,7 @@
 import { Context, Next } from 'hono'
 import * as Sentry from '@sentry/node'
 import { supabase } from '../lib/supabase'
+import type { AccountContext, MembershipRole } from '../types'
 
 import { createJwtVerifier } from './jwt-verifier'
 
@@ -102,6 +103,73 @@ export const tenantMiddleware = async (c: Context, next: Next) => {
     }, 403)
   }
   
+  await next()
+}
+
+export const ACCOUNT_CONTEXT_HEADER = 'X-Kanvise-Account-Id'
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isMembershipRole(value: unknown): value is MembershipRole {
+  return value === 'admin' || value === 'tutor' || value === 'learner'
+}
+
+/**
+ * Resolve the account named by the request, never by profile/JWT projections.
+ * The membership and active-account reads intentionally happen on every
+ * protected request so revocation is effective without waiting for a token
+ * refresh. The selected account ID is a request hint, not proof of access.
+ */
+export const accountContextMiddleware = async (c: Context, next: Next) => {
+  const user = c.get('user')
+  const accountId = c.req.header(ACCOUNT_CONTEXT_HEADER)?.trim()
+  if (!accountId || !UUID_PATTERN.test(accountId)) {
+    return c.json({ error: 'A valid tutoring account must be selected', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('account_memberships')
+    .select('id, school_id, role, status')
+    .eq('person_id', user.id)
+    .eq('school_id', accountId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (membershipError) {
+    return c.json({ error: 'Could not verify the selected tutoring account', code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503)
+  }
+  if (!membership || !isMembershipRole(membership.role)) {
+    return c.json({ error: 'You are not an active member of this tutoring account', code: 'ACCOUNT_ACCESS_DENIED' }, 403)
+  }
+
+  const { data: account, error: accountError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('id', accountId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (accountError) {
+    return c.json({ error: 'Could not verify the selected tutoring account', code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503)
+  }
+  if (!account) {
+    return c.json({ error: 'This tutoring account is unavailable', code: 'ACCOUNT_ACCESS_DENIED' }, 403)
+  }
+
+  const context: AccountContext = {
+    id: account.id,
+    membershipId: membership.id,
+    role: membership.role,
+  }
+  c.set('account', context)
+  c.set('tenant', { id: context.id })
+  await next()
+}
+
+export const requireMembershipRole = (...roles: MembershipRole[]) => async (c: Context, next: Next) => {
+  const account = c.get('account') as AccountContext | undefined
+  if (!account || !roles.includes(account.role)) {
+    return c.json({ error: 'This action is not available for your account membership', code: 'INSUFFICIENT_ROLE' }, 403)
+  }
   await next()
 }
 

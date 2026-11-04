@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string
+          person_id: string
+          revoked_at: string | null
+          role: string
+          school_id: string
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          person_id: string
+          revoked_at?: string | null
+          role: string
+          school_id: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          person_id?: string
+          revoked_at?: string | null
+          role?: string
+          school_id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_memberships_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_memberships_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           attachment_file_key: string | null
