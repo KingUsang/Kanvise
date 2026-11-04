@@ -2,7 +2,7 @@ import { Context, Next } from 'hono'
 import * as Sentry from '@sentry/node'
 import { supabase } from '../lib/supabase'
 
-import { decode, verifyWithJwks } from 'hono/jwt'
+import { createJwtVerifier } from './jwt-verifier'
 
 export type Variables = {
   user: any;
@@ -32,42 +32,7 @@ export function resolveTrustedProfileClaims(jwtPayload: any) {
   }
 }
 
-// In-memory cache for JWKS public keys — fetched once on first request, reused forever
-// (until server restarts). Supabase rarely rotates keys.
-let cachedJwks: any[] | null = null
-
-async function getJwks(): Promise<any[]> {
-  if (cachedJwks) return cachedJwks
-
-  // Per Supabase docs: https://supabase.com/docs/guides/auth/jwks
-  // The correct public JWKS endpoint path is /.well-known/jwks.json — no auth header needed
-  const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch JWKS from Supabase: ${res.status} ${await res.text()}`)
-  }
-
-  const { keys } = await res.json() as { keys: any[] }
-  cachedJwks = keys
-  console.log(`[JWT] Fetched and cached ${keys.length} JWKS key(s)`)
-  return cachedJwks!
-}
-
-// Kanvise's staging and production Supabase projects use asymmetric signing
-// keys. Verify user tokens against the project's public JWKS, rather than
-// keeping a shared JWT secret on the API server.
-const verifyJWT = async (token: string) => {
-  const { header } = decode(token)
-  const keys = await getJwks()
-  const allowedAlgorithms = [...new Set(keys.map((key) => key.alg).filter(Boolean))]
-  if (!allowedAlgorithms.includes(header.alg)) {
-    throw new Error(`Unsupported JWT signing algorithm: ${header.alg}`)
-  }
-  return await verifyWithJwks(token, {
-    keys,
-    allowedAlgorithms: allowedAlgorithms as any,
-  })
-}
+const verifyJWT = createJwtVerifier({ supabaseUrl: process.env.SUPABASE_URL || '' })
 
 export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
   const authHeader = c.req.header('Authorization')
@@ -82,7 +47,7 @@ export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
     c.set('jwt_payload', payload)
     await next()
   } catch (error: any) {
-    console.error('[JWT] Verification failed:', error)
+    console.error('[JWT] Verification failed:', error?.name || 'unknown')
     if (error.name === 'JwtTokenExpired') {
       return c.json({ error: 'Token has expired', code: 'TOKEN_EXPIRED' }, 401)
     }
