@@ -62,6 +62,15 @@ describe('dashboard school data boundary', () => {
     expect(mocks.replace).toHaveBeenCalledWith('/auth/login?redirect=%2Fdashboard%2Fschool-setup')
   })
 
+  it('does not retry forbidden responses under the production retry policy', async () => {
+    mocks.authenticatedApiFetch.mockResolvedValue(new Response(JSON.stringify({ error: 'Insufficient role' }), { status: 403 }))
+
+    renderRoute('setup', 1)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument())
+    expect(mocks.authenticatedApiFetch).toHaveBeenCalledTimes(1)
+  })
+
   it('redirects settings to first-time setup only for the typed missing-school state', async () => {
     mocks.authenticatedApiFetch.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'SCHOOL_NOT_CONFIGURED' }), { status: 400 }))
 

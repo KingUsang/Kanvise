@@ -37,7 +37,7 @@ async function loadSchool(): Promise<SchoolResponse> {
   if (response.status === 401 || body?.code === 'SESSION_EXPIRED') {
     throw new SchoolLoadError('SESSION_EXPIRED')
   }
-  throw new SchoolLoadError(response.status === 400 || response.status === 404 ? 'INVALID_RESPONSE' : 'UNAVAILABLE')
+  throw new SchoolLoadError(response.status >= 400 && response.status < 500 ? 'INVALID_RESPONSE' : 'UNAVAILABLE')
 }
 
 function RouteLoading() {
