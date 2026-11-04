@@ -13,7 +13,7 @@ export default async function Page({ params, searchParams }: PageProps) {
   const classId = resolvedParams.id
   const isStarting = resolvedSearchParams.start === 'true' // Tutor provides ?start=true
 
-  // ── 1. Get the authenticated user's session from the cookie ────────────────
+  // ── 1. Verify the authenticated user's claims from the cookie ──────────────
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,11 +26,10 @@ export default async function Page({ params, searchParams }: PageProps) {
     },
   )
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
 
-  if (!session) {
+  if (claimsError || !claims) {
     // ── No session: check if this class allows public access ──────────────────
     const honoUrl = process.env.NEXT_PUBLIC_API_URL
     let classInfo: { title: string; status: string; access_mode: string; centre_name: string; centre_logo_url: string | null } | null = null
@@ -94,13 +93,15 @@ export default async function Page({ params, searchParams }: PageProps) {
   // and awaiting that request in this server component strands the visitor on
   // Next's non-interactive route fallback. PreparingClassroom owns readiness,
   // retries and the eventual handoff to the provider UI.
+  const { data: { session } } = await supabase.auth.getSession()
+  const sessionUser = session?.user
   return <PreparingClassroom
     classId={classId}
     isStarting={isStarting}
     classTitle="Your live class"
     courseName={null}
     isHost={isStarting}
-    studentName={session.user.user_metadata?.first_name || 'Tutor'}
-    studentId={session.user.id}
+    studentName={sessionUser?.user_metadata?.first_name || 'Tutor'}
+    studentId={sessionUser?.id || claims.sub}
   />
 }
