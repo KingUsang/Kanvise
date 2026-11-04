@@ -6,6 +6,7 @@ const sourceRoot = join(process.cwd(), 'src')
 const dataApiPattern = /\bsupabase\s*\.\s*(?:from|rpc|storage|functions)\b/
 const fileMutationPattern = /\b(?:appendFile|appendFileSync|mkdir|mkdirSync|rename|renameSync|rm|rmSync|rmdir|rmdirSync|unlink|unlinkSync|writeFile|writeFileSync)\s*\(/
 const credentialPropPattern = /\b(?:accessToken|access_token|session|token)\s*=\s*\{/
+const dashboardBusinessFetchPattern = /\b(?:fetch|authenticatedFetch|authenticatedApiFetch)\s*\(/
 const clientModulePattern = /^\s*['"]use client['"];?/m
 
 function sourceFiles(directory: string): string[] {
@@ -48,6 +49,20 @@ describe('frontend architecture boundary', () => {
       .map((path) => path.replace(`${process.cwd()}/`, ''))
 
     expect(violations, 'Obtain browser API credentials at request time through authenticatedApiFetch')
+      .toEqual([])
+  })
+
+  it('does not fetch Hono business data from dashboard Server Components', () => {
+    const dashboardRoot = join(sourceRoot, 'app', 'dashboard')
+    const violations = sourceFiles(dashboardRoot)
+      .filter((path) => /[/\\](?:page|layout)\.tsx?$/.test(path))
+      .filter((path) => {
+        const source = readFileSync(path, 'utf8')
+        return !clientModulePattern.test(source) && dashboardBusinessFetchPattern.test(source)
+      })
+      .map((path) => path.replace(`${process.cwd()}/`, ''))
+
+    expect(violations, 'Move dashboard business-data reads into Client Components through TanStack Query and authenticatedApiFetch')
       .toEqual([])
   })
 })
