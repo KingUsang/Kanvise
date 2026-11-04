@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { isTelegramEnabled, isWebPushEnabled, validateProductionEnvironment } from './runtime-env'
+import { CORE_PRODUCTION_VARIABLES, isTelegramEnabled, isWebPushEnabled, validateProductionEnvironment } from './runtime-env'
 
 const validProductionEnv = {
   NODE_ENV: 'production',
@@ -27,6 +29,14 @@ const validProductionEnv = {
 } as NodeJS.ProcessEnv
 
 describe('validateProductionEnvironment', () => {
+  it('keeps the API environment example aligned with the production contract', () => {
+    const example = readFileSync(fileURLToPath(new URL('../../.env.example', import.meta.url)), 'utf8')
+    const exampleKeys = new Set([...example.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((match) => match[1]))
+
+    expect(CORE_PRODUCTION_VARIABLES.filter((name) => !exampleKeys.has(name))).toEqual([])
+    expect(example).not.toMatch(/^LIVEKIT_[A-Z0-9_]*=/m)
+  })
+
   it('does not enforce production variables in non-production environments', () => {
     expect(() => validateProductionEnvironment({ NODE_ENV: 'staging' } as NodeJS.ProcessEnv)).not.toThrow()
   })
