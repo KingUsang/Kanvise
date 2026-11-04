@@ -18,9 +18,9 @@ describe('StudentShell navigation', () => {
   }
 
   it('uses visible mobile destinations without a hamburger for programme students', () => {
-    renderShell(<StudentShell studentName="Ada Student" schoolName="Bright Minds"><p>Content</p></StudentShell>)
+    renderShell(<StudentShell learnerName="Ada Learner" accountName="Bright Minds"><p>Content</p></StudentShell>)
 
-    const mobileNavigation = screen.getByRole('navigation', { name: 'Student navigation' })
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })
     expect(mobileNavigation).toHaveTextContent('Home')
     expect(mobileNavigation).toHaveTextContent('Learn')
     expect(mobileNavigation).toHaveTextContent('Mocks')
@@ -30,9 +30,9 @@ describe('StudentShell navigation', () => {
   })
 
   it('keeps standalone navigation focused on home and mocks', () => {
-    renderShell(<StudentShell studentName="Ada Student" schoolName="Kanvise" hasCentreLearning={false}><p>Content</p></StudentShell>)
+    renderShell(<StudentShell learnerName="Ada Learner" accountName="Kanvise" hasClassLearning={false}><p>Content</p></StudentShell>)
 
-    const mobileNavigation = screen.getByRole('navigation', { name: 'Student navigation' })
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })
     expect(mobileNavigation).toHaveTextContent('Home')
     expect(mobileNavigation).toHaveTextContent('Mocks')
     expect(mobileNavigation).not.toHaveTextContent('Learn')

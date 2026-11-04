@@ -75,7 +75,7 @@ describe('ClassWorkspaceClient data loading', () => {
     }))
 
     const view = renderWorkspace()
-    await screen.findAllByRole('link', { name: 'Students' })
+    await screen.findAllByRole('link', { name: 'Learners' })
     window.history.pushState({}, '', '?tab=learners')
     view.unmount()
     renderWorkspace()

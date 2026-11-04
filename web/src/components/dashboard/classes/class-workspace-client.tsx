@@ -39,26 +39,29 @@ import { SubmissionsClient } from "../assignments/submissions-client";
 import { AssignmentsClient } from "@/components/dashboard/assignments/assignments-client";
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
+import {
+  adaptClassRecord,
+  adaptSubjectLink,
+  productTerms,
+  type LegacyClassRecord,
+  type ProductClassRecord,
+  type ProductSubject,
+  type ProductSubjectLink,
+} from '@/lib/product-terminology';
 
-type Subject = { id: string; name: string; tutor_ids?: string[] };
+type Subject = ProductSubject;
 type TutorPerson = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string };
-type ClassData = {
-  id: string;
-  name: string;
-  description?: string | null;
-  is_published: boolean;
-  teaching_mode: string;
-  courses: Subject[];
-  enrolled_count?: number;
-};
-type LiveClass = {
+type LegacyClassData = LegacyClassRecord;
+type ClassData = ProductClassRecord<LegacyClassData>;
+type LegacyLiveClass = {
   id: string;
   title: string;
   scheduled_at: string;
   status: string;
   course_id: string;
-  course?: { name: string } | null;
+  course?: Subject | null;
 };
+type LiveClass = ProductSubjectLink<LegacyLiveClass>;
 type Mock = {
   id: string;
   title: string;
@@ -87,15 +90,16 @@ type Note = {
   file_name?: string | null;
   file_size_bytes?: number | null;
 };
-type RecurringSlot = {
+type LegacyRecurringSlot = {
   id: string;
   title?: string | null;
   course_id: string;
   weekday: number;
   start_time: string;
   duration_minutes?: number | null;
-  course?: { name: string } | null;
+  course?: Subject | null;
 };
+type RecurringSlot = ProductSubjectLink<LegacyRecurringSlot>;
 type ScheduleData = { sessions: LiveClass[]; recurring_slots: RecurringSlot[] };
 type LearnerSignal = {
   id: string;
@@ -151,7 +155,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "assessments", label: "Assessments" },
   { id: "materials", label: "Materials" },
   { id: "tutors", label: "Tutors" },
-  { id: "learners", label: "Students" },
+  { id: "learners", label: productTerms.learners },
   { id: "performance", label: "Performance" },
 ];
 const dateFormat = new Intl.DateTimeFormat(undefined, {
@@ -226,7 +230,7 @@ export function ClassWorkspaceClient({
       const body = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(body?.error || "Could not load this class");
-      return body.data as ClassData;
+      return adaptClassRecord(body.data as LegacyClassData);
     },
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: true,
@@ -251,8 +255,8 @@ export function ClassWorkspaceClient({
       if (!response.ok)
         throw new Error(body?.error || "Could not load this class schedule");
       return {
-        sessions: body?.data?.sessions || [],
-        recurring_slots: body?.data?.recurring_slots || [],
+        sessions: (body?.data?.sessions || []).map((session: LegacyLiveClass) => adaptSubjectLink(session)),
+        recurring_slots: (body?.data?.recurring_slots || []).map((slot: LegacyRecurringSlot) => adaptSubjectLink(slot)),
       } as ScheduleData;
     },
     staleTime: 30_000,
@@ -282,12 +286,12 @@ export function ClassWorkspaceClient({
   });
   const visibleMaterialSubjectIds = useMemo(
     () =>
-      data?.courses
+      data?.subjects
         .filter(
           (subject) => activeSubject === "all" || subject.id === activeSubject,
         )
         .map((subject) => subject.id) || [],
-    [activeSubject, data?.courses],
+    [activeSubject, data?.subjects],
   );
   const materialsQuery = useQuery({
     queryKey: ["class-materials", classId, activeSubject],
@@ -365,13 +369,13 @@ export function ClassWorkspaceClient({
   const insights = insightsQuery.data || null;
 
   const subjectIds = useMemo(
-    () => new Set(data?.courses.map((subject) => subject.id) || []),
+    () => new Set(data?.subjects.map((subject) => subject.id) || []),
     [data],
   );
   const selectedSubject =
     activeSubject === "all"
       ? null
-      : data?.courses.find((subject) => subject.id === activeSubject);
+      : data?.subjects.find((subject) => subject.id === activeSubject);
   const selectedName = selectedSubject?.name || "All subjects";
   const classSessions = sessions.filter(
     (session) =>
@@ -451,7 +455,7 @@ export function ClassWorkspaceClient({
                 </span>
               </div>
               <p className="mt-1.5 text-sm text-dashboard-muted">
-                {data.courses.length > 1
+                {data.subjects.length > 1
                   ? "Multi-subject class"
                   : "Single-subject class"}
                 {data.description ? ` · ${data.description}` : ""}
@@ -464,7 +468,7 @@ export function ClassWorkspaceClient({
               <Plus size={17} /> Add subject
             </Link> : null}
           </div>
-          {data.courses.length > 1 ? (
+          {data.subjects.length > 1 ? (
             <div className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none]">
               <SubjectChip
                 label="All subjects"
@@ -473,7 +477,7 @@ export function ClassWorkspaceClient({
               >
                 All subjects
               </SubjectChip>
-              {data.courses.map((subject) => (
+              {data.subjects.map((subject) => (
                 <SubjectChip
                   key={subject.id}
                   label={subject.name}
@@ -506,7 +510,7 @@ export function ClassWorkspaceClient({
                   insights={insights}
                   needsAttention={needsAttention}
                   selectedName={selectedName}
-                  subjects={data.courses}
+                  subjects={data.subjects}
                   onSelectSubject={setActiveSubject}
                   onCreateAssessment={() => {
                     router.push(
@@ -544,8 +548,8 @@ export function ClassWorkspaceClient({
                       .map((slot): ClassRecurringSlotItem => ({
                         id: slot.id,
                         title:
-                          slot.title || slot.course?.name || "Teaching session",
-                        subject: slot.course?.name || "Subject",
+                          slot.title || slot.subject?.name || "Teaching session",
+                        subject: slot.subject?.name || productTerms.subject,
                         weekday: slot.weekday,
                         startTime: slot.start_time,
                         durationMinutes: slot.duration_minutes,
@@ -598,7 +602,7 @@ export function ClassWorkspaceClient({
                         Create quiz
                       </h2>
                       <p className="mt-1 text-sm text-dashboard-muted">
-                        This quiz is only for students in {data.name}.
+                        This quiz is only for learners in {data.name}.
                       </p>
                     </div>
                     <button
@@ -696,7 +700,7 @@ export function ClassWorkspaceClient({
             {activeTab === 'tutors' && canManageTutors ? (
               <ClassTutorsPanel
                 classId={classId}
-                subjects={data.courses}
+                subjects={data.subjects}
                 tutors={tutorsQuery.data || []}
                 loading={tutorsQuery.isPending}
                 onChanged={async () => {
@@ -740,7 +744,7 @@ export function ClassWorkspaceClient({
       <ClassMaterialUploadDialog
         open={showMaterialUpload}
         onClose={() => setShowMaterialUpload(false)}
-        subjects={data.courses}
+        subjects={data.subjects}
         initialSubjectId={activeSubject === "all" ? null : activeSubject}
         api={api}
         onUploaded={async () => {
@@ -794,7 +798,7 @@ export function ClassWorkspaceClient({
           ]);
         }}
         classId={classId}
-        subjects={data.courses}
+        subjects={data.subjects}
         initialCourseId={activeSubject === "all" ? undefined : activeSubject}
       />
     </>
@@ -858,7 +862,7 @@ function ClassTutorsPanel({
             {updating === key ? <span className="ml-auto text-xs text-dashboard-muted">Saving…</span> : null}
           </label>;
         })}
-        {!tutors.length ? <p className="text-sm text-dashboard-muted">Invite a tutor to your centre before assigning this subject.</p> : null}
+        {!tutors.length ? <p className="text-sm text-dashboard-muted">Invite a tutor to your tutoring account before assigning this subject.</p> : null}
       </div>
     </article>)}
   </section>;
@@ -888,7 +892,7 @@ function WorkspaceRail({
             aria-current={activeTab === tab.id ? "page" : undefined}
             className={`relative min-h-12 shrink-0 border-b-[3px] px-4 py-3 text-left text-sm font-semibold transition ${activeTab === tab.id ? "border-[#994704] text-[#211969]" : "border-transparent text-[#625e69] hover:text-[#211969]"}`}
           >
-            {tab.id === "learners" && isOneToOne ? "Student" : tab.label}
+            {tab.id === "learners" && isOneToOne ? productTerms.learner : tab.label}
           </Link>
         ))}
       </nav>
@@ -926,10 +930,10 @@ function LearnerDetailSheet({
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-dashboard-outline bg-white/95 px-5 py-4 backdrop-blur sm:px-7">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">
-              Student evidence
+              Learner evidence
             </p>
             <h2 className="mt-1 text-lg font-bold text-[#180d62]">
-              {detail?.name || "Student"}
+              {detail?.name || productTerms.learner}
             </h2>
           </div>
           <button
@@ -1036,7 +1040,7 @@ function RecurringSchedule({ slots }: { slots: RecurringSlot[] }) {
             className="rounded-xl border border-dashboard-outline bg-[#fbfaff] px-4 py-3"
           >
             <p className="font-bold text-[#27242d]">
-              {slot.title || slot.course?.name || "Teaching session"}
+              {slot.title || slot.subject?.name || "Teaching session"}
             </p>
             <p className="mt-1 text-sm text-dashboard-muted">
               {weekdays[slot.weekday - 1] || "Weekly"} ·{" "}
@@ -1065,7 +1069,7 @@ function toSessionItem(session: LiveClass): ClassSessionItem {
   return {
     id: session.id,
     title: session.title,
-    subject: session.course?.name || "Subject",
+    subject: session.subject?.name || productTerms.subject,
     startsAt: session.scheduled_at,
     status,
   };
@@ -1082,7 +1086,7 @@ function toAssessmentItem(mock: Mock, data: ClassData): ClassAssessmentItem {
   return {
     id: mock.id,
     title: mock.title,
-    subject: data.courses.find((subject) => subject.id === mock.course_id)
+    subject: data.subjects.find((subject) => subject.id === mock.course_id)
       ?.name,
     type: "mock",
     status,
@@ -1115,8 +1119,8 @@ function toMaterialItem(material: Note, data: ClassData): ClassMaterialItem {
     title: material.title,
     description: material.description || null,
     subject:
-      data.courses.find((subject) => subject.id === material.course_id)?.name ||
-      "Subject",
+      data.subjects.find((subject) => subject.id === material.course_id)?.name ||
+      productTerms.subject,
     type,
     publishedAt: material.created_at,
     downloadUrl: material.download_url,
@@ -1324,7 +1328,7 @@ function Overview({
       id: `session-${session.id}`,
       kind: "Session",
       title: session.title,
-      detail: `${session.course?.name || selectedName} · ${dateFormat.format(new Date(session.scheduled_at))}`,
+      detail: `${session.subject?.name || selectedName} · ${dateFormat.format(new Date(session.scheduled_at))}`,
       date: session.scheduled_at,
       tone: "session" as const,
     })),
@@ -1334,7 +1338,7 @@ function Overview({
           ? toAssignmentAsAssessment(assessment as Assignment)
           : toAssessmentItem(
               assessment as Mock,
-              { courses: subjects } as ClassData,
+              { subjects } as ClassData,
             );
       return {
         id: `assessment-${item.id}`,
@@ -1352,7 +1356,7 @@ function Overview({
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <WorkspaceMetric
           icon={<UsersRound size={18} />}
-          label="Total students"
+          label="Total learners"
           value={String(insights?.learners.length ?? 0)}
           detail="Enrolled in this class"
         />
@@ -1450,7 +1454,7 @@ function Overview({
           <div className="mt-4 space-y-2.5">
             <WorkspaceAction
               icon={<CalendarDays size={17} />}
-              title="Schedule live class"
+              title="Schedule session"
               description="Choose a date and time"
               onClick={onOpenSchedule}
               primary

@@ -7,9 +7,10 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { adaptSubjectLink, type ProductSubjectLink } from "@/lib/product-terminology";
 
 type Tutor = { id: string; first_name: string; last_name: string };
-type Course = { id: string; name: string };
+type Subject = { id: string; name: string };
 type TimetableSlot = {
   id: string;
   title: string;
@@ -20,10 +21,11 @@ type TimetableSlot = {
   tutor_id: string;
   starts_on?: string | null;
   ends_on?: string | null;
-  course?: Course | null;
+  course?: Subject | null;
   tutor?: Tutor | null;
 };
-type TimetableOccurrence = TimetableSlot & {
+type ProductTimetableSlot = ProductSubjectLink<TimetableSlot>;
+type TimetableOccurrence = ProductTimetableSlot & {
   scheduled_at: string;
   status: "scheduled";
 };
@@ -81,7 +83,7 @@ function hueFor(value: string) {
   return total;
 }
 
-export function CentreTimetableClient(_: Props) {
+export function TimetableClient(_: Props) {
   const api = process.env.NEXT_PUBLIC_API_URL;
   const [week, setWeek] = useState(() => startOfWeek(new Date()));
   const [selectedDay, setSelectedDay] = useState(new Date());
@@ -93,12 +95,12 @@ export function CentreTimetableClient(_: Props) {
   const timetableQuery = useQuery({
     queryKey: dashboardQueryKeys.timetable,
     staleTime: 30_000,
-    queryFn: async (): Promise<TimetableSlot[]> => {
+    queryFn: async (): Promise<ProductTimetableSlot[]> => {
       const response = await authenticatedApiFetch(`${api}/classes/timetable`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok)
         throw new Error(body.error || "Could not load timetable");
-      return body.data || [];
+      return (body.data || []).map((slot: TimetableSlot) => adaptSubjectLink(slot));
     },
   });
   const slots = timetableQuery.data || [];
@@ -113,8 +115,8 @@ export function CentreTimetableClient(_: Props) {
       Array.from(
         new Map(
           slots
-            .filter((item) => item.course)
-            .map((item) => [item.course!.id, item.course!]),
+            .filter((item) => item.subject)
+            .map((item) => [item.subject!.id, item.subject!]),
         ).values(),
       ),
     [slots],
@@ -209,7 +211,7 @@ export function CentreTimetableClient(_: Props) {
       <header className="flex flex-col gap-4 border-b border-[#e5e1dd] pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
-            Centre operations
+            Tutoring account operations
           </p>
           <h1 className="mt-1 text-3xl font-bold text-[#180d62]">Timetable</h1>
           <p className="mt-2 text-sm text-[#66616c]">
@@ -302,7 +304,7 @@ export function CentreTimetableClient(_: Props) {
                   ]
                 }{" "}
                 {timeLabel(new Date(nextTeachingSlot.scheduled_at))} ·{" "}
-                {nextTeachingSlot.course?.name || nextTeachingSlot.title}
+                {nextTeachingSlot.subject?.name || nextTeachingSlot.title}
               </p>
             )}
             <Link
@@ -379,7 +381,7 @@ export function CentreTimetableClient(_: Props) {
                           >
                             {events.map((item) => {
                               const hue = hueFor(
-                                item.course?.name || item.title,
+                                item.subject?.name || item.title,
                               );
                               const scheduled = new Date(item.scheduled_at);
                               return (
@@ -393,7 +395,7 @@ export function CentreTimetableClient(_: Props) {
                                   }}
                                 >
                                   <p className="truncate text-xs font-bold text-[#180d62]">
-                                    {item.course?.name || item.title}
+                                    {item.subject?.name || item.title}
                                   </p>
                                   <p className="mt-0.5 truncate text-[11px] text-[#474551]">
                                     {timeLabel(scheduled)} ·{" "}
@@ -428,7 +430,7 @@ export function CentreTimetableClient(_: Props) {
               </div>
               <div className="divide-y divide-[#eeeae6]">
                 {selectedEvents.map((item) => {
-                  const hue = hueFor(item.course?.name || item.title);
+                  const hue = hueFor(item.subject?.name || item.title);
                   return (
                     <article key={item.id} className="flex gap-3 p-4">
                       <div className="w-16 shrink-0 text-xs font-bold text-[#994704]">
@@ -442,7 +444,7 @@ export function CentreTimetableClient(_: Props) {
                         style={{ borderColor: `hsl(${hue} 55% 43%)` }}
                       >
                         <p className="truncate font-semibold text-[#180d62]">
-                          {item.course?.name || item.title}
+                          {item.subject?.name || item.title}
                         </p>
                         <p className="mt-1 text-sm text-[#474551]">
                           {item.title}
@@ -465,7 +467,7 @@ export function CentreTimetableClient(_: Props) {
         )}
       </section>
       <p className="mt-4 text-xs leading-5 text-[#66616c]">
-        This view reflects recurring teaching slots across the centre. Scroll to
+        This view reflects recurring teaching slots across the tutoring account. Scroll to
         see evening sessions; manage a dated session from Calendar.
       </p>
     </main>
