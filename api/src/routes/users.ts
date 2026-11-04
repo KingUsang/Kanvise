@@ -24,6 +24,7 @@ const enforceAdmin = async (c: any, next: any) => {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_IMPORT_SIZE = 500;
+const NON_ENUMERATING_IMPORT_ERROR = 'Could not add student';
 
 async function allocateStudentId() {
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -119,8 +120,8 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
       try {
         let student = row.email ? profilesByEmail.get(row.email) : undefined;
         if (student) {
-          if (student.role !== 'student') throw new Error('Email already belongs to a staff account');
-          if (student.school_id && student.school_id !== admin.school_id) throw new Error('Student already belongs to another centre');
+          if (student.role !== 'student') throw new Error(NON_ENUMERATING_IMPORT_ERROR);
+          if (student.school_id && student.school_id !== admin.school_id) throw new Error(NON_ENUMERATING_IMPORT_ERROR);
           if (!student.school_id) {
             const { data, error } = await supabase.from('user_profiles').update({ school_id: admin.school_id }).eq('id', student.id).select('id, supabase_auth_id, school_id, role, kanvise_user_id, email, first_name, last_name, onboarding_status').single();
             if (error) throw error;

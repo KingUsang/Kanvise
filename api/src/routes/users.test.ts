@@ -5,6 +5,30 @@ const mocks = vi.hoisted(() => ({
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin' } as any,
 }))
 
+function query(result: any) {
+  const builder: any = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    in: vi.fn(() => builder),
+    update: vi.fn(() => builder),
+    insert: vi.fn(() => builder),
+    single: vi.fn(async () => result),
+    maybeSingle: vi.fn(async () => result),
+    then: (resolve: (value: any) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(result).then(resolve, reject),
+  }
+  return builder
+}
+
+function configureImportQueries(profile: any, existingEnrolment: any = null) {
+  mocks.from.mockImplementation((table: string) => {
+    if (table === 'programmes') return query({ data: [{ id: 'programme-1', name: 'Mathematics' }], error: null })
+    if (table === 'schools') return query({ data: { name: 'Test Centre' }, error: null })
+    if (table === 'user_profiles') return query({ data: profile ? [profile] : [], error: null })
+    if (table === 'enrolments') return query({ data: existingEnrolment, error: null })
+    throw new Error(`Unexpected table: ${table}`)
+  })
+}
+
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, auth: { admin: {} } } }))
 vi.mock('../storage/r2', () => ({ publicFileUrl: (key: string) => `https://media.test/${key}` }))
 vi.mock('../middleware/auth', () => ({
@@ -62,5 +86,35 @@ describe('student import access and validation', () => {
     expect(response.status).toBe(400)
     const body = await response.json() as any
     expect(body.errors[0].errors).toContain('Email address is required')
+  })
+
+  it.each([
+    ['a staff profile', { id: 'staff-1', role: 'tutor', school_id: 'school-2', email: 'person@example.test' }],
+    ['a Learner in another centre', { id: 'student-2', role: 'student', school_id: 'school-2', email: 'person@example.test' }],
+  ])('returns the same safe row error for %s', async (_description, profile) => {
+    configureImportQueries(profile)
+
+    const response = await usersRouter.request('/students/import', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ send_invitations: false, students: [{ first_name: 'Ada', last_name: 'Okafor', email: profile.email, programme_id: 'programme-1' }] }),
+    })
+
+    expect(response.status).toBe(201)
+    const body = await response.json() as any
+    expect(body.data.errors).toEqual([{ row: 1, errors: ['Could not add student'] }])
+    expect(body.data.errors[0].errors[0]).not.toMatch(/staff|centre|account|email|student already/i)
+  })
+
+  it('continues importing a same-centre Learner', async () => {
+    configureImportQueries({ id: 'student-1', role: 'student', school_id: 'school-1', email: 'person@example.test', onboarding_status: 'active' })
+
+    const response = await usersRouter.request('/students/import', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ send_invitations: false, students: [{ first_name: 'Ada', last_name: 'Okafor', email: 'person@example.test', programme_id: 'programme-1' }] }),
+    })
+
+    expect(response.status).toBe(201)
+    const body = await response.json() as any
+    expect(body.data).toMatchObject({ created: 0, enrolled: 1, skipped: 0, errors: [] })
   })
 })
