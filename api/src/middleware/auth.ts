@@ -15,23 +15,6 @@ function setSentryUserContext(user: { id?: string; kanvise_user_id?: string; sch
   if (user.school_id) Sentry.setTag('school_id', user.school_id)
 }
 
-export function resolveTrustedProfileClaims(jwtPayload: any) {
-  const appMetadata = jwtPayload?.app_metadata || {}
-  const role = appMetadata.kanvise_role || appMetadata.role
-  const { school_id, kanvise_user_id, profile_id } = appMetadata
-
-  if (!role || !kanvise_user_id || !profile_id) return null
-
-  return {
-    id: profile_id,
-    supabase_auth_id: jwtPayload.sub,
-    role,
-    school_id: school_id || null,
-    kanvise_user_id,
-    email: jwtPayload.email || null,
-  }
-}
-
 const verifyJWT = createJwtVerifier({ supabaseUrl: process.env.SUPABASE_URL || '' })
 
 export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
@@ -57,52 +40,31 @@ export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
 
 export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   const jwtPayload = c.get('jwt_payload')
-  const supabaseAuthId = jwtPayload.sub
-  
-  // Fast path: only app_metadata is trusted for authorisation claims.
-  // Supabase users can edit user_metadata themselves, so it must never decide
-  // role, tenant, or profile identity.
-  const trustedClaims = resolveTrustedProfileClaims(jwtPayload)
-
-  if (trustedClaims) {
-    let resolvedClaims = trustedClaims
-    // A first centre enrolment can commit between access-token issuance and
-    // the next refresh. Consult the canonical profile only for this transition
-    // state so a stale null claim cannot serve the standalone-student view.
-    if (trustedClaims.role === 'student' && !trustedClaims.school_id) {
-      const { data: currentProfile } = await supabase
-        .from('user_profiles')
-        .select('school_id, is_active')
-        .eq('id', trustedClaims.id)
-        .eq('supabase_auth_id', supabaseAuthId)
-        .maybeSingle()
-      if (currentProfile?.is_active === false) {
-        return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
-      }
-      if (currentProfile?.school_id) resolvedClaims = { ...trustedClaims, school_id: currentProfile.school_id }
-    }
-    c.set('user', resolvedClaims)
-    setSentryUserContext(resolvedClaims)
-    return await next()
+  const supabaseAuthId = jwtPayload?.sub
+  if (!supabaseAuthId) {
+    return c.json({ error: 'Invalid verified identity', code: 'INVALID_IDENTITY' }, 401)
   }
-  
-  // Slow path - lookup from DB
+
+  const isProfileInit = c.req.method === 'POST' && c.req.path === '/auth/profile/init'
   const { data: profile, error } = await supabase
     .from('user_profiles')
     .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active')
     .eq('supabase_auth_id', supabaseAuthId)
-    .single()
-    
-  if (error || !profile) {
-    // If it's the init profile endpoint, the user doesn't have a profile yet but needs to pass through
-    if (c.req.path.includes('/auth/profile/init')) {
-      c.set('user', { supabase_auth_id: supabaseAuthId })
+    .maybeSingle()
+
+  if (error) {
+    return c.json({ error: 'Could not resolve your profile right now', code: 'PROFILE_LOOKUP_FAILED' }, 503)
+  }
+
+  if (!profile) {
+    if (isProfileInit) {
+      c.set('user', { supabase_auth_id: supabaseAuthId, email: jwtPayload.email || null })
       return await next()
     }
     return c.json({ error: 'User profile not found', code: 'PROFILE_NOT_FOUND' }, 403)
   }
 
-  if (profile.is_active === false) {
+  if (profile.is_active !== true) {
     return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
   }
   
@@ -119,25 +81,6 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   c.set('user', resolvedUser)
   setSentryUserContext(resolvedUser)
 
-  // Existing users may have been issued tokens before trusted claims moved to
-  // app_metadata. Backfill from the canonical profile without blocking access
-  // if the Auth admin update is temporarily unavailable. The new claims take
-  // effect when Supabase next refreshes the user's token.
-  try {
-    await supabase.auth.admin.updateUserById(supabaseAuthId, {
-      app_metadata: {
-        ...(jwtPayload.app_metadata || {}),
-        role: profile.role,
-        kanvise_role: profile.role,
-        school_id: profile.school_id,
-        kanvise_user_id: profile.kanvise_user_id,
-        profile_id: profile.id,
-      },
-    })
-  } catch (metadataError) {
-    console.error('[auth] Failed to backfill trusted profile claims:', metadataError)
-  }
-  
   await next()
 }
 
