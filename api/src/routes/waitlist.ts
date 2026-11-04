@@ -32,13 +32,15 @@ export function createSupabaseWaitlistStore(client: SupabaseClient<Database>): W
   }
 }
 
-function objectBody(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
+function isObjectBody(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
 function parseStudentCount(value: unknown): number | null {
   if (value === undefined || value === null || value === '') return null
-  return typeof value === 'number' ? value : Number(value)
+  if (typeof value === 'number') return value
+  if (typeof value !== 'string' || value.trim() === '') return Number.NaN
+  return Number(value)
 }
 
 function duplicateResponse(position: number | null) {
@@ -50,12 +52,35 @@ export function createWaitlistRouter(store: WaitlistStore) {
 
   router.post('/waitlist', async (c) => {
     try {
-      const body = objectBody(await c.req.json())
-      const contactName = typeof body?.contact_name === 'string' ? body.contact_name.trim() : ''
-      const contactEmail = typeof body?.contact_email === 'string' ? body.contact_email.trim().toLowerCase() : ''
-      const centreName = typeof body?.centre_name === 'string' ? body.centre_name.trim() : ''
-      const contactPhone = typeof body?.contact_phone === 'string' ? body.contact_phone.trim().slice(0, 40) || null : null
-      const parsedStudentCount = parseStudentCount(body?.estimated_student_count)
+      let rawBody: unknown
+      try {
+        rawBody = await c.req.json()
+      } catch {
+        return c.json({ error: 'Invalid JSON payload' }, 400)
+      }
+      if (!isObjectBody(rawBody)) return c.json({ error: 'Invalid waitlist payload' }, 400)
+
+      const body = rawBody
+      const requiredFields = ['contact_name', 'contact_email', 'centre_name'] as const
+      if (requiredFields.some((field) => body[field] !== undefined && typeof body[field] !== 'string')) {
+        return c.json({ error: 'Invalid waitlist details' }, 400)
+      }
+      if (body.contact_phone !== undefined && body.contact_phone !== null && typeof body.contact_phone !== 'string') {
+        return c.json({ error: 'Invalid waitlist details' }, 400)
+      }
+      if (body.estimated_student_count !== undefined && body.estimated_student_count !== null
+        && typeof body.estimated_student_count !== 'number' && typeof body.estimated_student_count !== 'string') {
+        return c.json({ error: 'Invalid estimated student count' }, 400)
+      }
+      if (body.wants_beta_testing !== undefined && typeof body.wants_beta_testing !== 'boolean') {
+        return c.json({ error: 'Invalid waitlist details' }, 400)
+      }
+
+      const contactName = typeof body.contact_name === 'string' ? body.contact_name.trim() : ''
+      const contactEmail = typeof body.contact_email === 'string' ? body.contact_email.trim().toLowerCase() : ''
+      const centreName = typeof body.centre_name === 'string' ? body.centre_name.trim() : ''
+      const contactPhone = typeof body.contact_phone === 'string' ? body.contact_phone.trim().slice(0, 40) || null : null
+      const parsedStudentCount = parseStudentCount(body.estimated_student_count)
       const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)
 
       if (!contactEmail || !contactName || !centreName) return c.json({ error: 'Missing required fields' }, 400)

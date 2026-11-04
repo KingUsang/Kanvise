@@ -3,27 +3,24 @@ import { NextRequest, NextResponse } from "next/server";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON payload" },
-      { status: 400 },
-    );
-  }
-
-  try {
+    const body = await req.arrayBuffer();
+    const contentType = req.headers.get("content-type");
+    const headers = contentType ? { "Content-Type": contentType } : undefined;
     const response = await fetch(`${API_URL}/waitlist`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      ...(headers ? { headers } : {}),
+      body,
       signal: AbortSignal.timeout(15_000),
     });
 
-    const payload = await response.json();
-    return NextResponse.json(payload, { status: response.status });
+    const responseHeaders = new Headers();
+    const upstreamContentType = response.headers.get("content-type");
+    if (upstreamContentType) responseHeaders.set("content-type", upstreamContentType);
+    return new NextResponse(await response.arrayBuffer(), {
+      status: response.status,
+      headers: responseHeaders,
+    });
   } catch (error) {
     console.error("[Waitlist Route] Failed to reach API:", error);
     return NextResponse.json(

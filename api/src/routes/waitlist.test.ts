@@ -16,10 +16,14 @@ function makeStore(overrides: Partial<WaitlistStore> = {}): WaitlistStore {
 }
 
 function post(store: WaitlistStore, body: unknown) {
+  return postRaw(store, JSON.stringify(body))
+}
+
+function postRaw(store: WaitlistStore, body: string) {
   return createWaitlistRouter(store).request('/waitlist', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    body,
   })
 }
 
@@ -49,6 +53,36 @@ describe('POST /waitlist', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Invalid waitlist details' })
+  })
+
+  it('rejects malformed JSON and non-object bodies before store access', async () => {
+    const malformedStore = makeStore()
+    const malformed = await postRaw(malformedStore, '{not-json')
+    expect(malformed.status).toBe(400)
+    await expect(malformed.json()).resolves.toEqual({ error: 'Invalid JSON payload' })
+    expect(malformedStore.findByEmail).not.toHaveBeenCalled()
+
+    const nullStore = makeStore()
+    const nullBody = await post(nullStore, null)
+    expect(nullBody.status).toBe(400)
+    await expect(nullBody.json()).resolves.toEqual({ error: 'Invalid waitlist payload' })
+    expect(nullStore.findByEmail).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['required field', { ...validBody, contact_name: false }, 'Invalid waitlist details'],
+    ['student count', { ...validBody, estimated_student_count: false }, 'Invalid estimated student count'],
+    ['beta flag', { ...validBody, wants_beta_testing: 'false' }, 'Invalid waitlist details'],
+    ['phone', { ...validBody, contact_phone: 12345 }, 'Invalid waitlist details'],
+  ])('rejects a wrong %s type before storage', async (_label, body, error) => {
+    const store = makeStore()
+
+    const response = await post(store, body)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error })
+    expect(store.findByEmail).not.toHaveBeenCalled()
+    expect(store.insert).not.toHaveBeenCalled()
   })
 
   it.each([
