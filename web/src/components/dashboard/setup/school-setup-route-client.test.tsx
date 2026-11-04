@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SchoolSetupRouteClient } from './school-setup-route-client'
 
@@ -12,8 +12,8 @@ vi.mock('@/lib/authenticated-fetch', () => ({ authenticatedApiFetch: mocks.authe
 vi.mock('@/config/api', () => ({ getApiUrl: () => 'https://api.kanvise.test' }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: mocks.replace }) }))
 
-function renderRoute(mode: 'setup' | 'settings' = 'setup') {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+function renderRoute(mode: 'setup' | 'settings' = 'setup', retry: number | boolean = false) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry } } })
   return render(<QueryClientProvider client={queryClient}><SchoolSetupRouteClient mode={mode} /></QueryClientProvider>)
 }
 
@@ -41,21 +41,25 @@ describe('dashboard school data boundary', () => {
   })
 
   it('shows a safe retry state for service failures', async () => {
-    mocks.authenticatedApiFetch.mockRejectedValueOnce(new Error('Could not reach the API'))
+    mocks.authenticatedApiFetch.mockRejectedValue(new Error('internal transport details'))
 
     renderRoute()
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument())
-    expect(screen.getByText('Could not reach the API')).toBeInTheDocument()
+    expect(screen.getByText('We could not load your centre details. Please try again.')).toBeInTheDocument()
+    expect(screen.queryByText('internal transport details')).not.toBeInTheDocument()
   })
 
-  it('shows the session-ended state without rendering the form', async () => {
-    mocks.authenticatedApiFetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Your session has ended. Please sign in again.', code: 'SESSION_EXPIRED' }), { status: 401 }))
+  it('does not retry session expiry and offers safe sign-in continuation', async () => {
+    mocks.authenticatedApiFetch.mockResolvedValue(new Response(JSON.stringify({ error: 'Your session has ended. Please sign in again.', code: 'SESSION_EXPIRED' }), { status: 401 }))
 
-    renderRoute()
+    renderRoute('setup', 1)
 
     await waitFor(() => expect(screen.getByText('Your session has ended. Please sign in again.')).toBeInTheDocument())
     expect(screen.queryByRole('heading', { name: 'Centre profile' })).not.toBeInTheDocument()
+    expect(mocks.authenticatedApiFetch).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in again' }))
+    expect(mocks.replace).toHaveBeenCalledWith('/auth/login?redirect=%2Fdashboard%2Fschool-setup')
   })
 
   it('redirects settings to first-time setup only for the typed missing-school state', async () => {

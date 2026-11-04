@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { getApiUrl } from '@/config/api'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { loginHref } from '@/lib/auth-continuation'
 import { SchoolSetupForm } from './school-setup-form'
 
 type SchoolSetupRouteClientProps = {
@@ -16,6 +17,15 @@ type SchoolResponse = {
   isConfigured: boolean
 }
 
+const SESSION_ENDED_MESSAGE = 'Your session has ended. Please sign in again.'
+const SAFE_LOAD_ERROR = 'We could not load your centre details. Please try again.'
+
+class SchoolLoadError extends Error {
+  constructor(readonly code: 'SESSION_EXPIRED' | 'INVALID_RESPONSE' | 'UNAVAILABLE') {
+    super(code === 'SESSION_EXPIRED' ? SESSION_ENDED_MESSAGE : SAFE_LOAD_ERROR)
+  }
+}
+
 async function loadSchool(): Promise<SchoolResponse> {
   const response = await authenticatedApiFetch(`${getApiUrl()}/schools/me`, { cache: 'no-store' })
   const body = await response.json().catch(() => null) as { data?: Record<string, unknown>; error?: string; code?: string } | null
@@ -25,9 +35,9 @@ async function loadSchool(): Promise<SchoolResponse> {
     return { school: null, isConfigured: false }
   }
   if (response.status === 401 || body?.code === 'SESSION_EXPIRED') {
-    throw new Error('Your session has ended. Please sign in again.')
+    throw new SchoolLoadError('SESSION_EXPIRED')
   }
-  throw new Error(body?.error || 'We could not load your centre details. Please try again.')
+  throw new SchoolLoadError(response.status === 400 || response.status === 404 ? 'INVALID_RESPONSE' : 'UNAVAILABLE')
 }
 
 function RouteLoading() {
@@ -36,10 +46,12 @@ function RouteLoading() {
 
 export function SchoolSetupRouteClient({ mode }: SchoolSetupRouteClientProps) {
   const router = useRouter()
+  const loginPath = loginHref({ redirect: mode === 'settings' ? '/dashboard/settings' : '/dashboard/school-setup' })
   const schoolQuery = useQuery({
     queryKey: ['dashboard-school'],
     queryFn: loadSchool,
     staleTime: 60_000,
+    retry: (failureCount, error) => error instanceof SchoolLoadError && error.code === 'UNAVAILABLE' && failureCount < 1,
   })
 
   useEffect(() => {
@@ -50,10 +62,15 @@ export function SchoolSetupRouteClient({ mode }: SchoolSetupRouteClientProps) {
 
   if (schoolQuery.isPending || (mode === 'settings' && schoolQuery.data?.isConfigured === false)) return <RouteLoading />
   if (schoolQuery.isError) {
+    const sessionEnded = schoolQuery.error instanceof SchoolLoadError && schoolQuery.error.code === 'SESSION_EXPIRED'
     return (
       <main className="mx-auto max-w-xl px-4 py-10 text-center text-sm text-red-800">
-        <p>{schoolQuery.error instanceof Error ? schoolQuery.error.message : 'We could not load your centre details.'}</p>
-        <button type="button" onClick={() => void schoolQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button>
+        <p>{sessionEnded ? SESSION_ENDED_MESSAGE : SAFE_LOAD_ERROR}</p>
+        {sessionEnded ? (
+          <button type="button" onClick={() => router.replace(loginPath)} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Sign in again</button>
+        ) : (
+          <button type="button" onClick={() => void schoolQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button>
+        )}
       </main>
     )
   }
