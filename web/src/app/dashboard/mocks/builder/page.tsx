@@ -22,9 +22,10 @@ export default async function MockBuilderPage() {
     }
   );
 
-  const { data: sessionData } = await supabase.auth.getSession();
+  const { data: claimsData, error } = await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
 
-  if (!sessionData.session) {
+  if (error || !claims) {
     redirect("/auth/login");
   }
 
