@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { authenticatedFetch } from './authenticated-fetch'
+import { clearActiveAccountId, setActiveAccountId } from './account-preference'
 
 describe('authenticatedFetch', () => {
-  beforeEach(() => vi.restoreAllMocks())
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    clearActiveAccountId()
+  })
 
   it('refreshes once and retries the same request after an expired access token', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
@@ -112,6 +116,20 @@ describe('authenticatedFetch', () => {
     }))
   })
 
+  it('attaches the active account preference to every authenticated request', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const accountId = '22222222-2222-4222-8222-222222222222'
+    setActiveAccountId(accountId)
+
+    await authenticatedFetch({ auth: { refreshSession: vi.fn() } } as any, '/dashboard', 'current-token', {
+      headers: { 'X-Kanvise-Account-Id': 'stale-account' },
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/dashboard', expect.objectContaining({
+      headers: { Authorization: 'Bearer current-token', 'X-Kanvise-Account-Id': accountId },
+    }))
+  })
+
   it('shares one refresh when requests receive 401 together', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'TOKEN_EXPIRED' }), { status: 401 }))
@@ -127,6 +145,7 @@ describe('authenticatedFetch', () => {
 
     expect(responses.every(response => response.status === 200)).toBe(true)
     expect(refreshSession).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
 })

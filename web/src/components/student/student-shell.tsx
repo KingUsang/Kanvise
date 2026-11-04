@@ -16,6 +16,7 @@ import { BrowserPushPrompt } from '@/components/pwa/browser-push-prompt';
 import { BrowserPushEngagementTracker } from '@/components/pwa/browser-push-engagement-tracker';
 import type { StudentDashboardData } from '@/lib/student-dashboard';
 import { adaptLearnerDashboard, productTerms } from '@/lib/product-terminology';
+import { AccountSwitcher } from '@/components/account/account-switcher';
 
 const navigation = [
   { label: "Home", href: "/dashboard/student", icon: Home },
@@ -101,7 +102,8 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#e7e3df] bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-10">
         <div className="min-w-0 lg:hidden"><p className="text-sm font-semibold text-[#2e2877]">Kanvise</p><p className="truncate text-xs text-[#77727e]">{resolvedAccount}</p></div>
         <div className="hidden lg:block"><p className="text-sm font-medium text-[#2e2877]">{resolvedAccount}</p><p className="text-xs text-[#77727e]">Learner portal</p></div>
-        <div className="relative ml-auto">
+        <div className="relative ml-auto flex items-center gap-2">
+          <AccountSwitcher compact />
           <button type="button" aria-label="Open account menu" aria-expanded={accountOpen} onClick={() => setAccountOpen(value => !value)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eeeafe] text-sm font-semibold text-[#2e2877] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2e2877]">{resolvedName.charAt(0).toUpperCase() || "S"}</button>
           {accountOpen && <><button aria-label="Close account menu" className="fixed inset-0 z-30" onClick={() => setAccountOpen(false)} /><div className="absolute right-0 top-12 z-40 w-60 overflow-hidden rounded-2xl border border-[#e3ded9] bg-white shadow-xl"><div className="border-b border-[#eeeae6] px-4 py-3"><p className="truncate text-sm font-semibold">{resolvedName}</p><p className="truncate text-xs text-[#77727e]">{resolvedAccount}</p></div><div className="p-2"><Link href="/dashboard/student/settings" onClick={() => setAccountOpen(false)} className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><Settings size={18} />Settings</Link><button onClick={signOut} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><LogOut size={18} />Log out</button></div></div></>}
         </div>

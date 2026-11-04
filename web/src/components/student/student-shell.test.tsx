@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const mocks = vi.hoisted(() => ({ pathname: '/dashboard/student' }))
 
-vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname }))
+vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname, useRouter: () => ({ replace: vi.fn() }) }))
 vi.mock('@supabase/ssr', () => ({ createBrowserClient: vi.fn() }))
 vi.mock('@/lib/push-notifications', () => ({ detachBrowserPushOnLogout: vi.fn() }))
 

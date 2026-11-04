@@ -8,6 +8,7 @@ import { startNavigationProgress } from '@/components/navigation/NavigationProgr
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { detachBrowserPushOnLogout } from '@/lib/push-notifications'
+import { AccountSwitcher } from '@/components/account/account-switcher'
 
 interface TopBarProps {
   user: {
@@ -122,6 +123,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
       
       {/* User identity */}
       <div className="flex items-center space-x-3 sm:space-x-6">
+        {!capabilities.setupRequired && <AccountSwitcher compact />}
         <div className="relative">
           <button
             type="button"

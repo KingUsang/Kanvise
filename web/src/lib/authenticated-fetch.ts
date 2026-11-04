@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCurrentAccessToken, refreshAccessToken } from './auth-session'
+import { ACCOUNT_CONTEXT_HEADER, getActiveAccountId } from './account-preference'
 import { createClient } from './supabase/client'
 
 const refreshes = new WeakMap<SupabaseClient, Promise<string | null>>()
@@ -39,6 +40,9 @@ export async function authenticatedFetch(
     // place alongside this one causes browsers to combine both values.
     const headers = Object.fromEntries(new Headers(init.headers).entries())
     delete headers.authorization
+    delete headers[ACCOUNT_CONTEXT_HEADER.toLowerCase()]
+    const activeAccountId = getActiveAccountId()
+    if (activeAccountId) headers[ACCOUNT_CONTEXT_HEADER] = activeAccountId
     return fetch(input, {
       ...init,
       headers: { ...headers, Authorization: `Bearer ${token}` },
