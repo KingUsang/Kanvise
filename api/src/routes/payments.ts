@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
+import {
+  accountContextMiddleware,
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  requireMembershipRole,
+} from "../middleware/auth";
+import type { AccountContext } from "../types";
 import {
   calculatePaymentBreakdown,
   checkoutCallbackUrl,
@@ -11,20 +17,27 @@ import {
 
 type Variables = {
   user: any;
+  account: AccountContext;
 };
 
 export const paymentsRouter = new Hono<{ Variables: Variables }>();
 
 paymentsRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
-
-// Middleware to enforce Admin role
-const enforceAdmin = async (c: any, next: any) => {
-  const profile = c.get("user");
-  if (profile.role !== "admin") {
-    return c.json({ error: "Only admins can perform this action", code: "FORBIDDEN" }, 403);
-  }
+paymentsRouter.use("*", accountContextMiddleware);
+paymentsRouter.use("*", async (c, next) => {
+  const account = c.get("account") as AccountContext | undefined;
+  if (!account) return c.json({ error: "Tutoring account context is required", code: "ACCOUNT_CONTEXT_REQUIRED" }, 400);
+  const user = c.get("user");
+  c.set("user", {
+    ...user,
+    school_id: account.id,
+    role: account.role === "learner" ? "student" : account.role,
+  });
   await next();
-};
+});
+
+const enforceAdmin = requireMembershipRole("admin");
+const enforceLearner = requireMembershipRole("learner");
 
 // GET /payments/summary — Fetch subaccount config and Kanvise subscription status
 paymentsRouter.get("/summary", enforceAdmin, async (c) => {
@@ -47,18 +60,15 @@ paymentsRouter.get("/summary", enforceAdmin, async (c) => {
 
     return c.json({ data: { subaccount, subscription } });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("GET /payments/summary error:", error);
+    return c.json({ error: "Could not load payment settings", code: "PAYMENT_SETTINGS_LOAD_FAILED" }, 500);
   }
 });
 
 // POST /checkout — Initiate a Paystack payment for a student
-paymentsRouter.post("/checkout", async (c) => {
+paymentsRouter.post("/checkout", enforceLearner, async (c) => {
   try {
     const user = c.get("user");
-    if (user.role !== "student") {
-      return c.json({ error: "Only students can checkout", code: "FORBIDDEN" }, 403);
-    }
-
     const body = await c.req.json();
     const checkoutTarget = parseCheckoutTarget(body);
     if (!checkoutTarget) {
@@ -78,11 +88,15 @@ paymentsRouter.post("/checkout", async (c) => {
       .from("payments")
       .select("id, paystack_reference, paystack_authorization_url, amount, status, programme_id, sub_programme_id, course_id, kanvise_fee")
       .eq("student_id", user.id)
+      .eq("school_id", user.school_id)
       .eq("checkout_idempotency_key", idempotencyKey)
       .maybeSingle();
 
     const { data: existingCheckout } = await existingCheckoutQuery();
     if (existingCheckout) {
+      if (existingCheckout[checkoutTarget.column] !== checkoutTarget.id) {
+        return c.json({ error: "Checkout is already being initialized", code: "PAYMENT_INITIALIZING" }, 409);
+      }
       if (existingCheckout.paystack_authorization_url && existingCheckout.status === "pending") {
         return c.json({ data: {
           payment_id: existingCheckout.id,
@@ -107,6 +121,7 @@ paymentsRouter.post("/checkout", async (c) => {
       .from(checkoutTarget.table)
       .select(targetFields)
       .eq("id", checkoutTarget.id)
+      .eq("school_id", user.school_id)
       .single();
     const target = rawTarget as any;
 
@@ -123,6 +138,7 @@ paymentsRouter.post("/checkout", async (c) => {
       .from("enrolments")
       .select("id")
       .eq("student_id", user.id)
+      .eq("school_id", user.school_id)
       .eq(checkoutTarget.column, checkoutTarget.id)
       .maybeSingle();
 
@@ -288,30 +304,30 @@ paymentsRouter.post("/checkout", async (c) => {
     }, 201);
 
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("POST /payments/checkout error:", error);
+    return c.json({ error: "Could not initialize payment", code: "CHECKOUT_FAILED" }, 500);
   }
 });
 
 // GET /payments/status/:reference — The return page polls this; it never grants access.
-paymentsRouter.get("/status/:reference", async (c) => {
+paymentsRouter.get("/status/:reference", enforceLearner, async (c) => {
   const user = c.get("user");
-  if (user.role !== "student") {
-    return c.json({ error: "Only students can view checkout status", code: "FORBIDDEN" }, 403);
-  }
 
   const reference = c.req.param("reference");
+  if (!reference) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
   const { data, error } = await supabase
     .from("payments")
     .select("paystack_reference, status, amount, paid_at, school_id")
     .eq("paystack_reference", reference)
     .eq("student_id", user.id)
+    .eq("school_id", user.school_id)
     .maybeSingle();
 
-  if (error) return c.json({ error: "Could not load payment status" }, 500);
+  if (error) return c.json({ error: "Could not load payment status", code: "PAYMENT_STATUS_FAILED" }, 500);
   if (!data) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
   const { data: paidTelegramChat, error: telegramError } = await (supabase as any).from('telegram_chats')
     .select('id').eq('school_id', data.school_id).eq('purpose', 'paid_teaching').eq('status', 'active').maybeSingle()
-  if (telegramError) return c.json({ error: 'Could not load payment status' }, 500)
+  if (telegramError) return c.json({ error: 'Could not load payment status', code: 'PAYMENT_STATUS_FAILED' }, 500)
   return c.json({ data: { ...data, telegram_paid_access_available: Boolean(paidTelegramChat) } });
 });
 
@@ -319,18 +335,19 @@ paymentsRouter.get("/status/:reference", async (c) => {
 // Webhooks remain the primary confirmation path, but a successful Paystack
 // callback must not leave a student without access when a webhook is delayed
 // or a staging environment cannot receive the account-level webhook.
-paymentsRouter.post("/status/:reference/confirm", async (c) => {
+paymentsRouter.post("/status/:reference/confirm", enforceLearner, async (c) => {
   const user = c.get("user");
-  if (user.role !== "student") return c.json({ error: "Only students can confirm checkout status", code: "FORBIDDEN" }, 403);
 
   const reference = c.req.param("reference");
+  if (!reference) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
   const { data: payment, error: paymentError } = await supabase
     .from("payments")
     .select("paystack_reference, status, amount")
     .eq("paystack_reference", reference)
     .eq("student_id", user.id)
+    .eq("school_id", user.school_id)
     .maybeSingle();
-  if (paymentError) return c.json({ error: "Could not load payment status" }, 500);
+  if (paymentError) return c.json({ error: "Could not load payment status", code: "PAYMENT_STATUS_FAILED" }, 500);
   if (!payment) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
   if (payment.status === "successful") return c.json({ data: { status: "successful", already_confirmed: true } });
 

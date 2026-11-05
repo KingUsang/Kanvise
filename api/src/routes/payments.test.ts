@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   rpc: vi.fn(),
+  account: { id: "school-1", membershipId: "membership-1", role: "learner" } as any,
   user: { id: "student-1", role: "student", email: "student@example.com", school_id: "school-1" } as any,
 }));
 
@@ -10,14 +11,25 @@ vi.mock("../lib/supabase", () => ({ supabase: { from: mocks.from, rpc: mocks.rpc
 vi.mock("../middleware/auth", () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set("user", mocks.user); await next(); },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    if (!mocks.account) return c.json({ error: "A valid tutoring account must be selected", code: "ACCOUNT_CONTEXT_REQUIRED" }, 400);
+    c.set("account", mocks.account);
+    await next();
+  },
+  requireMembershipRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
+    if (!mocks.account || !roles.includes(mocks.account.role)) {
+      return c.json({ error: "This action is not available for your account membership", code: "INSUFFICIENT_ROLE" }, 403);
+    }
+    await next();
+  },
 }));
 
 import { paymentsRouter } from "./payments";
 
-function selectQuery(result: any) {
+function selectQuery(result: any, eqSpy = vi.fn()) {
   const value: any = {
     select: () => value,
-    eq: () => value,
+    eq: (...args: any[]) => { eqSpy(...args); return value; },
     order: () => value,
     limit: () => value,
     single: async () => result,
@@ -49,12 +61,14 @@ function updateQuery(result: any) {
 describe("POST /payments/checkout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.account = { id: "school-1", membershipId: "membership-1", role: "learner" };
     vi.stubEnv("FRONTEND_URL", "https://kanvise.com");
     vi.stubEnv("PAYSTACK_SECRET_KEY", "sk_test_123");
   });
 
   it("creates a checkout with a clean callback URL and persists Paystack details", async () => {
     let paymentsCall = 0;
+    const programmeFilters = vi.fn();
     mocks.from.mockImplementation((table: string) => {
       if (table === "payments") {
         paymentsCall += 1;
@@ -63,7 +77,7 @@ describe("POST /payments/checkout", () => {
         if (paymentsCall === 3) return updateQuery({ error: null });
         return updateQuery({ error: null });
       }
-      if (table === "programmes") return selectQuery({ data: { id: "programme-1", name: "Physics", price: 45000, school_id: "school-1", is_published: true }, error: null });
+      if (table === "programmes") return selectQuery({ data: { id: "programme-1", name: "Physics", price: 45000, school_id: "school-1", is_published: true }, error: null }, programmeFilters);
       if (table === "paystack_subaccounts") return selectQuery({ data: { subaccount_code: "ACCT_TEST", percentage_charge: 10 }, error: null });
       if (table === "enrolments") return selectQuery({ data: null, error: null });
       throw new Error(`Unexpected table ${table}`);
@@ -97,6 +111,7 @@ describe("POST /payments/checkout", () => {
     expect(mocks.from).toHaveBeenCalledWith("payments");
     expect(mocks.from).toHaveBeenCalledWith("programmes");
     expect(mocks.from).toHaveBeenCalledWith("paystack_subaccounts");
+    expect(programmeFilters).toHaveBeenCalledWith("school_id", "school-1");
   });
 
   it("enrols a student immediately when a programme is free", async () => {
@@ -124,5 +139,106 @@ describe("POST /payments/checkout", () => {
     await expect(response.json()).resolves.toMatchObject({ data: { free: true, enrolment_id: "enrolment-1", amount: 0 } });
     expect(mocks.rpc).toHaveBeenCalledWith("confirm_student_payment", expect.objectContaining({ p_amount_kobo: 0 }));
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not replay an idempotency key for a different target", async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "payments") return selectQuery({
+        data: {
+          id: "payment-1",
+          paystack_reference: "PSK-existing",
+          paystack_authorization_url: "https://checkout.paystack.com/existing",
+          amount: 45000,
+          status: "pending",
+          programme_id: "programme-other",
+          kanvise_fee: 4500,
+        },
+        error: null,
+      });
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    const response = await paymentsRouter.request("/checkout", {
+      method: "POST",
+      headers: { "content-type": "application/json", "Idempotency-Key": "44444444-4444-4444-8444-444444444444" },
+      body: JSON.stringify({ programme_id: "programme-1" }),
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "Checkout is already being initialized",
+      code: "PAYMENT_INITIALIZING",
+    });
+    expect(mocks.from).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not disclose a target from another active account", async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "payments") return selectQuery({ data: null, error: null });
+      if (table === "programmes") return selectQuery({ data: null, error: null });
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    const response = await paymentsRouter.request("/checkout", {
+      method: "POST",
+      headers: { "content-type": "application/json", "Idempotency-Key": "55555555-5555-4555-8555-555555555555" },
+      body: JSON.stringify({ programme_id: "programme-foreign" }),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "Target not found", code: "TARGET_NOT_FOUND" });
+    expect(mocks.from).toHaveBeenCalledTimes(2);
+  });
+
+  it("maps checkout lookup failures to a stable non-disclosing response", async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table !== "payments") throw new Error(`Unexpected table ${table}`);
+      const value: any = {
+        select: () => value,
+        eq: () => value,
+        maybeSingle: async () => { throw new Error("private database detail"); },
+      };
+      return value;
+    });
+
+    const response = await paymentsRouter.request("/checkout", {
+      method: "POST",
+      headers: { "content-type": "application/json", "Idempotency-Key": "66666666-6666-4666-8666-666666666666" },
+      body: JSON.stringify({ programme_id: "programme-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: "Could not initialize payment", code: "CHECKOUT_FAILED" });
+  });
+
+  it("does not authorize checkout without an active account context", async () => {
+    mocks.account = null;
+
+    const response = await paymentsRouter.request("/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "33333333-3333-4333-8333-333333333333",
+      },
+      body: JSON.stringify({ programme_id: "programme-1" }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "A valid tutoring account must be selected",
+      code: "ACCOUNT_CONTEXT_REQUIRED",
+    });
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it("rejects an admin-only payment operation for a learner membership", async () => {
+    const response = await paymentsRouter.request("/summary");
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      error: "This action is not available for your account membership",
+      code: "INSUFFICIENT_ROLE",
+    });
+    expect(mocks.from).not.toHaveBeenCalled();
   });
 });
