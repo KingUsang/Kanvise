@@ -101,14 +101,12 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/webhooks', 'webhooksRouter', 'src/routes/webhooks.ts', 'webhook', [], {
     exception: 'Provider signatures and webhook-specific verification own this boundary.',
   }),
-  router('/dashboard', 'dashboardRouter', 'src/routes/dashboard.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: dashboard resolves tenant through route-local middleware.',
+  router('/dashboard', 'dashboardRouter', 'src/routes/dashboard.ts', 'protected-account', membershipSequence, {
+    exception: 'Standalone-mock student home and progress explicitly bypass account resolution only when no tutoring account is selected; account-backed dashboard requests use accountContextMiddleware.',
   }),
   router('/programmes', 'programmesRouter', 'src/routes/programmes.ts', 'protected-account', membershipSequence),
   router('/classes', 'classesRouter', 'src/routes/classes.ts', 'protected-account', membershipSequence),
-  router('/sub-programmes', 'subProgrammesRouter', 'src/routes/sub-programmes.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/sub-programmes', 'subProgrammesRouter', 'src/routes/sub-programmes.ts', 'protected-account', membershipSequence),
   router('/courses', 'coursesRouter', 'src/routes/courses.ts', 'protected-account', membershipSequence),
   router('/courses', 'courseAssignmentsRouter', 'src/routes/assignments.ts', 'protected-account', membershipSequence),
   router('/assignments', 'assignmentsRouter', 'src/routes/assignments.ts', 'protected-account', membershipSequence),
@@ -118,9 +116,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/mocks', 'mocksRouter', 'src/routes/mocks.ts', 'protected-account', fullSequence),
   router('/mocks', 'mockOfferAdminRouter', 'src/routes/mock-access.ts', 'protected-account', fullSequence),
   router('/question-banks', 'questionBanksRouter', 'src/routes/question-banks.ts', 'protected-account', fullSequence),
-  router('/enrolments', 'enrolmentsRouter', 'src/routes/enrolments.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/enrolments', 'enrolmentsRouter', 'src/routes/enrolments.ts', 'protected-account', membershipSequence),
   router('/payments', 'paymentsRouter', 'src/routes/payments.ts', 'protected-account', jwtAndProfile, {
     knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
   }),

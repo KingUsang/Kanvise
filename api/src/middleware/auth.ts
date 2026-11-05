@@ -8,6 +8,8 @@ import { createJwtVerifier } from './jwt-verifier'
 export type Variables = {
   user: any;
   jwt_payload: any;
+  account: AccountContext;
+  tenant: { id: string };
 };
 
 function setSentryUserContext(user: { id?: string; kanvise_user_id?: string; school_id?: string | null }) {

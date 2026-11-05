@@ -1,23 +1,43 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
+import {
+  accountContextMiddleware,
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  requireMembershipRole,
+} from "../middleware/auth";
+import type { AccountContext } from "../types";
 
 type Variables = {
   user: any;
+  account: AccountContext;
 };
 
 export const enrolmentsRouter = new Hono<{ Variables: Variables }>();
 
-enrolmentsRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
-
-// Middleware to enforce Admin role
-const enforceAdmin = async (c: any, next: any) => {
-  const profile = c.get("user");
-  if (profile.role !== "admin") {
-    return c.json({ error: "Only admins can perform this action", code: "FORBIDDEN" }, 403);
+const accountUserProjection = async (c: any, next: any) => {
+  const user = c.get("user");
+  const account = c.get("account") as AccountContext | undefined;
+  if (!account) {
+    return c.json({ error: "Tutoring account context is required", code: "ACCOUNT_CONTEXT_REQUIRED" }, 400);
   }
+  c.set("user", {
+    ...user,
+    school_id: account.id,
+    role: account.role === "learner" ? "student" : account.role,
+  });
   await next();
 };
+
+enrolmentsRouter.use(
+  "*",
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  accountContextMiddleware,
+  accountUserProjection,
+);
+
+const enforceAdmin = requireMembershipRole("admin");
 
 // GET /enrolments — List all enrolments for the school, optionally filtered by student_id
 enrolmentsRouter.get("/", enforceAdmin, async (c) => {

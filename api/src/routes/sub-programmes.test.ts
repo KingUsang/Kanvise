@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin' },
+  account: { id: 'school-1', membershipId: 'membership-1', role: 'admin' } as any,
 }))
 
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
@@ -10,6 +11,16 @@ vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => {
     c.set('user', mocks.user)
+    await next()
+  },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    if (mocks.account) c.set('account', mocks.account)
+    await next()
+  },
+  requireMembershipRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
+    if (!mocks.account || !roles.includes(mocks.account.role)) {
+      return c.json({ error: 'This action is not available for your account membership', code: 'INSUFFICIENT_ROLE' }, 403)
+    }
     await next()
   },
 }))
@@ -33,6 +44,27 @@ describe('DELETE /sub-programmes/:id', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'admin' }
+  })
+
+  it('requires an active account before curriculum access', async () => {
+    mocks.account = null
+
+    const response = await subProgrammesRouter.request('/sub-1', { method: 'DELETE' })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'ACCOUNT_CONTEXT_REQUIRED' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects a learner before curriculum lookups', async () => {
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'learner' }
+
+    const response = await subProgrammesRouter.request('/', { method: 'GET' })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({ code: 'INSUFFICIENT_ROLE' })
+    expect(mocks.from).not.toHaveBeenCalled()
   })
 
   it('blocks deletion when an enrolment inherits access through the parent programme', async () => {
