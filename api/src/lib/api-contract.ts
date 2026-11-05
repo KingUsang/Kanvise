@@ -17,6 +17,26 @@ export type ApiContractEnv = {
 
 export const uuidSchema = z.string().uuid()
 export const boundedStringSchema = z.string().trim().min(1).max(256)
+export const strictBooleanQuerySchema = z.enum(['true', 'false'])
+
+export type OffsetPagination = {
+  page: number
+  pageSize: number
+  offset: number
+}
+
+export function parseOffsetPagination(pageInput: string | undefined, pageSizeInput: string | undefined): OffsetPagination | null {
+  const page = Number(pageInput ?? 1)
+  const pageSize = Number(pageSizeInput ?? 20)
+  if (!Number.isSafeInteger(page) || page < 1
+    || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) return null
+
+  const offset = (page - 1) * pageSize
+  const rangeEnd = offset + pageSize - 1
+  if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(rangeEnd)) return null
+  return { page, pageSize, offset }
+}
+
 const boundedDetailValueSchema = z.union([
   z.string().max(MAX_DETAIL_STRING_LENGTH),
   z.number().finite(),

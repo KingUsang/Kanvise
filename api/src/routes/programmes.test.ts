@@ -168,3 +168,35 @@ describe('programme publishing', () => {
     expect(updates).toEqual({ name: 'Updated', slug: 'updated' })
   })
 })
+
+describe('programme list filters', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+  })
+
+  it('rejects malformed publication filters before querying', async () => {
+    const response = await programmesRouter.request('/?is_published=published')
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('retains false publication filtering for valid callers', async () => {
+    const calls: Array<[string, ...any[]]> = []
+    const builder: any = {
+      select: (...args: any[]) => { calls.push(['select', ...args]); return builder },
+      eq: (...args: any[]) => { calls.push(['eq', ...args]); return builder },
+      order: (...args: any[]) => { calls.push(['order', ...args]); return builder },
+      then: (resolve: (value: any) => void) => Promise.resolve({ data: [], error: null }).then(resolve),
+    }
+    mocks.from.mockImplementation((table: string) => table === 'programmes'
+      ? builder
+      : {
+          select: () => ({ eq: () => ({ then: (resolve: (value: any) => void) => Promise.resolve({ data: [], error: null }).then(resolve) }) }),
+        })
+    const response = await programmesRouter.request('/?is_published=false')
+    expect(response.status).toBe(200)
+    expect(calls).toContainEqual(['eq', 'is_published', false])
+  })
+})

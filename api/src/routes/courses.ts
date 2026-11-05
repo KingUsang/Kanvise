@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
+import { strictBooleanQuerySchema } from "../lib/api-contract";
 
 type Variables = {
   user: any;
@@ -129,6 +130,12 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
     const sub_programme_id = c.req.query("sub_programme_id");
     const standalone = c.req.query("standalone");
     const is_published = c.req.query("is_published");
+    const parsedStandalone = strictBooleanQuerySchema.safeParse(standalone);
+    const parsedIsPublished = strictBooleanQuerySchema.safeParse(is_published);
+    if ((standalone !== undefined && !parsedStandalone.success)
+      || (is_published !== undefined && !parsedIsPublished.success)) {
+      return c.json({ error: "Boolean filters must be true or false", code: "VALIDATION_ERROR" }, 400);
+    }
 
     let query = supabase
       .from("courses")
@@ -137,11 +144,11 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     if (programme_id) query = query.eq("programme_id", programme_id);
     if (sub_programme_id) query = query.eq("sub_programme_id", sub_programme_id);
-    if (standalone === "true") {
+    if (parsedStandalone.success && parsedStandalone.data === "true") {
       query = query.is("programme_id", null).is("sub_programme_id", null);
     }
-    if (is_published !== undefined) {
-      query = query.eq("is_published", is_published === "true");
+    if (parsedIsPublished.success) {
+      query = query.eq("is_published", parsedIsPublished.data === "true");
     }
 
     // If tutor, filter by assigned courses

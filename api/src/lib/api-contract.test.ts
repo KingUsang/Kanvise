@@ -9,7 +9,9 @@ import {
   boundedStringSchema,
   mapApiError,
   notFoundHandler,
+  parseOffsetPagination,
   requestIdMiddleware,
+  strictBooleanQuerySchema,
   uuidSchema,
 } from './api-contract'
 
@@ -160,5 +162,15 @@ describe('API contract foundation', () => {
     expect(boundedStringSchema.safeParse('x'.repeat(257)).success).toBe(false)
     expect(boundedObjectSchema.safeParse({ field: 'value' }).success).toBe(true)
     expect(boundedObjectSchema.safeParse(Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`field-${i}`, true]))).success).toBe(false)
+  })
+
+  it('bounds offset pagination arithmetic and strict query booleans', () => {
+    expect(parseOffsetPagination(undefined, undefined)).toEqual({ page: 1, pageSize: 20, offset: 0 })
+    expect(parseOffsetPagination('3', '10')).toEqual({ page: 3, pageSize: 10, offset: 20 })
+    expect(parseOffsetPagination('9007199254740991', '2')).toBeNull()
+    expect(parseOffsetPagination('90071992547410', '100')).toBeNull()
+    expect(strictBooleanQuerySchema.safeParse('true').success).toBe(true)
+    expect(strictBooleanQuerySchema.safeParse('false').success).toBe(true)
+    expect(strictBooleanQuerySchema.safeParse('1').success).toBe(false)
   })
 })

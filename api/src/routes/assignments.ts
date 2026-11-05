@@ -4,6 +4,7 @@ import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, te
 import type { TenantVariables, TenantUser } from '../types'
 import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
+import { parseOffsetPagination, strictBooleanQuerySchema } from '../lib/api-contract'
 
 export const courseAssignmentsRouter = new Hono<{ Variables: TenantVariables }>()
 export const assignmentsRouter = new Hono<{ Variables: TenantVariables }>()
@@ -142,11 +143,12 @@ courseAssignmentsRouter.get('/:courseId/assignments', async (c) => {
 
 assignmentsRouter.get('/', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
-  const requestedPage = Number(c.req.query('page') || 1)
-  const requestedPageSize = Number(c.req.query('page_size') || 20)
-  if (!Number.isInteger(requestedPage) || requestedPage < 1
-    || !Number.isInteger(requestedPageSize) || requestedPageSize < 1 || requestedPageSize > 100) {
-    return c.json({ error: 'page must be positive and page_size must be between 1 and 100', code: 'BAD_REQUEST' }, 400)
+  const pagination = parseOffsetPagination(c.req.query('page'), c.req.query('page_size'))
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
+  const published = c.req.query('is_published')
+  const parsedPublished = strictBooleanQuerySchema.safeParse(published)
+  if (published !== undefined && !parsedPublished.success) {
+    return c.json({ error: 'is_published must be true or false', code: 'VALIDATION_ERROR' }, 400)
   }
 
   let courseIds: string[] | null = null
@@ -158,11 +160,10 @@ assignmentsRouter.get('/', requireRole('tutor', 'admin'), async (c) => {
     if (error) return c.json({ error: error.message }, 500)
     courseIds = [...new Set((courseAssignments || []).map(item => item.course_id))]
     if (!courseIds.length) {
-      return c.json({ data: [], pagination: { page: requestedPage, page_size: requestedPageSize, total: 0, has_more: false } })
+      return c.json({ data: [], pagination: { page: pagination.page, page_size: pagination.pageSize, total: 0, has_more: false } })
     }
   }
 
-  const offset = (requestedPage - 1) * requestedPageSize
   let query = supabase.from('assignments')
     .select('*, course:courses(id, name), submissions(count)', { count: 'exact' })
     .eq('school_id', user.school_id)
@@ -174,15 +175,11 @@ assignmentsRouter.get('/', requireRole('tutor', 'admin'), async (c) => {
     }
     query = query.eq('course_id', courseId)
   }
-  const published = c.req.query('is_published')
-  if (published !== undefined && !['true', 'false'].includes(published)) {
-    return c.json({ error: 'is_published must be true or false', code: 'BAD_REQUEST' }, 400)
-  }
-  if (published !== undefined) query = query.eq('is_published', published === 'true')
+  if (parsedPublished.success) query = query.eq('is_published', parsedPublished.data === 'true')
 
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
-    .range(offset, offset + requestedPageSize - 1)
+    .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
   if (error) return c.json({ error: error.message }, 500)
 
   const assignments = (data || []).map(({ submissions, ...assignment }) => ({
@@ -193,10 +190,10 @@ assignmentsRouter.get('/', requireRole('tutor', 'admin'), async (c) => {
   return c.json({
     data: assignments,
     pagination: {
-      page: requestedPage,
-      page_size: requestedPageSize,
+      page: pagination.page,
+      page_size: pagination.pageSize,
       total,
-      has_more: offset + assignments.length < total,
+      has_more: pagination.offset + assignments.length < total,
     },
   })
 })

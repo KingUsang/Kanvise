@@ -58,4 +58,18 @@ describe('assignment ledger', () => {
     expect(response.status).toBe(400)
     expect(mocks.from).not.toHaveBeenCalled()
   })
+
+  it('rejects an unsafe page offset before querying tutor assignments', async () => {
+    const response = await assignmentsRouter.request('/?page=9007199254740991&page_size=2')
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed publication filters before querying tutor assignments', async () => {
+    const response = await assignmentsRouter.request('/?is_published=published')
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
 })

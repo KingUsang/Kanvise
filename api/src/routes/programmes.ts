@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { randomUUID } from 'node:crypto'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
+import { strictBooleanQuerySchema } from '../lib/api-contract'
 
 type Variables = { user: any }
 type SubjectInput = { name?: unknown; description?: unknown; tutor_ids?: unknown }
@@ -183,8 +184,12 @@ programmesRouter.get('/', enforceAdminOrTutor, async (c) => {
     const profile = c.get('user')
     if (!profile.school_id) return c.json({ data: [] })
     const isPublished = c.req.query('is_published')
+    const parsedIsPublished = strictBooleanQuerySchema.safeParse(isPublished)
+    if (isPublished !== undefined && !parsedIsPublished.success) {
+      return c.json({ error: 'is_published must be true or false', code: 'VALIDATION_ERROR' }, 400)
+    }
     let query = supabase.from('programmes').select('*, enrolments(count)').eq('school_id', profile.school_id)
-    if (isPublished !== undefined) query = query.eq('is_published', isPublished === 'true')
+    if (parsedIsPublished.success) query = query.eq('is_published', parsedIsPublished.data === 'true')
     const [{ data: programmes, error }, { data: subProgrammes, error: subError }, { data: courses, error: courseError }, { data: assignments, error: assignmentError }] = await Promise.all([
       query.order('created_at', { ascending: false }),
       supabase.from('sub_programmes').select('id, programme_id').eq('school_id', profile.school_id),

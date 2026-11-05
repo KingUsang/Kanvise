@@ -72,4 +72,58 @@ describe('student settings security', () => {
     expect(eqSpy).not.toHaveBeenCalledWith('school_id', 'school-1')
     expect(eqSpy).not.toHaveBeenCalledWith('role', 'student')
   })
+
+  it('rejects a malformed GET programme UUID before querying', async () => {
+    const response = await studentSettingsRouter.request('/students/me/subject-combination?programme_id=not-a-uuid')
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed PUT programme and subject UUIDs before querying', async () => {
+    const response = await studentSettingsRouter.request('/students/me/subject-combination', {
+      method: 'PUT', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ programme_id: 'not-a-uuid', course_ids: ['not-a-uuid', '2', '3', '4'] }),
+    })
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed course UUIDs before querying', async () => {
+    const response = await studentSettingsRouter.request('/students/me/subject-combination', {
+      method: 'PUT', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        programme_id: '11111111-1111-4111-8111-111111111111',
+        course_ids: ['22222222-2222-4222-8222-222222222222', 'not-a-uuid', '33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444'],
+      }),
+    })
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('keeps valid UUID GET selection behavior', async () => {
+    const programmeId = '11111111-1111-4111-8111-111111111111'
+    const courseId = '22222222-2222-4222-8222-222222222222'
+    const builder = (result: any) => {
+      const value: any = {
+        select: () => value,
+        eq: () => value,
+        order: () => value,
+        maybeSingle: async () => result,
+        then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
+      }
+      return value
+    }
+    mocks.from.mockImplementation((table: string) => table === 'enrolments'
+      ? builder({ data: { id: 'enrolment-1' }, error: null })
+      : builder({ data: [{ course_id: courseId, course: { id: courseId, name: 'Physics' } }], error: null }))
+
+    const response = await studentSettingsRouter.request(`/students/me/subject-combination?programme_id=${programmeId}`)
+    expect(response.status).toBe(200)
+    expect((await response.json() as any).data).toMatchObject({ programme_id: programmeId, course_ids: [courseId] })
+    expect(mocks.from).toHaveBeenCalledWith('enrolments')
+    expect(mocks.from).toHaveBeenCalledWith('student_programme_subjects')
+  })
 })

@@ -11,6 +11,7 @@ import {
   escapeLikePattern,
   validateQuestionInput,
 } from '../domain/question-bank'
+import { parseOffsetPagination } from '../lib/api-contract'
 
 export const questionBanksRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -93,10 +94,7 @@ async function tutorCanUseCourse(user: TenantUser, courseId: string | null) {
 }
 
 function pageParams(c: any) {
-  const page = Number(c.req.query('page') || 1)
-  const pageSize = Number(c.req.query('page_size') || 20)
-  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) return null
-  return { page, pageSize, offset: (page - 1) * pageSize }
+  return parseOffsetPagination(c.req.query('page'), c.req.query('page_size'))
 }
 
 function databaseError(c: any, error: any, fallback: string) {
@@ -115,7 +113,7 @@ function databaseError(c: any, error: any, fallback: string) {
 questionBanksRouter.get('/', async c => {
   const user = c.get('user')
   const pagination = pageParams(c)
-  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'BAD_REQUEST' }, 400)
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
 
   let query = supabase.from('question_banks')
     .select(`${bankSelect}, questions:bank_questions(count)`, { count: 'exact' })
@@ -218,7 +216,7 @@ questionBanksRouter.get('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
   const user = c.get('user')
   const bankId = c.req.param('bankId')!
   const pagination = pageParams(c)
-  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'BAD_REQUEST' }, 400)
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
 
   try {
     const bank = await loadBank(bankId, user.school_id!)

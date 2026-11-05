@@ -4,6 +4,7 @@ import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionM
 import { publicFileUrl } from '../storage/r2'
 import { validateStudentProfileUpdate } from '../domain/student-settings'
 import { validateStudentSubjectCombination } from '../domain/student-subject-combination'
+import { uuidSchema } from '../lib/api-contract'
 import type { TenantVariables } from '../types'
 import type { TablesUpdate } from '../lib/database.types'
 
@@ -50,6 +51,9 @@ studentSettingsRouter.get('/students/me/subject-combination', jwtVerificationMid
   const user = c.get('user')
   const programmeId = c.req.query('programme_id')
   if (!programmeId) return c.json({ error: 'programme_id is required', code: 'VALIDATION_ERROR' }, 400)
+  if (!uuidSchema.safeParse(programmeId).success) {
+    return c.json({ error: 'programme_id must be a valid UUID', code: 'VALIDATION_ERROR' }, 400)
+  }
   const client = supabase as any
   const [{ data: enrolment, error: enrolmentError }, { data: selections, error: selectionError }] = await Promise.all([
     supabase.from('enrolments').select('id').eq('school_id', user.school_id).eq('student_id', user.id).eq('programme_id', programmeId).maybeSingle(),
@@ -67,6 +71,12 @@ studentSettingsRouter.put('/students/me/subject-combination', jwtVerificationMid
   const programmeId = typeof body.programme_id === 'string' && body.programme_id ? body.programme_id : null
   const validated = validateStudentSubjectCombination(body.course_ids)
   if (!programmeId || 'error' in validated) return c.json({ error: !programmeId ? 'programme_id is required' : validated.error, code: 'VALIDATION_ERROR' }, 400)
+  if (!uuidSchema.safeParse(programmeId).success) {
+    return c.json({ error: 'programme_id must be a valid UUID', code: 'VALIDATION_ERROR' }, 400)
+  }
+  if (validated.courseIds.some(courseId => !uuidSchema.safeParse(courseId).success)) {
+    return c.json({ error: 'Each selected subject must use a valid UUID', code: 'VALIDATION_ERROR' }, 400)
+  }
 
   const [{ data: enrolment, error: enrolmentError }, { data: programme, error: programmeError }, { data: subProgrammes, error: subProgrammeError }] = await Promise.all([
     supabase.from('enrolments').select('id').eq('school_id', user.school_id).eq('student_id', user.id).eq('programme_id', programmeId).maybeSingle(),
