@@ -17,6 +17,7 @@ import {
   programmeBuilderStep,
   saveProgrammeDraft,
 } from '@/lib/programme-draft'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type Tutor = { id: string; first_name?: string; last_name?: string; email?: string; role: string }
 type Identity = { id: string; school_id: string }
@@ -63,7 +64,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return router.replace('/')
         const headers = { Authorization: `Bearer ${session.access_token}` }
-        const requests = [fetch(`${apiUrl}/auth/me`, { headers }), fetch(`${apiUrl}/users?roles=admin,tutor`, { headers }), fetch(`${apiUrl}/schools/me`, { headers })]
+        const requests = [fetch(`${apiUrl}/auth/me`, { headers }), authenticatedApiFetch(`${apiUrl}/users?roles=admin,tutor`), fetch(`${apiUrl}/schools/me`, { headers })]
         const payoutRequest = fetch(`${apiUrl}/payments/summary`, { headers })
         if (programmeId) requests.push(fetch(`${apiUrl}/programmes/${programmeId}`, { headers }))
         const responses = await Promise.all(requests)

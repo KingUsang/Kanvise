@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { dashboardQueryKeys } from '@/lib/dashboard-session'
 import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type Tutor = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role?: string }
 type Viewer = { id: string; role?: string; school_id?: string | null }
@@ -67,7 +68,7 @@ export function ClassBuilder() {
         const profileBody = await profileResponse.json()
         if (profileBody.user?.role !== 'admin') { if (active) setAccessDenied(true); return }
         const [tutorsResponse, schoolResponse, payoutResponse] = await Promise.all([
-          fetch(`${apiUrl}/users?roles=admin,tutor`, { headers }),
+          authenticatedApiFetch(`${apiUrl}/users?roles=admin,tutor`),
           fetch(`${apiUrl}/schools/me`, { headers }),
           fetch(`${apiUrl}/payments/summary`, { headers }),
         ])

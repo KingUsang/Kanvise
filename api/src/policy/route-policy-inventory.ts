@@ -114,9 +114,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/assignments', 'assignmentsRouter', 'src/routes/assignments.ts', 'protected-account', membershipSequence),
   router('/direct-assignments', 'directAssignmentsRouter', 'src/routes/direct-assignments.ts', 'protected-account', fullSequence),
   router('/public/direct-assignments', 'publicDirectAssignmentsRouter', 'src/routes/direct-assignments.ts', 'public', []),
-  router('/users', 'usersRouter', 'src/routes/users.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/users', 'usersRouter', 'src/routes/users.ts', 'protected-account', membershipSequence),
   router('/mocks', 'mocksRouter', 'src/routes/mocks.ts', 'protected-account', fullSequence),
   router('/mocks', 'mockOfferAdminRouter', 'src/routes/mock-access.ts', 'protected-account', fullSequence),
   router('/question-banks', 'questionBanksRouter', 'src/routes/question-banks.ts', 'protected-account', fullSequence),

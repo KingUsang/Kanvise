@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import React, { useState } from 'react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import { dashboardQueryKeys } from '@/lib/dashboard-session'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { useActiveAccountId } from '@/lib/account-preference'
+import { peopleQueryKeys } from '@/lib/people-query-keys'
 
 interface Tutor {
   id: string
@@ -43,8 +45,22 @@ interface CourseAssignmentOverview {
   tutors: AssignmentPerson[]
 }
 
+type ApiBody<T = unknown> = { data?: T; user?: { id?: string }; error?: string }
+
+async function readApiResponse<T = unknown>(url: string, init?: RequestInit) {
+  const response = await authenticatedApiFetch(url, init)
+  const body = await response.json().catch(() => null) as ApiBody<T> | null
+  if (!response.ok) throw new Error(body?.error || 'Could not load this panel')
+  return body || {}
+}
+
+async function readApiData<T>(url: string) {
+  const body = await readApiResponse<T>(url)
+  return (body.data || []) as T
+}
+
 export function TutorsClient() {
-  const supabase = useMemo(() => createClient(), [])
+  const accountId = useActiveAccountId()
   const queryClient = useQueryClient()
   const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null)
   const [confirmation, setConfirmation] = useState<null | { type: 'revoke'; id: string; email: string } | { type: 'remove'; id: string; name: string }>(null)
@@ -62,44 +78,49 @@ export function TutorsClient() {
   const [resendingId, setResendingId] = useState<string | null>(null)
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
-
+  const keys = peopleQueryKeys(accountId)
+  const enabled = Boolean(accountId)
   const tutorsQuery = useQuery({
-    queryKey: ['tutors'],
-    queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-      if (!token) throw new Error('Your session has ended. Please sign in again.')
-
-      const headers = { 'Authorization': `Bearer ${token}` }
-
-      const [tutorsRes, invitesRes, peopleRes, assignmentsRes] = await Promise.all([
-        fetch(`${baseUrl}/users/tutors`, { headers }),
-        fetch(`${baseUrl}/schools/me/invites`, { headers }),
-        fetch(`${baseUrl}/users?roles=admin,tutor`, { headers }),
-        fetch(`${baseUrl}/courses/assignment-overview`, { headers }),
-      ])
-      if (!tutorsRes.ok || !invitesRes.ok || !peopleRes.ok || !assignmentsRes.ok) throw new Error('Could not load your tutors')
-      const { data: tutorData } = await tutorsRes.json()
-      const { data: inviteData } = await invitesRes.json()
-      const { data: peopleData } = await peopleRes.json()
-      const { data: assignmentsData } = await assignmentsRes.json()
-      return {
-        tutors: (tutorData || []) as Tutor[],
-        invites: (inviteData || []) as Invite[],
-        assignmentPeople: (peopleData || []) as AssignmentPerson[],
-        courseAssignments: (assignmentsData || []) as CourseAssignmentOverview[],
-        currentProfileId: typeof session.user.app_metadata?.profile_id === 'string' ? session.user.app_metadata.profile_id : null,
-      }
-    },
+    queryKey: keys.tutors,
+    queryFn: () => readApiData<Tutor[]>(`${baseUrl}/users/tutors`),
+    enabled,
     staleTime: 60_000,
   })
-  const tutors = tutorsQuery.data?.tutors || []
-  const invites = tutorsQuery.data?.invites || []
-  const assignmentPeople = tutorsQuery.data?.assignmentPeople || []
-  const courseAssignments = tutorsQuery.data?.courseAssignments || []
-  const currentProfileId = tutorsQuery.data?.currentProfileId || null
-  const isLoading = tutorsQuery.isLoading
-  const loadError = tutorsQuery.error ? 'We could not load your tutors and invitations. Please check your connection and try again.' : ''
+  const invitesQuery = useQuery({
+    queryKey: keys.invites,
+    queryFn: () => readApiData<Invite[]>(`${baseUrl}/schools/me/invites`),
+    enabled,
+    staleTime: 60_000,
+  })
+  const peopleQuery = useQuery({
+    queryKey: keys.people,
+    queryFn: () => readApiData<AssignmentPerson[]>(`${baseUrl}/users?roles=admin,tutor`),
+    enabled,
+    staleTime: 60_000,
+  })
+  const assignmentsQuery = useQuery({
+    queryKey: keys.assignments,
+    queryFn: () => readApiData<CourseAssignmentOverview[]>(`${baseUrl}/courses/assignment-overview`),
+    enabled,
+    staleTime: 60_000,
+  })
+  const profileQuery = useQuery({
+    queryKey: keys.profile,
+    queryFn: async () => (await readApiResponse(`${baseUrl}/auth/me`)).user?.id || null,
+    enabled,
+    staleTime: 60_000,
+  })
+  const tutors = tutorsQuery.data || []
+  const invites = invitesQuery.data || []
+  const assignmentPeople = peopleQuery.data || []
+  const courseAssignments = assignmentsQuery.data || []
+  const currentProfileId = profileQuery.data || null
+  const isLoading = enabled && tutorsQuery.isPending
+  const loadError = !accountId
+    ? 'Select a tutoring account to view its people.'
+    : tutorsQuery.isError
+      ? 'We could not load the Tutor list. Please try again.'
+      : ''
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -109,23 +130,17 @@ export function TutorsClient() {
     setInviteError('')
     setGeneratedLink('')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      const res = await fetch(`${baseUrl}/schools/me/invite/tutor`, {
+      const res = await authenticatedApiFetch(`${baseUrl}/schools/me/invite/tutor`, {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`, 
-          'Content-Type': 'application/json' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: inviteEmail }),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Failed to generate invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteEmail('') // Clear input on success
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['tutors'] }),
+        queryClient.invalidateQueries({ queryKey: keys.root }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.capabilities }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ])
@@ -142,22 +157,16 @@ export function TutorsClient() {
   const handleResend = async (email: string, id: string) => {
     setResendingId(id)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      const res = await fetch(`${baseUrl}/schools/me/invite/tutor`, {
+      const res = await authenticatedApiFetch(`${baseUrl}/schools/me/invite/tutor`, {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`, 
-          'Content-Type': 'application/json' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Failed to resend invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteError('')
-      await queryClient.invalidateQueries({ queryKey: ['tutors'] })
+      await queryClient.invalidateQueries({ queryKey: keys.root })
       toast.success('Invitation resent')
     } catch (err: any) {
       toast.error('Could not resend the invitation', { description: err.message })
@@ -183,21 +192,17 @@ export function TutorsClient() {
     }
   }
 
-  const handleRevoke = async (inviteId: string, email: string) => {
+  const handleRevoke = async (inviteId: string) => {
     setRevokingId(inviteId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      const res = await fetch(`${baseUrl}/schools/me/invites/${inviteId}/revoke`, {
+      const res = await authenticatedApiFetch(`${baseUrl}/schools/me/invites/${inviteId}/revoke`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
       })
       if (!res.ok) {
         const json = await res.json()
         toast.error('Could not revoke the invitation', { description: json.error || 'Please try again.' })
       } else {
-        await queryClient.invalidateQueries({ queryKey: ['tutors'] })
+        await queryClient.invalidateQueries({ queryKey: keys.root })
         toast.success('Invitation revoked')
       }
     } finally {
@@ -205,21 +210,17 @@ export function TutorsClient() {
     }
   }
 
-  const handleRemoveTutor = async (tutorId: string, name: string) => {
+  const handleRemoveTutor = async (tutorId: string) => {
     setRemovingId(tutorId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      const res = await fetch(`${baseUrl}/users/${tutorId}`, {
+      const res = await authenticatedApiFetch(`${baseUrl}/users/${tutorId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
       })
       if (!res.ok) {
         const json = await res.json()
         toast.error('Could not remove the tutor', { description: json.error || 'Please try again.' })
       } else {
-        await queryClient.invalidateQueries({ queryKey: ['tutors'] })
+        await queryClient.invalidateQueries({ queryKey: keys.root })
         toast.success('Tutor removed')
       }
     } finally {
@@ -230,22 +231,20 @@ export function TutorsClient() {
   const updateCourseAssignment = async (courseId: string, person: AssignmentPerson, isAssigned: boolean) => {
     setUpdatingCourseId(courseId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch(
+      const response = await authenticatedApiFetch(
         isAssigned ? `${baseUrl}/courses/${courseId}/tutors/${person.id}` : `${baseUrl}/courses/${courseId}/tutors`,
         {
           method: isAssigned ? 'DELETE' : 'POST',
           headers: {
-            Authorization: `Bearer ${session?.access_token}`,
             ...(isAssigned ? {} : { 'Content-Type': 'application/json' }),
           },
           ...(isAssigned ? {} : { body: JSON.stringify({ tutor_id: person.id }) }),
         }
       )
-      const body = await response.json()
+      const body = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(body.error || 'Could not update the Subject assignment')
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['tutors'] }),
+        queryClient.invalidateQueries({ queryKey: keys.root }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.capabilities }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ])
@@ -264,6 +263,18 @@ export function TutorsClient() {
   const activeInvites = [...pendingInvites, ...expiredInvites].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )
+  const invitesLoading = enabled && invitesQuery.isPending
+  const invitesError = !accountId
+    ? 'Select a tutoring account to view invitations.'
+    : invitesQuery.isError
+      ? 'We could not load invitations. Please try again.'
+      : ''
+  const assignmentsLoading = enabled && (assignmentsQuery.isPending || peopleQuery.isPending)
+  const assignmentsError = !accountId
+    ? 'Select a tutoring account to view Subject assignments.'
+    : assignmentsQuery.isError || peopleQuery.isError
+      ? 'We could not load Subject assignments. Please try again.'
+      : ''
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -386,7 +397,14 @@ export function TutorsClient() {
               <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Teaching assignments</h3>
               <p className="mt-1 text-sm text-[#474551]">Choose who teaches each Subject. A published Subject must always have at least one tutor.</p>
             </div>
-            {courseAssignments.length === 0 ? (
+            {assignmentsLoading ? (
+              <div className="p-8 text-center text-sm text-[#474551]">Loading Subject assignments…</div>
+            ) : assignmentsError ? (
+              <div className="p-8 text-center text-sm text-[#474551]">
+                <p role="alert">{assignmentsError}</p>
+                <button type="button" onClick={() => { void assignmentsQuery.refetch(); void peopleQuery.refetch() }} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button>
+              </div>
+            ) : courseAssignments.length === 0 ? (
               <div className="p-8 text-center text-sm text-[#474551]">Create a Subject before assigning tutors.</div>
             ) : (
               <div className="divide-y divide-[#e4e2e1]">
@@ -516,10 +534,15 @@ export function TutorsClient() {
             </div>
             
             <div className="flex flex-col divide-y divide-[#c2b59b]">
-              {isLoading ? (
+              {invitesLoading ? (
                 <div className="p-6 text-center text-[#474551] text-[14px]">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2e2877] mx-auto mb-2" />
-                  Loading...
+                  Loading…
+                </div>
+              ) : invitesError ? (
+                <div className="p-6 text-center text-[#474551] text-[14px]">
+                  <p role="alert">{invitesError}</p>
+                  <button type="button" onClick={() => void invitesQuery.refetch()} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button>
                 </div>
               ) : activeInvites.length === 0 ? (
                 <div className="p-6 text-center text-[#474551] text-[14px] italic">
@@ -599,7 +622,7 @@ export function TutorsClient() {
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setConfirmation(null)} className="rounded px-4 py-2 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2]">Keep it</button>
-              <button type="button" onClick={() => { const action = confirmation; setConfirmation(null); if (action.type === 'remove') void handleRemoveTutor(action.id, action.name); else void handleRevoke(action.id, action.email) }} className="rounded bg-[#ba1a1a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#93000a]">
+              <button type="button" onClick={() => { const action = confirmation; setConfirmation(null); if (action.type === 'remove') void handleRemoveTutor(action.id); else void handleRevoke(action.id) }} className="rounded bg-[#ba1a1a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#93000a]">
                 {confirmation.type === 'remove' ? 'Remove tutor' : 'Cancel invitation'}
               </button>
             </div>

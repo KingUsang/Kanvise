@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   updateUserById: vi.fn(),
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin' } as any,
+  account: { id: 'school-1', role: 'admin' } as any,
 }))
 
 function query(result: any) {
@@ -14,6 +15,7 @@ function query(result: any) {
     in: vi.fn(() => builder),
     update: vi.fn(() => builder),
     insert: vi.fn(() => builder),
+    order: vi.fn(() => builder),
     single: vi.fn(async () => result),
     maybeSingle: vi.fn(async () => result),
     then: (resolve: (value: any) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(result).then(resolve, reject),
@@ -36,6 +38,11 @@ vi.mock('../storage/r2', () => ({ publicFileUrl: (key: string) => `https://media
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { c.set('account', mocks.account); await next() },
+  requireMembershipRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
+    if (!roles.includes(c.get('account')?.role)) return c.json({ error: 'Forbidden', code: 'FORBIDDEN' }, 403)
+    await next()
+  },
 }))
 
 import { usersRouter } from './users'
@@ -44,10 +51,11 @@ describe('student import access and validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+    mocks.account = { id: 'school-1', role: 'admin' }
   })
 
   it('rejects non-admins before accessing student data', async () => {
-    mocks.user.role = 'tutor'
+    mocks.account.role = 'tutor'
     const response = await usersRouter.request('/students/import', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ students: [{ first_name: 'Ada', last_name: 'Okafor', email: 'ada@example.test', programme_id: 'programme-1' }] }),
@@ -90,6 +98,26 @@ describe('student import access and validation', () => {
     expect(body.errors[0].errors).toContain('Email address is required')
   })
 
+  it('rejects duplicate normalized emails before reading or writing account data', async () => {
+    const response = await usersRouter.request('/students/import', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ send_invitations: false, students: [
+        { first_name: 'Ada', last_name: 'Okafor', email: 'ADA@example.test', programme_id: 'programme-1' },
+        { first_name: 'Grace', last_name: 'Ike', email: ' ada@example.test ', programme_id: 'programme-1' },
+      ] }),
+    })
+
+    expect(response.status).toBe(400)
+    const body = await response.json() as any
+    expect(body.code).toBe('VALIDATION_ERROR')
+    expect(body.errors).toEqual([
+      { row: 1, errors: ['Email address appears more than once in this import'] },
+      { row: 2, errors: ['Email address appears more than once in this import'] },
+    ])
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['a staff profile', { id: 'staff-1', role: 'tutor', school_id: 'school-2', email: 'person@example.test' }],
     ['a Learner in another centre', { id: 'student-2', role: 'student', school_id: 'school-2', email: 'person@example.test' }],
@@ -118,6 +146,24 @@ describe('student import access and validation', () => {
     expect(response.status).toBe(201)
     const body = await response.json() as any
     expect(body.data).toMatchObject({ created: 0, enrolled: 1, skipped: 0, errors: [] })
+  })
+
+  it('filters operational people lists to active profiles in the selected account', async () => {
+    const builders: any[] = []
+    mocks.from.mockImplementation((table: string) => {
+      const result = table === 'user_profiles' ? { data: [], error: null } : { data: [], error: null }
+      const builder = query(result)
+      builders.push(builder)
+      return builder
+    })
+
+    const response = await usersRouter.request('/students')
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ data: [] })
+    expect(builders[0].eq).toHaveBeenCalledWith('school_id', 'school-1')
+    expect(builders[0].eq).toHaveBeenCalledWith('role', 'student')
+    expect(builders[0].eq).toHaveBeenCalledWith('is_active', true)
   })
 
   it.each([

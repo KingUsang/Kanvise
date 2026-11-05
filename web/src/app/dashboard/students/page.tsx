@@ -3,30 +3,10 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { Loader2, AlertCircle, Download, UserPlus, X, Upload } from "lucide-react";
 import Papa from "papaparse";
-import { createClient } from "@/lib/supabase/client";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { downloadStudentRosterCsv } from "@/lib/student-roster";
 import StudentsTable from "@/components/dashboard/students/students-table";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
-
-function exportToCSV(students: any[]) {
-  if (students.length === 0) return;
-  const headers = ["Kanvise ID", "First Name", "Last Name", "Email", "Enrolments Count"];
-  const rows = students.map(s => [
-    s.kanvise_user_id || "",
-    s.first_name || "",
-    s.last_name || "",
-    s.email || "",
-    s.enrolments?.length || 0
-  ]);
-  const csvContent = "data:text/csv;charset=utf-8," 
-    + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "student_roster.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
@@ -47,26 +27,14 @@ export default function StudentsPage() {
       setLoading(true);
       setError(null);
       try {
-        const supabase = createClient();
-        const { data: session } = await supabase.auth.getSession();
-        
         const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        const res = await fetch(`${API_URL}/users/students`, {
-          headers: {
-            Authorization: `Bearer ${session?.session?.access_token}`,
-          },
-        });
-        
+        const res = await authenticatedApiFetch(`${API_URL}/users/students`);
+        const body = await res.json().catch(() => null) as { data?: any[]; error?: string } | null;
         if (!res.ok) {
-          const errText = await res.text();
-          console.error("API Error:", res.status, errText);
-          throw new Error(`Server returned ${res.status}: ${errText}`);
+          throw new Error(body?.error || "Could not load the student roster");
         }
-        
-        const json = await res.json();
-        setStudents(json.data || []);
-      } catch (err: any) {
-        console.error('Failed to load student roster', err);
+        setStudents(body?.data || []);
+      } catch {
         setError('We could not load the student roster. Please try again.');
       } finally {
         setLoading(false);
@@ -79,9 +47,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     async function fetchProgrammes() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, { headers: { Authorization: `Bearer ${session?.access_token}` } });
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`);
       if (!response.ok) return;
       const body = await response.json();
       setProgrammes((body.data || []).map((programme: any) => ({ id: programme.id, name: programme.name })));
@@ -94,15 +60,13 @@ export default function StudentsPage() {
     setSubmittingStudent(true);
     setAddStudentError(null);
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
       if (!programmeId) throw new Error("Choose the programme this student is enrolled in");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/students/import`, {
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/users/students/import`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ students: [{ email: studentEmail, programme_id: programmeId }], send_invitations: true }),
       });
-      const body = await response.json();
+      const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "Could not add student");
       if (body.data?.errors?.length) throw new Error(body.data.errors[0].errors?.[0] || "Could not add student");
 
@@ -136,12 +100,17 @@ export default function StudentsPage() {
       complete: ({ data, errors }) => {
         if (errors.length) { setCsvError("We could not read that CSV file. Download the template and try again."); return; }
         const names = new Map(programmes.map((programme) => [programme.name.trim().toLowerCase(), programme.id]));
+        const normalizedEmails = data.map((item) => String(item.email || "").trim().toLowerCase());
+        const emailCounts = new Map<string, number>();
+        normalizedEmails.forEach((email) => { if (email) emailCounts.set(email, (emailCounts.get(email) || 0) + 1); });
         const rows = data.map((item, index) => {
           const programmeName = String(item.programme || "").trim();
           const programme_id = names.get(programmeName.toLowerCase()) || "";
-          const email = String(item.email || "").trim();
+          const email = String(item.email || "").trim().toLowerCase();
           const error = !email
             ? "Email address is required"
+            : (emailCounts.get(email) || 0) > 1
+              ? "Email address appears more than once in this import"
             : !programme_id
               ? `Programme “${programmeName || "(missing)"}” was not found`
               : undefined;
@@ -159,11 +128,9 @@ export default function StudentsPage() {
     if (!csvRows.length || csvRows.some((row) => row.error)) return;
     setImportingCsv(true); setCsvError(null); setImportSummary(null);
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/students/import`, {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ students: csvRows.map(({ row, error, ...student }) => student), send_invitations: true }),
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/users/students/import`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ students: csvRows.map(({ first_name, last_name, email, phone, programme_id }) => ({ first_name, last_name, email, phone, programme_id })), send_invitations: true }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not import students");
@@ -195,7 +162,7 @@ export default function StudentsPage() {
             <input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleCsvFile} />
           </label>
           <button 
-            onClick={() => exportToCSV(students)}
+            onClick={() => downloadStudentRosterCsv(students)}
             className="flex items-center gap-2 rounded-dashboard-control border border-dashboard-primary px-4 py-2 text-dashboard-primary transition-colors hover:bg-dashboard-primary/5"
           >
             <Download size={18} />

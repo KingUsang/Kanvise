@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
+import { clampRosterPage } from "@/lib/student-roster";
 
 export default function StudentsTable({ students, onStudentRemoved }: { students: any[], onStudentRemoved: (studentId: string) => void }) {
   const [programmeFilter, setProgrammeFilter] = useState("");
@@ -52,7 +53,10 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
   });
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-  const paginatedStudents = filteredStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const effectivePage = clampRosterPage(currentPage, totalPages);
+  // Keep the rendered page/range valid immediately after a removal or filter
+  // shrink; the next pager interaction writes the already-clamped page back.
+  const paginatedStudents = filteredStudents.slice((effectivePage - 1) * itemsPerPage, effectivePage * itemsPerPage);
 
   return (
     <div>
@@ -79,18 +83,18 @@ export default function StudentsTable({ students, onStudentRemoved }: { students
         </div>
         
         <div className="flex items-center gap-2 text-gray-600 text-xs font-bold uppercase tracking-widest">
-          <span>Showing {filteredStudents.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length}</span>
+          <span>Showing {filteredStudents.length === 0 ? 0 : (effectivePage - 1) * itemsPerPage + 1}-{Math.min(effectivePage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length}</span>
           <div className="ml-2 flex overflow-hidden rounded-dashboard-control border border-dashboard-outline">
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={effectivePage === 1}
               className="px-2 py-1 hover:bg-gray-50 border-r border-kv-dust disabled:opacity-50 flex items-center justify-center"
             >
               <ChevronLeft size={18} />
             </button>
             <button 
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
+              disabled={effectivePage >= totalPages || totalPages === 0}
               className="px-2 py-1 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center"
             >
               <ChevronRight size={18} />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Loader2, BookOpen, Clock, AlertCircle, ReceiptText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 export default function StudentDetailsSheet({ student, onClose, onRemoved }: { student: any, onClose: () => void, onRemoved: () => void }) {
   const [enrolments, setEnrolments] = useState<any[]>([]);
@@ -20,9 +21,8 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved }: { s
       const { data: { session } } = await supabase.auth.getSession();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!session || !apiUrl) throw new Error('Your session is unavailable');
-      const response = await fetch(`${apiUrl}/users/${encodeURIComponent(student.id)}`, {
+      const response = await authenticatedApiFetch(`${apiUrl}/users/${encodeURIComponent(student.id)}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Could not remove student');
