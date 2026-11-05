@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TutorsClient } from './tutors-client'
@@ -43,6 +43,38 @@ describe('TutorsClient independent panel recovery', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('We could not load invitations. Please try again.'))
     expect(screen.queryByText('No outstanding invitations.')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('announces initial Tutor-list failures in both responsive views', async () => {
+    authenticatedApiFetch.mockImplementation((input: string) => {
+      if (input.includes('/users/tutors')) return Promise.resolve(new Response(JSON.stringify({ error: 'Tutors unavailable' }), { status: 503 }))
+      if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    renderTutors()
+
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
+    for (const alert of screen.getAllByRole('alert')) {
+      expect(alert).toHaveAttribute('aria-live', 'assertive')
+      expect(alert).toHaveTextContent('We could not load the Tutor list. Please try again.')
+    }
+  })
+
+  it('announces invitation action failures as assertive errors', async () => {
+    authenticatedApiFetch.mockImplementation((input: string) => {
+      if (input.includes('/schools/me/invite/tutor')) return Promise.resolve(new Response(JSON.stringify({ error: 'Invitation unavailable' }), { status: 503 }))
+      if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    renderTutors()
+    fireEvent.change(screen.getByPlaceholderText('tutor@example.com'), { target: { value: 'tutor@example.test' } })
+    fireEvent.click(screen.getByRole('button', { name: /Send invitation/ }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveAttribute('aria-live', 'assertive')
+    expect(alert).toHaveTextContent('Invitation unavailable')
   })
 
   it('retains cached Tutors and shows a polite refresh notice after a failed refetch', async () => {
