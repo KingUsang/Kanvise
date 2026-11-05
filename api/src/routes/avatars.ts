@@ -1,11 +1,29 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, Variables } from '../middleware/auth'
+import {
+  accountContextMiddleware,
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  Variables,
+} from '../middleware/auth'
+import type { AccountContext } from '../types'
 
 export const avatarsRouter = new Hono<{ Variables: Variables }>()
 
 avatarsRouter.use('*', jwtVerificationMiddleware)
 avatarsRouter.use('*', profileResolutionMiddleware)
+avatarsRouter.use('*', accountContextMiddleware)
+avatarsRouter.use('*', async (c, next) => {
+  const account = c.get('account') as AccountContext | undefined
+  if (!account) return c.json({ error: 'Tutoring account context is required', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
+  const user = c.get('user')
+  c.set('user', {
+    ...user,
+    school_id: account.id,
+    role: account.role === 'learner' ? 'student' : account.role,
+  })
+  await next()
+})
 
 avatarsRouter.get('/me', async (c) => {
   const user = c.get('user')
@@ -17,7 +35,8 @@ avatarsRouter.get('/me', async (c) => {
     .single()
 
   if (error && error.code !== 'PGRST116') {
-    return c.json({ error: error.message }, 500)
+    console.error('GET /avatars/me error:', error)
+    return c.json({ error: 'Could not load avatar configuration', code: 'AVATAR_LOAD_FAILED' }, 500)
   }
 
   // If no avatar config exists yet, return empty or default
@@ -43,7 +62,8 @@ avatarsRouter.put('/me', async (c) => {
     .single()
 
   if (error) {
-    return c.json({ error: error.message }, 500)
+    console.error('PUT /avatars/me error:', error)
+    return c.json({ error: 'Could not save avatar configuration', code: 'AVATAR_SAVE_FAILED' }, 500)
   }
 
   return c.json({ avatar: data })

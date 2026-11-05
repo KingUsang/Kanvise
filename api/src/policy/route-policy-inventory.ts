@@ -91,9 +91,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
       },
     ],
   }),
-  router('/avatars', 'avatarsRouter', 'src/routes/avatars.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/avatars', 'avatarsRouter', 'src/routes/avatars.ts', 'protected-account', membershipSequence),
   router('/schools', 'schoolsRouter', 'src/routes/schools.ts', 'protected-account', fullSequence),
   router('/live-classes', 'liveClassesRouter', 'src/routes/live-classes.ts', 'protected-account', fullSequence),
   router('/public/live-classes', 'publicLiveClassesRouter', 'src/routes/public-live-classes.ts', 'public', []),
@@ -122,12 +120,8 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   }),
   router('/attendance', 'attendanceRouter', 'src/routes/attendance.ts', 'protected-account', fullSequence),
   router('/public', 'publicRouter', 'src/routes/public.ts', 'public', []),
-  router('/storage', 'storageRouter', 'src/routes/storage.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
-  router('/notes', 'notesRouter', 'src/routes/notes.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/storage', 'storageRouter', 'src/routes/storage.ts', 'protected-account', membershipSequence),
+  router('/notes', 'notesRouter', 'src/routes/notes.ts', 'protected-account', membershipSequence),
   router('/internal/payments', 'internalPaymentsRouter', 'src/routes/internal-payments.ts', 'internal-service', [], {
     exception: 'Shared-secret verification owns this service-to-service boundary.',
   }),
