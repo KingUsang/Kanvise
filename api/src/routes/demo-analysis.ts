@@ -1,27 +1,48 @@
 import { Hono } from 'hono';
 import { supabase } from '../lib/supabase';
-import { jwtVerificationMiddleware, profileResolutionMiddleware, type Variables } from '../middleware/auth';
+import {
+  accountContextMiddleware,
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  requireMembershipRole,
+  type Variables,
+} from '../middleware/auth';
+import type { AccountContext } from '../types';
 
 export const demoAnalysisRouter = new Hono<{ Variables: Variables }>();
-demoAnalysisRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware);
+demoAnalysisRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware);
+demoAnalysisRouter.use('*', async (c, next) => {
+  const account = c.get('account') as AccountContext | undefined;
+  if (!account) return c.json({ error: 'Tutoring account context is required', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400);
+  const user = c.get('user');
+  c.set('user', {
+    ...user,
+    school_id: account.id,
+    role: account.role === 'learner' ? 'student' : account.role,
+  });
+  await next();
+});
 
 // This endpoint runs the cross-signal AI analysis for the demo
-demoAnalysisRouter.post('/', async (c) => {
+demoAnalysisRouter.post('/', requireMembershipRole('admin', 'tutor'), async (c) => {
   const { studentId, classId } = await c.req.json();
   const user = c.get('user');
-  if (!['admin', 'tutor'].includes(user.role) || !user.school_id) return c.json({ error: 'Tutor access only' }, 403);
-  const classQuery = supabase.from('live_classes').select('id, tutor_id').eq('id', classId).eq('school_id', user.school_id);
-  const { data: liveClass } = user.role === 'tutor' ? await classQuery.eq('tutor_id', user.id).maybeSingle() : await classQuery.maybeSingle();
+  const classQuery = supabase.from('live_classes').select('id, tutor_id, course_id').eq('id', classId).eq('school_id', user.school_id);
+  const { data: liveClass, error: classError } = user.role === 'tutor'
+    ? await classQuery.eq('tutor_id', user.id).maybeSingle()
+    : await classQuery.maybeSingle();
+  if (classError) return c.json({ error: 'Could not load the selected Class', code: 'DEMO_ANALYSIS_UNAVAILABLE' }, 503);
   if (!liveClass) return c.json({ error: 'Class not found' }, 404);
 
   // Fetch the student profile
-  const { data: student } = await supabase
+  const { data: student, error: studentError } = await supabase
     .from('user_profiles')
     .select('first_name, last_name')
     .eq('id', studentId)
     .eq('school_id', user.school_id)
     .single();
 
+  if (studentError) return c.json({ error: 'Could not load the selected Learner', code: 'DEMO_ANALYSIS_UNAVAILABLE' }, 503);
   if (!student) {
     return c.json({ error: 'Student not found' }, 404);
   }
@@ -31,12 +52,14 @@ demoAnalysisRouter.post('/', async (c) => {
   // For the demo video's constraints, we'll specifically identify "Newton's Laws"
   // from their historic performance if they fit the pattern.
   
-  const { data: attempts } = await supabase
+  const { data: attempts, error: attemptsError } = await supabase
     .from('mock_attempts')
     .select('id, mock_exam_id, status, created_at')
     .eq('school_id', user.school_id)
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
+
+  if (attemptsError) return c.json({ error: 'Could not load Learner analysis data', code: 'DEMO_ANALYSIS_UNAVAILABLE' }, 503);
 
   // In a full implementation, we'd query mock_answers, join version_questions,
   // join bank_questions, and GROUP BY topic.

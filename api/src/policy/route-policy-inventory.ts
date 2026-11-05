@@ -128,16 +128,12 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/submissions', 'submissionsRouter', 'src/routes/submissions.ts', 'protected-account', membershipSequence),
   router('/mock-answers', 'mockAnswersRouter', 'src/routes/mock-answers.ts', 'protected-account', fullSequence),
   router('/health', 'healthRouter', 'src/routes/health.ts', 'public', []),
-  router('/feedback', 'feedbackRouter', 'src/routes/feedback.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/feedback', 'feedbackRouter', 'src/routes/feedback.ts', 'protected-account', membershipSequence),
   router('/support/feedback', 'feedbackResolutionRouter', 'src/routes/feedback.ts', 'public', [], {
     exception: 'Signed support-token verification owns this public resolution boundary.',
   }),
   router('/users/me/push', 'pushRouter', 'src/routes/push.ts', 'protected-account', fullSequence),
-  router('/demo/analyze', 'demoAnalysisRouter', 'src/routes/demo-analysis.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/demo/analyze', 'demoAnalysisRouter', 'src/routes/demo-analysis.ts', 'protected-account', membershipSequence),
   router('/', 'waitlistRouter', 'src/routes/waitlist.ts', 'public', []),
   router('/telegram', 'telegramRouter', 'src/routes/telegram.ts', 'protected-account', fullSequence),
   router('/telegram', 'telegramWebhookRouter', 'src/routes/telegram.ts', 'webhook', [], {
