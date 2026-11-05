@@ -42,6 +42,26 @@ remain unavailable or outside scope; no schema/migration/deployment change was
 made. The detailed rows below retain the historical source trace and are
 interpreted with this addendum.
 
+## Slice 32 current verification
+
+The Slice 32 people-management implementation supersedes the historical source
+observations for `DEV-SEC-016`, `DEV-USR-005`, `DEV-USR-008`, `DEV-USR-009`,
+`DEV-FE-032`, `DEV-FE-033`, and the Learner-import portion of `DEV-TEST-024`.
+Protected Users routes derive account scope from verified active membership;
+operational and public Tutor/Learner projections are active-only; duplicate
+normalized import emails are rejected before effects; staff/cross-account rows
+share a generic outcome; partial imports retain committed progress; and
+invitation-provider failures remain bounded row errors. Tutor, invitation,
+people and Subject-assignment panels use independent account-keyed queries,
+retain cached data during failed background refetches, and expose polite retry
+notices without false-empty states. Roster paging clamps after removal and the
+displayed export projection uses tested CSV quoting, formula neutralization and
+Blob URL cleanup. The focused API/component tests and current deviation rows are
+the implementation evidence; Notes/material coverage, provider delivery,
+membership linking/removal, clean runtime database/RLS proof, browser gates and
+full-build gates remain outside this slice. The detailed rows below retain the
+historical source trace and are interpreted with this addendum.
+
 | Area | Source files | Status | Findings / next boundary |
 |---|---:|---|---|
 | `api/src/lib` | 8 implementation, 5 tests, 1 generated type file | Complete | DEV-ACC-001–004, DEV-PUB-007, DEV-CFG-001–002 confirmed; full generated schema read confirms DEV-DB-003, including stale live-class/presentation shapes and retired mock/marketplace tables and RPCs |

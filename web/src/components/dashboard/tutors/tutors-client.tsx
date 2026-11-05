@@ -47,6 +47,15 @@ interface CourseAssignmentOverview {
 
 type ApiBody<T = unknown> = { data?: T; user?: { id?: string }; error?: string }
 
+function RefreshNotice({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div role="status" aria-live="polite" className="flex items-center justify-between gap-3 border-b border-dashboard-outline bg-dashboard-surface-subtle px-4 py-3 text-sm text-[#474551]">
+      <p>{message}</p>
+      <button type="button" onClick={onRetry} className="shrink-0 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button>
+    </div>
+  )
+}
+
 async function readApiResponse<T = unknown>(url: string, init?: RequestInit) {
   const response = await authenticatedApiFetch(url, init)
   const body = await response.json().catch(() => null) as ApiBody<T> | null
@@ -118,9 +127,12 @@ export function TutorsClient() {
   const isLoading = enabled && tutorsQuery.isPending
   const loadError = !accountId
     ? 'Select a tutoring account to view its people.'
-    : tutorsQuery.isError
+    : tutorsQuery.isError && !tutorsQuery.data
       ? 'We could not load the Tutor list. Please try again.'
       : ''
+  const tutorsRefreshError = accountId && tutorsQuery.isError && tutorsQuery.data
+    ? 'The Tutor list could not refresh. Showing the last saved list.'
+    : ''
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -266,15 +278,22 @@ export function TutorsClient() {
   const invitesLoading = enabled && invitesQuery.isPending
   const invitesError = !accountId
     ? 'Select a tutoring account to view invitations.'
-    : invitesQuery.isError
+    : invitesQuery.isError && !invitesQuery.data
       ? 'We could not load invitations. Please try again.'
       : ''
+  const invitesRefreshError = accountId && invitesQuery.isError && invitesQuery.data
+    ? 'Invitations could not refresh. Showing the last saved list.'
+    : ''
   const assignmentsLoading = enabled && (assignmentsQuery.isPending || peopleQuery.isPending)
   const assignmentsError = !accountId
     ? 'Select a tutoring account to view Subject assignments.'
-    : assignmentsQuery.isError || peopleQuery.isError
+    : (assignmentsQuery.isError && !assignmentsQuery.data) || (peopleQuery.isError && !peopleQuery.data)
       ? 'We could not load Subject assignments. Please try again.'
       : ''
+  const assignmentsRefreshMessages = [
+    assignmentsQuery.isError && assignmentsQuery.data ? 'Subject assignments could not refresh. Showing the last saved assignments.' : '',
+    peopleQuery.isError && peopleQuery.data ? 'Tutor choices could not refresh. Showing the last saved people list.' : '',
+  ].filter(Boolean)
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -301,6 +320,8 @@ export function TutorsClient() {
                 <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Tutors in your centre</h3>
               </div>
             </div>
+
+            {tutorsRefreshError && <RefreshNotice message={tutorsRefreshError} onRetry={() => void tutorsQuery.refetch()} />}
 
             <div className="divide-y divide-dashboard-outline/50 sm:hidden">
               {isLoading ? <p className="p-6 text-center text-sm text-[#474551]">Loading tutors…</p>
@@ -397,6 +418,9 @@ export function TutorsClient() {
               <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Teaching assignments</h3>
               <p className="mt-1 text-sm text-[#474551]">Choose who teaches each Subject. A published Subject must always have at least one tutor.</p>
             </div>
+            {assignmentsRefreshMessages.length > 0 && (
+              <RefreshNotice message={assignmentsRefreshMessages.join(' ')} onRetry={() => { void assignmentsQuery.refetch(); void peopleQuery.refetch() }} />
+            )}
             {assignmentsLoading ? (
               <div className="p-8 text-center text-sm text-[#474551]">Loading Subject assignments…</div>
             ) : assignmentsError ? (
@@ -534,6 +558,7 @@ export function TutorsClient() {
             </div>
             
             <div className="flex flex-col divide-y divide-[#c2b59b]">
+              {invitesRefreshError && <RefreshNotice message={invitesRefreshError} onRetry={() => void invitesQuery.refetch()} />}
               {invitesLoading ? (
                 <div className="p-6 text-center text-[#474551] text-[14px]">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2e2877] mx-auto mb-2" />

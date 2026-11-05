@@ -42,6 +42,20 @@ full build, and broad lint evidence remain outside this slice and are explicit
 residue; no schema, migration, deployment, or remote database changes were
 made.
 
+## Slice 32 current verification
+
+The Slice 32 people-management implementation updates the bounded audit claims
+for `DEV-SEC-016`, `DEV-USR-005`, `DEV-USR-008`, `DEV-USR-009`, `DEV-FE-032`,
+`DEV-FE-033`, and the Learner-import portion of `DEV-TEST-024`. Active membership
+owns protected people-route scope; active-only projections, generic
+non-enumerating import outcomes, duplicate prevalidation, partial-import and
+invitation-failure evidence, independent account-keyed Tutor panels, cached
+background-refetch recovery, clamped roster paging and safe CSV export are now
+covered by the focused implementation tests. Notes/material paths, provider
+delivery, membership linking/removal, runtime database/RLS, browser and full
+build evidence remain separate boundaries. The detailed coverage rows below
+retain historical findings and are interpreted with this addendum.
+
 | Area | Coverage | Next deep-audit boundary |
 |---|---|---|
 | Product terminology/domain | Cross-cutting complete; key workflows sampled | Persistence/API compatibility removal plan |
