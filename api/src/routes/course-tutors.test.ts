@@ -9,6 +9,10 @@ vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    c.set('account', { id: 'school-1', membershipId: 'membership-1', role: mocks.user.role === 'student' ? 'learner' : mocks.user.role })
+    await next()
+  },
 }))
 
 import { coursesRouter } from './courses'

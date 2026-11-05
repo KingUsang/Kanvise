@@ -10,6 +10,10 @@ vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    c.set('account', { id: 'school-1', membershipId: 'membership-1', role: mocks.user.role === 'student' ? 'learner' : mocks.user.role })
+    await next()
+  },
   tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
 }))
@@ -42,13 +46,13 @@ describe('class-first API aliases', () => {
 
     const response = await classesRouter.request('/class-1/subjects', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: 'Physics', tutor_ids: ['tutor-1'] }),
+      body: JSON.stringify({ name: 'Physics', tutor_ids: ['11111111-1111-4111-8111-111111111111'] }),
     })
 
     expect(response.status).toBe(201)
     expect(mocks.rpc).toHaveBeenCalledWith('add_programme_subject', expect.objectContaining({
       p_school_id: 'school-1', p_created_by: 'admin-1', p_programme_id: 'class-1',
-      p_slug: 'jamb-2027-physics', p_tutor_ids: ['tutor-1'],
+      p_slug: 'jamb-2027-physics', p_tutor_ids: ['11111111-1111-4111-8111-111111111111'],
     }))
   })
 
@@ -58,6 +62,18 @@ describe('class-first API aliases', () => {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Physics' }),
     })
     expect(response.status).toBe(403)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed tutor_ids before class or RPC lookups', async () => {
+    const response = await classesRouter.request('/class-1/subjects', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Physics', tutor_ids: ['not-a-uuid'] }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_TUTOR_IDS' })
+    expect(mocks.from).not.toHaveBeenCalled()
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 

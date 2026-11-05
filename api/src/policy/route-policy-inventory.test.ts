@@ -43,7 +43,7 @@ describe('route policy inventory', () => {
     )
 
     expect(errors).toContain(
-      `${entry!.key} is protected-account but lacks the required JWT/profile/tenant sequence or a recorded knownGap`,
+      `${entry!.key} is protected-account but lacks the required JWT/profile plus tenant or account-context sequence or a recorded knownGap`,
     )
   })
 })

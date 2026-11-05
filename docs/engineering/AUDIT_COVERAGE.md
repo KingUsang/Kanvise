@@ -8,6 +8,20 @@ The standards define the target. This map tracks whether implementation has
 received a cross-cutting scan or a workflow-level audit; “standardised” does not
 mean “implementation fully audited.” Findings belong in `docs/deviations.md`.
 
+## Slice 29 current verification
+
+The Slice 29 trusted Class and Subject vertical updates the bounded audit
+claims for `DEV-CLS-013/014/015`, `DEV-CRS-003/008/009/010`, and the exercised
+portion of `DEV-TEST-021`: Class setup/add-Subject now rejects malformed Tutor
+UUID arrays before RPC execution; Class detail/publish lookup failures use safe
+service errors; Tutor insights are limited to assigned-Subject Learner and
+assessment evidence; Subject routes resolve the active account membership and
+enforce Admin account scope, Tutor assignment, or Learner enrolment. The
+remaining `DEV-CLS-017` Sub-programme roster gap, broader integration/runtime
+proof, and unrelated protected-router gaps remain open. This addendum is the
+current implementation evidence; the detailed ledger rows below retain the
+historical audit trace.
+
 | Area | Coverage | Next deep-audit boundary |
 |---|---|---|
 | Product terminology/domain | Cross-cutting complete; key workflows sampled | Persistence/API compatibility removal plan |

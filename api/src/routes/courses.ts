@@ -1,16 +1,30 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
+import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
 import { strictBooleanQuerySchema } from "../lib/api-contract";
+import type { AccountContext } from "../types";
 
-type Variables = {
-  user: any;
-};
+type Variables = { user: any; account: AccountContext; jwt_payload: any };
 
 export const coursesRouter = new Hono<{ Variables: Variables }>();
 
-// Apply authentication middleware
-coursesRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
+// Subject routes use the current account membership, not the legacy profile
+// school/role projection. The projection below keeps the older route body
+// implementation and response contracts compatible while making every query
+// use the account selected and verified by Hono.
+const accountUserProjection = async (c: any, next: any) => {
+  const user = c.get("user");
+  const account = c.get("account") as AccountContext | undefined;
+  if (!account) return c.json({ error: "Tutoring account context is required", code: "ACCOUNT_CONTEXT_REQUIRED" }, 400);
+  c.set("user", {
+    ...user,
+    school_id: account.id,
+    role: account.role === "learner" ? "student" : account.role,
+  });
+  await next();
+};
+
+coursesRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection);
 
 // Middleware to enforce Admin role
 const enforceAdmin = async (c: any, next: any) => {
@@ -153,11 +167,15 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     // If tutor, filter by assigned courses
     if (profile.role === "tutor") {
-      const { data: assignments } = await supabase
+      const { data: assignments, error: assignmentError } = await supabase
         .from("tutor_course_assignments")
         .select("course_id")
         .eq("tutor_id", profile.id)
         .eq("school_id", profile.school_id);
+
+      if (assignmentError) {
+        return c.json({ error: "Could not resolve your subject access", code: "SUBJECT_ACCESS_FAILED" }, 500);
+      }
 
       const courseIds = assignments?.map(a => a.course_id) || [];
       if (courseIds.length === 0) {
@@ -173,8 +191,8 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     return c.json({ data });
   } catch (error: any) {
-    console.error("GET /courses error:", error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("GET /courses error:", error?.name || "unknown");
+    return c.json({ error: "Could not load subjects", code: "SUBJECT_LIST_FAILED" }, 500);
   }
 });
 
@@ -228,13 +246,17 @@ coursesRouter.get("/:id", async (c) => {
       .eq("school_id", profile.school_id)
       .single();
 
-    if (error || !course) {
-      return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
+    if (error) {
+      if (error.code === "PGRST116") {
+        return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
+      }
+      return c.json({ error: "Could not load this subject", code: "SUBJECT_READ_FAILED" }, 500);
     }
+    if (!course) return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
 
     // Access control checks
     if (profile.role === "tutor") {
-      const { data: assignment } = await supabase
+      const { data: assignment, error: assignmentError } = await supabase
         .from("tutor_course_assignments")
         .select("id")
         .eq("course_id", id)
@@ -242,25 +264,31 @@ coursesRouter.get("/:id", async (c) => {
         .eq("school_id", profile.school_id)
         .single();
 
+      if (assignmentError && assignmentError.code !== "PGRST116") {
+        return c.json({ error: "Could not verify your subject access", code: "SUBJECT_ACCESS_FAILED" }, 500);
+      }
       if (!assignment) {
         return c.json({ error: "Not assigned to this subject", code: "FORBIDDEN" }, 403);
       }
     } else if (profile.role === "student") {
       let parentProgrammeId = course.programme_id;
       if (course.sub_programme_id) {
-        const { data: subProgramme } = await supabase
+        const { data: subProgramme, error: subProgrammeError } = await supabase
           .from("sub_programmes")
           .select("programme_id")
           .eq("id", course.sub_programme_id)
           .eq("school_id", profile.school_id)
           .maybeSingle();
+        if (subProgrammeError) {
+          return c.json({ error: "Could not verify your subject access", code: "SUBJECT_ACCESS_FAILED" }, 500);
+        }
         parentProgrammeId = subProgramme?.programme_id || null;
       }
 
       const targets = [`course_id.eq.${id}`];
       if (course.sub_programme_id) targets.push(`sub_programme_id.eq.${course.sub_programme_id}`);
       if (parentProgrammeId) targets.push(`programme_id.eq.${parentProgrammeId}`);
-      const { data: enrolment } = await supabase
+      const { data: enrolment, error: enrolmentError } = await supabase
         .from("enrolments")
         .select("id")
         .eq("student_id", profile.id)
@@ -269,7 +297,12 @@ coursesRouter.get("/:id", async (c) => {
         .limit(1)
         .maybeSingle();
 
+      if (enrolmentError) {
+        return c.json({ error: "Could not verify your subject access", code: "SUBJECT_ACCESS_FAILED" }, 500);
+      }
       if (!enrolment) return c.json({ error: "Not enrolled in this subject", code: "NOT_ENROLLED" }, 403);
+    } else if (profile.role !== "admin") {
+      return c.json({ error: "This role cannot access subjects", code: "INSUFFICIENT_ROLE" }, 403);
     }
 
     const [notes, assignments, mocks, liveClasses] = await Promise.all([
@@ -291,7 +324,8 @@ coursesRouter.get("/:id", async (c) => {
 
     return c.json({ data: enhancedData });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("GET /courses/:id error:", error?.name || "unknown");
+    return c.json({ error: "Could not load this subject", code: "SUBJECT_READ_FAILED" }, 500);
   }
 });
 
@@ -493,17 +527,45 @@ coursesRouter.get("/:id/tutors", enforceAdminOrTutor, async (c) => {
     const profile = c.get("user");
     const courseId = c.req.param("id");
 
+    const { data: course, error: courseError } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("id", courseId)
+      .eq("school_id", profile.school_id)
+      .single();
+    if (courseError && courseError.code !== "PGRST116") {
+      return c.json({ error: "Could not load this subject", code: "SUBJECT_READ_FAILED" }, 500);
+    }
+    if (!course) return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
+
+    if (profile.role === "tutor") {
+      const { data: assignment, error: assignmentError } = await supabase
+        .from("tutor_course_assignments")
+        .select("id")
+        .eq("course_id", courseId)
+        .eq("tutor_id", profile.id)
+        .eq("school_id", profile.school_id)
+        .single();
+      if (assignmentError && assignmentError.code !== "PGRST116") {
+        return c.json({ error: "Could not verify your subject access", code: "SUBJECT_ACCESS_FAILED" }, 500);
+      }
+      if (!assignment) return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
+    }
+
     const { data, error } = await supabase
       .from("tutor_course_assignments")
       .select("tutor_id")
       .eq("course_id", courseId)
       .eq("school_id", profile.school_id);
 
-    if (error) throw error;
+    if (error) {
+      return c.json({ error: "Could not load subject tutors", code: "SUBJECT_ASSIGNMENTS_FAILED" }, 500);
+    }
 
     // In a real app we'd join this with user_profiles, but for now just return the assignment rows
     return c.json({ data });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("GET /courses/:id/tutors error:", error?.name || "unknown");
+    return c.json({ error: "Could not load subject tutors", code: "SUBJECT_ASSIGNMENTS_FAILED" }, 500);
   }
 });

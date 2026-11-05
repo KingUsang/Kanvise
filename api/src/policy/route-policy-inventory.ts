@@ -65,6 +65,7 @@ const inline = (method: string, path: string, source = 'src/index.ts'): RoutePol
 
 const fullSequence = REQUIRED_PROTECTED_MIDDLEWARE
 const jwtAndProfile = ['jwtVerificationMiddleware', 'profileResolutionMiddleware'] as const
+const membershipSequence = ['jwtVerificationMiddleware', 'profileResolutionMiddleware', 'accountContextMiddleware'] as const
 
 /**
  * Source-of-truth inventory for every API route mount in src/index.ts.
@@ -103,16 +104,12 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/dashboard', 'dashboardRouter', 'src/routes/dashboard.ts', 'protected-account', jwtAndProfile, {
     knownGap: 'DEV-SEC-006: dashboard resolves tenant through route-local middleware.',
   }),
-  router('/programmes', 'programmesRouter', 'src/routes/programmes.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/programmes', 'programmesRouter', 'src/routes/programmes.ts', 'protected-account', membershipSequence),
   router('/classes', 'classesRouter', 'src/routes/classes.ts', 'protected-account', fullSequence),
   router('/sub-programmes', 'subProgrammesRouter', 'src/routes/sub-programmes.ts', 'protected-account', jwtAndProfile, {
     knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
   }),
-  router('/courses', 'coursesRouter', 'src/routes/courses.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
-  }),
+  router('/courses', 'coursesRouter', 'src/routes/courses.ts', 'protected-account', membershipSequence),
   router('/courses', 'courseAssignmentsRouter', 'src/routes/assignments.ts', 'protected-account', fullSequence),
   router('/assignments', 'assignmentsRouter', 'src/routes/assignments.ts', 'protected-account', fullSequence),
   router('/direct-assignments', 'directAssignmentsRouter', 'src/routes/direct-assignments.ts', 'protected-account', fullSequence),
@@ -216,17 +213,18 @@ export function discoverMountedRouteKeys(source: string): string[] {
 }
 
 function hasRequiredMiddleware(observed: readonly string[]): boolean {
-  return REQUIRED_PROTECTED_MIDDLEWARE.every((middleware) => observed.includes(middleware))
+  const hasJwtAndProfile = REQUIRED_PROTECTED_MIDDLEWARE.slice(0, 2).every((middleware) => observed.includes(middleware))
+  return hasJwtAndProfile && (observed.includes('tenantMiddleware') || observed.includes('accountContextMiddleware'))
 }
 
 function validateProtectedEntry(entry: RoutePolicyEntry, label: string, errors: string[]): void {
   if (entry.policy === 'protected-account' && !hasRequiredMiddleware(entry.observedMiddleware) && !entry.knownGap) {
-    errors.push(`${label} is protected-account but lacks the required JWT/profile/tenant sequence or a recorded knownGap`)
+    errors.push(`${label} is protected-account but lacks the required JWT/profile plus tenant or account-context sequence or a recorded knownGap`)
   }
   for (const [index, family] of (entry.families || []).entries()) {
     if (family.policy !== 'protected-account') continue
     if (!hasRequiredMiddleware(family.observedMiddleware) && !family.knownGap) {
-      errors.push(`${label} family ${index} is protected-account but lacks the required JWT/profile/tenant sequence or a recorded knownGap`)
+      errors.push(`${label} family ${index} is protected-account but lacks the required JWT/profile plus tenant or account-context sequence or a recorded knownGap`)
     }
   }
 }

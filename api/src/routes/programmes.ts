@@ -1,15 +1,28 @@
 import { Hono } from 'hono'
 import { randomUUID } from 'node:crypto'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
-import { strictBooleanQuerySchema } from '../lib/api-contract'
+import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
+import { strictBooleanQuerySchema, uuidSchema } from '../lib/api-contract'
+import type { AccountContext } from '../types'
 
 type Variables = { user: any }
 type SubjectInput = { name?: unknown; description?: unknown; tutor_ids?: unknown }
 
 export const programmesRouter = new Hono<{ Variables: Variables }>()
 
-programmesRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware)
+const accountUserProjection = async (c: any, next: any) => {
+  const user = c.get('user')
+  const account = c.get('account') as AccountContext | undefined
+  if (!account) return c.json({ error: 'Tutoring account context is required', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
+  c.set('user', {
+    ...user,
+    school_id: account.id,
+    role: account.role === 'learner' ? 'student' : account.role,
+  })
+  await next()
+}
+
+programmesRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection)
 
 const enforceAdmin = async (c: any, next: any) => {
   const profile = c.get('user')
@@ -32,16 +45,28 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
-function normaliseSubjects(subjects: SubjectInput[]) {
-  return subjects.map((subject, index) => ({
-    name: typeof subject.name === 'string' ? subject.name.trim() : '',
-    slug: slugify(typeof subject.name === 'string' ? subject.name.trim() : ''),
-    description: typeof subject.description === 'string' ? subject.description.trim() : '',
-    tutor_ids: Array.isArray(subject.tutor_ids)
-      ? [...new Set(subject.tutor_ids.filter((id): id is string => typeof id === 'string' && id.length > 0))]
-      : [],
-    sort_order: index,
-  }))
+function parseTutorIds(value: unknown) {
+  if (value === undefined) return [] as string[]
+  if (!Array.isArray(value) || value.some(id => !uuidSchema.safeParse(id).success)) return null
+  return [...new Set(value)] as string[]
+}
+
+function normaliseSubjects(subjects: unknown[]) {
+  const normalized: Array<{ name: string; slug: string; description: string; tutor_ids: string[]; sort_order: number }> = []
+  for (const [index, value] of subjects.entries()) {
+    const subject = value && typeof value === 'object' ? value as SubjectInput : {}
+    const tutorIds = parseTutorIds(subject.tutor_ids)
+    if (!tutorIds) return null
+    const name = typeof subject.name === 'string' ? subject.name.trim() : ''
+    normalized.push({
+      name,
+      slug: slugify(name),
+      description: typeof subject.description === 'string' ? subject.description.trim() : '',
+      tutor_ids: tutorIds,
+      sort_order: index,
+    })
+  }
+  return normalized
 }
 
 async function hasPayoutAccount(schoolId: string) {
@@ -123,13 +148,17 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
     const programmeSlug = slugify(name)
     requestedSlug = programmeSlug
     const subjects = (Array.isArray(body.subjects) ? normaliseSubjects(body.subjects) : [])
+    if (subjects === null) {
+      return c.json({ error: 'tutor_ids must be an array of valid UUIDs', code: 'INVALID_TUTOR_IDS' }, 400)
+    }
+    const normalizedSubjects = subjects
       .map(subject => ({ ...subject, slug: slugify(`${programmeSlug}-${subject.name}`) }))
     if (!name) return c.json({ error: 'Programme name is required', code: 'PROGRAMME_NAME_REQUIRED' }, 400)
-    if (subjects.length === 0) return c.json({ error: 'Add at least one subject', code: 'SUBJECT_REQUIRED' }, 400)
-    if (subjects.some(subject => !subject.name || !subject.slug)) {
+    if (normalizedSubjects.length === 0) return c.json({ error: 'Add at least one subject', code: 'SUBJECT_REQUIRED' }, 400)
+    if (normalizedSubjects.some(subject => !subject.name || !subject.slug)) {
       return c.json({ error: 'Every subject needs a name', code: 'SUBJECT_NAME_REQUIRED' }, 400)
     }
-    const names = subjects.map(subject => subject.name.toLocaleLowerCase())
+    const names = normalizedSubjects.map(subject => subject.name.toLocaleLowerCase())
     if (new Set(names).size !== names.length) {
       return c.json({ error: 'Subject names must be unique within a programme', code: 'DUPLICATE_SUBJECTS' }, 400)
     }
@@ -151,7 +180,7 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
       p_description: typeof body.description === 'string' ? body.description.trim() : '',
       p_price: price,
       p_currency: body.currency || 'NGN',
-      p_subjects: subjects,
+      p_subjects: normalizedSubjects,
       p_creation_key: creationKey,
     })
     if (error) throw error
@@ -240,7 +269,11 @@ programmesRouter.get('/:id', enforceAdminOrTutor, async (c) => {
     const id = c.req.param('id')
     const { data: programme, error } = await supabase.from('programmes').select('*, enrolments(count)')
       .eq('id', id).eq('school_id', profile.school_id).single()
-    if (error || !programme) return c.json({ error: 'Programme not found', code: 'NOT_FOUND' }, 404)
+    if (error) {
+      if (error.code === 'PGRST116') return c.json({ error: 'Programme not found', code: 'NOT_FOUND' }, 404)
+      return c.json({ error: 'Could not load this class', code: 'CLASS_READ_FAILED' }, 500)
+    }
+    if (!programme) return c.json({ error: 'Programme not found', code: 'NOT_FOUND' }, 404)
     const subjects = await loadProgrammeSubjects(profile.school_id, id)
     const subjectIds = subjects.map(subject => subject.id)
     let assignments: any[] = []
@@ -266,7 +299,8 @@ programmesRouter.get('/:id', enforceAdminOrTutor, async (c) => {
       enrolled_count: programme.enrolments?.[0]?.count || 0,
     } })
   } catch (error: any) {
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('GET /programmes/:id error:', error?.name || 'unknown')
+    return c.json({ error: 'Could not load this class', code: 'CLASS_READ_FAILED' }, 500)
   }
 })
 
@@ -296,10 +330,14 @@ programmesRouter.get('/:id/insights', enforceAdminOrTutor, async (c) => {
     if (!courseIds.length) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
 
     const [{ data: programmeEnrolments, error: programmeEnrolmentError }, { data: subjectEnrolments, error: subjectEnrolmentError }, { data: courseMocks, error: courseMockError }, { data: programmeMocks, error: programmeMockError }, { data: sessions, error: sessionError }] = await Promise.all([
-      supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).eq('programme_id', programmeId),
+      profile.role === 'tutor'
+        ? supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).in('course_id', courseIds)
+        : supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).eq('programme_id', programmeId),
       supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).in('course_id', courseIds),
       supabase.from('mock_exams').select('id, title, course_id').eq('school_id', profile.school_id).in('course_id', courseIds),
-      supabase.from('mock_exams').select('id, title, course_id').eq('school_id', profile.school_id).eq('programme_id', programmeId),
+      profile.role === 'tutor'
+        ? Promise.resolve({ data: [], error: null })
+        : supabase.from('mock_exams').select('id, title, course_id').eq('school_id', profile.school_id).eq('programme_id', programmeId),
       supabase.from('live_classes').select('id, course_id').eq('school_id', profile.school_id).in('course_id', courseIds),
     ])
     if (programmeEnrolmentError || subjectEnrolmentError || courseMockError || programmeMockError || sessionError) throw programmeEnrolmentError || subjectEnrolmentError || courseMockError || programmeMockError || sessionError
@@ -421,7 +459,8 @@ programmesRouter.get('/:id/insights', enforceAdminOrTutor, async (c) => {
     } : null
     return c.json({ data: { learners, topics, learner_detail: learnerDetail, class_health: { average_assessment_score: average, attendance: attendanceAverage, needs_attention: learners.filter(item => item.attention === 'Needs attention').length } } })
   } catch (error: any) {
-    return c.json({ error: error.message || 'Could not load class insights' }, 500)
+    console.error('GET /programmes/:id/insights error:', error?.name || 'unknown')
+    return c.json({ error: 'Could not load class insights', code: 'CLASS_INSIGHTS_FAILED' }, 500)
   }
 })
 
@@ -457,7 +496,8 @@ programmesRouter.post('/:id/publish', enforceAdmin, async (c) => {
   try {
     const profile = c.get('user')
     const id = c.req.param('id')
-    const { data: programme } = await supabase.from('programmes').select('id, price').eq('id', id).eq('school_id', profile.school_id).maybeSingle()
+    const { data: programme, error: programmeError } = await supabase.from('programmes').select('id, price').eq('id', id).eq('school_id', profile.school_id).maybeSingle()
+    if (programmeError) return c.json({ error: 'Could not load this class', code: 'CLASS_PUBLISH_LOOKUP_FAILED' }, 500)
     if (!programme) return c.json({ error: 'Programme not found', code: 'NOT_FOUND' }, 404)
     if (Number(programme.price) > 0) {
       const payoutError = await requirePayoutAccount(c, profile.school_id)
@@ -484,7 +524,8 @@ programmesRouter.post('/:id/publish', enforceAdmin, async (c) => {
     if (error) throw error
     return c.json({ message: 'Programme published', data })
   } catch (error: any) {
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('POST /programmes/:id/publish error:', error?.name || 'unknown')
+    return c.json({ error: 'Could not publish this class', code: 'CLASS_PUBLISH_FAILED' }, 500)
   }
 })
 

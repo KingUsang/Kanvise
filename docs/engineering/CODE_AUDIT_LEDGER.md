@@ -7,6 +7,18 @@ This ledger proves file-by-file review coverage. “Read” means the implementa
 was inspected in full; it does not mean conformant. Findings are recorded in
 `docs/deviations.md`. Tests and generated files are reviewed as separate strata.
 
+## Slice 29 current verification
+
+The current trusted Class and Subject candidate supersedes the pre-slice
+handler observations for `DEV-CLS-013/014/015`, `DEV-CRS-003/008/009/010`, and
+the exercised `DEV-TEST-021` boundary. The changed endpoints use verified
+active-account context; Admins retain account scope, Tutors require assigned
+Subjects, Learners require enrolment, malformed Tutor UUID arrays fail before
+RPC execution, dependency failures map to safe service errors, and Tutor
+insights exclude Programme-only Learner/assessment evidence. `DEV-CLS-017` and
+broader runtime/database proof remain explicit residue. The detailed rows below
+remain the historical source trace and are interpreted with this addendum.
+
 | Area | Source files | Status | Findings / next boundary |
 |---|---:|---|---|
 | `api/src/lib` | 8 implementation, 5 tests, 1 generated type file | Complete | DEV-ACC-001–004, DEV-PUB-007, DEV-CFG-001–002 confirmed; full generated schema read confirms DEV-DB-003, including stale live-class/presentation shapes and retired mock/marketplace tables and RPCs |
