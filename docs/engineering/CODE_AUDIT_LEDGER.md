@@ -34,7 +34,10 @@ independent of optional download signing, and the affected Tutor/Learner
 consumers retain cached data during background refresh failure. Focused API and
 component tests cover account context, failed reads, committed-without-URL,
 initial/retry/empty states, missing sessions, cached refresh, and single-save
-notification behavior. Runtime DB/provider replay, full build, and broad lint
+notification behavior; the Tutor Assignment and submission-review query keys
+use a reactive active-account snapshot and account changes reload distinct
+caches through the shared key factory. Runtime DB/provider replay, full build,
+and broad lint
 remain unavailable or outside scope; no schema/migration/deployment change was
 made. The detailed rows below retain the historical source trace and are
 interpreted with this addendum.

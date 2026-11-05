@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { useActiveAccountId } from "@/lib/account-preference";
+import { assignmentQueryKeys } from "@/lib/assignment-query-keys";
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message === "Your session has ended. Please sign in again." ? error.message : fallback;
@@ -37,6 +39,7 @@ type SubmissionQueryData = {
 
 export function SubmissionsClient({ assignmentId, embedded = false }: { assignmentId: string; embedded?: boolean }) {
   const queryClient = useQueryClient();
+  const activeAccountId = useActiveAccountId();
   const [search, setSearch] = useState("");
   // Grading state
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRow | null>(null);
@@ -44,7 +47,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
   const [feedback, setFeedback] = useState<string>("");
 
   const submissionsQuery = useQuery<SubmissionQueryData>({
-    queryKey: ["assignment-submissions", assignmentId],
+    queryKey: assignmentQueryKeys.submissions(activeAccountId, assignmentId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments/${assignmentId}/submissions`);
       if (!response.ok) throw new Error(await responseErrorMessage(response, "Failed to load submissions"));
@@ -79,7 +82,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
     },
     onSuccess: async () => {
       toast.success("Grade and feedback saved");
-      await queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignmentId] });
+      await queryClient.invalidateQueries({ queryKey: assignmentQueryKeys.submissions(activeAccountId, assignmentId) });
     },
     onError: (error) => toast.error(errorMessage(error, "Failed to submit grade")),
   });

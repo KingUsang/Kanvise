@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react'
+
 const ACTIVE_ACCOUNT_KEY = 'kanvise:active-account:v1'
 export const ACCOUNT_CONTEXT_HEADER = 'X-Kanvise-Account-Id'
 export const ACTIVE_ACCOUNT_CHANGED_EVENT = 'kanvise:active-account-changed'
@@ -44,4 +46,10 @@ export function subscribeToActiveAccount(listener: () => void) {
   const handleChange = () => listener()
   window.addEventListener(ACTIVE_ACCOUNT_CHANGED_EVENT, handleChange)
   return () => window.removeEventListener(ACTIVE_ACCOUNT_CHANGED_EVENT, handleChange)
+}
+
+const getServerActiveAccountId = () => null
+
+export function useActiveAccountId() {
+  return useSyncExternalStore(subscribeToActiveAccount, getActiveAccountId, getServerActiveAccountId)
 }

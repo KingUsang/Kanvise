@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SubmissionsClient } from './submissions-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { clearActiveAccountId, setActiveAccountId } from '@/lib/account-preference'
 
 const { authenticatedApiFetch, toastError } = vi.hoisted(() => ({
   authenticatedApiFetch: vi.fn(),
@@ -24,6 +25,7 @@ describe('SubmissionsClient token boundary', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    clearActiveAccountId()
     authenticatedApiFetch.mockResolvedValue(new Response(JSON.stringify({ data: [], summary: {} })))
   })
 
@@ -45,6 +47,16 @@ describe('SubmissionsClient token boundary', () => {
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Your session has ended. Please sign in again.'))
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('reloads the review list when the active account changes', async () => {
+    setActiveAccountId('11111111-1111-4111-8111-111111111111')
+    renderSubmissions()
+
+    await waitFor(() => expect(authenticatedApiFetch).toHaveBeenCalledTimes(1))
+    setActiveAccountId('22222222-2222-4222-8222-222222222222')
+
+    await waitFor(() => expect(authenticatedApiFetch).toHaveBeenCalledTimes(2))
   })
 
   it('shows a safe session-ended message when grading has no response body', async () => {

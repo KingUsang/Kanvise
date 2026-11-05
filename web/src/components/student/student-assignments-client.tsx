@@ -1,12 +1,12 @@
 "use client";
 
 import { CalendarDays, CheckCircle2, Download, FileText, Search, Send, UploadCloud, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getApiUrl } from "@/config/api";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
-import { getActiveAccountId, subscribeToActiveAccount } from "@/lib/account-preference";
+import { useActiveAccountId } from "@/lib/account-preference";
 import type { StudentAssignment } from "@/lib/student-assignments";
 
 type Status = "all" | "pending" | "submitted" | "graded" | "overdue";
@@ -34,8 +34,7 @@ function safeQueryErrorMessage(error: unknown, fallback: string) {
 
 export function StudentAssignmentsClient({ assignments: seededAssignments }: { assignments?: StudentAssignment[] } = {}) {
   const queryClient = useQueryClient();
-  const [activeAccountId, setActiveAccountId] = useState(getActiveAccountId);
-  useEffect(() => subscribeToActiveAccount(() => setActiveAccountId(getActiveAccountId())), []);
+  const activeAccountId = useActiveAccountId();
   const assignmentsQuery = useQuery<StudentAssignment[]>({
     queryKey: ["student-assignments", activeAccountId],
     initialData: seededAssignments,

@@ -34,8 +34,10 @@ retryable responses and successful absence remains not-found/denial; committed
 Learner submissions are returned even when optional URL signing fails. Tutor
 and Learner Assignment consumers use the shared authenticated client and
 TanStack Query states for initial loading, retryable errors, successful empty
-results, missing sessions, and cached background-refresh failures. Focused API
-and component tests cover these boundaries. Clean runtime database/provider,
+results, missing sessions, and cached background-refresh failures. Tutor query
+keys include a reactive active-account snapshot, and account changes reload
+the account-scoped caches through the same key identity. Focused API and
+component tests cover these boundaries. Clean runtime database/provider,
 full build, and broad lint evidence remain outside this slice and are explicit
 residue; no schema, migration, deployment, or remote database changes were
 made.

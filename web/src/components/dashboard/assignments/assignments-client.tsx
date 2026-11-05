@@ -10,6 +10,8 @@ import { UploadTaskStatus } from "@/components/uploads/upload-task-status";
 import { uploadFileWithProgress } from "@/lib/upload-with-progress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { useActiveAccountId } from "@/lib/account-preference";
+import { assignmentQueryKeys } from "@/lib/assignment-query-keys";
 
 function responseErrorMessage(response: Response, body: any, fallback: string) {
   if (typeof body?.error === "string" && body.error) return body.error;
@@ -42,6 +44,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
   const fetch = authenticatedApiFetch;
   const router = useRouter();
   const queryClient = useQueryClient();
+  const activeAccountId = useActiveAccountId();
   const searchParams = useSearchParams();
   const contextualCourseId = searchParams.get("course_id");
   const classContextId = searchParams.get("class_id");
@@ -58,7 +61,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const assignmentQuery = useQuery<AssignmentQueryData>({
-    queryKey: ["assignments", contextualCourseId ?? null, classContextId ?? null],
+    queryKey: assignmentQueryKeys.list(activeAccountId, contextualCourseId ?? null, classContextId ?? null),
     queryFn: async () => {
       const resCourses = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
       const courseBody = await resCourses.json().catch(() => null);
@@ -164,7 +167,9 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
       setDeadline("");
       setFile(null);
       setCourseId("");
-      await assignmentQuery.refetch();
+      await queryClient.invalidateQueries({
+        queryKey: assignmentQueryKeys.list(activeAccountId, contextualCourseId ?? null, classContextId ?? null),
+      });
     } catch (err: any) {
       toast.error("Could not save the assignment", { description: safeQueryErrorMessage(err, "Please try again.") });
     } finally {
