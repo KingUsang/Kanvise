@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ClassWorkspaceClient } from './class-workspace-client'
+import { classQueryKeys } from '@/lib/class-query-keys'
 
 vi.mock('next/link', () => ({ default: ({ href, children, ...props }: any) => <a href={href} {...props}>{children}</a> }))
 vi.mock('next/navigation', () => ({
@@ -143,7 +144,30 @@ describe('ClassWorkspaceClient data loading', () => {
     }))
 
     renderWorkspace()
-    expect(await screen.findByText('Schedule could not be loaded.')).toBeTruthy()
+    const notice = await screen.findByRole('alert')
+    expect(notice).toHaveTextContent('Schedule could not be loaded.')
+    expect(notice).toHaveAttribute('aria-live', 'assertive')
     expect(screen.queryByText('No sessions yet')).toBeNull()
+  })
+
+  it('keeps the cached root Class workspace visible after a failed refresh', async () => {
+    let failRefresh = false
+    vi.stubGlobal('fetch', vi.fn(async (input: string) => {
+      if (input.endsWith('/classes/class-1')) return failRefresh ? response({ error: 'temporary outage' }, 503) : response({ data: { id: 'class-1', name: 'Cached class', is_published: true, enrolled_count: 0, courses: [{ id: 'physics', name: 'Physics' }] } })
+      if (input.endsWith('/classes/class-1/schedule')) return response({ data: { sessions: [] } })
+      if (input.endsWith('/mocks') || input.includes('/assignments')) return response({ data: [] })
+      if (input.endsWith('/classes/class-1/insights')) return response({ data: { learners: [], topics: [], class_health: { average_assessment_score: null, attendance: null, needs_attention: 0 } } })
+      throw new Error(`Unexpected request ${input}`)
+    }))
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={queryClient}><ClassWorkspaceClient classId="class-1" /></QueryClientProvider>)
+    expect(await screen.findByRole('heading', { name: 'Cached class' })).toBeTruthy()
+
+    failRefresh = true
+    await queryClient.refetchQueries({ queryKey: classQueryKeys.workspace(null, 'class-1'), exact: true })
+    const notice = await screen.findByRole('status')
+    expect(notice).toHaveTextContent('Class workspace could not refresh')
+    expect(notice).toHaveAttribute('aria-live', 'polite')
+    expect(screen.getByRole('heading', { name: 'Cached class' })).toBeTruthy()
   })
 })

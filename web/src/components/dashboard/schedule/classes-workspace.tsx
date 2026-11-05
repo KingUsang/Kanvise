@@ -544,7 +544,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           </div>
         ) : (
           <>
-            {scheduleQuery.isError ? <div className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Schedule refresh failed; showing your last saved calendar. <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold underline">Try again</button></div> : null}
+            {scheduleQuery.isError ? <div role="status" aria-live="polite" aria-atomic="true" className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Schedule refresh failed; showing your last saved calendar. <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold underline">Try again</button></div> : null}
             <div
               ref={calendarGridRef}
               className="hidden overflow-auto md:block md:max-h-[calc(100vh-260px)]"

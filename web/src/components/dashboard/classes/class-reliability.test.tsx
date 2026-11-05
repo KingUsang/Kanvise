@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ProgrammesClient } from '../programmes/programmes-client'
 import { ClassBuilder } from './class-builder'
 import { AddClassSubjectClient } from './add-class-subject-client'
+import { classQueryKeys } from '@/lib/class-query-keys'
 
 vi.mock('next/link', () => ({ default: ({ href, children, ...props }: any) => <a href={href} {...props}>{children}</a> }))
 vi.mock('next/navigation', () => ({
@@ -25,8 +26,9 @@ function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 }
 
-function withQuery(children: React.ReactNode) {
-  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>)
+function withQuery(children: React.ReactNode, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+  render(<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>)
+  return queryClient
 }
 
 describe('Class vertical recovery states', () => {
@@ -53,5 +55,24 @@ describe('Class vertical recovery states', () => {
     withQuery(<ClassBuilder />)
     expect(await screen.findByText('We could not load the class prerequisites')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+  })
+
+  it('keeps cached Class-list data visible after a failed background refetch', async () => {
+    let failRefresh = false
+    vi.stubGlobal('fetch', vi.fn(async () => failRefresh ? response({ error: 'temporary outage' }, 503) : response({ data: [] })))
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClient.setQueryData(classQueryKeys.programmes(null), {
+      programmes: [{ id: 'class-1', name: 'Cached class', slug: 'cached-class', description: null, price: 0, is_published: true, courses: [], courses_count: 0, assigned_subjects_count: 0, tutors_complete: true }],
+      schoolSlug: 'centre', schoolId: 'school-1', userId: 'user-1', canCreate: true, schoolContextError: false,
+    })
+    withQuery(<ProgrammesClient />, queryClient)
+    expect(await screen.findByRole('heading', { name: 'Cached class' })).toBeTruthy()
+
+    failRefresh = true
+    await queryClient.refetchQueries({ queryKey: classQueryKeys.programmes(null), exact: true })
+    const notice = await screen.findByRole('status')
+    expect(notice).toHaveTextContent('Class refresh failed')
+    expect(notice).toHaveAttribute('aria-live', 'polite')
+    expect(screen.getByRole('heading', { name: 'Cached class' })).toBeTruthy()
   })
 })

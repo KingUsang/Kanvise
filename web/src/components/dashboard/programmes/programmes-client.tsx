@@ -91,7 +91,8 @@ export function ProgrammesClient() {
   const schoolContextError = programmesQuery.data?.schoolContextError || false
   const hasLocalDraft = Boolean(programmesQuery.data?.schoolId && programmesQuery.data?.userId && loadProgrammeDraft(programmesQuery.data.schoolId, programmesQuery.data.userId))
   const canCreate = programmesQuery.data?.canCreate ?? false
-  const loadError = programmesQuery.error ? 'We could not load your classes. Check your connection and try again.' : ''
+  const loadError = programmesQuery.error && !programmesQuery.data ? 'We could not load your classes. Check your connection and try again.' : ''
+  const refreshError = Boolean(programmesQuery.error && programmesQuery.data)
   const visibleProgrammes = programmes.filter((programme) => {
     const matchesStatus = statusFilter === 'all' || (statusFilter === 'published' ? programme.is_published : !programme.is_published)
     const needle = search.trim().toLowerCase()
@@ -173,11 +174,15 @@ export function ProgrammesClient() {
       )}
 
       {loadError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
+        <div role="alert" aria-live="assertive" aria-atomic="true" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
+      )}
+
+      {refreshError && (
+        <div role="status" aria-live="polite" aria-atomic="true" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Class refresh failed; showing your last saved classes. <button type="button" onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
       )}
 
       {schoolContextError && !loadError && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p>Class links are temporarily unavailable because centre details could not be loaded.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-2 font-semibold underline">Try again</button></div>
+        <div role="status" aria-live="polite" aria-atomic="true" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p>Class links are temporarily unavailable because centre details could not be loaded.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-2 font-semibold underline">Try again</button></div>
       )}
 
       {programmesQuery.isSuccess && programmes.length > 0 && <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
@@ -187,8 +192,8 @@ export function ProgrammesClient() {
 
       {programmesQuery.isLoading ? (
         <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading classes…</div>
-      ) : programmesQuery.isError ? (
-        <div className="rounded-dashboard-panel border border-red-200 bg-red-50 px-6 py-16 text-center text-sm text-red-800"><p>We could not load your classes.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-4 font-semibold underline">Try again</button></div>
+      ) : programmesQuery.isError && !programmesQuery.data ? (
+        <div role="alert" aria-live="assertive" aria-atomic="true" className="rounded-dashboard-panel border border-red-200 bg-red-50 px-6 py-16 text-center text-sm text-red-800"><p>We could not load your classes.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-4 font-semibold underline">Try again</button></div>
       ) : programmesQuery.isSuccess && programmes.length === 0 ? (
         <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-16 text-center">
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>

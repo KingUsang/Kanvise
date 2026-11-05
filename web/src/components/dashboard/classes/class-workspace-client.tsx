@@ -426,10 +426,10 @@ export function ClassWorkspaceClient({
     ) || [];
 
   if (classQuery.isPending) return <WorkspaceLoading />;
-  if (classQuery.isError || !data)
+  if (!data)
     return (
       <main className="w-full">
-        <div className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-6 text-sm text-[#8d2f22]">
+        <div role="alert" aria-live="assertive" aria-atomic="true" className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-6 text-sm text-[#8d2f22]">
           <p>This class could not be loaded.</p>
           <button
             onClick={() => void classQuery.refetch()}
@@ -444,6 +444,7 @@ export function ClassWorkspaceClient({
   return (
     <>
       <main className="w-full pb-20 sm:pb-0">
+        {classQuery.isError ? <WorkspaceQueryNotice label="Class workspace" cached onRetry={() => void classQuery.refetch()} /> : null}
         <div className="flex items-center gap-2 text-sm font-semibold text-[#625e69]">
           <Link
             href="/dashboard/classes"
@@ -1949,7 +1950,7 @@ function formatStatus(status: string) {
     : "Assessment";
 }
 function WorkspaceQueryNotice({ label, cached = false, onRetry }: { label: string; cached?: boolean; onRetry: () => void }) {
-  return <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${cached ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-[#f0c7c1] bg-[#fff8f7] text-[#8d2f22]'}`}>
+  return <div role={cached ? 'status' : 'alert'} aria-live={cached ? 'polite' : 'assertive'} aria-atomic="true" className={`mb-4 rounded-xl border px-4 py-3 text-sm ${cached ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-[#f0c7c1] bg-[#fff8f7] text-[#8d2f22]'}`}>
     <span>{cached ? `${label} could not refresh. Showing the last saved data.` : `${label} could not be loaded.`}</span>
     <button type="button" onClick={onRetry} className="ml-2 font-semibold underline">Try again</button>
   </div>
