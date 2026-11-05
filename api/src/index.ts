@@ -2,6 +2,7 @@ import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { mapApiError, notFoundHandler, requestIdMiddleware } from "./lib/api-contract";
 // TypeScript's legacy Node resolution cannot resolve the SDK's runtime-specific
 // export, while Node resolves it correctly at runtime.
 const { sentry } = require("@sentry/hono/node") as {
@@ -20,11 +21,14 @@ const app = new Hono();
 
 // Middleware
 // Sentry starts before route middleware so it captures unhandled 5xx responses.
+app.use("/*", requestIdMiddleware);
 app.use("/*", sentry(app));
 app.use("/*", cors({
   origin: (origin) => resolveCorsOrigin(origin),
   credentials: true,
 }));
+app.onError(mapApiError);
+app.notFound(notFoundHandler);
 
 import { authRouter } from "./routes/auth";
 import { publicRegistrationRouter } from './routes/public-registration';
