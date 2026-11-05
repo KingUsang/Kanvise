@@ -1,16 +1,42 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ChevronDown, CloudUpload, FileText } from "lucide-react";
-import { createBrowserClient } from '@supabase/ssr';
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
 import { UploadTaskStatus } from "@/components/uploads/upload-task-status";
 import { uploadFileWithProgress } from "@/lib/upload-with-progress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+
+function responseErrorMessage(response: Response, body: any, fallback: string) {
+  if (typeof body?.error === "string" && body.error) return body.error;
+  if (response.status === 401) return "Your session has ended. Please sign in again.";
+  return fallback;
+}
+
+const SESSION_ENDED_MESSAGE = "Your session has ended. Please sign in again.";
+
+function safeQueryErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message === SESSION_ENDED_MESSAGE ? SESSION_ENDED_MESSAGE : fallback;
+}
+
+type AssignmentListItem = {
+  id: string;
+  title: string;
+  deadline_at: string;
+  is_published: boolean;
+  submission_count?: number;
+  course?: { title?: string; name?: string } | null;
+};
+
+type AssignmentQueryData = {
+  courses: Array<{ id: string; title?: string; name?: string }>;
+  classContextName: string | null;
+  assignments: AssignmentListItem[];
+};
 
 export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) {
   const fetch = authenticatedApiFetch;
@@ -19,9 +45,6 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
   const searchParams = useSearchParams();
   const contextualCourseId = searchParams.get("course_id");
   const classContextId = searchParams.get("class_id");
-  const [courses, setCourses] = useState<any[]>([]);
-  const [classContextName, setClassContextName] = useState<string | null>(null);
-  const [assignments, setAssignments] = useState<any[]>([]);
 
   // Form State
   const [courseId, setCourseId] = useState("");
@@ -31,64 +54,42 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
   const [file, setFile] = useState<File | null>(null);
   // Status state
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
   const [saveStage, setSaveStage] = useState<"idle" | "uploading" | "saving">("idle");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  const fetchData = async () => {
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token;
-    if (!token) return;
-
-    try {
-      // Fetch courses for the dropdown
-      const resCourses = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  const assignmentQuery = useQuery<AssignmentQueryData>({
+    queryKey: ["assignments", contextualCourseId ?? null, classContextId ?? null],
+    queryFn: async () => {
+      const resCourses = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
       const courseBody = await resCourses.json().catch(() => null);
-      if (!resCourses.ok) throw new Error(courseBody?.error || "Could not load Subjects");
-      const loadedCourses = courseBody.data || [];
+      if (!resCourses.ok) throw new Error(responseErrorMessage(resCourses, courseBody, "Could not load Subjects"));
+      const loadedCourses = courseBody?.data || [];
       let visibleCourses = loadedCourses;
+      let nextClassContextName: string | null = null;
       if (classContextId) {
-        const classRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${classContextId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const classRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${classContextId}`);
         const classBody = await classRes.json().catch(() => null);
-        if (!classRes.ok) throw new Error(classBody?.error || "Could not load this class");
+        if (!classRes.ok) throw new Error(responseErrorMessage(classRes, classBody, "Could not load this class"));
         const classSubjectIds = new Set((classBody?.data?.courses || []).map((course: any) => course.id));
         visibleCourses = loadedCourses.filter((course: any) => classSubjectIds.has(course.id));
-        setClassContextName(classBody?.data?.name || "This class");
-      }
-      setCourses(visibleCourses);
-      if (contextualCourseId && visibleCourses.some((course: any) => course.id === contextualCourseId)) {
-        setCourseId(contextualCourseId);
+        nextClassContextName = classBody?.data?.name || "This class";
       }
 
-      // Fetch assignments using the new aggregated backend endpoint
-      const resAssignments = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments?page=1&page_size=20`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const resAssignments = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments?page=1&page_size=20`);
       const assignmentBody = await resAssignments.json().catch(() => null);
-      if (!resAssignments.ok) throw new Error(assignmentBody?.error || "Could not load assignments");
-      setAssignments(assignmentBody.data || []);
-    } catch (err) {
-      console.error("Failed to fetch initial data", err);
-      toast.error("Could not load assignments", {
-        description: err instanceof Error ? err.message : "Refresh the page and try again.",
-      });
-    } finally {
-      setIsFetching(false);
-    }
-  };
+      if (!resAssignments.ok) throw new Error(responseErrorMessage(resAssignments, assignmentBody, "Could not load assignments"));
+      return {
+        courses: visibleCourses,
+        classContextName: nextClassContextName,
+        assignments: assignmentBody?.data || [],
+      };
+    },
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [contextualCourseId, classContextId]);
+  const courses = assignmentQuery.data?.courses || [];
+  const classContextName = assignmentQuery.data?.classContextName || null;
+  const assignments = assignmentQuery.data?.assignments || [];
+  const isFetching = assignmentQuery.isPending;
 
   const handleSubmit = async (publish: boolean) => {
     if (!courseId || !title || !description || !deadline) {
@@ -100,9 +101,6 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
     setSaveStage(file ? "uploading" : "saving");
     setUploadProgress(file ? 0 : null);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      
       let fileKey = null;
 
       if (file) {
@@ -110,8 +108,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
         const presignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/presigned-url`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             file_name: file.name,
@@ -121,13 +118,8 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
             course_id: courseId
           })
         });
-
-        if (!presignRes.ok) {
-          const errData = await presignRes.json();
-          throw new Error(errData.error || "Failed to get upload URL");
-        }
-        
-        const presignData = await presignRes.json();
+        const presignData = await presignRes.json().catch(() => null);
+        if (!presignRes.ok) throw new Error(responseErrorMessage(presignRes, presignData, "Failed to get upload URL"));
         
         // 2. Upload directly to Cloudflare R2
         await uploadFileWithProgress(presignData.data.presigned_url, file, setUploadProgress);
@@ -140,8 +132,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
       const assignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           title,
@@ -155,10 +146,8 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
         })
       });
 
-      if (!assignRes.ok) {
-        const errorData = await assignRes.json();
-        throw new Error(errorData.error || "Failed to create assignment");
-      }
+      const assignmentBody = await assignRes.json().catch(() => null);
+      if (!assignRes.ok) throw new Error(responseErrorMessage(assignRes, assignmentBody, "Failed to create assignment"));
 
       toast.success(publish ? "Assignment published" : "Assignment saved as a draft");
       if (classContextId) {
@@ -175,9 +164,9 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
       setDeadline("");
       setFile(null);
       setCourseId("");
-      fetchData(); // Refresh the ledger immediately
+      await assignmentQuery.refetch();
     } catch (err: any) {
-      toast.error("Could not save the assignment", { description: err.message });
+      toast.error("Could not save the assignment", { description: safeQueryErrorMessage(err, "Please try again.") });
     } finally {
       setIsLoading(false);
       setSaveStage("idle");
@@ -398,6 +387,11 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
           <div className="overflow-y-auto flex-1">
             {isFetching ? (
               <div className="p-8 text-center text-sm text-dashboard-muted">Loading assignments…</div>
+            ) : assignmentQuery.isError && !assignmentQuery.data ? (
+              <div className="p-8 text-center text-sm text-red-800" role="alert">
+                <p>{safeQueryErrorMessage(assignmentQuery.error, "Could not load assignments. Please try again.")}</p>
+                <button type="button" onClick={() => void assignmentQuery.refetch()} className="mt-4 rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-xs font-semibold text-white">Try again</button>
+              </div>
             ) : assignments.length === 0 ? (
               <div className="p-8 text-center text-sm text-dashboard-muted">
                 <FileText className="mx-auto mb-3 h-8 w-8 text-dashboard-outline" />

@@ -110,8 +110,8 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
   }),
   router('/courses', 'coursesRouter', 'src/routes/courses.ts', 'protected-account', membershipSequence),
-  router('/courses', 'courseAssignmentsRouter', 'src/routes/assignments.ts', 'protected-account', fullSequence),
-  router('/assignments', 'assignmentsRouter', 'src/routes/assignments.ts', 'protected-account', fullSequence),
+  router('/courses', 'courseAssignmentsRouter', 'src/routes/assignments.ts', 'protected-account', membershipSequence),
+  router('/assignments', 'assignmentsRouter', 'src/routes/assignments.ts', 'protected-account', membershipSequence),
   router('/direct-assignments', 'directAssignmentsRouter', 'src/routes/direct-assignments.ts', 'protected-account', fullSequence),
   router('/public/direct-assignments', 'publicDirectAssignmentsRouter', 'src/routes/direct-assignments.ts', 'public', []),
   router('/users', 'usersRouter', 'src/routes/users.ts', 'protected-account', jwtAndProfile, {
@@ -137,7 +137,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/internal/payments', 'internalPaymentsRouter', 'src/routes/internal-payments.ts', 'internal-service', [], {
     exception: 'Shared-secret verification owns this service-to-service boundary.',
   }),
-  router('/submissions', 'submissionsRouter', 'src/routes/submissions.ts', 'protected-account', fullSequence),
+  router('/submissions', 'submissionsRouter', 'src/routes/submissions.ts', 'protected-account', membershipSequence),
   router('/mock-answers', 'mockAnswersRouter', 'src/routes/mock-answers.ts', 'protected-account', fullSequence),
   router('/health', 'healthRouter', 'src/routes/health.ts', 'public', []),
   router('/feedback', 'feedbackRouter', 'src/routes/feedback.ts', 'protected-account', jwtAndProfile, {

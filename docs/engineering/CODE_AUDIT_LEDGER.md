@@ -19,6 +19,26 @@ insights exclude Programme-only Learner/assessment evidence. `DEV-CLS-017` and
 broader runtime/database proof remain explicit residue. The detailed rows below
 remain the historical source trace and are interpreted with this addendum.
 
+## Slice 30 current verification
+
+The Slice 30 Assignment lifecycle candidate supersedes the pre-slice observations
+for `DEV-ASN-007–010`, `DEV-ASN-015`, `DEV-ASN-018/019/021`, `DEV-FE-035`, and
+the Assignment portion of `DEV-SEC-006`. The changed endpoints use verified
+active-account context: Admins are account-scoped, Tutors require an assigned
+Subject, and Learners require active membership plus enrolment. Legacy route
+handlers receive a compatibility projection only after the canonical account
+context is verified; mutable profile `school_id`, role names alone, and frontend
+visibility are not authorization sources. Dependency failures are safe and
+retryable, successful absence/denial remains distinct, submission commit is
+independent of optional download signing, and the affected Tutor/Learner
+consumers retain cached data during background refresh failure. Focused API and
+component tests cover account context, failed reads, committed-without-URL,
+initial/retry/empty states, missing sessions, cached refresh, and single-save
+notification behavior. Runtime DB/provider replay, full build, and broad lint
+remain unavailable or outside scope; no schema/migration/deployment change was
+made. The detailed rows below retain the historical source trace and are
+interpreted with this addendum.
+
 | Area | Source files | Status | Findings / next boundary |
 |---|---:|---|---|
 | `api/src/lib` | 8 implementation, 5 tests, 1 generated type file | Complete | DEV-ACC-001–004, DEV-PUB-007, DEV-CFG-001–002 confirmed; full generated schema read confirms DEV-DB-003, including stale live-class/presentation shapes and retired mock/marketplace tables and RPCs |

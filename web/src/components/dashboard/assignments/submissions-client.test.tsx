@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SubmissionsClient } from './submissions-client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const { authenticatedApiFetch, toastError } = vi.hoisted(() => ({
   authenticatedApiFetch: vi.fn(),
@@ -16,13 +17,18 @@ vi.mock('sonner', () => ({
 }))
 
 describe('SubmissionsClient token boundary', () => {
+  function renderSubmissions() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return render(<QueryClientProvider client={queryClient}><SubmissionsClient assignmentId="assignment-1" /></QueryClientProvider>)
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     authenticatedApiFetch.mockResolvedValue(new Response(JSON.stringify({ data: [], summary: {} })))
   })
 
   it('loads submissions through the shared browser-session client without a session prop', async () => {
-    render(<SubmissionsClient assignmentId="assignment-1" />)
+    renderSubmissions()
 
     await waitFor(() => expect(authenticatedApiFetch).toHaveBeenCalledTimes(1))
 
@@ -35,9 +41,10 @@ describe('SubmissionsClient token boundary', () => {
   it('shows a safe session-ended message when the submissions read has no response body', async () => {
     authenticatedApiFetch.mockResolvedValueOnce(new Response(null, { status: 401 }))
 
-    render(<SubmissionsClient assignmentId="assignment-1" />)
+    renderSubmissions()
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Your session has ended. Please sign in again.'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Your session has ended. Please sign in again.'))
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
   it('shows a safe session-ended message when grading has no response body', async () => {
@@ -55,7 +62,7 @@ describe('SubmissionsClient token boundary', () => {
       summary: { total_submitted: 1, total_reviewed: 0 },
     })))
 
-    render(<SubmissionsClient assignmentId="assignment-1" />)
+    renderSubmissions()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save grade' })).toBeInTheDocument())
 
     authenticatedApiFetch.mockResolvedValueOnce(new Response(null, { status: 401 }))

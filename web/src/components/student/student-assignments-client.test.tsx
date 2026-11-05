@@ -1,14 +1,23 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import { assignmentStatus, StudentAssignmentsClient } from "./student-assignments-client";
 import type { StudentAssignment } from "@/lib/student-assignments";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const { authenticatedApiFetch } = vi.hoisted(() => ({ authenticatedApiFetch: vi.fn() }));
+vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedApiFetch }));
+vi.mock("@/config/api", () => ({ getApiUrl: () => "https://api.test" }));
 
 const base: StudentAssignment = { id: "a1", title: "Essay", description: "Write", deadline_at: "2026-07-23T12:00:00Z", created_at: "2026-07-20T12:00:00Z", attachment_file_name: null, attachment_download_url: null, course: null, submission: null };
 const now = new Date("2026-07-22T12:00:00Z").getTime();
 
 describe("assignmentStatus", () => {
-  function renderAssignments(assignments: StudentAssignment[]) {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authenticatedApiFetch.mockResolvedValue(new Response(JSON.stringify({ data: [base] }), { status: 200 }));
+  });
+
+  function renderAssignments(assignments?: StudentAssignment[]) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(<QueryClientProvider client={queryClient}><StudentAssignmentsClient assignments={assignments} /></QueryClientProvider>);
   }
@@ -39,5 +48,23 @@ describe("assignmentStatus", () => {
     for (const label of ["all", "pending", "submitted", "graded", "overdue"]) {
       expect(screen.getByRole("button", { name: label })).toBeVisible();
     }
+  });
+
+  it("keeps cached assignments visible when a background refresh fails", async () => {
+    authenticatedApiFetch.mockRejectedValueOnce(new Error("Network unavailable"));
+    renderAssignments([base]);
+
+    expect(screen.getByText("Essay")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Refresh failed"));
+    expect(screen.getByText("Essay")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("shows an initial failure with a retry action", async () => {
+    authenticatedApiFetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: "Your session has ended. Please sign in again." }), { status: 401 }));
+    renderAssignments();
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Your session has ended"));
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });

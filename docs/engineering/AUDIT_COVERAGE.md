@@ -2,7 +2,7 @@
 
 **Status:** Current
 **Owner:** Kanvise engineering
-**Last verified:** 2026-11-02
+**Last verified:** 2026-11-05
 
 The standards define the target. This map tracks whether implementation has
 received a cross-cutting scan or a workflow-level audit; “standardised” does not
@@ -21,6 +21,24 @@ remaining `DEV-CLS-017` Sub-programme roster gap, broader integration/runtime
 proof, and unrelated protected-router gaps remain open. This addendum is the
 current implementation evidence; the detailed ledger rows below retain the
 historical audit trace.
+
+## Slice 30 current verification
+
+The Slice 30 Assignment lifecycle candidate updates the bounded audit claims for
+`DEV-ASN-007–010`, `DEV-ASN-015`, `DEV-ASN-018/019/021`, `DEV-FE-035`, and the
+Assignment portion of `DEV-SEC-006`. Assignment and submission-review routes now
+compose verified active-account context, project that context into the legacy
+handler shape, and enforce Admin account scope, Tutor assigned-Subject access,
+or Learner active membership/enrolment. Failed dependency reads use safe
+retryable responses and successful absence remains not-found/denial; committed
+Learner submissions are returned even when optional URL signing fails. Tutor
+and Learner Assignment consumers use the shared authenticated client and
+TanStack Query states for initial loading, retryable errors, successful empty
+results, missing sessions, and cached background-refresh failures. Focused API
+and component tests cover these boundaries. Clean runtime database/provider,
+full build, and broad lint evidence remain outside this slice and are explicit
+residue; no schema, migration, deployment, or remote database changes were
+made.
 
 | Area | Coverage | Next deep-audit boundary |
 |---|---|---|

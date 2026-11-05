@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Download, Edit, Search, FileText, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 
 function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
+  return error instanceof Error && error.message === "Your session has ended. Please sign in again." ? error.message : fallback;
 }
 
 async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
@@ -17,49 +18,73 @@ async function responseErrorMessage(response: Response, fallback: string): Promi
   return fallback;
 }
 
+type SubmissionRow = {
+  id: string;
+  score: number | null;
+  feedback?: string | null;
+  reviewed_at?: string | null;
+  submitted_at: string;
+  download_url: string;
+  file_name?: string | null;
+  is_late?: boolean;
+  student?: { first_name?: string | null; last_name?: string | null } | null;
+};
+
+type SubmissionQueryData = {
+  submissions: SubmissionRow[];
+  summary: { total_submitted: number; total_reviewed: number };
+};
+
 export function SubmissionsClient({ assignmentId, embedded = false }: { assignmentId: string; embedded?: boolean }) {
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [assignment, setAssignment] = useState<any>(null);
-  const [summary, setSummary] = useState({ total_submitted: 0, total_reviewed: 0 });
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  
   // Grading state
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRow | null>(null);
   const [score, setScore] = useState<string>("");
   const [feedback, setFeedback] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchSubmissions = async () => {
-    try {
-      setIsLoading(true);
-      const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments/${assignmentId}/submissions`);
-      if (!res.ok) {
-        throw new Error(await responseErrorMessage(res, "Failed to load submissions"));
-      }
-      const json = await res.json();
-      setSubmissions(json.data || []);
-      setSummary(json.summary || { total_submitted: 0, total_reviewed: 0 });
-      
-      // Select first submission automatically if none selected
-      if (json.data && json.data.length > 0 && !selectedSubmission) {
-        setSelectedSubmission(json.data[0]);
-        setScore(json.data[0].score !== null ? String(json.data[0].score) : "");
-        setFeedback(json.data[0].feedback || "");
-      }
-    } catch (error: any) {
-      console.error(error);
-      toast.error(errorMessage(error, "Failed to load submissions"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const submissionsQuery = useQuery<SubmissionQueryData>({
+    queryKey: ["assignment-submissions", assignmentId],
+    queryFn: async () => {
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments/${assignmentId}/submissions`);
+      if (!response.ok) throw new Error(await responseErrorMessage(response, "Failed to load submissions"));
+      const json = await response.json();
+      return {
+        submissions: json.data || [],
+        summary: json.summary || { total_submitted: 0, total_reviewed: 0 },
+      };
+    },
+  });
+
+  const submissions = submissionsQuery.data?.submissions || [];
+  const summary = submissionsQuery.data?.summary || { total_submitted: 0, total_reviewed: 0 };
 
   useEffect(() => {
-    void fetchSubmissions();
-  }, [assignmentId]);
+    if (selectedSubmission || submissions.length === 0) return;
+    const first = submissions[0];
+    setSelectedSubmission(first);
+    setScore(first.score !== null ? String(first.score) : "");
+    setFeedback(first.feedback || "");
+  }, [selectedSubmission, submissions]);
 
-  const handleSelectSubmission = (sub: any) => {
+  const reviewMutation = useMutation({
+    mutationFn: async ({ submissionId, nextScore, nextFeedback }: { submissionId: string; nextScore: number; nextFeedback: string }) => {
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/submissions/${submissionId}/review`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score: nextScore, feedback: nextFeedback }),
+      });
+      if (!response.ok) throw new Error(await responseErrorMessage(response, "Failed to submit grade"));
+      return response.json();
+    },
+    onSuccess: async () => {
+      toast.success("Grade and feedback saved");
+      await queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignmentId] });
+    },
+    onError: (error) => toast.error(errorMessage(error, "Failed to submit grade")),
+  });
+
+  const handleSelectSubmission = (sub: SubmissionRow) => {
     setSelectedSubmission(sub);
     setScore(sub.score !== null ? String(sub.score) : "");
     setFeedback(sub.feedback || "");
@@ -73,29 +98,9 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
     }
 
     try {
-      setIsSubmitting(true);
-      const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/submissions/${selectedSubmission.id}/review`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          score: Number(score),
-          feedback
-        })
-      });
-
-      if (!res.ok) {
-        throw new Error(await responseErrorMessage(res, "Failed to submit grade"));
-      }
-
-      toast.success("Grade and feedback saved");
-      await fetchSubmissions(); // Refresh list to update UI
-    } catch (error: any) {
-      console.error(error);
-      toast.error(errorMessage(error, "Failed to submit grade"));
-    } finally {
-      setIsSubmitting(false);
+      await reviewMutation.mutateAsync({ submissionId: selectedSubmission.id, nextScore: Number(score), nextFeedback: feedback });
+    } catch {
+      // The mutation owns the single failure notification.
     }
   };
 
@@ -117,6 +122,17 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
     return studentName.includes(search.toLowerCase());
   });
 
+  if (submissionsQuery.isPending) {
+    return <div className="rounded-lg border border-dashboard-outline bg-white p-10 text-center text-sm text-dashboard-muted">Loading submissions…</div>;
+  }
+
+  if (submissionsQuery.isError && !submissionsQuery.data) {
+    return <div className="rounded-lg border border-red-200 bg-red-50 p-10 text-center text-sm text-red-800" role="alert">
+      <p>{errorMessage(submissionsQuery.error, "Could not load submissions. Please try again.")}</p>
+      <button type="button" onClick={() => void submissionsQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button>
+    </div>;
+  }
+
   return (
     <div className="flex flex-col animate-in fade-in duration-500">
       {/* Context Header */}
@@ -128,6 +144,11 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
             {summary.total_reviewed} of {summary.total_submitted} submissions reviewed
           </span>}
       />}
+
+      {submissionsQuery.isError && <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+        <span>{errorMessage(submissionsQuery.error, "Refresh failed; showing the last successful submission list.")}</span>
+        <button type="button" onClick={() => void submissionsQuery.refetch()} className="ml-3 font-semibold underline">Retry</button>
+      </div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Student List */}
@@ -150,9 +171,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
             </div>
 
             <div className="overflow-y-auto flex-1 -mx-6 px-6">
-              {isLoading ? (
-                <div className="text-center py-10 text-gray-400">Loading submissions...</div>
-              ) : filteredSubmissions.length === 0 ? (
+              {filteredSubmissions.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <FileText className="mx-auto mb-3 h-8 w-8 text-gray-300" />
                   <p className="font-semibold text-gray-700">{search ? "No matching students" : "No submissions yet"}</p>
@@ -274,10 +293,10 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
                     <div className="flex justify-end mt-4 gap-3">
                       <button 
                         onClick={handleSubmitGrade}
-                        disabled={isSubmitting}
+                        disabled={reviewMutation.isPending}
                         className="px-6 py-2 bg-[#994704] text-white font-semibold text-sm rounded-md hover:bg-[#994704]/90 transition-colors shadow-sm disabled:opacity-50"
                       >
-                        {isSubmitting ? "Saving..." : "Save grade"}
+                        {reviewMutation.isPending ? "Saving..." : "Save grade"}
                       </button>
                     </div>
                   </div>
