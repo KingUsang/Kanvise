@@ -153,9 +153,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
       },
     ],
   }),
-  router('/students/me', 'studentMembershipsRouter', 'src/routes/student-memberships.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: membership selection predates canonical tenantMiddleware.',
-  }),
+  router('/students/me', 'studentMembershipsRouter', 'src/routes/student-memberships.ts', 'authenticated-pre-account', jwtAndProfile),
   router('/', 'guestMocksRouter', 'src/routes/guest-mocks.ts', 'mixed', [], {
     families: [
       {

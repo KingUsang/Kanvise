@@ -46,9 +46,10 @@ studentMembershipsRouter.get('/centres', async c => {
 
   const selectedAccountId = c.req.header(ACCOUNT_CONTEXT_HEADER) || user.school_id
   let membershipsQuery = supabase.from('account_memberships')
-    .select('id, school_id, joined_at, role, school:schools(id, name)')
+    .select('id, school_id, joined_at, role, school:schools!inner(id, name)')
     .eq('person_id', user.id)
     .eq('status', 'active')
+    .eq('school.is_active', true)
   if (cursor) {
     membershipsQuery = membershipsQuery.or(`joined_at.gt.${cursor.joined_at},and(joined_at.eq.${cursor.joined_at},id.gt.${cursor.id})`)
   }

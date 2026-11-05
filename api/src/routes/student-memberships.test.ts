@@ -128,6 +128,7 @@ describe('student centre selection safety', () => {
       meta: { limit: 20, next_cursor: null },
     })
     expect(mocks.limits).toEqual([21])
+    expect(mocks.filters).toContainEqual({ table: 'account_memberships', args: ['school.is_active', true] })
   })
 
   it('honours a requested page size and fetches one extra row for continuation', async () => {
@@ -148,6 +149,7 @@ describe('student centre selection safety', () => {
     expect(body.meta.limit).toBe(2)
     expect(body.meta.next_cursor).toEqual(expect.any(String))
     expect(mocks.limits).toEqual([3])
+    expect(mocks.filters).toContainEqual({ table: 'account_memberships', args: ['status', 'active'] })
   })
 
   it('continues from an opaque cursor without losing learner scope', async () => {
