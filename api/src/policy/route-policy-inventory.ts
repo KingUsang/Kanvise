@@ -105,7 +105,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     knownGap: 'DEV-SEC-006: dashboard resolves tenant through route-local middleware.',
   }),
   router('/programmes', 'programmesRouter', 'src/routes/programmes.ts', 'protected-account', membershipSequence),
-  router('/classes', 'classesRouter', 'src/routes/classes.ts', 'protected-account', fullSequence),
+  router('/classes', 'classesRouter', 'src/routes/classes.ts', 'protected-account', membershipSequence),
   router('/sub-programmes', 'subProgrammesRouter', 'src/routes/sub-programmes.ts', 'protected-account', jwtAndProfile, {
     knownGap: 'DEV-SEC-006: router-wide tenantMiddleware is not yet attached.',
   }),
