@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { dashboardQueryKeys } from '@/lib/dashboard-session'
+import { useActiveAccountId } from '@/lib/account-preference'
+import { classQueryKeys } from '@/lib/class-query-keys'
 
 type Tutor = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role?: string }
 type Viewer = { id: string; role?: string; school_id?: string | null }
@@ -23,6 +25,7 @@ function tutorName(tutor: Tutor) {
 export function ClassBuilder() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const accountId = useActiveAccountId()
   const supabase = useMemo(() => createClient(), [])
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
   const [viewer, setViewer] = useState<Viewer | null>(null)
@@ -32,10 +35,13 @@ export function ClassBuilder() {
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('0')
   const [payoutReady, setPayoutReady] = useState<boolean | null>(null)
+  const [payoutError, setPayoutError] = useState(false)
   const [kind, setKind] = useState<ClassKind>('single')
   const [studentMode, setStudentMode] = useState<'group' | 'one_to_one'>('group')
   const [subjects, setSubjects] = useState<SubjectRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
   const [accessDenied, setAccessDenied] = useState(false)
   const [submissionAction, setSubmissionAction] = useState<'draft' | 'publish' | null>(null)
   const submissionLock = useRef(false)
@@ -47,6 +53,11 @@ export function ClassBuilder() {
   useEffect(() => {
     let active = true
     async function load() {
+      if (active) {
+        setLoading(true)
+        setLoadError(false)
+        setPayoutError(false)
+      }
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return router.replace('/auth/login')
@@ -72,16 +83,19 @@ export function ClassBuilder() {
         if (payoutResponse.ok) {
           const payoutBody = await payoutResponse.json()
           setPayoutReady(Boolean(payoutBody.data?.subaccount?.subaccount_code))
-        } else setPayoutReady(false)
-      } catch (error) {
-        toast.error('Could not start class setup', { description: error instanceof Error ? error.message : 'Please refresh and try again.' })
+        } else {
+          setPayoutReady(null)
+          setPayoutError(true)
+        }
+      } catch {
+        if (active) setLoadError(true)
       } finally {
         if (active) setLoading(false)
       }
     }
     void load()
     return () => { active = false }
-  }, [apiUrl, router, supabase])
+  }, [apiUrl, retryToken, router, supabase])
 
   useEffect(() => {
     if (kind === 'single' && subjects.length > 1) setSubjects(current => [current[0]])
@@ -106,7 +120,8 @@ export function ClassBuilder() {
     if (!name.trim()) return toast.error('Give this class a name')
     if (!subjectNamesValid) return toast.error('Add a name to every subject and remove duplicates')
     if (!feeIsValid) return toast.error('Enter a valid class fee')
-    if (isPaid && !payoutReady) return toast.error('Set up your payout account before creating a paid class', { description: 'Students cannot pay until you add where your earnings should be sent.' })
+    if (isPaid && payoutError) return toast.error('Payout service is temporarily unavailable', { description: 'Retry the payout check before creating a paid class.' })
+    if (isPaid && payoutReady === false) return toast.error('Set up your payout account before creating a paid class', { description: 'Students cannot pay until you add where your earnings should be sent.' })
     if (publish && !independent && subjects.some(subject => !subject.tutorId)) return toast.error('Assign a tutor to every subject before publishing')
     submissionLock.current = true
     setSubmissionAction(publish ? 'publish' : 'draft')
@@ -155,13 +170,13 @@ export function ClassBuilder() {
       }
       router.push(`/dashboard/classes/${classId}${studentMode === 'one_to_one' ? '?tab=learners&add_student=true' : ''}`)
       void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['programmes'] }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
+        queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) }),
+        queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ])
-    } catch (error) {
-      toast.error('Could not save class', { description: error instanceof Error ? error.message : 'Please try again.' })
+    } catch {
+      toast.error('Could not save class', { description: 'Please check your connection and try again.' })
     } finally {
       submissionLock.current = false
       setSubmissionAction(null)
@@ -169,6 +184,7 @@ export function ClassBuilder() {
   }
 
   if (loading) return <div className="mx-auto max-w-3xl rounded-2xl border border-dashboard-outline bg-white p-10 text-center text-sm text-dashboard-muted">Preparing class setup…</div>
+  if (loadError) return <main className="max-w-2xl"><section className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-7 shadow-dashboard-card"><p className="text-xs font-bold uppercase tracking-[.14em] text-[#8d2f22]">Class setup unavailable</p><h1 className="mt-2 text-2xl font-bold text-[#180d62]">We could not load the class prerequisites</h1><p className="mt-3 text-sm leading-6 text-dashboard-muted">Your profile, teaching team or account details could not be verified. Nothing has been created. Try again when the dependency is available.</p><button type="button" onClick={() => setRetryToken(value => value + 1)} className="mt-6 rounded-lg bg-[#312783] px-4 py-2.5 text-sm font-bold text-white">Try again</button></section></main>
   if (accessDenied) return <main className="max-w-2xl"><section className="rounded-2xl border border-dashboard-outline bg-white p-7 shadow-dashboard-card"><p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">Class setup</p><h1 className="mt-2 text-2xl font-bold text-[#180d62]">Your centre admin creates classes</h1><p className="mt-3 max-w-xl text-sm leading-6 text-dashboard-muted">Once you are assigned to a subject, you can schedule sessions, publish materials, and assign assessments for that subject.</p><Link href="/dashboard/classes" className="mt-6 inline-flex rounded-lg bg-[#312783] px-4 py-2.5 text-sm font-bold text-white">Back to classes</Link></section></main>
 
   // DashboardShell already supplies the responsive page gutter. This route
@@ -196,7 +212,7 @@ export function ClassBuilder() {
               <button type="button" onClick={() => setPrice('0')} className={`rounded-xl border p-4 text-left transition ${!isPaid ? 'border-[#312783] bg-[#f1efff] ring-1 ring-[#312783]' : 'border-[#ded9e0] bg-white hover:border-[#8e87bd]'}`}><span className={`flex h-6 w-6 items-center justify-center rounded-full border ${!isPaid ? 'border-[#312783] bg-[#312783] text-white' : 'border-[#9c96a0] text-transparent'}`}><Check size={15}/></span><span className="mt-3 block text-base font-bold text-[#27242d]">Free</span><span className="mt-1 block text-sm leading-5 text-dashboard-muted">Students can enrol without paying.</span></button>
               <button type="button" onClick={() => setPrice(current => current === '0' ? '' : current)} className={`rounded-xl border p-4 text-left transition ${isPaid ? 'border-[#312783] bg-[#f1efff] ring-1 ring-[#312783]' : 'border-[#ded9e0] bg-white hover:border-[#8e87bd]'}`}><span className={`flex h-6 w-6 items-center justify-center rounded-full border ${isPaid ? 'border-[#312783] bg-[#312783] text-white' : 'border-[#9c96a0] text-transparent'}`}><Check size={15}/></span><span className="mt-3 block text-base font-bold text-[#27242d]">Paid</span><span className="mt-1 block text-sm leading-5 text-dashboard-muted">Students pay once to enrol.</span></button>
             </div>
-            {isPaid && <div className="mt-4 max-w-sm"><label htmlFor="class-fee" className="text-sm font-bold text-[#27242d]">Class fee</label><div className="mt-2 flex rounded-lg border border-[#beb8c5] bg-white focus-within:border-[#312783] focus-within:ring-4 focus-within:ring-[#312783]/10"><span className="border-r border-[#beb8c5] bg-[#f5f3f2] px-3 py-3 text-sm text-[#514b5b]">₦</span><input id="class-fee" type="number" min="1" inputMode="numeric" value={price} onChange={event => setPrice(event.target.value)} placeholder="e.g. 15000" className="min-h-11 min-w-0 flex-1 rounded-r-lg px-3 text-sm outline-none" /></div>{payoutReady === false ? <p className="mt-3 text-sm leading-5 text-[#8a5b16]">Set up your payout account before creating a paid class. <Link href="/dashboard/payments" className="font-bold underline">Set up payments</Link></p> : payoutReady ? <p className="mt-3 text-sm text-[#1e6234]">Your payout account is ready.</p> : null}</div>}
+            {isPaid && <div className="mt-4 max-w-sm"><label htmlFor="class-fee" className="text-sm font-bold text-[#27242d]">Class fee</label><div className="mt-2 flex rounded-lg border border-[#beb8c5] bg-white focus-within:border-[#312783] focus-within:ring-4 focus-within:ring-[#312783]/10"><span className="border-r border-[#beb8c5] bg-[#f5f3f2] px-3 py-3 text-sm text-[#514b5b]">₦</span><input id="class-fee" type="number" min="1" inputMode="numeric" value={price} onChange={event => setPrice(event.target.value)} placeholder="e.g. 15000" className="min-h-11 min-w-0 flex-1 rounded-r-lg px-3 text-sm outline-none" /></div>{payoutError ? <p className="mt-3 text-sm leading-5 text-[#8a5b16]">Payout status could not be checked. Retry before creating a paid class; your account is not being treated as unconfigured.</p> : payoutReady === false ? <p className="mt-3 text-sm leading-5 text-[#8a5b16]">Set up your payout account before creating a paid class. <Link href="/dashboard/payments" className="font-bold underline">Set up payments</Link></p> : payoutReady ? <p className="mt-3 text-sm text-[#1e6234]">Your payout account is ready.</p> : null}</div>}
           </fieldset>
 
           <fieldset>

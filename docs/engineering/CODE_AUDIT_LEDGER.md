@@ -238,6 +238,16 @@ interpreted with this addendum.
 | Dashboard grading summary ranking | `api/src/routes/dashboard.ts`, `dashboard.test.ts`, dashboard UI and backend standard | Handler/auth and ranking trace complete; route test covers only resolveStudentCourses | `loadNeedsGrading` selects an unordered 20-Assignment sample before computing and ranking pending work, so the displayed top three can omit higher-volume queues beyond that sample (`DEV-DSH-008`). This is distinct from the per-assignment query amplification (`DEV-DSH-003`). |
 | Git working-tree snapshot | Repository status observed 2026-11-02 with `git status --short` and `git diff --stat` | Snapshot recorded; change ownership/history not established | The checkout is dirty: 8 tracked files modified (116 insertions/39 deletions) and 28 untracked paths. The tracked paths include agent instructions, deployment workflow, health route/tests, auth/infrastructure docs and `.gitignore`; untracked paths include staging workflows, scripts, tests, documentation, and audit records. This audit did not stage, reset, clean, or overwrite them. The three audit records are also untracked in this checkout. Status alone does not establish authorship, intent, or whether any path is safe to remove. |
 
+### Slice 31 implementation verification
+
+The retained Class vertical was re-read after the Slice 30 account-switching
+seam. The exact candidate changes the Class list and workspace URL state,
+explicit setup and panel recovery branches, cached schedule refresh behavior,
+and account-aware query-key/invalidation factories. This is bounded evidence for
+`DEV-CLS-011`, `DEV-FE-017/018/020/021`, and `DEV-FE-036/037/038`; it does not
+close the separate overfetch, runtime database, browser, or legacy-builder
+findings. Focused tests and the candidate SHA are recorded in the slice proof.
+
 ## Review labels
 
 - **Queued:** inventoried but not read fully.

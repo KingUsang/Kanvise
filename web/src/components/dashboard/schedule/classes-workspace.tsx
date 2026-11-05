@@ -16,7 +16,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
-import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
+import { useActiveAccountId } from "@/lib/account-preference";
+import { classQueryKeys } from "@/lib/class-query-keys";
+import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
 
 type Tutor = { id: string; first_name: string; last_name: string };
 type Subject = { id: string; name: string };
@@ -37,6 +39,11 @@ type LiveClass = ProductSubjectLink<LegacyLiveClass>;
 type Props = {
   capabilities: { isAdmin: boolean; isTutor: boolean };
   user: Tutor;
+};
+type ScheduleQueryData = {
+  classes: LiveClass[];
+  teachingClasses: ProductClassRecord<LegacyTeachingClass>[];
+  tutors: Tutor[];
 };
 type Composer = { date: Date; hour: number; existing?: LiveClass } | null;
 
@@ -95,6 +102,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   const searchParams = useSearchParams();
   const api = process.env.NEXT_PUBLIC_API_URL;
   const queryClient = useQueryClient();
+  const accountId = useActiveAccountId();
   const [week, setWeek] = useState(() => startOfWeek(new Date()));
   const [mobileDay, setMobileDay] = useState(new Date());
   const [mobileMonth, setMobileMonth] = useState(() =>
@@ -119,8 +127,8 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   const [repeat, setRepeat] = useState(false);
   const [repeatDays, setRepeatDays] = useState<number[]>([]);
   const scheduleLoadError = "We couldn't load your live-class schedule. Please try again.";
-  const scheduleQuery = useQuery({
-    queryKey: dashboardQueryKeys.schedule,
+  const scheduleQuery = useQuery<ScheduleQueryData>({
+    queryKey: classQueryKeys.dashboardSchedule(accountId),
     staleTime: 30_000,
     refetchOnMount: "always",
     refetchOnWindowFocus: "always",
@@ -354,7 +362,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
       );
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: dashboardQueryKeys.schedule,
+          queryKey: classQueryKeys.dashboardSchedule(accountId),
         }),
         queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.timetable,
@@ -363,7 +371,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
         ...(classId
           ? [
               queryClient.invalidateQueries({
-                queryKey: ["class-schedule", classId],
+                queryKey: classQueryKeys.schedule(accountId, classId),
               }),
             ]
           : []),
@@ -387,7 +395,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     setComposer(null);
     toast.success("Session cancelled");
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
+      queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
     ]);
@@ -407,7 +415,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     setComposer(null);
     toast.success("Recurring series ended");
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
+      queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
     ]);
@@ -529,13 +537,14 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
             <Loader2 className="mr-2 animate-spin" size={18} />
             Loading schedule…
           </div>
-        ) : scheduleQuery.isError ? (
+        ) : scheduleQuery.isError && !scheduleQuery.data ? (
           <div className="flex h-96 flex-col items-center justify-center gap-3 px-6 text-center text-sm text-[#66616c]">
             <p>{scheduleLoadError}</p>
             <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold text-[#2e2877] underline">Try again</button>
           </div>
         ) : (
           <>
+            {scheduleQuery.isError ? <div className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Schedule refresh failed; showing your last saved calendar. <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold underline">Try again</button></div> : null}
             <div
               ref={calendarGridRef}
               className="hidden overflow-auto md:block md:max-h-[calc(100vh-260px)]"

@@ -113,4 +113,37 @@ describe('ClassWorkspaceClient data loading', () => {
     expect(screen.queryByText('Class health')).toBeNull()
     await waitFor(() => expect(requests).toEqual(expect.arrayContaining([expect.stringMatching(/learner_id=learner-1/)])))
   })
+
+  it('restores a deep-linked Subject and writes chip selection back to browser history', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: string) => {
+      if (input.endsWith('/classes/class-1')) return response({ data: { id: 'class-1', name: 'Deep link class', is_published: true, enrolled_count: 0, courses: [{ id: 'physics', name: 'Physics' }, { id: 'chemistry', name: 'Chemistry' }] } })
+      if (input.endsWith('/classes/class-1/schedule')) return response({ data: { sessions: [] } })
+      if (input.endsWith('/mocks') || input.includes('/assignments')) return response({ data: [] })
+      if (input.endsWith('/classes/class-1/insights')) return response({ data: { learners: [], topics: [], class_health: { average_assessment_score: null, attendance: null, needs_attention: 0 } } })
+      throw new Error(`Unexpected request ${input}`)
+    }))
+    window.history.pushState({}, '', '?subject=chemistry')
+
+    renderWorkspace()
+    await screen.findByRole('heading', { name: 'Deep link class' })
+    expect(screen.getByRole('button', { name: 'Chemistry' }).className).toContain('bg-[#2e2877]')
+    fireEvent.click(screen.getByRole('button', { name: 'Physics' }))
+    expect(new URL(window.location.href).searchParams.get('subject')).toBe('physics')
+    fireEvent.click(screen.getByRole('button', { name: 'All subjects' }))
+    expect(new URL(window.location.href).searchParams.has('subject')).toBe(false)
+  })
+
+  it('does not turn an initial panel failure into an empty workspace', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: string) => {
+      if (input.endsWith('/classes/class-1')) return response({ data: { id: 'class-1', name: 'Recoverable class', is_published: true, enrolled_count: 0, courses: [{ id: 'physics', name: 'Physics' }] } })
+      if (input.endsWith('/classes/class-1/schedule')) return response({ error: 'temporary outage' }, 503)
+      if (input.endsWith('/mocks') || input.includes('/assignments')) return response({ data: [] })
+      if (input.endsWith('/classes/class-1/insights')) return response({ data: { learners: [], topics: [], class_health: { average_assessment_score: null, attendance: null, needs_attention: 0 } } })
+      throw new Error(`Unexpected request ${input}`)
+    }))
+
+    renderWorkspace()
+    expect(await screen.findByText('Schedule could not be loaded.')).toBeTruthy()
+    expect(screen.queryByText('No sessions yet')).toBeNull()
+  })
 })

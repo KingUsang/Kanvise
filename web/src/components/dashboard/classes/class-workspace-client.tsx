@@ -18,6 +18,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { useActiveAccountId } from "@/lib/account-preference";
+import { classQueryKeys } from "@/lib/class-query-keys";
 import {
   ClassAssessmentsPanel,
   ClassLearnersPanel,
@@ -183,6 +185,7 @@ export function ClassWorkspaceClient({
 }) {
   const api = process.env.NEXT_PUBLIC_API_URL;
   const queryClient = useQueryClient();
+  const accountId = useActiveAccountId();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -220,11 +223,25 @@ export function ClassWorkspaceClient({
       );
     }
     const requestedSubject = searchParams.get('subject');
-    if (requestedSubject) setActiveSubject(requestedSubject);
+    setActiveSubject(requestedSubject || 'all');
   }, [searchParams, canManageStudents, canManageTutors]);
 
+  useEffect(() => {
+    const syncSubjectFromUrl = () => setActiveSubject(new URL(window.location.href).searchParams.get('subject') || 'all');
+    window.addEventListener('popstate', syncSubjectFromUrl);
+    return () => window.removeEventListener('popstate', syncSubjectFromUrl);
+  }, []);
+
+  const selectSubject = (subjectId: string) => {
+    const url = new URL(window.location.href);
+    if (subjectId === 'all') url.searchParams.delete('subject');
+    else url.searchParams.set('subject', subjectId);
+    window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    setActiveSubject(subjectId);
+  };
+
   const classQuery = useQuery({
-    queryKey: ["class-workspace", classId],
+    queryKey: classQueryKeys.workspace(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/classes/${classId}`);
       const body = await response.json().catch(() => null);
@@ -237,7 +254,7 @@ export function ClassWorkspaceClient({
   });
   const data = classQuery.data;
   const tutorsQuery = useQuery({
-    queryKey: ['class-tutors', classId],
+    queryKey: classQueryKeys.tutors(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/users?roles=admin,tutor`);
       const body = await response.json().catch(() => null);
@@ -248,7 +265,7 @@ export function ClassWorkspaceClient({
     staleTime: 60_000,
   });
   const scheduleQuery = useQuery({
-    queryKey: ["class-schedule", classId],
+    queryKey: classQueryKeys.schedule(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/classes/${classId}/schedule`);
       const body = await response.json().catch(() => null);
@@ -263,7 +280,7 @@ export function ClassWorkspaceClient({
     refetchInterval: (query) => query.state.data?.sessions.some(s => s.status === 'live') ? 15000 : false,
   });
   const mocksQuery = useQuery({
-    queryKey: ["class-mocks", classId],
+    queryKey: classQueryKeys.mocks(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/mocks`);
       const body = await response.json().catch(() => null);
@@ -274,7 +291,7 @@ export function ClassWorkspaceClient({
     staleTime: 60_000,
   });
   const assignmentsQuery = useQuery({
-    queryKey: ["class-assignments", classId],
+    queryKey: classQueryKeys.assignments(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/assignments?page_size=100`);
       const body = await response.json().catch(() => null);
@@ -294,7 +311,7 @@ export function ClassWorkspaceClient({
     [activeSubject, data?.subjects],
   );
   const materialsQuery = useQuery({
-    queryKey: ["class-materials", classId, activeSubject],
+    queryKey: classQueryKeys.materials(accountId, classId, activeSubject),
     queryFn: async () => {
       const responses = await Promise.all(
         visibleMaterialSubjectIds.map(async (courseId) => {
@@ -316,7 +333,7 @@ export function ClassWorkspaceClient({
     refetchOnWindowFocus: false,
   });
   const insightsQuery = useQuery({
-    queryKey: ["class-insights", classId, activeSubject],
+    queryKey: classQueryKeys.insights(accountId, classId, activeSubject),
     queryFn: async () => {
       const query =
         activeSubject === "all"
@@ -341,12 +358,7 @@ export function ClassWorkspaceClient({
       : null;
   const detailLearnerId = selectedLearnerId || singletonLearnerId;
   const learnerDetailQuery = useQuery({
-    queryKey: [
-      "class-learner-detail",
-      classId,
-      activeSubject,
-      detailLearnerId,
-    ],
+    queryKey: classQueryKeys.learnerDetail(accountId, classId, activeSubject, detailLearnerId),
     queryFn: async () => {
       const params = new URLSearchParams({ learner_id: detailLearnerId! });
       if (activeSubject !== "all") params.set("course_id", activeSubject);
@@ -372,6 +384,9 @@ export function ClassWorkspaceClient({
     () => new Set(data?.subjects.map((subject) => subject.id) || []),
     [data],
   );
+  useEffect(() => {
+    if (data && activeSubject !== 'all' && !subjectIds.has(activeSubject)) selectSubject('all');
+  }, [activeSubject, data, subjectIds]);
   const selectedSubject =
     activeSubject === "all"
       ? null
@@ -411,7 +426,7 @@ export function ClassWorkspaceClient({
     ) || [];
 
   if (classQuery.isPending) return <WorkspaceLoading />;
-  if (!data)
+  if (classQuery.isError || !data)
     return (
       <main className="w-full">
         <div className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-6 text-sm text-[#8d2f22]">
@@ -473,7 +488,7 @@ export function ClassWorkspaceClient({
               <SubjectChip
                 label="All subjects"
                 active={activeSubject === "all"}
-                onClick={() => setActiveSubject("all")}
+                onClick={() => selectSubject("all")}
               >
                 All subjects
               </SubjectChip>
@@ -482,7 +497,7 @@ export function ClassWorkspaceClient({
                   key={subject.id}
                   label={subject.name}
                   active={activeSubject === subject.id}
-                  onClick={() => setActiveSubject(subject.id)}
+                  onClick={() => selectSubject(subject.id)}
                 >
                   {subject.name}
                 </SubjectChip>
@@ -500,30 +515,31 @@ export function ClassWorkspaceClient({
               insightsQuery.isPending ? (
                 <WorkspaceSectionLoading cards={3} />
               ) : (
-                <Overview
-                  upcoming={upcoming}
-                  sessions={classSessions}
-                  mocks={[
-                    ...classMocks,
-                    ...classAssignments.map(toAssignmentAsAssessment),
-                  ]}
-                  insights={insights}
-                  needsAttention={needsAttention}
-                  selectedName={selectedName}
-                  subjects={data.subjects}
-                  onSelectSubject={setActiveSubject}
-                  onCreateAssessment={() => {
-                    router.push(
-                      `/dashboard/classes/${classId}?tab=assessments`,
-                    );
-                    setOpenAssessmentCreator((value) => value + 1);
-                  }}
-                  onOpenSchedule={() => setShowSessionComposer(true)}
-                  onAddMaterial={() => {
-                    router.push(`/dashboard/classes/${classId}?tab=materials`);
-                    setShowMaterialUpload(true);
-                  }}
-                />
+                <>
+                  {scheduleQuery.isError && <WorkspaceQueryNotice label="Schedule" cached={Boolean(scheduleQuery.data)} onRetry={() => void scheduleQuery.refetch()} />}
+                  {mocksQuery.isError && <WorkspaceQueryNotice label="Quiz" cached={Boolean(mocksQuery.data)} onRetry={() => void mocksQuery.refetch()} />}
+                  {assignmentsQuery.isError && <WorkspaceQueryNotice label="Assignment" cached={Boolean(assignmentsQuery.data)} onRetry={() => void assignmentsQuery.refetch()} />}
+                  {insightsQuery.isError && <WorkspaceQueryNotice label="Learning signals" cached={Boolean(insightsQuery.data)} onRetry={() => void insightsQuery.refetch()} />}
+                  {!((scheduleQuery.isError && !scheduleQuery.data) || (mocksQuery.isError && !mocksQuery.data) || (assignmentsQuery.isError && !assignmentsQuery.data) || (insightsQuery.isError && !insightsQuery.data)) ? <Overview
+                    upcoming={upcoming}
+                    sessions={classSessions}
+                    mocks={[...classMocks, ...classAssignments.map(toAssignmentAsAssessment)]}
+                    insights={insights}
+                    needsAttention={needsAttention}
+                    selectedName={selectedName}
+                    subjects={data.subjects}
+                    onSelectSubject={selectSubject}
+                    onCreateAssessment={() => {
+                      router.push(`/dashboard/classes/${classId}?tab=assessments`);
+                      setOpenAssessmentCreator((value) => value + 1);
+                    }}
+                    onOpenSchedule={() => setShowSessionComposer(true)}
+                    onAddMaterial={() => {
+                      router.push(`/dashboard/classes/${classId}?tab=materials`);
+                      setShowMaterialUpload(true);
+                    }}
+                  /> : null}
+                </>
               ))}
             {activeTab === "schedule" &&
               (sessionId ? (
@@ -535,8 +551,11 @@ export function ClassWorkspaceClient({
                 </section>
               ) : scheduleQuery.isPending ? (
                 <WorkspaceSectionLoading cards={2} />
+              ) : scheduleQuery.isError && !scheduleQuery.data ? (
+                <WorkspaceQueryNotice label="Schedule" onRetry={() => void scheduleQuery.refetch()} />
               ) : (
                 <div className="mt-6 space-y-5">
+                  {scheduleQuery.isError && <WorkspaceQueryNotice label="Schedule" cached onRetry={() => void scheduleQuery.refetch()} />}
                   <ClassSchedulePanel
                     sessions={classSessions.map(toSessionItem)}
                     recurringSlots={schedule.recurring_slots
@@ -626,8 +645,12 @@ export function ClassWorkspaceClient({
                 </section>
               ) : mocksQuery.isPending || assignmentsQuery.isPending ? (
                 <WorkspaceSectionLoading cards={3} />
+              ) : (mocksQuery.isError && !mocksQuery.data) || (assignmentsQuery.isError && !assignmentsQuery.data) ? (
+                <><WorkspaceQueryNotice label={mocksQuery.isError ? "Quiz" : "Assignment"} onRetry={() => void (mocksQuery.isError ? mocksQuery.refetch() : assignmentsQuery.refetch())} /></>
               ) : (
                 <div className="mt-5">
+                  {mocksQuery.isError && <WorkspaceQueryNotice label="Quiz" cached onRetry={() => void mocksQuery.refetch()} />}
+                  {assignmentsQuery.isError && <WorkspaceQueryNotice label="Assignment" cached onRetry={() => void assignmentsQuery.refetch()} />}
                   <ClassAssessmentsPanel
                     assessments={[
                       ...classMocks.map((mock) => toAssessmentItem(mock, data)),
@@ -658,8 +681,11 @@ export function ClassWorkspaceClient({
               (materialsQuery.isPending &&
               visibleMaterialSubjectIds.length > 0 ? (
                 <WorkspaceSectionLoading cards={3} />
+              ) : materialsQuery.isError && !materialsQuery.data ? (
+                <WorkspaceQueryNotice label="Materials" onRetry={() => void materialsQuery.refetch()} />
               ) : (
                 <div className="mt-5">
+                  {materialsQuery.isError && <WorkspaceQueryNotice label="Materials" cached onRetry={() => void materialsQuery.refetch()} />}
                   <ClassMaterialsPanel
                     materials={materials.map((material) =>
                       toMaterialItem(material, data),
@@ -682,8 +708,11 @@ export function ClassWorkspaceClient({
             {activeTab === "learners" &&
               (insightsQuery.isPending ? (
                 <WorkspaceSectionLoading cards={3} />
+              ) : insightsQuery.isError && !insightsQuery.data ? (
+                <WorkspaceQueryNotice label="Learners" onRetry={() => void insightsQuery.refetch()} />
               ) : (
                 <div className="mt-5">
+                  {insightsQuery.isError && <WorkspaceQueryNotice label="Learners" cached onRetry={() => void insightsQuery.refetch()} />}
                   <ClassLearnersPanel
                     learners={(insights?.learners || []).map(toLearnerRow)}
                     onInvite={
@@ -705,8 +734,8 @@ export function ClassWorkspaceClient({
                 loading={tutorsQuery.isPending}
                 onChanged={async () => {
                   await Promise.all([
-                    queryClient.invalidateQueries({ queryKey: ['class-workspace', classId] }),
-                    queryClient.invalidateQueries({ queryKey: ['class-tutors', classId] }),
+                    queryClient.invalidateQueries({ queryKey: classQueryKeys.workspace(accountId, classId) }),
+                    queryClient.invalidateQueries({ queryKey: classQueryKeys.tutors(accountId, classId) }),
                     queryClient.invalidateQueries({ queryKey: ['tutors'] }),
                   ]);
                 }}
@@ -715,6 +744,8 @@ export function ClassWorkspaceClient({
             {activeTab === "performance" &&
               (insightsQuery.isPending ? (
                 <WorkspaceSectionLoading cards={3} />
+              ) : insightsQuery.isError && !insightsQuery.data ? (
+                <WorkspaceQueryNotice label="Performance" onRetry={() => void insightsQuery.refetch()} />
               ) : (
                 <ClassPerformance
                   insights={insights}
@@ -750,7 +781,7 @@ export function ClassWorkspaceClient({
         onUploaded={async () => {
           await Promise.all([
             queryClient.invalidateQueries({
-              queryKey: ["class-materials", classId],
+              queryKey: classQueryKeys.materials(accountId, classId, activeSubject),
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.summary,
@@ -767,7 +798,7 @@ export function ClassWorkspaceClient({
         onInvited={async () => {
           await Promise.all([
             queryClient.invalidateQueries({
-              queryKey: ["class-insights", classId],
+              queryKey: classQueryKeys.insights(accountId, classId, activeSubject),
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.summary,
@@ -781,13 +812,13 @@ export function ClassWorkspaceClient({
         onSaved={() => {
           void Promise.all([
             queryClient.invalidateQueries({
-              queryKey: ["class-schedule", classId],
+              queryKey: classQueryKeys.schedule(accountId, classId),
             }),
             queryClient.invalidateQueries({
-              queryKey: ["class-insights", classId],
+              queryKey: classQueryKeys.insights(accountId, classId, activeSubject),
             }),
             queryClient.invalidateQueries({
-              queryKey: dashboardQueryKeys.schedule,
+              queryKey: classQueryKeys.dashboardSchedule(accountId),
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.timetable,
@@ -1917,6 +1948,13 @@ function formatStatus(status: string) {
     ? status.charAt(0).toUpperCase() + status.slice(1)
     : "Assessment";
 }
+function WorkspaceQueryNotice({ label, cached = false, onRetry }: { label: string; cached?: boolean; onRetry: () => void }) {
+  return <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${cached ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-[#f0c7c1] bg-[#fff8f7] text-[#8d2f22]'}`}>
+    <span>{cached ? `${label} could not refresh. Showing the last saved data.` : `${label} could not be loaded.`}</span>
+    <button type="button" onClick={onRetry} className="ml-2 font-semibold underline">Try again</button>
+  </div>
+}
+
 function WorkspaceLoading() {
   return (
     <main className="w-full animate-pulse">

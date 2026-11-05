@@ -8,12 +8,15 @@ import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { useDashboardSession, dashboardQueryKeys } from '@/lib/dashboard-session'
+import { useActiveAccountId } from '@/lib/account-preference'
+import { classQueryKeys } from '@/lib/class-query-keys'
 
 type Tutor = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string }
 
 export function AddClassSubjectClient({ classId }: { classId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const accountId = useActiveAccountId()
   const session = useDashboardSession()
   const api = process.env.NEXT_PUBLIC_API_URL
   const [className, setClassName] = useState('this class')
@@ -22,6 +25,8 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
   const [tutorId, setTutorId] = useState('')
   const [tutors, setTutors] = useState<Tutor[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
   const [saving, setSaving] = useState(false)
 
   const capabilities = session.data?.capabilities
@@ -29,6 +34,8 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
 
   useEffect(() => {
     if (!session.data || !api) return
+    setLoading(true)
+    setLoadError(false)
     if (!session.data.capabilities.isAdmin) {
       router.replace(`/dashboard/classes/${classId}`)
       return
@@ -45,10 +52,12 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
       if (!active) return
       setClassName(classBody.data?.name || 'this class')
       setTutors((tutorBody?.data || []).filter((person: Tutor) => person.role === 'admin' || person.role === 'tutor'))
-    }).catch(error => toast.error('Could not prepare subject setup', { description: error instanceof Error ? error.message : 'Try again.' }))
+    }).catch(() => {
+      if (active) setLoadError(true)
+    })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [api, classId, independent, router, session.data])
+  }, [api, classId, independent, retryToken, router, session.data])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -66,9 +75,9 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
       toast.success('Subject added')
       router.push(`/dashboard/classes/${classId}${subjectId ? `?subject=${subjectId}` : ''}`)
       void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['class-workspace', classId] }),
-        queryClient.invalidateQueries({ queryKey: ['programmes'] }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
+        queryClient.invalidateQueries({ queryKey: classQueryKeys.workspace(accountId, classId) }),
+        queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) }),
+        queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ])
     } catch (error) {
@@ -78,7 +87,9 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
     }
   }
 
+  if (session.isError) return <div className="mx-auto max-w-2xl rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-8 text-center text-sm text-[#8d2f22]"><p>We could not verify your access to add a subject.</p><button type="button" onClick={() => void session.refetch()} className="mt-4 font-semibold underline">Try again</button></div>
   if (session.isPending || loading) return <div className="mx-auto max-w-2xl rounded-2xl border border-dashboard-outline bg-white p-10 text-center text-sm text-dashboard-muted">Preparing subject setup…</div>
+  if (loadError) return <div className="mx-auto max-w-2xl rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-8 text-center text-sm text-[#8d2f22]"><p>Subject setup could not load the class prerequisites.</p><button type="button" onClick={() => setRetryToken(value => value + 1)} className="mt-4 rounded-lg bg-[#312783] px-4 py-2.5 font-bold text-white">Try again</button></div>
 
   return <main className="mx-auto w-full max-w-2xl">
     <Link href={`/dashboard/classes/${classId}`} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#514b5b]"><ArrowLeft size={17}/> Back to {className}</Link>

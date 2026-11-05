@@ -74,6 +74,16 @@ made.
 | Standards and decision governance | Standards, ADR status, authority map and adoption plan cross-checked; authority map now distinguishes Accepted from Proposed/Rejected ADRs, adoption phases still contradict the owner’s staging deferral, and most ADRs omit required verification dates (`DEV-DOC-019/020`, `DEV-GOV-002`) | Align adoption sequencing with explicit owner direction, add verification metadata on actual review, and implement accepted ADR 0006 through separately verified work |
 | Repository/dependencies | Deep inventory complete; worktree snapshot on 2026-11-02 recorded 8 modified tracked files and 28 untracked paths in `CODE_AUDIT_LEDGER.md` | Establish authorship/intent before cleanup; ownership-led cleanup and CI enforcement |
 
+### Slice 31 frontend recovery verification
+
+The retained Class discovery/creation/Subject/workspace boundary now has
+focused evidence for URL restoration/history, initial versus successful-empty
+states, school and payout dependency failures, rejected dashboard capability
+lookup, per-panel retry states, cached refresh warnings, and account-switch
+query-key isolation. This does not claim broad browser, clean database,
+deployment, or full-build coverage; those remain explicit residues for later
+work.
+
 ## Rule
 
 Before fixing a feature family, complete its next deep-audit boundary, attach

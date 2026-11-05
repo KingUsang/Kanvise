@@ -1,10 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { useActiveAccountId } from '@/lib/account-preference'
+import { classQueryKeys } from '@/lib/class-query-keys'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
@@ -26,34 +30,65 @@ type Programme = {
 export function ProgrammesClient() {
   const supabase = useMemo(() => createClient(), [])
   const queryClient = useQueryClient()
+  const accountId = useActiveAccountId()
+  const searchParams = useSearchParams()
   const [publishingId, setPublishingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [search, setSearch] = useState(() => searchParams.get('search') || '')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>(() => {
+    const value = searchParams.get('status')
+    return value === 'published' || value === 'draft' ? value : 'all'
+  })
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search)
+      setSearch(params.get('search') || '')
+      const status = params.get('status')
+      setStatusFilter(status === 'published' || status === 'draft' ? status : 'all')
+    }
+    window.addEventListener('popstate', syncFromUrl)
+    return () => window.removeEventListener('popstate', syncFromUrl)
+  }, [])
+
+  useEffect(() => {
+    const status = searchParams.get('status')
+    setSearch(searchParams.get('search') || '')
+    setStatusFilter(status === 'published' || status === 'draft' ? status : 'all')
+  }, [searchParams])
+
+  const updateFilters = (nextSearch: string, nextStatus: 'all' | 'published' | 'draft') => {
+    const url = new URL(window.location.href)
+    if (nextSearch.trim()) url.searchParams.set('search', nextSearch)
+    else url.searchParams.delete('search')
+    if (nextStatus === 'all') url.searchParams.delete('status')
+    else url.searchParams.set('status', nextStatus)
+    window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
+    setSearch(nextSearch)
+    setStatusFilter(nextStatus)
+  }
 
   const programmesQuery = useQuery({
-    queryKey: ['programmes'],
+    queryKey: classQueryKeys.programmes(accountId),
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Your session has ended. Please sign in again.')
-      const headers = { Authorization: `Bearer ${session.access_token}` }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       const [programmesResponse, schoolResponse, profileResponse] = await Promise.all([
-        fetch(`${apiUrl}/classes`, { headers }),
-        fetch(`${apiUrl}/schools/me`, { headers }),
-        fetch(`${apiUrl}/auth/me`, { headers }),
+        authenticatedApiFetch(`${apiUrl}/classes`),
+        authenticatedApiFetch(`${apiUrl}/schools/me`),
+        authenticatedApiFetch(`${apiUrl}/auth/me`),
       ])
       if (!programmesResponse.ok || !profileResponse.ok) throw new Error('Could not load class data')
       const [{ data }, schoolBody, { user }] = await Promise.all([
-        programmesResponse.json(), schoolResponse.json(), profileResponse.json(),
+        programmesResponse.json(), schoolResponse.ok ? schoolResponse.json() : Promise.resolve({}), profileResponse.json(),
       ])
       const school = schoolResponse.ok ? schoolBody.data : null
-      return { programmes: (data || []) as Programme[], schoolSlug: school?.slug || '', schoolId: school?.id as string | undefined, userId: user?.id as string | undefined, canCreate: user?.role === 'admin' }
+      return { programmes: (data || []) as Programme[], schoolSlug: school?.slug || '', schoolId: school?.id as string | undefined, userId: user?.id as string | undefined, canCreate: user?.role === 'admin', schoolContextError: !schoolResponse.ok }
     },
     staleTime: 60_000,
   })
   const programmes = programmesQuery.data?.programmes || []
   const schoolSlug = programmesQuery.data?.schoolSlug || ''
+  const schoolContextError = programmesQuery.data?.schoolContextError || false
   const hasLocalDraft = Boolean(programmesQuery.data?.schoolId && programmesQuery.data?.userId && loadProgrammeDraft(programmesQuery.data.schoolId, programmesQuery.data.userId))
   const canCreate = programmesQuery.data?.canCreate ?? false
   const loadError = programmesQuery.error ? 'We could not load your classes. Check your connection and try again.' : ''
@@ -86,7 +121,7 @@ export function ProgrammesClient() {
         throw new Error(missing ? `Assign tutors to: ${missing}` : body.error)
       }
       toast.success('Class published')
-      await queryClient.invalidateQueries({ queryKey: ['programmes'] })
+      await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
     } catch (error) {
       toast.error('Class is not ready', { description: error instanceof Error ? error.message : 'Please review its setup.' })
     } finally {
@@ -107,7 +142,7 @@ export function ProgrammesClient() {
         ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
         : body?.error || 'Could not delete programme')
       toast.success('Class deleted')
-      await queryClient.invalidateQueries({ queryKey: ['programmes'] })
+      await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
     } catch (error) {
       toast.error('Could not delete programme', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
@@ -141,14 +176,20 @@ export function ProgrammesClient() {
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
       )}
 
-      {!programmesQuery.isLoading && programmes.length > 0 && <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
-        <label className="relative block min-w-0 flex-1"><span className="sr-only">Search classes</span><span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-[#766f78]">search</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search classes or subjects" className="min-h-11 w-full rounded-lg border border-[#d8d3d0] bg-white py-2 pl-10 pr-3 text-sm text-[#27242d] outline-none transition focus:border-[#2e2877]" /></label>
-        <div className="mt-3 flex gap-2 overflow-x-auto sm:mt-0">{([{ id: 'all', label: `All (${programmes.length})` }, { id: 'published', label: `Active (${programmes.filter(item => item.is_published).length})` }, { id: 'draft', label: `Draft (${programmes.filter(item => !item.is_published).length})` }] as const).map(filter => <button type="button" key={filter.id} onClick={() => setStatusFilter(filter.id)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${statusFilter === filter.id ? 'bg-[#2e2877] text-white' : 'border border-[#d8d3d0] bg-white text-[#625e69] hover:border-[#2e2877]/40'}`}>{filter.label}</button>)}</div>
+      {schoolContextError && !loadError && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p>Class links are temporarily unavailable because centre details could not be loaded.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-2 font-semibold underline">Try again</button></div>
+      )}
+
+      {programmesQuery.isSuccess && programmes.length > 0 && <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+        <label className="relative block min-w-0 flex-1"><span className="sr-only">Search classes</span><span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-[#766f78]">search</span><input value={search} onChange={(event) => updateFilters(event.target.value, statusFilter)} placeholder="Search classes or subjects" className="min-h-11 w-full rounded-lg border border-[#d8d3d0] bg-white py-2 pl-10 pr-3 text-sm text-[#27242d] outline-none transition focus:border-[#2e2877]" /></label>
+        <div className="mt-3 flex gap-2 overflow-x-auto sm:mt-0">{([{ id: 'all', label: `All (${programmes.length})` }, { id: 'published', label: `Active (${programmes.filter(item => item.is_published).length})` }, { id: 'draft', label: `Draft (${programmes.filter(item => !item.is_published).length})` }] as const).map(filter => <button type="button" key={filter.id} onClick={() => updateFilters(search, filter.id)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${statusFilter === filter.id ? 'bg-[#2e2877] text-white' : 'border border-[#d8d3d0] bg-white text-[#625e69] hover:border-[#2e2877]/40'}`}>{filter.label}</button>)}</div>
       </section>}
 
       {programmesQuery.isLoading ? (
         <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading classes…</div>
-      ) : programmes.length === 0 ? (
+      ) : programmesQuery.isError ? (
+        <div className="rounded-dashboard-panel border border-red-200 bg-red-50 px-6 py-16 text-center text-sm text-red-800"><p>We could not load your classes.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-4 font-semibold underline">Try again</button></div>
+      ) : programmesQuery.isSuccess && programmes.length === 0 ? (
         <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-16 text-center">
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
           <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first class</h2>
@@ -185,7 +226,7 @@ export function ProgrammesClient() {
               </div>
             </article>
           ))}
-          {!visibleProgrammes.length && <div className="col-span-full rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-14 text-center"><span className="material-symbols-outlined text-4xl text-[#8a838d]">search_off</span><h2 className="mt-3 text-lg font-bold text-[#27242d]">No classes match</h2><p className="mt-1 text-sm text-dashboard-muted">Try another name, subject, or status filter.</p><button type="button" onClick={() => { setSearch(''); setStatusFilter('all') }} className="mt-4 text-sm font-semibold text-[#2e2877] hover:underline">Clear filters</button></div>}
+          {!visibleProgrammes.length && <div className="col-span-full rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-14 text-center"><span className="material-symbols-outlined text-4xl text-[#8a838d]">search_off</span><h2 className="mt-3 text-lg font-bold text-[#27242d]">No classes match</h2><p className="mt-1 text-sm text-dashboard-muted">Try another name, subject, or status filter.</p><button type="button" onClick={() => updateFilters('', 'all')} className="mt-4 text-sm font-semibold text-[#2e2877] hover:underline">Clear filters</button></div>}
         </div>
       )}
     </div>
