@@ -17,9 +17,9 @@ function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 }
 
-function renderWorkspace() {
+function renderWorkspace(canManageClass = false) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><ClassWorkspaceClient classId="class-1" /></QueryClientProvider>)
+  return render(<QueryClientProvider client={queryClient}><ClassWorkspaceClient classId="class-1" canManageClass={canManageClass} /></QueryClientProvider>)
 }
 
 describe('ClassWorkspaceClient data loading', () => {
@@ -44,9 +44,11 @@ describe('ClassWorkspaceClient data loading', () => {
       throw new Error(`Unexpected request ${input}`)
     }))
 
-    renderWorkspace()
+    renderWorkspace(true)
 
     expect(await screen.findByRole('heading', { name: 'JAMB 2027' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Classes' })).toHaveClass('text-dashboard-muted', 'min-h-11')
+    expect(screen.getByRole('link', { name: 'Add subject' })).toHaveClass('bg-dashboard-primary', 'w-full', 'sm:w-auto', 'min-h-11')
     expect(screen.getByRole('button', { name: 'All subjects' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Physics' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Chemistry' })).toBeTruthy()

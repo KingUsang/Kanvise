@@ -10,6 +10,7 @@ import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
 import { PageHeader } from '@/components/dashboard/page-header'
+import { LinkButton } from '@/components/dashboard/action-controls'
 import { Plus } from 'lucide-react'
 import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
 
@@ -158,9 +159,9 @@ export function ProgrammesClient() {
       <PageHeader
         title="Classes"
         description="Create the teaching groups where your subjects, learners and sessions live."
-        actions={canCreate ? <Link href="/dashboard/classes/new" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm outline-none hover:bg-dashboard-accent/90 focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2 sm:w-auto">
+        actions={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>
           <Plus aria-hidden="true" size={18} /> Create class
-        </Link> : null}
+        </LinkButton> : null}
       />
 
       {hasLocalDraft && (
@@ -199,7 +200,7 @@ export function ProgrammesClient() {
           <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
           <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first class</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Add the subjects, learners and sessions you will teach together.</p>
-          {canCreate ? <Link href="/dashboard/classes/new" className="mt-5 inline-flex rounded-dashboard-control bg-dashboard-primary px-5 py-2.5 text-sm font-semibold text-white">Create class</Link> : <p className="mt-5 text-sm text-[#474551]">Your centre admin creates classes and assigns you the subjects you teach.</p>}
+          {canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile className="mt-5">Create class</LinkButton> : <p className="mt-5 text-sm text-[#474551]">Your centre admin creates classes and assigns you the subjects you teach.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

@@ -44,6 +44,24 @@ describe('Class vertical recovery states', () => {
     expect(screen.queryByText('Create your first class')).toBeNull()
   })
 
+  it('uses the canonical primary action control for creating a Class', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: string) => {
+      if (input.endsWith('/classes')) return response({ data: [] })
+      if (input.endsWith('/schools/me')) return response({ data: { id: 'school-1', slug: 'school' } })
+      if (input.endsWith('/auth/me')) return response({ user: { id: 'user-1', role: 'admin' } })
+      throw new Error(`Unexpected request ${input}`)
+    }))
+
+    withQuery(<ProgrammesClient />)
+
+    const actions = await screen.findAllByRole('link', { name: 'Create class' })
+    expect(actions).toHaveLength(2)
+    for (const action of actions) {
+      expect(action).toHaveAttribute('href', '/dashboard/classes/new')
+      expect(action).toHaveClass('bg-dashboard-primary', 'min-h-11', 'w-full', 'sm:w-auto')
+    }
+  })
+
   it('does not leave Add Subject on an indefinite preparation spinner after session failure', () => {
     withQuery(<AddClassSubjectClient classId="class-1" />)
     expect(screen.getByText('We could not verify your access to add a subject.')).toBeTruthy()

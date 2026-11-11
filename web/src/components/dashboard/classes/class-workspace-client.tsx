@@ -42,6 +42,7 @@ import { AssignmentsClient } from "@/components/dashboard/assignments/assignment
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
 import { WorkspaceHeader } from "@/components/dashboard/page-header";
+import { LinkButton } from "@/components/dashboard/action-controls";
 import {
   adaptClassRecord,
   adaptSubjectLink,
@@ -448,24 +449,25 @@ export function ClassWorkspaceClient({
         {classQuery.isError ? <WorkspaceQueryNotice label="Class workspace" cached onRetry={() => void classQuery.refetch()} /> : null}
         <WorkspaceHeader
           className="mt-4"
-          back={<Link
+          back={<LinkButton
             href="/dashboard/classes"
-            className="inline-flex min-h-11 items-center gap-2 rounded-dashboard-control px-1 outline-none transition-colors hover:text-dashboard-primary focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2"
+            variant="quiet"
           >
             <ArrowLeft aria-hidden="true" size={16} /> Classes
-          </Link>}
+          </LinkButton>}
           title={data.name}
           status={data.is_published ? "Published" : "Draft"}
           description={<>
             {data.subjects.length > 1 ? "Multi-subject class" : "Single-subject class"}
             {data.description ? ` · ${data.description}` : ""}
           </>}
-          actions={canManageClass ? <Link
+          actions={canManageClass ? <LinkButton
             href={`/dashboard/classes/${classId}/subjects/new`}
-            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-3.5 text-sm font-bold text-white shadow-sm outline-none hover:bg-dashboard-primary/90 focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2 sm:w-auto"
+            variant="primary"
+            fullWidthMobile
           >
             <Plus aria-hidden="true" size={17} /> Add subject
-          </Link> : null}
+          </LinkButton> : null}
         >
           {data.subjects.length > 1 ? (
             <div className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none]">
