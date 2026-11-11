@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { getApiUrl } from '@/config/api'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { useActiveAccountId } from '@/lib/account-preference'
 import { loginHref } from '@/lib/auth-continuation'
+import { settingsQueryKeys } from '@/lib/settings-query-keys'
 import { SchoolSetupForm } from './school-setup-form'
 
 type SchoolSetupRouteClientProps = {
@@ -26,8 +28,8 @@ class SchoolLoadError extends Error {
   }
 }
 
-async function loadSchool(): Promise<SchoolResponse> {
-  const response = await authenticatedApiFetch(`${getApiUrl()}/schools/me`, { cache: 'no-store' })
+async function loadSchool({ signal }: { signal?: AbortSignal } = {}): Promise<SchoolResponse> {
+  const response = await authenticatedApiFetch(`${getApiUrl()}/schools/me`, { cache: 'no-store', signal })
   const body = await response.json().catch(() => null) as { data?: Record<string, unknown>; error?: string; code?: string } | null
 
   if (response.ok) return { school: body?.data || null, isConfigured: true }
@@ -46,9 +48,10 @@ function RouteLoading() {
 
 export function SchoolSetupRouteClient({ mode }: SchoolSetupRouteClientProps) {
   const router = useRouter()
+  const accountId = useActiveAccountId()
   const loginPath = loginHref({ redirect: mode === 'settings' ? '/dashboard/settings' : '/dashboard/school-setup' })
   const schoolQuery = useQuery({
-    queryKey: ['dashboard-school'],
+    queryKey: settingsQueryKeys.school(accountId),
     queryFn: loadSchool,
     staleTime: 60_000,
     retry: (failureCount, error) => error instanceof SchoolLoadError && error.code === 'UNAVAILABLE' && failureCount < 1,

@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Check, CircleAlert, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
 import { dashboardQueryKeys } from '@/lib/dashboard-session'
 import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { readApiBody, responseErrorMessage } from '@/lib/safe-api-error'
 
 type Tutor = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role?: string }
 type Viewer = { id: string; role?: string; school_id?: string | null }
@@ -27,7 +27,6 @@ export function ClassBuilder() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const accountId = useActiveAccountId()
-  const supabase = useMemo(() => createClient(), [])
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [tutors, setTutors] = useState<Tutor[]>([])
@@ -53,6 +52,8 @@ export function ClassBuilder() {
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
+    const request = (input: RequestInfo | URL, init: RequestInit = {}) => authenticatedApiFetch(input, { ...init, signal: controller.signal })
     async function load() {
       if (active) {
         setLoading(true)
@@ -60,30 +61,35 @@ export function ClassBuilder() {
         setPayoutError(false)
       }
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) return router.replace('/auth/login')
-        const headers = { Authorization: `Bearer ${session.access_token}` }
-        const profileResponse = await fetch(`${apiUrl}/auth/me`, { headers })
-        if (!profileResponse.ok) throw new Error('Could not verify class permissions')
-        const profileBody = await profileResponse.json()
-        if (profileBody.user?.role !== 'admin') { if (active) setAccessDenied(true); return }
+        const profileResponse = await request(`${apiUrl}/auth/me`)
+        const profileBody = await readApiBody<{ user?: Viewer; code?: string }>(profileResponse)
+        if (profileResponse.status === 401 && profileBody?.code === 'SESSION_EXPIRED') return router.replace('/auth/login')
+        if (!profileResponse.ok) throw new Error(responseErrorMessage(profileResponse, 'Could not verify class permissions'))
+        if (profileBody?.user?.role !== 'admin') { if (active) setAccessDenied(true); return }
         const [tutorsResponse, schoolResponse, payoutResponse] = await Promise.all([
-          authenticatedApiFetch(`${apiUrl}/users?roles=admin,tutor`),
-          fetch(`${apiUrl}/schools/me`, { headers }),
-          fetch(`${apiUrl}/payments/summary`, { headers }),
+          request(`${apiUrl}/users?roles=admin,tutor`),
+          request(`${apiUrl}/schools/me`),
+          request(`${apiUrl}/payments/summary`),
         ])
-        if (!tutorsResponse.ok || !schoolResponse.ok) throw new Error('Could not load the people available for this class')
-        const [tutorsBody, schoolBody] = await Promise.all([tutorsResponse.json(), schoolResponse.json()])
+        const [tutorsBody, schoolBody] = await Promise.all([
+          readApiBody<{ data?: Tutor[] }>(tutorsResponse),
+          readApiBody<{ data?: { account_type?: string } }>(schoolResponse),
+        ])
+        if (!tutorsResponse.ok || !schoolResponse.ok) {
+          const failedResponse = !tutorsResponse.ok ? tutorsResponse : schoolResponse
+          throw new Error(responseErrorMessage(failedResponse, 'Could not load the people available for this class'))
+        }
         if (!active) return
-        const currentViewer = profileBody.user as Viewer
-        const mode = schoolBody.data?.account_type === 'independent' ? 'independent' : 'centre'
+        const currentViewer = profileBody?.user
+        if (!currentViewer) throw new Error('Could not verify class permissions')
+        const mode = schoolBody?.data?.account_type === 'independent' ? 'independent' : 'centre'
         setViewer(currentViewer)
         setAccountType(mode)
-        setTutors((tutorsBody.data || []).filter((person: Tutor) => person.role === 'admin' || person.role === 'tutor'))
+        setTutors((tutorsBody?.data || []).filter((person: Tutor) => person.role === 'admin' || person.role === 'tutor'))
         setSubjects([newSubject(mode === 'independent' ? currentViewer.id : '')])
         if (payoutResponse.ok) {
-          const payoutBody = await payoutResponse.json()
-          setPayoutReady(Boolean(payoutBody.data?.subaccount?.subaccount_code))
+          const payoutBody = await readApiBody<{ data?: { subaccount?: { subaccount_code?: string } } }>(payoutResponse)
+          setPayoutReady(Boolean(payoutBody?.data?.subaccount?.subaccount_code))
         } else {
           setPayoutReady(null)
           setPayoutError(true)
@@ -95,8 +101,8 @@ export function ClassBuilder() {
       }
     }
     void load()
-    return () => { active = false }
-  }, [apiUrl, retryToken, router, supabase])
+    return () => { active = false; controller.abort() }
+  }, [accountId, apiUrl, retryToken, router])
 
   useEffect(() => {
     if (kind === 'single' && subjects.length > 1) setSubjects(current => [current[0]])
@@ -127,11 +133,9 @@ export function ClassBuilder() {
     submissionLock.current = true
     setSubmissionAction(publish ? 'publish' : 'draft')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Your session has expired')
-      const response = await fetch(`${apiUrl}/classes/setup`, {
+      const response = await authenticatedApiFetch(`${apiUrl}/classes/setup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, 'Idempotency-Key': creationKey.current },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': creationKey.current },
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim(),
@@ -143,7 +147,7 @@ export function ClassBuilder() {
           })),
         }),
       })
-      const body = await response.json().catch(() => null)
+      const body = await readApiBody<{ code?: string; existing_class_id?: string; data?: { programme?: { id?: string } } }>(response)
       if (!response.ok) {
         if (response.status === 409 && body?.code === 'CLASS_NAME_TAKEN' && body?.existing_class_id) {
           toast.error('A class with this name already exists', {
@@ -152,17 +156,16 @@ export function ClassBuilder() {
           })
           return
         }
-        throw new Error(body?.error || 'Could not create this class')
+        throw new Error(responseErrorMessage(response, 'Could not create this class'))
       }
-      const classId = body.data.programme.id as string
+      const classId = body?.data?.programme?.id as string | undefined
+      if (!classId) throw new Error('Could not create this class')
       if (publish) {
-        const publishResponse = await fetch(`${apiUrl}/classes/${classId}/publish`, {
+        const publishResponse = await authenticatedApiFetch(`${apiUrl}/classes/${classId}/publish`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` },
         })
-        const publishBody = await publishResponse.json().catch(() => null)
         if (!publishResponse.ok) {
-          toast.error('Class saved as a draft', { description: publishBody?.error || 'It could not be published yet. Finish the missing setup in the class workspace.' })
+          toast.error('Class saved as a draft', { description: responseErrorMessage(publishResponse, 'It could not be published yet. Finish the missing setup in the class workspace.') })
         } else {
           toast.success('Class published', { description: 'Students can now enrol and access it.' })
         }

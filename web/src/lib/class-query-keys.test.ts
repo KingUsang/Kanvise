@@ -8,6 +8,10 @@ describe('class query keys', () => {
     expect(classQueryKeys.dashboardSchedule('account-a')).not.toEqual(classQueryKeys.dashboardSchedule('account-b'))
   })
 
+  it('keeps the active-account identity in the programme mutation invalidation key', () => {
+    expect(classQueryKeys.programmes('account-a')).not.toEqual(classQueryKeys.programmes('account-b'))
+  })
+
   it('keeps invalidation factories identical to their query keys', () => {
     const accountId = 'account-a'
     expect(classQueryKeys.programmes(accountId)).toEqual(['programmes', accountId])

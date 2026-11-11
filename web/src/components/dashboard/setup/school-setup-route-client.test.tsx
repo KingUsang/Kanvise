@@ -29,7 +29,7 @@ describe('dashboard school data boundary', () => {
 
     expect(screen.getByText('Loading your centre details…')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Centre profile' })).toBeInTheDocument())
-    expect(mocks.authenticatedApiFetch).toHaveBeenCalledWith(expect.stringContaining('/schools/me'), { cache: 'no-store' })
+    expect(mocks.authenticatedApiFetch).toHaveBeenCalledWith(expect.stringContaining('/schools/me'), expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }))
   })
 
   it('keeps first-time setup available when Hono reports no configured school', async () => {

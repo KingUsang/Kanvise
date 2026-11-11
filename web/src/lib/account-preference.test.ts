@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearActiveAccountId, getActiveAccountId, setActiveAccountId } from './account-preference'
+import { clearActiveAccountId, getActiveAccountId, setActiveAccountId, subscribeToActiveAccount } from './account-preference'
 
 const accountOne = '11111111-1111-4111-8111-111111111111'
 
@@ -28,5 +28,15 @@ describe('active account preference', () => {
     expect(getActiveAccountId()).toBeNull()
     clearActiveAccountId()
     expect(sessionStorage.getItem('kanvise:active-account:v1')).toBeNull()
+  })
+
+  it('notifies subscribers when the active account changes so query keys can reload', () => {
+    const listener = vi.fn()
+    const unsubscribe = subscribeToActiveAccount(listener)
+
+    setActiveAccountId(accountOne)
+
+    expect(listener).toHaveBeenCalledOnce()
+    unsubscribe()
   })
 })

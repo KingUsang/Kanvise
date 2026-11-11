@@ -737,7 +737,6 @@ export function ClassWorkspaceClient({
                   await Promise.all([
                     queryClient.invalidateQueries({ queryKey: classQueryKeys.workspace(accountId, classId) }),
                     queryClient.invalidateQueries({ queryKey: classQueryKeys.tutors(accountId, classId) }),
-                    queryClient.invalidateQueries({ queryKey: ['tutors'] }),
                   ]);
                 }}
               />

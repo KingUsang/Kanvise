@@ -1,16 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
 type Programme = {
@@ -28,7 +28,6 @@ type Programme = {
 }
 
 export function ProgrammesClient() {
-  const supabase = useMemo(() => createClient(), [])
   const queryClient = useQueryClient()
   const accountId = useActiveAccountId()
   const searchParams = useSearchParams()
@@ -70,12 +69,12 @@ export function ProgrammesClient() {
 
   const programmesQuery = useQuery({
     queryKey: classQueryKeys.programmes(accountId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       const [programmesResponse, schoolResponse, profileResponse] = await Promise.all([
-        authenticatedApiFetch(`${apiUrl}/classes`),
-        authenticatedApiFetch(`${apiUrl}/schools/me`),
-        authenticatedApiFetch(`${apiUrl}/auth/me`),
+        authenticatedApiFetch(`${apiUrl}/classes`, { signal }),
+        authenticatedApiFetch(`${apiUrl}/schools/me`, { signal }),
+        authenticatedApiFetch(`${apiUrl}/auth/me`, { signal }),
       ])
       if (!programmesResponse.ok || !profileResponse.ok) throw new Error('Could not load class data')
       const [{ data }, schoolBody, { user }] = await Promise.all([
@@ -112,19 +111,18 @@ export function ProgrammesClient() {
   const publish = async (programme: Programme) => {
     setPublishingId(programme.id)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${programme.id}/publish`, {
-        method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` },
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${programme.id}/publish`, {
+        method: 'POST',
       })
-      const body = await response.json()
+      const body = await readApiBody<{ readiness?: { missing_tutors?: Subject[] } }>(response)
       if (!response.ok) {
-        const missing = body.readiness?.missing_tutors?.map((subject: Subject) => subject.name).join(', ')
-        throw new Error(missing ? `Assign tutors to: ${missing}` : body.error)
+        const missing = body?.readiness?.missing_tutors?.map(subject => subject.name).join(', ')
+        throw new Error(missing ? `Assign tutors to: ${missing}` : responseErrorMessage(response, 'Please review the class setup.'))
       }
       toast.success('Class published')
       await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
     } catch (error) {
-      toast.error('Class is not ready', { description: error instanceof Error ? error.message : 'Please review its setup.' })
+      toast.error('Class is not ready', { description: safeApiErrorMessage(error, 'Please review its setup.') })
     } finally {
       setPublishingId(null)
     }
@@ -134,18 +132,17 @@ export function ProgrammesClient() {
     if (!window.confirm(`Delete “${programme.name}”? This removes its subjects and cannot be undone.`)) return
     setDeletingId(programme.id)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${programme.id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` },
+      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${programme.id}`, {
+        method: 'DELETE',
       })
-      const body = await response.json().catch(() => null)
+      const body = await readApiBody<{ code?: string }>(response)
       if (!response.ok) throw new Error(body?.code === 'ACTIVE_ENROLMENTS_EXIST'
         ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
-        : body?.error || 'Could not delete programme')
+        : responseErrorMessage(response, 'Could not delete programme'))
       toast.success('Class deleted')
       await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
     } catch (error) {
-      toast.error('Could not delete programme', { description: error instanceof Error ? error.message : 'Please try again.' })
+      toast.error('Could not delete programme', { description: safeApiErrorMessage(error, 'Please try again.') })
     } finally {
       setDeletingId(null)
     }
