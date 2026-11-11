@@ -50,6 +50,10 @@ describe('ClassWorkspaceClient data loading', () => {
     expect(screen.getByRole('button', { name: 'All subjects' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Physics' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Chemistry' })).toBeTruthy()
+    for (const label of ['All subjects', 'Physics', 'Chemistry']) {
+      expect(screen.getByRole('button', { name: label })).toHaveAttribute('type', 'button')
+      expect(screen.getByRole('button', { name: label })).toHaveClass('min-h-11', 'focus-visible:outline-2')
+    }
     await waitFor(() => expect(requests).toEqual(expect.arrayContaining([
       expect.stringMatching(/\/classes\/class-1$/),
       expect.stringMatching(/\/classes\/class-1\/schedule$/),

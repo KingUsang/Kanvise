@@ -1261,9 +1261,10 @@ function SubjectChip({
 }) {
   return (
     <button
+      type="button"
       aria-label={label}
       onClick={onClick}
-      className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${active ? "bg-[#2e2877] text-white shadow-sm" : "border border-[#d8d3d0] bg-white text-[#474551] hover:border-[#2e2877]/40 hover:text-[#180d62]"}`}
+      className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 py-2 text-sm font-semibold outline-none transition-colors focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2 ${active ? "bg-[#2e2877] text-white shadow-sm" : "border border-[#d8d3d0] bg-white text-[#474551] hover:border-[#2e2877]/40 hover:text-[#180d62]"}`}
     >
       {children}
     </button>
