@@ -41,6 +41,7 @@ import { SubmissionsClient } from "../assignments/submissions-client";
 import { AssignmentsClient } from "@/components/dashboard/assignments/assignments-client";
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
+import { WorkspaceHeader } from "@/components/dashboard/page-header";
 import {
   adaptClassRecord,
   adaptSubjectLink,
@@ -445,45 +446,27 @@ export function ClassWorkspaceClient({
     <>
       <main className="w-full pb-20 sm:pb-0">
         {classQuery.isError ? <WorkspaceQueryNotice label="Class workspace" cached onRetry={() => void classQuery.refetch()} /> : null}
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#625e69]">
-          <Link
+        <WorkspaceHeader
+          className="mt-4"
+          back={<Link
             href="/dashboard/classes"
-            className="inline-flex items-center gap-2 transition-colors hover:text-[#2e2877]"
+            className="inline-flex min-h-11 items-center gap-2 rounded-dashboard-control px-1 outline-none transition-colors hover:text-dashboard-primary focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2"
           >
-            <ArrowLeft size={16} /> Classes
-          </Link>
-          <span aria-hidden="true" className="text-[#aaa5af]">
-            /
-          </span>
-          <span className="max-w-48 truncate text-[#46414a]">{data.name}</span>
-        </div>
-        <header className="mt-4">
-          <div className="flex flex-col gap-4 border-b border-dashboard-outline pb-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-2xl font-bold tracking-tight text-[#180d62] sm:text-[28px]">
-                  {data.name}
-                </h1>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${data.is_published ? "bg-[#e7f5eb] text-[#14532d]" : "bg-[#f5f3f2] text-[#625e69]"}`}
-                >
-                  {data.is_published ? "Published" : "Draft"}
-                </span>
-              </div>
-              <p className="mt-1.5 text-sm text-dashboard-muted">
-                {data.subjects.length > 1
-                  ? "Multi-subject class"
-                  : "Single-subject class"}
-                {data.description ? ` · ${data.description}` : ""}
-              </p>
-            </div>
-            {canManageClass ? <Link
-              href={`/dashboard/classes/${classId}/subjects/new`}
-              className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#312783] px-3.5 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70 sm:w-fit"
-            >
-              <Plus size={17} /> Add subject
-            </Link> : null}
-          </div>
+            <ArrowLeft aria-hidden="true" size={16} /> Classes
+          </Link>}
+          title={data.name}
+          status={data.is_published ? "Published" : "Draft"}
+          description={<>
+            {data.subjects.length > 1 ? "Multi-subject class" : "Single-subject class"}
+            {data.description ? ` · ${data.description}` : ""}
+          </>}
+          actions={canManageClass ? <Link
+            href={`/dashboard/classes/${classId}/subjects/new`}
+            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-primary px-3.5 text-sm font-bold text-white shadow-sm outline-none hover:bg-dashboard-primary/90 focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2 sm:w-auto"
+          >
+            <Plus aria-hidden="true" size={17} /> Add subject
+          </Link> : null}
+        >
           {data.subjects.length > 1 ? (
             <div className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none]">
               <SubjectChip
@@ -505,7 +488,7 @@ export function ClassWorkspaceClient({
               ))}
             </div>
           ) : null}
-        </header>
+        </WorkspaceHeader>
         <div className="mt-2">
           <WorkspaceRail classId={classId} activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} />
           <div className="min-w-0">

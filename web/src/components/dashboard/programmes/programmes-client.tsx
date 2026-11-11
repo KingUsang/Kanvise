@@ -9,7 +9,8 @@ import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
-import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { Plus } from 'lucide-react'
 import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
@@ -154,14 +155,12 @@ export function ProgrammesClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <DashboardPageHeader
+      <PageHeader
         title="Classes"
         description="Create the teaching groups where your subjects, learners and sessions live."
-        actions={<>
-          {canCreate && <div className="col-span-2 sm:col-auto"><Link href="/dashboard/classes/new" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-dashboard-accent/90 sm:w-auto">
-            <span className="material-symbols-outlined text-[19px]">add</span> Create class
-          </Link></div>}
-        </>}
+        actions={canCreate ? <Link href="/dashboard/classes/new" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-dashboard-control bg-dashboard-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm outline-none hover:bg-dashboard-accent/90 focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2 sm:w-auto">
+          <Plus aria-hidden="true" size={18} /> Create class
+        </Link> : null}
       />
 
       {hasLocalDraft && (
