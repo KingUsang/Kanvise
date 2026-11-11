@@ -27,6 +27,8 @@ type Programme = {
   tutors_complete: boolean
 }
 
+const ACTIVE_ENROLMENT_MESSAGE = 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+
 export function ProgrammesClient() {
   const queryClient = useQueryClient()
   const accountId = useActiveAccountId()
@@ -110,6 +112,7 @@ export function ProgrammesClient() {
 
   const publish = async (programme: Programme) => {
     setPublishingId(programme.id)
+    let safePublishMessage = ''
     try {
       const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/classes/${programme.id}/publish`, {
         method: 'POST',
@@ -117,12 +120,13 @@ export function ProgrammesClient() {
       const body = await readApiBody<{ readiness?: { missing_tutors?: Subject[] } }>(response)
       if (!response.ok) {
         const missing = body?.readiness?.missing_tutors?.map(subject => subject.name).join(', ')
-        throw new Error(missing ? `Assign tutors to: ${missing}` : responseErrorMessage(response, 'Please review the class setup.'))
+        safePublishMessage = missing ? `Assign tutors to: ${missing}` : ''
+        throw new Error(safePublishMessage || responseErrorMessage(response, 'Please review the class setup.'))
       }
       toast.success('Class published')
       await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
     } catch (error) {
-      toast.error('Class is not ready', { description: safeApiErrorMessage(error, 'Please review its setup.') })
+      toast.error('Class is not ready', { description: safeApiErrorMessage(error, 'Please review its setup.', safePublishMessage ? [safePublishMessage] : []) })
     } finally {
       setPublishingId(null)
     }
@@ -137,12 +141,12 @@ export function ProgrammesClient() {
       })
       const body = await readApiBody<{ code?: string }>(response)
       if (!response.ok) throw new Error(body?.code === 'ACTIVE_ENROLMENTS_EXIST'
-        ? 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+        ? ACTIVE_ENROLMENT_MESSAGE
         : responseErrorMessage(response, 'Could not delete programme'))
       toast.success('Class deleted')
       await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
     } catch (error) {
-      toast.error('Could not delete programme', { description: safeApiErrorMessage(error, 'Please try again.') })
+      toast.error('Could not delete programme', { description: safeApiErrorMessage(error, 'Please try again.', [ACTIVE_ENROLMENT_MESSAGE]) })
     } finally {
       setDeletingId(null)
     }
