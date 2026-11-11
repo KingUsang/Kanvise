@@ -10,9 +10,10 @@ import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
 import { PageHeader } from '@/components/dashboard/page-header'
-import { Button, LinkButton } from '@/components/dashboard/action-controls'
+import { actionControlClassName, Button, LinkButton } from '@/components/dashboard/action-controls'
 import { EmptyState, ErrorState, PageLoadingState, RefreshNotice } from '@/components/dashboard/async-states'
-import { Plus, School, SearchX } from 'lucide-react'
+import { CollectionToolbar } from '@/components/dashboard/collection-controls'
+import { School, SearchX } from 'lucide-react'
 import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
@@ -30,6 +31,14 @@ type Programme = {
   tutors_complete: boolean
 }
 
+type StatusFilter = 'all' | 'published' | 'draft'
+
+const STATUS_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'published', label: 'Active' },
+  { value: 'draft', label: 'Draft' },
+] as const
+
 const ACTIVE_ENROLMENT_MESSAGE = 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
 
 export function ProgrammesClient() {
@@ -39,7 +48,7 @@ export function ProgrammesClient() {
   const [publishingId, setPublishingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [search, setSearch] = useState(() => searchParams.get('search') || '')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>(() => {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
     const value = searchParams.get('status')
     return value === 'published' || value === 'draft' ? value : 'all'
   })
@@ -61,7 +70,7 @@ export function ProgrammesClient() {
     setStatusFilter(status === 'published' || status === 'draft' ? status : 'all')
   }, [searchParams])
 
-  const updateFilters = (nextSearch: string, nextStatus: 'all' | 'published' | 'draft') => {
+  const updateFilters = (nextSearch: string, nextStatus: StatusFilter) => {
     const url = new URL(window.location.href)
     if (nextSearch.trim()) url.searchParams.set('search', nextSearch)
     else url.searchParams.delete('search')
@@ -160,9 +169,6 @@ export function ProgrammesClient() {
       <PageHeader
         title="Classes"
         description="Create the teaching groups where your subjects, learners and sessions live."
-        actions={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>
-          <Plus aria-hidden="true" size={18} /> Create class
-        </LinkButton> : null}
       />
 
       {hasLocalDraft && (
@@ -183,10 +189,24 @@ export function ProgrammesClient() {
         <RefreshNotice message="Class links are temporarily unavailable because centre details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
       )}
 
-      {programmesQuery.isSuccess && programmes.length > 0 && <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
-        <label className="relative block min-w-0 flex-1"><span className="sr-only">Search classes</span><span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-[#766f78]">search</span><input value={search} onChange={(event) => updateFilters(event.target.value, statusFilter)} placeholder="Search classes or subjects" className="min-h-11 w-full rounded-lg border border-[#d8d3d0] bg-white py-2 pl-10 pr-3 text-sm text-[#27242d] outline-none transition focus:border-[#2e2877]" /></label>
-        <div className="mt-3 flex gap-2 overflow-x-auto sm:mt-0">{([{ id: 'all', label: `All (${programmes.length})` }, { id: 'published', label: `Active (${programmes.filter(item => item.is_published).length})` }, { id: 'draft', label: `Draft (${programmes.filter(item => !item.is_published).length})` }] as const).map(filter => <button type="button" key={filter.id} onClick={() => updateFilters(search, filter.id)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${statusFilter === filter.id ? 'bg-[#2e2877] text-white' : 'border border-[#d8d3d0] bg-white text-[#625e69] hover:border-[#2e2877]/40'}`}>{filter.label}</button>)}</div>
-      </section>}
+      {programmesQuery.isSuccess && programmes.length > 0 && (
+        <CollectionToolbar
+          ariaLabel="Class collection controls"
+          searchLabel="Search classes"
+          searchPlaceholder="Search classes or subjects"
+          searchValue={search}
+          onSearchChange={(value) => updateFilters(value, statusFilter)}
+          filterLabel="Filter classes by status"
+          filterValue={statusFilter}
+          filterOptions={STATUS_FILTERS}
+          onFilterChange={(value) => updateFilters(search, value)}
+          resultCount={visibleProgrammes.length}
+          totalCount={programmes.length}
+          itemLabel="class"
+          itemPluralLabel="classes"
+          action={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>Create class</LinkButton> : null}
+        />
+      )}
 
       {programmesQuery.isLoading ? (
         <PageLoadingState label="Loading classes" />
@@ -199,10 +219,11 @@ export function ProgrammesClient() {
           body="Add the subjects, learners and sessions you will teach together."
           action={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>Create class</LinkButton> : <p className="text-sm text-dashboard-muted">Your centre admin creates classes and assigns you the subjects you teach.</p>}
         />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      ) : visibleProgrammes.length ? (
+        <ul aria-label="Classes" className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {visibleProgrammes.map(programme => (
-            <article key={programme.id} className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
+            <li key={programme.id}>
+              <article className="h-full overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               <div className="flex gap-4 p-5">
                 <div className="flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-[#c8c5d2] bg-[#f2ebd9]">
                   {programme.thumbnail_url ? <img src={programme.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <span className="material-symbols-outlined text-3xl text-[#994704]">menu_book</span>}
@@ -221,16 +242,18 @@ export function ProgrammesClient() {
                 {programme.courses.length ? <div className="flex flex-wrap gap-2">{programme.courses.map(subject => <span key={subject.id} className="rounded border border-[#c8c5d2] bg-white px-2.5 py-1 text-xs font-medium text-[#1b1c1c]">{subject.name}</span>)}</div> : <p className="text-sm text-[#474551]">No subjects added yet.</p>}
               </div>
               <div className="flex flex-wrap gap-2 p-4">
-                <Link href={programme.courses_count ? `/dashboard/classes/${programme.id}` : `/dashboard/classes/new`} className="rounded bg-[#2e2877] px-3.5 py-2 text-xs font-semibold text-white">{programme.courses_count ? 'Open class' : 'Continue setup'}</Link>
-                {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}${programme.is_published ? '' : `?preview=${programme.id}`}`} target="_blank" rel="noreferrer" className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Preview enrolment page</a>}
-                {schoolSlug && <button onClick={() => void copyLink(programme)} className="rounded border border-[#c8c5d2] px-3.5 py-2 text-xs font-semibold text-[#474551]">Copy enrolment link</button>}
-                {canCreate && !programme.is_published && <button disabled={publishingId === programme.id} onClick={() => void publish(programme)} className="ml-auto rounded border border-[#994704] px-3.5 py-2 text-xs font-semibold text-[#994704] disabled:opacity-50">{publishingId === programme.id ? 'Publishing…' : 'Publish'}</button>}
-                {canCreate && <button disabled={deletingId === programme.id} onClick={() => void deleteProgramme(programme)} className={`${programme.is_published ? '' : 'ml-auto'} rounded border border-[#ba1a1a]/40 px-3.5 py-2 text-xs font-semibold text-[#ba1a1a] disabled:opacity-50`}>{deletingId === programme.id ? 'Deleting…' : 'Delete'}</button>}
+                <LinkButton href={programme.courses_count ? `/dashboard/classes/${programme.id}` : `/dashboard/classes/new`} variant="primary">{programme.courses_count ? 'Open class' : 'Continue setup'}</LinkButton>
+                {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}${programme.is_published ? '' : `?preview=${programme.id}`}`} target="_blank" rel="noreferrer" className={actionControlClassName({ variant: 'secondary' })}>Preview enrolment page</a>}
+                {schoolSlug && <Button variant="secondary" onClick={() => void copyLink(programme)}>Copy enrolment link</Button>}
+                {canCreate && !programme.is_published && <Button variant="secondary" pending={publishingId === programme.id} pendingLabel="Publishing…" onClick={() => void publish(programme)} className="sm:ml-auto">Publish</Button>}
+                {canCreate && <Button variant="danger" pending={deletingId === programme.id} pendingLabel="Deleting…" onClick={() => void deleteProgramme(programme)} className={programme.is_published ? '' : 'sm:ml-auto'}>Delete</Button>}
               </div>
-            </article>
+              </article>
+            </li>
           ))}
-          {!visibleProgrammes.length && <div className="col-span-full"><EmptyState icon={<SearchX aria-hidden="true" size={24} />} title="No classes match" body="Try another name, subject, or status filter." action={<Button variant="quiet" onClick={() => updateFilters('', 'all')}>Clear filters</Button>} /></div>}
-        </div>
+        </ul>
+      ) : (
+        <EmptyState icon={<SearchX aria-hidden="true" size={24} />} title="No classes match" body="Try another name, subject, or status filter." action={<Button variant="quiet" onClick={() => updateFilters('', 'all')}>Clear filters</Button>} />
       )}
     </div>
   )
