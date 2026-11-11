@@ -43,6 +43,7 @@ import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
 import { WorkspaceHeader } from "@/components/dashboard/page-header";
 import { LinkButton } from "@/components/dashboard/action-controls";
+import { ErrorState, PageLoadingState, RefreshNotice, SectionLoadingState } from "@/components/dashboard/async-states";
 import {
   adaptClassRecord,
   adaptSubjectLink,
@@ -427,21 +428,9 @@ export function ClassWorkspaceClient({
       (learner) => learner.attention === "Needs attention",
     ) || [];
 
-  if (classQuery.isPending) return <WorkspaceLoading />;
+  if (classQuery.isPending) return <PageLoadingState label="Loading class workspace" />;
   if (!data)
-    return (
-      <main className="w-full">
-        <div role="alert" aria-live="assertive" aria-atomic="true" className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-6 text-sm text-[#8d2f22]">
-          <p>This class could not be loaded.</p>
-          <button
-            onClick={() => void classQuery.refetch()}
-            className="mt-3 rounded-lg border border-[#8d2f22] px-3 py-2 text-sm font-semibold"
-          >
-            Try again
-          </button>
-        </div>
-      </main>
-    );
+    return <ErrorState message="This class could not be loaded." onRetry={() => void classQuery.refetch()} />;
 
   return (
     <>
@@ -499,7 +488,7 @@ export function ClassWorkspaceClient({
               mocksQuery.isPending ||
               assignmentsQuery.isPending ||
               insightsQuery.isPending ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
               ) : (
                 <>
                   {scheduleQuery.isError && <WorkspaceQueryNotice label="Schedule" cached={Boolean(scheduleQuery.data)} onRetry={() => void scheduleQuery.refetch()} />}
@@ -536,7 +525,7 @@ export function ClassWorkspaceClient({
                   />
                 </section>
               ) : scheduleQuery.isPending ? (
-                <WorkspaceSectionLoading cards={2} />
+                <SectionLoadingState label="Loading class information" cards={2} />
               ) : scheduleQuery.isError && !scheduleQuery.data ? (
                 <WorkspaceQueryNotice label="Schedule" onRetry={() => void scheduleQuery.refetch()} />
               ) : (
@@ -630,7 +619,7 @@ export function ClassWorkspaceClient({
                   <AssignmentsClient embedded />
                 </section>
               ) : mocksQuery.isPending || assignmentsQuery.isPending ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
               ) : (mocksQuery.isError && !mocksQuery.data) || (assignmentsQuery.isError && !assignmentsQuery.data) ? (
                 <><WorkspaceQueryNotice label={mocksQuery.isError ? "Quiz" : "Assignment"} onRetry={() => void (mocksQuery.isError ? mocksQuery.refetch() : assignmentsQuery.refetch())} /></>
               ) : (
@@ -666,7 +655,7 @@ export function ClassWorkspaceClient({
             {activeTab === "materials" &&
               (materialsQuery.isPending &&
               visibleMaterialSubjectIds.length > 0 ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
               ) : materialsQuery.isError && !materialsQuery.data ? (
                 <WorkspaceQueryNotice label="Materials" onRetry={() => void materialsQuery.refetch()} />
               ) : (
@@ -693,7 +682,7 @@ export function ClassWorkspaceClient({
               ))}
             {activeTab === "learners" &&
               (insightsQuery.isPending ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
               ) : insightsQuery.isError && !insightsQuery.data ? (
                 <WorkspaceQueryNotice label="Learners" onRetry={() => void insightsQuery.refetch()} />
               ) : (
@@ -728,7 +717,7 @@ export function ClassWorkspaceClient({
             ) : null}
             {activeTab === "performance" &&
               (insightsQuery.isPending ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
               ) : insightsQuery.isError && !insightsQuery.data ? (
                 <WorkspaceQueryNotice label="Performance" onRetry={() => void insightsQuery.refetch()} />
               ) : (
@@ -865,7 +854,7 @@ function ClassTutorsPanel({
       <div><h2 className="text-lg font-bold text-[#27242d]">Class tutors</h2><p className="mt-1 text-sm text-dashboard-muted">Assign members of your teaching team to the subjects they teach.</p></div>
       <Link href={`/dashboard/tutors?class=${classId}`} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#312783] px-4 text-sm font-bold text-[#312783]">Invite tutor</Link>
     </div>
-    {loading ? <WorkspaceSectionLoading cards={2} /> : subjects.map(subject => <article key={subject.id} className="rounded-2xl border border-dashboard-outline bg-white p-5 shadow-dashboard-card">
+    {loading ? <SectionLoadingState label="Loading class information" cards={2} /> : subjects.map(subject => <article key={subject.id} className="rounded-2xl border border-dashboard-outline bg-white p-5 shadow-dashboard-card">
       <h3 className="font-bold text-[#27242d]">{subject.name}</h3>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {tutors.map(tutor => {
@@ -962,7 +951,7 @@ function LearnerDetailSheet({
         </div>
         <div className="p-5 sm:p-7">
           {loading ? (
-            <WorkspaceSectionLoading cards={3} />
+            <SectionLoadingState label="Loading class information" cards={3} />
           ) : error ? (
             <div className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-5 text-sm text-[#8d2f22]">
               <p>{error}</p>
@@ -1186,7 +1175,7 @@ function ClassPerformance({
       </section>
     );
   if (insights.learners.length === 1) {
-    if (learnerDetailLoading) return <div className="mt-6"><WorkspaceSectionLoading cards={3} /></div>;
+    if (learnerDetailLoading) return <div className="mt-6"><SectionLoadingState label="Loading class information" cards={3} /></div>;
     if (learnerDetailError) return <section className="mt-6 rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-6 text-sm text-[#8d2f22]"><p>{learnerDetailError}</p><button type="button" onClick={onRetryLearnerDetail} className="mt-3 rounded-lg border border-[#8d2f22] px-3 py-2 font-semibold">Try again</button></section>;
     const learner = learnerDetail || insights.learners[0];
     return (
@@ -1935,45 +1924,7 @@ function formatStatus(status: string) {
     : "Assessment";
 }
 function WorkspaceQueryNotice({ label, cached = false, onRetry }: { label: string; cached?: boolean; onRetry: () => void }) {
-  return <div role={cached ? 'status' : 'alert'} aria-live={cached ? 'polite' : 'assertive'} aria-atomic="true" className={`mb-4 rounded-xl border px-4 py-3 text-sm ${cached ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-[#f0c7c1] bg-[#fff8f7] text-[#8d2f22]'}`}>
-    <span>{cached ? `${label} could not refresh. Showing the last saved data.` : `${label} could not be loaded.`}</span>
-    <button type="button" onClick={onRetry} className="ml-2 font-semibold underline">Try again</button>
-  </div>
-}
-
-function WorkspaceLoading() {
-  return (
-    <main className="w-full animate-pulse">
-      <div className="h-4 w-24 rounded bg-[#e9e6e5]" />
-      <section className="mt-5 rounded-2xl border border-dashboard-outline bg-white p-6">
-        <div className="h-3 w-14 rounded bg-[#e9e6e5]" />
-        <div className="mt-3 h-9 w-64 max-w-full rounded bg-[#e9e6e5]" />
-        <div className="mt-8 h-11 w-full rounded bg-[#f1eeee]" />
-      </section>
-      <section className="mt-6 grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
-        <div className="h-60 rounded-2xl border border-dashboard-outline bg-white" />
-        <div className="h-60 rounded-2xl border border-dashboard-outline bg-white" />
-      </section>
-    </main>
-  );
-}
-function WorkspaceSectionLoading({ cards }: { cards: number }) {
-  return (
-    <section
-      className="mt-6 animate-pulse rounded-2xl border border-dashboard-outline bg-white shadow-dashboard-card"
-      aria-busy="true"
-      aria-label="Loading class information"
-    >
-      <div className="border-b border-dashboard-outline px-5 py-5 sm:px-6">
-        <div className="h-3 w-24 rounded bg-[#e9e6e5]" />
-        <div className="mt-3 h-6 w-48 max-w-full rounded bg-[#e9e6e5]" />
-        <div className="mt-3 h-4 w-80 max-w-full rounded bg-[#f1eeee]" />
-      </div>
-      <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
-        {Array.from({ length: cards }, (_, index) => (
-          <div key={index} className="h-28 rounded-xl bg-[#f7f5f4]" />
-        ))}
-      </div>
-    </section>
-  );
+  return cached
+    ? <RefreshNotice message={`${label} could not refresh. Showing the last saved data.`} onRetry={onRetry} />
+    : <ErrorState size="compact" message={`${label} could not be loaded.`} onRetry={onRetry} />;
 }

@@ -10,8 +10,9 @@ import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
 import { loadProgrammeDraft } from '@/lib/programme-draft'
 import { PageHeader } from '@/components/dashboard/page-header'
-import { LinkButton } from '@/components/dashboard/action-controls'
-import { Plus } from 'lucide-react'
+import { Button, LinkButton } from '@/components/dashboard/action-controls'
+import { EmptyState, ErrorState, PageLoadingState, RefreshNotice } from '@/components/dashboard/async-states'
+import { Plus, School, SearchX } from 'lucide-react'
 import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
@@ -174,16 +175,12 @@ export function ProgrammesClient() {
         </div>
       )}
 
-      {loadError && (
-        <div role="alert" aria-live="assertive" aria-atomic="true" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError} <button onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
-      )}
-
       {refreshError && (
-        <div role="status" aria-live="polite" aria-atomic="true" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Class refresh failed; showing your last saved classes. <button type="button" onClick={() => void programmesQuery.refetch()} className="ml-2 font-semibold underline">Try again</button></div>
+        <RefreshNotice message="Class refresh failed; showing your last saved classes." onRetry={() => void programmesQuery.refetch()} />
       )}
 
       {schoolContextError && !loadError && (
-        <div role="status" aria-live="polite" aria-atomic="true" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p>Class links are temporarily unavailable because centre details could not be loaded.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-2 font-semibold underline">Try again</button></div>
+        <RefreshNotice message="Class links are temporarily unavailable because centre details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
       )}
 
       {programmesQuery.isSuccess && programmes.length > 0 && <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-3 shadow-dashboard-card sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
@@ -192,16 +189,16 @@ export function ProgrammesClient() {
       </section>}
 
       {programmesQuery.isLoading ? (
-        <div className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-12 text-center text-sm text-dashboard-muted">Loading classes…</div>
+        <PageLoadingState label="Loading classes" />
       ) : programmesQuery.isError && !programmesQuery.data ? (
-        <div role="alert" aria-live="assertive" aria-atomic="true" className="rounded-dashboard-panel border border-red-200 bg-red-50 px-6 py-16 text-center text-sm text-red-800"><p>We could not load your classes.</p><button type="button" onClick={() => void programmesQuery.refetch()} className="mt-4 font-semibold underline">Try again</button></div>
+        <ErrorState message="We could not load your classes." onRetry={() => void programmesQuery.refetch()} />
       ) : programmesQuery.isSuccess && programmes.length === 0 ? (
-        <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-16 text-center">
-          <span className="material-symbols-outlined text-5xl text-[#2e2877]">school</span>
-          <h2 className="mt-3 text-xl font-bold text-[#1b1c1c]">Create your first class</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-[#474551]">Add the subjects, learners and sessions you will teach together.</p>
-          {canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile className="mt-5">Create class</LinkButton> : <p className="mt-5 text-sm text-[#474551]">Your centre admin creates classes and assigns you the subjects you teach.</p>}
-        </div>
+        <EmptyState
+          icon={<School aria-hidden="true" size={24} />}
+          title="Create your first class"
+          body="Add the subjects, learners and sessions you will teach together."
+          action={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>Create class</LinkButton> : <p className="text-sm text-dashboard-muted">Your centre admin creates classes and assigns you the subjects you teach.</p>}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {visibleProgrammes.map(programme => (
@@ -232,7 +229,7 @@ export function ProgrammesClient() {
               </div>
             </article>
           ))}
-          {!visibleProgrammes.length && <div className="col-span-full rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-14 text-center"><span className="material-symbols-outlined text-4xl text-[#8a838d]">search_off</span><h2 className="mt-3 text-lg font-bold text-[#27242d]">No classes match</h2><p className="mt-1 text-sm text-dashboard-muted">Try another name, subject, or status filter.</p><button type="button" onClick={() => updateFilters('', 'all')} className="mt-4 text-sm font-semibold text-[#2e2877] hover:underline">Clear filters</button></div>}
+          {!visibleProgrammes.length && <div className="col-span-full"><EmptyState icon={<SearchX aria-hidden="true" size={24} />} title="No classes match" body="Try another name, subject, or status filter." action={<Button variant="quiet" onClick={() => updateFilters('', 'all')}>Clear filters</Button>} /></div>}
         </div>
       )}
     </div>

@@ -44,6 +44,23 @@ describe('Class vertical recovery states', () => {
     expect(screen.queryByText('Create your first class')).toBeNull()
   })
 
+  it('keeps the initial loading state separate from the successful empty state', async () => {
+    const resolvers: Array<(value: Response) => void> = []
+    vi.stubGlobal('fetch', vi.fn((input: string) => new Promise<Response>((resolve) => {
+      resolvers.push((value) => resolve(value))
+      void input
+    })))
+
+    withQuery(<ProgrammesClient />)
+    expect(await screen.findByRole('status', { name: 'Loading classes' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('Create your first class')).toBeNull()
+
+    resolvers[0](response({ data: [] }))
+    resolvers[1](response({ data: { id: 'school-1', slug: 'school' } }))
+    resolvers[2](response({ user: { id: 'user-1', role: 'admin' } }))
+    expect(await screen.findByRole('heading', { name: 'Create your first class' })).toBeInTheDocument()
+  })
+
   it('uses the canonical primary action control for creating a Class', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: string) => {
       if (input.endsWith('/classes')) return response({ data: [] })
