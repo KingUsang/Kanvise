@@ -151,4 +151,18 @@ describe('TutorsClient independent panel recovery', () => {
     expect(screen.getByText('Ada Tutor')).toBeInTheDocument()
     expect(screen.queryByText('Grace Tutor')).not.toBeInTheDocument()
   })
+
+  it('keeps assigned-Tutor removal controls at the canonical target size', async () => {
+    authenticatedApiFetch.mockImplementation((input: string) => {
+      if (input.includes('/courses/assignment-overview')) return Promise.resolve(new Response(JSON.stringify({ data: [{ id: 'course-1', name: 'Mathematics', is_published: true, tutors: [{ id: 'tutor-1', first_name: 'Ada', last_name: 'Tutor', email: 'ada@example.test', role: 'tutor' }] }] }), { status: 200 }))
+      if (input.includes('/users?roles=admin,tutor')) return Promise.resolve(new Response(JSON.stringify({ data: [{ id: 'tutor-1', first_name: 'Ada', last_name: 'Tutor', email: 'ada@example.test', role: 'tutor' }] }), { status: 200 }))
+      if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    renderTutors()
+
+    const removeButton = await screen.findByRole('button', { name: 'Remove Ada from Mathematics' })
+    expect(removeButton).toHaveClass('h-11', 'min-h-11', 'w-11', 'focus-visible:outline-2')
+  })
 })

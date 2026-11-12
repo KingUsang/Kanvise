@@ -145,7 +145,6 @@ function AssignmentRow({
                   label={`Remove ${person.first_name} from ${course.name}`}
                   disabled={isUpdating}
                   onClick={() => onUpdate(person, true)}
-                  className="h-9 min-h-9 w-9"
                 >
                   <X aria-hidden="true" size={15} />
                 </IconButton>
