@@ -48,11 +48,11 @@ describe('scheduled notification jobs', () => {
     expect(mark).toHaveBeenCalledTimes(1)
   })
 
-  it('uses the documented 10–15 minute class window and retries partial failures', async () => {
+  it('uses a bounded upcoming window and retries partial failures', async () => {
     const mark = vi.fn(async () => {})
     const deps = dependencies({
       async findDueLiveClasses(start, end) {
-        expect(start.toISOString()).toBe('2026-07-20T12:10:00.000Z')
+        expect(start.toISOString()).toBe('2026-07-20T12:00:00.000Z')
         expect(end.toISOString()).toBe('2026-07-20T12:15:00.000Z')
         return [{ id: 'class-1', schoolId: 'school-1', courseId: 'course-1', title: 'Class', courseName: 'Physics', startsAt: end.toISOString() }]
       },
@@ -62,6 +62,25 @@ describe('scheduled notification jobs', () => {
     const result = await runLiveClassReminderJob(now, deps)
     expect(result.failures).toBe(1)
     expect(mark).not.toHaveBeenCalled()
+  })
+
+  it('catches an upcoming class after a delayed scheduler run and marks it after delivery', async () => {
+    const mark = vi.fn(async () => {})
+    const deps = dependencies({
+      async findDueLiveClasses(start, end, limit) {
+        expect(start).toEqual(now)
+        expect(end).toEqual(new Date('2026-07-20T12:15:00Z'))
+        expect(limit).toBe(50)
+        return [{ id: 'class-delayed', schoolId: 'school-1', courseId: 'course-1', title: 'Delayed class', courseName: 'Physics', startsAt: '2026-07-20T12:05:00Z' }]
+      },
+      markLiveClassReminderSent: mark,
+    })
+
+    await expect(runLiveClassReminderJob(now, deps)).resolves.toEqual({
+      name: 'live_class_reminder', processed: 1, failures: 0,
+    })
+    expect(deps.notifyClass).toHaveBeenCalledWith(expect.objectContaining({ id: 'class-delayed' }))
+    expect(mark).toHaveBeenCalledWith('class-delayed')
   })
 
   it('keeps published weekly timetables materialized 12 weeks ahead', async () => {
