@@ -45,7 +45,7 @@ describe('TutorsClient independent panel recovery', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
-  it('announces initial Tutor-list failures in both responsive views', async () => {
+  it('announces initial Tutor-list failures in the responsive list', async () => {
     authenticatedApiFetch.mockImplementation((input: string) => {
       if (input.includes('/users/tutors')) return Promise.resolve(new Response(JSON.stringify({ error: 'Tutors unavailable' }), { status: 503 }))
       if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
@@ -54,11 +54,9 @@ describe('TutorsClient independent panel recovery', () => {
 
     renderTutors()
 
-    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
-    for (const alert of screen.getAllByRole('alert')) {
-      expect(alert).toHaveAttribute('aria-live', 'assertive')
-      expect(alert).toHaveTextContent('We could not load the Tutor list. Please try again.')
-    }
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveAttribute('aria-live', 'assertive')
+    expect(alert).toHaveTextContent('We could not load the Tutor list. Please try again.')
   })
 
   it('announces invitation action failures as assertive errors', async () => {
@@ -86,9 +84,10 @@ describe('TutorsClient independent panel recovery', () => {
 
     renderTutors({ tutors: [{ id: 'tutor-1', first_name: 'Ada', last_name: 'Tutor', email: 'ada@example.test', courses: [] }] })
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Tutor list could not refresh. Showing the last saved list.'))
-    expect(screen.getAllByText('Ada Tutor')).toHaveLength(2)
-    expect(screen.getByRole('status').querySelector('button')).toHaveTextContent('Try again')
+    await waitFor(() => expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Tutor list could not refresh. Showing the last saved list.'))).toBe(true))
+    expect(screen.getAllByText('Ada Tutor')).toHaveLength(1)
+    const refreshNotice = screen.getAllByRole('status').find((status) => status.textContent?.includes('Tutor list could not refresh'))
+    expect(refreshNotice?.querySelector('button')).toHaveTextContent('Try again')
   })
 
   it('retains cached invitations and shows a polite refresh notice after a failed refetch', async () => {
@@ -100,7 +99,7 @@ describe('TutorsClient independent panel recovery', () => {
 
     renderTutors({ invites: [{ id: 'invite-1', email: 'pending@example.test', status: 'pending', expires_at: '2026-12-01T00:00:00.000Z', created_at: '2026-11-01T00:00:00.000Z' }] })
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Invitations could not refresh. Showing the last saved list.'))
+    await waitFor(() => expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Invitations could not refresh. Showing the last saved list.'))).toBe(true))
     expect(screen.getByText('pending@example.test')).toBeInTheDocument()
     expect(screen.queryByText('No outstanding invitations.')).not.toBeInTheDocument()
   })
@@ -119,8 +118,37 @@ describe('TutorsClient independent panel recovery', () => {
       assignments: [{ id: 'course-1', name: 'Mathematics', is_published: true, tutors: [] }],
     })
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Subject assignments could not refresh. Showing the last saved assignments.'))
+    await waitFor(() => expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Subject assignments could not refresh. Showing the last saved assignments.'))).toBe(true))
     expect(screen.getByText('Mathematics')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Tutor choices could not refresh. Showing the last saved people list.')
+    expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Tutor choices could not refresh. Showing the last saved people list.'))).toBe(true)
+  })
+
+  it('uses the canonical Tutor toolbar for search, filters, counts and invitation focus', async () => {
+    authenticatedApiFetch.mockImplementation((input: string) => {
+      if (input.includes('/users/tutors')) return Promise.resolve(new Response(JSON.stringify({ data: [
+        { id: 'tutor-1', first_name: 'Ada', last_name: 'Tutor', email: 'ada@example.test', courses: [{ id: 'subject-1', name: 'Mathematics' }] },
+        { id: 'tutor-2', first_name: 'Grace', last_name: 'Tutor', email: 'grace@example.test', courses: [] },
+      ] }), { status: 200 }))
+      if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    renderTutors()
+
+    const toolbar = await screen.findByRole('toolbar', { name: 'Tutor collection controls' })
+    await screen.findByText('Ada Tutor')
+    expect(screen.getByRole('searchbox', { name: 'Search Tutors' })).toHaveClass('min-h-11')
+    expect(screen.getByRole('button', { name: 'Invite Tutor' })).toHaveClass('min-h-11')
+    expect(toolbar).toHaveTextContent('2 Tutors')
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Tutors' }), { target: { value: 'Ada' } })
+    expect(screen.getByText('Ada Tutor')).toBeInTheDocument()
+    expect(screen.queryByText('Grace Tutor')).not.toBeInTheDocument()
+    expect(toolbar).toHaveTextContent('1 of 2 Tutors')
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Tutors' }), { target: { value: '' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter Tutors' }), { target: { value: 'assigned' } })
+    expect(screen.getByText('Ada Tutor')).toBeInTheDocument()
+    expect(screen.queryByText('Grace Tutor')).not.toBeInTheDocument()
   })
 })

@@ -93,6 +93,7 @@ export function ClassStudentInviteDialog({
     <Dialog
       open={open}
       onClose={onClose}
+      eyebrow="Class students"
       title="Add student"
       description="They will receive an email to set up their account."
       busy={sending}

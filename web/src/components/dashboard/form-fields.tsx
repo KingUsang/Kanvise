@@ -26,7 +26,7 @@ export function Field({
       </label>
       {hint ? <p id={`${id}-hint`} className="mt-1 text-xs text-dashboard-muted">{hint}</p> : null}
       {children}
-      {error ? <p id={`${id}-error`} role="alert" className="mt-1 text-sm text-dashboard-danger">{error}</p> : null}
+      {error ? <p id={`${id}-error`} role="alert" aria-live="assertive" className="mt-1 text-sm text-dashboard-danger">{error}</p> : null}
     </div>
   )
 }

@@ -1,9 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
-import { toast } from 'sonner'
+import { useRef, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { CheckCircle2, Clock3, Copy, Mail, School, Trash2, UserPlus, Users, X } from 'lucide-react'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
+import { Button, IconButton } from '@/components/dashboard/action-controls'
+import { CollectionToolbar, type CollectionFilterOption } from '@/components/dashboard/collection-controls'
+import { Dialog } from '@/components/dashboard/dialog'
+import { EmptyState, ErrorState, PageLoadingState, RefreshNotice, SectionLoadingState } from '@/components/dashboard/async-states'
+import { Field, fieldControlClassName, fieldDescribedBy } from '@/components/dashboard/form-fields'
 import { dashboardQueryKeys } from '@/lib/dashboard-session'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { useActiveAccountId } from '@/lib/account-preference'
@@ -46,14 +52,25 @@ interface CourseAssignmentOverview {
 }
 
 type ApiBody<T = unknown> = { data?: T; user?: { id?: string }; error?: string }
+type TutorFilter = 'all' | 'assigned' | 'unassigned'
+type Confirmation =
+  | { type: 'revoke'; id: string; email: string }
+  | { type: 'remove'; id: string; name: string }
 
-function RefreshNotice({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div role="status" aria-live="polite" className="flex items-center justify-between gap-3 border-b border-dashboard-outline bg-dashboard-surface-subtle px-4 py-3 text-sm text-[#474551]">
-      <p>{message}</p>
-      <button type="button" onClick={onRetry} className="shrink-0 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button>
-    </div>
-  )
+const tutorFilterOptions: readonly CollectionFilterOption<TutorFilter>[] = [
+  { value: 'all', label: 'All Tutors' },
+  { value: 'assigned', label: 'With Subjects' },
+  { value: 'unassigned', label: 'No Subjects' },
+]
+
+function initialsFor(tutor: Tutor) {
+  return `${tutor.first_name[0] || ''}${tutor.last_name[0] || ''}`.toUpperCase()
+}
+
+function formatDate(value: string, includeYear = true) {
+  return new Date(value).toLocaleDateString('en-GB', includeYear
+    ? { day: 'numeric', month: 'short', year: 'numeric' }
+    : { day: 'numeric', month: 'short' })
 }
 
 async function readApiResponse<T = unknown>(url: string, init?: RequestInit) {
@@ -68,20 +85,108 @@ async function readApiData<T>(url: string) {
   return (body.data || []) as T
 }
 
+function TutorCard({ tutor, isRemoving, onRemove }: { tutor: Tutor; isRemoving: boolean; onRemove: () => void }) {
+  return (
+    <article role="listitem" className={`flex items-start gap-3 border-b border-dashboard-outline/50 p-4 last:border-b-0 sm:p-5 ${isRemoving ? 'opacity-40' : ''}`}>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-dashboard-control border border-dashboard-outline bg-dashboard-primary/10 font-bold text-dashboard-primary">
+        {initialsFor(tutor)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate font-bold text-dashboard-foreground">{tutor.first_name} {tutor.last_name}</h2>
+        <p className="truncate text-sm text-dashboard-muted">{tutor.email}</p>
+        <p className="mt-2 text-sm text-dashboard-muted">
+          {tutor.courses.length ? tutor.courses.map((course) => course.name).join(', ') : 'No assigned Subjects'}
+        </p>
+      </div>
+      <IconButton
+        type="button"
+        variant="danger"
+        label={`Remove ${tutor.first_name} ${tutor.last_name}`}
+        onClick={onRemove}
+        disabled={isRemoving}
+      >
+        <Trash2 aria-hidden="true" size={18} />
+      </IconButton>
+    </article>
+  )
+}
+
+function AssignmentRow({
+  course,
+  assignmentPeople,
+  currentProfileId,
+  updatingCourseId,
+  onUpdate,
+}: {
+  course: CourseAssignmentOverview
+  assignmentPeople: AssignmentPerson[]
+  currentProfileId: string | null
+  updatingCourseId: string | null
+  onUpdate: (person: AssignmentPerson, isAssigned: boolean) => void
+}) {
+  const availablePeople = assignmentPeople.filter((person) => !course.tutors.some((tutor) => tutor.id === person.id))
+  const isUpdating = updatingCourseId === course.id
+
+  return (
+    <li className="border-b border-dashboard-outline/50 p-5 last:border-b-0">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-dashboard-foreground">{course.name}</p>
+            {course.tutors.length === 0 ? <span className="rounded-full border border-dashboard-danger/30 bg-dashboard-danger/10 px-2 py-1 text-[10px] font-bold uppercase text-dashboard-danger">No Tutor</span> : null}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {course.tutors.map((person) => (
+              <span key={person.id} className="inline-flex min-h-9 items-center gap-1 rounded-full border border-dashboard-outline bg-dashboard-surface-subtle py-1 pl-3 pr-1 text-xs text-dashboard-muted">
+                {person.first_name} {person.last_name}{person.id === currentProfileId ? ' (you)' : ''}
+                <IconButton
+                  type="button"
+                  variant="quiet"
+                  label={`Remove ${person.first_name} from ${course.name}`}
+                  disabled={isUpdating}
+                  onClick={() => onUpdate(person, true)}
+                  className="h-9 min-h-9 w-9"
+                >
+                  <X aria-hidden="true" size={15} />
+                </IconButton>
+              </span>
+            ))}
+          </div>
+        </div>
+        <label className="flex min-w-48 flex-col gap-1 text-xs font-semibold text-dashboard-muted">
+          <span>Assign a Tutor</span>
+          <select
+            aria-label={`Assign a Tutor to ${course.name}`}
+            value=""
+            disabled={isUpdating || availablePeople.length === 0}
+            onChange={(event) => {
+              const person = assignmentPeople.find((item) => item.id === event.target.value)
+              if (person) onUpdate(person, false)
+            }}
+            className={`${fieldControlClassName} mt-0 bg-dashboard-surface`}
+          >
+            <option value="">{availablePeople.length === 0 ? 'Everyone assigned' : 'Add a Tutor…'}</option>
+            {availablePeople.map((person) => <option key={person.id} value={person.id}>{person.first_name} {person.last_name}{person.id === currentProfileId ? ' (you)' : ''}</option>)}
+          </select>
+        </label>
+      </div>
+    </li>
+  )
+}
+
 export function TutorsClient() {
   const accountId = useActiveAccountId()
   const queryClient = useQueryClient()
+  const inviteInputRef = useRef<HTMLInputElement>(null)
   const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null)
-  const [confirmation, setConfirmation] = useState<null | { type: 'revoke'; id: string; email: string } | { type: 'remove'; id: string; name: string }>(null)
-
-  // Invite state
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  const [tutorSearch, setTutorSearch] = useState('')
+  const [tutorFilter, setTutorFilter] = useState<TutorFilter>('all')
   const [inviteEmail, setInviteEmail] = useState('')
   const [isInviting, setIsInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
   const [generatedLink, setGeneratedLink] = useState('')
   const [copied, setCopied] = useState(false)
-
-  // Action state
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [resendingId, setResendingId] = useState<string | null>(null)
@@ -89,78 +194,58 @@ export function TutorsClient() {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
   const keys = peopleQueryKeys(accountId)
   const enabled = Boolean(accountId)
-  const tutorsQuery = useQuery({
-    queryKey: keys.tutors,
-    queryFn: () => readApiData<Tutor[]>(`${baseUrl}/users/tutors`),
-    enabled,
-    staleTime: 60_000,
-  })
-  const invitesQuery = useQuery({
-    queryKey: keys.invites,
-    queryFn: () => readApiData<Invite[]>(`${baseUrl}/schools/me/invites`),
-    enabled,
-    staleTime: 60_000,
-  })
-  const peopleQuery = useQuery({
-    queryKey: keys.people,
-    queryFn: () => readApiData<AssignmentPerson[]>(`${baseUrl}/users?roles=admin,tutor`),
-    enabled,
-    staleTime: 60_000,
-  })
-  const assignmentsQuery = useQuery({
-    queryKey: keys.assignments,
-    queryFn: () => readApiData<CourseAssignmentOverview[]>(`${baseUrl}/courses/assignment-overview`),
-    enabled,
-    staleTime: 60_000,
-  })
-  const profileQuery = useQuery({
-    queryKey: keys.profile,
-    queryFn: async () => (await readApiResponse(`${baseUrl}/auth/me`)).user?.id || null,
-    enabled,
-    staleTime: 60_000,
-  })
+  const tutorsQuery = useQuery({ queryKey: keys.tutors, queryFn: () => readApiData<Tutor[]>(`${baseUrl}/users/tutors`), enabled, staleTime: 60_000 })
+  const invitesQuery = useQuery({ queryKey: keys.invites, queryFn: () => readApiData<Invite[]>(`${baseUrl}/schools/me/invites`), enabled, staleTime: 60_000 })
+  const peopleQuery = useQuery({ queryKey: keys.people, queryFn: () => readApiData<AssignmentPerson[]>(`${baseUrl}/users?roles=admin,tutor`), enabled, staleTime: 60_000 })
+  const assignmentsQuery = useQuery({ queryKey: keys.assignments, queryFn: () => readApiData<CourseAssignmentOverview[]>(`${baseUrl}/courses/assignment-overview`), enabled, staleTime: 60_000 })
+  const profileQuery = useQuery({ queryKey: keys.profile, queryFn: async () => (await readApiResponse(`${baseUrl}/auth/me`)).user?.id || null, enabled, staleTime: 60_000 })
+
   const tutors = tutorsQuery.data || []
   const invites = invitesQuery.data || []
   const assignmentPeople = peopleQuery.data || []
   const courseAssignments = assignmentsQuery.data || []
   const currentProfileId = profileQuery.data || null
+  const tutorSearchValue = tutorSearch.trim().toLowerCase()
+  const filteredTutors = tutors.filter((tutor) => {
+    const matchesSearch = !tutorSearchValue || `${tutor.first_name} ${tutor.last_name} ${tutor.email}`.toLowerCase().includes(tutorSearchValue)
+    const matchesFilter = tutorFilter === 'all' || (tutorFilter === 'assigned' ? tutor.courses.length > 0 : tutor.courses.length === 0)
+    return matchesSearch && matchesFilter
+  })
   const isLoading = enabled && tutorsQuery.isPending
-  const loadError = !accountId
-    ? 'Select a tutoring account to view its people.'
-    : tutorsQuery.isError && !tutorsQuery.data
-      ? 'We could not load the Tutor list. Please try again.'
-      : ''
-  const tutorsRefreshError = accountId && tutorsQuery.isError && tutorsQuery.data
-    ? 'The Tutor list could not refresh. Showing the last saved list.'
-    : ''
+  const loadError = !accountId ? 'Select a tutoring account to view its people.' : tutorsQuery.isError && !tutorsQuery.data ? 'We could not load the Tutor list. Please try again.' : ''
+  const tutorsRefreshError = accountId && tutorsQuery.isError && tutorsQuery.data ? 'The Tutor list could not refresh. Showing the last saved list.' : ''
+  const pendingInvites = invites.filter((invite) => invite.status === 'pending')
+  const expiredInvites = invites.filter((invite) => invite.status === 'expired')
+  const activeInvites = [...pendingInvites, ...expiredInvites].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const invitesLoading = enabled && invitesQuery.isPending
+  const invitesError = !accountId ? 'Select a tutoring account to view invitations.' : invitesQuery.isError && !invitesQuery.data ? 'We could not load invitations. Please try again.' : ''
+  const invitesRefreshError = accountId && invitesQuery.isError && invitesQuery.data ? 'Invitations could not refresh. Showing the last saved list.' : ''
+  const assignmentsLoading = enabled && (assignmentsQuery.isPending || peopleQuery.isPending)
+  const assignmentsError = !accountId ? 'Select a tutoring account to view Subject assignments.' : (assignmentsQuery.isError && !assignmentsQuery.data) || (peopleQuery.isError && !peopleQuery.data) ? 'We could not load Subject assignments. Please try again.' : ''
+  const assignmentsRefreshMessages = [
+    assignmentsQuery.isError && assignmentsQuery.data ? 'Subject assignments could not refresh. Showing the last saved assignments.' : '',
+    peopleQuery.isError && peopleQuery.data ? 'Tutor choices could not refresh. Showing the last saved people list.' : '',
+  ].filter(Boolean)
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
-
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleInvite = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setIsInviting(true)
     setInviteError('')
     setGeneratedLink('')
     try {
-      const res = await authenticatedApiFetch(`${baseUrl}/schools/me/invite/tutor`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Failed to generate invite link')
+      const response = await authenticatedApiFetch(`${baseUrl}/schools/me/invite/tutor`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: inviteEmail }) })
+      const json = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(json.error || 'Failed to generate invite link')
       setGeneratedLink(json.data.invite_url)
-      setInviteEmail('') // Clear input on success
+      setInviteEmail('')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: keys.root }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.capabilities }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ])
-      toast.success(json.data.email_sent ? 'Invitation emailed to the tutor' : 'Invitation link created', {
-        description: json.data.email_sent ? 'They can use the email to join your centre.' : 'The email could not be sent. Copy and share the link yourself.'
-      })
-    } catch (err: any) {
-      setInviteError(err.message)
+      toast.success(json.data.email_sent ? 'Invitation emailed to the Tutor' : 'Invitation link created', { description: json.data.email_sent ? 'They can use the email to join your tutoring account.' : 'The email could not be sent. Copy and share the link yourself.' })
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Could not send the invitation. Please try again.')
     } finally {
       setIsInviting(false)
     }
@@ -169,19 +254,15 @@ export function TutorsClient() {
   const handleResend = async (email: string, id: string) => {
     setResendingId(id)
     try {
-      const res = await authenticatedApiFetch(`${baseUrl}/schools/me/invite/tutor`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Failed to resend invite link')
+      const response = await authenticatedApiFetch(`${baseUrl}/schools/me/invite/tutor`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+      const json = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(json.error || 'Failed to resend invite link')
       setGeneratedLink(json.data.invite_url)
       setInviteError('')
       await queryClient.invalidateQueries({ queryKey: keys.root })
       toast.success('Invitation resent')
-    } catch (err: any) {
-      toast.error('Could not resend the invitation', { description: err.message })
+    } catch (error) {
+      toast.error('Could not resend the invitation', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
       setResendingId(null)
     }
@@ -190,28 +271,24 @@ export function TutorsClient() {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(generatedLink)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2500)
     } catch {
-      const el = document.createElement('textarea')
-      el.value = generatedLink
-      document.body.appendChild(el)
-      el.select()
+      const element = document.createElement('textarea')
+      element.value = generatedLink
+      document.body.appendChild(element)
+      element.select()
       document.execCommand('copy')
-      document.body.removeChild(el)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2500)
+      document.body.removeChild(element)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
   }
 
   const handleRevoke = async (inviteId: string) => {
     setRevokingId(inviteId)
     try {
-      const res = await authenticatedApiFetch(`${baseUrl}/schools/me/invites/${inviteId}/revoke`, {
-        method: 'POST',
-      })
-      if (!res.ok) {
-        const json = await res.json()
+      const response = await authenticatedApiFetch(`${baseUrl}/schools/me/invites/${inviteId}/revoke`, { method: 'POST' })
+      if (!response.ok) {
+        const json = await response.json().catch(() => ({}))
         toast.error('Could not revoke the invitation', { description: json.error || 'Please try again.' })
       } else {
         await queryClient.invalidateQueries({ queryKey: keys.root })
@@ -225,12 +302,10 @@ export function TutorsClient() {
   const handleRemoveTutor = async (tutorId: string) => {
     setRemovingId(tutorId)
     try {
-      const res = await authenticatedApiFetch(`${baseUrl}/users/${tutorId}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) {
-        const json = await res.json()
-        toast.error('Could not remove the tutor', { description: json.error || 'Please try again.' })
+      const response = await authenticatedApiFetch(`${baseUrl}/users/${tutorId}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const json = await response.json().catch(() => ({}))
+        toast.error('Could not remove the Tutor', { description: json.error || 'Please try again.' })
       } else {
         await queryClient.invalidateQueries({ queryKey: keys.root })
         toast.success('Tutor removed')
@@ -243,16 +318,11 @@ export function TutorsClient() {
   const updateCourseAssignment = async (courseId: string, person: AssignmentPerson, isAssigned: boolean) => {
     setUpdatingCourseId(courseId)
     try {
-      const response = await authenticatedApiFetch(
-        isAssigned ? `${baseUrl}/courses/${courseId}/tutors/${person.id}` : `${baseUrl}/courses/${courseId}/tutors`,
-        {
-          method: isAssigned ? 'DELETE' : 'POST',
-          headers: {
-            ...(isAssigned ? {} : { 'Content-Type': 'application/json' }),
-          },
-          ...(isAssigned ? {} : { body: JSON.stringify({ tutor_id: person.id }) }),
-        }
-      )
+      const response = await authenticatedApiFetch(isAssigned ? `${baseUrl}/courses/${courseId}/tutors/${person.id}` : `${baseUrl}/courses/${courseId}/tutors`, {
+        method: isAssigned ? 'DELETE' : 'POST',
+        headers: isAssigned ? {} : { 'Content-Type': 'application/json' },
+        ...(isAssigned ? {} : { body: JSON.stringify({ tutor_id: person.id }) }),
+      })
       const body = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(body.error || 'Could not update the Subject assignment')
       await Promise.all([
@@ -268,392 +338,121 @@ export function TutorsClient() {
     }
   }
 
-  // ── Derived state ──────────────────────────────────────────────────────────
-
-  const pendingInvites = invites.filter((i) => i.status === 'pending')
-  const expiredInvites = invites.filter((i) => i.status === 'expired')
-  const activeInvites = [...pendingInvites, ...expiredInvites].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )
-  const invitesLoading = enabled && invitesQuery.isPending
-  const invitesError = !accountId
-    ? 'Select a tutoring account to view invitations.'
-    : invitesQuery.isError && !invitesQuery.data
-      ? 'We could not load invitations. Please try again.'
-      : ''
-  const invitesRefreshError = accountId && invitesQuery.isError && invitesQuery.data
-    ? 'Invitations could not refresh. Showing the last saved list.'
-    : ''
-  const assignmentsLoading = enabled && (assignmentsQuery.isPending || peopleQuery.isPending)
-  const assignmentsError = !accountId
-    ? 'Select a tutoring account to view Subject assignments.'
-    : (assignmentsQuery.isError && !assignmentsQuery.data) || (peopleQuery.isError && !peopleQuery.data)
-      ? 'We could not load Subject assignments. Please try again.'
-      : ''
-  const assignmentsRefreshMessages = [
-    assignmentsQuery.isError && assignmentsQuery.data ? 'Subject assignments could not refresh. Showing the last saved assignments.' : '',
-    peopleQuery.isError && peopleQuery.data ? 'Tutor choices could not refresh. Showing the last saved people list.' : '',
-  ].filter(Boolean)
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const confirmationBusy = confirmation?.type === 'remove' ? removingId === confirmation.id : confirmation?.type === 'revoke' ? revokingId === confirmation.id : false
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8">
+      <DashboardPageHeader title="Tutors" description="Invite Tutors to your tutoring account and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself." />
 
-      {/* ── Page Header ── */}
-      <DashboardPageHeader
-        title="Tutors"
-        description="Invite tutors to your centre and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself."
+      <CollectionToolbar
+        ariaLabel="Tutor collection controls"
+        searchLabel="Search Tutors"
+        searchPlaceholder="Search by name or email"
+        searchValue={tutorSearch}
+        onSearchChange={setTutorSearch}
+        filterLabel="Filter Tutors"
+        filterValue={tutorFilter}
+        filterOptions={tutorFilterOptions}
+        onFilterChange={setTutorFilter}
+        resultCount={filteredTutors.length}
+        totalCount={tutors.length}
+        itemLabel="Tutor"
+        itemPluralLabel="Tutors"
+        action={<Button type="button" variant="primary" fullWidthMobile onClick={() => inviteInputRef.current?.focus()}><UserPlus aria-hidden="true" size={17} /> Invite Tutor</Button>}
       />
 
-      {/* ── Bento Grid Layout ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Main Tutors List (Spans 8 cols) */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="flex flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
-            <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-[#2e2877]/10 flex items-center justify-center text-[#2e2877]">
-                  <span className="material-symbols-outlined icon-fill">school</span>
-                </div>
-                <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Tutors in your centre</h3>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <main className="flex min-w-0 flex-col gap-6 xl:col-span-8">
+          <section className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card" aria-labelledby="tutor-list-heading">
+            <header className="flex items-center gap-3 border-b border-dashboard-outline bg-dashboard-surface-subtle px-5 py-5 sm:px-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-dashboard-control bg-dashboard-primary/10 text-dashboard-primary"><Users aria-hidden="true" size={20} /></div>
+              <div>
+                <h2 id="tutor-list-heading" className="text-lg font-bold text-dashboard-foreground">Tutors in your tutoring account</h2>
+                <p className="mt-1 text-sm text-dashboard-muted">Manage access and see assigned Subjects.</p>
               </div>
-            </div>
-
-            {tutorsRefreshError && <RefreshNotice message={tutorsRefreshError} onRetry={() => void tutorsQuery.refetch()} />}
-
-            <div className="divide-y divide-dashboard-outline/50 sm:hidden">
-              {isLoading ? <p className="p-6 text-center text-sm text-[#474551]">Loading tutors…</p>
-                : loadError ? <div role="alert" aria-live="assertive" className="p-6 text-center text-sm text-[#474551]"><p>{loadError}</p><button type="button" onClick={() => void tutorsQuery.refetch()} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button></div>
-                : tutors.length === 0 ? <div className="p-8 text-center text-[#474551]"><span className="material-symbols-outlined mb-2 text-[44px] text-[#c8c5d2]">group_off</span><p className="font-medium">No tutors yet</p><p className="mx-auto mt-1 max-w-sm text-sm">You are currently teaching on your own. Invite someone only when another tutor needs access to teach subjects in your centre.</p></div>
-                : tutors.map((tutor) => { const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase(); const isRemoving = removingId === tutor.id; return <article key={tutor.id} className={`p-4 ${isRemoving ? 'opacity-40' : ''}`}><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#e4e2e1] font-bold text-[#474551]">{initials}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-[#1b1c1c]">{tutor.first_name} {tutor.last_name}</h2><p className="truncate text-xs text-[#474551]">{tutor.email}</p><p className="mt-2 text-xs text-[#474551]">{tutor.courses.length ? tutor.courses.map(course => course.name).join(', ') : 'No assigned subjects'}</p></div><button onClick={() => setConfirmation({ type: 'remove', id: tutor.id, name: `${tutor.first_name} ${tutor.last_name}` })} disabled={isRemoving} className="shrink-0 rounded p-2 text-[#ba1a1a] disabled:opacity-30" aria-label={`Remove ${tutor.first_name} ${tutor.last_name}`}><span className="material-symbols-outlined">person_remove</span></button></div></article> })}
-            </div>
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full text-left border-collapse min-w-[600px]">
-                <thead>
-                  <tr className="border-b border-dashboard-outline bg-dashboard-surface-subtle text-dashboard-muted">
-                    <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Tutor</th>
-                    <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider">Assigned Subjects</th>
-                    <th className="py-3 px-6 text-[12px] font-semibold uppercase tracking-wider text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[14px] text-[#1b1c1c]">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={3} className="py-8 text-center text-[#474551]">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2e2877]" />
-                          Loading tutors...
-                        </div>
-                      </td>
-                    </tr>
-                  ) : loadError ? (
-                    <tr><td colSpan={3} role="alert" aria-live="assertive" className="px-6 py-12 text-center"><p className="text-sm text-[#474551]">{loadError}</p><button type="button" onClick={() => void tutorsQuery.refetch()} className="mt-4 rounded bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Try again</button></td></tr>
-                  ) : tutors.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="py-12 text-center text-[#474551]">
-                        <span className="material-symbols-outlined text-[48px] text-[#c8c5d2] mb-2">group_off</span>
-                        <p className="font-medium">No tutors yet</p>
-                        <p className="text-sm mt-1 max-w-sm mx-auto">You are currently teaching on your own. Invite someone only when another tutor needs access to teach Subjects in your centre.</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    tutors.map((tutor) => {
-                      const initials = `${tutor.first_name[0]}${tutor.last_name[0]}`.toUpperCase()
-                      const isRemoving = removingId === tutor.id
-                      return (
-                        <tr key={tutor.id} className={`group border-b border-dashboard-outline/50 transition-colors hover:bg-dashboard-primary/5 ${isRemoving ? 'opacity-40' : ''}`}>
-                          <td className="py-4 px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded bg-[#e4e2e1] border border-[#c8c5d2] flex items-center justify-center text-[#474551] font-bold flex-shrink-0">
-                                {initials}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-bold text-[#1b1c1c] truncate">
-                                    {tutor.first_name} {tutor.last_name}
-                                  </p>
-                                </div>
-                                <p className="text-xs text-[#474551] truncate">{tutor.email}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-4 px-6">
-                            <p className="font-medium">{tutor.courses.length} Assigned</p>
-                            {tutor.courses.length > 0 ? (
-                              <p className="text-xs text-[#474551] truncate w-48" title={tutor.courses.map(c => c.name).join(', ')}>
-                                {tutor.courses.map(c => c.name).join(', ')}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-[#c8c5d2] italic">No active subjects</p>
-                            )}
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            <button
-                              onClick={() => setConfirmation({ type: 'remove', id: tutor.id, name: `${tutor.first_name} ${tutor.last_name}` })}
-                              disabled={isRemoving}
-                              title="Remove tutor"
-                              className="text-[#2e2877] hover:text-[#ba1a1a] transition-colors p-2 rounded hover:bg-[#eae8e7] disabled:opacity-30 inline-flex items-center justify-center"
-                            >
-                              <span className="material-symbols-outlined">person_remove</span>
-                            </button>
-                          </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {!isLoading && tutors.length > 0 && (
-              <div className="p-4 border-t border-[#c2b59b] bg-[#fbf9f8] flex justify-between items-center text-[14px]">
-                <span className="text-[#474551]">Total: {tutors.length} tutor{tutors.length !== 1 ? 's' : ''}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="overflow-hidden rounded-lg border border-[#c2b59b] bg-white shadow-[0_4px_20px_rgba(61,61,61,0.08)]">
-            <div className="border-b border-[#c2b59b] bg-[#fbf9f8] p-6">
-              <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Teaching assignments</h3>
-              <p className="mt-1 text-sm text-[#474551]">Choose who teaches each Subject. A published Subject must always have at least one tutor.</p>
-            </div>
-            {assignmentsRefreshMessages.length > 0 && (
-              <RefreshNotice message={assignmentsRefreshMessages.join(' ')} onRetry={() => { void assignmentsQuery.refetch(); void peopleQuery.refetch() }} />
-            )}
-            {assignmentsLoading ? (
-              <div className="p-8 text-center text-sm text-[#474551]">Loading Subject assignments…</div>
-            ) : assignmentsError ? (
-              <div className="p-8 text-center text-sm text-[#474551]">
-                <p role="alert">{assignmentsError}</p>
-                <button type="button" onClick={() => { void assignmentsQuery.refetch(); void peopleQuery.refetch() }} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button>
-              </div>
-            ) : courseAssignments.length === 0 ? (
-              <div className="p-8 text-center text-sm text-[#474551]">Create a Subject before assigning tutors.</div>
+            </header>
+            {tutorsRefreshError ? <RefreshNotice message={tutorsRefreshError} onRetry={() => void tutorsQuery.refetch()} /> : null}
+            {isLoading ? <PageLoadingState label="Loading Tutors" /> : loadError ? <ErrorState message={loadError} onRetry={() => void tutorsQuery.refetch()} /> : tutors.length === 0 ? (
+              <EmptyState icon={<Users aria-hidden="true" size={22} />} title="No Tutors yet" body="You are currently teaching on your own. Invite someone when another Tutor needs access to teach Subjects in your tutoring account." />
+            ) : filteredTutors.length === 0 ? (
+              <EmptyState icon={<Users aria-hidden="true" size={22} />} title="No Tutors match" body="Try a different search or clear the filter to see every Tutor." action={<Button type="button" variant="quiet" onClick={() => { setTutorSearch(''); setTutorFilter('all') }}>Clear filters</Button>} />
             ) : (
-              <div className="divide-y divide-[#e4e2e1]">
-                {courseAssignments.map((course) => {
-                  const availablePeople = assignmentPeople.filter((person) => !course.tutors.some((tutor) => tutor.id === person.id))
-                  return (
-                    <div key={course.id} className="p-5">
-                      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-[#1b1c1c]">{course.name}</p>
-                            {course.tutors.length === 0 && <span className="rounded bg-[#ffdad6] px-2 py-0.5 text-[10px] font-bold uppercase text-[#ba1a1a]">No tutor</span>}
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {course.tutors.map((person) => (
-                              <span key={person.id} className="inline-flex items-center gap-1 rounded-full border border-[#c8c5d2] bg-[#f5f3f2] py-1 pl-3 pr-1 text-xs text-[#474551]">
-                                {person.first_name} {person.last_name}{person.id === currentProfileId ? ' (you)' : ''}
-                                <button type="button" disabled={updatingCourseId === course.id} onClick={() => void updateCourseAssignment(course.id, person, true)} className="rounded-full p-1 hover:bg-[#ffdad6] hover:text-[#ba1a1a]" aria-label={`Remove ${person.first_name} from ${course.name}`}>
-                                  <span className="material-symbols-outlined text-[15px]">close</span>
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <select
-                          aria-label={`Assign a tutor to ${course.name}`}
-                          value=""
-                          disabled={updatingCourseId === course.id || availablePeople.length === 0}
-                          onChange={(event) => { const person = assignmentPeople.find((item) => item.id === event.target.value); if (person) void updateCourseAssignment(course.id, person, false) }}
-                          className="min-w-48 rounded border border-[#c8c5d2] bg-white px-3 py-2 text-sm text-[#474551] outline-none focus:border-[#2e2877] disabled:bg-[#f0eded]"
-                        >
-                          <option value="">{availablePeople.length === 0 ? 'Everyone assigned' : 'Add a tutor…'}</option>
-                          {availablePeople.map((person) => <option key={person.id} value={person.id}>{person.first_name} {person.last_name}{person.id === currentProfileId ? ' (you)' : ''}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  )
-                })}
+              <div role="list" aria-label="Tutors" className="divide-y divide-dashboard-outline/50">
+                {filteredTutors.map((tutor) => <TutorCard key={tutor.id} tutor={tutor} isRemoving={removingId === tutor.id} onRemove={() => setConfirmation({ type: 'remove', id: tutor.id, name: `${tutor.first_name} ${tutor.last_name}` })} />)}
               </div>
             )}
-          </div>
-        </div>
+          </section>
 
-        {/* Right Sidebar Area (Spans 4 cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          
-          {/* Invite Action Card */}
-          <div className="bg-[#2e2877] text-white rounded-lg shadow-[0_12px_32px_rgba(46,40,119,0.12)] p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
-              <span className="material-symbols-outlined text-[150px]">hub</span>
-            </div>
-            
-            <h3 className="text-[20px] font-semibold mb-2 relative z-10">Invite a tutor</h3>
-            <p className="text-[14px] text-white/80 mb-6 relative z-10">
-              Enter their email address. We will email them a link to join your centre, and you can also copy the link yourself.
-            </p>
-            
-            <form onSubmit={handleInvite} className="flex flex-col gap-4 relative z-10">
-              <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-semibold text-white/90 uppercase tracking-wider">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="tutor@example.com"
-                  className="bg-white/10 border border-white/30 text-white placeholder:text-white/50 rounded-lg p-3 text-[14px] focus:ring-2 focus:ring-[#994704] focus:border-transparent outline-none transition-all"
-                />
-              </div>
+          <section className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card" aria-labelledby="assignment-heading">
+            <header className="border-b border-dashboard-outline bg-dashboard-surface-subtle px-5 py-5 sm:px-6">
+              <h2 id="assignment-heading" className="text-lg font-bold text-dashboard-foreground">Teaching assignments</h2>
+              <p className="mt-1 text-sm leading-6 text-dashboard-muted">Choose who teaches each Subject. A published Subject must always have at least one Tutor.</p>
+            </header>
+            {assignmentsRefreshMessages.length > 0 ? <RefreshNotice message={assignmentsRefreshMessages.join(' ')} onRetry={() => { void assignmentsQuery.refetch(); void peopleQuery.refetch() }} /> : null}
+            {assignmentsLoading ? <SectionLoadingState label="Loading Subject assignments" cards={2} /> : assignmentsError ? <div className="p-5"><ErrorState message={assignmentsError} onRetry={() => { void assignmentsQuery.refetch(); void peopleQuery.refetch() }} size="compact" /></div> : courseAssignments.length === 0 ? (
+              <EmptyState icon={<School aria-hidden="true" size={22} />} title="No Subjects to assign" body="Create a Subject before assigning Tutors." />
+            ) : (
+              <ul aria-label="Teaching assignments">
+                {courseAssignments.map((course) => <AssignmentRow key={course.id} course={course} assignmentPeople={assignmentPeople} currentProfileId={currentProfileId} updatingCourseId={updatingCourseId} onUpdate={(person, isAssigned) => void updateCourseAssignment(course.id, person, isAssigned)} />)}
+              </ul>
+            )}
+          </section>
+        </main>
 
-              {inviteError && (
-                <div role="alert" aria-live="assertive" className="bg-[#ba1a1a]/20 border border-[#ba1a1a]/50 rounded-lg p-3 text-[12px] text-[#ffdad6] flex items-start gap-2">
-                  <span className="material-symbols-outlined text-[16px]">error</span>
-                  <p>{inviteError}</p>
+        <aside className="flex min-w-0 flex-col gap-6 xl:col-span-4">
+          <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-5 shadow-dashboard-card sm:p-6" aria-labelledby="invite-heading">
+            <header className="mb-5">
+              <p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">People management</p>
+              <h2 id="invite-heading" className="mt-1 text-xl font-bold text-dashboard-foreground">Invite a Tutor</h2>
+              <p className="mt-1 text-sm leading-6 text-dashboard-muted">Enter an email address. We will email a link to join your tutoring account, and you can copy the link yourself.</p>
+            </header>
+            <form onSubmit={(event) => void handleInvite(event)} className="flex flex-col gap-4" noValidate>
+              <Field id="tutor-invite-email" label="Tutor email" required error={inviteError}>
+                <input ref={inviteInputRef} id="tutor-invite-email" type="email" required autoComplete="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="tutor@example.com" disabled={isInviting} aria-invalid={Boolean(inviteError)} aria-describedby={fieldDescribedBy('tutor-invite-email', undefined, inviteError)} className={fieldControlClassName} />
+              </Field>
+              {generatedLink ? (
+                <div role="status" aria-live="polite" className="rounded-dashboard-panel border border-dashboard-success/30 bg-dashboard-success/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-bold text-dashboard-success"><CheckCircle2 aria-hidden="true" size={17} /> Invitation link ready</div>
+                  <label htmlFor="generated-invitation-link" className="mt-3 block text-xs font-semibold text-dashboard-foreground">Invitation link</label>
+                  <div className="mt-2 flex gap-2"><input id="generated-invitation-link" readOnly value={generatedLink} className={`${fieldControlClassName} mt-0 min-w-0 flex-1`} /><Button type="button" variant="secondary" onClick={() => void handleCopy()}><Copy aria-hidden="true" size={16} /> {copied ? 'Copied' : 'Copy'}</Button></div>
                 </div>
-              )}
-
-              {generatedLink && (
-                <div className="bg-[#386a1f]/20 border border-[#386a1f]/50 rounded-lg p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-[#b5f299] text-[12px] font-bold">
-                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                    Invitation link ready
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      readOnly
-                      value={generatedLink}
-                      className="flex-1 bg-black/20 border border-white/20 rounded p-2 text-[11px] text-white/80 font-mono outline-none min-w-0"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      className="bg-white/20 hover:bg-white/30 text-white px-3 rounded text-[12px] font-semibold transition-colors flex items-center justify-center flex-shrink-0"
-                    >
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isInviting || !inviteEmail}
-                className="mt-2 bg-[#994704] hover:bg-[#a65006] text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-60"
-              >
-                {isInviting ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined icon-fill">send</span>
-                    Send invitation
-                  </>
-                )}
-              </button>
+              ) : null}
+              <Button type="submit" variant="primary" pending={isInviting} pendingLabel="Sending invitation…" disabled={!inviteEmail} fullWidthMobile><Mail aria-hidden="true" size={17} /> Send invitation</Button>
             </form>
-          </div>
+          </section>
 
-          {/* Pending Invites List */}
-          <div className="bg-white rounded-lg border border-[#c2b59b] shadow-[0_4px_20px_rgba(61,61,61,0.08)] flex flex-col">
-            <div className="p-4 border-b border-[#c2b59b] bg-[#f5f3f2]">
-              <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#474551] flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">pending_actions</span>
-                Invitations awaiting response
-              </h3>
-            </div>
-            
-            <div className="flex flex-col divide-y divide-[#c2b59b]">
-              {invitesRefreshError && <RefreshNotice message={invitesRefreshError} onRetry={() => void invitesQuery.refetch()} />}
-              {invitesLoading ? (
-                <div className="p-6 text-center text-[#474551] text-[14px]">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2e2877] mx-auto mb-2" />
-                  Loading…
-                </div>
-              ) : invitesError ? (
-                <div className="p-6 text-center text-[#474551] text-[14px]">
-                  <p role="alert">{invitesError}</p>
-                  <button type="button" onClick={() => void invitesQuery.refetch()} className="mt-3 rounded bg-[#2e2877] px-3 py-2 font-semibold text-white">Try again</button>
-                </div>
-              ) : activeInvites.length === 0 ? (
-                <div className="p-6 text-center text-[#474551] text-[14px] italic">
-                  No outstanding invitations.
-                </div>
-              ) : (
-                activeInvites.map((invite) => {
+          <section className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card" aria-labelledby="invites-heading">
+            <header className="border-b border-dashboard-outline bg-dashboard-surface-subtle px-5 py-4"><h2 id="invites-heading" className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-dashboard-foreground"><Clock3 aria-hidden="true" size={17} /> Invitations awaiting response</h2></header>
+            {invitesRefreshError ? <RefreshNotice message={invitesRefreshError} onRetry={() => void invitesQuery.refetch()} /> : null}
+            {invitesLoading ? <SectionLoadingState label="Loading invitations" cards={2} /> : invitesError ? <div className="p-5"><ErrorState message={invitesError} onRetry={() => void invitesQuery.refetch()} size="compact" /></div> : activeInvites.length === 0 ? (
+              <EmptyState icon={<Mail aria-hidden="true" size={22} />} title="No outstanding invitations" body="New Tutor invitations will appear here until they are accepted or expire." />
+            ) : (
+              <ul aria-label="Tutor invitations" className="divide-y divide-dashboard-outline/50">
+                {activeInvites.map((invite) => {
                   const isExpired = invite.status === 'expired'
                   const isRevoking = revokingId === invite.id
                   const isResending = resendingId === invite.id
-                  
                   return (
-                    <div key={invite.id} className={`p-4 flex flex-col gap-2 transition-colors ${isExpired ? 'bg-[#f5f3f2] opacity-80' : 'hover:bg-[#fbf9f8]'}`}>
-                      <div className="flex justify-between items-start">
-                        <p className={`font-bold text-[#1b1c1c] text-[14px] ${isExpired ? 'line-through decoration-[#787582]' : ''} truncate pr-2`}>
-                          {invite.email}
-                        </p>
-                        {isExpired ? (
-                          <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-sm bg-[#ffdad6] text-[#ba1a1a] text-[10px] font-bold uppercase tracking-wider border border-[#ba1a1a]/20">
-                            Expired
-                          </span>
-                        ) : (
-                          <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-sm bg-[#ff9653]/20 text-[#994704] text-[10px] font-bold uppercase tracking-wider">
-                            Pending
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <p className="text-[12px] text-[#474551]">
-                            Sent: {new Date(invite.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </p>
-                          {!isExpired && (
-                            <p className="text-[12px] text-[#994704] mt-0.5 flex items-center gap-1 font-medium">
-                              <span className="material-symbols-outlined text-[14px]">schedule</span>
-                              Expires {new Date(invite.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                            </p>
-                          )}
-                        </div>
-                        
-                        {isExpired ? (
-                          <button
-                            onClick={() => handleResend(invite.email, invite.id)}
-                            disabled={isResending}
-                            className="text-[12px] text-[#2e2877] hover:text-[#180d62] transition-colors font-bold uppercase tracking-wider disabled:opacity-50"
-                          >
-                            {isResending ? 'Sending...' : 'Resend'}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmation({ type: 'revoke', id: invite.id, email: invite.email })}
-                            disabled={isRevoking}
-                            className="text-[12px] text-[#787582] hover:text-[#ba1a1a] transition-colors font-bold uppercase tracking-wider disabled:opacity-50"
-                          >
-                            {isRevoking ? 'Revoking...' : 'Revoke'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                    <li key={invite.id} className={`flex flex-col gap-3 p-4 ${isExpired ? 'bg-dashboard-surface-subtle' : ''}`}>
+                      <div className="flex items-start justify-between gap-3"><p className={`min-w-0 truncate text-sm font-bold text-dashboard-foreground ${isExpired ? 'line-through' : ''}`}>{invite.email}</p><span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isExpired ? 'border-dashboard-danger/30 bg-dashboard-danger/10 text-dashboard-danger' : 'border-dashboard-accent/30 bg-dashboard-accent/10 text-dashboard-accent'}`}>{isExpired ? 'Expired' : 'Pending'}</span></div>
+                      <div className="flex items-end justify-between gap-3"><div className="text-xs text-dashboard-muted"><p>Sent: {formatDate(invite.created_at)}</p>{!isExpired ? <p className="mt-1 flex items-center gap-1 text-dashboard-accent"><Clock3 aria-hidden="true" size={13} /> Expires {formatDate(invite.expires_at, false)}</p> : null}</div>{isExpired ? <Button type="button" variant="quiet" pending={isResending} pendingLabel="Sending…" onClick={() => void handleResend(invite.email, invite.id)}>Resend</Button> : <Button type="button" variant="quiet" pending={isRevoking} pendingLabel="Revoking…" onClick={() => setConfirmation({ type: 'revoke', id: invite.id, email: invite.email })}>Revoke</Button>}</div>
+                    </li>
                   )
-                })
-              )}
-            </div>
-          </div>
-
-        </div>
+                })}
+              </ul>
+            )}
+          </section>
+        </aside>
       </div>
-      {confirmation && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#1b1c1c]/45 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-lg border border-[#c8c5d2] bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-[#1b1c1c]">{confirmation.type === 'remove' ? 'Remove this tutor?' : 'Cancel this invitation?'}</h3>
-            <p className="mt-2 text-sm leading-6 text-[#474551]">
-              {confirmation.type === 'remove'
-                ? `${confirmation.name} will lose access to your centre. Their previous teaching records will be kept.`
-                : `The invitation sent to ${confirmation.email} will stop working.`}
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={() => setConfirmation(null)} className="rounded px-4 py-2 text-sm font-semibold text-[#474551] hover:bg-[#f5f3f2]">Keep it</button>
-              <button type="button" onClick={() => { const action = confirmation; setConfirmation(null); if (action.type === 'remove') void handleRemoveTutor(action.id); else void handleRevoke(action.id) }} className="rounded bg-[#ba1a1a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#93000a]">
-                {confirmation.type === 'remove' ? 'Remove tutor' : 'Cancel invitation'}
-              </button>
-            </div>
+
+      {confirmation ? (
+        <Dialog open onClose={() => { if (!confirmationBusy) setConfirmation(null) }} title={confirmation.type === 'remove' ? 'Remove this Tutor?' : 'Cancel this invitation?'} description={confirmation.type === 'remove' ? `${confirmation.name} will lose access to your tutoring account. Their previous teaching records will be kept.` : `The invitation sent to ${confirmation.email} will stop working.`} busy={confirmationBusy}>
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="quiet" data-dialog-initial-focus onClick={() => setConfirmation(null)} disabled={confirmationBusy}>Keep it</Button>
+            <Button type="button" variant="danger" pending={Boolean(confirmationBusy)} pendingLabel={confirmation.type === 'remove' ? 'Removing…' : 'Cancelling…'} onClick={() => { const action = confirmation; setConfirmation(null); if (action.type === 'remove') void handleRemoveTutor(action.id); else void handleRevoke(action.id) }}>{confirmation.type === 'remove' ? 'Remove Tutor' : 'Cancel invitation'}</Button>
           </div>
-        </div>
-      )}
+        </Dialog>
+      ) : null}
     </div>
   )
 }
