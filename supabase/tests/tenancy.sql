@@ -88,6 +88,7 @@ SELECT throws_ok(
       '00000000-0000-4000-8000-000000000021'
     )$$,
   '23503',
+  NULL,
   'cross-account student relationship is rejected by PostgreSQL'
 );
 
