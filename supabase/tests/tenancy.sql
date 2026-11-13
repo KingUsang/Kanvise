@@ -5,7 +5,16 @@ SELECT plan(8);
 SELECT has_table('public', 'account_memberships', 'general account membership table exists');
 SELECT has_index('public', 'account_memberships', 'account_memberships_person_status_idx', 'membership lookup index exists');
 SELECT col_is_unique('public', 'account_memberships', ARRAY['person_id', 'school_id'], 'one membership per person and account');
-SELECT has_check('public', 'account_memberships', 'account_memberships_revocation_consistency', 'membership status and revocation timestamp agree');
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.account_memberships'::regclass
+      AND conname = 'account_memberships_revocation_consistency'
+      AND contype = 'c'
+  ),
+  'membership status and revocation timestamp check has the exact constraint name'
+);
 SELECT function_privs_are(
   'public',
   'sync_account_membership_from_legacy_student',
