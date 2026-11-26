@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
 import { createPaystackReference, isUuid } from '../payments/checkout'
 import type { AppVariables, TenantVariables } from '../types'
+import { hasActiveLearnerMembership } from '../lib/student-course-access'
 import { loadStudentMockAudience, studentCanAccessCentreMock } from '../lib/student-mock-audience'
 
 export const mockAccessRouter = new Hono<{ Variables: AppVariables }>()
@@ -38,8 +39,7 @@ async function canUseOffer(studentId: string, offer: any) {
     return !!data
   }
   if (offer.audience_scope === 'school') {
-    const { data } = await db.from('student_centre_memberships').select('id').eq('student_id', studentId).eq('school_id', offer.school_id).eq('status', 'active').maybeSingle()
-    return !!data
+    return hasActiveLearnerMembership(studentId, offer.school_id)
   }
   if (offer.audience_scope === 'programme') {
     const { data } = await db.from('enrolments').select('id').eq('student_id', studentId).eq('programme_id', offer.programme_id).eq('status', 'active').maybeSingle()

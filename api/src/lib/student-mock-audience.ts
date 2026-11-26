@@ -1,11 +1,15 @@
 import { parseMockAudienceScope } from '../domain/mock-audience'
-import { loadStudentCourseIds } from './student-course-access'
+import { hasActiveLearnerMembership, loadStudentCourseIds } from './student-course-access'
 import { supabase } from './supabase'
 
 export type StudentMockAudience = { courseIds: string[]; programmeIds: string[] }
 
 export async function loadStudentMockAudience(user: { id: string; school_id?: string | null }): Promise<StudentMockAudience> {
   if (!user.school_id) return { courseIds: [], programmeIds: [] }
+  // The caller passes the selected active account as school_id. Enrolments are
+  // only an audience while a Learner membership in that account is active
+  // (DEV-ACC-002).
+  if (!await hasActiveLearnerMembership(user.id, user.school_id)) return { courseIds: [], programmeIds: [] }
   const [courseIds, enrolments] = await Promise.all([
     loadStudentCourseIds(user.id, user.school_id),
     supabase.from('enrolments').select('programme_id').eq('student_id', user.id).eq('school_id', user.school_id),

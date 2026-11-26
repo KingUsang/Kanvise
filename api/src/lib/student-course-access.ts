@@ -47,15 +47,26 @@ export function resolveStudentCourses<T extends StudentCourse>(
     || Boolean(course.sub_programme_id && programmeIds.has(subProgrammeParents.get(course.sub_programme_id) || '')))
 }
 
-export async function loadStudentCourseIds(studentId: string, schoolId: string) {
-  const { data: membership, error: membershipError } = await db.from('student_centre_memberships')
+/**
+ * True only while the person holds an active Learner membership in the
+ * account. account_memberships is the canonical source (DEV-ACC-001); the
+ * legacy student_centre_memberships table is kept in sync by a trigger and is
+ * no longer read for access decisions.
+ */
+export async function hasActiveLearnerMembership(studentId: string, schoolId: string) {
+  const { data: membership, error } = await db.from('account_memberships')
     .select('id')
-    .eq('student_id', studentId)
+    .eq('person_id', studentId)
     .eq('school_id', schoolId)
+    .eq('role', 'learner')
     .eq('status', 'active')
     .maybeSingle()
-  if (membershipError) throw new Error('Could not resolve student course access')
-  if (!membership) return []
+  if (error) throw new Error('Could not resolve student course access')
+  return Boolean(membership)
+}
+
+export async function loadStudentCourseIds(studentId: string, schoolId: string) {
+  if (!await hasActiveLearnerMembership(studentId, schoolId)) return []
 
   const [{ data: enrolments, error: enrolmentsError }, { data: courses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
     supabase.from('enrolments').select('programme_id, sub_programme_id, course_id')

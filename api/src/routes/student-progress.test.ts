@@ -57,7 +57,7 @@ describe('student progress route security', () => {
 
   it('returns an empty recorded-data summary when the student has no enrolled courses or centre-wide mocks', async () => {
     mocks.from.mockImplementation((table: string) => {
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'enrolments') return query({ data: [], error: null })
       if (table === 'courses' || table === 'sub_programmes') return query({ data: [], error: null })
       if (table === 'submissions' || table === 'mock_exams' || table === 'mock_attempts') return query({ data: [], error: null })

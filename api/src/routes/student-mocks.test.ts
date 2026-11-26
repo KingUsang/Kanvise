@@ -37,7 +37,7 @@ function query(result: any, eqSpy = vi.fn()) {
 
 function enrolmentTables(enrolled: boolean) {
   mocks.from.mockImplementation((table: string) => {
-    if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+    if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
     if (table === 'enrolments') return query({ data: enrolled
       ? [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }] : [], error: null })
     if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
