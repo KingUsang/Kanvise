@@ -1,4 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+
+// route.ts resolves the API URL at module load, so pin it before the import.
+vi.hoisted(() => {
+  vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:3001");
+});
 
 import { POST } from "./route";
 
@@ -12,6 +17,7 @@ function request(body: BodyInit) {
 
 describe("POST /api/waitlist", () => {
   afterEach(() => vi.restoreAllMocks());
+  afterAll(() => vi.unstubAllEnvs());
 
   it("forwards the input unchanged and preserves an upstream success", async () => {
     const input = {
