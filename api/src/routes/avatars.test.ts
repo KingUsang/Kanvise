@@ -29,6 +29,8 @@ function query(result: any) {
   return builder
 }
 
+const validAvatar = { skin_tone: '#FAD6B1', face_shape: 'Round', hair_style: 'Short', hair_colour: '#2b2b2b' }
+
 describe('avatar account policy', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -73,7 +75,7 @@ describe('avatar account policy', () => {
     const response = await avatarsRouter.request('/me', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ style: 'friendly', school_id: 'forged-account' }),
+      body: JSON.stringify(validAvatar),
     })
 
     expect(response.status).toBe(200)
@@ -81,5 +83,29 @@ describe('avatar account policy', () => {
       user_id: 'person-1',
       school_id: 'account-1',
     }), { onConflict: 'user_id' })
+  })
+
+  it.each([
+    ['forged school_id', { ...validAvatar, school_id: 'forged-account' }],
+    ['forged user_id', { ...validAvatar, user_id: 'someone-else' }],
+    ['unknown column', { ...validAvatar, id: 'x', is_admin: true }],
+    ['missing required column', { skin_tone: '#FAD6B1' }],
+    ['oversized value', { ...validAvatar, hair_style: 'x'.repeat(65) }],
+    ['non-object body', ['a']],
+  ])('rejects %s with 400 and writes nothing', async (_label, body) => {
+    const response = await avatarsRouter.request('/me', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_AVATAR_CONFIG' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unparseable body with 400', async () => {
+    const response = await avatarsRouter.request('/me', { method: 'PUT', body: 'nope' })
+    expect(response.status).toBe(400)
   })
 })
