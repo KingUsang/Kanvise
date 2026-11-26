@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { getApiUrl } from '@/config/api'
 import { accountContextHeaders } from '@/lib/account-preference'
+import { accountScopedFetch } from '@/lib/authenticated-fetch'
 
 type Response = { status: 'Correct' | 'Incorrect' | 'No response'; studentId?: string }
 
@@ -100,7 +101,7 @@ export default function DemoKnowledgeCheck({ classId, isHost, studentName, stude
   const loadInsight = async (sId: string) => {
     setInsightLoading(true)
     const { data: sessionData } = await supabase.auth.getSession()
-    const res = await fetch(`${getApiUrl()}/demo/analyze`, {
+    const res = await accountScopedFetch(`${getApiUrl()}/demo/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...accountContextHeaders(), Authorization: `Bearer ${sessionData.session?.access_token || ''}` },
         body: JSON.stringify({ studentId: sId, classId })

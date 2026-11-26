@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Loader2, X, AlertCircle, CheckCircle2, ChevronDown, Search } from "lucide-react";
-import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { accountScopedFetch, authenticatedApiFetch } from "@/lib/authenticated-fetch";
 import { accountContextHeaders } from "@/lib/account-preference";
 
 interface Bank {
@@ -54,7 +54,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
       setError(null);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-        const res = await fetch(`${apiUrl}/payments/banks`, {
+        const res = await accountScopedFetch(`${apiUrl}/payments/banks`, {
           headers: { ...accountContextHeaders(), Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -82,7 +82,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
         setError(null);
         try {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-          const res = await fetch(`${apiUrl}/payments/subaccount/resolve`, {
+          const res = await accountScopedFetch(`${apiUrl}/payments/subaccount/resolve`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -117,7 +117,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
     setError(null);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}/payments/subaccount`, {
+      const res = await accountScopedFetch(`${apiUrl}/payments/subaccount`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

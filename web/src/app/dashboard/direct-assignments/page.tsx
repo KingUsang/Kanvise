@@ -5,13 +5,14 @@ import { Copy, Link2 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { toast } from 'sonner'
 import { accountContextHeaders } from '@/lib/account-preference'
+import { accountScopedFetch } from '@/lib/authenticated-fetch'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 
 type Assignment = { id: string; title: string; description: string; deadline_at: string; revoked_at: string | null; submission_count: number; is_active: boolean }
 export default function DirectAssignmentsPage() {
   const [items, setItems] = useState<Assignment[]>([]); const [title, setTitle] = useState(''); const [description, setDescription] = useState(''); const [deadline, setDeadline] = useState(''); const [saving, setSaving] = useState(false)
   const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); const api = process.env.NEXT_PUBLIC_API_URL
-  async function request(path: string, options: RequestInit = {}) { const { data } = await supabase.auth.getSession(); return fetch(`${api}${path}`, { ...options, headers: { Authorization: `Bearer ${data.session?.access_token}`, 'Content-Type': 'application/json', ...accountContextHeaders(), ...(options.headers || {}) } }) }
+  async function request(path: string, options: RequestInit = {}) { const { data } = await supabase.auth.getSession(); return accountScopedFetch(`${api}${path}`, { ...options, headers: { Authorization: `Bearer ${data.session?.access_token}`, 'Content-Type': 'application/json', ...accountContextHeaders(), ...(options.headers || {}) } }) }
   async function load() { const r = await request('/direct-assignments'); const body = await r.json(); if (r.ok) setItems(body.data || []); else toast.error(body.error || 'Could not load direct assignments') }
   useEffect(() => { void load() }, [])
   async function create(event: FormEvent) { event.preventDefault(); setSaving(true); try { const r = await request('/direct-assignments', { method: 'POST', body: JSON.stringify({ title, description, deadline_at: new Date(deadline).toISOString() }) }); const body = await r.json(); if (!r.ok) throw new Error(body.error); const url = `${window.location.origin}/direct-assignment/${body.share_token}`; await navigator.clipboard.writeText(url); toast.success('Assignment link copied'); setTitle(''); setDescription(''); setDeadline(''); await load() } catch (e) { toast.error(e instanceof Error ? e.message : 'Could not create assignment') } finally { setSaving(false) } }

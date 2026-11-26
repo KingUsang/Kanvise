@@ -239,9 +239,10 @@ app.get("/waitlist/count", async (c) => {
   }
 });
 
-// These student routers contain several top-level paths (/students, /mocks and
-// /attempts). Register them last so their router-wide student middleware cannot
-// intercept unrelated endpoints such as /payments/summary or /waitlist.
+// studentSettingsRouter mounts at "/" with router-wide student middleware, so it
+// stays after the other routers and cannot intercept unrelated endpoints such as
+// /payments/summary or /waitlist. studentMocksRouter is the exception: it mounts
+// before /mocks (see above) and uses only per-route middleware.
 app.route("/", studentSettingsRouter);
 
 const port = Number(process.env.PORT!);

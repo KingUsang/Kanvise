@@ -12,6 +12,7 @@ import { createStudentRegistrationIntent } from '@/lib/student-registration'
 import { AuthMethodDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { AuthAlert, AuthHeading, AuthLabel, authInputClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
 import { signInErrorMessage } from '@/lib/auth-error-message'
+import { clearActiveAccountId } from '@/lib/account-preference'
 
 function LoginContent() {
   const router = useRouter();
@@ -51,6 +52,9 @@ function LoginContent() {
         return;
       }
       signedIn = true
+      // A new sign-in must not inherit the account a previous session selected on
+      // this browser; the next page resolves or asks for the account again.
+      clearActiveAccountId()
 
       if (!signInData.session?.access_token) throw new Error('Your session could not be started')
       // Existing accounts created before trusted role claims were introduced

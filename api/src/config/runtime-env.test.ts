@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { CORE_PRODUCTION_VARIABLES, isWebPushEnabled, validateProductionEnvironment } from './runtime-env'
 
 const validProductionEnv = {
@@ -53,6 +53,16 @@ describe('validateProductionEnvironment', () => {
   it('rejects insecure production origins', () => {
     expect(() => validateProductionEnvironment({ ...validProductionEnv, FRONTEND_URL: 'http://example.com' }))
       .toThrow('FRONTEND_URL must use HTTPS')
+  })
+
+  it('warns without failing when KANVISE_PROXY_SECRET is shorter than the trusted minimum', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(() => validateProductionEnvironment({ ...validProductionEnv, KANVISE_PROXY_SECRET: 'short' })).not.toThrow()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('KANVISE_PROXY_SECRET'))
+    warn.mockClear()
+    validateProductionEnvironment({ ...validProductionEnv, KANVISE_PROXY_SECRET: 'proxy-secret-0123456789' })
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
   })
 })
 

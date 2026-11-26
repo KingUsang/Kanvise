@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { proxyClientHeaders, visitorAddress } from './proxy-client-headers'
 
 const req = (headers: Record<string, string>) => new Request('https://kanvise.test/api/waitlist', { headers })
@@ -21,5 +21,13 @@ describe('proxyClientHeaders (DEV-PUB-004)', () => {
     expect(proxyClientHeaders(req({ 'x-real-ip': '1.1.1.1' }), undefined)).toEqual({})
     expect(proxyClientHeaders(req({ 'x-real-ip': '1.1.1.1' }), '  ')).toEqual({})
     expect(proxyClientHeaders(req({}), 'proxy-secret-0123456789')).toEqual({})
+  })
+
+  it('sends nothing and warns once when the secret is shorter than the API minimum', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(proxyClientHeaders(req({ 'x-real-ip': '1.1.1.1' }), 'short-secret')).toEqual({})
+    expect(proxyClientHeaders(req({ 'x-real-ip': '1.1.1.1' }), 'short-secret')).toEqual({})
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
   })
 })

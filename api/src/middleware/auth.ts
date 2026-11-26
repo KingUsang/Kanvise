@@ -152,11 +152,14 @@ export type DefaultAccountLookup =
  * the client has stored a selection).
  */
 export async function lookupDefaultAccount(personId: string): Promise<DefaultAccountLookup> {
+  // Count only memberships of active accounts, the same set the picker lists
+  // (/students/me/centres), so a deactivated account never forces a 409.
   const { data, error } = await supabase
     .from('account_memberships')
-    .select('school_id')
+    .select('school_id, school:schools!inner(id)')
     .eq('person_id', personId)
     .eq('status', 'active')
+    .eq('school.is_active', true)
     .limit(2)
   if (error) return { kind: 'error' }
   if (!data?.length) return { kind: 'none' }

@@ -17,6 +17,8 @@ export const ACCOUNT_COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60
 
 /** API code returned when a person with several active memberships sends no account. */
 export const ACCOUNT_SELECTION_REQUIRED = 'ACCOUNT_SELECTION_REQUIRED'
+/** API code returned when the named account is not one of the caller's active memberships. */
+export const ACCOUNT_ACCESS_DENIED = 'ACCOUNT_ACCESS_DENIED'
 export const ACCOUNT_PICKER_PATH = '/account/select'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i

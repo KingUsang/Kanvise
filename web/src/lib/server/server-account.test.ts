@@ -64,6 +64,21 @@ describe('server account context', () => {
     expect(mocks.redirect).toHaveBeenCalledWith('/account/select?redirect=%2Fdashboard%2Fstudent%2Fmocks%2Fmock-1')
   })
 
+  it('opens the account picker when the API rejects a stale account cookie', async () => {
+    mocks.cookieValue = account
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'Not a member', code: 'ACCOUNT_ACCESS_DENIED' }), { status: 403 }))
+
+    await expect(withAccountPicker(() => getMockPreflight('mock-1', 'server-token', { 'X-Kanvise-Account-Id': account }), '/dashboard/student/mocks/mock-1'))
+      .rejects.toThrow('NEXT_REDIRECT')
+    expect(mocks.redirect).toHaveBeenCalledWith('/account/select?redirect=%2Fdashboard%2Fstudent%2Fmocks%2Fmock-1')
+  })
+
+  it('rethrows ACCOUNT_ACCESS_DENIED when no account cookie was sent', async () => {
+    const failure = new ServerApiError('Not a member', 403, 'ACCOUNT_ACCESS_DENIED')
+    await expect(withAccountPicker(async () => { throw failure }, '/x')).rejects.toBe(failure)
+    expect(mocks.redirect).not.toHaveBeenCalled()
+  })
+
   it('rethrows other API errors unchanged', async () => {
     const failure = new ServerApiError('Not found', 404, 'NOT_FOUND')
     await expect(withAccountPicker(async () => { throw failure }, '/x')).rejects.toBe(failure)
