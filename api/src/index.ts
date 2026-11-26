@@ -106,6 +106,11 @@ app.route("/assignments", assignmentsRouter);
 app.route('/direct-assignments', directAssignmentsRouter);
 app.route('/public/direct-assignments', publicDirectAssignmentsRouter);
 app.route("/users", usersRouter);
+// mocksRouter has router-wide strict account context on /mocks/*. The student
+// preflight and attempt routes carry their own standalone-aware context, so
+// they must be registered first or the strict middleware rejects header-less
+// students before they are reached.
+app.route("/", studentMocksRouter);
 app.route("/mocks", mocksRouter);
 app.route("/mocks", mockOfferAdminRouter);
 app.route("/question-banks", questionBanksRouter);
@@ -237,7 +242,6 @@ app.get("/waitlist/count", async (c) => {
 // These student routers contain several top-level paths (/students, /mocks and
 // /attempts). Register them last so their router-wide student middleware cannot
 // intercept unrelated endpoints such as /payments/summary or /waitlist.
-app.route("/", studentMocksRouter);
 app.route("/", studentSettingsRouter);
 
 const port = Number(process.env.PORT!);

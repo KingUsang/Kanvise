@@ -1,12 +1,24 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Hono } from 'hono'
 
-const mocks = vi.hoisted(() => ({ resolved: vi.fn() }))
+const mocks = vi.hoisted(() => ({ resolved: vi.fn(), memberships: [] as Array<{ school_id: string }> }))
+vi.mock('../lib/supabase', () => {
+  const value: any = {
+    select: () => value, eq: () => value, limit: () => value,
+    then: (resolve: (v: any) => void) => Promise.resolve({ data: mocks.memberships, error: null }).then(resolve),
+  }
+  return { supabase: { from: () => value } }
+})
 vi.mock('./auth', () => ({
   ACCOUNT_CONTEXT_HEADER: 'X-Kanvise-Account-Id',
   accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
     mocks.resolved()
     c.set('account', { id: 'account-1', membershipId: 'm-1', role: 'learner' })
+    await next()
+  },
+  resolveAccountContext: async (c: any, next: () => Promise<void>, id: string) => {
+    mocks.resolved(id)
+    c.set('account', { id, membershipId: 'm-1', role: 'learner' })
     await next()
   },
 }))
@@ -44,6 +56,15 @@ describe('account user projection', () => {
     expect(response.status).toBe(200)
     expect(mocks.resolved).not.toHaveBeenCalled()
     await expect(response.json()).resolves.toMatchObject({ user: { school_id: null } })
+  })
+
+  it('falls back to the single active learner membership when no header is sent', async () => {
+    mocks.resolved.mockClear()
+    mocks.memberships = [{ school_id: 'account-9' }]
+    const response = await app({ id: 'u', role: 'student', school_id: 'profile' }).request('/')
+    await expect(response.json()).resolves.toMatchObject({ user: { school_id: 'account-9' } })
+    expect(mocks.resolved).toHaveBeenCalledWith('account-9')
+    mocks.memberships = []
   })
 
   it('resolves the membership when a header names an account or the profile has one', async () => {

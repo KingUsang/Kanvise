@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { accountContextHeaders } from "@/lib/account-preference";
 import PlugNmeetClassroom from "./PlugNmeetClassroom";
 
 type ClassroomToken = {
@@ -38,7 +39,7 @@ export default function PreparingClassroom({ classId, classTitle, courseName }: 
       const takeover = takeoverRef.current ? "?takeover=1" : "";
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/enter${takeover}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json", ...accountContextHeaders() },
         cache: "no-store", signal,
       });
       const body = await response.json().catch(() => null);

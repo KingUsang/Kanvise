@@ -26,6 +26,12 @@ export function getActiveAccountId() {
   return isValidAccountId(value) ? value : null
 }
 
+/** Headers naming the selected account, for raw fetch callers that cannot use authenticatedFetch. */
+export function accountContextHeaders(): Record<string, string> {
+  const accountId = getActiveAccountId()
+  return accountId ? { [ACCOUNT_CONTEXT_HEADER]: accountId } : {}
+}
+
 export function setActiveAccountId(accountId: string) {
   if (!isValidAccountId(accountId)) throw new Error('Invalid account identifier')
   const storage = browserSessionStorage()

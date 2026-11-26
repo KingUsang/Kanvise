@@ -127,11 +127,16 @@ function isMembershipRole(value: unknown): value is MembershipRole {
  * refresh. The selected account ID is a request hint, not proof of access.
  */
 export const accountContextMiddleware = async (c: Context, next: Next) => {
-  const user = c.get('user')
   const accountId = c.req.header(ACCOUNT_CONTEXT_HEADER)?.trim()
   if (!accountId || !UUID_PATTERN.test(accountId)) {
     return c.json({ error: 'A valid tutoring account must be selected', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
   }
+  return resolveAccountContext(c, next, accountId)
+}
+
+/** Verifies the caller's active membership of `accountId` and sets the account context. */
+export const resolveAccountContext = async (c: Context, next: Next, accountId: string) => {
+  const user = c.get('user')
 
   const { data: membership, error: membershipError } = await supabase
     .from('account_memberships')

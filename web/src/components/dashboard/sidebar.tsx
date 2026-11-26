@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { useState, useEffect } from 'react'
 import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
+import { accountContextHeaders } from '@/lib/account-preference'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 
 interface SidebarProps {
@@ -27,7 +28,7 @@ export function Sidebar({ capabilities }: SidebarProps) {
 
         const baseUrl = process.env.NEXT_PUBLIC_API_URL
         const res = await fetch(`${baseUrl}/mocks/ungraded-count`, {
-          headers: { Authorization: `Bearer ${session.access_token}` }
+          headers: { Authorization: `Bearer ${session.access_token}`, ...accountContextHeaders() }
         })
         if (res.ok) {
           const json = await res.json()
