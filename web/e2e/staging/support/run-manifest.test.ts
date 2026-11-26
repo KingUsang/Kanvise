@@ -5,7 +5,7 @@ const sha = '0123456789012345678901234567890123456789'
 
 describe('staging run manifest', () => {
   it('creates an isolated manifest with a full release identity', () => {
-    const manifest = createManifest({ E2E_RUN_ID: 'E2E-42-1', E2E_EXPECTED_SHA: sha } as NodeJS.ProcessEnv)
+    const manifest = createManifest({ E2E_RUN_ID: 'E2E-42-1', E2E_EXPECTED_SHA: sha } as unknown as NodeJS.ProcessEnv)
     expect(manifest).toMatchObject({ version: 1, runId: 'E2E-42-1', releaseSha: sha, status: 'running' })
     expect(manifest.tenants).toEqual([])
   })

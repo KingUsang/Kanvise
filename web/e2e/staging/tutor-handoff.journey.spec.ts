@@ -21,7 +21,7 @@ test('[J03] invited tutor accepts the delivered email in a separate browser cont
     after: requestedAt,
     expectedOrigin: new URL(process.env.E2E_BASE_URL!).origin,
   })
-  await updateManifest((current) => current.providers.push({ provider: 'gmail', kind: 'tutor-invitation', id: delivered.messageId }))
+  await updateManifest((current) => { current.providers.push({ provider: 'gmail', kind: 'tutor-invitation', id: delivered.messageId }) })
 
   const tutorContext = await browser.newContext()
   const tutorPage = await tutorContext.newPage()

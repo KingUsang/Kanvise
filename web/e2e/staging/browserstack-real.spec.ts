@@ -57,10 +57,12 @@ test('[BS01] real Android Chrome preserves critical tutor and student navigation
   await expect(studentPage.getByRole('heading', { name: /classes/i }).first()).toBeVisible({ timeout: 45_000 })
   await student.close()
 
-  await updateManifest((manifest) => manifest.providers.push({
-    provider: 'browserstack',
-    kind: 'real-android-session',
-    id: `${manifest.runId}-${testInfo.project.name}`,
-    metadata: { project: testInfo.project.name },
-  }))
+  await updateManifest((manifest) => {
+    manifest.providers.push({
+      provider: 'browserstack',
+      kind: 'real-android-session',
+      id: `${manifest.runId}-${testInfo.project.name}`,
+      metadata: { project: testInfo.project.name },
+    })
+  })
 })
