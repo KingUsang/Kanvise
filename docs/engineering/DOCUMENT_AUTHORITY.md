@@ -2,7 +2,7 @@
 
 **Status:** Current
 **Owner:** Kanvise engineering
-**Last verified:** 2026-11-03
+**Last verified:** 2026-11-26
 
 This map prevents filename age or an old `Approved` label from outranking the
 engineering standards. It classifies document families without rewriting or
@@ -19,10 +19,11 @@ deleting historical evidence.
 | `docs/deviations.md` | Current evidence register | Known conflicts; does not authorize implementation |
 | `docs/engineering/ADOPTION_PLAN.md` | Current execution order | Standards-conformance sequencing |
 | `docs/runbooks/*` | Current only when individually marked Current and verified | Operational response, not architecture/product policy |
-| `01_*`, `02_*`, `03_*`, `04_*`, `05_*`, `06_*`, `08_*`, `09_*`, `17_*` | Superseded for cross-cutting authority | Historical intent and feature discovery only; verify against standards/code/migrations |
-| `07_KANVISE_LiveKit_Integration_Contract.md`, `kanvise-live-class-architecture-v3.md`, `docs/operations/livekit-*` | Historical | Retired LiveKit-era evidence; do not extend current PlugNMeet behavior from it |
+| `docs/archive/*` | Archived (superseded or historical) | Moved here by the repository documentation clean-up. Never authority. Each file starts with a "Superseded by" or "Archived tracker" header. Holds former `01_*` to `09_*` (including duplicate variants), the former root copies (`Api spec.md`, `System Architecture Overview.md`, `Technical Stack Decision.md`, `Multi Tenanacy Arvhitecture.md`, `Authentication And authorizations.md`) and the folded trackers `14_*`, `16_*`, `26_*`, `27_*`, `28_*` |
+| `17_*` | Superseded for cross-cutting authority | Historical intent and feature discovery only; verify against standards/code/migrations |
+| `docs/archive/07_KANVISE_LiveKit_Integration_Contract.md`, `kanvise-live-class-architecture-v3.md`, `docs/operations/livekit-*` | Historical | Retired LiveKit-era evidence; do not extend current PlugNMeet behavior from it |
 | `plugnmeet-integration-reference.md`, `plugnmeet-phase-0-validation-plan.md`, `docs/operations/plugnmeet-enrolled-pilot.md` | Reference/audit evidence | Verify current provider contract and configuration before use |
-| `10_*`, `11_*`, `12_*`, `13_*`, `14_*`, `16_*`, `19_*`, `21_*`, `25_*`, `26_*`, `27_*`, `28_*`, `31_*`, `32_*`, `33_*`, `34_*` | Progress, audit, incident, plan, or test evidence | Useful inputs; not standing architecture or conventions |
+| `10_*`, `11_*`, `12_*`, `13_*`, `19_*`, `21_*`, `25_*`, `29_*`, `30_*`, `31_*`, `32_*`, `33_*`, `34_*` | Progress, audit, incident, plan, or test evidence | Useful inputs; not standing architecture or conventions |
 | `15_*`, `18_*` and other Mock-named plans | Historical/superseded terminology | Mine behavior only after translating to the Quiz domain |
 | `*:Zone.Identifier` | Repository artifact | Never authority; remove through scoped repository cleanup |
 

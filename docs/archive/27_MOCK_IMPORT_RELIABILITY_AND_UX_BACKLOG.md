@@ -1,7 +1,9 @@
+> **Archived tracker.** Its open items were folded into the [deviation register](../deviations.md) as DEV-TRK-027-01 to DEV-TRK-027-03 (section "Older tracker items folded into this register"). The register is the single bug list; this file is dated evidence and is no longer updated. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
 > [!WARNING]
 > **Document status: Evidence**
 >
-> The retained body is proposal, research, backlog, or incident evidence rather than approved product behavior, architecture authority, or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is proposal, research, backlog, or incident evidence rather than approved product behavior, architecture authority, or current release proof. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Mock import reliability and UX backlog
 
