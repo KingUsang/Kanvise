@@ -16,7 +16,7 @@ import {
 } from '@/lib/account-preference'
 import { loginHref } from '@/lib/auth-continuation'
 
-type AccountMembership = {
+export type AccountMembership = {
   id: string
   school_id: string
   role: 'admin' | 'tutor' | 'learner'
@@ -25,7 +25,7 @@ type AccountMembership = {
   active?: boolean
 }
 
-class AccountSwitcherError extends Error {
+export class AccountSwitcherError extends Error {
   constructor(readonly code: string, readonly userMessage: string) {
     super(userMessage)
     this.name = 'AccountSwitcherError'
@@ -39,7 +39,7 @@ function safeApiMessage(code: unknown, fallback: string) {
   return fallback
 }
 
-async function responseBody(response: Response, fallback: string) {
+export async function responseBody(response: Response, fallback: string) {
   const body = await response.json().catch(() => null) as { data?: unknown; code?: string } | null
   if (!response.ok) throw new AccountSwitcherError(body?.code || 'ACCOUNT_SWITCH_FAILED', safeApiMessage(body?.code, fallback))
   return body
@@ -58,7 +58,7 @@ function parseMemberships(body: { data?: unknown } | null) {
   })
 }
 
-async function loadMemberships() {
+export async function loadMemberships() {
   try {
     const response = await authenticatedApiFetch(`${getApiUrl()}/students/me/centres?limit=100`, { cache: 'no-store' })
     return parseMemberships(await responseBody(response, 'We could not load your tutoring accounts. Try again.'))
@@ -75,7 +75,10 @@ function useAccountMemberships() {
   const query = useQuery({ queryKey: ['account-memberships'], queryFn: loadMemberships, staleTime: 5 * 60_000, retry: false })
   const selected = useMemo(() => {
     if (!query.data?.length) return null
-    return query.data.find(account => account.school_id === preferredAccountId) || query.data.find(account => account.active) || query.data[0]
+    // A stored selection is kept only while it is still an active membership.
+    // Otherwise the only membership is chosen automatically; with several the
+    // person picks one (the API answers ACCOUNT_SELECTION_REQUIRED meanwhile).
+    return query.data.find(account => account.school_id === preferredAccountId) || (query.data.length === 1 ? query.data[0] : null)
   }, [preferredAccountId, query.data])
 
   useEffect(() => {

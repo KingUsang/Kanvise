@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useMemo, useState } from "react"
+import { clearActiveAccountId } from '@/lib/account-preference'
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowRight, Check, Eye, EyeOff, Loader2 } from "lucide-react"
@@ -109,6 +110,7 @@ function JoinContent() {
 
   const signOut = async () => {
     await supabase.auth.signOut()
+    clearActiveAccountId()
     router.refresh()
     window.location.reload()
   }

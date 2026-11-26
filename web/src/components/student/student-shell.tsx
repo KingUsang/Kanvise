@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { clearActiveAccountId } from '@/lib/account-preference';
 import { usePathname } from "next/navigation";
 import { BookOpen, CalendarDays, ClipboardCheck, FileText, GraduationCap, Home, LogOut, Settings, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -68,6 +69,7 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
     const { data: sessionData } = await supabase.auth.getSession();
     await detachBrowserPushOnLogout(sessionData.session?.access_token);
     await supabase.auth.signOut();
+    clearActiveAccountId();
     window.location.href = "/auth/login";
   }
 

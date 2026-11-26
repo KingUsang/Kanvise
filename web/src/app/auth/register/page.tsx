@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { clearActiveAccountId } from '@/lib/account-preference'
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Building2, Check, Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
@@ -87,6 +88,7 @@ function RegisterContent() {
           if (!profileResponse.ok) throw new Error(profileBody?.error || 'Could not load your existing account')
           if (profileBody?.user?.role !== 'student') {
             await supabase.auth.signOut()
+            clearActiveAccountId()
             throw new Error('This email belongs to a staff account. Use a student email to continue.')
           }
           const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()

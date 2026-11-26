@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Loader2, BookOpen, Clock, AlertCircle, ReceiptText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { accountContextHeaders } from "@/lib/account-preference";
 
 export default function StudentDetailsSheet({ student, onClose, onRemoved, onChanged }: { student: any, onClose: () => void, onRemoved: () => void, onChanged: () => void }) {
   const [enrolments, setEnrolments] = useState<any[]>([]);
@@ -24,7 +25,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!session || !apiUrl) throw new Error('Your session is unavailable');
       const response = await fetch(`${apiUrl}/users/students/${encodeURIComponent(student.id)}/invitation${action === 'resend' ? '/resend' : ''}`, {
-        method: action === 'resend' ? 'POST' : 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
+        method: action === 'resend' ? 'POST' : 'DELETE', headers: { ...accountContextHeaders(), Authorization: `Bearer ${session.access_token}` },
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || `Could not ${action} invitation`);
@@ -64,7 +65,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
         const { data: session } = await supabase.auth.getSession();
         
         const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        const headers = { Authorization: `Bearer ${session?.session?.access_token}` };
+        const headers = { ...accountContextHeaders(), Authorization: `Bearer ${session?.session?.access_token}` };
         const [res, paymentsRes] = await Promise.all([
           fetch(`${API_URL}/enrolments?student_id=${encodeURIComponent(student.id)}`, { headers }),
           fetch(`${API_URL}/payments?student_id=${encodeURIComponent(student.id)}`, { headers }),
