@@ -81,6 +81,87 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.20.3
+      - name: Report remote schema (read-only)
+        # Diagnostic for staging schema drift. Prints catalog metadata only,
+        # never row data, inside a read-only transaction that is rolled back.
+        if: github.ref_name != 'main'
+        continue-on-error: true
+        run: |
+          test -n "$SUPABASE_DB_URL"
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql "$SUPABASE_DB_URL" --no-psqlrc --quiet --pset=pager=off <<'SQL'
+          \set ON_ERROR_STOP off
+          \set ON_ERROR_ROLLBACK on
+          BEGIN READ ONLY;
+
+          \echo '== Migration history from 20260706 =='
+          SELECT version, name
+          FROM supabase_migrations.schema_migrations
+          WHERE version >= '20260706'
+          ORDER BY version;
+
+          \echo '== Functions in schema public =='
+          SELECT p.proname AS name,
+                 pg_get_function_identity_arguments(p.oid) AS args,
+                 p.prosecdef AS security_definer,
+                 p.proconfig AS config
+          FROM pg_proc p
+          JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE n.nspname = 'public'
+            AND NOT EXISTS (
+              SELECT 1 FROM pg_depend d
+              WHERE d.classid = 'pg_proc'::regclass
+                AND d.objid = p.oid
+                AND d.deptype = 'e'
+            )
+          ORDER BY p.proname, args;
+
+          \echo '== RLS policies in schema public =='
+          SELECT tablename, policyname, cmd, roles, qual, with_check
+          FROM pg_policies
+          WHERE schemaname = 'public'
+          ORDER BY tablename, policyname;
+
+          \echo '== Constraints on key tables =='
+          SELECT c.relname AS tablename,
+                 con.conname,
+                 con.contype,
+                 pg_get_constraintdef(con.oid) AS definition
+          FROM pg_constraint con
+          JOIN pg_class c ON c.oid = con.conrelid
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relname IN (
+              'avatar_configs', 'user_profiles', 'schools', 'enrolments',
+              'payments', 'submissions', 'live_classes', 'courses',
+              'programmes', 'assignments', 'notes'
+            )
+          ORDER BY c.relname, con.conname;
+
+          \echo '== RLS enabled per public table =='
+          SELECT c.relname AS tablename,
+                 c.relrowsecurity AS rls_enabled,
+                 c.relforcerowsecurity AS rls_forced
+          FROM pg_class c
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relkind IN ('r', 'p')
+          ORDER BY c.relname;
+
+          \echo '== Table grants to anon and authenticated =='
+          SELECT table_name, grantee,
+                 string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
+          FROM information_schema.role_table_grants
+          WHERE table_schema = 'public'
+            AND grantee IN ('anon', 'authenticated')
+          GROUP BY table_name, grantee
+          ORDER BY table_name, grantee;
+
+          ROLLBACK;
+          SQL
       - name: Check pending migration plan
         run: |
           test -n "$SUPABASE_DB_URL"
