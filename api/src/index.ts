@@ -81,7 +81,6 @@ import { studentSettingsRouter } from "./routes/student-settings";
 import { retiredQuizRouter } from "./routes/retired-quiz";
 import { studentMembershipsRouter } from "./routes/student-memberships";
 import { pushRouter } from './routes/push';
-import { demoAnalysisRouter } from './routes/demo-analysis';
 import { feedbackResolutionRouter, feedbackRouter } from './routes/feedback';
 import { waitlistRouter } from './routes/waitlist';
 import { clientAddress } from './lib/ip-rate-limit';
@@ -127,7 +126,6 @@ app.route("/health", healthRouter);
 app.route('/feedback', feedbackRouter);
 app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
-app.route("/demo/analyze", demoAnalysisRouter);
 app.route('/', waitlistRouter);
 app.route('/', suggestionsRouter);
 // Promo routes are intentionally confined to this prefix. Mounting this router at

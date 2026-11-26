@@ -27,6 +27,23 @@ describe('mock assembly validation', () => {
   })
 })
 
+describe('mock assembly bounds (DEV-QUIZ-009)', () => {
+  it('caps sections, questions, rules and marks overrides', () => {
+    const many = (n: number, offset = 100) => Array.from({ length: n }, (_, i) => ({ question_id: id(offset + i) }))
+    expect(validateMockAssembly(Array.from({ length: 21 }, (_, i) => ({ title: `S${i}`, questions: [{ question_id: id(i + 1) }] }))))
+      .toEqual(['A Quiz can have at most 20 sections'])
+    expect(validateMockAssembly([{ title: 'A', questions: many(501) }]))
+      .toContain('Section 1 can have at most 500 questions')
+    expect(validateMockAssembly([
+      { title: 'A', questions: many(500, 1000) }, { title: 'B', questions: many(500, 2000) }, { title: 'C', questions: many(1, 3000) },
+    ])).toContain('A Quiz can have at most 1000 fixed questions')
+    expect(validateMockAssembly([{ title: 'A', rules: Array.from({ length: 51 }, () => ({ bank_id: id(3), question_count: 1 })) }]))
+      .toContain('Section 1 can have at most 50 random rules')
+    expect(validateMockAssembly([{ title: 'A', questions: [{ question_id: id(2), marks_override: 10_001 }] }]))
+      .toContain('Section 1, question 1 needs marks between 0 and 10000')
+  })
+})
+
 describe('mock settings validation', () => {
   it('normalizes supported settings and availability dates', () => {
     const result = normalizeMockSettings({

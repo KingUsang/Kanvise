@@ -144,7 +144,6 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     exception: 'Signed support-token verification owns this public resolution boundary.',
   }),
   router('/users/me/push', 'pushRouter', 'src/routes/push.ts', 'protected-account', membershipSequence),
-  router('/demo/analyze', 'demoAnalysisRouter', 'src/routes/demo-analysis.ts', 'protected-account', membershipSequence),
   router('/', 'waitlistRouter', 'src/routes/waitlist.ts', 'public', []),
   router('/', 'suggestionsRouter', 'src/routes/suggestions.ts', 'public', []),
   router('/schools/me/promos', 'promosRouter', 'src/routes/promos.ts', 'protected-account', membershipSequence),

@@ -52,6 +52,18 @@ async function accessibleMock(user: any, mockId: string) {
   return studentCanAccessCentreMock(data, await loadStudentMockAudience(user)) ? data : null
 }
 
+// Reads never write. An in-progress attempt whose deadline has passed is shown
+// as timed out; the durable finalization happens when the learner opens that one
+// attempt (loadAttempt) or starts a new one (DEV-QUIZ-006, DEV-QUIZ-025).
+function projectExpiredAttempt<T extends { status: string; deadline_at?: string | null }>(attempt: T, now: Date): T {
+  return attempt.status === 'in_progress' && attempt.deadline_at && now >= new Date(attempt.deadline_at)
+    ? { ...attempt, status: 'timed_out' }
+    : attempt
+}
+
+// Upper bound for one learner Quiz list response.
+export const MAX_LEARNER_QUIZ_LIST = 200
+
 function availability(mock: any, now: Date) {
   if (mock.available_from && now < new Date(mock.available_from)) return 'upcoming'
   if (mock.closes_at && now >= new Date(mock.closes_at)) return 'closed'
@@ -152,6 +164,7 @@ studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileR
       .select('id, title, description, course_id, programme_id, audience_scope, publish_at, available_from, closes_at, time_limit_minutes, calculator_mode, max_attempts, course:courses(name), programme:programmes(name), sections:mock_sections(course_id), versions:mock_exam_versions(id, version_number, total_questions, total_marks)')
       .eq('school_id', user.school_id).eq('status', 'published')
       .order('available_from', { ascending: true, nullsFirst: true })
+      .limit(MAX_LEARNER_QUIZ_LIST)
     if (error) throw error
     const visibleMocks = (mocks || []).filter((mock: any) => studentCanAccessCentreMock(mock, audience))
     const versionByMock = new Map(visibleMocks.flatMap((mock: any) => {
@@ -169,18 +182,12 @@ studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileR
     if (attemptError || grantError) throw attemptError || grantError
 
     const now = new Date()
-    for (const attempt of attempts || []) {
-      if (attempt.status === 'in_progress' && attempt.deadline_at && now >= new Date(attempt.deadline_at)) {
-        const finalized = await submitAttempt(user, user.school_id!, attempt.id, 'timeout')
-        if (finalized.error) throw finalized.error
-        Object.assign(attempt, finalized.data?.[0] || {}, { status: finalized.data?.[0]?.status || 'timed_out' })
-      }
-    }
+    const projectedAttempts = (attempts || []).map(attempt => projectExpiredAttempt(attempt, now))
     const groups: Record<string, any[]> = { available: [], in_progress: [], upcoming: [], completed: [] }
     for (const mock of visibleMocks) {
       const version: any = versionByMock.get(mock.id)
       if (!version) continue
-      const mockAttempts = (attempts || []).filter((attempt: any) => attempt.mock_exam_version_id === version.id)
+      const mockAttempts = projectedAttempts.filter((attempt: any) => attempt.mock_exam_version_id === version.id)
       const active = mockAttempts.find((attempt: any) => attempt.status === 'in_progress')
       const completed = [...mockAttempts].filter((attempt: any) => attempt.status !== 'in_progress')
         .sort((a: any, b: any) => b.attempt_number - a.attempt_number)[0]
@@ -198,7 +205,7 @@ studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileR
     }
     return c.json({ data: groups, server_now: now.toISOString() })
   } catch (error) {
-    return attemptDatabaseError(c, error, 'Could not load your mocks')
+    return attemptDatabaseError(c, error, 'Could not load your quizzes')
   }
 })
 
@@ -216,13 +223,7 @@ studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, pr
         .eq('student_id', user.id).eq('mock_exam_version_id', version.id).is('revoked_at', null),
     ])
     if (attemptError || grantError) throw attemptError || grantError
-    for (const attempt of attempts || []) {
-      if (attempt.status === 'in_progress' && attempt.deadline_at && new Date() >= new Date(attempt.deadline_at)) {
-        const finalized = await submitAttempt(user, user.school_id!, attempt.id, 'timeout')
-        if (finalized.error) throw finalized.error
-        Object.assign(attempt, finalized.data?.[0] || {}, { status: finalized.data?.[0]?.status || 'timed_out' })
-      }
-    }
+    const projectedAttempts = (attempts || []).map(attempt => projectExpiredAttempt(attempt, new Date()))
     const extra = (grants || []).reduce((sum: number, grant: any) => sum + grant.additional_attempts, 0)
     let subjectCombination: any = null
     if (mock.delivery_mode === 'subject_combination' && mock.programme_id) {
@@ -249,9 +250,9 @@ studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, pr
       },
       version: { id: version.id, total_questions: version.total_questions, total_marks: version.total_marks },
       availability: availability(mock, new Date()),
-      attempts_used: (attempts || []).length,
+      attempts_used: projectedAttempts.length,
       attempts_allowed: mock.max_attempts + extra,
-      resumable_attempt: (attempts || []).find((attempt: any) => attempt.status === 'in_progress') || null,
+      resumable_attempt: projectedAttempts.find((attempt: any) => attempt.status === 'in_progress') || null,
       subject_combination: subjectCombination,
     }, server_now: new Date().toISOString() })
   } catch (error) {
@@ -319,6 +320,7 @@ studentMocksRouter.get('/attempts/:attemptId', jwtVerificationMiddleware, profil
     return c.json({ data: {
       attempt: {
         id: attempt.id, status: attempt.status, attempt_number: attempt.attempt_number,
+        student_id: attempt.student_id,
         started_at: attempt.started_at, deadline_at: attempt.deadline_at, last_saved_at: attempt.last_saved_at,
       },
       mock: attempt.mock_exam,
@@ -363,21 +365,33 @@ studentMocksRouter.put('/attempts/:attemptId/answers/:questionId', jwtVerificati
 
 studentMocksRouter.patch('/attempts/:attemptId/questions/:questionId/flag', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
   const user = c.get('user')
-  const body = await c.req.json()
-  if (typeof body.is_flagged !== 'boolean') return c.json({ error: 'is_flagged must be true or false', code: 'VALIDATION_ERROR' }, 400)
+  const body = await c.req.json().catch(() => null)
+  if (typeof body?.is_flagged !== 'boolean') return c.json({ error: 'is_flagged must be true or false', code: 'VALIDATION_ERROR' }, 400)
   try {
-    const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId')!)
-    if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
-    const { data: current, error: loadError } = await supabase.from('mock_answers')
-      .select('selected_option_version_id, theory_answer_text').eq('school_id', schoolId)
-      .eq('attempt_id', c.req.param('attemptId')!).eq('mock_version_question_id', c.req.param('questionId')!).maybeSingle()
-    if (loadError) throw loadError
+    const attemptId = c.req.param('attemptId')!
+    const questionId = c.req.param('questionId')!
+    const { data: attempt, error: attemptError } = await supabase.from('mock_attempts')
+      .select('school_id, status, deadline_at').eq('id', attemptId).eq('student_id', user.id).maybeSingle()
+    if (attemptError) throw attemptError
+    if (!attempt) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
+    if (attempt.status !== 'in_progress') return c.json({ error: 'attempt finalized', code: 'ATTEMPT_FINALIZED' }, 409)
+    if (attempt.deadline_at && new Date() >= new Date(attempt.deadline_at)) return c.json({ error: 'attempt expired', code: 'ATTEMPT_EXPIRED' }, 409)
+    // Flag-only update: the answer columns are never read or rewritten here, so a
+    // concurrent autosave cannot be reverted by a stale copy (DEV-QUIZ-026).
+    const { data: updated, error: updateError } = await supabase.from('mock_answers')
+      .update({ is_flagged: body.is_flagged })
+      .eq('school_id', attempt.school_id).eq('attempt_id', attemptId).eq('mock_version_question_id', questionId)
+      .select('id')
+    if (updateError) throw updateError
+    if (updated && updated.length > 0) return c.json({ data: { answer_id: updated[0].id, is_flagged: body.is_flagged } })
+    // No answer exists yet, so there is nothing to overwrite. The RPC validates the
+    // question belongs to this attempt and creates the flag-only row.
     const { data, error } = await supabase.rpc('save_versioned_mock_answer', {
-      p_school_id: schoolId, p_attempt_id: c.req.param('attemptId')!, p_student_id: user.id,
-      p_mock_version_question_id: c.req.param('questionId')!,
+      p_school_id: attempt.school_id, p_attempt_id: attemptId, p_student_id: user.id,
+      p_mock_version_question_id: questionId,
       // The SQL function accepts NULL for these args; generated types mark them non-null.
-      p_selected_option_version_id: (current?.selected_option_version_id ?? null) as unknown as string,
-      p_theory_answer_text: (current?.theory_answer_text ?? null) as unknown as string,
+      p_selected_option_version_id: null as unknown as string,
+      p_theory_answer_text: null as unknown as string,
       p_is_flagged: body.is_flagged, p_now: new Date().toISOString(),
     })
     if (error) return attemptDatabaseError(c, error, 'Could not update review flag')
@@ -393,17 +407,24 @@ studentMocksRouter.post('/attempts/:attemptId/submit', jwtVerificationMiddleware
     const schoolId = await ownedAttemptSchoolId(user, c.req.param('attemptId')!)
     if (!schoolId) return c.json({ error: 'Attempt not found', code: 'ATTEMPT_NOT_FOUND' }, 404)
     const { data, error } = await submitAttempt(user, schoolId, c.req.param('attemptId')!, 'student')
-    if (error) return attemptDatabaseError(c, error, 'Could not submit your mock')
+    if (error) return attemptDatabaseError(c, error, 'Could not submit your quiz')
     // Snapshot-total triggers run after the RPC's UPDATE ... RETURNING, so
     // reload the attempt before responding. This matters for adaptive mocks,
     // where a student's four subjects are a subset of the published version.
     const { data: attempt, error: reloadError } = await supabase.from('mock_attempts')
       .select('status, mcq_score, total_score, total_marks, submitted_at')
       .eq('id', c.req.param('attemptId')!).eq('school_id', schoolId).eq('student_id', user.id).maybeSingle()
-    if (reloadError || !attempt) return c.json({ error: 'Mock was submitted but could not be reloaded', code: 'ATTEMPT_RELOAD_FAILED' }, 500)
-    return c.json({ data: attempt || data?.[0] || data })
+    if (reloadError || !attempt) {
+      // The submission is committed and cannot be repeated. Answer with success so
+      // the learner is not told to retry; the result page reads the final totals
+      // (DEV-QUIZ-007).
+      console.error('student_mocks.submit_reload_failed', { attemptId: c.req.param('attemptId'), message: reloadError?.message })
+      const committed = Array.isArray(data) ? data[0] : data
+      return c.json({ data: { ...(committed || {}), status: committed?.status || 'submitted' }, warnings: ['ATTEMPT_RELOAD_FAILED'] })
+    }
+    return c.json({ data: attempt })
   } catch (error) {
-    return attemptDatabaseError(c, error, 'Could not submit your mock')
+    return attemptDatabaseError(c, error, 'Could not submit your quiz')
   }
 })
 

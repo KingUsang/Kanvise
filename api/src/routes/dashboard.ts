@@ -113,7 +113,8 @@ async function loadMockOverview(schoolId: string, tutorId?: string) {
     );
     if (courseIds.length === 0)
       return { pending_count: 0, active_count: 0, items: [] };
-    mocksQuery = mocksQuery.in("course_id", courseIds);
+    // Only Quizzes the Tutor owns count as their grading work (DEV-QUIZ-033).
+    mocksQuery = mocksQuery.in("course_id", courseIds).eq("tutor_id", tutorId);
   }
 
   const { data: mocks } = await mocksQuery;

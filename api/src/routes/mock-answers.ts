@@ -46,14 +46,26 @@ mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async
     return c.json({ error: 'This attempt has not been submitted', code: 'ATTEMPT_NOT_SUBMITTED' }, 409)
   }
   if (user.role === 'tutor') {
-    const { data: assignment } = await supabase.from('tutor_course_assignments')
-      .select('id')
-      .eq('school_id', user.school_id)
-      .eq('tutor_id', user.id)
-      .eq('course_id', mockExam?.course_id)
-      .maybeSingle()
-    if (!assignment) {
-      return c.json({ error: 'You are not assigned to this mock’s course', code: 'FORBIDDEN' }, 403)
+    // A Tutor grades only Quizzes they own and, for a Subject Quiz, only in a
+    // Subject they are assigned to. This matches the results workspace
+    // (DEV-QUIZ-033). A failed lookup is an error, not a permission decision.
+    if (mockExam?.tutor_id !== user.id) {
+      return c.json({ error: 'You can only grade your own Quizzes', code: 'FORBIDDEN' }, 403)
+    }
+    if (mockExam?.course_id) {
+      const { data: assignment, error: assignmentError } = await supabase.from('tutor_course_assignments')
+        .select('id')
+        .eq('school_id', user.school_id)
+        .eq('tutor_id', user.id)
+        .eq('course_id', mockExam.course_id)
+        .maybeSingle()
+      if (assignmentError) {
+        console.error('mock_answers.assignment_lookup_failed', { message: assignmentError.message })
+        return c.json({ error: 'Could not verify your Subject assignment', code: 'DATABASE_ERROR' }, 500)
+      }
+      if (!assignment) {
+        return c.json({ error: 'You are not assigned to this Quiz’s Subject', code: 'FORBIDDEN' }, 403)
+      }
     }
   }
 
