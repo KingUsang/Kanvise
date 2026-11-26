@@ -3149,6 +3149,9 @@ isOneToOne: false
 "create_school_for_admin":
 { Args: { "p_account_type": string,"p_admin_id": string,"p_contact_email"?: string,"p_contact_phone"?: string,"p_description"?: string,"p_name": string,"p_slug": string }; Returns: Json
                            },
+"delete_programme_checked":
+{ Args: { "p_programme_id": string,"p_school_id": string }; Returns: string
+                           },
 "current_user_school_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },

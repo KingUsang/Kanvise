@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { supabase } from '../lib/supabase'
 import {
   jwtVerificationMiddleware,
@@ -21,6 +22,65 @@ attendanceRouter.use('*', profileResolutionMiddleware)
 attendanceRouter.use('*', accountContextMiddleware, accountUserProjection)
 attendanceRouter.use('*', requireRole('admin', 'tutor'))
 
+// Strict runtime contract for both report endpoints (DEV-ATD-004).
+const dateFilterSchema = z.string().max(40)
+  .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:\d{2})?)?$/)
+  .refine((value) => Number.isFinite(Date.parse(value)))
+const attendanceQuerySchema = z.object({
+  programme_id: z.string().uuid().optional(),
+  class_id: z.string().uuid().optional(),
+  start_date: dateFilterSchema.optional(),
+  end_date: dateFilterSchema.optional(),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+}).refine((q) => !q.start_date || !q.end_date || Date.parse(q.start_date) <= Date.parse(q.end_date))
+const INVALID_QUERY = { error: 'Invalid attendance filters', code: 'VALIDATION_ERROR' } as const
+const ATTENDANCE_UNAVAILABLE = { error: 'Attendance data is temporarily unavailable', code: 'ATTENDANCE_UNAVAILABLE' } as const
+
+function parseAttendanceQuery(c: { req: { query: () => Record<string, string> } }) {
+  const raw: Record<string, string> = {}
+  for (const [key, value] of Object.entries(c.req.query())) if (value !== '') raw[key] = value
+  return attendanceQuerySchema.safeParse(raw)
+}
+
+// A Programme filter covers Subjects attached directly and through its
+// Sub-programmes (DEV-ATD-009). Returns null when a lookup fails.
+async function courseIdsForProgramme(schoolId: string, programmeId: string): Promise<string[] | null> {
+  const { data: subs, error: subsError } = await supabase
+    .from('sub_programmes').select('id').eq('school_id', schoolId).eq('programme_id', programmeId).limit(1000)
+  if (subsError) return null
+  const subIds = (subs || []).map((row) => row.id)
+  let query = supabase.from('courses').select('id').eq('school_id', schoolId)
+  query = subIds.length > 0
+    ? query.or(`programme_id.eq.${programmeId},sub_programme_id.in.(${subIds.join(',')})`)
+    : query.eq('programme_id', programmeId)
+  const { data, error } = await query.limit(5000)
+  if (error) return null
+  return (data || []).map((row) => row.id)
+}
+
+// Subject hierarchy with each Subject's effective Programme, so enrolments at
+// Programme level also reach Subjects nested under a Sub-programme (DEV-ATD-010).
+async function loadCourseHierarchy(courseIds: string[]) {
+  const { data: courses, error } = await supabase
+    .from('courses').select('id, sub_programme_id, programme_id').in('id', courseIds)
+  if (error) return null
+  const subIds = [...new Set((courses || []).map((row) => row.sub_programme_id).filter(Boolean))] as string[]
+  const parentBySub = new Map<string, string | null>()
+  if (subIds.length > 0) {
+    const { data: subs, error: subsError } = await supabase
+      .from('sub_programmes').select('id, programme_id').in('id', subIds)
+    if (subsError) return null
+    for (const sub of subs || []) parentBySub.set(sub.id, sub.programme_id)
+  }
+  return (courses || []).map((row) => ({
+    id: row.id,
+    sub_programme_id: row.sub_programme_id,
+    programme_id: row.programme_id,
+    effective_programme_id: row.programme_id || (row.sub_programme_id ? parentBySub.get(row.sub_programme_id) ?? null : null),
+  }))
+}
+
 const configuredRiskThreshold = Number(process.env.ATTENDANCE_RISK_THRESHOLD_PERCENT || 70)
 const riskThreshold = Number.isFinite(configuredRiskThreshold)
   ? Math.min(100, Math.max(0, configuredRiskThreshold))
@@ -32,10 +92,9 @@ attendanceRouter.get('/metrics', async (c) => {
   const schoolId = user.school_id
   const role = user.role
   
-  const programmeId = c.req.query('programme_id')
-  const classId = c.req.query('class_id')
-  const startDate = c.req.query('start_date')
-  const endDate = c.req.query('end_date')
+  const parsedQuery = parseAttendanceQuery(c)
+  if (!parsedQuery.success) return c.json(INVALID_QUERY, 400)
+  const { programme_id: programmeId, class_id: classId, start_date: startDate, end_date: endDate } = parsedQuery.data
 
   if (!schoolId) {
     return c.json({ error: 'User does not belong to a school' }, 400)
@@ -53,16 +112,10 @@ attendanceRouter.get('/metrics', async (c) => {
   }
   
   if (programmeId) {
-     const { data: pCourses } = await supabase
-       .from('courses')
-       .select('id')
-       .eq('school_id', schoolId)
-       .eq('programme_id', programmeId)
-     if (pCourses && pCourses.length > 0) {
-        classesQuery = classesQuery.in('course_id', pCourses.map(c => c.id))
-     } else {
-        classesQuery = classesQuery.in('course_id', ['none'])
-     }
+     const pCourseIds = await courseIdsForProgramme(schoolId, programmeId)
+     if (!pCourseIds) return c.json(ATTENDANCE_UNAVAILABLE, 500)
+     if (pCourseIds.length === 0) return c.json({ data: { average_attendance: 0, total_sessions: 0, at_risk_students: 0, risk_threshold: riskThreshold } })
+     classesQuery = classesQuery.in('course_id', pCourseIds)
   }
   
   if (classId) classesQuery = classesQuery.eq('id', classId)
@@ -71,7 +124,7 @@ attendanceRouter.get('/metrics', async (c) => {
 
   const { data: liveClasses, error: classesError } = await classesQuery
   
-  if (classesError) return c.json({ error: 'Failed to fetch classes' }, 500)
+  if (classesError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
   
   const totalSessions = liveClasses ? liveClasses.length : 0
 
@@ -83,13 +136,11 @@ attendanceRouter.get('/metrics', async (c) => {
   const courseIds = [...new Set(liveClasses!.flatMap(c => c.course_id ? [c.course_id] : []))]
 
   // 2. Fetch expected students (enrolments) considering hierarchy
-  const { data: coursesData } = await supabase
-    .from('courses')
-    .select('id, sub_programme_id, programme_id')
-    .in('id', courseIds)
+  const coursesData = await loadCourseHierarchy(courseIds)
+  if (!coursesData) return c.json(ATTENDANCE_UNAVAILABLE, 500)
 
-  const subProgrammeIds = [...new Set(coursesData?.map(c => c.sub_programme_id).filter(Boolean) || [])]
-  const programmeIds = [...new Set(coursesData?.map(c => c.programme_id).filter(Boolean) || [])]
+  const subProgrammeIds = [...new Set(coursesData.map(c => c.sub_programme_id).filter(Boolean))]
+  const programmeIds = [...new Set(coursesData.map(c => c.effective_programme_id).filter(Boolean))]
 
   // Fetch enrolments optimally using the database (PostgREST OR syntax without quotes)
   let enrolmentsQuery = supabase
@@ -110,14 +161,15 @@ attendanceRouter.get('/metrics', async (c) => {
 
   const { data: enrolments, error: enrolmentsError } = await enrolmentsQuery
     
-  if (enrolmentsError) console.error("Metrics enrolments fetch error:", enrolmentsError)
+  if (enrolmentsError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
 
   // 3. Fetch actual attendance records
-  const { data: records } = await supabase
+  const { data: records, error: recordsError } = await supabase
     .from('attendance_records')
     .select('student_id, live_class_id')
     .eq('school_id', schoolId)
     .in('live_class_id', classIds)
+  if (recordsError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
 
   // Calculate Metrics
   let totalExpectedAttendees = 0
@@ -131,7 +183,7 @@ attendanceRouter.get('/metrics', async (c) => {
      const courseEnrolments = enrolments?.filter(e => 
          e.course_id === lc.course_id || 
          (courseInfo?.sub_programme_id && e.sub_programme_id === courseInfo.sub_programme_id) || 
-         (courseInfo?.programme_id && e.programme_id === courseInfo.programme_id)
+         (courseInfo?.effective_programme_id && e.programme_id === courseInfo.effective_programme_id)
      ) || []
      
      // Deduplicate students (in case they enrolled multiple ways)
@@ -154,7 +206,7 @@ attendanceRouter.get('/metrics', async (c) => {
                   e.student_id === sId && (
                   e.course_id === lc.course_id || 
                   (courseInfo?.sub_programme_id && e.sub_programme_id === courseInfo.sub_programme_id) || 
-                  (courseInfo?.programme_id && e.programme_id === courseInfo.programme_id))
+                  (courseInfo?.effective_programme_id && e.programme_id === courseInfo.effective_programme_id))
               )
           }).length
           
@@ -184,13 +236,9 @@ attendanceRouter.get('/records', async (c) => {
   const schoolId = user.school_id
   const role = user.role
   
-  const programmeId = c.req.query('programme_id')
-  const classId = c.req.query('class_id')
-  const startDate = c.req.query('start_date')
-  const endDate = c.req.query('end_date')
-  
-  const page = parseInt(c.req.query('page') || '1', 10)
-  const limit = parseInt(c.req.query('limit') || '20', 10)
+  const parsedQuery = parseAttendanceQuery(c)
+  if (!parsedQuery.success) return c.json(INVALID_QUERY, 400)
+  const { programme_id: programmeId, class_id: classId, start_date: startDate, end_date: endDate, page, limit } = parsedQuery.data
 
   if (!schoolId) {
     return c.json({ error: 'User does not belong to a school' }, 400)
@@ -210,16 +258,10 @@ attendanceRouter.get('/records', async (c) => {
   }
   
   if (programmeId) {
-     const { data: pCourses } = await supabase
-       .from('courses')
-       .select('id')
-       .eq('school_id', schoolId)
-       .eq('programme_id', programmeId)
-     if (pCourses && pCourses.length > 0) {
-        classesQuery = classesQuery.in('course_id', pCourses.map(c => c.id))
-     } else {
-        classesQuery = classesQuery.in('course_id', ['none'])
-     }
+     const pCourseIds = await courseIdsForProgramme(schoolId, programmeId)
+     if (!pCourseIds) return c.json(ATTENDANCE_UNAVAILABLE, 500)
+     if (pCourseIds.length === 0) return c.json({ data: [], meta: { total: 0, page, limit, total_pages: 0 } })
+     classesQuery = classesQuery.in('course_id', pCourseIds)
   }
 
   if (classId) classesQuery = classesQuery.eq('id', classId)
@@ -228,20 +270,18 @@ attendanceRouter.get('/records', async (c) => {
 
   const { data: liveClasses, error: classesError } = await classesQuery
   
-  if (classesError) return c.json({ error: 'Failed to fetch classes' }, 500)
+  if (classesError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
   if (!liveClasses || liveClasses.length === 0) return c.json({ data: [], meta: { total: 0, page, limit } })
 
   const classIds = liveClasses.map(c => c.id)
   const courseIds = [...new Set(liveClasses.flatMap(c => c.course_id ? [c.course_id] : []))]
 
   // 2. Fetch expected students (enrolments) considering hierarchy
-  const { data: coursesData } = await supabase
-    .from('courses')
-    .select('id, sub_programme_id, programme_id')
-    .in('id', courseIds)
+  const coursesData = await loadCourseHierarchy(courseIds)
+  if (!coursesData) return c.json(ATTENDANCE_UNAVAILABLE, 500)
 
-  const subProgrammeIds = [...new Set(coursesData?.map(c => c.sub_programme_id).filter(Boolean) || [])]
-  const programmeIds = [...new Set(coursesData?.map(c => c.programme_id).filter(Boolean) || [])]
+  const subProgrammeIds = [...new Set(coursesData.map(c => c.sub_programme_id).filter(Boolean))]
+  const programmeIds = [...new Set(coursesData.map(c => c.effective_programme_id).filter(Boolean))]
 
   // Fetch enrolments optimally using the database (PostgREST OR syntax without quotes)
   let enrolmentsQuery = supabase
@@ -262,14 +302,15 @@ attendanceRouter.get('/records', async (c) => {
 
   const { data: enrolments, error: enrolmentsError } = await enrolmentsQuery
     
-  if (enrolmentsError) console.error("Records enrolments fetch error:", enrolmentsError)
+  if (enrolmentsError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
     
   // 3. Fetch actual attendance
-  const { data: records } = await supabase
+  const { data: records, error: recordsError } = await supabase
     .from('attendance_records')
     .select('*')
     .eq('school_id', schoolId)
     .in('live_class_id', classIds)
+  if (recordsError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
 
   // 4. Build complete roster (Attendees + Absentees)
   let roster = []
@@ -279,7 +320,7 @@ attendanceRouter.get('/records', async (c) => {
       const classEnrolments = enrolments?.filter(e => 
           e.course_id === lc.course_id || 
           (courseInfo?.sub_programme_id && e.sub_programme_id === courseInfo.sub_programme_id) || 
-          (courseInfo?.programme_id && e.programme_id === courseInfo.programme_id)
+          (courseInfo?.effective_programme_id && e.programme_id === courseInfo.effective_programme_id)
       ) || []
       const classRecords = records?.filter(r => r.live_class_id === lc.id) || []
       

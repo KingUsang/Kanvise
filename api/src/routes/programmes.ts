@@ -542,17 +542,18 @@ programmesRouter.post('/:id/unpublish', enforceAdmin, async (c) => {
 })
 
 programmesRouter.delete('/:id', enforceAdmin, async (c) => {
-  try {
-    const profile = c.get('user')
-    const id = c.req.param('id')
-    const { count, error: countError } = await supabase.from('enrolments').select('*', { count: 'exact', head: true })
-      .eq('programme_id', id).eq('school_id', profile.school_id)
-    if (countError && countError.code !== '42P01') throw countError
-    if (count && count > 0) return c.json({ error: 'Cannot delete programme with active enrolments', code: 'ACTIVE_ENROLMENTS_EXIST' }, 409)
-    const { error } = await supabase.from('programmes').delete().eq('id', id).eq('school_id', profile.school_id)
-    if (error) throw error
-    return c.json({ message: 'Programme deleted' })
-  } catch (error: any) {
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+  const profile = c.get('user')
+  const id = c.req.param('id')
+  if (!uuidSchema.safeParse(id).success) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+  // One transaction locks the Class tree and checks enrolments at Class,
+  // Sub-programme and Subject level before deleting (DEV-CLS-009, DEV-CLS-018).
+  const { data, error } = await supabase.rpc('delete_programme_checked', { p_school_id: profile.school_id, p_programme_id: id })
+  if (error) {
+    console.error('[programmes] delete failed:', error.code || 'unknown')
+    return c.json({ error: 'Could not delete this class', code: 'CLASS_DELETE_FAILED' }, 500)
   }
+  if (data === 'not_found') return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+  if (data === 'has_enrolments') return c.json({ error: 'Cannot delete programme with active enrolments', code: 'ACTIVE_ENROLMENTS_EXIST' }, 409)
+  if (data !== 'deleted') return c.json({ error: 'Could not delete this class', code: 'CLASS_DELETE_FAILED' }, 500)
+  return c.json({ message: 'Programme deleted' })
 })
