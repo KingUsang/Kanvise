@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { proxyClientHeaders } from "@/lib/server/proxy-client-headers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const response = await fetch(`${API_URL}/suggestions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...proxyClientHeaders(req) },
       body: JSON.stringify({ suggestion, email: body.email?.trim() || null }),
       signal: AbortSignal.timeout(15_000),
     });

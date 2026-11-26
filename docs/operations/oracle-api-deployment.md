@@ -49,6 +49,27 @@ SSH port 22 should remain restricted to explicit administrator `/32` addresses.
 Ports 80 and 443 are public. Remove temporary administrator SSH rules after
 maintenance or update them when the administrator's public address changes.
 
+## Public form rate-limit secret
+
+The waitlist, suggestion and landing-analytics limits in the API key on the
+visitor address (DEV-PUB-004). Browsers reach these endpoints through the
+Next.js route handlers on Vercel, which forward the visitor address (Vercel's
+`x-real-ip`, or the first `x-forwarded-for` entry) in `X-Kanvise-Client-Ip`
+together with `X-Kanvise-Proxy-Secret`.
+
+- Set the same random value (32+ characters) as `KANVISE_PROXY_SECRET` in the
+  API `api/.env` on the VM (staging and production separately) and in the
+  matching Vercel environment (server-only, no `NEXT_PUBLIC_` prefix). Restart
+  the API unit after editing `.env`.
+- The API compares the secret in constant time and ignores
+  `X-Kanvise-Client-Ip` without a match.
+- Without the secret, or before it is set on both sides, the API keys on the
+  last `X-Forwarded-For` entry, which Caddy on this VM appends from the
+  connecting peer, then on the socket address. It never trusts
+  `cf-connecting-ip` or `x-real-ip` because Caddy passes those through from the
+  caller. Until the secret is set, all web-proxied submissions share the
+  Vercel server's bucket, as before this change.
+
 ## Operational checks
 
 ```bash
