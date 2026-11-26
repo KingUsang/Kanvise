@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { createHash, randomBytes } from 'node:crypto'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
+import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, accountContextMiddleware } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import type { TenantVariables } from '../types'
 
 export const directAssignmentsRouter = new Hono<{ Variables: TenantVariables }>()
@@ -17,7 +18,7 @@ async function ownedAssignment(id: string, user: any) {
   return data as any
 }
 
-directAssignmentsRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
+directAssignmentsRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection)
 
 directAssignmentsRouter.get('/', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')

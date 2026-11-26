@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { z } from "zod";
+import type { TablesUpdate } from "../lib/database.types";
 import { supabase } from "../lib/supabase";
 import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
 import { strictBooleanQuerySchema } from "../lib/api-contract";
@@ -329,26 +331,53 @@ coursesRouter.get("/:id", async (c) => {
   }
 });
 
+// Columns a subject PATCH may change. school_id, id, created_by, is_published and
+// timestamps are never client-writable (publishing has its own route).
+const subjectUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  slug: z.string().trim().min(1).max(200),
+  description: z.string().max(5000).nullable(),
+  price: z.union([z.number().finite(), z.string().max(32)]),
+  currency: z.string().trim().min(1).max(8),
+  programme_id: z.string().uuid().nullable(),
+  sub_programme_id: z.string().uuid().nullable(),
+  is_available_separately: z.boolean(),
+  sort_order: z.number().int().min(0).max(100000),
+}).partial().strict();
+
 // Update course
 coursesRouter.patch("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
-    const updates = await c.req.json();
-
-    // Prevent spoofing
-    delete updates.school_id;
-    delete updates.id;
-    delete updates.is_published;
-    delete updates.created_by;
+    const parsedUpdates = subjectUpdateSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsedUpdates.success) {
+      return c.json({ error: "Invalid subject update", code: "INVALID_SUBJECT_UPDATE" }, 400);
+    }
+    const updates: Record<string, any> = { ...parsedUpdates.data };
     if (updates.is_available_separately === false) updates.price = 0;
     if (updates.is_available_separately === true && (updates.price === '' || !Number.isFinite(parseFloat(updates.price)) || parseFloat(updates.price) < 0)) {
       return c.json({ error: "Choose a free option or enter a valid price", code: "PRICE_REQUIRED" }, 400);
     }
 
+    if (updates.programme_id && updates.sub_programme_id) {
+      return c.json({ error: "Cannot specify both programme and sub-programme", code: "INVALID_PARENT" }, 400);
+    }
+    // A new parent must belong to the same account.
+    for (const [field, table] of [["programme_id", "programmes"], ["sub_programme_id", "sub_programmes"]] as const) {
+      if (!updates[field]) continue;
+      const { data: parent } = await supabase
+        .from(table)
+        .select("id")
+        .eq("id", updates[field])
+        .eq("school_id", profile.school_id)
+        .single();
+      if (!parent) return c.json({ error: "Invalid parent", code: "INVALID_PARENT" }, 400);
+    }
+
     const { data, error } = await supabase
       .from("courses")
-      .update(updates)
+      .update(updates as TablesUpdate<"courses">)
       .eq("id", id)
       .eq("school_id", profile.school_id)
       .select()

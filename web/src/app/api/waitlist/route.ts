@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { proxyClientHeaders } from "@/lib/server/proxy-client-headers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -6,10 +7,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.arrayBuffer();
     const contentType = req.headers.get("content-type");
-    const headers = contentType ? { "Content-Type": contentType } : undefined;
+    const headers: Record<string, string> = {
+      ...(contentType ? { "Content-Type": contentType } : {}),
+      ...proxyClientHeaders(req),
+    };
     const response = await fetch(`${API_URL}/waitlist`, {
       method: "POST",
-      ...(headers ? { headers } : {}),
+      ...(Object.keys(headers).length ? { headers } : {}),
       body,
       signal: AbortSignal.timeout(15_000),
     });

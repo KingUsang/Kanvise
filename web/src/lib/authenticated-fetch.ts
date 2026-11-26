@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import * as Sentry from '@sentry/nextjs'
 import { getCurrentAccessToken, refreshAccessToken } from './auth-session'
 import { ACCOUNT_CONTEXT_HEADER, getActiveAccountId } from './account-preference'
+import { ACCOUNT_PICKER_PATH, ACCOUNT_SELECTION_REQUIRED, accountPickerHref } from './account-cookie'
 import { createClient } from './supabase/client'
 
 const refreshes = new WeakMap<SupabaseClient, Promise<string | null>>()
@@ -28,6 +29,30 @@ async function isExpiredAccessTokenResponse(response: Response) {
   if (response.status !== 401) return false
   const body = await response.clone().json().catch(() => null)
   return body?.code === 'TOKEN_EXPIRED'
+}
+
+/**
+ * The API answers 409 ACCOUNT_SELECTION_REQUIRED when the person has several
+ * active memberships and the request named none. Send the browser to the
+ * account picker, returning to the current page, instead of showing an error.
+ */
+async function openAccountPickerIfRequired(response: Response) {
+  if (response.status !== 409 || typeof window === 'undefined') return
+  const body = await response.clone().json().catch(() => null)
+  if (body?.code !== ACCOUNT_SELECTION_REQUIRED) return
+  if (window.location.pathname.startsWith(ACCOUNT_PICKER_PATH)) return
+  window.location.assign(accountPickerHref(`${window.location.pathname}${window.location.search}`))
+}
+
+/**
+ * fetch for callers that build their own Authorization and
+ * accountContextHeaders() instead of using authenticatedFetch. It adds only
+ * the account picker redirect on 409 ACCOUNT_SELECTION_REQUIRED.
+ */
+export async function accountScopedFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, init)
+  await openAccountPickerIfRequired(response)
+  return response
 }
 
 function sessionEndedResponse() {
@@ -85,11 +110,12 @@ export async function authenticatedFetch(
   const accessToken = suppliedToken ?? await getCurrentAccessToken(supabase)
   if (!accessToken) return sessionEndedResponse()
   let response = await request(accessToken)
-  if (!await isExpiredAccessTokenResponse(response)) return response
-
-  const freshToken = await refreshOnce(supabase)
-  if (!freshToken) return sessionEndedResponse()
-  response = await request(freshToken)
+  if (await isExpiredAccessTokenResponse(response)) {
+    const freshToken = await refreshOnce(supabase)
+    if (!freshToken) return sessionEndedResponse()
+    response = await request(freshToken)
+  }
+  await openAccountPickerIfRequired(response)
   return response
 }
 

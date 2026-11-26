@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
 }))
 vi.mock('../push/config', () => ({ getPushConfig: () => ({ enabled: true, publicKey: 'vapid-public' }) }))
 vi.mock('../push/repository', () => ({ pushRepository: mocks }))

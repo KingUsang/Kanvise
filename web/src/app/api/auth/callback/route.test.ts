@@ -42,5 +42,33 @@ describe('Google OAuth callback', () => {
       cache: 'no-store',
     }))
     expect(response.headers.get('location')).toBe('https://kanvise.test/dashboard/student')
+    // A previous session's account selection is cleared on sign-in.
+    expect(response.headers.getSetCookie().some(cookie => cookie.startsWith('kanvise_account=;'))).toBe(true)
+  })
+
+  it('sends a deadline with profile init and redirects to the error page when it fails', async () => {
+    mocks.cookie = ''
+    const fetchMock = vi.fn().mockRejectedValue(new DOMException('timed out', 'TimeoutError'))
+    vi.stubGlobal('fetch', fetchMock)
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: 'tok' }, user: { id: 'u', user_metadata: {} } },
+      error: null,
+    })
+
+    const response = await GET(new Request('https://kanvise.test/api/auth/callback?code=c&role=student'))
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/auth\/profile\/init$/), expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    expect(response.headers.get('location')).toContain('/auth/auth-code-error?reason=profile_init_failed')
+  })
+
+  it('sends a retired legacy tutor invite link to /invite without the token (DEV-SEC-008)', async () => {
+    mocks.cookie = ''
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await GET(new Request('https://kanvise.test/api/auth/callback?code=c&role=tutor&invite_token=legacy.signature'))
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(response.headers.get('location')).toBe('https://kanvise.test/invite')
   })
 })

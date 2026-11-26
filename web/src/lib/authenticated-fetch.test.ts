@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { authenticatedFetch } from './authenticated-fetch'
+import { accountScopedFetch, authenticatedFetch } from './authenticated-fetch'
 import { clearActiveAccountId, setActiveAccountId } from './account-preference'
+
+function pickerSupabase() {
+  return { auth: { refreshSession: vi.fn() } } as unknown as Parameters<typeof authenticatedFetch>[0]
+}
 
 describe('authenticatedFetch', () => {
   beforeEach(() => {
@@ -146,6 +150,43 @@ describe('authenticatedFetch', () => {
     expect(responses.every(response => response.status === 200)).toBe(true)
     expect(refreshSession).toHaveBeenCalledOnce()
     expect(fetchMock).toHaveBeenCalledTimes(4)
+  })
+
+  it('opens the account picker, returning to the current page, on ACCOUNT_SELECTION_REQUIRED', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'ACCOUNT_SELECTION_REQUIRED' }), { status: 409 }))
+    const assign = vi.fn()
+    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, pathname: '/dashboard/payments', search: '?tab=1', assign } as unknown as Location)
+
+    const response = await authenticatedFetch(pickerSupabase(), '/payments', 'current-token')
+
+    expect(response.status).toBe(409)
+    expect(assign).toHaveBeenCalledWith('/account/select?redirect=%2Fdashboard%2Fpayments%3Ftab%3D1')
+  })
+
+  it('does not redirect for other 409 conflicts or when already on the picker', async () => {
+    const assign = vi.fn()
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'PAYMENT_INITIALIZING' }), { status: 409 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'ACCOUNT_SELECTION_REQUIRED' }), { status: 409 }))
+    const location = vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, pathname: '/dashboard', search: '', assign } as unknown as Location)
+    await authenticatedFetch(pickerSupabase(), '/one', 'current-token')
+    location.mockReturnValue({ ...window.location, pathname: '/account/select', search: '', assign } as unknown as Location)
+    await authenticatedFetch(pickerSupabase(), '/two', 'current-token')
+
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('opens the account picker from raw-fetch callers that use accountScopedFetch', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'ACCOUNT_SELECTION_REQUIRED' }), { status: 409 }))
+    const assign = vi.fn()
+    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, pathname: '/class/class-1', search: '', assign } as unknown as Location)
+    const init = { method: 'POST', headers: { Authorization: 'Bearer caller-token' } }
+
+    const response = await accountScopedFetch('/live-classes/class-1/enter', init)
+
+    expect(response.status).toBe(409)
+    expect(fetchMock).toHaveBeenCalledWith('/live-classes/class-1/enter', init)
+    expect(assign).toHaveBeenCalledWith('/account/select?redirect=%2Fclass%2Fclass-1')
   })
 
 })

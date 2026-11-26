@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { X, Loader2, BookOpen, Clock, AlertCircle, ReceiptText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { accountScopedFetch, authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { accountContextHeaders } from "@/lib/account-preference";
 
 export default function StudentDetailsSheet({ student, onClose, onRemoved, onChanged }: { student: any, onClose: () => void, onRemoved: () => void, onChanged: () => void }) {
   const [enrolments, setEnrolments] = useState<any[]>([]);
@@ -23,8 +24,8 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
       const { data: { session } } = await supabase.auth.getSession();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!session || !apiUrl) throw new Error('Your session is unavailable');
-      const response = await fetch(`${apiUrl}/users/students/${encodeURIComponent(student.id)}/invitation${action === 'resend' ? '/resend' : ''}`, {
-        method: action === 'resend' ? 'POST' : 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
+      const response = await accountScopedFetch(`${apiUrl}/users/students/${encodeURIComponent(student.id)}/invitation${action === 'resend' ? '/resend' : ''}`, {
+        method: action === 'resend' ? 'POST' : 'DELETE', headers: { ...accountContextHeaders(), Authorization: `Bearer ${session.access_token}` },
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || `Could not ${action} invitation`);
@@ -64,10 +65,10 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
         const { data: session } = await supabase.auth.getSession();
         
         const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        const headers = { Authorization: `Bearer ${session?.session?.access_token}` };
+        const headers = { ...accountContextHeaders(), Authorization: `Bearer ${session?.session?.access_token}` };
         const [res, paymentsRes] = await Promise.all([
-          fetch(`${API_URL}/enrolments?student_id=${encodeURIComponent(student.id)}`, { headers }),
-          fetch(`${API_URL}/payments?student_id=${encodeURIComponent(student.id)}`, { headers }),
+          accountScopedFetch(`${API_URL}/enrolments?student_id=${encodeURIComponent(student.id)}`, { headers }),
+          accountScopedFetch(`${API_URL}/payments?student_id=${encodeURIComponent(student.id)}`, { headers }),
         ]);
         
         if (!res.ok || !paymentsRes.ok) throw new Error("Failed to fetch student details");
@@ -145,7 +146,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
                   <div key={enrolment.id} className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-4 shadow-sm transition-colors hover:border-dashboard-primary/30">
                     <div className="flex justify-between items-start mb-1">
                       <div className="font-semibold text-dashboard-foreground">
-                        {enrolment.programmes?.name || enrolment.sub_programmes?.name || enrolment.courses?.name || "Unknown"}
+                        {enrolment.programmes?.name || enrolment.courses?.name || (enrolment.sub_programmes ? 'Class' : null) || "Unknown"}
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700">
                         Access granted
@@ -180,7 +181,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
             ) : (
               <div className="space-y-3">
                 {payments.map((payment) => {
-                  const itemName = payment.programmes?.name || payment.sub_programmes?.name || payment.courses?.name || 'Enrolment'
+                  const itemName = payment.programmes?.name || payment.courses?.name || 'Enrolment'
                   return (
                     <div key={payment.id} className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">

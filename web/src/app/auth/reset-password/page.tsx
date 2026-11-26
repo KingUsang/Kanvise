@@ -20,6 +20,7 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [checkingRecovery, setCheckingRecovery] = useState(true);
   const [recoveryVerified, setRecoveryVerified] = useState(false);
+  const [activationWarning, setActivationWarning] = useState<string | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -72,15 +73,25 @@ export default function ResetPasswordPage() {
     // Their invitation only creates a login, so record that this profile is now
     // active once they have chosen a password.
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile/activate`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const appRole = currentUser?.app_metadata?.kanvise_role || currentUser?.app_metadata?.role;
+      if (appRole === 'student') {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile/activate`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              first_name: String(currentUser?.user_metadata?.first_name || ''),
+              last_name: String(currentUser?.user_metadata?.last_name || ''),
+            }),
+          });
+          if (!response.ok) throw new Error(`activation_failed_${response.status}`);
+        }
       }
     } catch (activationError) {
       console.error('Could not mark student profile active:', activationError);
+      setActivationWarning('Your password was changed, but we could not finish activating your profile. Sign in and complete your details if asked.');
     }
 
     setSuccess(true);
@@ -119,6 +130,7 @@ export default function ResetPasswordPage() {
         : success ? <div className="text-center">
           <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Password updated</h1>
           <p className="mt-3 text-sm leading-6 text-[#625e6e]">Your password has been changed.</p>
+          {activationWarning ? <p role="alert" className="mt-3 text-sm leading-6 text-[#a33a2b]">{activationWarning}</p> : null}
           <div className="mt-7 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#dedce5] text-sm text-[#625e6e]"><Loader2 className="h-4 w-4 animate-spin"/>Opening your account…</div>
         </div> : !recoveryVerified ? <div className="py-6 text-center">
           <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">This reset link can’t be used</h1>

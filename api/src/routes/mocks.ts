@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import { BANK_QUESTION_TYPE_RELATION } from "../lib/postgrest-selects";
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from "../middleware/auth";
+import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, accountContextMiddleware } from "../middleware/auth"
+import { accountUserProjection } from '../middleware/account-projection';
 import { TenantVariables } from "../types";
 import { notifyMockPublished } from "../notifications/triggers";
 import {
@@ -27,7 +28,7 @@ import {
 
 export const mocksRouter = new Hono<{ Variables: TenantVariables }>();
 
-mocksRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware);
+mocksRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection);
 
 const requireTutorOrAdmin = requireRole("tutor", "admin");
 

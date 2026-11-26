@@ -80,9 +80,9 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     families: [
       {
         policy: 'public',
-        paths: ['/tutor-invite/preview', '/invitation/preview', '/invitation/start'],
+        paths: ['/invitation/preview', '/invitation/start'],
         observedMiddleware: [],
-        exception: 'Signed invitation-token flows intentionally precede router authentication.',
+        exception: 'Durable invitation-token flows intentionally precede router authentication.',
       },
       {
         policy: 'authenticated-pre-account',
@@ -92,15 +92,29 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     ],
   }),
   router('/avatars', 'avatarsRouter', 'src/routes/avatars.ts', 'protected-account', membershipSequence),
-  router('/schools', 'schoolsRouter', 'src/routes/schools.ts', 'protected-account', fullSequence),
-  router('/live-classes', 'liveClassesRouter', 'src/routes/live-classes.ts', 'protected-account', fullSequence),
+  router('/schools', 'schoolsRouter', 'src/routes/schools.ts', 'mixed', membershipSequence, {
+    families: [
+      {
+        policy: 'authenticated-pre-account',
+        paths: ['/'],
+        observedMiddleware: jwtAndProfile,
+        exception: 'First-account creation happens before any membership exists. It requires an Admin profile with no configured account.',
+      },
+      {
+        policy: 'protected-account',
+        paths: ['/me', '/me/*'],
+        observedMiddleware: membershipSequence,
+      },
+    ],
+  }),
+  router('/live-classes', 'liveClassesRouter', 'src/routes/live-classes.ts', 'protected-account', membershipSequence),
   router('/public/live-classes', 'publicLiveClassesRouter', 'src/routes/public-live-classes.ts', 'public', []),
-  router('/live-classes', 'slidesRouter', 'src/routes/slides.ts', 'protected-account', fullSequence),
+  router('/live-classes', 'slidesRouter', 'src/routes/slides.ts', 'protected-account', membershipSequence),
   router('/webhooks', 'webhooksRouter', 'src/routes/webhooks.ts', 'webhook', [], {
     exception: 'Provider signatures and webhook-specific verification own this boundary.',
   }),
   router('/dashboard', 'dashboardRouter', 'src/routes/dashboard.ts', 'protected-account', membershipSequence, {
-    exception: 'Standalone-mock student home and progress explicitly bypass account resolution only when no tutoring account is selected; account-backed dashboard requests use accountContextMiddleware.',
+    exception: 'Student home and progress use standaloneAwareAccountContext: with no header a single active membership is resolved, and only a student with no membership and no profile account continues without a tenant. Every other dashboard request uses accountContextMiddleware.',
   }),
   router('/programmes', 'programmesRouter', 'src/routes/programmes.ts', 'protected-account', membershipSequence),
   router('/classes', 'classesRouter', 'src/routes/classes.ts', 'protected-account', membershipSequence),
@@ -108,15 +122,15 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/courses', 'coursesRouter', 'src/routes/courses.ts', 'protected-account', membershipSequence),
   router('/courses', 'courseAssignmentsRouter', 'src/routes/assignments.ts', 'protected-account', membershipSequence),
   router('/assignments', 'assignmentsRouter', 'src/routes/assignments.ts', 'protected-account', membershipSequence),
-  router('/direct-assignments', 'directAssignmentsRouter', 'src/routes/direct-assignments.ts', 'protected-account', fullSequence),
+  router('/direct-assignments', 'directAssignmentsRouter', 'src/routes/direct-assignments.ts', 'protected-account', membershipSequence),
   router('/public/direct-assignments', 'publicDirectAssignmentsRouter', 'src/routes/direct-assignments.ts', 'public', []),
   router('/users', 'usersRouter', 'src/routes/users.ts', 'protected-account', membershipSequence),
-  router('/mocks', 'mocksRouter', 'src/routes/mocks.ts', 'protected-account', fullSequence),
-  router('/mocks', 'mockOfferAdminRouter', 'src/routes/mock-access.ts', 'protected-account', fullSequence),
-  router('/question-banks', 'questionBanksRouter', 'src/routes/question-banks.ts', 'protected-account', fullSequence),
+  router('/mocks', 'mocksRouter', 'src/routes/mocks.ts', 'protected-account', membershipSequence),
+  router('/mocks', 'mockOfferAdminRouter', 'src/routes/mock-access.ts', 'protected-account', membershipSequence),
+  router('/question-banks', 'questionBanksRouter', 'src/routes/question-banks.ts', 'protected-account', membershipSequence),
   router('/enrolments', 'enrolmentsRouter', 'src/routes/enrolments.ts', 'protected-account', membershipSequence),
   router('/payments', 'paymentsRouter', 'src/routes/payments.ts', 'protected-account', membershipSequence),
-  router('/attendance', 'attendanceRouter', 'src/routes/attendance.ts', 'protected-account', fullSequence),
+  router('/attendance', 'attendanceRouter', 'src/routes/attendance.ts', 'protected-account', membershipSequence),
   router('/public', 'publicRouter', 'src/routes/public.ts', 'public', []),
   router('/storage', 'storageRouter', 'src/routes/storage.ts', 'protected-account', membershipSequence),
   router('/notes', 'notesRouter', 'src/routes/notes.ts', 'protected-account', membershipSequence),
@@ -124,16 +138,17 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     exception: 'Shared-secret verification owns this service-to-service boundary.',
   }),
   router('/submissions', 'submissionsRouter', 'src/routes/submissions.ts', 'protected-account', membershipSequence),
-  router('/mock-answers', 'mockAnswersRouter', 'src/routes/mock-answers.ts', 'protected-account', fullSequence),
+  router('/mock-answers', 'mockAnswersRouter', 'src/routes/mock-answers.ts', 'protected-account', membershipSequence),
   router('/health', 'healthRouter', 'src/routes/health.ts', 'public', []),
   router('/feedback', 'feedbackRouter', 'src/routes/feedback.ts', 'protected-account', membershipSequence),
   router('/support/feedback', 'feedbackResolutionRouter', 'src/routes/feedback.ts', 'public', [], {
     exception: 'Signed support-token verification owns this public resolution boundary.',
   }),
-  router('/users/me/push', 'pushRouter', 'src/routes/push.ts', 'protected-account', fullSequence),
+  router('/users/me/push', 'pushRouter', 'src/routes/push.ts', 'protected-account', membershipSequence),
   router('/demo/analyze', 'demoAnalysisRouter', 'src/routes/demo-analysis.ts', 'protected-account', membershipSequence),
   router('/', 'waitlistRouter', 'src/routes/waitlist.ts', 'public', []),
-  router('/schools/me/promos', 'promosRouter', 'src/routes/promos.ts', 'protected-account', fullSequence),
+  router('/', 'suggestionsRouter', 'src/routes/suggestions.ts', 'public', []),
+  router('/schools/me/promos', 'promosRouter', 'src/routes/promos.ts', 'protected-account', membershipSequence),
   router('/', 'mockAccessRouter', 'src/routes/mock-access.ts', 'mixed', jwtAndProfile, {
     families: [
       {
@@ -142,10 +157,10 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
         observedMiddleware: [],
       },
       {
-        policy: 'protected-account',
+        policy: 'authenticated-pre-account',
         paths: ['/mock/*', '/my-mocks'],
         observedMiddleware: jwtAndProfile,
-        knownGap: 'DEV-SEC-006: student mock access has no tenantMiddleware on its authenticated families.',
+        exception: 'Standalone-mock students have no selected tutoring account. Centre access is granted only through an active Learner membership in the offer\'s own account, never the profile school_id.',
       },
     ],
   }),
@@ -158,20 +173,19 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
         observedMiddleware: [],
       },
       {
-        policy: 'protected-account',
+        policy: 'authenticated-pre-account',
         paths: ['/guest/attempts/:attemptId/transfer'],
         observedMiddleware: jwtAndProfile,
-        knownGap: 'DEV-SEC-006: authenticated guest-transfer route has no tenantMiddleware.',
+        exception: 'Moves a guest attempt into the signed-in student\'s own standalone-mock history. It reads no tenant.',
       },
     ],
   }),
-  router('/', 'studentMocksRouter', 'src/routes/student-mocks.ts', 'protected-account', jwtAndProfile, {
-    knownGap: 'DEV-SEC-006: student mock endpoints attach JWT/profile per route but omit tenantMiddleware.',
+  router('/', 'studentMocksRouter', 'src/routes/student-mocks.ts', 'protected-account', membershipSequence, {
+    exception: 'Centre mock list, preflight and attempt start resolve the selected active membership (standalone-mock students with no account bypass it, as on the dashboard). Attempt routes are owner-scoped by student_id and read the tenant from the attempt record.',
   }),
-  router('/', 'studentSettingsRouter', 'src/routes/student-settings.ts', 'protected-account', fullSequence),
+  router('/', 'studentSettingsRouter', 'src/routes/student-settings.ts', 'protected-account', membershipSequence),
   inline('POST', '/analytics/landing-events'),
   inline('GET', '/waitlist/count'),
-  inline('POST', '/suggestions'),
 ]
 
 export function discoverMountedRouteKeys(source: string): string[] {

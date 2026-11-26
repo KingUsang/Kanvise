@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { proxyClientHeaders } from "@/lib/server/proxy-client-headers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -12,7 +13,9 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Forwarded-For": request.headers.get("x-forwarded-for") || "",
+        // The caller's own X-Forwarded-For is not forwarded: the API would
+        // treat it as a spoofable hop (DEV-PUB-004).
+        ...proxyClientHeaders(request),
       },
       body: raw,
       signal: AbortSignal.timeout(5_000),

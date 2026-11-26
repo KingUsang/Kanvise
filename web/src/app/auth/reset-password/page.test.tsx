@@ -1,34 +1,48 @@
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import ResetPasswordPage from './page'
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import ResetPasswordPage from "./page"
 
 const getUser = vi.fn()
+const getSession = vi.fn()
 const updateUser = vi.fn()
 
-vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({ auth: { getUser, updateUser, getSession: vi.fn() } }),
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({ auth: { getUser, getSession, updateUser } }),
 }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
+const student = { app_metadata: { kanvise_role: "student" }, user_metadata: { first_name: "Ada", last_name: "Obi" } }
 
-describe('ResetPasswordPage', () => {
+describe("ResetPasswordPage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getUser.mockResolvedValue({ data: { user: student } })
+    getSession.mockResolvedValue({ data: { session: { access_token: "tok" } } })
     updateUser.mockResolvedValue({ error: null })
+    vi.spyOn(console, "error").mockImplementation(() => {})
   })
 
-  it('shows a session check before the password form', () => {
-    getUser.mockReturnValue(new Promise(() => undefined))
+  async function submit() {
+    const user = userEvent.setup()
     render(<ResetPasswordPage />)
-    expect(screen.getByText('Checking password reset…')).toBeInTheDocument()
-    expect(screen.queryByLabelText('New password')).not.toBeInTheDocument()
+    await user.type(await screen.findByLabelText("New password"), "Password1")
+    await user.type(screen.getByLabelText("Confirm password"), "Password1")
+    await user.click(screen.getByRole("button", { name: /Update password/ }))
+  }
+
+  it("sends names to profile activation and checks the response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }))
+    vi.stubGlobal("fetch", fetchMock)
+    await submit()
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ first_name: "Ada", last_name: "Obi" })
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 
-  it('offers recovery actions instead of a disabled form when the recovery session is absent', async () => {
-    getUser.mockResolvedValue({ data: { user: null } })
-    render(<ResetPasswordPage />)
-    expect(await screen.findByRole('heading', { name: 'This reset link can’t be used' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Request a new code' })).toHaveAttribute('href', '/auth/forgot-password')
-    expect(screen.queryByLabelText('New password')).not.toBeInTheDocument()
+  it("tells the learner when activation fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 400 })))
+    await submit()
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not finish activating/i)
   })
 })

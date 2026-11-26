@@ -79,7 +79,7 @@ describe('student submission authorization and races', () => {
   it('rejects an unenrolled student before R2 verification', async () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: 'programme-1', sub_programme_id: null }], error: null })
       if (table === 'enrolments') return query({ data: [], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
@@ -97,7 +97,7 @@ describe('student submission authorization and races', () => {
     let submissionCalls = 0
     mocks.from.mockImplementation((table: string) => {
       if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
@@ -116,7 +116,7 @@ describe('student submission authorization and races', () => {
     let submissionCalls = 0
     mocks.from.mockImplementation((table: string) => {
       if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
@@ -140,7 +140,7 @@ describe('student submission authorization and races', () => {
     const committed = { id: 'submission-1', assignment_id: assignmentId, student_id: 'student-1', file_name: 'work.pdf', is_late: false }
     mocks.from.mockImplementation((table: string) => {
       if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })

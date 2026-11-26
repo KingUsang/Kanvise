@@ -44,4 +44,16 @@ describe("ForgotPasswordPage", () => {
     expect(push).toHaveBeenCalledWith("/auth/reset-password")
     expect(refresh).toHaveBeenCalled()
   }, 10_000)
+
+  it("re-enables the form when the recovery request throws", async () => {
+    resetPasswordForEmail.mockRejectedValue(new Error("network"))
+    const user = userEvent.setup()
+    render(<ForgotPasswordPage />)
+
+    await user.type(screen.getByLabelText("Email address"), "student@example.com")
+    await user.click(screen.getByRole("button", { name: "Send recovery code" }))
+
+    expect(await screen.findByText(/couldn't send a recovery code/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Send recovery code" })).toBeEnabled()
+  })
 })

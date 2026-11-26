@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { supabase } from '../lib/supabase'
 import {
   accountContextMiddleware,
@@ -7,6 +8,19 @@ import {
   Variables,
 } from '../middleware/auth'
 import type { AccountContext } from '../types'
+
+// Columns a caller may set on avatar_configs. user_id and school_id come from the
+// verified session and selected account; id and timestamps are database-owned.
+const avatarValue = z.string().trim().min(1).max(64)
+const avatarConfigSchema = z.object({
+  skin_tone: avatarValue,
+  face_shape: avatarValue,
+  hair_style: avatarValue,
+  hair_colour: avatarValue,
+  outfit_colour: avatarValue.optional(),
+  accessory: avatarValue.nullable().optional(),
+  headwear: avatarValue.nullable().optional(),
+}).strict()
 
 export const avatarsRouter = new Hono<{ Variables: Variables }>()
 
@@ -45,11 +59,15 @@ avatarsRouter.get('/me', async (c) => {
 
 avatarsRouter.put('/me', async (c) => {
   const user = c.get('user')
-  const body = await c.req.json()
+  const body = await c.req.json().catch(() => null)
+  const parsed = avatarConfigSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json({ error: 'Invalid avatar configuration', code: 'INVALID_AVATAR_CONFIG' }, 400)
+  }
 
   // Ensure security overrides
   const configToSave = {
-    ...body,
+    ...parsed.data,
     user_id: user.id,
     school_id: user.school_id, // ensure it belongs to the correct school
   }

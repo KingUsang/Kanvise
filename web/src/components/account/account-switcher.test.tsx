@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AccountSwitcher } from './account-switcher'
-import { getActiveAccountId } from '@/lib/account-preference'
+import { clearActiveAccountId, getActiveAccountId, setActiveAccountId } from '@/lib/account-preference'
 
 const mocks = vi.hoisted(() => ({
   authenticatedApiFetch: vi.fn(),
@@ -28,7 +28,33 @@ function renderSwitcher(queryClient = new QueryClient({ defaultOptions: { querie
 describe('AccountSwitcher', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    clearActiveAccountId()
     vi.clearAllMocks()
+  })
+
+  it('selects the only active membership automatically', async () => {
+    mocks.authenticatedApiFetch.mockImplementationOnce(() => response({ data: [secondAccount] }))
+    renderSwitcher()
+
+    await waitFor(() => expect(getActiveAccountId()).toBe(secondAccount.school_id))
+    expect(await screen.findByText('Second Account')).toBeInTheDocument()
+  })
+
+  it('leaves the choice to the person when several memberships exist and nothing is stored', async () => {
+    mocks.authenticatedApiFetch.mockImplementationOnce(() => response({ data: [firstAccount, secondAccount] }))
+    renderSwitcher()
+
+    expect(await screen.findByText('Choose tutoring account')).toBeInTheDocument()
+    await waitFor(() => expect(mocks.authenticatedApiFetch).toHaveBeenCalledOnce())
+    expect(getActiveAccountId()).toBeNull()
+  })
+
+  it('clears a stored selection that is no longer an active membership', async () => {
+    setActiveAccountId('33333333-3333-4333-8333-333333333333')
+    mocks.authenticatedApiFetch.mockImplementationOnce(() => response({ data: [firstAccount, secondAccount] }))
+    renderSwitcher()
+
+    await waitFor(() => expect(getActiveAccountId()).toBeNull())
   })
 
   it('lists active accounts and switches without retaining old account cache', async () => {
@@ -65,6 +91,7 @@ describe('AccountSwitcher', () => {
   })
 
   it('keeps the current preference when the selected account is revoked', async () => {
+    setActiveAccountId(firstAccount.school_id)
     mocks.authenticatedApiFetch.mockImplementationOnce(() => response({ data: [firstAccount, secondAccount] }))
       .mockImplementationOnce(() => response({ error: 'membership detail', code: 'FORBIDDEN' }, 403))
     renderSwitcher()

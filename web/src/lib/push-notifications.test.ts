@@ -60,3 +60,21 @@ describe('browser push management', () => {
     expect(unsubscribe).toHaveBeenCalledOnce()
   })
 })
+
+describe('push account context header', () => {
+  it('sends the selected account on push requests', async () => {
+    const id = '11111111-1111-4111-8111-111111111111'
+    window.sessionStorage.setItem('kanvise:active-account:v1', id)
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: { enabled: false, publicKey: null } }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true })
+    Object.defineProperty(window, 'PushManager', { configurable: true, value: function PushManager() {} })
+    Object.defineProperty(window, 'Notification', { configurable: true, value: { permission: 'default', requestPermission: vi.fn() } })
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { register: vi.fn(), ready: Promise.resolve({}) } })
+    await getBrowserPushState('token')
+    expect(fetchMock).toHaveBeenCalledWith('https://api.kanvise.test/users/me/push/config', {
+      headers: { Authorization: 'Bearer token', 'X-Kanvise-Account-Id': id },
+    })
+    window.sessionStorage.clear()
+  })
+})

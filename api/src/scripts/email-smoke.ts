@@ -7,7 +7,7 @@ const baseUrl = (process.env.FRONTEND_URL || 'https://staging.kanvise.com').repl
 
 export const smokeInputs: { [K in EmailEventName]: EmailTemplateInputs[K] } = {
   tutor_invitation: {
-    inviteUrl: `${baseUrl}/join?token=smoke-test`, invitedByName: 'Amara Okafor',
+    inviteUrl: `${baseUrl}/invite?token=smoke-test`, invitedByName: 'Amara Okafor',
     schoolName: 'Kanvise Demo School', expiresAt: '2026-07-27T12:00:00Z',
   },
   student_invitation: {

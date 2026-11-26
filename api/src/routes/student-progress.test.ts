@@ -12,6 +12,10 @@ vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
   accountContextMiddleware: async (c: any, next: () => Promise<void>) => { c.set('account', { ...mocks.account, role: mocks.user.role === 'student' ? 'learner' : mocks.user.role }); await next() },
+  lookupDefaultAccount: async () => ({ kind: 'none' }),
+  accountContextUnavailable: (c: any) => c.json({ code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503),
+  accountSelectionRequired: (c: any) => c.json({ code: 'ACCOUNT_SELECTION_REQUIRED' }, 409),
+  resolveAccountContext: async () => { throw new Error('not expected in this test') },
   tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
 }))
 
@@ -57,7 +61,7 @@ describe('student progress route security', () => {
 
   it('returns an empty recorded-data summary when the student has no enrolled courses or centre-wide mocks', async () => {
     mocks.from.mockImplementation((table: string) => {
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'enrolments') return query({ data: [], error: null })
       if (table === 'courses' || table === 'sub_programmes') return query({ data: [], error: null })
       if (table === 'submissions' || table === 'mock_exams' || table === 'mock_attempts') return query({ data: [], error: null })

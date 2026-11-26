@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, Landmark, Wallet, Plus, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { accountContextHeaders } from "@/lib/account-preference";
+import { accountScopedFetch } from "@/lib/authenticated-fetch";
 import EditPayoutModal from "@/components/dashboard/payments/edit-payout-modal";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
@@ -26,8 +28,8 @@ export default function PaymentsPage() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         
         // Fetch summary
-      const summaryRes = await fetch(`${apiUrl}/payments/summary`, {
-        headers: { Authorization: `Bearer ${sessionToken}` }
+      const summaryRes = await accountScopedFetch(`${apiUrl}/payments/summary`, {
+        headers: { ...accountContextHeaders(), Authorization: `Bearer ${sessionToken}` }
       });
         
         if (!summaryRes.ok) {
@@ -37,8 +39,8 @@ export default function PaymentsPage() {
         const summaryData = await summaryRes.json();
         
         // Fetch payments
-      const paymentsRes = await fetch(`${apiUrl}/payments`, {
-        headers: { Authorization: `Bearer ${sessionToken}` }
+      const paymentsRes = await accountScopedFetch(`${apiUrl}/payments`, {
+        headers: { ...accountContextHeaders(), Authorization: `Bearer ${sessionToken}` }
       });
         
         if (!paymentsRes.ok) {
@@ -62,9 +64,10 @@ export default function PaymentsPage() {
   }, []);
 
   const resolveItemName = (payment: any) => {
-    if (payment.sub_programmes?.name) return payment.sub_programmes.name;
+    // Sub-programmes are kept in the data but not shown in the UI (DEV-SUB-006).
     if (payment.courses?.name) return payment.courses.name;
     if (payment.programmes?.name) return payment.programmes.name;
+    if (payment.sub_programmes) return "Class";
     return "Item no longer available";
   };
 

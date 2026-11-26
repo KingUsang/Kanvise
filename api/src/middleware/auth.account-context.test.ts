@@ -20,10 +20,22 @@ function query(result: any) {
   return value
 }
 
-function app() {
+const ACCOUNT_A = '11111111-1111-4111-8111-111111111111'
+const ACCOUNT_B = '22222222-2222-4222-8222-222222222222'
+
+function listQuery(result: any) {
+  const value: any = {
+    select: vi.fn(() => value),
+    eq: vi.fn(() => value),
+    limit: vi.fn(async () => result),
+  }
+  return value
+}
+
+function app(user: any = { id: 'person-1', role: 'admin' }) {
   const application = new Hono()
   application.use('/settings', async (c, next) => {
-    c.set('user', { id: 'person-1' })
+    c.set('user', user)
     return accountContextMiddleware(c, next)
   })
   application.get('/settings', c => c.json({ account: c.get('account') }))
@@ -31,12 +43,96 @@ function app() {
 }
 
 describe('account request context', () => {
-  it('requires an explicit account header', async () => {
+  it('resolves the only active membership of an admin when no header is sent', async () => {
+    vi.clearAllMocks()
+    const lookup = listQuery({ data: [{ school_id: ACCOUNT_A }], error: null })
+    mocks.from
+      .mockImplementationOnce(() => lookup)
+      .mockImplementationOnce(() => query({ data: { id: 'membership-admin', school_id: ACCOUNT_A, role: 'admin', status: 'active' }, error: null }))
+      .mockImplementationOnce(() => query({ data: { id: ACCOUNT_A }, error: null }))
+
+    const response = await app().request('/settings')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      account: { id: ACCOUNT_A, membershipId: 'membership-admin', role: 'admin' },
+    })
+    // The lookup is for any role: no role filter, only the person and active status.
+    expect(lookup.eq.mock.calls).toEqual([['person_id', 'person-1'], ['status', 'active'], ['school.is_active', true]])
+    expect(lookup.limit).toHaveBeenCalledWith(2)
+  })
+
+  it('excludes memberships of deactivated accounts from the no-header fallback', async () => {
+    vi.clearAllMocks()
+    // The person also holds an active membership in a deactivated account; the
+    // inner join on schools.is_active drops it, so only ACCOUNT_A is returned.
+    const lookup = listQuery({ data: [{ school_id: ACCOUNT_A, school: { id: ACCOUNT_A } }], error: null })
+    mocks.from
+      .mockImplementationOnce(() => lookup)
+      .mockImplementationOnce(() => query({ data: { id: 'membership-a', school_id: ACCOUNT_A, role: 'learner', status: 'active' }, error: null }))
+      .mockImplementationOnce(() => query({ data: { id: ACCOUNT_A }, error: null }))
+
+    const response = await app({ id: 'person-1', role: 'student' }).request('/settings')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ account: { id: ACCOUNT_A } })
+    expect(lookup.select).toHaveBeenCalledWith(expect.stringContaining('schools!inner'))
+    expect(lookup.eq).toHaveBeenCalledWith('school.is_active', true)
+  })
+
+  it('asks a tutor with two active memberships and no header to choose an account', async () => {
+    vi.clearAllMocks()
+    mocks.from.mockImplementationOnce(() => listQuery({ data: [{ school_id: ACCOUNT_A }, { school_id: ACCOUNT_B }], error: null }))
+
+    const response = await app({ id: 'person-1', role: 'tutor' }).request('/settings')
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_SELECTION_REQUIRED' })
+    expect(mocks.from).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps ACCOUNT_CONTEXT_REQUIRED when the person has no active membership', async () => {
+    vi.clearAllMocks()
+    mocks.from.mockImplementationOnce(() => listQuery({ data: [], error: null }))
+
     const response = await app().request('/settings')
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_CONTEXT_REQUIRED' })
+  })
+
+  it('returns 503 when the membership lookup fails', async () => {
+    vi.clearAllMocks()
+    mocks.from.mockImplementationOnce(() => listQuery({ data: null, error: { message: 'down' } }))
+
+    const response = await app().request('/settings')
+
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_CONTEXT_UNAVAILABLE' })
+  })
+
+  it('rejects a malformed header without querying memberships', async () => {
+    vi.clearAllMocks()
+
+    const response = await app().request('/settings', { headers: { [ACCOUNT_CONTEXT_HEADER]: 'not-a-uuid' } })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_CONTEXT_REQUIRED' })
     expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('denies a forged well-formed header for an account the person is not a member of', async () => {
+    vi.clearAllMocks()
+    // The person has exactly one membership (ACCOUNT_A); the header names ACCOUNT_B.
+    const membershipLookup = query({ data: null, error: null })
+    mocks.from.mockImplementation(() => membershipLookup)
+
+    const response = await app().request('/settings', { headers: { [ACCOUNT_CONTEXT_HEADER]: ACCOUNT_B } })
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_ACCESS_DENIED' })
+    expect(membershipLookup.eq).toHaveBeenCalledWith('school_id', ACCOUNT_B)
+    expect(membershipLookup.eq).toHaveBeenCalledWith('person_id', 'person-1')
   })
 
   it('resolves membership and active account without using profile school state', async () => {

@@ -69,6 +69,12 @@ jobs:
           test -z "$invalid" || { echo "Invalid migration filename(s):"; printf '%s\n' "$invalid"; exit 1; }
           duplicates="$(printf '%s\n' "$names" | cut -d_ -f1 | sort | uniq -d)"
           test -z "$duplicates" || { echo "Duplicate migration timestamp(s):"; printf '%s\n' "$duplicates"; exit 1; }
+      - name: Reject new empty migrations
+        run: |
+          set -eu
+          # 20261001050221 is already applied on staging and stays as is.
+          empty="$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -empty -printf '%f\n' | grep -v '^20261001050221_add_mock_import_jobs.sql$' || true)"
+          test -z "$empty" || { echo "Empty migration file(s):"; printf '%s\n' "$empty"; exit 1; }
       - uses: supabase/setup-cli@v1
         with:
           version: 2.20.3

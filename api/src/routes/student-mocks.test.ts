@@ -11,7 +11,12 @@ vi.mock('../storage/r2', () => ({ createPresignedDownload: vi.fn(async () => 'si
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
+  lookupDefaultAccount: async () => ({ kind: 'none' }),
+  accountContextUnavailable: (c: any) => c.json({ code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503),
+  accountSelectionRequired: (c: any) => c.json({ code: 'ACCOUNT_SELECTION_REQUIRED' }, 409),
+  resolveAccountContext: async () => { throw new Error('not expected in this test') },
+  ACCOUNT_CONTEXT_HEADER: 'X-Kanvise-Account-Id',
   requireRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
     if (!roles.includes(c.get('user').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)
     await next()
@@ -37,7 +42,7 @@ function query(result: any, eqSpy = vi.fn()) {
 
 function enrolmentTables(enrolled: boolean) {
   mocks.from.mockImplementation((table: string) => {
-    if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+    if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
     if (table === 'enrolments') return query({ data: enrolled
       ? [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }] : [], error: null })
     if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })

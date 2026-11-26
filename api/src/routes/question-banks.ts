@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
+import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, accountContextMiddleware } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import type { TenantVariables, TenantUser } from '../types'
 import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
 import type { TablesUpdate } from '../lib/database.types'
@@ -15,7 +16,7 @@ import { parseOffsetPagination, uuidSchema } from '../lib/api-contract'
 
 export const questionBanksRouter = new Hono<{ Variables: TenantVariables }>()
 
-questionBanksRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
+questionBanksRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection)
 questionBanksRouter.use('/*', requireRole('tutor', 'admin'))
 
 const bankSelect = 'id, created_at, updated_at, archived_at, school_id, owner_id, name, description, visibility'

@@ -28,7 +28,7 @@ vi.mock('../middleware/auth', () => ({
     c.set('user', { id: 'admin-1', school_id: 'school-1', role: 'admin', first_name: 'Ada', last_name: 'Okafor' })
     await next()
   },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => { await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
   requireRole: () => async (_c: any, next: () => Promise<void>) => { await next() },
 }))
 
@@ -48,7 +48,6 @@ describe('POST /schools/me/invite/tutor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv('FRONTEND_URL', 'https://kanvise.com')
-    vi.stubEnv('INVITE_TOKEN_SECRET', 'test-invite-secret')
   })
 
   it('retains the invite and returns its URL when email delivery fails', async () => {

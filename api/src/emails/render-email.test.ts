@@ -13,9 +13,9 @@ const cases: Array<{
 }> = [
   {
     event: 'tutor_invitation',
-    input: { inviteUrl: 'https://kanvise.com/join?token=abc', invitedByName: 'Ada Okafor', schoolName: 'Bright Minds', expiresAt: '2026-07-27T12:00:00Z' },
+    input: { inviteUrl: 'https://kanvise.com/invite?token=abc', invitedByName: 'Ada Okafor', schoolName: 'Bright Minds', expiresAt: '2026-07-27T12:00:00Z' },
     expected: ['Ada Okafor', 'Bright Minds'],
-    link: 'https://kanvise.com/join?token=abc',
+    link: 'https://kanvise.com/invite?token=abc',
   },
   {
     event: 'student_invitation',

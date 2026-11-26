@@ -11,7 +11,7 @@ vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => { await next() },
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
   requireRole: () => async (_c: any, next: () => Promise<void>) => { await next() },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => { await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
 }))
 
 import { mockAccessRouter } from './mock-access'
@@ -60,7 +60,7 @@ describe('standalone mock library', () => {
       if (table === 'mock_exams') return query({ data: {
         id: 'mock-1', school_id: 'school-1', audience_scope: 'course', course_id: 'course-1', programme_id: null, sections: [],
       }, error: null })
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })

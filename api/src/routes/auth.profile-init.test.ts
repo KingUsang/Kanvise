@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   updateUserById: vi.fn(),
   getUserById: vi.fn(),
   ensureWelcomeEmail: vi.fn(),
-  validateInviteToken: vi.fn(),
   user: { supabase_auth_id: 'auth-1' } as any,
 }))
 
@@ -16,10 +15,6 @@ vi.mock('../lib/supabase', () => ({
     rpc: mocks.rpc,
     auth: { admin: { updateUserById: mocks.updateUserById, getUserById: mocks.getUserById } },
   },
-}))
-
-vi.mock('../lib/invites', () => ({
-  validateInviteToken: mocks.validateInviteToken,
 }))
 
 vi.mock('../emails/ensure-welcome-email', () => ({
@@ -82,15 +77,26 @@ describe('POST /auth/profile/init registration flow hardening', () => {
     expect(body.error).toBe('A valid registration flow is required')
   })
 
-  it('rejects a new tutor without an invite token', async () => {
-    // No existing profile, so the handler proceeds to the tutor invite check.
+  it('rejects a new tutor without a durable account invitation', async () => {
     mocks.from.mockReturnValue(profileLookup({ data: null, error: null }))
 
     const response = await initProfile({ flow: 'tutor', first_name: 'Tu', last_name: 'Tor' })
     const body = await response.json() as any
 
     expect(response.status).toBe(400)
-    expect(body.error).toBe('Invite token required for tutors')
+    expect(body.code).toBe('TUTOR_INVITATION_REQUIRED')
+  })
+
+  it('no longer accepts a legacy signed tutor invite token (DEV-SEC-008)', async () => {
+    mocks.from.mockReturnValue(profileLookup({ data: null, error: null }))
+
+    const response = await initProfile({ flow: 'tutor', first_name: 'Tu', last_name: 'Tor', invite_token: 'payload.signature' })
+    const body = await response.json() as any
+
+    expect(response.status).toBe(400)
+    expect(body.code).toBe('TUTOR_INVITATION_REQUIRED')
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 })
 

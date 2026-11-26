@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { clearActiveAccountId } from '@/lib/account-preference'
 import Link from 'next/link'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { AuthAlert, authInputClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
@@ -35,6 +36,7 @@ export default function CompleteProfilePage() {
 
   async function switchAccount() {
     await createClient().auth.signOut()
+    clearActiveAccountId()
     window.location.assign(context?.invitation_token ? `/invite?token=${encodeURIComponent(context.invitation_token)}` : '/auth/login')
   }
 

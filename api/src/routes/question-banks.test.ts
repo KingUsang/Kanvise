@@ -17,7 +17,7 @@ vi.mock('../middleware/auth', () => ({
     c.set('user', { id: 'tutor-1', school_id: 'school-1', role: 'tutor' })
     await next()
   },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
   requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
 }))
 

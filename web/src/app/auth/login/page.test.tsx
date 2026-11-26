@@ -32,4 +32,18 @@ describe('LoginPage', () => {
     expect(screen.queryByText('provider detail')).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('student@example.com')).toBeInTheDocument()
   })
+
+  it('clears an account selection left by a previous session once sign-in succeeds', async () => {
+    document.cookie = 'kanvise_account=11111111-1111-4111-8111-111111111111; Path=/'
+    signInWithPassword.mockResolvedValue({ data: { session: null }, error: null })
+    const user = userEvent.setup()
+    render(<LoginPage />)
+
+    await user.type(screen.getByLabelText('Email address'), 'student@example.com')
+    await user.type(screen.getByLabelText('Password'), 'correct-password')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(document.cookie).not.toContain('kanvise_account=1111')
+  })
 })

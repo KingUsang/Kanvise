@@ -57,7 +57,7 @@ describe('student materials library security', () => {
     const courseFilter = vi.fn()
     const enrolmentFilter = vi.fn()
     mocks.from.mockImplementation((table: string) => {
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null }, vi.fn(), enrolmentFilter)
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }, { id: 'course-2', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
@@ -87,7 +87,7 @@ describe('student materials library security', () => {
   it('keeps the library available when an old note key cannot be signed', async () => {
     mocks.download.mockRejectedValueOnce(new Error('old file key'))
     mocks.from.mockImplementation((table: string) => {
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
@@ -121,7 +121,7 @@ describe('student materials library security', () => {
 
   it('denies a Learner whose active account has no enrolment for the Subject', async () => {
     mocks.from.mockImplementation((table: string) => {
-      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'enrolments') return query({ data: [], error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-2', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })

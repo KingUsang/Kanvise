@@ -41,6 +41,10 @@ export default function AcceptInvitationPage() {
         setReady(true);
       }
       setChecking(false);
+    }).catch(() => {
+      if (!mounted) return;
+      setError("We couldn't check your sign-in right now. Open the invitation again to continue.");
+      setChecking(false);
     });
     return () => { mounted = false; };
   }, [supabase]);

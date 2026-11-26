@@ -157,3 +157,43 @@ describe('POST /waitlist', () => {
     await expect(response.json()).resolves.toMatchObject({ position: 9, already_joined: true })
   })
 })
+
+describe('POST /waitlist abuse limits and count errors', () => {
+  it('limits repeated submissions per client address', async () => {
+    const store = makeStore()
+    const router = createWaitlistRouter(store, { hit: vi.fn().mockReturnValueOnce(null).mockReturnValue(42) })
+    const send = () => router.request('/waitlist', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(validBody),
+    })
+    expect((await send()).status).toBe(201)
+    const blocked = await send()
+    expect(blocked.status).toBe(429)
+    expect(blocked.headers.get('retry-after')).toBe('42')
+    expect(store.insert).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the default limiter keyed by client address', async () => {
+    const store = makeStore()
+    const router = createWaitlistRouter(store)
+    let last = 0
+    for (let i = 0; i < 31; i += 1) {
+      last = (await router.request('/waitlist', {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '3.3.3.3' },
+        body: JSON.stringify({ ...validBody, contact_email: `u${i}@example.com` }),
+      })).status
+    }
+    expect(last).toBe(429)
+  })
+
+  it('logs a failed position count on the duplicate path and still answers', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = makeStore({
+      findByEmail: vi.fn().mockResolvedValue({ data: signup, error: null }),
+      countThrough: vi.fn().mockResolvedValue({ count: null, error: { message: 'count failed' } }),
+    })
+    const response = await post(store, validBody)
+    expect(response.status).toBe(409)
+    expect(error).toHaveBeenCalledWith('Error calculating waitlist position:', expect.objectContaining({ message: 'count failed' }))
+    error.mockRestore()
+  })
+})

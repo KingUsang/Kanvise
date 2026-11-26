@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
+import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware, requireRole } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import { createPaystackReference, isUuid } from '../payments/checkout'
 import type { AppVariables, TenantVariables } from '../types'
+import { hasActiveLearnerMembership } from '../lib/student-course-access'
 import { loadStudentMockAudience, studentCanAccessCentreMock } from '../lib/student-mock-audience'
 
 export const mockAccessRouter = new Hono<{ Variables: AppVariables }>()
@@ -38,8 +40,7 @@ async function canUseOffer(studentId: string, offer: any) {
     return !!data
   }
   if (offer.audience_scope === 'school') {
-    const { data } = await db.from('student_centre_memberships').select('id').eq('student_id', studentId).eq('school_id', offer.school_id).eq('status', 'active').maybeSingle()
-    return !!data
+    return hasActiveLearnerMembership(studentId, offer.school_id)
   }
   if (offer.audience_scope === 'programme') {
     const { data } = await db.from('enrolments').select('id').eq('student_id', studentId).eq('programme_id', offer.programme_id).eq('status', 'active').maybeSingle()
@@ -52,14 +53,19 @@ async function canUseOffer(studentId: string, offer: any) {
   return false
 }
 
-async function hasCentreAccessToOffer(user: { id: string; school_id?: string | null }, offer: any) {
-  if (!user.school_id || offer?.school_id !== user.school_id || !offer?.mock_exam_id) return false
+// Standalone-mock students have no selected tutoring account, so the offer's
+// own account is the tenant. Access is granted only through an active Learner
+// membership in that account (verified by loadStudentMockAudience), never from
+// the profile school_id projection (DEV-SEC-006).
+async function hasCentreAccessToOffer(user: { id: string }, offer: any) {
+  const schoolId = offer?.school_id
+  if (typeof schoolId !== 'string' || !offer?.mock_exam_id) return false
   const { data: mock, error } = await db.from('mock_exams')
     .select('id, school_id, audience_scope, course_id, programme_id, sections:mock_sections(course_id)')
-    .eq('id', offer.mock_exam_id).eq('school_id', user.school_id).maybeSingle()
+    .eq('id', offer.mock_exam_id).eq('school_id', schoolId).maybeSingle()
   if (error) throw error
   if (!mock || mock.audience_scope === 'direct_link') return false
-  return studentCanAccessCentreMock(mock, await loadStudentMockAudience(user))
+  return studentCanAccessCentreMock(mock, await loadStudentMockAudience({ id: user.id, school_id: schoolId }))
 }
 
 mockAccessRouter.get('/mock/:slug', async c => {
@@ -153,7 +159,7 @@ mockAccessRouter.post('/mock/:offerId/attempts', requireRole('student'), async c
     ? [...new Set(body.selected_subject_names.filter((name): name is string => typeof name === 'string').map(name => name.trim()).filter(Boolean))]
     : []
   const { data, error } = centreAccess
-    ? await db.rpc('start_or_resume_versioned_mock_attempt', { p_school_id: user.school_id, p_mock_exam_id: offer.mock_exam_id, p_student_id: user.id, p_now: new Date().toISOString() })
+    ? await db.rpc('start_or_resume_versioned_mock_attempt', { p_school_id: offer.school_id, p_mock_exam_id: offer.mock_exam_id, p_student_id: user.id, p_now: new Date().toISOString() })
     : await db.rpc('start_or_resume_mock_offer_attempt_with_subjects', { p_offer_id: offer.id, p_student_id: user.id, p_selected_subject_names: selectedSubjectNames, p_now: new Date().toISOString() })
   if (error) {
     const message = String(error.message || '')
@@ -227,7 +233,7 @@ mockAccessRouter.post('/mock/orders/:reference/confirm', requireRole('student'),
 // router-wide guard also ran for unrelated `/mocks/:id/attempts` requests when
 // this router was mounted beside the student mocks router, rejecting students
 // before their actual attempt route could run.
-mockOfferAdminRouter.use('/:mockId/offers', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('admin', 'tutor'))
+mockOfferAdminRouter.use('/:mockId/offers', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection, requireRole('admin', 'tutor'))
 mockOfferAdminRouter.get('/:mockId/offers', async c => {
   const user = c.get('user'); const mockId = c.req.param('mockId')!
   const [{ data, error }, { data: versions, error: versionError }] = await Promise.all([

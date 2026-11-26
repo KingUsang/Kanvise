@@ -99,3 +99,46 @@ describe('course list filters', () => {
     expect(calls).toBe(2)
   })
 })
+
+describe('subject PATCH allow-list', () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.accountRole = 'admin' })
+
+  function patch(body: unknown) {
+    return coursesRouter.request('/11111111-1111-4111-8111-111111111111', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+  }
+
+  it.each([
+    ['school_id', { school_id: 'other' }],
+    ['created_by', { created_by: 'x' }],
+    ['is_published', { is_published: true }],
+    ['id', { id: 'x' }],
+    ['unknown column', { name: 'A', nope: 1 }],
+  ])('rejects %s with 400 and does not write', async (_l, body) => {
+    const response = await patch(body)
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'INVALID_SUBJECT_UPDATE' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('forwards exactly the fields the web builder sends', async () => {
+    const update = vi.fn()
+    mocks.from.mockImplementation(() => {
+      const b: any = query({ data: { id: 'c1' }, error: null }, [])
+      b.update = (u: any) => { update(u); return b }
+      return b
+    })
+    const payload = { name: 'Maths', slug: 'maths', description: 'd', programme_id: null, price: 0, currency: 'NGN', is_available_separately: false, sort_order: 2 }
+    const response = await patch(payload)
+    expect(response.status).toBe(200)
+    expect(update).toHaveBeenCalledWith(payload)
+  })
+
+  it('rejects a parent from another account', async () => {
+    mocks.from.mockImplementation(() => query({ data: null, error: null }, []))
+    const response = await patch({ programme_id: '22222222-2222-4222-8222-222222222222' })
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'INVALID_PARENT' })
+  })
+})

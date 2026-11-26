@@ -1,11 +1,12 @@
 import { Hono } from 'hono'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware } from '../middleware/auth'
+import { jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import { getPushConfig } from '../push/config'
 import { pushRepository } from '../push/repository'
 import type { TenantVariables } from '../types'
 
 export const pushRouter = new Hono<{ Variables: TenantVariables }>()
-pushRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
+pushRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection)
 
 function parseSubscription(value: unknown) {
   if (!value || typeof value !== 'object') return null

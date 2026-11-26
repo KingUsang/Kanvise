@@ -3,7 +3,6 @@ export const CORE_PRODUCTION_VARIABLES = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'PAYSTACK_SECRET_KEY',
   'KANVISE_INTERNAL_SECRET',
-  'INVITE_TOKEN_SECRET',
   'CLASS_LINK_ENCRYPTION_KEY',
   'R2_ACCOUNT_ID',
   'R2_ACCESS_KEY_ID',
@@ -76,5 +75,12 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
     const recorderMissing = missingVariables(['RECORDER_FLEET_CONTROLLER_URL', 'RECORDER_FLEET_CONTROLLER_SECRET', 'RECORDER_CALLBACK_SECRET'], env)
     if (recorderMissing.length) throw new Error(`Missing recorder fleet environment variables: ${recorderMissing.join(', ')}`)
     requireHttpsUrl('RECORDER_FLEET_CONTROLLER_URL', env.RECORDER_FLEET_CONTROLLER_URL)
+  }
+
+  // The secret is optional during rollout (DEV-PUB-004), so a short value only
+  // warns. hasTrustedProxySecret ignores anything under 16 characters.
+  const proxySecret = env.KANVISE_PROXY_SECRET?.trim()
+  if (proxySecret && proxySecret.length < 16) {
+    console.warn('KANVISE_PROXY_SECRET is shorter than 16 characters and is ignored; public form rate limits treat all proxied visitors as one client.')
   }
 }
