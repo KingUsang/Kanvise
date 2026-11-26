@@ -79,7 +79,7 @@ export const jobsRepository: JobsRepository = {
 
   async findDueLiveClasses(windowStart, windowEnd, limit) {
     const { data, error } = await supabase.from('live_classes')
-      .select('id, school_id, course_id, title, scheduled_at, course:courses(name)')
+      .select('id, school_id, course_id, title, scheduled_at, course:courses!live_classes_course_id_fkey(name)')
       .eq('status', 'scheduled')
       .eq('notification_sent', false)
       .gte('scheduled_at', windowStart.toISOString())

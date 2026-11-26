@@ -54,9 +54,9 @@ enrolmentsRouter.get("/", enforceAdmin, async (c) => {
         sub_programme_id,
         course_id,
         enrolled_at,
-        programmes (id, name),
-        sub_programmes (id, name),
-        courses (id, name)
+        programmes!enrolments_programme_id_fkey (id, name),
+        sub_programmes!enrolments_sub_programme_id_fkey (id, name),
+        courses!enrolments_course_id_fkey (id, name)
       `)
       .eq("school_id", profile.school_id);
 

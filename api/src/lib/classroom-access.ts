@@ -41,7 +41,7 @@ export async function resolveClassroomAccess(
   // account is indistinguishable from a missing one, so its existence is not
   // revealed (DEV-ACC-003). A database failure still surfaces as lookup_failed.
   const { data, error } = await supabase.from('live_classes')
-    .select('*, courses(name), school:schools(name)')
+    .select('*, courses!live_classes_course_id_fkey(name), school:schools(name)')
     .eq('id', classId)
     .eq('school_id', user.school_id)
     .maybeSingle()

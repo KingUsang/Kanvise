@@ -128,39 +128,71 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"attendance_records": {
-                  Row: {
-                    "created_at": string,"duration_seconds": number | null,"id": string,"joined_at": string,"left_at": string | null,"live_class_id": string,"school_id": string,"source": string,"student_id": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"joined_at": string,"left_at"?: string | null,"live_class_id": string,"school_id": string,"source"?: string,"student_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"joined_at"?: string,"left_at"?: string | null,"live_class_id"?: string,"school_id"?: string,"source"?: string,"student_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "attendance_records_live_class_id_fkey"
-      columns: ["live_class_id"]
-isOneToOne: false
-      referencedRelation: "live_classes"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "attendance_records_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "attendance_records_student_id_fkey"
-      columns: ["student_id"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"avatar_configs": {
+                },attendance_records: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          joined_at: string
+          left_at: string | null
+          live_class_id: string
+          school_id: string
+          source: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          joined_at: string
+          left_at?: string | null
+          live_class_id: string
+          school_id: string
+          source?: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          live_class_id?: string
+          school_id?: string
+          source?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_live_class_id_fkey"
+            columns: ["live_class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_school_live_class_fkey"
+            columns: ["school_id", "live_class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"avatar_configs": {
                   Row: {
                     "accessory": string | null,"created_at": string,"face_shape": string,"hair_colour": string,"hair_style": string,"headwear": string | null,"id": string,"outfit_colour": string,"school_id": string,"skin_tone": string,"updated_at": string,"user_id": string
                   }
@@ -408,45 +440,103 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"courses": {
-                  Row: {
-                    "created_at": string,"created_by": string,"currency": string,"description": string | null,"id": string,"is_available_separately": boolean,"is_published": boolean,"name": string,"price": number,"programme_id": string | null,"school_id": string,"slug": string,"sort_order": number,"sub_programme_id": string | null,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"created_by": string,"currency"?: string,"description"?: string | null,"id"?: string,"is_available_separately"?: boolean,"is_published"?: boolean,"name": string,"price"?: number,"programme_id"?: string | null,"school_id": string,"slug": string,"sort_order"?: number,"sub_programme_id"?: string | null,"updated_at"?: string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string,"currency"?: string,"description"?: string | null,"id"?: string,"is_available_separately"?: boolean,"is_published"?: boolean,"name"?: string,"price"?: number,"programme_id"?: string | null,"school_id"?: string,"slug"?: string,"sort_order"?: number,"sub_programme_id"?: string | null,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "courses_created_by_fkey"
-      columns: ["created_by"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "courses_programme_id_fkey"
-      columns: ["programme_id"]
-isOneToOne: false
-      referencedRelation: "programmes"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "courses_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "courses_sub_programme_id_fkey"
-      columns: ["sub_programme_id"]
-isOneToOne: false
-      referencedRelation: "sub_programmes"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"direct_assignment_submissions": {
+                },courses: {
+        Row: {
+          created_at: string
+          created_by: string
+          currency: string
+          description: string | null
+          id: string
+          is_available_separately: boolean
+          is_published: boolean
+          name: string
+          price: number
+          programme_id: string | null
+          school_id: string
+          slug: string
+          sort_order: number
+          sub_programme_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_available_separately?: boolean
+          is_published?: boolean
+          name: string
+          price?: number
+          programme_id?: string | null
+          school_id: string
+          slug: string
+          sort_order?: number
+          sub_programme_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_available_separately?: boolean
+          is_published?: boolean
+          name?: string
+          price?: number
+          programme_id?: string | null
+          school_id?: string
+          slug?: string
+          sort_order?: number
+          sub_programme_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_school_programme_fkey"
+            columns: ["school_id", "programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "courses_school_sub_programme_fkey"
+            columns: ["school_id", "sub_programme_id"]
+            isOneToOne: false
+            referencedRelation: "sub_programmes"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "courses_sub_programme_id_fkey"
+            columns: ["sub_programme_id"]
+            isOneToOne: false
+            referencedRelation: "sub_programmes"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"direct_assignment_submissions": {
                   Row: {
                     "created_at": string,"direct_assignment_id": string,"feedback": string | null,"file_key": string | null,"file_name": string | null,"file_size_bytes": number | null,"file_type": string | null,"guest_email": string | null,"guest_name": string,"id": string,"response_text": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"school_id": string,"score": number | null,"submitted_at": string
                   }
@@ -622,11 +712,32 @@ isOneToOne: false
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "enrolments_school_course_fkey"
+            columns: ["school_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
             foreignKeyName: "enrolments_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_school_programme_fkey"
+            columns: ["school_id", "programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "enrolments_school_sub_programme_fkey"
+            columns: ["school_id", "sub_programme_id"]
+            isOneToOne: false
+            referencedRelation: "sub_programmes"
+            referencedColumns: ["school_id", "id"]
           },
           {
             foreignKeyName: "enrolments_student_id_fkey"
@@ -1090,51 +1201,154 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
-                },"live_classes": {
-                  Row: {
-                    "access_mode": string,"classroom_provider": string,"course_id": string | null,"created_at": string,"created_by": string,"duration_minutes": number,"ended_at": string | null,"id": string,"last_provider_event_at": string | null,"livekit_room_name": string | null,"notification_sent": boolean,"occurrence_date": string | null,"provider_error_at": string | null,"provider_error_message": string | null,"provider_generation": number,"provider_room_checked_at": string | null,"provider_room_id": string | null,"provider_room_status": string,"room_ready_at": string | null,"scheduled_at": string,"school_id": string,"share_link_revoked_at": string | null,"share_token_encrypted": string | null,"share_token_hash": string | null,"start_requested_at": string | null,"started_at": string | null,"status": string,"teaching_mode": string,"timetable_slot_id": string | null,"title": string,"tutor_id": string,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "access_mode"?: string,"classroom_provider"?: string,"course_id"?: string | null,"created_at"?: string,"created_by": string,"duration_minutes": number,"ended_at"?: string | null,"id"?: string,"last_provider_event_at"?: string | null,"livekit_room_name"?: string | null,"notification_sent"?: boolean,"occurrence_date"?: string | null,"provider_error_at"?: string | null,"provider_error_message"?: string | null,"provider_generation"?: number,"provider_room_checked_at"?: string | null,"provider_room_id"?: string | null,"provider_room_status"?: string,"room_ready_at"?: string | null,"scheduled_at": string,"school_id": string,"share_link_revoked_at"?: string | null,"share_token_encrypted"?: string | null,"share_token_hash"?: string | null,"start_requested_at"?: string | null,"started_at"?: string | null,"status"?: string,"teaching_mode"?: string,"timetable_slot_id"?: string | null,"title": string,"tutor_id": string,"updated_at"?: string
-                  }
-                  Update: {
-                    "access_mode"?: string,"classroom_provider"?: string,"course_id"?: string | null,"created_at"?: string,"created_by"?: string,"duration_minutes"?: number,"ended_at"?: string | null,"id"?: string,"last_provider_event_at"?: string | null,"livekit_room_name"?: string | null,"notification_sent"?: boolean,"occurrence_date"?: string | null,"provider_error_at"?: string | null,"provider_error_message"?: string | null,"provider_generation"?: number,"provider_room_checked_at"?: string | null,"provider_room_id"?: string | null,"provider_room_status"?: string,"room_ready_at"?: string | null,"scheduled_at"?: string,"school_id"?: string,"share_link_revoked_at"?: string | null,"share_token_encrypted"?: string | null,"share_token_hash"?: string | null,"start_requested_at"?: string | null,"started_at"?: string | null,"status"?: string,"teaching_mode"?: string,"timetable_slot_id"?: string | null,"title"?: string,"tutor_id"?: string,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "live_classes_course_id_fkey"
-      columns: ["course_id"]
-isOneToOne: false
-      referencedRelation: "courses"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "live_classes_created_by_fkey"
-      columns: ["created_by"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "live_classes_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "live_classes_timetable_slot_id_fkey"
-      columns: ["timetable_slot_id"]
-isOneToOne: false
-      referencedRelation: "class_timetable_slots"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "live_classes_tutor_id_fkey"
-      columns: ["tutor_id"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"mock_access_offer_students": {
+                },live_classes: {
+        Row: {
+          access_mode: string
+          classroom_provider: string
+          course_id: string | null
+          created_at: string
+          created_by: string
+          duration_minutes: number
+          ended_at: string | null
+          id: string
+          last_provider_event_at: string | null
+          livekit_room_name: string | null
+          notification_sent: boolean
+          occurrence_date: string | null
+          provider_error_at: string | null
+          provider_error_message: string | null
+          provider_generation: number
+          provider_room_checked_at: string | null
+          provider_room_id: string | null
+          provider_room_status: string
+          room_ready_at: string | null
+          scheduled_at: string
+          school_id: string
+          share_link_revoked_at: string | null
+          share_token_encrypted: string | null
+          share_token_hash: string | null
+          start_requested_at: string | null
+          started_at: string | null
+          status: string
+          teaching_mode: string
+          timetable_slot_id: string | null
+          title: string
+          tutor_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_mode?: string
+          classroom_provider?: string
+          course_id?: string | null
+          created_at?: string
+          created_by: string
+          duration_minutes: number
+          ended_at?: string | null
+          id?: string
+          last_provider_event_at?: string | null
+          livekit_room_name?: string | null
+          notification_sent?: boolean
+          occurrence_date?: string | null
+          provider_error_at?: string | null
+          provider_error_message?: string | null
+          provider_generation?: number
+          provider_room_checked_at?: string | null
+          provider_room_id?: string | null
+          provider_room_status?: string
+          room_ready_at?: string | null
+          scheduled_at: string
+          school_id: string
+          share_link_revoked_at?: string | null
+          share_token_encrypted?: string | null
+          share_token_hash?: string | null
+          start_requested_at?: string | null
+          started_at?: string | null
+          status?: string
+          teaching_mode?: string
+          timetable_slot_id?: string | null
+          title: string
+          tutor_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_mode?: string
+          classroom_provider?: string
+          course_id?: string | null
+          created_at?: string
+          created_by?: string
+          duration_minutes?: number
+          ended_at?: string | null
+          id?: string
+          last_provider_event_at?: string | null
+          livekit_room_name?: string | null
+          notification_sent?: boolean
+          occurrence_date?: string | null
+          provider_error_at?: string | null
+          provider_error_message?: string | null
+          provider_generation?: number
+          provider_room_checked_at?: string | null
+          provider_room_id?: string | null
+          provider_room_status?: string
+          room_ready_at?: string | null
+          scheduled_at?: string
+          school_id?: string
+          share_link_revoked_at?: string | null
+          share_token_encrypted?: string | null
+          share_token_hash?: string | null
+          start_requested_at?: string | null
+          started_at?: string | null
+          status?: string
+          teaching_mode?: string
+          timetable_slot_id?: string | null
+          title?: string
+          tutor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_classes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_classes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_classes_school_course_fkey"
+            columns: ["school_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "live_classes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_classes_timetable_slot_id_fkey"
+            columns: ["timetable_slot_id"]
+            isOneToOne: false
+            referencedRelation: "class_timetable_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_classes_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"mock_access_offer_students": {
                   Row: {
                     "created_at": string,"offer_id": string,"student_id": string
                   }
@@ -2352,39 +2566,83 @@ isOneToOne: false
             referencedColumns: ["id"]
           },
         ]
-      },"sub_programmes": {
-                  Row: {
-                    "created_at": string,"created_by": string,"currency": string,"description": string | null,"id": string,"is_available_separately": boolean,"is_published": boolean,"name": string,"price": number,"programme_id": string,"school_id": string,"slug": string,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"created_by": string,"currency"?: string,"description"?: string | null,"id"?: string,"is_available_separately"?: boolean,"is_published"?: boolean,"name": string,"price"?: number,"programme_id": string,"school_id": string,"slug": string,"updated_at"?: string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string,"currency"?: string,"description"?: string | null,"id"?: string,"is_available_separately"?: boolean,"is_published"?: boolean,"name"?: string,"price"?: number,"programme_id"?: string,"school_id"?: string,"slug"?: string,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "sub_programmes_created_by_fkey"
-      columns: ["created_by"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "sub_programmes_programme_id_fkey"
-      columns: ["programme_id"]
-isOneToOne: false
-      referencedRelation: "programmes"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "sub_programmes_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"submissions": {
+      },sub_programmes: {
+        Row: {
+          created_at: string
+          created_by: string
+          currency: string
+          description: string | null
+          id: string
+          is_available_separately: boolean
+          is_published: boolean
+          name: string
+          price: number
+          programme_id: string
+          school_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_available_separately?: boolean
+          is_published?: boolean
+          name: string
+          price?: number
+          programme_id: string
+          school_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_available_separately?: boolean
+          is_published?: boolean
+          name?: string
+          price?: number
+          programme_id?: string
+          school_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_programmes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sub_programmes_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sub_programmes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sub_programmes_school_programme_fkey"
+            columns: ["school_id", "programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["school_id", "id"]
+          },
+        ]
+      },"submissions": {
                   Row: {
                     "assignment_id": string,"created_at": string,"feedback": string | null,"file_key": string,"file_name": string,"id": string,"is_late": boolean,"reviewed_at": string | null,"reviewed_by": string | null,"school_id": string,"score": number | null,"student_id": string,"submitted_at": string
                   }
@@ -2622,45 +2880,72 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"tutor_course_assignments": {
-                  Row: {
-                    "assigned_at": string,"assigned_by": string,"course_id": string,"created_at": string,"id": string,"school_id": string,"tutor_id": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "assigned_at"?: string,"assigned_by": string,"course_id": string,"created_at"?: string,"id"?: string,"school_id": string,"tutor_id": string
-                  }
-                  Update: {
-                    "assigned_at"?: string,"assigned_by"?: string,"course_id"?: string,"created_at"?: string,"id"?: string,"school_id"?: string,"tutor_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "tutor_course_assignments_assigned_by_fkey"
-      columns: ["assigned_by"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "tutor_course_assignments_course_id_fkey"
-      columns: ["course_id"]
-isOneToOne: false
-      referencedRelation: "courses"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "tutor_course_assignments_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "tutor_course_assignments_tutor_id_fkey"
-      columns: ["tutor_id"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"tutor_invites": {
+                },tutor_course_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          course_id: string
+          created_at: string
+          id: string
+          school_id: string
+          tutor_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          course_id: string
+          created_at?: string
+          id?: string
+          school_id: string
+          tutor_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+          school_id?: string
+          tutor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_course_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_course_assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_course_assignments_school_course_fkey"
+            columns: ["school_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["school_id", "id"]
+          },
+          {
+            foreignKeyName: "tutor_course_assignments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_course_assignments_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"tutor_invites": {
                   Row: {
                     "accepted_at": string | null,"created_at": string,"email": string,"expires_at": string,"id": string,"invited_by": string,"school_id": string,"status": string,"supabase_auth_id": string | null,"updated_at": string
                   }

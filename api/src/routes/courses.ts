@@ -155,7 +155,7 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     let query = supabase
       .from("courses")
-      .select("*, programme:programmes(name)")
+      .select("*, programme:programmes!courses_programme_id_fkey(name)")
       .eq("school_id", profile.school_id);
 
     if (programme_id) query = query.eq("programme_id", programme_id);

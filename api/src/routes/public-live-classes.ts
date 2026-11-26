@@ -117,7 +117,7 @@ publicLiveClassesRouter.get('/recordings/:token', async c => {
       .select('live_class_id, school_id').eq('token_hash', tokenHash(token)).is('revoked_at', null).maybeSingle()
     if (!link) return c.json({ error: 'Recording link unavailable', code: 'LINK_UNAVAILABLE' }, 404)
     const [{ data: liveClass }, { data: recording }] = await Promise.all([
-      db.from('live_classes').select('id, title, scheduled_at, tutor:user_profiles!live_classes_tutor_id_fkey(first_name,last_name), course:courses(name)').eq('id', link.live_class_id).eq('school_id', link.school_id).maybeSingle(),
+      db.from('live_classes').select('id, title, scheduled_at, tutor:user_profiles!live_classes_tutor_id_fkey(first_name,last_name), course:courses!live_classes_course_id_fkey(name)').eq('id', link.live_class_id).eq('school_id', link.school_id).maybeSingle(),
       db.from('live_class_recordings').select('id, r2_file_key, content_type, status').eq('live_class_id', link.live_class_id).eq('status', 'ready').maybeSingle(),
     ])
     if (!liveClass || !recording?.r2_file_key) return c.json({ error: 'Recording is not ready', code: 'RECORDING_NOT_READY' }, 404)

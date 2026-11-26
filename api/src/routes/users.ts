@@ -288,9 +288,9 @@ usersRouter.get("/students", enforceAdmin, async (c) => {
         id, 
         student_id,
         enrolled_at,
-        programmes (id, name),
-        sub_programmes (id, name),
-        courses (id, name)
+        programmes!enrolments_programme_id_fkey (id, name),
+        sub_programmes!enrolments_sub_programme_id_fkey (id, name),
+        courses!enrolments_course_id_fkey (id, name)
       `)
       .eq("school_id", account.id)
       .in("student_id", studentIds);
