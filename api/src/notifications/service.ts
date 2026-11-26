@@ -8,7 +8,7 @@ import {
   type NotificationResult,
 } from './types'
 import { sendWebPushNotification } from '../push/service'
-import { retryWrite } from '../lib/retry-write'
+import { holdSentClaim, retryWrite } from '../lib/retry-write'
 
 type Logger = Pick<Console, 'info' | 'error'>
 
@@ -141,9 +141,12 @@ export async function deliverNotification<K extends NotificationEvent>(
         providerAccepted = true
         result.emailsSent += 1
         // The provider accepted the message. If the ledger write keeps failing the
-        // delivery stays claimed rather than failed, so it is not re-sent at once.
+        // delivery stays claimed (and the claim is held for a day) rather than failed, so it is not re-sent.
         const recorded = await retryWrite(() => dependencies.repository.markDeliverySent(key, sent.id))
-        if (!recorded) dependencies.logger.error('notification.email_sent_state_write_failed', { key })
+        if (!recorded) {
+          dependencies.logger.error('notification.email_sent_state_write_failed', { key })
+          await holdSentClaim('email_deliveries', key)
+        }
       } catch (error) {
         if (providerAccepted) return
         const message = errorMessage(error)

@@ -60,7 +60,7 @@ describe('scheduled notification jobs', () => {
     expect(mark).not.toHaveBeenCalled()
 
     ;(deps.notifyMock as any).mockResolvedValueOnce({ failures: [{ error: 'permanent' }] })
-    await handler(job(3))
+    await expect(handler(job(3))).rejects.toThrow(/Gave up after 3 attempts/)
     expect(mark).toHaveBeenCalledWith('mock-1')
   })
 

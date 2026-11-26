@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import { sendEmail } from '../emails/provider-router'
 import { getEmailConfig } from '../emails/config'
 import { renderEmail } from '../emails/render-email'
-import { retryWrite } from '../lib/retry-write'
+import { holdSentClaim, retryWrite } from '../lib/retry-write'
 
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = 24 * ONE_HOUR
@@ -99,7 +99,10 @@ export async function runOnboardingDripJob() {
           }).eq('idempotency_key', idempotencyKey)
           if (sentError) throw sentError
         })
-        if (!recorded) console.error(`Drip ${step.key} sent to ${user.email} but its sent state could not be saved`)
+        if (!recorded) {
+          console.error(`Drip ${step.key} sent to ${user.email} but its sent state could not be saved`)
+          await holdSentClaim('email_deliveries', idempotencyKey)
+        }
       } catch (err) {
         console.error(`Failed to send drip ${step.key} to ${user.email}`, err)
         if (!providerAccepted) {

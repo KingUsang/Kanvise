@@ -14,3 +14,17 @@ export async function retryWrite(write: () => Promise<void>, attempts = 3, delay
   }
   return false
 }
+
+/**
+ * Last resort after the provider accepted a message but the "sent" write kept
+ * failing: push the delivery claim out by a day so the claim expiry does not
+ * hand the row to another worker that would send it again. Best effort.
+ */
+export async function holdSentClaim(table: 'email_deliveries' | 'push_deliveries', idempotencyKey: string): Promise<void> {
+  try {
+    const { supabase } = await import('./supabase')
+    await (supabase as any).from(table)
+      .update({ claimed_until: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() })
+      .eq('idempotency_key', idempotencyKey)
+  } catch { /* the failure is already logged by the caller */ }
+}

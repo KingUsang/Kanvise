@@ -132,7 +132,10 @@ async function finishNotification(
   // logged) so the notification is not re-selected forever.
   if (job.attempts >= job.max_attempts) {
     dependencies.logger.error(`job.${label}.gave_up`, { jobId: job.id, failures: failureCount })
-    return markSent()
+    await markSent()
+    // Mark the source row sent so it is not re-selected, then fail the job so the
+    // abandoned delivery stays visible: durable_jobs.status = 'failed' with last_error.
+    throw new Error(`Gave up after ${job.attempts} attempts with ${failureCount} ${label} delivery failure(s)`)
   }
   throw new Error(`${failureCount} ${label} delivery failure(s)`)
 }

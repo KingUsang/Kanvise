@@ -201,8 +201,6 @@ webhooksRouter.post('/plugnmeet', async (c) => {
         check(await db.from('live_class_recordings').upsert({
           live_class_id: liveClass.id, provider_recording_id: recordingId, status: 'pending', updated_at: new Date().toISOString(),
         }, { onConflict: 'live_class_id' }))
-        check(await db.from('live_class_jobs')
-          .update({ status: 'complete', completed_at: new Date().toISOString() }).eq('id', mergeJob.id))
         // The recorder hook and webhook are independent asynchronous deliveries.
         // If R2 arrived first, promote the already-verified segment immediately.
         const { data: uploaded } = check(await db.from('live_class_recording_segments')
@@ -214,6 +212,10 @@ webhooksRouter.post('/plugnmeet', async (c) => {
           }).eq('live_class_id', liveClass.id))
           check(await db.from('live_class_jobs').upsert({ job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString() }, { onConflict: 'job_type,live_class_id' }))
         }
+        // Complete the merge job last. Until then a replayed delivery still finds
+        // it waiting and repeats the idempotent steps above.
+        check(await db.from('live_class_jobs')
+          .update({ status: 'complete', completed_at: new Date().toISOString() }).eq('id', mergeJob.id))
       }
     }
     if (eventName === 'room_finished') {

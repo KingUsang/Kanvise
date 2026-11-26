@@ -37,6 +37,26 @@ describe('runDurableJobs', () => {
     expect(s.fail).toHaveBeenCalledWith('j1', 'w', 'No handler for job type other', 30)
   })
 
+  it('extends the lease while a handler runs and reports a lost lease', async () => {
+    vi.useFakeTimers()
+    try {
+      const s = store([job()])
+      s.extend = vi.fn(async () => false)
+      s.complete = vi.fn(async () => false) as any
+      const warn = vi.fn()
+      const run = runDurableJobs({
+        handlers: { t: () => new Promise<void>((resolve) => setTimeout(resolve, 5_000)) },
+        store: s, worker: 'w', leaseSeconds: 3, logger: { ...logger, warn },
+      })
+      await vi.advanceTimersByTimeAsync(5_000)
+      const result = await run
+      expect(s.extend).toHaveBeenCalledWith('j1', 'w', 3)
+      expect(warn).toHaveBeenCalledWith('durable_job.lease_lost', expect.anything())
+      expect(warn).toHaveBeenCalledWith('durable_job.complete_lease_lost', expect.anything())
+      expect(result).toMatchObject({ processed: 0 })
+    } finally { vi.useRealTimers() }
+  })
+
   it('caps backoff at one hour', () => {
     expect(retryDelaySeconds(1)).toBe(30)
     expect(retryDelaySeconds(20)).toBe(3600)

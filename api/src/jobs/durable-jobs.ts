@@ -16,6 +16,7 @@ export type DurableJobStore = {
   claim(jobTypes: string[], worker: string, limit: number, leaseSeconds: number): Promise<DurableJob[]>
   complete(id: string, worker: string): Promise<boolean>
   fail(id: string, worker: string, message: string, retrySeconds: number): Promise<boolean>
+  extend?(id: string, worker: string, leaseSeconds: number): Promise<boolean>
 }
 
 const db = supabase as any
@@ -42,6 +43,11 @@ export const durableJobStore: DurableJobStore = {
   },
   async fail(id, worker, message, retrySeconds) {
     const { data, error } = await db.rpc('fail_durable_job', { p_id: id, p_worker: worker, p_error: message, p_retry_seconds: retrySeconds })
+    if (error) throw error
+    return Boolean(data)
+  },
+  async extend(id, worker, leaseSeconds) {
+    const { data, error } = await db.rpc('extend_durable_job_lease', { p_id: id, p_worker: worker, p_lease_seconds: leaseSeconds })
     if (error) throw error
     return Boolean(data)
   },
@@ -75,19 +81,32 @@ export async function runDurableJobs(options: {
   let failures = 0
   for (const job of jobs) {
     const handler = handlers[job.job_type]
+    // Keep the lease alive while the handler runs, so a slow job (or a late job in
+    // the batch) is not claimed by a second worker.
+    const heartbeat = store.extend ? setInterval(() => {
+      store.extend!(job.id, worker, leaseSeconds).then((held) => {
+        if (!held) logger.warn('durable_job.lease_lost', { jobId: job.id, jobType: job.job_type })
+      }).catch((error) => logger.error('durable_job.lease_extend_failed', { jobId: job.id, error }))
+    }, Math.max(1, Math.floor(leaseSeconds / 3)) * 1000) : null
     try {
       if (!handler) throw new Error(`No handler for job type ${job.job_type}`)
       await handler(job)
-      await store.complete(job.id, worker)
-      processed += 1
+      if (heartbeat) clearInterval(heartbeat)
+      if (await store.complete(job.id, worker)) processed += 1
+      else logger.warn('durable_job.complete_lease_lost', { jobId: job.id, jobType: job.job_type })
     } catch (error) {
       failures += 1
       const message = error instanceof Error ? error.message : String(error)
       logger.error('durable_job.failed', { jobId: job.id, jobType: job.job_type, attempts: job.attempts, error: message })
-      await store.fail(job.id, worker, message, retryDelaySeconds(job.attempts)).catch((failError) => {
+      if (heartbeat) clearInterval(heartbeat)
+      const recorded = await store.fail(job.id, worker, message, retryDelaySeconds(job.attempts)).catch((failError) => {
         // The lease expiry will return the job to the queue.
         logger.error('durable_job.fail_record_failed', { jobId: job.id, error: failError })
+        return true
       })
+      if (!recorded) logger.warn('durable_job.fail_lease_lost', { jobId: job.id, jobType: job.job_type })
+    } finally {
+      if (heartbeat) clearInterval(heartbeat)
     }
   }
   return { name: 'durable_jobs', processed, failures }

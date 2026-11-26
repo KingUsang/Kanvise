@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { sendWelcomeEmail } from './send-welcome'
-import { retryWrite } from '../lib/retry-write'
+import { holdSentClaim, retryWrite } from '../lib/retry-write'
 
 type Delivery = {
   idempotency_key: string
@@ -100,7 +100,10 @@ export async function ensureWelcomeEmail(
     providerAccepted = true
     // The email is delivered. A failing ledger write must not mark it failed.
     const recorded = await retryWrite(() => dependencies.store.markSent(idempotencyKey, result.id))
-    if (!recorded) console.error('email.sent_state_write_failed', { event: 'welcome', idempotencyKey })
+    if (!recorded) {
+      console.error('email.sent_state_write_failed', { event: 'welcome', idempotencyKey })
+      await holdSentClaim('email_deliveries', idempotencyKey)
+    }
     return { sent: true, id: result.id, alreadySent: false }
   } catch (error) {
     const safeError = error instanceof Error ? error.message : 'Unknown email delivery error'

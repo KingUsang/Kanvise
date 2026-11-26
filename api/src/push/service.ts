@@ -1,7 +1,7 @@
 import webpush from 'web-push'
 import { configureWebPush } from './config'
 import { pushRepository } from './repository'
-import { retryWrite } from '../lib/retry-write'
+import { holdSentClaim, retryWrite } from '../lib/retry-write'
 import type { NotificationEvent } from '../notifications/types'
 
 export type PushPayload = { title: string; body: string; url: string; tag: string }
@@ -42,7 +42,10 @@ export async function sendWebPushNotification(input: {
       sentToProvider = true
       result.sent += 1
       // Delivered. A failing ledger write is retried and never turns the push into a failure.
-      if (!await retryWrite(() => pushRepository.markSent(key))) console.error('push.sent_state_write_failed', { key })
+      if (!await retryWrite(() => pushRepository.markSent(key))) {
+        console.error('push.sent_state_write_failed', { key })
+        await holdSentClaim('push_deliveries', key)
+      }
     } catch (error) {
       if (sentToProvider) continue
       const code = statusCode(error)

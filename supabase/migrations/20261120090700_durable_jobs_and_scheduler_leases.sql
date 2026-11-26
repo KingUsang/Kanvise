@@ -54,7 +54,9 @@ ALTER TABLE public.live_class_jobs ADD COLUMN IF NOT EXISTS locked_until timesta
 ALTER TABLE public.plugnmeet_webhook_inbox ADD COLUMN IF NOT EXISTS outcome text;
 
 -- Create or re-arm a job. An active (pending or running) job with the same key
--- is left alone, so repeated enqueues are idempotent. A finished job is reset.
+-- is left alone, so repeated enqueues are idempotent. A completed job is reset. A
+-- failed job is only re-armed after six hours, so a producer that scans every
+-- minute cannot restart a poison job's retry cycle forever.
 CREATE OR REPLACE FUNCTION public.enqueue_durable_job(
   p_job_type text,
   p_dedupe_key text,
@@ -73,7 +75,8 @@ AS $$
       SET status = 'pending', attempts = 0, payload = EXCLUDED.payload, run_at = EXCLUDED.run_at,
           max_attempts = EXCLUDED.max_attempts, locked_by = NULL, locked_until = NULL,
           last_error = NULL, completed_at = NULL, updated_at = now()
-      WHERE j.status IN ('complete', 'failed')
+      WHERE j.status = 'complete'
+         OR (j.status = 'failed' AND j.updated_at < now() - interval '6 hours')
     RETURNING j.id
   )
   SELECT COALESCE(

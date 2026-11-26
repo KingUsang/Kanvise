@@ -43,7 +43,9 @@ export function createLeasedJob<T>(name: string, job: () => Promise<T>, options:
       return undefined
     }
     const renewal = setInterval(() => {
-      void lease.acquire(leaseName, holder, ttlSeconds).catch((error) => logger.error('job.lease_renew_failed', { name, error }))
+      lease.acquire(leaseName, holder, ttlSeconds).then((held) => {
+        if (!held) logger.error('job.lease_lost', { name, holder })
+      }).catch((error) => logger.error('job.lease_renew_failed', { name, error }))
     }, Math.max(1, Math.floor(ttlSeconds / 3)) * 1000)
     try { return await job() }
     finally {
