@@ -458,7 +458,7 @@ dashboardRouter.get("/student", async (c) => {
     .slice(0, 6)
     .map((item) => ({
       ...item,
-      course_name: courseNames.get(item.course_id) || "Course",
+      course_name: (item.course_id && courseNames.get(item.course_id)) || "Course",
     }));
   const assignmentsDue = (assignments || [])
     .filter((item) => !submittedAssignmentIds.has(item.id))
@@ -673,7 +673,7 @@ dashboardRouter.get("/student/progress", async (c) => {
     return c.json({
       data: buildStudentProgress({
         courses: courses || [],
-        classes: classes || [],
+        classes: (classes || []).flatMap((item) => item.course_id ? [{ id: item.id, course_id: item.course_id }] : []),
         attendance: attendance || [],
         assignments: assignments || [],
         submissions: submissions || [],

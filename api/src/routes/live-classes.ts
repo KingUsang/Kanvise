@@ -530,7 +530,8 @@ liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
 
   if (error || !data) return c.json({ error: 'Failed to cancel class' }, 500)
 
-  const notification = await notifyClassCancelled({
+  // Recipients are resolved through course enrolments, so a class without a course has nobody to notify.
+  const notification = data.course_id ? await notifyClassCancelled({
     id: data.id,
     schoolId: data.school_id,
     schoolName: (liveClass.school as any)?.name || 'Your school',
@@ -538,7 +539,7 @@ liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
     title: data.title,
     scheduledAt: data.scheduled_at,
     reason,
-  })
+  }) : null
 
   return c.json({ message: 'Live class cancelled', data, notification })
 })

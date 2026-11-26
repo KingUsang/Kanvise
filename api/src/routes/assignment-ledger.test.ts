@@ -3,15 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   user: { id: 'tutor-1', school_id: 'school-1', role: 'tutor' },
+  account: { id: 'school-1', membershipId: 'membership-1', role: 'tutor' } as any,
 }))
 
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
-  requireRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
-    if (!roles.includes(c.get('user').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { c.set('account', mocks.account); await next() },
+  requireMembershipRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
+    if (!roles.includes(c.get('account').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)
     await next()
   },
 }))
@@ -31,7 +32,7 @@ function query(result: any, calls: Array<[string, ...any[]]>) {
 }
 
 describe('assignment ledger', () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.user.role = 'tutor' })
+  beforeEach(() => { vi.clearAllMocks(); mocks.user.role = 'tutor'; mocks.account.role = 'tutor' })
 
   it('loads all tutor-course assignments with two fixed queries', async () => {
     const calls: Array<[string, ...any[]]> = []

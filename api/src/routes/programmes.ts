@@ -356,7 +356,7 @@ programmesRouter.get('/:id/insights', enforceAdminOrTutor, async (c) => {
     if (profilesResult.error || attemptsResult.error || attendanceResult.error) throw profilesResult.error || attemptsResult.error || attendanceResult.error
 
     const attemptsByStudent = new Map<string, any[]>()
-    for (const attempt of attemptsResult.data || []) attemptsByStudent.set(attempt.student_id, [...(attemptsByStudent.get(attempt.student_id) || []), attempt])
+    for (const attempt of attemptsResult.data || []) if (attempt.student_id) attemptsByStudent.set(attempt.student_id, [...(attemptsByStudent.get(attempt.student_id) || []), attempt])
     const attendanceByStudent = new Map<string, any[]>()
     for (const record of attendanceResult.data || []) attendanceByStudent.set(record.student_id, [...(attendanceByStudent.get(record.student_id) || []), record])
     const learners = (profilesResult.data || []).map((learner: any) => {

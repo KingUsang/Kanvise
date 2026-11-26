@@ -49,7 +49,7 @@ function readInputFromCli(args: Record<string, string | number | boolean>) {
   return { kind: 'text', value: DEFAULT_TEXT }
 }
 
-async function measureOne(label: string, fn: () => Promise<unknown>) {
+async function measureOne(label: string, fn: () => Promise<any>) {
   const startedAt = Date.now()
   const result = await fn()
   const elapsedMs = Date.now() - startedAt
