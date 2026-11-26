@@ -125,7 +125,7 @@ classesRouter.get('/:id/schedule', ...classAccessMiddleware(), async (c) => {
     if (!visibleSubjectIds.length) return c.json({ error: 'Subject not found in this class', code: 'SUBJECT_NOT_FOUND' }, 404)
 
     let sessionsQuery = (supabase as any).from('live_classes')
-      .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name)')
+      .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, course:courses!live_classes_course_id_fkey(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name)')
       .eq('school_id', user.school_id)
       .in('course_id', visibleSubjectIds)
       .order('scheduled_at', { ascending: true })
@@ -168,7 +168,7 @@ classesRouter.get('/timetable', ...classAccessMiddleware(), async (c) => {
       return c.json({ error: 'Timetable is available for tutoring agencies', code: 'CENTRE_TIMETABLE_UNAVAILABLE' }, 403)
     }
     let query = (supabase as any).from('class_timetable_slots')
-      .select('id, course_id, tutor_id, weekday, start_time, duration_minutes, starts_on, ends_on, title, source, recurrence_group_id, timetable_id, course:courses(id, name, programme_id, programme:programmes(id, name)), tutor:user_profiles!class_timetable_slots_tutor_id_fkey(id, first_name, last_name)')
+      .select('id, course_id, tutor_id, weekday, start_time, duration_minutes, starts_on, ends_on, title, source, recurrence_group_id, timetable_id, course:courses(id, name, programme_id, programme:programmes!courses_programme_id_fkey(id, name)), tutor:user_profiles!class_timetable_slots_tutor_id_fkey(id, first_name, last_name)')
       .eq('school_id', user.school_id)
       .is('deleted_at', null)
       .order('weekday', { ascending: true })

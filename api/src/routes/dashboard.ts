@@ -925,7 +925,7 @@ dashboardRouter.get("/stats", async (c) => {
   endOfToday.setHours(23, 59, 59, 999);
   let scheduleQuery = supabase
     .from("live_classes")
-    .select("id, title, scheduled_at, duration_minutes, status, courses(name)")
+    .select("id, title, scheduled_at, duration_minutes, status, courses!live_classes_course_id_fkey(name)")
     .eq("school_id", schoolId)
     .gte("scheduled_at", startOfToday.toISOString())
     .lte("scheduled_at", endOfToday.toISOString())
@@ -942,7 +942,7 @@ dashboardRouter.get("/stats", async (c) => {
     const { data: myTodaySchedule, error: myScheduleError } = await supabase
       .from("live_classes")
       .select(
-        "id, title, scheduled_at, duration_minutes, status, courses(name)",
+        "id, title, scheduled_at, duration_minutes, status, courses!live_classes_course_id_fkey(name)",
       )
       .eq("school_id", schoolId)
       .eq("tutor_id", user.id)

@@ -217,7 +217,7 @@ programmesRouter.get('/', enforceAdminOrTutor, async (c) => {
     if (isPublished !== undefined && !parsedIsPublished.success) {
       return c.json({ error: 'is_published must be true or false', code: 'VALIDATION_ERROR' }, 400)
     }
-    let query = supabase.from('programmes').select('*, enrolments(count)').eq('school_id', profile.school_id)
+    let query = supabase.from('programmes').select('*, enrolments!enrolments_programme_id_fkey(count)').eq('school_id', profile.school_id)
     if (parsedIsPublished.success) query = query.eq('is_published', parsedIsPublished.data === 'true')
     const [{ data: programmes, error }, { data: subProgrammes, error: subError }, { data: courses, error: courseError }, { data: assignments, error: assignmentError }] = await Promise.all([
       query.order('created_at', { ascending: false }),
@@ -267,7 +267,7 @@ programmesRouter.get('/:id', enforceAdminOrTutor, async (c) => {
   try {
     const profile = c.get('user')
     const id = c.req.param('id')
-    const { data: programme, error } = await supabase.from('programmes').select('*, enrolments(count)')
+    const { data: programme, error } = await supabase.from('programmes').select('*, enrolments!enrolments_programme_id_fkey(count)')
       .eq('id', id).eq('school_id', profile.school_id).single()
     if (error) {
       if (error.code === 'PGRST116') return c.json({ error: 'Programme not found', code: 'NOT_FOUND' }, 404)

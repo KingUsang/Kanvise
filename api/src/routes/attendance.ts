@@ -44,7 +44,7 @@ attendanceRouter.get('/metrics', async (c) => {
   // 1. Fetch relevant live_classes
   let classesQuery = supabase
     .from('live_classes')
-    .select('id, course_id, status, scheduled_at, courses(id, name)')
+    .select('id, course_id, status, scheduled_at, courses!live_classes_course_id_fkey(id, name)')
     .eq('school_id', schoolId)
     .eq('status', 'completed')
 
@@ -199,7 +199,7 @@ attendanceRouter.get('/records', async (c) => {
   // 1. Fetch relevant live_classes (limited to 50 most recent to avoid massive memory processing)
   let classesQuery = supabase
     .from('live_classes')
-    .select('id, course_id, status, scheduled_at, title, courses(id, name, programmes(name))')
+    .select('id, course_id, status, scheduled_at, title, courses!live_classes_course_id_fkey(id, name, programmes!courses_programme_id_fkey(name))')
     .eq('school_id', schoolId)
     .eq('status', 'completed')
     .order('scheduled_at', { ascending: false })

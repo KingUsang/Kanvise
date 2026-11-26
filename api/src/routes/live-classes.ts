@@ -388,7 +388,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses!live_classes_course_id_fkey(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
 
