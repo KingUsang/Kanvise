@@ -376,12 +376,6 @@ paymentsRouter.post("/status/:reference/confirm", enforceLearner, async (c) => {
   });
   if (confirmationError) return c.json({ error: "Payment confirmation failed", code: "PAYMENT_CONFIRMATION_FAILED" }, 500);
 
-  const result = confirmation as { student_auth_id?: string; student_school_id?: string } | null;
-  if (result?.student_auth_id && result.student_school_id) {
-    await (supabase as any).auth?.admin?.updateUserById(result.student_auth_id, {
-      app_metadata: { school_id: result.student_school_id },
-    });
-  }
   return c.json({ data: { status: "successful", already_confirmed: Boolean((confirmation as any)?.already_processed) } });
 });
 

@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   rpc: vi.fn(),
+  updateUserById: vi.fn(),
   account: { id: "school-1", membershipId: "membership-1", role: "learner" } as any,
   user: { id: "student-1", role: "student", email: "student@example.com", school_id: "school-1" } as any,
 }));
 
-vi.mock("../lib/supabase", () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }));
+vi.mock("../lib/supabase", () => ({ supabase: { from: mocks.from, rpc: mocks.rpc, auth: { admin: { updateUserById: mocks.updateUserById } } } }));
 vi.mock("../middleware/auth", () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set("user", mocks.user); await next(); },
@@ -240,5 +241,32 @@ describe("POST /payments/checkout", () => {
       code: "INSUFFICIENT_ROLE",
     });
     expect(mocks.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("return-page payment confirmation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.account = { id: "school-1", membershipId: "membership-1", role: "learner" };
+    mocks.user = { id: "student-1", role: "student", email: "student@example.com", school_id: "school-1" };
+  });
+
+  it("confirms without writing app_metadata.school_id (DEV-PAY-006)", async () => {
+    process.env.PAYSTACK_SECRET_KEY = "sk_test_fake";
+    mocks.from.mockReturnValue(selectQuery({ data: { paystack_reference: "ref-1", status: "pending", amount: 100 }, error: null }));
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      status: true, data: { status: "success", reference: "ref-1", amount: 10000, id: 77 },
+    })));
+    mocks.rpc.mockResolvedValue({
+      data: { student_auth_id: "auth-1", student_school_id: "school-2", already_processed: false }, error: null,
+    });
+
+    const response = await paymentsRouter.request("/status/ref-1/confirm", { method: "POST" });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ data: { status: "successful", already_confirmed: false } });
+    expect(mocks.rpc).toHaveBeenCalledWith("confirm_student_payment", expect.objectContaining({ p_paystack_reference: "ref-1" }));
+    expect(mocks.updateUserById).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });
