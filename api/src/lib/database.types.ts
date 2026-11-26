@@ -754,7 +754,21 @@ isOneToOne: false
             referencedColumns: ["id"]
           },
         ]
-      },"feedback_reports": {
+      },"feature_suggestions": {
+                  Row: {
+                    "created_at": string,"email": string | null,"id": string,"status": string,"suggestion": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"email"?: string | null,"id"?: string,"status"?: string,"suggestion": string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string | null,"id"?: string,"status"?: string,"suggestion"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"feedback_reports": {
                   Row: {
                     "attempted_action": string | null,"created_at": string,"description": string,"id": string,"kind": string,"page_url": string | null,"receipt_sent_at": string | null,"reporter_id": string,"resolution_sent_at": string | null,"resolved_at": string | null,"school_id": string | null,"screenshot_key": string | null,"sentry_event_id": string | null,"severity": string | null,"status": string,"user_agent": string | null
                   }

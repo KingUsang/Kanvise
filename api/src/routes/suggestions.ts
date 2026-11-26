@@ -43,8 +43,7 @@ suggestionsRouter.post("/suggestions", async (c) => {
       return c.json({ error: "Enter a valid email address" }, 400);
     }
 
-    // feature_suggestions has no migration, so it is absent from the generated database types.
-    const { error: insertError } = await (supabase as any).from("feature_suggestions").insert([
+    const { error: insertError } = await supabase.from("feature_suggestions").insert([
       {
         suggestion,
         email: email || null,
