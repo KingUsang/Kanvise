@@ -166,12 +166,12 @@ export default async function ProgrammePage({
                       </div>
                     </div>
                   ))}
+                  {/* Sub-programme Subjects are listed without their section name (DEV-SUB-006). */}
                   {sub_programmes.map((sub: any) => sub.courses?.map((course: any) => (
                     <div key={`course-${course.id}`} className="flex gap-4 p-5">
                       <span className="material-symbols-outlined mt-0.5 text-[#994704]">play_lesson</span>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[#6a6874]">{sub.name}</p>
-                        <h3 className="mt-1 font-semibold text-[#1b1c1c]">{course.name}</h3>
+                        <h3 className="font-semibold text-[#1b1c1c]">{course.name}</h3>
                         {course.description && <p className="mt-1 text-sm leading-6 text-[#6a6874]">{course.description}</p>}
                       </div>
                     </div>

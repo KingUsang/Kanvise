@@ -63,9 +63,10 @@ export default function PaymentsPage() {
   }, []);
 
   const resolveItemName = (payment: any) => {
-    if (payment.sub_programmes?.name) return payment.sub_programmes.name;
+    // Sub-programmes are kept in the data but not shown in the UI (DEV-SUB-006).
     if (payment.courses?.name) return payment.courses.name;
     if (payment.programmes?.name) return payment.programmes.name;
+    if (payment.sub_programmes) return "Class";
     return "Item no longer available";
   };
 

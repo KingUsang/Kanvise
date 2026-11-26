@@ -146,7 +146,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
                   <div key={enrolment.id} className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-4 shadow-sm transition-colors hover:border-dashboard-primary/30">
                     <div className="flex justify-between items-start mb-1">
                       <div className="font-semibold text-dashboard-foreground">
-                        {enrolment.programmes?.name || enrolment.sub_programmes?.name || enrolment.courses?.name || "Unknown"}
+                        {enrolment.programmes?.name || enrolment.courses?.name || (enrolment.sub_programmes ? 'Class' : null) || "Unknown"}
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700">
                         Access granted
@@ -181,7 +181,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
             ) : (
               <div className="space-y-3">
                 {payments.map((payment) => {
-                  const itemName = payment.programmes?.name || payment.sub_programmes?.name || payment.courses?.name || 'Enrolment'
+                  const itemName = payment.programmes?.name || payment.courses?.name || 'Enrolment'
                   return (
                     <div key={payment.id} className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">

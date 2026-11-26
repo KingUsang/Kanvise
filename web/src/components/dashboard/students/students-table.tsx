@@ -23,13 +23,13 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
     if (matchingStudent) setSelectedStudent(matchingStudent);
   }, [students]);
 
-  // Extract unique programmes for the filter dropdown
+  // Extract unique programmes for the filter dropdown. Sub-programmes stay in
+  // the data but are not shown in the UI (DEV-SUB-006).
   const enrolmentOptions = useMemo(() => {
     const progs = new Map<string, string>();
     students.forEach(student => {
       (student.enrolments || []).forEach((enr: any) => {
         if (enr.programmes?.id) progs.set(`programme:${enr.programmes.id}`, `Class — ${enr.programmes.name}`);
-        if (enr.sub_programmes?.id) progs.set(`sub_programme:${enr.sub_programmes.id}`, `Class section — ${enr.sub_programmes.name}`);
         if (enr.courses?.id) progs.set(`course:${enr.courses.id}`, `Subject — ${enr.courses.name}`);
       });
     });
@@ -45,7 +45,7 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
 
     if (programmeFilter) {
       const [type, id] = programmeFilter.split(':');
-      const hasEnrolment = (student.enrolments || []).some((e: any) => type === 'programme' ? e.programmes?.id === id : type === 'sub_programme' ? e.sub_programmes?.id === id : e.courses?.id === id);
+      const hasEnrolment = (student.enrolments || []).some((e: any) => type === 'programme' ? e.programmes?.id === id : e.courses?.id === id);
       if (!hasEnrolment) return false;
     }
     
@@ -108,7 +108,7 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
         <div className="divide-y divide-dashboard-outline/50 sm:hidden">
           {paginatedStudents.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">No students found matching filters.</p> : paginatedStudents.map((student) => <article key={student.id} onClick={() => setSelectedStudent(student)} className="cursor-pointer p-4 active:bg-dashboard-primary/5">
             <div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-dashboard-primary text-xs font-bold text-white`}>{student.profile_photo_url ? <img src={student.profile_photo_url} alt="" className="h-full w-full object-cover" /> : <>{student.first_name?.[0] || ''}{student.last_name?.[0] || ''}</>}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{student.first_name} {student.last_name}</h2><p className="truncate text-xs text-gray-500">{student.email || student.kanvise_user_id || 'No contact detail'}</p>{student.onboarding_status !== 'active' ? <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">Invitation pending</span> : null}</div><button onClick={(event) => { event.stopPropagation(); setSelectedStudent(student) }} className="shrink-0 rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877]">Details</button></div>
-            <div className="mt-3 flex flex-wrap gap-1">{student.enrolments?.length ? student.enrolments.map((enr: any) => <span key={enr.id} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-600">{enr.programmes?.name || enr.sub_programmes?.name || enr.courses?.name || 'Unknown'}</span>) : null}{student.pending_enrolments?.map((enr: any) => <span key={enr.id} className="rounded bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase text-amber-800">Pending · {enr.programmes?.name || 'Class'}</span>)}{!student.enrolments?.length && !student.pending_enrolments?.length ? <span className="text-xs text-gray-400">No class access</span> : null}</div>
+            <div className="mt-3 flex flex-wrap gap-1">{student.enrolments?.length ? student.enrolments.map((enr: any) => <span key={enr.id} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-600">{enr.programmes?.name || enr.courses?.name || (enr.sub_programmes ? 'Class' : null) || 'Unknown'}</span>) : null}{student.pending_enrolments?.map((enr: any) => <span key={enr.id} className="rounded bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase text-amber-800">Pending · {enr.programmes?.name || 'Class'}</span>)}{!student.enrolments?.length && !student.pending_enrolments?.length ? <span className="text-xs text-gray-400">No class access</span> : null}</div>
           </article>)}
         </div>
         <div className="hidden overflow-x-auto sm:block"><table className="w-full min-w-[900px] text-left border-collapse">
@@ -165,7 +165,7 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
                         {student.enrolments && student.enrolments.length > 0 ? (
                           student.enrolments.map((enr: any) => (
                             <span key={enr.id} className="px-2 py-1 bg-gray-100 border border-gray-200 rounded text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                              {enr.programmes?.name || enr.sub_programmes?.name || enr.courses?.name || "Unknown"}
+                              {enr.programmes?.name || enr.courses?.name || (enr.sub_programmes ? 'Class' : null) || "Unknown"}
                             </span>
                           ))
                         ) : null}
