@@ -26,7 +26,7 @@ vi.mock('../middleware/auth', () => ({
   },
 }))
 
-import { feedbackResolutionRouter, feedbackRouter } from './feedback'
+import { createResolveToken, feedbackResolutionRouter, feedbackRouter } from './feedback'
 
 function query(result: any) {
   const builder: any = {
@@ -108,7 +108,80 @@ describe('feedback account policy', () => {
     const response = await feedbackResolutionRouter.request('/report-1/resolve?token=wrong')
 
     expect(response.status).toBe(403)
-    expect(await response.text()).toBe('Invalid resolution link.')
+    expect(await response.text()).toBe('Invalid or expired resolution link.')
     expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects an oversized screenshot before decoding or writing a report', async () => {
+    const response = await feedbackRouter.request('/', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'feature', description: 'x', screenshot: { name: 'a.png', content_type: 'image/png', data: 'A'.repeat(7 * 1024 * 1024) } }),
+    })
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'SCREENSHOT_FAILED' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects an over-long attempted action', async () => {
+    const response = await feedbackRouter.request('/', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'feature', description: 'x', attempted_action: 'a'.repeat(2001) }),
+    })
+    expect(response.status).toBe(400)
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('still sends the support alert when the reporter receipt fails and escapes entities', async () => {
+    mocks.user = { ...mocks.user, id: 'person-receipt', email: 'r@example.com' }
+    mocks.from.mockReturnValue(query({ data: { id: 'report-2' }, error: null }))
+    mocks.sendEmail.mockRejectedValueOnce(new Error('receipt down'))
+    const response = await feedbackRouter.request('/', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'feature', description: '&lt;a href=x&gt;' }),
+    })
+    expect(response.status).toBe(201)
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(2)
+    expect((mocks.sendEmail.mock.calls[1] as any[])[0].html).toContain('&amp;lt;a href=x&amp;gt;')
+  })
+
+  it('rejects expired and tampered resolution tokens', async () => {
+    const expired = createResolveToken('report-1', Date.now() - 15 * 24 * 60 * 60 * 1000)
+    expect((await feedbackResolutionRouter.request(`/report-1/resolve?token=${expired}`)).status).toBe(403)
+    const valid = createResolveToken('report-1')
+    expect((await feedbackResolutionRouter.request(`/report-2/resolve?token=${valid}`)).status).toBe(403)
+    expect((await feedbackResolutionRouter.request(`/report-1/resolve?token=${valid}`)).status).toBe(200)
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  function resolveQuery(results: Record<string, any>) {
+    const builder: any = { select: vi.fn(() => builder), update: vi.fn(() => builder), eq: vi.fn(() => builder) }
+    let mode = 'select'
+    builder.update = vi.fn(() => { mode = 'update'; return builder })
+    builder.maybeSingle = vi.fn(async () => results.select)
+    builder.then = (resolve: (v: any) => void) => Promise.resolve(results[mode]).then(resolve)
+    return builder
+  }
+
+  it('retries a lost resolution notification on a resolved report', async () => {
+    const reports = resolveQuery({ select: { data: { id: 'report-1', status: 'resolved', reporter_id: 'p1', resolution_sent_at: null }, error: null }, update: { error: null } })
+    const profiles = resolveQuery({ select: { data: { email: 'r@example.com', first_name: 'R' }, error: null } })
+    mocks.from.mockImplementation((table: string) => (table === 'feedback_reports' ? reports : profiles))
+    const response = await feedbackResolutionRouter.request(`/report-1/resolve?token=${createResolveToken('report-1')}`, { method: 'POST' })
+    expect(response.status).toBe(200)
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not report success when the resolution update or email fails', async () => {
+    const token = createResolveToken('report-1')
+    const failing = resolveQuery({ select: { data: { id: 'report-1', status: 'open', reporter_id: 'p1', resolution_sent_at: null }, error: null }, update: { error: { message: 'db' } } })
+    mocks.from.mockReturnValue(failing)
+    expect((await feedbackResolutionRouter.request(`/report-1/resolve?token=${token}`, { method: 'POST' })).status).toBe(503)
+
+    const reports = resolveQuery({ select: { data: { id: 'report-1', status: 'resolved', reporter_id: 'p1', resolution_sent_at: null }, error: null }, update: { error: null } })
+    const profiles = resolveQuery({ select: { data: { email: 'r@example.com' }, error: null } })
+    mocks.from.mockImplementation((table: string) => (table === 'feedback_reports' ? reports : profiles))
+    mocks.sendEmail.mockRejectedValueOnce(new Error('smtp'))
+    expect((await feedbackResolutionRouter.request(`/report-1/resolve?token=${token}`, { method: 'POST' })).status).toBe(503)
+    expect(reports.update).not.toHaveBeenCalled()
   })
 })
