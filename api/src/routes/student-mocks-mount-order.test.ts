@@ -70,16 +70,17 @@ describe('student mock routes behind the real /mocks router', () => {
     expect(response.status).not.toBe(400)
   })
 
-  it('requires an explicit account when the learner has several memberships', async () => {
+  it('asks for an account selection when the learner has several memberships', async () => {
     state.memberships = [{ school_id: ACCOUNT }, { school_id: '22222222-2222-4222-8222-222222222222' }]
     const response = await app().request('/mocks/mock-1/attempts', { method: 'POST' })
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_CONTEXT_REQUIRED' })
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_SELECTION_REQUIRED' })
   })
 
   it('still gates tutor mock management on /mocks behind strict account context', async () => {
     state.user = { id: 'u-2', role: 'tutor', school_id: ACCOUNT }
     const response = await app().request('/mocks/ungraded-count')
     expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_CONTEXT_REQUIRED' })
   })
 })

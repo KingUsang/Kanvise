@@ -12,6 +12,10 @@ vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
   accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
+  lookupDefaultAccount: async () => ({ kind: 'none' }),
+  accountContextUnavailable: (c: any) => c.json({ code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503),
+  accountSelectionRequired: (c: any) => c.json({ code: 'ACCOUNT_SELECTION_REQUIRED' }, 409),
+  resolveAccountContext: async () => { throw new Error('not expected in this test') },
   ACCOUNT_CONTEXT_HEADER: 'X-Kanvise-Account-Id',
   requireRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
     if (!roles.includes(c.get('user').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)

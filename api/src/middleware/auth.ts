@@ -127,11 +127,65 @@ function isMembershipRole(value: unknown): value is MembershipRole {
  * refresh. The selected account ID is a request hint, not proof of access.
  */
 export const accountContextMiddleware = async (c: Context, next: Next) => {
-  const accountId = c.req.header(ACCOUNT_CONTEXT_HEADER)?.trim()
-  if (!accountId || !UUID_PATTERN.test(accountId)) {
+  const rawHeader = c.req.header(ACCOUNT_CONTEXT_HEADER)
+  if (rawHeader === undefined) {
+    return resolveDefaultAccountContext(c, next)
+  }
+  const accountId = rawHeader.trim()
+  if (!UUID_PATTERN.test(accountId)) {
     return c.json({ error: 'A valid tutoring account must be selected', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
   }
   return resolveAccountContext(c, next, accountId)
+}
+
+export type DefaultAccountLookup =
+  | { kind: 'single'; accountId: string }
+  | { kind: 'several' }
+  | { kind: 'none' }
+  | { kind: 'error' }
+
+/**
+ * Looks up the caller's active memberships (any role) when the request names
+ * no account. The API is on a different site from the web app, so it does not
+ * read the web's selection cookie; callers send the header and this is only
+ * the safety net for requests that cannot (for example a first request before
+ * the client has stored a selection).
+ */
+export async function lookupDefaultAccount(personId: string): Promise<DefaultAccountLookup> {
+  const { data, error } = await supabase
+    .from('account_memberships')
+    .select('school_id')
+    .eq('person_id', personId)
+    .eq('status', 'active')
+    .limit(2)
+  if (error) return { kind: 'error' }
+  if (!data?.length) return { kind: 'none' }
+  if (data.length > 1) return { kind: 'several' }
+  return { kind: 'single', accountId: data[0].school_id }
+}
+
+export const accountContextUnavailable = (c: Context) =>
+  c.json({ error: 'Could not verify the selected tutoring account', code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503)
+
+export const accountSelectionRequired = (c: Context) =>
+  c.json({ error: 'Choose which tutoring account to use', code: 'ACCOUNT_SELECTION_REQUIRED' }, 409)
+
+const noAccountContext = (c: Context) =>
+  c.json({ error: 'A valid tutoring account must be selected', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
+
+/**
+ * With no header: exactly one active membership is used (and still verified
+ * by resolveAccountContext), several return ACCOUNT_SELECTION_REQUIRED so the
+ * web shows the account picker, none returns ACCOUNT_CONTEXT_REQUIRED.
+ */
+export const resolveDefaultAccountContext = async (c: Context, next: Next) => {
+  const user = c.get('user')
+  if (!user?.id) return noAccountContext(c)
+  const lookup = await lookupDefaultAccount(user.id)
+  if (lookup.kind === 'error') return accountContextUnavailable(c)
+  if (lookup.kind === 'several') return accountSelectionRequired(c)
+  if (lookup.kind === 'none') return noAccountContext(c)
+  return resolveAccountContext(c, next, lookup.accountId)
 }
 
 /** Verifies the caller's active membership of `accountId` and sets the account context. */
