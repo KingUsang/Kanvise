@@ -166,7 +166,7 @@ slidesRouter.post('/:id/presentations/:presentationId/complete', async (c) => {
     const { data, error } = await db.from('live_class_presentations').update({ processing_status: 'processing', processing_started_at: new Date().toISOString() })
       .eq('id', presentation.id).eq('live_class_id', access.liveClass.id).eq('processing_status', 'uploading').select('*').single()
     if (error) throw error
-    enqueuePresentationProcessing(presentation.id)
+    await enqueuePresentationProcessing(presentation.id)
     return c.json({ data: publicPresentation(data) })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not verify uploaded PDF'
@@ -195,7 +195,7 @@ slidesRouter.get('/:id/presentations/:presentationId/pages/:page/view', async (c
     const { data: queued } = await db.from('live_class_presentations').update({
       processing_status: 'processing', processing_started_at: new Date().toISOString(), processing_error: null,
     }).eq('id', presentation.id).eq('processing_status', 'ready').select('id').maybeSingle()
-    if (queued) enqueuePresentationProcessing(presentation.id)
+    if (queued) await enqueuePresentationProcessing(presentation.id)
     return c.json({ error: 'Material pages are being prepared', code: 'MATERIAL_NOT_READY' }, 409)
   }
   if (presentation.processing_status !== 'ready') return c.json({ error: 'Material is still being prepared', code: 'MATERIAL_NOT_READY' }, 409)
@@ -249,7 +249,7 @@ slidesRouter.post('/:id/presentations/:presentationId/replace', async (c) => {
     }).eq('id', presentation.id).eq('live_class_id', access.liveClass.id).select('*').single()
     if (error) throw error
     await deletePageImages(presentation, access.user.school_id)
-    enqueuePresentationProcessing(presentation.id)
+    await enqueuePresentationProcessing(presentation.id)
     await deletePrivateObject(presentation.file_key, access.user.school_id).catch((error) => {
       console.error('[presentations] old replacement object cleanup failed', error)
     })

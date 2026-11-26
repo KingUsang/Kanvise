@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import { sendEmail } from '../emails/provider-router'
 import { getEmailConfig } from '../emails/config'
 import { renderEmail } from '../emails/render-email'
+import { holdSentClaim, retryWrite } from '../lib/retry-write'
 
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = 24 * ONE_HOUR
@@ -14,13 +15,17 @@ const DRIP_STEPS = [
   { key: 'kavi_challenge', trigger: 14 * ONE_DAY },
 ] as const
 
+// A step is abandoned after this many failed attempts so one bad address does
+// not retry hourly forever. Later steps for that user still proceed.
+const MAX_STEP_ATTEMPTS = 5
+
 export async function runOnboardingDripJob() {
   const config = getEmailConfig()
   const { data: users, error } = await supabase
     .from('user_profiles')
     .select('id, first_name, email, created_at, role')
     .in('role', ['admin', 'tutor'])
-  
+
   if (error || !users) {
     console.error('Failed to fetch users for drip job', error)
     return
@@ -38,7 +43,7 @@ export async function runOnboardingDripJob() {
       const idempotencyKey = `drip_${step.key}_${user.id}`
       const { data: existing, error: existingError } = await supabase
         .from('email_deliveries')
-        .select('status')
+        .select('status, attempt_count')
         .eq('idempotency_key', idempotencyKey)
         .maybeSingle()
 
@@ -48,17 +53,25 @@ export async function runOnboardingDripJob() {
       }
 
       if (existing?.status === 'sent') continue
-      if (existing) break
+      // A step that used every attempt is skipped, not left blocking the rest.
+      if (existing && existing.attempt_count >= MAX_STEP_ATTEMPTS) continue
 
+      let providerAccepted = false
       try {
         const frontendUrl = (process.env.FRONTEND_URL || 'https://kanvise.com').replace(/\/$/, '')
 
-        await supabase.from('email_deliveries').upsert({
+        const { error: createError } = await supabase.from('email_deliveries').upsert({
           idempotency_key: idempotencyKey,
           event_type: step.key,
           recipient_email: user.email,
-          status: 'pending',
-        })
+        }, { onConflict: 'idempotency_key', ignoreDuplicates: true })
+        if (createError) throw createError
+
+        // Atomic claim: a crashed or concurrent run cannot send this step twice,
+        // and an expired claim or failed row becomes claimable again.
+        const { data: claimed, error: claimError } = await (supabase as any).rpc('claim_email_delivery', { p_key: idempotencyKey, p_lease_seconds: 600 })
+        if (claimError) throw claimError
+        if (!claimed) break
 
         const rendered = await renderEmail(step.key as any, {
           firstName: user.first_name,
@@ -73,14 +86,32 @@ export async function runOnboardingDripJob() {
           text: rendered.text,
           replyTo: config.replyTo,
         }, { event: step.key, idempotencyKey })
+        providerAccepted = true
 
-        await supabase.from('email_deliveries').update({
-          status: 'sent',
-          provider_message_id: result.id,
-          sent_at: new Date().toISOString(),
-        }).eq('idempotency_key', idempotencyKey)
+        const recorded = await retryWrite(async () => {
+          const { error: sentError } = await supabase.from('email_deliveries').update({
+            status: 'sent',
+            provider_message_id: result.id,
+            sent_at: new Date().toISOString(),
+            last_error: null,
+            claimed_until: null,
+            updated_at: new Date().toISOString(),
+          }).eq('idempotency_key', idempotencyKey)
+          if (sentError) throw sentError
+        })
+        if (!recorded) {
+          console.error(`Drip ${step.key} sent to ${user.email} but its sent state could not be saved`)
+          await holdSentClaim('email_deliveries', idempotencyKey)
+        }
       } catch (err) {
         console.error(`Failed to send drip ${step.key} to ${user.email}`, err)
+        if (!providerAccepted) {
+          const message = err instanceof Error ? err.message : 'Unknown drip delivery error'
+          const { error: failedError } = await supabase.from('email_deliveries').update({
+            status: 'failed', last_error: message.slice(0, 500), claimed_until: null, updated_at: new Date().toISOString(),
+          }).eq('idempotency_key', idempotencyKey)
+          if (failedError) console.error(`Failed to record drip ${step.key} failure`, failedError)
+        }
       }
 
       break

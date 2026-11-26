@@ -70,146 +70,169 @@ webhooksRouter.post('/plugnmeet', async (c) => {
     .select('id, processed_at, attempts').eq('provider_event_id', eventId).maybeSingle()).data
   if (inbox?.processed_at) return c.text('OK', 200)
 
-  if (!roomId) return c.text('OK', 200)
-  const { data: liveClass } = await (supabase as any).from('live_classes')
-    .select('id, school_id, status, course_id, tutor_id, classroom_provider, provider_room_id')
-    .or(`provider_room_id.eq.${roomId},id.eq.${roomId}`)
-    .maybeSingle()
-  if (!liveClass || liveClass.classroom_provider !== 'plugnmeet') return c.text('OK', 200)
-  console.info('live_class.plugnmeet_webhook_matched', {
-    event_id: eventId, event_name: eventName, room_id: roomId, class_id: liveClass.id, class_status: liveClass.status,
-  })
+  const db = supabase as any
+  const check = <T extends { error?: any }>(result: T): T => {
+    if (result.error) throw result.error
+    return result
+  }
+  // The inbox row is only marked processed after every required effect has been
+  // written. Ignored events get an explicit outcome instead of staying unfinished.
+  const markProcessed = async (outcome: string) => {
+    check(await db.from('plugnmeet_webhook_inbox')
+      .update({ processed_at: new Date().toISOString(), attempts: (inbox?.attempts || 0) + 1, last_error: null, outcome }).eq('provider_event_id', eventId))
+    return c.text('OK', 200)
+  }
 
-  const participantIdentity = String(event.participant?.user_id || event.participant?.identity || '')
-  const guestMatch = /^guest_([0-9a-f-]{36})$/i.exec(participantIdentity)
-  // A room is only genuinely live when PlugNmeet says the meeting started or
-  // somebody joined it. Room creation alone merely makes it ready.
-  if (eventName === 'room_started' || (eventName === 'participant_joined' && participantIdentity)) {
-    const observedAt = new Date().toISOString()
-    await (supabase as any).from('live_classes').update({
-      status: 'live', provider_room_status: 'active', provider_room_checked_at: observedAt,
-      last_provider_event_at: observedAt, provider_error_at: null, provider_error_message: null,
-    }).eq('id', liveClass.id).in('status', ['starting', 'ready', 'live'])
-    // Preserve the first provider-confirmed start time through retries and
-    // later participant joins; never overwrite it with a browser click.
-    await (supabase as any).from('live_classes').update({ started_at: observedAt })
-      .eq('id', liveClass.id).is('started_at', null)
-  }
-  if (eventName === 'participant_joined' && participantIdentity) {
-    if (guestMatch && liveClass.course_id === null) {
-      const guestId = guestMatch[1]
-      const { data: guest } = await (supabase as any).from('live_class_guests')
-        .select('id').eq('id', guestId).eq('live_class_id', liveClass.id).eq('school_id', liveClass.school_id).is('revoked_at', null).maybeSingle()
-      if (guest) {
-        // One lightweight lead-engagement row per guest/class. On reconnect we
-        // retain the original join time and clear left_at for the final leave.
-        await (supabase as any).from('guest_live_class_attendance').upsert({
-          school_id: liveClass.school_id, live_class_id: liveClass.id, guest_id: guestId,
-          joined_at: new Date().toISOString(),
-        }, { onConflict: 'live_class_id,guest_id', ignoreDuplicates: true })
-        await (supabase as any).from('guest_live_class_attendance').update({ left_at: null, duration_seconds: null })
-          .eq('live_class_id', liveClass.id).eq('guest_id', guestId)
+  try {
+    if (!roomId) return await markProcessed('ignored_no_room')
+    const { data: liveClass } = check(await db.from('live_classes')
+      .select('id, school_id, status, course_id, tutor_id, classroom_provider, provider_room_id')
+      .or(`provider_room_id.eq.${roomId},id.eq.${roomId}`)
+      .maybeSingle())
+    if (!liveClass || liveClass.classroom_provider !== 'plugnmeet') return await markProcessed('ignored_unknown_room')
+    console.info('live_class.plugnmeet_webhook_matched', {
+      event_id: eventId, event_name: eventName, room_id: roomId, class_id: liveClass.id, class_status: liveClass.status,
+    })
+
+    const participantIdentity = String(event.participant?.user_id || event.participant?.identity || '')
+    const guestMatch = /^guest_([0-9a-f-]{36})$/i.exec(participantIdentity)
+    // A room is only genuinely live when PlugNmeet says the meeting started or
+    // somebody joined it. Room creation alone merely makes it ready.
+    if (eventName === 'room_started' || (eventName === 'participant_joined' && participantIdentity)) {
+      const observedAt = new Date().toISOString()
+      check(await db.from('live_classes').update({
+        status: 'live', provider_room_status: 'active', provider_room_checked_at: observedAt,
+        last_provider_event_at: observedAt, provider_error_at: null, provider_error_message: null,
+      }).eq('id', liveClass.id).in('status', ['starting', 'ready', 'live']))
+      // Preserve the first provider-confirmed start time through retries and
+      // later participant joins; never overwrite it with a browser click.
+      check(await db.from('live_classes').update({ started_at: observedAt })
+        .eq('id', liveClass.id).is('started_at', null))
+    }
+    if (eventName === 'participant_joined' && participantIdentity) {
+      if (guestMatch && liveClass.course_id === null) {
+        const guestId = guestMatch[1]
+        const { data: guest } = check(await db.from('live_class_guests')
+          .select('id').eq('id', guestId).eq('live_class_id', liveClass.id).eq('school_id', liveClass.school_id).is('revoked_at', null).maybeSingle())
+        if (guest) {
+          // One lightweight lead-engagement row per guest/class. On reconnect we
+          // retain the original join time and clear left_at for the final leave.
+          check(await db.from('guest_live_class_attendance').upsert({
+            school_id: liveClass.school_id, live_class_id: liveClass.id, guest_id: guestId,
+            joined_at: new Date().toISOString(),
+          }, { onConflict: 'live_class_id,guest_id', ignoreDuplicates: true }))
+          check(await db.from('guest_live_class_attendance').update({ left_at: null, duration_seconds: null })
+            .eq('live_class_id', liveClass.id).eq('guest_id', guestId))
+        }
+      }
+      const { data: enrolled } = check(await db.from('enrolments').select('student_id').eq('course_id', liveClass.course_id).eq('student_id', participantIdentity).eq('school_id', liveClass.school_id).maybeSingle())
+      // attendance_records is deliberately learner-only.
+      if (enrolled) {
+        // A retried delivery must not add a second open attendance row (DEV-WHK-002).
+        const { data: openRecord } = check(await db.from('attendance_records').select('id')
+          .eq('live_class_id', liveClass.id).eq('student_id', participantIdentity).is('left_at', null).limit(1).maybeSingle())
+        if (!openRecord) {
+          check(await db.from('attendance_records').insert({ school_id: liveClass.school_id, live_class_id: liveClass.id, student_id: participantIdentity, joined_at: new Date().toISOString() }))
+        }
       }
     }
-    const { data: enrolled } = await (supabase as any).from('enrolments').select('student_id').eq('course_id', liveClass.course_id).eq('student_id', participantIdentity).eq('school_id', liveClass.school_id).maybeSingle()
-    // attendance_records is deliberately learner-only.
-    if (enrolled) {
-      await (supabase as any).from('attendance_records').insert({ school_id: liveClass.school_id, live_class_id: liveClass.id, student_id: participantIdentity, joined_at: new Date().toISOString() })
+    if (eventName === 'participant_left' && participantIdentity) {
+      const leftAt = new Date()
+      if (guestMatch) {
+        const { data: guestRecord } = check(await db.from('guest_live_class_attendance')
+          .select('id, joined_at').eq('live_class_id', liveClass.id).eq('guest_id', guestMatch[1]).maybeSingle())
+        if (guestRecord) check(await db.from('guest_live_class_attendance').update({
+          left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(guestRecord.joined_at).getTime()) / 1000)),
+        }).eq('id', guestRecord.id))
+      }
+      const { data: record } = check(await db.from('attendance_records').select('id, joined_at').eq('live_class_id', liveClass.id).eq('student_id', participantIdentity).is('left_at', null).order('joined_at', { ascending: false }).limit(1).maybeSingle())
+      if (record) check(await db.from('attendance_records').update({ left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(record.joined_at).getTime()) / 1000)) }).eq('id', record.id))
     }
-  }
-  if (eventName === 'participant_left' && participantIdentity) {
-    const leftAt = new Date()
-    if (guestMatch) {
-      const { data: guestRecord } = await (supabase as any).from('guest_live_class_attendance')
-        .select('id, joined_at').eq('live_class_id', liveClass.id).eq('guest_id', guestMatch[1]).maybeSingle()
-      if (guestRecord) await (supabase as any).from('guest_live_class_attendance').update({
-        left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(guestRecord.joined_at).getTime()) / 1000)),
-      }).eq('id', guestRecord.id)
+    if (eventName === 'room_finished' && liveClass.status === 'ending') {
+      const endedAt = new Date().toISOString()
+      check(await db.from('live_classes').update({
+        status: 'completed', provider_room_status: 'ended', provider_room_checked_at: endedAt,
+        last_provider_event_at: endedAt, provider_error_at: null, provider_error_message: null,
+      }).eq('id', liveClass.id).in('status', ['starting', 'ready', 'live', 'ending']))
+      // Keep the first terminal provider observation when delivery is retried.
+      check(await db.from('live_classes').update({ ended_at: endedAt })
+        .eq('id', liveClass.id).is('ended_at', null))
     }
-    const { data: record } = await (supabase as any).from('attendance_records').select('id, joined_at').eq('live_class_id', liveClass.id).eq('student_id', participantIdentity).is('left_at', null).order('joined_at', { ascending: false }).limit(1).maybeSingle()
-    if (record) await (supabase as any).from('attendance_records').update({ left_at: leftAt.toISOString(), duration_seconds: Math.max(0, Math.round((leftAt.getTime() - new Date(record.joined_at).getTime()) / 1000)) }).eq('id', record.id)
-  }
-  if (eventName === 'room_finished' && liveClass.status === 'ending') {
-    const endedAt = new Date().toISOString()
-    await (supabase as any).from('live_classes').update({
-      status: 'completed', provider_room_status: 'ended', provider_room_checked_at: endedAt,
-      last_provider_event_at: endedAt, provider_error_at: null, provider_error_message: null,
-    }).eq('id', liveClass.id).in('status', ['starting', 'ready', 'live', 'ending'])
-    // Keep the first terminal provider observation when delivery is retried.
-    await (supabase as any).from('live_classes').update({ ended_at: endedAt })
-      .eq('id', liveClass.id).is('ended_at', null)
-  }
-  if (eventName === 'room_finished' && liveClass.status !== 'ending') {
-    // PlugNmeet rooms are disposable. Network loss can leave an older room
-    // empty and trigger its provider timeout; that must not end the durable
-    // Kanvise class. Atomically prepare a new generation for the tutor.
-    const { error: recoveryError } = await (supabase as any).rpc('prepare_live_class_provider_recovery', {
-      p_live_class_id: liveClass.id,
-      p_provider_room_id: roomId,
-    })
-    if (recoveryError) {
-      console.error('live_class.plugnmeet_webhook_recovery_failed', {
-        event_id: eventId, room_id: roomId, class_id: liveClass.id, class_status: liveClass.status,
-        error: recoveryError.message || String(recoveryError),
+    if (eventName === 'room_finished' && liveClass.status !== 'ending') {
+      // PlugNmeet rooms are disposable. Network loss can leave an older room
+      // empty and trigger its provider timeout; that must not end the durable
+      // Kanvise class. Atomically prepare a new generation for the tutor.
+      const { error: recoveryError } = await db.rpc('prepare_live_class_provider_recovery', {
+        p_live_class_id: liveClass.id,
+        p_provider_room_id: roomId,
       })
-      throw recoveryError
+      if (recoveryError) {
+        console.error('live_class.plugnmeet_webhook_recovery_failed', {
+          event_id: eventId, room_id: roomId, class_id: liveClass.id, class_status: liveClass.status,
+          error: recoveryError.message || String(recoveryError),
+        })
+        throw recoveryError
+      }
+      console.warn('live_class.plugnmeet_webhook_recovery_prepared', {
+        event_id: eventId, room_id: roomId, class_id: liveClass.id, previous_status: liveClass.status,
+      })
     }
-    console.warn('live_class.plugnmeet_webhook_recovery_prepared', {
-      event_id: eventId, room_id: roomId, class_id: liveClass.id, previous_status: liveClass.status,
-    })
-  }
-  if (eventName === 'room_finished') {
-    const endedAt = new Date()
-    const { data: openGuestRecords } = await (supabase as any).from('guest_live_class_attendance')
-      .select('id, joined_at').eq('live_class_id', liveClass.id).is('left_at', null)
-    await Promise.all((openGuestRecords || []).map((record: any) => (supabase as any).from('guest_live_class_attendance').update({
-      left_at: endedAt.toISOString(), duration_seconds: Math.max(0, Math.round((endedAt.getTime() - new Date(record.joined_at).getTime()) / 1000)),
-    }).eq('id', record.id)))
-  }
-  if (eventName === 'recording_proceeded') {
-    // PlugNmeet calls this field record_id. Keep the compatibility fallbacks
-    // for older event payloads, but never overwrite an earlier segment.
-    const recordingId = event.recording_info?.record_id || event.recording_info?.recording_id || event.recording_info?.id || null
-    if (!recordingId) throw new Error('recording_proceeded did not include record_id')
-    const { error } = await (supabase as any).from('live_class_recording_segments').upsert({
-      live_class_id: liveClass.id, provider_recording_id: recordingId, status: 'pending', updated_at: new Date().toISOString(),
-    }, { onConflict: 'provider_recording_id' })
-    if (error) throw error
-    const { data: mergeJob } = await (supabase as any).from('live_class_jobs')
-      .select('id').eq('job_type', 'recording_finalize').eq('live_class_id', liveClass.id).eq('status', 'waiting').maybeSingle()
-    if (mergeJob) {
-      const { error: finalError } = await (supabase as any).from('live_class_recordings').upsert({
-        live_class_id: liveClass.id, provider_recording_id: recordingId, status: 'pending', updated_at: new Date().toISOString(),
-      }, { onConflict: 'live_class_id' })
-      if (finalError) throw finalError
-      const { error: completionError } = await (supabase as any).from('live_class_jobs')
-        .update({ status: 'complete', completed_at: new Date().toISOString() }).eq('id', mergeJob.id)
-      if (completionError) throw completionError
-      // The recorder hook and webhook are independent asynchronous deliveries.
-      // If R2 arrived first, promote the already-verified segment immediately.
-      const { data: uploaded } = await (supabase as any).from('live_class_recording_segments')
-        .select('r2_file_key, content_type, file_size_bytes, checksum, ended_at').eq('provider_recording_id', recordingId).eq('status', 'uploaded').maybeSingle()
-      if (uploaded?.r2_file_key) {
-        const { error: readyError } = await (supabase as any).from('live_class_recordings').update({
-          r2_file_key: uploaded.r2_file_key, status: 'ready', content_type: uploaded.content_type,
-          file_size_bytes: uploaded.file_size_bytes, checksum: uploaded.checksum, ended_at: uploaded.ended_at || new Date().toISOString(), updated_at: new Date().toISOString(),
-        }).eq('live_class_id', liveClass.id)
-        if (readyError) throw readyError
-        const { error: jobError } = await (supabase as any).from('live_class_jobs').upsert({ job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString() }, { onConflict: 'job_type,live_class_id' })
-        if (jobError) throw jobError
+    if (eventName === 'room_finished') {
+      const endedAt = new Date()
+      const { data: openGuestRecords } = check(await db.from('guest_live_class_attendance')
+        .select('id, joined_at').eq('live_class_id', liveClass.id).is('left_at', null))
+      for (const record of openGuestRecords || []) {
+        check(await db.from('guest_live_class_attendance').update({
+          left_at: endedAt.toISOString(), duration_seconds: Math.max(0, Math.round((endedAt.getTime() - new Date(record.joined_at).getTime()) / 1000)),
+        }).eq('id', record.id))
       }
     }
+    if (eventName === 'recording_proceeded') {
+      // PlugNmeet calls this field record_id. Keep the compatibility fallbacks
+      // for older event payloads, but never overwrite an earlier segment.
+      const recordingId = event.recording_info?.record_id || event.recording_info?.recording_id || event.recording_info?.id || null
+      if (!recordingId) throw new Error('recording_proceeded did not include record_id')
+      check(await db.from('live_class_recording_segments').upsert({
+        live_class_id: liveClass.id, provider_recording_id: recordingId, status: 'pending', updated_at: new Date().toISOString(),
+      }, { onConflict: 'provider_recording_id' }))
+      const { data: mergeJob } = check(await db.from('live_class_jobs')
+        .select('id').eq('job_type', 'recording_finalize').eq('live_class_id', liveClass.id).eq('status', 'waiting').maybeSingle())
+      if (mergeJob) {
+        check(await db.from('live_class_recordings').upsert({
+          live_class_id: liveClass.id, provider_recording_id: recordingId, status: 'pending', updated_at: new Date().toISOString(),
+        }, { onConflict: 'live_class_id' }))
+        // The recorder hook and webhook are independent asynchronous deliveries.
+        // If R2 arrived first, promote the already-verified segment immediately.
+        const { data: uploaded } = check(await db.from('live_class_recording_segments')
+          .select('r2_file_key, content_type, file_size_bytes, checksum, ended_at').eq('provider_recording_id', recordingId).eq('status', 'uploaded').maybeSingle())
+        if (uploaded?.r2_file_key) {
+          check(await db.from('live_class_recordings').update({
+            r2_file_key: uploaded.r2_file_key, status: 'ready', content_type: uploaded.content_type,
+            file_size_bytes: uploaded.file_size_bytes, checksum: uploaded.checksum, ended_at: uploaded.ended_at || new Date().toISOString(), updated_at: new Date().toISOString(),
+          }).eq('live_class_id', liveClass.id))
+          check(await db.from('live_class_jobs').upsert({ job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString() }, { onConflict: 'job_type,live_class_id' }))
+        }
+        // Complete the merge job last. Until then a replayed delivery still finds
+        // it waiting and repeats the idempotent steps above.
+        check(await db.from('live_class_jobs')
+          .update({ status: 'complete', completed_at: new Date().toISOString() }).eq('id', mergeJob.id))
+      }
+    }
+    if (eventName === 'room_finished') {
+      check(await db.from('live_class_jobs').upsert({
+        job_type: 'recording_finalize', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date(Date.now() + 2 * 60_000).toISOString(),
+      }, { onConflict: 'job_type,live_class_id' }))
+    }
+    return await markProcessed('processed')
+  } catch (error: any) {
+    // Leave processed_at empty so the provider's retry re-runs the event, and
+    // record why for operators.
+    console.error('live_class.plugnmeet_webhook_failed', { event_id: eventId, event_name: eventName, room_id: roomId, error: error?.message || String(error) })
+    await db.from('plugnmeet_webhook_inbox')
+      .update({ attempts: (inbox?.attempts || 0) + 1, last_error: String(error?.message || error).slice(0, 500) }).eq('provider_event_id', eventId)
+      .then(undefined, () => undefined)
+    return c.text('Retry', 500)
   }
-  if (eventName === 'room_finished') {
-    const { error } = await (supabase as any).from('live_class_jobs').upsert({
-      job_type: 'recording_finalize', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date(Date.now() + 2 * 60_000).toISOString(),
-    }, { onConflict: 'job_type,live_class_id' })
-    if (error) throw error
-  }
-  const { error: processedError } = await (supabase as any).from('plugnmeet_webhook_inbox')
-    .update({ processed_at: new Date().toISOString(), attempts: (inbox?.attempts || 0) + 1, last_error: null }).eq('provider_event_id', eventId)
-  if (processedError) throw processedError
-  return c.text('OK', 200)
 })
 
 // The recorder uploads a completed MP4 to R2 in its post_transcoding hook, then

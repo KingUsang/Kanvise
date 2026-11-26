@@ -1,3 +1,4 @@
+import { enqueueObjectDeletion } from "../jobs/storage-cleanup";
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import {
@@ -253,7 +254,7 @@ notesRouter.delete("/:id", enforceAdminOrTutor, async (c) => {
 
     const { data: note, error: fetchError } = await supabase
       .from("notes")
-      .select("tutor_id, course_id")
+      .select("tutor_id, course_id, file_key")
       .eq("id", id)
       .eq("school_id", profile.school_id)
       .single();
@@ -289,7 +290,8 @@ notesRouter.delete("/:id", enforceAdminOrTutor, async (c) => {
 
     if (deleteError) throw deleteError;
 
-    // File deletion in R2 is left to background job, as per spec.
+    // The stored file is removed by a durable job now that the row is gone.
+    await enqueueObjectDeletion(note.file_key, profile.school_id);
     return c.json({ message: "Note deleted successfully" });
   } catch (error: any) {
     console.error(`DELETE /notes/:id error:`, error);

@@ -594,16 +594,30 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"email_deliveries": {
+                },"durable_jobs": {
                   Row: {
-                    "attempt_count": number,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"provider_message_id": string | null,"recipient_email": string,"sent_at": string | null,"status": string,"updated_at": string
+                    "attempts": number,"completed_at": string | null,"created_at": string,"dedupe_key": string,"id": string,"job_type": string,"last_error": string | null,"locked_by": string | null,"locked_until": string | null,"max_attempts": number,"payload": NonNullable<Json>,"run_at": string,"status": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email": string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
+                    "attempts"?: number,"completed_at"?: string | null,"created_at"?: string,"dedupe_key": string,"id"?: string,"job_type": string,"last_error"?: string | null,"locked_by"?: string | null,"locked_until"?: string | null,"max_attempts"?: number,"payload"?: NonNullable<Json>,"run_at"?: string,"status"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email"?: string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
+                    "attempts"?: number,"completed_at"?: string | null,"created_at"?: string,"dedupe_key"?: string,"id"?: string,"job_type"?: string,"last_error"?: string | null,"locked_by"?: string | null,"locked_until"?: string | null,"max_attempts"?: number,"payload"?: NonNullable<Json>,"run_at"?: string,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"email_deliveries": {
+                  Row: {
+                    "attempt_count": number,"claimed_until": string | null,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"provider_message_id": string | null,"recipient_email": string,"sent_at": string | null,"status": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email": string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email"?: string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
 
@@ -974,14 +988,14 @@ isOneToOne: false
                   ]
                 },"live_class_jobs": {
                   Row: {
-                    "attempts": number,"available_at": string,"completed_at": string | null,"created_at": string,"id": string,"job_type": string,"last_error": string | null,"live_class_id": string | null,"payload": NonNullable<Json>,"status": string
+                    "attempts": number,"available_at": string,"completed_at": string | null,"created_at": string,"id": string,"job_type": string,"last_error": string | null,"live_class_id": string | null,"locked_by": string | null,"locked_until": string | null,"payload": NonNullable<Json>,"status": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempts"?: number,"available_at"?: string,"completed_at"?: string | null,"created_at"?: string,"id"?: string,"job_type": string,"last_error"?: string | null,"live_class_id"?: string | null,"payload"?: NonNullable<Json>,"status"?: string
+                    "attempts"?: number,"available_at"?: string,"completed_at"?: string | null,"created_at"?: string,"id"?: string,"job_type": string,"last_error"?: string | null,"live_class_id"?: string | null,"locked_by"?: string | null,"locked_until"?: string | null,"payload"?: NonNullable<Json>,"status"?: string
                   }
                   Update: {
-                    "attempts"?: number,"available_at"?: string,"completed_at"?: string | null,"created_at"?: string,"id"?: string,"job_type"?: string,"last_error"?: string | null,"live_class_id"?: string | null,"payload"?: NonNullable<Json>,"status"?: string
+                    "attempts"?: number,"available_at"?: string,"completed_at"?: string | null,"created_at"?: string,"id"?: string,"job_type"?: string,"last_error"?: string | null,"live_class_id"?: string | null,"locked_by"?: string | null,"locked_until"?: string | null,"payload"?: NonNullable<Json>,"status"?: string
                   }
                   Relationships: [
                     {
@@ -2096,14 +2110,14 @@ isOneToOne: true
                   ]
                 },"plugnmeet_webhook_inbox": {
                   Row: {
-                    "attempts": number,"event_name": string,"id": string,"last_error": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"provider_event_id": string,"received_at": string,"room_id": string | null
+                    "attempts": number,"event_name": string,"id": string,"last_error": string | null,"outcome": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"provider_event_id": string,"received_at": string,"room_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempts"?: number,"event_name": string,"id"?: string,"last_error"?: string | null,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider_event_id": string,"received_at"?: string,"room_id"?: string | null
+                    "attempts"?: number,"event_name": string,"id"?: string,"last_error"?: string | null,"outcome"?: string | null,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider_event_id": string,"received_at"?: string,"room_id"?: string | null
                   }
                   Update: {
-                    "attempts"?: number,"event_name"?: string,"id"?: string,"last_error"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider_event_id"?: string,"received_at"?: string,"room_id"?: string | null
+                    "attempts"?: number,"event_name"?: string,"id"?: string,"last_error"?: string | null,"outcome"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider_event_id"?: string,"received_at"?: string,"room_id"?: string | null
                   }
                   Relationships: [
 
@@ -2191,14 +2205,14 @@ isOneToOne: false
                   ]
                 },"push_deliveries": {
                   Row: {
-                    "attempt_count": number,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"school_id": string,"sent_at": string | null,"status": string,"subscription_id": string,"updated_at": string,"user_id": string
+                    "attempt_count": number,"claimed_until": string | null,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"school_id": string,"sent_at": string | null,"status": string,"subscription_id": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"school_id": string,"sent_at"?: string | null,"status"?: string,"subscription_id": string,"updated_at"?: string,"user_id": string
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"school_id": string,"sent_at"?: string | null,"status"?: string,"subscription_id": string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"school_id"?: string,"sent_at"?: string | null,"status"?: string,"subscription_id"?: string,"updated_at"?: string,"user_id"?: string
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"school_id"?: string,"sent_at"?: string | null,"status"?: string,"subscription_id"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -2434,6 +2448,20 @@ isOneToOne: false
       referencedRelation: "sub_programmes"
       referencedColumns: ["id"]
     }
+                  ]
+                },"scheduler_leases": {
+                  Row: {
+                    "expires_at": string,"holder": string,"name": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "expires_at": string,"holder": string,"name": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "expires_at"?: string,"holder"?: string,"name"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+
                   ]
                 },"school_promos": {
                   Row: {
@@ -3031,7 +3059,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "add_programme_subject":
+            "acquire_scheduler_lease":
+{ Args: { "p_holder": string,"p_name": string,"p_ttl_seconds": number }; Returns: boolean
+                           },
+"add_programme_subject":
 { Args: { "p_created_by": string,"p_description": string,"p_name": string,"p_programme_id": string,"p_school_id": string,"p_slug": string,"p_tutor_ids": (string)[] }; Returns: Json
                            },
 "bind_question_block_media":
@@ -3044,6 +3075,20 @@ isOneToOne: false
 { Args: { "p_now": string,"p_offer_id": string,"p_student_id": string }; Returns: {
               "entitlement_id": string,"newly_claimed": boolean
             }[]
+                           },
+"claim_durable_jobs":
+{ Args: { "p_job_types": (string)[],"p_lease_seconds"?: number,"p_limit"?: number,"p_worker": string }; Returns: {
+              "attempts": number,"completed_at": string | null,"created_at": string,"dedupe_key": string,"id": string,"job_type": string,"last_error": string | null,"locked_by": string | null,"locked_until": string | null,"max_attempts": number,"payload": NonNullable<Json>,"run_at": string,"status": string,"updated_at": string
+            }[]
+                           },
+"claim_email_delivery":
+{ Args: { "p_key": string,"p_lease_seconds"?: number }; Returns: boolean
+                           },
+"claim_push_delivery":
+{ Args: { "p_key": string,"p_lease_seconds"?: number }; Returns: boolean
+                           },
+"complete_durable_job":
+{ Args: { "p_id": string,"p_worker": string }; Returns: boolean
                            },
 "confirm_mock_order_payment":
 { Args: { "p_amount_kobo": number,"p_now": string,"p_paystack_reference": string,"p_paystack_transaction_id": string }; Returns: {
@@ -3098,6 +3143,15 @@ isOneToOne: false
 "current_user_school_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"enqueue_durable_job":
+{ Args: { "p_dedupe_key": string,"p_job_type": string,"p_max_attempts"?: number,"p_payload"?: Json,"p_run_at"?: string }; Returns: string
+                           },
+"extend_durable_job_lease":
+{ Args: { "p_id": string,"p_lease_seconds"?: number,"p_worker": string }; Returns: boolean
+                           },
+"fail_durable_job":
+{ Args: { "p_error": string,"p_id": string,"p_retry_seconds"?: number,"p_worker": string }; Returns: boolean
+                           },
 "increment_user_sequence":
 { Args: { "p_role": string }; Returns: number
                            },
@@ -3128,6 +3182,9 @@ isOneToOne: false
                            },
 "record_telegram_attendance_checkin":
 { Args: { "p_chat_id": number,"p_telegram_user_id": number,"p_window_id": string }; Returns: Json
+                           },
+"release_scheduler_lease":
+{ Args: { "p_holder": string,"p_name": string }; Returns: undefined
                            },
 "remove_user_from_school":
 { Args: { "p_school_id": string,"p_target_user_id": string }; Returns: Json

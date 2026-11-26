@@ -1,5 +1,6 @@
 import { notifyAssignmentDeadline, notifyLiveClassReminder, notifyMockPublished } from '../notifications/triggers'
 import { jobsRepository, type JobsRepository } from './repository'
+import { durableJobStore, type DurableJob, type DurableJobHandlers, type DurableJobStore } from './durable-jobs'
 
 type Logger = Pick<Console, 'info' | 'error' | 'warn'>
 type Delivery = { failures: unknown[] }
@@ -9,6 +10,7 @@ export type JobsDependencies = {
   notifyMock: typeof notifyMockPublished
   notifyClass: typeof notifyLiveClassReminder
   notifyAssignment: typeof notifyAssignmentDeadline
+  enqueue: DurableJobStore['enqueue']
   logger: Logger
 }
 
@@ -17,12 +19,16 @@ const defaults: JobsDependencies = {
   notifyMock: notifyMockPublished,
   notifyClass: notifyLiveClassReminder,
   notifyAssignment: notifyAssignmentDeadline,
+  enqueue: (input) => durableJobStore.enqueue(input),
   logger: console,
 }
 
 function summary(name: string, processed: number, failures: number) {
   return { name, processed, failures }
 }
+
+export const MOCK_NOTIFY_JOB = 'notify_mock_published'
+export const LIVE_CLASS_REMINDER_JOB = 'notify_live_class_reminder'
 
 export async function runMockPublicationJob(now = new Date(), dependencies = defaults) {
   const mocks = await dependencies.repository.claimDueMocks(now, 50)
@@ -36,17 +42,9 @@ export async function runMockPublicationJob(now = new Date(), dependencies = def
         await dependencies.repository.markMockPublicationNotified(mock.id)
         continue
       }
-      const delivery = await dependencies.notifyMock({
-        id: mock.id,
-        schoolId: mock.schoolId,
-        courseId: mock.courseId,
-        programmeId: mock.programmeId,
-        audienceScope: mock.audienceScope,
-        title: mock.title,
-        courseName: mock.courseName,
-      })
-      failures += delivery.failures.length
-      if (delivery.failures.length === 0) await dependencies.repository.markMockPublicationNotified(mock.id)
+      // Delivery runs as a durable job with its own retries and backoff, so a
+      // mock whose delivery keeps failing cannot hold a slot in this page forever.
+      await dependencies.enqueue({ jobType: MOCK_NOTIFY_JOB, dedupeKey: `${MOCK_NOTIFY_JOB}:${mock.id}`, payload: { ...mock } })
     } catch (error) {
       failures += 1
       dependencies.logger.error('job.mock_publication.item_failed', { mockId: mock.id, error })
@@ -79,9 +77,7 @@ export async function runLiveClassReminderJob(now = new Date(), dependencies = d
   let failures = 0
   for (const liveClass of classes) {
     try {
-      const delivery = await dependencies.notifyClass({ ...liveClass }) as Delivery
-      if (delivery.failures.length === 0) await dependencies.repository.markLiveClassReminderSent(liveClass.id)
-      else failures += delivery.failures.length
+      await dependencies.enqueue({ jobType: LIVE_CLASS_REMINDER_JOB, dedupeKey: `${LIVE_CLASS_REMINDER_JOB}:${liveClass.id}`, payload: { ...liveClass } })
     } catch (error) {
       failures += 1
       dependencies.logger.error('job.live_class_reminder.item_failed', { liveClassId: liveClass.id, error })
@@ -124,5 +120,37 @@ export function createGuardedJob(name: string, job: () => Promise<unknown>, logg
       return active
     },
     async waitForIdle() { await active },
+  }
+}
+
+async function finishNotification(
+  job: DurableJob, failureCount: number, markSent: () => Promise<void>, dependencies: JobsDependencies, label: string,
+) {
+  if (failureCount === 0) return markSent()
+  // Sent channels are recorded in their own ledgers, so a retry only re-attempts
+  // the ones that failed. After the last attempt, stop retrying (the failures are
+  // logged) so the notification is not re-selected forever.
+  if (job.attempts >= job.max_attempts) {
+    dependencies.logger.error(`job.${label}.gave_up`, { jobId: job.id, failures: failureCount })
+    await markSent()
+    // Mark the source row sent so it is not re-selected, then fail the job so the
+    // abandoned delivery stays visible: durable_jobs.status = 'failed' with last_error.
+    throw new Error(`Gave up after ${job.attempts} attempts with ${failureCount} ${label} delivery failure(s)`)
+  }
+  throw new Error(`${failureCount} ${label} delivery failure(s)`)
+}
+
+export function createNotificationJobHandlers(dependencies = defaults): DurableJobHandlers {
+  return {
+    [MOCK_NOTIFY_JOB]: async (job) => {
+      const mock = job.payload as any
+      const delivery = await dependencies.notifyMock(mock) as Delivery
+      await finishNotification(job, delivery.failures.length, () => dependencies.repository.markMockPublicationNotified(mock.id), dependencies, 'mock_publication')
+    },
+    [LIVE_CLASS_REMINDER_JOB]: async (job) => {
+      const liveClass = job.payload as any
+      const delivery = await dependencies.notifyClass(liveClass) as Delivery
+      await finishNotification(job, delivery.failures.length, () => dependencies.repository.markLiveClassReminderSent(liveClass.id), dependencies, 'live_class_reminder')
+    },
   }
 }

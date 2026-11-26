@@ -6,10 +6,12 @@ import type { NotificationRecipient } from './types'
 function fakeRepository(recipients: NotificationRecipient[]): NotificationRepository & {
   notifications: string[]
   deliveries: Map<string, { status: 'pending' | 'sent' | 'failed'; provider_message_id: string | null; attempt_count: number }>
+  claimed: Set<string>
 } {
   return {
     notifications: [],
     deliveries: new Map(),
+    claimed: new Set(),
     async resolveRecipients() { return recipients },
     async createInApp(input) {
       const key = `${input.event}:${input.relatedEntityId}:${input.recipientId}`
@@ -21,13 +23,19 @@ function fakeRepository(recipients: NotificationRecipient[]): NotificationReposi
       if (!this.deliveries.has(key)) this.deliveries.set(key, { status: 'pending', provider_message_id: null, attempt_count: 0 })
     },
     async getDelivery(key) { return this.deliveries.get(key)! },
-    async markDeliveryAttempt(key, attemptCount) {
-      this.deliveries.set(key, { ...this.deliveries.get(key)!, status: 'pending', attempt_count: attemptCount })
+    async claimDelivery(key) {
+      const current = this.deliveries.get(key)!
+      if (current.status === 'sent' || this.claimed.has(key)) return false
+      this.claimed.add(key)
+      this.deliveries.set(key, { ...current, status: 'pending', attempt_count: current.attempt_count + 1 })
+      return true
     },
     async markDeliverySent(key, providerMessageId) {
+      this.claimed.delete(key)
       this.deliveries.set(key, { ...this.deliveries.get(key)!, status: 'sent', provider_message_id: providerMessageId })
     },
     async markDeliveryFailed(key) {
+      this.claimed.delete(key)
       const current = this.deliveries.get(key)
       if (current) this.deliveries.set(key, { ...current, status: 'failed' })
     },

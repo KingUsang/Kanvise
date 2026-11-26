@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { JobsRepository } from './repository'
 import {
+  LIVE_CLASS_REMINDER_JOB,
+  MOCK_NOTIFY_JOB,
   createGuardedJob,
+  createNotificationJobHandlers,
   runAssignmentDeadlineJob,
   runLiveClassReminderJob,
   runMockPublicationJob,
@@ -24,6 +27,7 @@ function dependencies(overrides: Partial<JobsRepository> = {}): JobsDependencies
     notifyMock: vi.fn(async () => ({ failures: [] })) as any,
     notifyClass: vi.fn(async () => ({ failures: [] })) as any,
     notifyAssignment: vi.fn(async () => ({ failures: [] })) as any,
+    enqueue: vi.fn(async () => 'job') as any,
     logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
   }
 }
@@ -31,7 +35,7 @@ function dependencies(overrides: Partial<JobsRepository> = {}): JobsDependencies
 const now = new Date('2026-07-20T12:00:00Z')
 
 describe('scheduled notification jobs', () => {
-  it('publishes bounded mocks and marks notification completion only after success', async () => {
+  it('enqueues a deduplicated delivery job per published mock and leaves marking to the job', async () => {
     const mark = vi.fn(async () => {})
     const deps = dependencies({
       async claimDueMocks(_now, limit) {
@@ -41,45 +45,56 @@ describe('scheduled notification jobs', () => {
       markMockPublicationNotified: mark,
     })
     await expect(runMockPublicationJob(now, deps)).resolves.toEqual({ name: 'mock_publication', processed: 1, failures: 0 })
-    expect(mark).toHaveBeenCalledWith('mock-1')
-
-    ;(deps.notifyMock as any).mockResolvedValueOnce({ failures: [{ error: 'temporary' }] })
-    await runMockPublicationJob(now, deps)
-    expect(mark).toHaveBeenCalledTimes(1)
+    expect(deps.enqueue).toHaveBeenCalledWith(expect.objectContaining({ jobType: 'notify_mock_published', dedupeKey: 'notify_mock_published:mock-1' }))
+    expect(mark).not.toHaveBeenCalled()
   })
 
-  it('uses a bounded upcoming window and retries partial failures', async () => {
+  it('marks a mock notified only after delivery succeeds and gives up after the last attempt', async () => {
     const mark = vi.fn(async () => {})
+    const deps = dependencies({ markMockPublicationNotified: mark })
+    const handler = createNotificationJobHandlers(deps)[MOCK_NOTIFY_JOB]
+    const job = (attempts: number) => ({ id: 'j', job_type: MOCK_NOTIFY_JOB, payload: { id: 'mock-1' }, attempts, max_attempts: 3 })
+
+    ;(deps.notifyMock as any).mockResolvedValueOnce({ failures: [{ error: 'temporary' }] })
+    await expect(handler(job(1))).rejects.toThrow(/delivery failure/)
+    expect(mark).not.toHaveBeenCalled()
+
+    ;(deps.notifyMock as any).mockResolvedValueOnce({ failures: [{ error: 'permanent' }] })
+    await expect(handler(job(3))).rejects.toThrow(/Gave up after 3 attempts/)
+    expect(mark).toHaveBeenCalledWith('mock-1')
+  })
+
+  it('uses a bounded upcoming window and enqueues one reminder job per class', async () => {
     const deps = dependencies({
       async findDueLiveClasses(start, end) {
         expect(start.toISOString()).toBe('2026-07-20T12:00:00.000Z')
         expect(end.toISOString()).toBe('2026-07-20T12:15:00.000Z')
         return [{ id: 'class-1', schoolId: 'school-1', courseId: 'course-1', title: 'Class', courseName: 'Physics', startsAt: end.toISOString() }]
       },
-      markLiveClassReminderSent: mark,
     })
-    ;(deps.notifyClass as any).mockResolvedValueOnce({ failures: [{ recipientId: 'student-1' }] })
-    const result = await runLiveClassReminderJob(now, deps)
-    expect(result.failures).toBe(1)
-    expect(mark).not.toHaveBeenCalled()
+    await expect(runLiveClassReminderJob(now, deps)).resolves.toEqual({ name: 'live_class_reminder', processed: 1, failures: 0 })
+    expect(deps.enqueue).toHaveBeenCalledWith(expect.objectContaining({ dedupeKey: 'notify_live_class_reminder:class-1' }))
   })
 
-  it('catches an upcoming class after a delayed scheduler run and marks it after delivery', async () => {
-    const mark = vi.fn(async () => {})
+  it('counts a failed enqueue so the class stays eligible for the next tick', async () => {
     const deps = dependencies({
-      async findDueLiveClasses(start, end, limit) {
-        expect(start).toEqual(now)
-        expect(end).toEqual(new Date('2026-07-20T12:15:00Z'))
-        expect(limit).toBe(50)
-        return [{ id: 'class-delayed', schoolId: 'school-1', courseId: 'course-1', title: 'Delayed class', courseName: 'Physics', startsAt: '2026-07-20T12:05:00Z' }]
+      async findDueLiveClasses() {
+        return [{ id: 'class-1', schoolId: 'school-1', courseId: 'course-1', title: 'Class', courseName: 'Physics', startsAt: '2026-07-20T12:05:00Z' }]
       },
-      markLiveClassReminderSent: mark,
     })
+    ;(deps.enqueue as any).mockRejectedValueOnce(new Error('db down'))
+    await expect(runLiveClassReminderJob(now, deps)).resolves.toMatchObject({ failures: 1 })
+  })
 
-    await expect(runLiveClassReminderJob(now, deps)).resolves.toEqual({
-      name: 'live_class_reminder', processed: 1, failures: 0,
-    })
-    expect(deps.notifyClass).toHaveBeenCalledWith(expect.objectContaining({ id: 'class-delayed' }))
+  it('marks a reminder sent after delivery and retries partial failures', async () => {
+    const mark = vi.fn(async () => {})
+    const deps = dependencies({ markLiveClassReminderSent: mark })
+    const handler = createNotificationJobHandlers(deps)[LIVE_CLASS_REMINDER_JOB]
+    const job = { id: 'j', job_type: LIVE_CLASS_REMINDER_JOB, payload: { id: 'class-delayed' }, attempts: 1, max_attempts: 5 }
+    ;(deps.notifyClass as any).mockResolvedValueOnce({ failures: [{ recipientId: 'student-1' }] })
+    await expect(handler(job)).rejects.toThrow()
+    expect(mark).not.toHaveBeenCalled()
+    await handler(job)
     expect(mark).toHaveBeenCalledWith('class-delayed')
   })
 

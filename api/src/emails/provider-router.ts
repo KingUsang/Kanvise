@@ -260,11 +260,12 @@ export async function sendUsingProviderChain(input: {
           continue
         }
       } catch (error) {
-        console.error('email.provider_capacity_check_failed', {
-          provider,
-          event: input.event,
-          error: asProviderError(error).message.slice(0, 300),
-        })
+        // Fail closed: without the shared counter the daily limits cannot be
+        // enforced, so this provider is skipped rather than risking an overrun.
+        const message = asProviderError(error).message.slice(0, 300)
+        failures.push(`${provider}: capacity_check_failed`)
+        console.error('email.provider_capacity_check_failed', { provider, event: input.event, error: message })
+        continue
       }
     }
 

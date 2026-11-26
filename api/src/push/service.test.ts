@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   sendNotification: vi.fn(),
   listSubscriptions: vi.fn(),
   beginDelivery: vi.fn(),
-  markAttempt: vi.fn(),
+  claim: vi.fn(),
   markSent: vi.fn(),
   markFailed: vi.fn(),
   deleteSubscriptionById: vi.fn(),
@@ -26,7 +26,22 @@ describe('sendWebPushNotification', () => {
     vi.clearAllMocks()
     mocks.listSubscriptions.mockResolvedValue([{ id: 'sub-1', endpoint: 'https://push.test/1', p256dh: 'key', auth: 'auth', expiration_time: null }])
     mocks.beginDelivery.mockResolvedValue({ status: 'pending', attempt_count: 0 })
+    mocks.claim.mockResolvedValue(true)
+    mocks.markSent.mockResolvedValue(undefined)
     mocks.sendNotification.mockResolvedValue({ statusCode: 201 })
+  })
+
+  it('does not send when another worker holds the claim', async () => {
+    mocks.claim.mockResolvedValue(false)
+    await expect(sendWebPushNotification(input)).resolves.toMatchObject({ sent: 0, alreadySent: 1 })
+    expect(mocks.sendNotification).not.toHaveBeenCalled()
+  })
+
+  it('keeps a delivered push successful when the sent-state write fails', async () => {
+    mocks.markSent.mockRejectedValue(new Error('db down'))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await expect(sendWebPushNotification(input)).resolves.toMatchObject({ sent: 1, failures: [] })
+    expect(mocks.markFailed).not.toHaveBeenCalled()
   })
 
   it('sends and records one idempotent delivery per subscription', async () => {

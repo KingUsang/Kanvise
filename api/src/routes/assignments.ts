@@ -5,6 +5,7 @@ import type { AccountContext, TenantVariables, TenantUser } from '../types'
 import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { parseOffsetPagination, strictBooleanQuerySchema } from '../lib/api-contract'
+import { enqueueObjectDeletion } from '../jobs/storage-cleanup'
 
 export const courseAssignmentsRouter = new Hono<{ Variables: TenantVariables }>()
 export const assignmentsRouter = new Hono<{ Variables: TenantVariables }>()
@@ -323,6 +324,7 @@ assignmentsRouter.delete('/:id{[0-9a-fA-F-]{36}}', requireMembershipRole('tutor'
   if (count) return c.json({ error: 'Cannot delete an assignment with submissions', code: 'HAS_SUBMISSIONS' }, 409)
   const { error } = await supabase.from('assignments').delete().eq('id', id).eq('school_id', user.school_id)
   if (error) return safeReadFailure(c, 'ASSIGNMENT_DELETE_FAILED', error)
+  await enqueueObjectDeletion(assignment.attachment_file_key, user.school_id!)
   return c.json({ message: 'Assignment deleted' })
 })
 
