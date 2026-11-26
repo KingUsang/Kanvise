@@ -9,7 +9,6 @@ const validProductionEnv = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-role',
   PAYSTACK_SECRET_KEY: 'paystack-production-secret-for-tests-only',
   KANVISE_INTERNAL_SECRET: 'internal-secret-1234567890123456',
-  INVITE_TOKEN_SECRET: 'invite-secret',
   CLASS_LINK_ENCRYPTION_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
   R2_ACCOUNT_ID: 'account',
   R2_ACCESS_KEY_ID: 'access',

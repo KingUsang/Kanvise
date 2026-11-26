@@ -80,9 +80,9 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     families: [
       {
         policy: 'public',
-        paths: ['/tutor-invite/preview', '/invitation/preview', '/invitation/start'],
+        paths: ['/invitation/preview', '/invitation/start'],
         observedMiddleware: [],
-        exception: 'Signed invitation-token flows intentionally precede router authentication.',
+        exception: 'Durable invitation-token flows intentionally precede router authentication.',
       },
       {
         policy: 'authenticated-pre-account',

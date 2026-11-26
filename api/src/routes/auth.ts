@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, Variables } from '../middleware/auth'
-import { validateInviteToken } from '../lib/invites'
 import { ensureWelcomeEmail } from '../emails/ensure-welcome-email'
 import type { TablesUpdate } from '../lib/database.types'
 import { createHash } from 'node:crypto'
@@ -18,7 +17,6 @@ const profileInitSchema = z.object({
   flow: z.string().max(32).nullish(),
   first_name: profileNameSchema.nullish(),
   last_name: profileNameSchema.nullish(),
-  invite_token: z.string().max(4096).nullish(),
   account_invitation_token: z.string().max(256).nullish(),
   student_registration_token: z.string().max(256).nullish(),
 })
@@ -66,50 +64,9 @@ async function lookupInvitation(label: string, token: string): Promise<Invitatio
 
 const invitationStarts = new Map<string, { count: number; resetAt: number }>()
 
-// This is intentionally public: the holder of an invite link needs to know
-// which email it was issued to before they can authenticate. The signed token
-// and the pending invite row are both checked; this endpoint never consumes an
-// invitation or grants access.
-authRouter.post('/tutor-invite/preview', async (c) => {
-  const body = await c.req.json().catch(() => null)
-  const token = body?.invite_token
-  if (typeof token !== 'string' || !token) {
-    return c.json({ error: 'Invite token is required' }, 400)
-  }
-
-  try {
-    const payload = validateInviteToken(token)
-    const { data: invite, error } = await supabase
-      .from('tutor_invites')
-      .select('email, status, expires_at, school:schools(name)')
-      .eq('id', payload.invite_id)
-      .eq('school_id', payload.school_id)
-      .maybeSingle()
-
-    if (error) {
-      console.error('[auth/tutor-invite/preview] Invite lookup failed', { code: error.code })
-      return c.json(INVITATION_LOOKUP_UNAVAILABLE, 503)
-    }
-    if (!invite || invite.status !== 'pending' || new Date(invite.expires_at).getTime() <= Date.now()) {
-      return c.json({ error: 'This invitation is no longer valid' }, 404)
-    }
-    if (invite.email.toLowerCase() !== payload.email.toLowerCase()) {
-      return c.json({ error: 'This invitation is no longer valid' }, 404)
-    }
-
-    const school = Array.isArray(invite.school) ? invite.school[0] : invite.school
-    return c.json({
-      data: {
-        email: invite.email,
-        school_name: school?.name || 'this tutoring agency',
-        expires_at: invite.expires_at,
-      },
-    })
-  } catch {
-    return c.json({ error: 'This invitation is invalid or has expired' }, 400)
-  }
-})
-
+// The legacy signed tutor invite (POST /auth/tutor-invite/preview and the
+// invite_token branch of /auth/profile/init) was retired (DEV-SEC-008,
+// DEV-AUTH-002). Tutors join only through durable account invitations.
 authRouter.post('/invitation/preview', async (c) => {
   const body = await c.req.json().catch(() => null)
   const token = typeof body?.token === 'string' ? body.token : ''
@@ -232,7 +189,7 @@ authRouter.use('*', tenantMiddleware)
 authRouter.post('/profile/init', async (c) => {
   const parsedBody = profileInitSchema.safeParse(await c.req.json().catch(() => null))
   if (!parsedBody.success) return c.json({ error: 'Invalid registration details', code: 'VALIDATION_ERROR' }, 400)
-  const { flow, invite_token, account_invitation_token, student_registration_token } = parsedBody.data
+  const { flow, account_invitation_token, student_registration_token } = parsedBody.data
   const first_name = parsedBody.data.first_name ?? ''
   const last_name = parsedBody.data.last_name ?? ''
   const user = c.get('user')
@@ -276,21 +233,8 @@ authRouter.post('/profile/init', async (c) => {
     role = 'student'
   } else return c.json({ error: 'A valid registration flow is required' }, 400)
 
-  let tutorInvite: ReturnType<typeof validateInviteToken> | null = null
-  if (role === 'tutor') {
-    if (account_invitation_token) {
-      if (!accountInvitation || accountInvitation.role !== 'tutor') return c.json({ error: 'This tutor invitation is invalid' }, 400)
-    } else {
-      if (!invite_token) return c.json({ error: 'Invite token required for tutors' }, 400)
-      try {
-        tutorInvite = validateInviteToken(invite_token)
-        if (String(tutorInvite.email).toLowerCase() !== String(email).toLowerCase()) {
-          return c.json({ error: 'This invitation was sent to a different email address' }, 403)
-        }
-      } catch (e: any) {
-        return c.json({ error: e.message || 'Invalid invite token' }, 400)
-      }
-    }
+  if (role === 'tutor' && (!accountInvitation || accountInvitation.role !== 'tutor')) {
+    return c.json({ error: 'A tutor invitation from your tutoring agency is required', code: 'TUTOR_INVITATION_REQUIRED' }, 400)
   }
 
   const { data: existingProfile } = await supabase
@@ -300,7 +244,7 @@ authRouter.post('/profile/init', async (c) => {
     .maybeSingle()
 
   if (existingProfile) {
-    const invitedSchoolId = accountInvitation?.school_id || tutorInvite?.school_id
+    const invitedSchoolId = accountInvitation?.school_id
     if (role === 'tutor' && (existingProfile.role !== 'tutor' || existingProfile.school_id !== invitedSchoolId)) {
       return c.json({ error: 'This Kanvise account already belongs to a different tutoring agency' }, 409)
     }
@@ -353,26 +297,7 @@ authRouter.post('/profile/init', async (c) => {
 
   let schoolId = null
 
-  if (role === 'tutor') {
-    if (accountInvitation) {
-      schoolId = accountInvitation.school_id
-    } else try {
-      const { data: claimed, error: claimError } = await supabase.rpc('consume_tutor_invite', {
-        p_invite_id: tutorInvite!.invite_id,
-        p_email: email,
-        p_supabase_auth_id: supabaseAuthId,
-      })
-      if (claimError || !claimed) {
-        return c.json({ error: claimError?.message || 'This invitation is no longer valid' }, 400)
-      }
-      schoolId = claimed
-      if (schoolId !== tutorInvite!.school_id) {
-        return c.json({ error: 'Invalid invitation' }, 400)
-      }
-    } catch (e: any) {
-      return c.json({ error: e.message || 'Invalid invite token' }, 400)
-    }
-  }
+  if (role === 'tutor') schoolId = accountInvitation.school_id
 
   // Staging's deployed RPC accepts p_role and returns the next numeric value.
   // Retry a few times when the sequence is behind existing seeded profiles;

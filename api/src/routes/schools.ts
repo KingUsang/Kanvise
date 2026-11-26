@@ -204,7 +204,7 @@ schoolsRouter.patch('/me', requireRole('admin'), async (c) => {
   return c.json({ data: school })
 })
 
-// POST /schools/me/invite/tutor — Generate a signed tutor invite link
+// POST /schools/me/invite/tutor: create a durable account invitation (/invite link) for a tutor. The tutor_invites row is kept only for the admin invite list and revoke.
 schoolsRouter.post('/me/invite/tutor', requireRole('admin'), async (c) => {
   const user = c.get('user')
   const body = await c.req.json()

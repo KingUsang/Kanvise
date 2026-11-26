@@ -21,7 +21,7 @@ export function postAuthDestination({ role, schoolId, redirect }: AuthDestinatio
   // A student may return to any safe in-app destination; the page and API
   // remain responsible for resource-level authorisation. Staff accounts only
   // retain invite acceptance, never a student purchase/attempt continuation.
-  if (role === 'student' || continuation.startsWith('/join')) return continuation
+  if (role === 'student' || continuation.startsWith('/invite')) return continuation
   return fallback
 }
 
