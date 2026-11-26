@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
+import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, accountContextMiddleware } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import { notifyMockFullyGraded } from '../notifications/triggers'
 import type { TenantVariables } from '../types'
 import { isReviewableAttemptStatus } from '../domain/mock-results'
@@ -8,7 +9,7 @@ import { BANK_QUESTION_TYPE_RELATION } from '../lib/postgrest-selects'
 
 export const mockAnswersRouter = new Hono<{ Variables: TenantVariables }>()
 
-mockAnswersRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
+mockAnswersRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection)
 
 mockAnswersRouter.patch('/:answerId/grade', requireRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')

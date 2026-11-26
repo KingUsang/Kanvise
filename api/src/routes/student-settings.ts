@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware, requireMembershipRole, requireRole, tenantMiddleware } from '../middleware/auth'
+import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware, requireMembershipRole, requireRole } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import { publicFileUrl } from '../storage/r2'
 import { validateStudentProfileUpdate } from '../domain/student-settings'
 import { validateStudentSubjectCombination } from '../domain/student-subject-combination'
@@ -47,7 +48,7 @@ studentSettingsRouter.patch('/students/me/settings', jwtVerificationMiddleware, 
 // A programme student keeps one explicit JAMB subject combination. Adaptive
 // mocks use this record only when an attempt starts, then snapshot its
 // questions so a later change cannot alter a live or submitted attempt.
-studentSettingsRouter.get('/students/me/subject-combination', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
+studentSettingsRouter.get('/students/me/subject-combination', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection, requireRole('student'), async c => {
   const user = c.get('user')
   const programmeId = c.req.query('programme_id')
   if (!programmeId) return c.json({ error: 'programme_id is required', code: 'VALIDATION_ERROR' }, 400)
@@ -65,7 +66,7 @@ studentSettingsRouter.get('/students/me/subject-combination', jwtVerificationMid
   return c.json({ data: { programme_id: programmeId, course_ids: (selections || []).map((item: any) => item.course_id), subjects: selections || [] } })
 })
 
-studentSettingsRouter.put('/students/me/subject-combination', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
+studentSettingsRouter.put('/students/me/subject-combination', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection, requireRole('student'), async c => {
   const user = c.get('user')
   const body = await c.req.json()
   const programmeId = typeof body.programme_id === 'string' && body.programme_id ? body.programme_id : null

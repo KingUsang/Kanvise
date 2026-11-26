@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole } from "../middleware/auth";
+import { jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, requireRole } from "../middleware/auth"
+import { accountUserProjection } from '../middleware/account-projection';
 import { supabase } from "../lib/supabase";
 import { deleteStoredObject, StorageError, verifyPublicUpload } from "../storage/r2";
 import type { TablesUpdate } from '../lib/database.types'
@@ -8,7 +9,7 @@ export const promosRouter = new Hono<{ Variables: { user: any; jwt_payload?: any
 
 // Require tenant auth and admin role for all promo routes
 promosRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
-promosRouter.use("*", tenantMiddleware);
+promosRouter.use("*", accountContextMiddleware, accountUserProjection);
 promosRouter.use("*", requireRole("admin"));
 
 // ---------------------------------------------------------------------------

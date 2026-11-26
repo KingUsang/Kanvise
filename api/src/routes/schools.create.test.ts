@@ -20,7 +20,7 @@ vi.mock('../middleware/auth', () => ({
     c.set('user', { id: 'admin-1', supabase_auth_id: 'auth-1', school_id: null, role: 'admin' })
     await next()
   },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => { await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
   requireRole: () => async (_c: any, next: () => Promise<void>) => { await next() },
 }))
 

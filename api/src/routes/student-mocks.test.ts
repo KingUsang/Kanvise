@@ -11,7 +11,8 @@ vi.mock('../storage/r2', () => ({ createPresignedDownload: vi.fn(async () => 'si
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => { const u = c.get('user'); c.set('account', { id: u.school_id, membershipId: 'membership-1', role: u.role === 'student' ? 'learner' : u.role }); await next() },
+  ACCOUNT_CONTEXT_HEADER: 'X-Kanvise-Account-Id',
   requireRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
     if (!roles.includes(c.get('user').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)
     await next()

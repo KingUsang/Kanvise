@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole, Variables } from '../middleware/auth'
+import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, Variables } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import { sendTutorInvitation } from '../emails/send-tutor-invitation'
 import { createAccountInvitation } from '../lib/account-invitations'
 import { isReservedSchoolSlug, normalizeSchoolProfileUpdate, schoolSlugCandidates, SchoolProfileValidationError } from '../lib/school-profile'
@@ -10,7 +11,11 @@ export const schoolsRouter = new Hono<{ Variables: Variables }>()
 
 schoolsRouter.use('*', jwtVerificationMiddleware)
 schoolsRouter.use('*', profileResolutionMiddleware)
-schoolsRouter.use('*', tenantMiddleware)
+// Creating the first account happens before any membership exists, so POST /
+// stays on the profile-only sequence. Every /me route acts on the selected
+// active account (DEV-SEC-004).
+schoolsRouter.use('/me', accountContextMiddleware, accountUserProjection)
+schoolsRouter.use('/me/*', accountContextMiddleware, accountUserProjection)
 
 schoolsRouter.post('/', requireRole('admin'), async (c) => {
   const user = c.get('user')

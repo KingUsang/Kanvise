@@ -5,8 +5,9 @@ import { classroomAccessError, resolveClassroomAccess, type ClassroomRecord, typ
 import {
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
-  tenantMiddleware,
+  accountContextMiddleware,
 } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import {
   buildPrivateFileKey,
   createPresignedUpload,
@@ -33,7 +34,7 @@ type LiveClassAccess = ClassroomRecord & {
   slides_urls: string[] | null
 }
 
-slidesRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware)
+slidesRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection)
 
 async function requireClass(c: any, manage = false) {
   const user = c.get('user') as ClassroomUser

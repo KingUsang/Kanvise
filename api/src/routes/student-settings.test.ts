@@ -16,7 +16,7 @@ vi.mock('../middleware/auth', () => ({
     if (!roles.includes(c.get('account').role)) return c.json({ code: 'INSUFFICIENT_ROLE' }, 403)
     await next()
   },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
+  
   requireRole: (...roles: string[]) => async (_c: any, next: () => Promise<void>) => next(),
 }))
 

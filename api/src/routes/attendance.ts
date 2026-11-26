@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase'
 import {
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
-  tenantMiddleware,
+  accountContextMiddleware,
   requireRole,
 } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import type { AppVariables } from '../types'
 import {
   attendancePairKey,
@@ -17,7 +18,7 @@ export const attendanceRouter = new Hono<{ Variables: AppVariables }>()
 
 attendanceRouter.use('*', jwtVerificationMiddleware)
 attendanceRouter.use('*', profileResolutionMiddleware)
-attendanceRouter.use('*', tenantMiddleware)
+attendanceRouter.use('*', accountContextMiddleware, accountUserProjection)
 attendanceRouter.use('*', requireRole('admin', 'tutor'))
 
 const configuredRiskThreshold = Number(process.env.ATTENDANCE_RISK_THRESHOLD_PERCENT || 70)

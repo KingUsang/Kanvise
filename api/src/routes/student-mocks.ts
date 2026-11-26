@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
 import { loadStudentMockAudience, studentCanAccessCentreMock } from '../lib/student-mock-audience'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole } from '../middleware/auth'
+import { standaloneAwareAccountContext, standaloneAwareAccountProjection } from '../middleware/account-projection'
 import { createPresignedDownload } from '../storage/r2'
 import type { AppVariables } from '../types'
 
@@ -142,7 +143,7 @@ async function loadAttempt(user: any, attemptId: string, lazyFinalize = true) {
   return data
 }
 
-studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
+studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileResolutionMiddleware, standaloneAwareAccountContext, standaloneAwareAccountProjection, requireRole('student'), async c => {
   const user = c.get('user')
   try {
     if (!user.school_id) return c.json({ data: { available: [], in_progress: [], upcoming: [], completed: [] }, server_now: new Date().toISOString() })
@@ -201,7 +202,7 @@ studentMocksRouter.get('/students/me/mocks', jwtVerificationMiddleware, profileR
   }
 })
 
-studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
+studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, profileResolutionMiddleware, standaloneAwareAccountContext, standaloneAwareAccountProjection, requireRole('student'), async c => {
   const user = c.get('user')
   try {
     const mock = await accessibleMock(user, c.req.param('mockId')!)
@@ -258,7 +259,7 @@ studentMocksRouter.get('/mocks/:mockId/preflight', jwtVerificationMiddleware, pr
   }
 })
 
-studentMocksRouter.post('/mocks/:mockId/attempts', jwtVerificationMiddleware, profileResolutionMiddleware, requireRole('student'), async c => {
+studentMocksRouter.post('/mocks/:mockId/attempts', jwtVerificationMiddleware, profileResolutionMiddleware, standaloneAwareAccountContext, standaloneAwareAccountProjection, requireRole('student'), async c => {
   const user = c.get('user')
   try {
     const mock = await accessibleMock(user, c.req.param('mockId')!)

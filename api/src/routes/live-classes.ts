@@ -4,9 +4,10 @@ import { supabase } from '../lib/supabase'
 import {
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
-  tenantMiddleware,
+  accountContextMiddleware,
   requireRole,
 } from '../middleware/auth'
+import { accountUserProjection } from '../middleware/account-projection'
 import type { TenantVariables } from '../types'
 import { notifyClassCancelled } from '../notifications/triggers'
 import { createPresignedDownload, privateObjectExists } from '../storage/r2'
@@ -86,7 +87,7 @@ liveClassesRouter.use(
   '/*',
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
-  tenantMiddleware,
+  accountContextMiddleware, accountUserProjection,
 )
 
 // ── GET /live-classes/:id/readiness/stream — SSE readiness feed ───────────
