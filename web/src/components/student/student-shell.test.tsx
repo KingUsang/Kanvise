@@ -23,7 +23,7 @@ describe('StudentShell navigation', () => {
     const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })
     expect(mobileNavigation).toHaveTextContent('Home')
     expect(mobileNavigation).toHaveTextContent('Learn')
-    expect(mobileNavigation).toHaveTextContent('Mocks')
+    expect(mobileNavigation).toHaveTextContent('Quizzes')
     expect(mobileNavigation).toHaveTextContent('Progress')
     expect(screen.queryByRole('button', { name: 'Open menu' })).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Report a problem' })).toHaveLength(2)
@@ -35,7 +35,7 @@ describe('StudentShell navigation', () => {
 
     const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })
     expect(mobileNavigation).toHaveTextContent('Home')
-    expect(mobileNavigation).toHaveTextContent('Mocks')
+    expect(mobileNavigation).toHaveTextContent('Quizzes')
     expect(mobileNavigation).not.toHaveTextContent('Learn')
     expect(mobileNavigation).not.toHaveTextContent('Progress')
   })

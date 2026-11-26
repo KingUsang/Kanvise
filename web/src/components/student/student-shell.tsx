@@ -23,7 +23,7 @@ const navigation = [
   { label: "Home", href: "/dashboard/student", icon: Home },
   { label: productTerms.sessions, href: "/dashboard/student/classes", icon: CalendarDays },
   { label: "Assignments", href: "/dashboard/student/assignments", icon: ClipboardCheck },
-  { label: "Mocks", href: "/dashboard/student/mocks", icon: BookOpen },
+  { label: "Quizzes", href: "/dashboard/student/mocks", icon: BookOpen },
   { label: "Materials", href: "/dashboard/student/materials", icon: FileText },
   { label: "My progress", href: "/dashboard/student/progress", icon: UserRound },
 ];
@@ -33,13 +33,13 @@ type MobileNavigationItem = { label: string; href: string; activeHref?: string; 
 const mobileClassNavigation: MobileNavigationItem[] = [
   { label: "Home", href: "/dashboard/student", icon: Home },
   { label: "Learn", href: "/dashboard/student/learn", icon: GraduationCap },
-  { label: "Mocks", href: "/dashboard/student/mocks", icon: BookOpen },
+  { label: "Quizzes", href: "/dashboard/student/mocks", icon: BookOpen },
   { label: "Progress", href: "/dashboard/student/progress", icon: UserRound },
 ];
 
 const mobileStandaloneNavigation: MobileNavigationItem[] = [
   { label: "Home", href: "/dashboard/student", icon: Home },
-  { label: "Mocks", href: "/dashboard/student/mocks?view=unlocked", activeHref: "/dashboard/student/mocks", icon: BookOpen },
+  { label: "Quizzes", href: "/dashboard/student/mocks", activeHref: "/dashboard/student/mocks", icon: BookOpen },
 ];
 
 export function StudentShell({ children, learnerName = productTerms.learner, accountName = 'Kanvise', hasClassLearning }: { children: React.ReactNode; learnerName?: string; accountName?: string; hasClassLearning?: boolean }) {
@@ -80,7 +80,7 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
         <p className="mt-1 truncate text-xs text-white/60">{resolvedAccount}</p>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-5">
-        {navigation.filter(item => resolvedClassLearning || ['Home', 'Mocks'].includes(item.label)).map((item) => {
+        {navigation.filter(item => resolvedClassLearning || ['Home', 'Quizzes'].includes(item.label)).map((item) => {
           const active = isActive(item.href);
           return <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-white/14 font-medium text-white" : "text-white/72 hover:bg-white/8 hover:text-white"}`}>
             <item.icon size={18} />{item.label}

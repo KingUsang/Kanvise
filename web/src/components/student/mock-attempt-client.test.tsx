@@ -53,7 +53,7 @@ describe('MockAttemptClient timeout', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Time is up')
     expect(screen.getByRole('button', { name: 'Flag' })).toBeDisabled()
     for (const option of screen.getAllByRole('radio')) expect(option).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'End of mock' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'End of quiz' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /review and submit/i })).not.toBeInTheDocument()
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
@@ -74,21 +74,20 @@ describe('MockAttemptClient timeout', () => {
       ],
     }} />)
 
-    expect(screen.getByRole('navigation', { name: 'Mock subjects' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Quiz subjects' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Physics/ }))
     expect(screen.getByText('Physics · Question 1 of 2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Physics question 1' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Physics question 2' })).toBeInTheDocument()
   })
 
-  it('lets the attempt header reach the top after the guest notice scrolls away', () => {
+  it('keeps the attempt header pinned to the top and shows no guest notice', () => {
     const { container } = render(<MockAttemptClient data={{
       ...data,
-      attempt: { id: 'guest-attempt', deadline_at: null },
-    }} guest />)
+      attempt: { id: 'attempt-1', deadline_at: null },
+    }} />)
 
-    expect(screen.getByText('Guest attempt.')).toBeInTheDocument()
+    expect(screen.queryByText('Guest attempt.')).not.toBeInTheDocument()
     expect(container.querySelector('header')).toHaveClass('sticky', 'top-0')
-    expect(container.querySelector('header')).not.toHaveClass('top-16')
   })
 })

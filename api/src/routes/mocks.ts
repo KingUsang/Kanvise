@@ -727,11 +727,11 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
         programme_id: programmeId,
         audience_scope: audience.scope,
         delivery_mode: deliveryMode,
-        direct_link_enabled: body.direct_link_enabled === true,
+        direct_link_enabled: false,
         subject_name: typeof body.subject_name === "string" ? body.subject_name.trim() || null : null,
-        direct_link_access_mode: body.direct_link_access_mode === "paid" ? "paid" : "free_claim",
-        direct_link_price_kobo: body.direct_link_access_mode === "paid" ? Math.max(0, Math.floor(Number(body.direct_link_price_kobo) || 0)) : 0,
-        direct_link_slug: typeof body.direct_link_slug === "string" ? body.direct_link_slug.trim().toLowerCase() || null : null,
+        direct_link_access_mode: "free_claim",
+        direct_link_price_kobo: 0,
+        direct_link_slug: null,
         title,
         description,
         status: "draft",
@@ -822,11 +822,11 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
       programme_id: audience.programmeId,
       audience_scope: audience.scope,
       delivery_mode: deliveryMode,
-      direct_link_enabled: body.direct_link_enabled === true,
+      direct_link_enabled: false,
       subject_name: typeof body.subject_name === "string" ? body.subject_name.trim() || null : null,
-      direct_link_access_mode: body.direct_link_access_mode === "paid" ? "paid" : "free_claim",
-      direct_link_price_kobo: body.direct_link_access_mode === "paid" ? Math.max(0, Math.floor(Number(body.direct_link_price_kobo) || 0)) : 0,
-      direct_link_slug: typeof body.direct_link_slug === "string" ? body.direct_link_slug.trim().toLowerCase() || null : null,
+      direct_link_access_mode: "free_claim",
+      direct_link_price_kobo: 0,
+      direct_link_slug: null,
       publish_at,
       time_limit_minutes: duration,
       ...settings.updates,
@@ -976,11 +976,14 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, tutor_id, time_limit_minutes, direct_link_enabled, direct_link_access_mode, direct_link_price_kobo, direct_link_slug")
+    .select("id, status, course_id, programme_id, audience_scope, tutor_id, time_limit_minutes")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be published" }, 409);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot publish this mock" }, 403);
+  if (mock.audience_scope === "direct_link") {
+    return c.json({ error: "Standalone Quizzes have been retired and can no longer be published", code: "QUIZ_AUDIENCE_RETIRED" }, 409);
+  }
   if (mock.time_limit_minutes !== null && Number(mock.time_limit_minutes) < 0) {
     return c.json({ error: "Time limit cannot be negative" }, 400);
   }
@@ -1010,16 +1013,16 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   }
 
   const publishedAt = new Date().toISOString();
-  const directSlug = mock.direct_link_slug || `mock-${mock.id.slice(0, 8)}`;
   const { data: versionResult, error: publishError } = await (supabase as any).rpc("publish_versioned_mock_with_offer", {
     p_school_id: user.school_id,
     p_mock_exam_id: mockId,
     p_published_by: user.id,
     p_published_at: publishedAt,
-    p_create_direct_offer: mock.direct_link_enabled === true,
-    p_direct_slug: directSlug,
-    p_direct_access_mode: mock.direct_link_access_mode || "free_claim",
-    p_direct_price_kobo: mock.direct_link_access_mode === "paid" ? mock.direct_link_price_kobo || 0 : 0,
+    // Public offers are retired: publication never creates a direct offer.
+    p_create_direct_offer: false,
+    p_direct_slug: `mock-${mock.id.slice(0, 8)}`,
+    p_direct_access_mode: "free_claim",
+    p_direct_price_kobo: 0,
   });
   if (publishError) return mockDatabaseError(c, publishError, "Could not publish the mock");
   const publication = Array.isArray(versionResult) ? versionResult[0] : versionResult;

@@ -23,6 +23,9 @@ export function validateCentreMockAudience(input: {
 }) {
   const scope = parseMockAudienceScope(input.audience_scope ?? 'course')
   if (!scope) return { error: 'Choose a valid centre mock audience' } as const
+  // Direct-link (standalone, public) Quizzes were retired. Existing rows stay
+  // readable but no new or edited Quiz may use this audience.
+  if (scope === 'direct_link') return { error: 'Standalone Quizzes have been retired. Create the Quiz inside a Class.' } as const
 
   const courseId = typeof input.course_id === 'string' && input.course_id.trim() ? input.course_id : null
   const programmeId = typeof input.programme_id === 'string' && input.programme_id.trim() ? input.programme_id : null
@@ -35,7 +38,7 @@ export function validateCentreMockAudience(input: {
   if (scope === 'school' && (courseId || programmeId)) {
     return { error: 'Centre-wide mocks cannot also target a course or programme' } as const
   }
-  if ((scope === 'combination' || scope === 'direct_link') && (courseId || programmeId)) {
+  if (scope === 'combination' && (courseId || programmeId)) {
     return { error: 'This mock does not need a programme or subject target' } as const
   }
   return { scope, courseId, programmeId } as const

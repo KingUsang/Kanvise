@@ -155,13 +155,6 @@ export function DashboardHomeClient() {
               </span>
               Schedule live class
             </Link>
-            <Link
-              href="/dashboard/mocks/builder"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#2e2877] bg-white px-3 py-2.5 text-sm font-semibold text-[#2e2877] transition-colors hover:bg-[#f5f3f2] sm:px-4"
-            >
-              <span className="material-symbols-outlined text-xl">quiz</span>
-              Create mock
-            </Link>
           </>
         }
       />

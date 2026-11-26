@@ -126,7 +126,6 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/public/direct-assignments', 'publicDirectAssignmentsRouter', 'src/routes/direct-assignments.ts', 'public', []),
   router('/users', 'usersRouter', 'src/routes/users.ts', 'protected-account', membershipSequence),
   router('/mocks', 'mocksRouter', 'src/routes/mocks.ts', 'protected-account', membershipSequence),
-  router('/mocks', 'mockOfferAdminRouter', 'src/routes/mock-access.ts', 'protected-account', membershipSequence),
   router('/question-banks', 'questionBanksRouter', 'src/routes/question-banks.ts', 'protected-account', membershipSequence),
   router('/enrolments', 'enrolmentsRouter', 'src/routes/enrolments.ts', 'protected-account', membershipSequence),
   router('/payments', 'paymentsRouter', 'src/routes/payments.ts', 'protected-account', membershipSequence),
@@ -149,36 +148,9 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/', 'waitlistRouter', 'src/routes/waitlist.ts', 'public', []),
   router('/', 'suggestionsRouter', 'src/routes/suggestions.ts', 'public', []),
   router('/schools/me/promos', 'promosRouter', 'src/routes/promos.ts', 'protected-account', membershipSequence),
-  router('/', 'mockAccessRouter', 'src/routes/mock-access.ts', 'mixed', jwtAndProfile, {
-    families: [
-      {
-        policy: 'public',
-        paths: ['/mock/:slug'],
-        observedMiddleware: [],
-      },
-      {
-        policy: 'authenticated-pre-account',
-        paths: ['/mock/*', '/my-mocks'],
-        observedMiddleware: jwtAndProfile,
-        exception: 'Standalone-mock students have no selected tutoring account. Centre access is granted only through an active Learner membership in the offer\'s own account, never the profile school_id.',
-      },
-    ],
-  }),
   router('/students/me', 'studentMembershipsRouter', 'src/routes/student-memberships.ts', 'authenticated-pre-account', jwtAndProfile),
-  router('/', 'guestMocksRouter', 'src/routes/guest-mocks.ts', 'mixed', [], {
-    families: [
-      {
-        policy: 'public',
-        paths: ['/guest/*'],
-        observedMiddleware: [],
-      },
-      {
-        policy: 'authenticated-pre-account',
-        paths: ['/guest/attempts/:attemptId/transfer'],
-        observedMiddleware: jwtAndProfile,
-        exception: 'Moves a guest attempt into the signed-in student\'s own standalone-mock history. It reads no tenant.',
-      },
-    ],
+  router('/', 'retiredQuizRouter', 'src/routes/retired-quiz.ts', 'public', [], {
+    exception: 'Answers 410 Gone for the retired /mock, /my-mocks, /guest and /mocks/:id/offers URLs. It reads no data.',
   }),
   router('/', 'studentMocksRouter', 'src/routes/student-mocks.ts', 'protected-account', membershipSequence, {
     exception: 'Centre mock list, preflight and attempt start resolve the selected active membership (standalone-mock students with no account bypass it, as on the dashboard). Attempt routes are owner-scoped by student_id and read the tenant from the attempt record.',
