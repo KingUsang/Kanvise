@@ -79,7 +79,7 @@ attendanceRouter.get('/metrics', async (c) => {
   }
 
   const classIds = liveClasses!.map(c => c.id)
-  const courseIds = [...new Set(liveClasses!.map(c => c.course_id))]
+  const courseIds = [...new Set(liveClasses!.flatMap(c => c.course_id ? [c.course_id] : []))]
 
   // 2. Fetch expected students (enrolments) considering hierarchy
   const { data: coursesData } = await supabase
@@ -231,7 +231,7 @@ attendanceRouter.get('/records', async (c) => {
   if (!liveClasses || liveClasses.length === 0) return c.json({ data: [], meta: { total: 0, page, limit } })
 
   const classIds = liveClasses.map(c => c.id)
-  const courseIds = [...new Set(liveClasses.map(c => c.course_id))]
+  const courseIds = [...new Set(liveClasses.flatMap(c => c.course_id ? [c.course_id] : []))]
 
   // 2. Fetch expected students (enrolments) considering hierarchy
   const { data: coursesData } = await supabase

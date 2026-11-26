@@ -437,13 +437,13 @@ mocksRouter.post("/:id/attempt-grants", requireTutorOrAdmin, async (c) => {
     .select("id, student_id, mock_exam_version_id")
     .eq("id", attemptId).eq("mock_exam_id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (attemptError) return mockDatabaseError(c, attemptError, "Could not check the student's attempt");
-  if (!attempt) return c.json({ error: "Student attempt not found", code: "ATTEMPT_NOT_FOUND" }, 404);
+  if (!attempt || !attempt.student_id) return c.json({ error: "Student attempt not found", code: "ATTEMPT_NOT_FOUND" }, 404);
   if (!attempt.mock_exam_version_id) {
     return c.json({ error: "Extra attempts are available only for versioned mocks", code: "LEGACY_ATTEMPT" }, 409);
   }
 
   const { data, error } = await supabase.from("mock_attempt_grants").insert({
-    school_id: user.school_id,
+    school_id: user.school_id!,
     mock_exam_version_id: attempt.mock_exam_version_id,
     student_id: attempt.student_id,
     granted_by: user.id,
