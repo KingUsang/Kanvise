@@ -55,15 +55,38 @@ printf '{"release_sha":"%s","environment":"%s"}\n' "${release_sha}" "${deploy_en
 
 verify_health() {
   local health_url=$1
-  curl --fail --silent --show-error --retry 8 --retry-connrefused --retry-delay 2 "${health_url}" \
-    | node -e '
-        let body = "";
-        process.stdin.on("data", chunk => { body += chunk });
-        process.stdin.on("end", () => {
-          const health = JSON.parse(body);
-          if (health.status !== "ok" || health.release_sha !== process.argv[1] || health.environment !== process.argv[2]) process.exit(1);
-        });
-      ' "${release_sha}" "${deploy_environment}"
+  local body
+  body=$(curl --fail --silent --show-error --retry 8 --retry-connrefused --retry-delay 2 "${health_url}") || {
+    echo "Health check failed: ${health_url} did not return a successful response" >&2
+    return 1
+  }
+  HEALTH_BODY=${body} node -e '
+    let health;
+    try {
+      health = JSON.parse(process.env.HEALTH_BODY || "");
+    } catch {
+      console.error("Health check failed: response was empty or not valid JSON");
+      process.exit(1);
+    }
+    if (health.status !== "ok" || health.release_sha !== process.argv[1] || health.environment !== process.argv[2]) {
+      console.error("Health check failed: unexpected payload " + JSON.stringify(health));
+      process.exit(1);
+    }
+  ' "${release_sha}" "${deploy_environment}"
+}
+
+# Best-effort diagnosis before rollback. Assumes the runner user ("ubuntu") may
+# run `sudo -n systemctl`, as the restart below already requires. journalctl
+# first tries `sudo -n` (works when sudoers allows it) and falls back to a plain
+# call (works when the user is in the adm or systemd-journal group). Nothing
+# here may fail the deployment script itself.
+print_service_diagnosis() {
+  echo "::group::Diagnosis for ${service_name}" >&2
+  sudo -n systemctl status "${service_name}" --no-pager --full >&2 || true
+  { sudo -n journalctl -u "${service_name}" -n 50 --no-pager \
+    || journalctl -u "${service_name}" -n 50 --no-pager; } >&2 \
+    || echo "Could not read the journal for ${service_name} (no sudo or group access)" >&2
+  echo "::endgroup::" >&2
 }
 
 for manifest in package.json package-lock.json api/package.json; do
@@ -96,6 +119,7 @@ mv "${next_dist}" "${deploy_root}/api/dist"
 if ! sudo -n systemctl restart "${service_name}" \
   || ! verify_health "http://127.0.0.1:${app_port}/health" \
   || ! verify_health "${public_health_url}"; then
+  print_service_diagnosis
   rm -rf "${deploy_root}/api/dist"
   mv "${previous_dist}" "${deploy_root}/api/dist"
   if [[ ${dependencies_changed} == true ]]; then
