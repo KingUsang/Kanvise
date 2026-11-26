@@ -43,33 +43,60 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"account_memberships": {
-                  Row: {
-                    "created_at": string,"id": string,"joined_at": string,"person_id": string,"revoked_at": string | null,"role": string,"school_id": string,"source": string,"status": string,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"id"?: string,"joined_at"?: string,"person_id": string,"revoked_at"?: string | null,"role": string,"school_id": string,"source"?: string,"status"?: string,"updated_at"?: string
-                  }
-                  Update: {
-                    "created_at"?: string,"id"?: string,"joined_at"?: string,"person_id"?: string,"revoked_at"?: string | null,"role"?: string,"school_id"?: string,"source"?: string,"status"?: string,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "account_memberships_person_id_fkey"
-      columns: ["person_id"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "account_memberships_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"assignments": {
+                },account_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string
+          person_id: string
+          revoked_at: string | null
+          role: string
+          school_id: string
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          person_id: string
+          revoked_at?: string | null
+          role: string
+          school_id: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          person_id?: string
+          revoked_at?: string | null
+          role?: string
+          school_id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_memberships_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_memberships_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"assignments": {
                   Row: {
                     "attachment_file_key": string | null,"attachment_file_name": string | null,"course_id": string,"created_at": string,"deadline_at": string,"description": string,"id": string,"is_published": boolean,"school_id": string,"title": string,"tutor_id": string,"updated_at": string
                   }
@@ -505,75 +532,118 @@ isOneToOne: false
                   Relationships: [
 
                   ]
-                },"enrolments": {
-                  Row: {
-                    "course_id": string | null,"created_at": string,"enrolled_at": string,"granted_by": string | null,"id": string,"imported_at": string | null,"membership_id": string,"payment_id": string | null,"programme_id": string | null,"school_id": string,"source": string,"student_id": string,"sub_programme_id": string | null
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "course_id"?: string | null,"created_at"?: string,"enrolled_at"?: string,"granted_by"?: string | null,"id"?: string,"imported_at"?: string | null,"membership_id": string,"payment_id"?: string | null,"programme_id"?: string | null,"school_id": string,"source"?: string,"student_id": string,"sub_programme_id"?: string | null
-                  }
-                  Update: {
-                    "course_id"?: string | null,"created_at"?: string,"enrolled_at"?: string,"granted_by"?: string | null,"id"?: string,"imported_at"?: string | null,"membership_id"?: string,"payment_id"?: string | null,"programme_id"?: string | null,"school_id"?: string,"source"?: string,"student_id"?: string,"sub_programme_id"?: string | null
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "enrolments_account_membership_fkey"
-      columns: ["student_id","school_id"]
-isOneToOne: false
-      referencedRelation: "account_memberships"
-      referencedColumns: ["person_id","school_id"]
-    },{
-      foreignKeyName: "enrolments_course_id_fkey"
-      columns: ["course_id"]
-isOneToOne: false
-      referencedRelation: "courses"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "enrolments_granted_by_fkey"
-      columns: ["granted_by"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "enrolments_membership_id_fkey"
-      columns: ["membership_id"]
-isOneToOne: false
-      referencedRelation: "student_centre_memberships"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "enrolments_payment_id_fkey"
-      columns: ["payment_id"]
-isOneToOne: false
-      referencedRelation: "payments"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "enrolments_programme_id_fkey"
-      columns: ["programme_id"]
-isOneToOne: false
-      referencedRelation: "programmes"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "enrolments_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "enrolments_student_id_fkey"
-      columns: ["student_id"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "enrolments_sub_programme_id_fkey"
-      columns: ["sub_programme_id"]
-isOneToOne: false
-      referencedRelation: "sub_programmes"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"feedback_reports": {
+                },enrolments: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          enrolled_at: string
+          granted_by: string | null
+          id: string
+          imported_at: string | null
+          membership_id: string
+          payment_id: string | null
+          programme_id: string | null
+          school_id: string
+          source: string
+          student_id: string
+          sub_programme_id: string | null
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          enrolled_at?: string
+          granted_by?: string | null
+          id?: string
+          imported_at?: string | null
+          membership_id: string
+          payment_id?: string | null
+          programme_id?: string | null
+          school_id: string
+          source?: string
+          student_id: string
+          sub_programme_id?: string | null
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          enrolled_at?: string
+          granted_by?: string | null
+          id?: string
+          imported_at?: string | null
+          membership_id?: string
+          payment_id?: string | null
+          programme_id?: string | null
+          school_id?: string
+          source?: string
+          student_id?: string
+          sub_programme_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrolments_account_membership_fkey"
+            columns: ["student_id", "school_id"]
+            isOneToOne: false
+            referencedRelation: "account_memberships"
+            referencedColumns: ["person_id", "school_id"]
+          },
+          {
+            foreignKeyName: "enrolments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "student_centre_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrolments_sub_programme_id_fkey"
+            columns: ["sub_programme_id"]
+            isOneToOne: false
+            referencedRelation: "sub_programmes"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"feedback_reports": {
                   Row: {
                     "attempted_action": string | null,"created_at": string,"description": string,"id": string,"kind": string,"page_url": string | null,"receipt_sent_at": string | null,"reporter_id": string,"resolution_sent_at": string | null,"resolved_at": string | null,"school_id": string | null,"screenshot_key": string | null,"sentry_event_id": string | null,"severity": string | null,"status": string,"user_agent": string | null
                   }
@@ -919,7 +989,48 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"live_class_recordings": {
+                },live_class_recording_share_links: {
+        Row: {
+          created_at: string
+          id: string
+          live_class_id: string
+          revoked_at: string | null
+          school_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          live_class_id: string
+          revoked_at?: string | null
+          school_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          live_class_id?: string
+          revoked_at?: string | null
+          school_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_class_recording_share_links_live_class_id_fkey"
+            columns: ["live_class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_class_recording_share_links_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"live_class_recordings": {
                   Row: {
                     "checksum": string | null,"content_type": string | null,"created_at": string,"ended_at": string | null,"file_size_bytes": number | null,"id": string,"live_class_id": string,"provider_recording_id": string | null,"r2_file_key": string | null,"started_at": string | null,"status": string,"updated_at": string
                   }
@@ -981,14 +1092,14 @@ isOneToOne: true
                   ]
                 },"live_classes": {
                   Row: {
-                    "access_mode": string,"classroom_provider": string,"course_id": string | null,"created_at": string,"created_by": string,"duration_minutes": number,"ended_at": string | null,"id": string,"last_provider_event_at": string | null,"livekit_room_name": string | null,"notification_sent": boolean,"occurrence_date": string | null,"provider_error_at": string | null,"provider_error_message": string | null,"provider_room_checked_at": string | null,"provider_room_id": string | null,"provider_room_status": string,"room_ready_at": string | null,"scheduled_at": string,"school_id": string,"share_link_revoked_at": string | null,"share_token_hash": string | null,"start_requested_at": string | null,"started_at": string | null,"status": string,"teaching_mode": string,"timetable_slot_id": string | null,"title": string,"tutor_id": string,"updated_at": string
+                    "access_mode": string,"classroom_provider": string,"course_id": string | null,"created_at": string,"created_by": string,"duration_minutes": number,"ended_at": string | null,"id": string,"last_provider_event_at": string | null,"livekit_room_name": string | null,"notification_sent": boolean,"occurrence_date": string | null,"provider_error_at": string | null,"provider_error_message": string | null,"provider_generation": number,"provider_room_checked_at": string | null,"provider_room_id": string | null,"provider_room_status": string,"room_ready_at": string | null,"scheduled_at": string,"school_id": string,"share_link_revoked_at": string | null,"share_token_encrypted": string | null,"share_token_hash": string | null,"start_requested_at": string | null,"started_at": string | null,"status": string,"teaching_mode": string,"timetable_slot_id": string | null,"title": string,"tutor_id": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "access_mode"?: string,"classroom_provider"?: string,"course_id"?: string | null,"created_at"?: string,"created_by": string,"duration_minutes": number,"ended_at"?: string | null,"id"?: string,"last_provider_event_at"?: string | null,"livekit_room_name"?: string | null,"notification_sent"?: boolean,"occurrence_date"?: string | null,"provider_error_at"?: string | null,"provider_error_message"?: string | null,"provider_room_checked_at"?: string | null,"provider_room_id"?: string | null,"provider_room_status"?: string,"room_ready_at"?: string | null,"scheduled_at": string,"school_id": string,"share_link_revoked_at"?: string | null,"share_token_hash"?: string | null,"start_requested_at"?: string | null,"started_at"?: string | null,"status"?: string,"teaching_mode"?: string,"timetable_slot_id"?: string | null,"title": string,"tutor_id": string,"updated_at"?: string
+                    "access_mode"?: string,"classroom_provider"?: string,"course_id"?: string | null,"created_at"?: string,"created_by": string,"duration_minutes": number,"ended_at"?: string | null,"id"?: string,"last_provider_event_at"?: string | null,"livekit_room_name"?: string | null,"notification_sent"?: boolean,"occurrence_date"?: string | null,"provider_error_at"?: string | null,"provider_error_message"?: string | null,"provider_generation"?: number,"provider_room_checked_at"?: string | null,"provider_room_id"?: string | null,"provider_room_status"?: string,"room_ready_at"?: string | null,"scheduled_at": string,"school_id": string,"share_link_revoked_at"?: string | null,"share_token_encrypted"?: string | null,"share_token_hash"?: string | null,"start_requested_at"?: string | null,"started_at"?: string | null,"status"?: string,"teaching_mode"?: string,"timetable_slot_id"?: string | null,"title": string,"tutor_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "access_mode"?: string,"classroom_provider"?: string,"course_id"?: string | null,"created_at"?: string,"created_by"?: string,"duration_minutes"?: number,"ended_at"?: string | null,"id"?: string,"last_provider_event_at"?: string | null,"livekit_room_name"?: string | null,"notification_sent"?: boolean,"occurrence_date"?: string | null,"provider_error_at"?: string | null,"provider_error_message"?: string | null,"provider_room_checked_at"?: string | null,"provider_room_id"?: string | null,"provider_room_status"?: string,"room_ready_at"?: string | null,"scheduled_at"?: string,"school_id"?: string,"share_link_revoked_at"?: string | null,"share_token_hash"?: string | null,"start_requested_at"?: string | null,"started_at"?: string | null,"status"?: string,"teaching_mode"?: string,"timetable_slot_id"?: string | null,"title"?: string,"tutor_id"?: string,"updated_at"?: string
+                    "access_mode"?: string,"classroom_provider"?: string,"course_id"?: string | null,"created_at"?: string,"created_by"?: string,"duration_minutes"?: number,"ended_at"?: string | null,"id"?: string,"last_provider_event_at"?: string | null,"livekit_room_name"?: string | null,"notification_sent"?: boolean,"occurrence_date"?: string | null,"provider_error_at"?: string | null,"provider_error_message"?: string | null,"provider_generation"?: number,"provider_room_checked_at"?: string | null,"provider_room_id"?: string | null,"provider_room_status"?: string,"room_ready_at"?: string | null,"scheduled_at"?: string,"school_id"?: string,"share_link_revoked_at"?: string | null,"share_token_encrypted"?: string | null,"share_token_hash"?: string | null,"start_requested_at"?: string | null,"started_at"?: string | null,"status"?: string,"teaching_mode"?: string,"timetable_slot_id"?: string | null,"title"?: string,"tutor_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1769,7 +1880,62 @@ isOneToOne: true
                   Relationships: [
 
                   ]
-                },"programmes": {
+                },pending_student_enrolments: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string | null
+          programme_id: string
+          school_id: string
+          student_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          programme_id: string
+          school_id: string
+          student_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          programme_id?: string
+          school_id?: string
+          student_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_student_enrolments_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_student_enrolments_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_student_enrolments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_student_enrolments_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"programmes": {
                   Row: {
                     "created_at": string,"created_by": string,"creation_key": string | null,"currency": string,"description": string | null,"id": string,"is_published": boolean,"name": string,"price": number,"school_id": string,"slug": string,"teaching_mode": string,"thumbnail_url": string | null,"updated_at": string
                   }
@@ -2121,51 +2287,72 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"student_programme_subjects": {
-                  Row: {
-                    "course_id": string,"created_at": string,"id": string,"programme_id": string,"school_id": string,"student_id": string,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "course_id": string,"created_at"?: string,"id"?: string,"programme_id": string,"school_id": string,"student_id": string,"updated_at"?: string
-                  }
-                  Update: {
-                    "course_id"?: string,"created_at"?: string,"id"?: string,"programme_id"?: string,"school_id"?: string,"student_id"?: string,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "student_programme_subjects_account_membership_fkey"
-      columns: ["student_id","school_id"]
-isOneToOne: false
-      referencedRelation: "account_memberships"
-      referencedColumns: ["person_id","school_id"]
-    },{
-      foreignKeyName: "student_programme_subjects_course_id_fkey"
-      columns: ["course_id"]
-isOneToOne: false
-      referencedRelation: "courses"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "student_programme_subjects_programme_id_fkey"
-      columns: ["programme_id"]
-isOneToOne: false
-      referencedRelation: "programmes"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "student_programme_subjects_school_id_fkey"
-      columns: ["school_id"]
-isOneToOne: false
-      referencedRelation: "schools"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "student_programme_subjects_student_id_fkey"
-      columns: ["student_id"]
-isOneToOne: false
-      referencedRelation: "user_profiles"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"sub_programmes": {
+                },student_programme_subjects: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          programme_id: string
+          school_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          programme_id: string
+          school_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          programme_id?: string
+          school_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_programme_subjects_account_membership_fkey"
+            columns: ["student_id", "school_id"]
+            isOneToOne: false
+            referencedRelation: "account_memberships"
+            referencedColumns: ["person_id", "school_id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_programme_subjects_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      },"sub_programmes": {
                   Row: {
                     "created_at": string,"created_by": string,"currency": string,"description": string | null,"id": string,"is_available_separately": boolean,"is_published": boolean,"name": string,"price": number,"programme_id": string,"school_id": string,"slug": string,"updated_at": string
                   }
