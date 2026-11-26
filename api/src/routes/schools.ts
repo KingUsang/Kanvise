@@ -14,7 +14,6 @@ schoolsRouter.use('*', profileResolutionMiddleware)
 // Creating the first account happens before any membership exists, so POST /
 // stays on the profile-only sequence. Every /me route acts on the selected
 // active account (DEV-SEC-004).
-schoolsRouter.use('/me', accountContextMiddleware, accountUserProjection)
 schoolsRouter.use('/me/*', accountContextMiddleware, accountUserProjection)
 
 schoolsRouter.post('/', requireRole('admin'), async (c) => {

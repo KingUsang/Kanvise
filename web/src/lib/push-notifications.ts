@@ -1,4 +1,5 @@
 import { getApiUrl } from '@/config/api'
+import { accountContextHeaders } from './account-preference'
 
 export type BrowserPushState = 'loading' | 'unsupported' | 'blocked' | 'disabled' | 'enabled' | 'unavailable'
 
@@ -20,7 +21,7 @@ async function registration() {
 }
 
 async function config(token: string) {
-  const response = await fetch(`${getApiUrl()}/users/me/push/config`, { headers: { Authorization: `Bearer ${token}` } })
+  const response = await fetch(`${getApiUrl()}/users/me/push/config`, { headers: { Authorization: `Bearer ${token}`, ...accountContextHeaders() } })
   const body = await response.json().catch(() => null)
   if (!response.ok) throw new Error(body?.error || 'Could not load browser notification settings')
   return body.data as { enabled: boolean; publicKey: string | null }
@@ -49,7 +50,7 @@ export async function enableBrowserPush(token: string): Promise<void> {
   }
   const response = await fetch(`${getApiUrl()}/users/me/push/subscriptions`, {
     method: 'PUT',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...accountContextHeaders() },
     body: JSON.stringify(subscription.toJSON()),
   })
   if (!response.ok) {
@@ -65,7 +66,7 @@ export async function disableBrowserPush(token: string): Promise<void> {
   if (!subscription) return
   const response = await fetch(`${getApiUrl()}/users/me/push/subscriptions`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...accountContextHeaders() },
     body: JSON.stringify({ endpoint: subscription.endpoint }),
   })
   if (!response.ok) {
@@ -83,7 +84,7 @@ export async function detachBrowserPushOnLogout(token: string | null | undefined
     if (token) {
       await fetch(`${getApiUrl()}/users/me/push/subscriptions`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...accountContextHeaders() },
         body: JSON.stringify({ endpoint: subscription.endpoint }),
       }).catch(() => null)
     }
