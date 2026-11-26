@@ -133,10 +133,6 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/users/me/push', 'pushRouter', 'src/routes/push.ts', 'protected-account', fullSequence),
   router('/demo/analyze', 'demoAnalysisRouter', 'src/routes/demo-analysis.ts', 'protected-account', membershipSequence),
   router('/', 'waitlistRouter', 'src/routes/waitlist.ts', 'public', []),
-  router('/telegram', 'telegramRouter', 'src/routes/telegram.ts', 'protected-account', fullSequence),
-  router('/telegram', 'telegramWebhookRouter', 'src/routes/telegram.ts', 'webhook', [], {
-    exception: 'Telegram secret verification owns this webhook boundary.',
-  }),
   router('/schools/me/promos', 'promosRouter', 'src/routes/promos.ts', 'protected-account', fullSequence),
   router('/', 'mockAccessRouter', 'src/routes/mock-access.ts', 'mixed', jwtAndProfile, {
     families: [

@@ -1,6 +1,5 @@
 import { deliverNotification } from './service'
 import type { NotificationRecipient, NotificationResult } from './types'
-import { announceTelegramClassReminder } from '../telegram/delivery'
 import { notificationRepository } from './repository'
 
 type Deliver = typeof deliverNotification
@@ -36,7 +35,6 @@ export function notifyMockPublished(input: {
       closesAt: input.closesAt || undefined,
       mockUrl: `${frontendUrl()}/dashboard/mocks/${input.id}`,
     }),
-    telegramAction: { text: 'Open mock', url: `${frontendUrl()}/dashboard/mocks/${input.id}` },
     push: { body: `${input.title} is now available.`, url: `/dashboard/student/mocks/${input.id}` },
   })
 }
@@ -60,7 +58,6 @@ export function notifySubmissionGraded(input: {
       feedback: input.feedback || undefined,
       submissionUrl: `${frontendUrl()}/dashboard/submissions/${input.id}`,
     }),
-    telegramAction: { text: 'View feedback', url: `${frontendUrl()}/dashboard/submissions/${input.id}` },
     push: { body: 'Your assignment has been graded. Open Kanvise to view your result.', url: '/dashboard/student/assignments' },
   })
 }
@@ -82,7 +79,6 @@ export function notifyMockFullyGraded(input: {
       score: input.score,
       resultsUrl: `${frontendUrl()}/dashboard/mocks/${input.mockId}/results/${input.attemptId}`,
     }),
-    telegramAction: { text: 'View results', url: `${frontendUrl()}/dashboard/mocks/${input.mockId}/results/${input.attemptId}` },
     push: { body: 'Your mock result is ready. Open Kanvise to view it.', url: `/dashboard/student/mocks/result/${input.attemptId}` },
   })
 }
@@ -106,7 +102,6 @@ export function notifyClassCancelled(input: {
       dashboardUrl: `${frontendUrl()}/dashboard/schedule`,
       reason: input.reason,
     }),
-    telegramAction: { text: 'View schedule', url: `${frontendUrl()}/dashboard/schedule` },
     push: { body: `${input.title} has been cancelled.`, url: '/dashboard/student/classes' },
   })
 }
@@ -129,10 +124,8 @@ export async function notifyLiveClassReminder(input: {
       startsAt: input.startsAt,
       joinUrl: `${frontendUrl()}/class/${input.id}`,
     }),
-    telegramAction: { text: 'View schedule', url: `${frontendUrl()}/dashboard/student/classes` },
     push: { body: `${input.title} starts soon.`, url: `/class/${input.id}` },
   })
-  await announceTelegramClassReminder({ schoolId: input.schoolId, liveClassId: input.id, title: input.title, startsAt: input.startsAt })
   return result
 }
 
@@ -154,7 +147,6 @@ export function notifyAssignmentDeadline(input: {
       deadlineAt: input.deadlineAt,
       assignmentUrl: `${frontendUrl()}/dashboard/assignments/${input.id}`,
     }),
-    telegramAction: { text: 'Open assignment', url: `${frontendUrl()}/dashboard/student/assignments` },
     push: { body: `${input.title} is due in less than 24 hours.`, url: '/dashboard/student/assignments' },
   })
 }

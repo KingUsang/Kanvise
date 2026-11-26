@@ -1,7 +1,11 @@
-> [!WARNING]
-> **Document status: Evidence**
+> **Archived. Superseded by:** the Telegram retirement decision recorded in [Integrations, storage and async work](../engineering/standards/08-integrations-storage-async.md) and the removal of the Telegram runtime code (DEV-RES-002, DEV-DOC-012).
 >
-> The retained body is proposal, research, backlog, or incident evidence rather than approved product behavior, architecture authority, or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> Kept as historical evidence only; do not extend it. The Telegram database tables and columns remain in the schema until a separate migration removes them. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
+> [!WARNING]
+> **Document status: Superseded**
+>
+> The retained body describes a feature that no longer exists in the code. It is not authority for new behavior.
 
 # Telegram MVP implementation
 

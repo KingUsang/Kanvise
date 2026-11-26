@@ -23,12 +23,6 @@ export const CORE_PRODUCTION_VARIABLES = [
   'PORT',
 ] as const
 
-const TELEGRAM_VARIABLES = [
-  'TELEGRAM_BOT_TOKEN',
-  'TELEGRAM_BOT_USERNAME',
-  'TELEGRAM_WEBHOOK_SECRET',
-] as const
-
 const WEB_PUSH_VARIABLES = [
   'WEB_PUSH_VAPID_PUBLIC_KEY',
   'WEB_PUSH_VAPID_PRIVATE_KEY',
@@ -49,10 +43,6 @@ function requireHttpsUrl(name: string, value: string | undefined) {
   if (url.protocol !== 'https:') throw new Error(`${name} must use HTTPS in production`)
 }
 
-export function isTelegramEnabled(env: NodeJS.ProcessEnv = process.env) {
-  return env.TELEGRAM_ENABLED === 'true'
-}
-
 export function isWebPushEnabled(env: NodeJS.ProcessEnv = process.env) {
   return env.WEB_PUSH_ENABLED === 'true'
 }
@@ -61,7 +51,6 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
   if (env.NODE_ENV !== 'production') return
 
   const missing = missingVariables(CORE_PRODUCTION_VARIABLES, env)
-  if (isTelegramEnabled(env)) missing.push(...missingVariables(TELEGRAM_VARIABLES, env))
   if (isWebPushEnabled(env)) missing.push(...missingVariables(WEB_PUSH_VARIABLES, env))
   if (missing.length > 0) {
     throw new Error(`Missing production environment variables: ${[...new Set(missing)].sort().join(', ')}`)
