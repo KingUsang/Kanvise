@@ -29,6 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
+        with:
+          version: 2.20.3
       - name: Verify explicit confirmation
         run: |
           test -n "$SUPABASE_DB_URL"

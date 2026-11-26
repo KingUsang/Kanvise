@@ -70,6 +70,8 @@ jobs:
           duplicates="$(printf '%s\n' "$names" | cut -d_ -f1 | sort | uniq -d)"
           test -z "$duplicates" || { echo "Duplicate migration timestamp(s):"; printf '%s\n' "$duplicates"; exit 1; }
       - uses: supabase/setup-cli@v1
+        with:
+          version: 2.20.3
       - name: Rebuild and test the disposable local database
         run: |
           supabase start
