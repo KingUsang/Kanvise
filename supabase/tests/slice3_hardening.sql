@@ -3,7 +3,7 @@
 -- and super_admin removal. Runs with `supabase test db` in CI.
 BEGIN;
 
-SELECT plan(29);
+SELECT plan(31);
 
 -- Fixture: two accounts, one admin in account one, a Class and Subject in each.
 INSERT INTO public.schools (id, name, slug)
@@ -206,6 +206,14 @@ SELECT ok(
   ),
   'every avatar policy resolves the caller through supabase_auth_id'
 );
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'avatar_configs'
+      AND (COALESCE(qual, '') || COALESCE(with_check, '')) LIKE '%current_user_school_id%'
+  ),
+  'avatar policies do not depend on current_user_school_id(), which staging lacks'
+);
 
 -- DEV-DB-015: self-row policies map auth.uid() to the Profile.
 -- Names longer than 63 bytes are stored truncated, so the enrolments and
@@ -240,6 +248,16 @@ SELECT ok(
     SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND qual LIKE '%super_admin%'
   ),
   'no RLS policy mentions super_admin'
+);
+SELECT is(
+  (SELECT array_agg(conname::text ORDER BY conname)
+   FROM pg_constraint
+   WHERE conrelid = 'public.user_profiles'::regclass
+     AND contype = 'c'
+     AND pg_get_constraintdef(oid) LIKE '%role%'
+     AND pg_get_constraintdef(oid) LIKE '%student%'),
+  ARRAY['user_profiles_role_supported_check'],
+  'user_profiles has exactly one role CHECK'
 );
 
 SELECT * FROM finish();

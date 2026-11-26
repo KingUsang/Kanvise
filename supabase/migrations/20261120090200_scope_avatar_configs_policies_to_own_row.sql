@@ -6,7 +6,11 @@
 --
 -- Replace it with one policy per operation. Each policy limits access to the
 -- caller's own avatar, resolved through user_profiles.supabase_auth_id, and
--- write policies also pin the row to the caller's JWT account.
+-- write policies also pin the row's school_id to that Profile's account.
+--
+-- The policies do not call public.current_user_school_id(). That function is
+-- created in 20260706000001 but is missing on staging (schema drift, see
+-- DEV-DB-018), so the account is read from the caller's own Profile row.
 --
 -- Table grants for anon/authenticated stay revoked (20260723130000). The
 -- policies are defense in depth and apply only if direct access is restored.
@@ -30,8 +34,7 @@ ON public.avatar_configs
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  school_id = public.current_user_school_id()
-  AND user_id IN (
+  user_id IN (
     SELECT profile.id FROM public.user_profiles AS profile
     WHERE profile.supabase_auth_id = (SELECT auth.uid())
       AND profile.school_id = avatar_configs.school_id
@@ -49,8 +52,7 @@ USING (
   )
 )
 WITH CHECK (
-  school_id = public.current_user_school_id()
-  AND user_id IN (
+  user_id IN (
     SELECT profile.id FROM public.user_profiles AS profile
     WHERE profile.supabase_auth_id = (SELECT auth.uid())
       AND profile.school_id = avatar_configs.school_id
