@@ -13,28 +13,48 @@
 -- assignments, submissions, mock_*, notifications, avatar_configs.
 --
 -- Steps:
---   1. UNIQUE (school_id, id) on each parent so it can be referenced.
---   2. Pre-check: list every child row whose parent belongs to a different
---      account or does not exist, and abort the migration if any are found.
+--   1. Pre-check, before any DDL: abort with a report if a parent table has
+--      duplicate (school_id, id) pairs, or if any child row points at a parent
+--      in a different account (or at no parent). Nothing is changed on failure.
+--   2. UNIQUE (school_id, id) on each parent so it can be referenced.
 --   3. Add each foreign key NOT VALID, then VALIDATE it.
 -- Delete behaviour matches the existing single-column foreign keys (CASCADE).
 -- Rows with a NULL parent column are not checked (MATCH SIMPLE).
 
-ALTER TABLE public.programmes
-  ADD CONSTRAINT programmes_school_id_id_unique UNIQUE (school_id, id);
-ALTER TABLE public.sub_programmes
-  ADD CONSTRAINT sub_programmes_school_id_id_unique UNIQUE (school_id, id);
-ALTER TABLE public.courses
-  ADD CONSTRAINT courses_school_id_id_unique UNIQUE (school_id, id);
-ALTER TABLE public.live_classes
-  ADD CONSTRAINT live_classes_school_id_id_unique UNIQUE (school_id, id);
-
 DO $$
 DECLARE
   spec record;
+  parent_name text;
   violating_count bigint;
+  duplicate_report text := '';
   report text := '';
 BEGIN
+  -- id is the primary key on every parent, so duplicates should be impossible.
+  -- Check anyway so a surprise shows up as a clear message, not a bare
+  -- unique-violation from ADD CONSTRAINT.
+  FOREACH parent_name IN ARRAY ARRAY['programmes', 'sub_programmes', 'courses', 'live_classes']
+  LOOP
+    EXECUTE format(
+      'SELECT count(*) FROM (
+         SELECT 1 FROM public.%I GROUP BY school_id, id HAVING count(*) > 1
+       ) AS duplicates',
+      parent_name
+    ) INTO violating_count;
+
+    IF violating_count > 0 THEN
+      duplicate_report := duplicate_report || format(
+        E'\n  public.%s: %s duplicate (school_id, id) pair(s)',
+        parent_name, violating_count
+      );
+    END IF;
+  END LOOP;
+
+  IF duplicate_report <> '' THEN
+    RAISE EXCEPTION
+      E'Slice 3 pre-check failed (20261120090500): UNIQUE (school_id, id) cannot be added:%\nRemove the duplicate rows, then re-run. Nothing was changed.',
+      duplicate_report;
+  END IF;
+
   FOR spec IN
     SELECT * FROM (VALUES
       ('sub_programmes',          'programme_id',     'programmes'),
@@ -60,7 +80,7 @@ BEGIN
 
     IF violating_count > 0 THEN
       report := report || format(
-        E'\n  %s.%s -> %s: %s row(s) reference a parent in another account',
+        E'\n  public.%s.%s -> public.%s: %s row(s) reference a parent in another account or no parent',
         spec.child_table, spec.child_column, spec.parent_table, violating_count
       );
     END IF;
@@ -68,10 +88,20 @@ BEGIN
 
   IF report <> '' THEN
     RAISE EXCEPTION
-      'Cross-account references block the composite foreign keys. Fix or remove these rows, then re-run:%', report;
+      E'Slice 3 pre-check failed (20261120090500): cross-account references block the composite foreign keys:%\nFind the rows with a query of the form: select child.id from public.<child> child join public.<parent> parent on parent.id = child.<column> where parent.school_id <> child.school_id. Fix or remove them, then re-run. Nothing was changed.',
+      report;
   END IF;
 END
 $$;
+
+ALTER TABLE public.programmes
+  ADD CONSTRAINT programmes_school_id_id_unique UNIQUE (school_id, id);
+ALTER TABLE public.sub_programmes
+  ADD CONSTRAINT sub_programmes_school_id_id_unique UNIQUE (school_id, id);
+ALTER TABLE public.courses
+  ADD CONSTRAINT courses_school_id_id_unique UNIQUE (school_id, id);
+ALTER TABLE public.live_classes
+  ADD CONSTRAINT live_classes_school_id_id_unique UNIQUE (school_id, id);
 
 ALTER TABLE public.sub_programmes
   ADD CONSTRAINT sub_programmes_school_programme_fkey

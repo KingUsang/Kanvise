@@ -12,6 +12,43 @@
 -- Not changed here: the notification delivery policies from
 -- 20260720145358 already use the correct mapping.
 
+-- Pre-check: every policy altered below must exist. ALTER POLICY on a missing
+-- policy fails with a bare "policy does not exist" error, so list all missing
+-- names at once and say what to do.
+DO $$
+DECLARE
+  missing text;
+BEGIN
+  SELECT string_agg(format('%s on public.%s', expected.policy_name, expected.table_name), E'\n  ' ORDER BY expected.table_name, expected.policy_name)
+  INTO missing
+  FROM (VALUES
+    ('user_profiles',      'Users can view profiles in their school'),
+    ('user_profiles',      'Users can update their own profile'),
+    ('enrolments',         'Users can view their own enrolments or admins view all school enrolments'),
+    ('payments',           'Users can view their own payments or admins view school payments'),
+    ('attendance_records', 'Students view attendance, admins/tutors manage'),
+    ('submissions',        'Students view their own submissions, tutors view assigned course submissions'),
+    ('submissions',        'Students can insert their own submissions'),
+    ('mock_attempts',      'Students view and create their own attempts'),
+    ('mock_answers',       'Students manage their own answers during active attempt'),
+    ('reviews',            'Enrolled students can create reviews'),
+    ('notifications',      'Users view and manage their own notifications')
+  ) AS expected(table_name, policy_name)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_policies AS existing
+    WHERE existing.schemaname = 'public'
+      AND existing.tablename = expected.table_name
+      AND existing.policyname = expected.policy_name
+  );
+
+  IF missing IS NOT NULL THEN
+    RAISE EXCEPTION
+      E'Slice 3 pre-check failed (20261120090300): these RLS policies do not exist, so their self-row identity cannot be fixed:\n  %\nCompare with: select tablename, policyname from pg_policies where schemaname = ''public''. If a policy was renamed or dropped on purpose, update this migration before it is applied. Nothing was changed.',
+      missing;
+  END IF;
+END
+$$;
+
 ALTER POLICY "Users can view profiles in their school"
 ON public.user_profiles
 USING (

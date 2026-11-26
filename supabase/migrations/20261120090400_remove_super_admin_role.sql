@@ -11,6 +11,7 @@
 DO $$
 DECLARE
   violating_count bigint;
+  other_roles text;
 BEGIN
   SELECT count(*) INTO violating_count
   FROM public.user_profiles
@@ -18,8 +19,25 @@ BEGIN
 
   IF violating_count > 0 THEN
     RAISE EXCEPTION
-      'Cannot remove super_admin: % user_profiles rows still have role = ''super_admin''. Reassign or remove them first.',
+      E'Slice 3 pre-check failed (20261120090400): % user_profiles row(s) still have role = ''super_admin''.\nFind them with: select id, email, school_id from public.user_profiles where role = ''super_admin''.\nDecide with the owner whether each person becomes admin, tutor or student, or is removed, then re-run. This migration never rewrites roles. Nothing was changed.',
       violating_count;
+  END IF;
+
+  -- The replacement CHECK would also reject any other unexpected value.
+  -- Report those here instead of failing later inside VALIDATE CONSTRAINT.
+  SELECT string_agg(format('%L: %s row(s)', role_counts.role, role_counts.row_count), ', ' ORDER BY role_counts.role)
+  INTO other_roles
+  FROM (
+    SELECT profile.role, count(*) AS row_count
+    FROM public.user_profiles AS profile
+    WHERE profile.role NOT IN ('admin', 'tutor', 'student')
+    GROUP BY profile.role
+  ) AS role_counts;
+
+  IF other_roles IS NOT NULL THEN
+    RAISE EXCEPTION
+      E'Slice 3 pre-check failed (20261120090400): user_profiles has roles outside admin, tutor, student: %.\nFix those rows, then re-run. Nothing was changed.',
+      other_roles;
   END IF;
 END
 $$;
