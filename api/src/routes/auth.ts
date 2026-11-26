@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { supabase } from '../lib/supabase'
 import { jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, Variables } from '../middleware/auth'
 import { validateInviteToken } from '../lib/invites'
@@ -8,6 +9,61 @@ import { createHash } from 'node:crypto'
 import { accountInvitationStatus, consumeAccountInvitation, findAccountInvitation, invitationTokenHash } from '../lib/account-invitations'
 
 export const authRouter = new Hono<{ Variables: Variables }>()
+
+const profileNameSchema = z.string().trim().max(100)
+// Runtime shape of POST /auth/profile/init. Unknown keys (for example the email
+// the register page sends) are ignored because none are forwarded; every value
+// that is used is bounded.
+const profileInitSchema = z.object({
+  flow: z.string().max(32).nullish(),
+  first_name: profileNameSchema.nullish(),
+  last_name: profileNameSchema.nullish(),
+  invite_token: z.string().max(4096).nullish(),
+  account_invitation_token: z.string().max(256).nullish(),
+  student_registration_token: z.string().max(256).nullish(),
+})
+// PATCH /auth/me edits only these columns; anything else is a 400.
+const profileEditSchema = z.object({
+  first_name: profileNameSchema.min(1),
+  last_name: profileNameSchema.min(1),
+  bio: z.string().trim().max(2000),
+}).partial().strict()
+
+const INVITATION_LOOKUP_UNAVAILABLE = {
+  error: 'We could not check this invitation right now. Try again shortly.',
+  code: 'INVITATION_LOOKUP_UNAVAILABLE',
+  retryable: true,
+}
+
+// Auth metadata mirrors profile data into the session. A failed sync must not
+// fail the request (the profile row is the source of truth), but it must be
+// visible to operators.
+async function syncAuthMetadata(label: string, authId: string, attributes: Parameters<typeof supabase.auth.admin.updateUserById>[1]) {
+  try {
+    const { error } = await supabase.auth.admin.updateUserById(authId, attributes)
+    if (error) {
+      console.error(`[${label}] Auth metadata update failed`, { status: (error as any).status, code: (error as any).code, message: error.message })
+      return false
+    }
+    return true
+  } catch (error) {
+    console.error(`[${label}] Auth metadata update threw`, { message: error instanceof Error ? error.message : 'unknown' })
+    return false
+  }
+}
+
+type InvitationLookup = { ok: true; invitation: any } | { ok: false }
+
+// Lookup failures are dependency errors, not invalid links.
+async function lookupInvitation(label: string, token: string): Promise<InvitationLookup> {
+  try {
+    return { ok: true, invitation: await findAccountInvitation(token) }
+  } catch (error) {
+    console.error(`[${label}] Invitation lookup failed`, { message: error instanceof Error ? error.message : 'unknown' })
+    return { ok: false }
+  }
+}
+
 const invitationStarts = new Map<string, { count: number; resetAt: number }>()
 
 // This is intentionally public: the holder of an invite link needs to know
@@ -30,7 +86,11 @@ authRouter.post('/tutor-invite/preview', async (c) => {
       .eq('school_id', payload.school_id)
       .maybeSingle()
 
-    if (error || !invite || invite.status !== 'pending' || new Date(invite.expires_at).getTime() <= Date.now()) {
+    if (error) {
+      console.error('[auth/tutor-invite/preview] Invite lookup failed', { code: error.code })
+      return c.json(INVITATION_LOOKUP_UNAVAILABLE, 503)
+    }
+    if (!invite || invite.status !== 'pending' || new Date(invite.expires_at).getTime() <= Date.now()) {
       return c.json({ error: 'This invitation is no longer valid' }, 404)
     }
     if (invite.email.toLowerCase() !== payload.email.toLowerCase()) {
@@ -53,7 +113,9 @@ authRouter.post('/tutor-invite/preview', async (c) => {
 authRouter.post('/invitation/preview', async (c) => {
   const body = await c.req.json().catch(() => null)
   const token = typeof body?.token === 'string' ? body.token : ''
-  const invitation = await findAccountInvitation(token).catch(() => null)
+  const lookup = await lookupInvitation('auth/invitation/preview', token)
+  if (!lookup.ok) return c.json(INVITATION_LOOKUP_UNAVAILABLE, 503)
+  const invitation = lookup.invitation
   if (!invitation) return c.json({ error: 'This invitation link is invalid', code: 'INVITATION_INVALID' }, 404)
 
   const status = accountInvitationStatus(invitation)
@@ -71,7 +133,9 @@ authRouter.post('/invitation/preview', async (c) => {
 authRouter.post('/invitation/start', async (c) => {
   const body = await c.req.json().catch(() => null)
   const token = typeof body?.token === 'string' ? body.token : ''
-  const invitation = await findAccountInvitation(token).catch(() => null)
+  const lookup = await lookupInvitation('auth/invitation/start', token)
+  if (!lookup.ok) return c.json(INVITATION_LOOKUP_UNAVAILABLE, 503)
+  const invitation = lookup.invitation
   if (!invitation) return c.json({ error: 'This invitation link is invalid', code: 'INVITATION_INVALID' }, 404)
   const rateKey = invitationTokenHash(token)
   const now = Date.now()
@@ -111,8 +175,11 @@ authRouter.post('/invitation/start', async (c) => {
     console.error('[auth/invitation/start] generateLink failed', {
       invitationId: invitation.id,
       role: invitation.role,
+      status: (error as any)?.status,
+      code: (error as any)?.code,
       message: error?.message || 'missing action link',
     })
+    // Provider detail stays in the server log; the caller gets a stable code.
     return c.json({ error: 'We could not start this invitation right now', code: 'INVITATION_START_FAILED' }, 502)
   }
 
@@ -163,8 +230,11 @@ authRouter.use('*', profileResolutionMiddleware)
 authRouter.use('*', tenantMiddleware)
 
 authRouter.post('/profile/init', async (c) => {
-  const body = await c.req.json()
-  const { flow, first_name, last_name, invite_token, account_invitation_token, student_registration_token } = body
+  const parsedBody = profileInitSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsedBody.success) return c.json({ error: 'Invalid registration details', code: 'VALIDATION_ERROR' }, 400)
+  const { flow, invite_token, account_invitation_token, student_registration_token } = parsedBody.data
+  const first_name = parsedBody.data.first_name ?? ''
+  const last_name = parsedBody.data.last_name ?? ''
   const user = c.get('user')
   const jwtPayload = c.get('jwt_payload')
   const supabaseAuthId = user.supabase_auth_id
@@ -174,7 +244,7 @@ authRouter.post('/profile/init', async (c) => {
     return c.json({ error: 'Authenticated user has no email address' }, 400)
   }
 
-  if (!String(first_name || '').trim() || !String(last_name || '').trim()) {
+  if (!first_name || !last_name) {
     return c.json({ error: 'First name and last name are required' }, 400)
   }
 
@@ -197,7 +267,11 @@ authRouter.post('/profile/init', async (c) => {
     const tokenHash = createHash('sha256').update(student_registration_token).digest('hex')
     const intents = (supabase as any).from('registration_intents')
     const { data: intent, error: intentError } = await intents.select('*').eq('token_hash', tokenHash).eq('kind', 'student').is('consumed_at', null).gt('expires_at', new Date().toISOString()).maybeSingle()
-    if (intentError || !intent) return c.json({ error: 'Student registration has expired. Return to the class or mock and try again.' }, 400)
+    if (intentError) {
+      console.error('[auth/profile/init] Registration intent lookup failed', { code: intentError.code })
+      return c.json({ error: 'Registration is temporarily unavailable. Please try again.', code: 'REGISTRATION_UNAVAILABLE', retryable: true }, 503)
+    }
+    if (!intent) return c.json({ error: 'Student registration has expired. Return to the class or mock and try again.' }, 400)
     studentIntent = intent
     role = 'student'
   } else return c.json({ error: 'A valid registration flow is required' }, 400)
@@ -256,7 +330,7 @@ authRouter.post('/profile/init', async (c) => {
       .single()
     if (rosterError || !rosterProfile) return c.json({ error: rosterError?.message || 'Student profile could not be activated' }, 409)
     await consumeAccountInvitation(String(account_invitation_token), email, supabaseAuthId)
-    await supabase.auth.admin.updateUserById(supabaseAuthId, {
+    await syncAuthMetadata('auth/profile/init', supabaseAuthId, {
       user_metadata: { first_name, last_name },
       app_metadata: { ...(jwtPayload.app_metadata || {}), role: 'student', kanvise_role: 'student', school_id: rosterProfile.school_id, kanvise_user_id: rosterProfile.kanvise_user_id, profile_id: rosterProfile.id },
     })
@@ -355,7 +429,7 @@ authRouter.post('/profile/init', async (c) => {
 
   // Keep editable presentation data in user_metadata. Authorisation claims
   // belong in app_metadata, which cannot be changed by the signed-in user.
-  await supabase.auth.admin.updateUserById(supabaseAuthId, {
+  await syncAuthMetadata('auth/profile/init', supabaseAuthId, {
     user_metadata: {
       first_name,
       last_name
@@ -433,7 +507,7 @@ authRouter.post('/profile/activate', async (c) => {
       return c.json({ error: consumeError?.message || 'Invitation could not be completed' }, 409)
     }
   }
-  await supabase.auth.admin.updateUserById(user.supabase_auth_id, {
+  await syncAuthMetadata('auth/profile/activate', user.supabase_auth_id, {
     user_metadata: { first_name: firstName, last_name: lastName },
     app_metadata: {
       role: 'student',
@@ -448,13 +522,11 @@ authRouter.post('/profile/activate', async (c) => {
 
 authRouter.patch('/me', async (c) => {
   const user = c.get('user')
-  const body = await c.req.json()
-  const allowedFields = ['first_name', 'last_name', 'bio'] as const
-  const updates = Object.fromEntries(
-    allowedFields
-      .filter((field) => body[field] !== undefined)
-      .map((field) => [field, typeof body[field] === 'string' ? body[field].trim() : body[field]])
-  )
+  const parsedUpdates = profileEditSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsedUpdates.success) {
+    return c.json({ error: 'Invalid profile details', code: 'VALIDATION_ERROR' }, 400)
+  }
+  const updates = parsedUpdates.data
 
   if (!Object.keys(updates).length) {
     return c.json({ error: 'No editable profile fields were provided' }, 400)
@@ -468,7 +540,7 @@ authRouter.patch('/me', async (c) => {
     
   if (error) return c.json({ error: error.message }, 500)
 
-  await supabase.auth.admin.updateUserById(user.supabase_auth_id, {
+  await syncAuthMetadata('auth/me', user.supabase_auth_id, {
     user_metadata: {
       first_name: data.first_name,
       last_name: data.last_name,
