@@ -74,6 +74,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
+        with:
+          version: 2.20.3
       - name: Check pending migration plan
         run: |
           test -n "$SUPABASE_DB_URL"
