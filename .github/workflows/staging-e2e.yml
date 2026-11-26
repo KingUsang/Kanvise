@@ -82,8 +82,11 @@ jobs:
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
       PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+      # Optional: BrowserStack real-device journeys run only when both secrets
+      # are set, or are forced (and then required) by E2E_REQUIRE_REAL_DEVICES=true.
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      E2E_REQUIRE_REAL_DEVICES: ${{ vars.E2E_REQUIRE_REAL_DEVICES }}
     steps:
       - uses: actions/checkout@v4
         with:

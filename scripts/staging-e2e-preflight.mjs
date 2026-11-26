@@ -1,6 +1,7 @@
 import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3'
 import { createClient } from '@supabase/supabase-js'
 import { assertStagingSafety } from './staging-e2e-safety.mjs'
+import { realDeviceMode } from './staging-certification-lib.mjs'
 
 const safe = assertStagingSafety()
 const checks = []
@@ -58,10 +59,16 @@ await check('gmail readonly mailbox', async () => {
   }
 })
 
-await check('browserstack automate', async () => {
-  const authorization = Buffer.from(`${process.env.BROWSERSTACK_USERNAME}:${process.env.BROWSERSTACK_ACCESS_KEY}`).toString('base64')
-  const response = await fetch('https://api.browserstack.com/automate/plan.json', { headers: { authorization: `Basic ${authorization}` } })
-  if (!response.ok) throw new Error(`BrowserStack credential check failed (${response.status})`)
-})
+const realDevices = realDeviceMode()
+if (realDevices.problems.length) throw new Error(realDevices.problems.join('; '))
+if (realDevices.enabled) {
+  await check('browserstack automate', async () => {
+    const authorization = Buffer.from(`${process.env.BROWSERSTACK_USERNAME}:${process.env.BROWSERSTACK_ACCESS_KEY}`).toString('base64')
+    const response = await fetch('https://api.browserstack.com/automate/plan.json', { headers: { authorization: `Basic ${authorization}` } })
+    if (!response.ok) throw new Error(`BrowserStack credential check failed (${response.status})`)
+  })
+} else {
+  checks.push({ name: 'browserstack automate', status: 'skipped', reason: 'optional; no BrowserStack credentials' })
+}
 
 console.log(JSON.stringify({ run_id: safe.runId, checks }, null, 2))
