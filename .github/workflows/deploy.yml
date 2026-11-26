@@ -5,6 +5,8 @@ on:
     branches: [main, staging]
     paths:
       - 'api/**'
+      - 'package.json'
+      - 'package-lock.json'
       - 'supabase/migrations/**'
       - 'scripts/operations/deploy-api-on-oracle.sh'
       - '.github/workflows/deploy.yml'
@@ -21,6 +23,9 @@ concurrency:
 jobs:
   verify:
     name: Test and build API
+    # Manual dispatch on any other ref must not build, migrate or deploy
+    # (DEV-OPS-016). Every later job depends on this one.
+    if: github.ref_name == 'main' || github.ref_name == 'staging'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

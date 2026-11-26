@@ -34,3 +34,12 @@ yarn-error.log*
 .release-worktree
 .student-journey-worktree
 .qoder
+
+# local or generated artifacts that must not be tracked
+web/*-state.json
+out.js
+my_changes.patch
+scratch/
+web/login-error.png
+scripts/seed-demo.js
+scripts/seed-demo-env.js

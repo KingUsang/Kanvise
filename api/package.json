@@ -8,7 +8,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "node --import tsx --import ./src/instrument.ts --watch src/index.ts",
-    "build": "tsc",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "start": "node --import ./dist/instrument.js dist/index.js",
     "test": "vitest run src",
     "email:smoke": "npm run build && node dist/scripts/email-smoke.js",

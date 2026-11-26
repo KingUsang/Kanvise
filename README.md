@@ -26,11 +26,20 @@ API run as separate workspaces.
 ## Current topology
 
 - Next.js runs the web application and dashboard on Vercel.
-- Hono runs the API and separately owned scheduler/worker roles on persistent
-  compute.
+- Hono runs the API on an Oracle Cloud ARM64 VM as a systemd service
+  (`kanvise-api-staging`, `kanvise-api-production`). GitHub Actions deploys a
+  verified build artifact through a self-hosted runner; see
+  [Oracle API deployment](docs/operations/oracle-api-deployment.md).
 - Supabase owns Auth and PostgreSQL; Cloudflare R2 owns application objects.
 - PlugNMeet owns live-room media. Its recorder capacity uses AWS infrastructure.
 - Paystack provides payment-provider integration for supported enrolment flows.
+  Payment behaviour is on hold pending an owner-led revamp.
+
+## Branch flow
+
+Work lands on `staging` through a pull request, is checked on the staging
+deployment, then `staging` is promoted to `main` (production) by the owner.
+Never commit directly to `main`.
 
 See the [engineering index](docs/engineering/README.md) for current standards,
 accepted decisions, runbooks, and the document authority map. Historical
@@ -65,6 +74,12 @@ npm run type-check --workspace=web  # web TypeScript check
 npm test --workspace=web            # web tests
 ```
 
+Local database work uses the Supabase CLI (`supabase start`, `supabase db reset`,
+`supabase test db`). The CI workflow [verify.yml](.github/workflows/verify.yml)
+runs the same database gate on pull requests. Utilities that use a service-role
+key (`seed.js`, `unseed.js`, `test-db.js`, `list_emails.js`) refuse to run unless
+`SUPABASE_URL` points at a local host.
+
 The web app defaults to [http://localhost:3000](http://localhost:3000) and the
 API to [http://localhost:3001](http://localhost:3001). Workspace environment
 templates are [web/.env.example](web/.env.example) and
@@ -74,7 +89,8 @@ templates are [web/.env.example](web/.env.example) and
 
 - [Engineering standards and authority](docs/engineering/README.md)
 - [Current document authority map](docs/engineering/DOCUMENT_AUTHORITY.md)
-- [Implementation deviations](docs/deviations.md)
+- [Implementation deviations](docs/deviations.md), the single bug and conflict register
+- [Archived documents](docs/archive/) (superseded or historical; never authority)
 - [API runtime environment contract](api/src/config/runtime-env.ts)
 - [Web workspace instructions](web/README.md)
 

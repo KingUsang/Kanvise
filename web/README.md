@@ -31,6 +31,15 @@ npm test --workspace=web
 npm run build --workspace=web
 ```
 
+The web build needs public placeholder values. CI uses
+`NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-placeholder-anon-key`,
+`NEXT_PUBLIC_API_URL=http://127.0.0.1:3001`, `API_URL`, `NEXT_PUBLIC_SITE_URL`,
+`NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_LIVEKIT_URL` (see
+[verify.yml](../.github/workflows/verify.yml)). The web app talks to the Hono API
+and Supabase; live classes use PlugNMeet. Playwright browser sessions must stay
+out of the repository: `web/*-state.json` is ignored.
+
 Do not create a workspace lockfile or install dependencies from `web/` as a
 separate project. The [engineering standards](../docs/engineering/README.md)
 and [document authority map](../docs/engineering/DOCUMENT_AUTHORITY.md) govern
