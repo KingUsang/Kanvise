@@ -62,6 +62,7 @@ publicRouter.get('/schools/:slug', async (c) => {
       .select('id, first_name, last_name, bio, role')
       .eq('school_id', school.id)
       .eq('role', 'tutor')
+      .eq('is_active', true)
 
     if (progError) console.error("Error fetching programmes:", progError)
     if (courseError) console.error("Error fetching courses:", courseError)

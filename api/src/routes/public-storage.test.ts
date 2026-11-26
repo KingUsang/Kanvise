@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   createPublic: vi.fn(),
   verifyPublic: vi.fn(),
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin', kanvise_user_id: 'KNV-ADM-1', supabase_auth_id: 'auth-1' },
+  account: { id: 'school-1', membershipId: 'membership-1' } as any,
 }))
 
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
@@ -20,6 +21,11 @@ vi.mock('../storage/r2', async (importOriginal) => {
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    const role = mocks.user.role === 'student' ? 'learner' : mocks.user.role
+    c.set('account', { ...mocks.account, role })
+    await next()
+  },
 }))
 
 import { storageRouter } from './storage'
@@ -39,6 +45,8 @@ describe('public media storage routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.user.role = 'admin'
+    mocks.user.school_id = 'school-1'
+    mocks.account = { id: 'school-1', membershipId: 'membership-1' }
     process.env.R2_PUBLIC_BASE_URL = 'https://cdn.example.com'
   })
 
@@ -79,5 +87,24 @@ describe('public media storage routes', () => {
     expect(response.status).toBe(200)
     expect(mocks.verifyPublic).toHaveBeenCalledWith(expect.objectContaining({ fileKey, schoolId: 'school-1' }))
     expect(mocks.from).toHaveBeenCalledWith('schools')
+  })
+
+  it('binds public media intent to the selected account, not profile school_id', async () => {
+    mocks.user.school_id = 'legacy-school'
+    mocks.account = { id: 'account-1', membershipId: 'membership-1' }
+    mocks.createPublic.mockResolvedValue({
+      presignedUrl: 'https://upload.example.com',
+      fileKey: 'schools/account-1/public/logo/account-1/file.png',
+      publicUrl: 'https://cdn.example.com/file.png',
+      expiresInSeconds: 900,
+    })
+
+    const response = await storageRouter.request('/presign/public', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ entity_type: 'logo', context_id: 'account-1', file_name: 'logo.png', content_type: 'image/png', file_size_bytes: 100 }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(mocks.createPublic).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'account-1', contextId: 'account-1' }))
   })
 })

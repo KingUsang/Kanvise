@@ -11,6 +11,7 @@ import {
   escapeLikePattern,
   validateQuestionInput,
 } from '../domain/question-bank'
+import { parseOffsetPagination, uuidSchema } from '../lib/api-contract'
 
 export const questionBanksRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -40,6 +41,65 @@ async function loadBank(bankId: string, schoolId: string) {
 function canContributeToBank(user: TenantUser, bank: any) {
   return canReadQuestionBank(user, bank)
     && (canEditQuestionBank(user, bank) || bank.visibility === 'centre')
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && uuidSchema.safeParse(value).success
+}
+
+function invalidUuid(c: any, field: string) {
+  return c.json({ error: `${field} must be a valid UUID`, code: 'VALIDATION_ERROR' }, 400)
+}
+
+function mapQuestionVersion(version: any) {
+  if (!version) return version
+  return {
+    id: version.id,
+    version_number: version.version_number,
+    created_at: version.created_at,
+    stimulus_id: version.stimulus_id,
+    plain_text: version.plain_text,
+    content_blocks: version.content_blocks,
+    explanation_blocks: version.explanation_blocks,
+    grading_rubric_blocks: version.grading_rubric_blocks,
+    marks: version.marks,
+    options: (version.options || []).map((option: any) => ({
+      id: option.id,
+      plain_text: option.plain_text,
+      content_blocks: option.content_blocks,
+      is_correct: option.is_correct,
+      order_index: option.order_index,
+    })),
+  }
+}
+
+function mapQuestion(question: any) {
+  return {
+    id: question.id,
+    created_at: question.created_at,
+    updated_at: question.updated_at,
+    archived_at: question.archived_at,
+    course_id: question.course_id,
+    subject_name: question.subject_name,
+    topic: question.topic,
+    subtopic: question.subtopic,
+    question_type: question.question_type,
+    status: question.status,
+    current_version: mapQuestionVersion(question.current_version),
+  }
+}
+
+function mapBank(bank: any, extras: Record<string, unknown> = {}) {
+  return {
+    id: bank.id,
+    created_at: bank.created_at,
+    updated_at: bank.updated_at,
+    archived_at: bank.archived_at,
+    name: bank.name,
+    description: bank.description,
+    visibility: bank.visibility,
+    ...extras,
+  }
 }
 
 function imageMediaIds(value: unknown) {
@@ -93,10 +153,7 @@ async function tutorCanUseCourse(user: TenantUser, courseId: string | null) {
 }
 
 function pageParams(c: any) {
-  const page = Number(c.req.query('page') || 1)
-  const pageSize = Number(c.req.query('page_size') || 20)
-  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) return null
-  return { page, pageSize, offset: (page - 1) * pageSize }
+  return parseOffsetPagination(c.req.query('page'), c.req.query('page_size'))
 }
 
 function databaseError(c: any, error: any, fallback: string) {
@@ -115,7 +172,7 @@ function databaseError(c: any, error: any, fallback: string) {
 questionBanksRouter.get('/', async c => {
   const user = c.get('user')
   const pagination = pageParams(c)
-  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'BAD_REQUEST' }, 400)
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
 
   let query = supabase.from('question_banks')
     .select(`${bankSelect}, questions:bank_questions(count)`, { count: 'exact' })
@@ -132,8 +189,7 @@ questionBanksRouter.get('/', async c => {
     .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
   if (error) return databaseError(c, error, 'Could not load question banks')
 
-  const banks = (data || []).map(({ questions, ...bank }: any) => ({
-    ...bank,
+  const banks = (data || []).map(({ questions, ...bank }: any) => mapBank(bank, {
     question_count: questions?.[0]?.count || 0,
     can_edit: canEditQuestionBank(user, bank),
   }))
@@ -166,25 +222,28 @@ questionBanksRouter.post('/', async c => {
     visibility,
   }).select(bankSelect).single()
   if (error) return databaseError(c, error, 'Could not create question bank')
-  return c.json({ data: { ...data, question_count: 0, can_edit: true } }, 201)
+  return c.json({ data: mapBank(data, { question_count: 0, can_edit: true }) }, 201)
 })
 
-questionBanksRouter.get('/:bankId{[0-9a-fA-F-]{36}}', async c => {
+questionBanksRouter.get('/:bankId', async c => {
   const user = c.get('user')
+  const bankId = c.req.param('bankId')!
+  if (!isUuid(bankId)) return invalidUuid(c, 'bank_id')
   try {
-    const bank = await loadBank(c.req.param('bankId')!, user.school_id!)
+    const bank = await loadBank(bankId, user.school_id!)
     if (!bank || !canReadQuestionBank(user, bank)) {
       return c.json({ error: 'Question bank not found', code: 'NOT_FOUND' }, 404)
     }
-    return c.json({ data: { ...bank, can_edit: canEditQuestionBank(user, bank) } })
+    return c.json({ data: mapBank(bank, { can_edit: canEditQuestionBank(user, bank) }) })
   } catch (error) {
     return databaseError(c, error, 'Could not load question bank')
   }
 })
 
-questionBanksRouter.patch('/:bankId{[0-9a-fA-F-]{36}}', async c => {
+questionBanksRouter.patch('/:bankId', async c => {
   const user = c.get('user')
   const bankId = c.req.param('bankId')!
+  if (!isUuid(bankId)) return invalidUuid(c, 'bank_id')
   try {
     const bank = await loadBank(bankId, user.school_id!)
     if (!bank || !canEditQuestionBank(user, bank)) {
@@ -208,17 +267,18 @@ questionBanksRouter.patch('/:bankId{[0-9a-fA-F-]{36}}', async c => {
     const { data, error } = await supabase.from('question_banks').update(updates as TablesUpdate<'question_banks'>)
       .eq('id', bankId).eq('school_id', user.school_id).select(bankSelect).single()
     if (error) return databaseError(c, error, 'Could not update question bank')
-    return c.json({ data: { ...data, can_edit: !data.archived_at } })
+    return c.json({ data: mapBank(data, { can_edit: !data.archived_at }) })
   } catch (error) {
     return databaseError(c, error, 'Could not update question bank')
   }
 })
 
-questionBanksRouter.get('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
+questionBanksRouter.get('/:bankId/questions', async c => {
   const user = c.get('user')
   const bankId = c.req.param('bankId')!
+  if (!isUuid(bankId)) return invalidUuid(c, 'bank_id')
   const pagination = pageParams(c)
-  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'BAD_REQUEST' }, 400)
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
 
   try {
     const bank = await loadBank(bankId, user.school_id!)
@@ -236,7 +296,7 @@ questionBanksRouter.get('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
     const { data, error, count } = await query.order('updated_at', { ascending: false })
       .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
     if (error) return databaseError(c, error, 'Could not load questions')
-    const questions = await addSignedMediaUrls(data || [], user.school_id!)
+    const questions = (await addSignedMediaUrls(data || [], user.school_id!)).map(mapQuestion)
     return c.json({
       data: questions,
       pagination: {
@@ -251,9 +311,10 @@ questionBanksRouter.get('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
   }
 })
 
-questionBanksRouter.post('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
+questionBanksRouter.post('/:bankId/questions', async c => {
   const user = c.get('user')
   const bankId = c.req.param('bankId')!
+  if (!isUuid(bankId)) return invalidUuid(c, 'bank_id')
   try {
     const bank = await loadBank(bankId, user.school_id!)
     const canContribute = bank && canContributeToBank(user, bank)
@@ -290,7 +351,7 @@ questionBanksRouter.post('/:bankId{[0-9a-fA-F-]{36}}/questions', async c => {
       .select(questionSelect).eq('id', questionId).eq('school_id', user.school_id).single()
     if (loadError) return databaseError(c, loadError, 'Question was created but could not be reloaded')
     const [withMedia] = await addSignedMediaUrls([data], user.school_id!)
-    return c.json({ data: withMedia }, 201)
+    return c.json({ data: mapQuestion(withMedia) }, 201)
   } catch (error) {
     return databaseError(c, error, 'Could not create question')
   }
@@ -306,6 +367,7 @@ questionBanksRouter.post('/media/confirm', async c => {
   if (!bankId || !body.file_key || !body.file_name || !body.content_type || !body.file_size_bytes || !altText) {
     return c.json({ error: 'Bank, file details, and alternative text are required', code: 'BAD_REQUEST' }, 400)
   }
+  if (!isUuid(bankId)) return invalidUuid(c, 'bank_id')
   if ((width !== null && (!Number.isInteger(width) || width <= 0))
     || (height !== null && (!Number.isInteger(height) || height <= 0))) {
     return c.json({ error: 'Image dimensions must be positive integers', code: 'BAD_REQUEST' }, 400)
@@ -323,7 +385,8 @@ questionBanksRouter.post('/media/confirm', async c => {
       contentType: body.content_type,
       fileSizeBytes: Number(body.file_size_bytes),
     })
-    const { data: existing, error: existingError } = await supabase.from('question_media').select('*')
+    const { data: existing, error: existingError } = await supabase.from('question_media')
+      .select('id, original_filename, mime_type, byte_size, width, height, alt_text, processing_status')
       .eq('school_id', user.school_id).eq('storage_key', body.file_key).maybeSingle()
     if (existingError) return databaseError(c, existingError, 'Could not check question image registration')
     if (existing) return c.json({ data: existing })
@@ -348,16 +411,19 @@ questionBanksRouter.post('/media/confirm', async c => {
   }
 })
 
-questionBanksRouter.get('/media/:mediaId{[0-9a-fA-F-]{36}}/url', async c => {
+questionBanksRouter.get('/media/:mediaId/url', async c => {
   const user = c.get('user')
+  const mediaId = c.req.param('mediaId')!
+  if (!isUuid(mediaId)) return invalidUuid(c, 'media_id')
   const bankId = c.req.query('bank_id')
   if (!bankId) return c.json({ error: 'bank_id is required', code: 'BAD_REQUEST' }, 400)
+  if (!isUuid(bankId)) return invalidUuid(c, 'bank_id')
   try {
     const bank = await loadBank(bankId, user.school_id!)
     if (!bank || !canReadQuestionBank(user, bank)) return c.json({ error: 'Image not found', code: 'NOT_FOUND' }, 404)
     const { data: media, error } = await supabase.from('question_media')
       .select('id, storage_key, alt_text, width, height, processing_status')
-      .eq('id', c.req.param('mediaId')).eq('school_id', user.school_id).maybeSingle()
+      .eq('id', mediaId).eq('school_id', user.school_id).maybeSingle()
     if (error) return databaseError(c, error, 'Could not load question image')
     if (!media || media.processing_status !== 'ready'
       || !media.storage_key.startsWith(`schools/${user.school_id}/private/question_media/${bankId}/`)) {
@@ -377,9 +443,10 @@ questionBanksRouter.get('/media/:mediaId{[0-9a-fA-F-]{36}}/url', async c => {
   }
 })
 
-questionBanksRouter.patch('/questions/:questionId{[0-9a-fA-F-]{36}}', async c => {
+questionBanksRouter.patch('/questions/:questionId', async c => {
   const user = c.get('user')
   const questionId = c.req.param('questionId')!
+  if (!isUuid(questionId)) return invalidUuid(c, 'question_id')
   const { data: question, error: lookupError } = await supabase.from('bank_questions')
     .select('id, school_id, author_id, question_type, archived_at')
     .eq('id', questionId).eq('school_id', user.school_id).maybeSingle()
@@ -416,9 +483,10 @@ questionBanksRouter.patch('/questions/:questionId{[0-9a-fA-F-]{36}}', async c =>
   return c.json({ data: revised?.[0] })
 })
 
-questionBanksRouter.get('/questions/:questionId{[0-9a-fA-F-]{36}}/versions', async c => {
+questionBanksRouter.get('/questions/:questionId/versions', async c => {
   const user = c.get('user')
   const questionId = c.req.param('questionId')!
+  if (!isUuid(questionId)) return invalidUuid(c, 'question_id')
   const { data: question } = await supabase.from('bank_questions')
     .select('id, bank_id, school_id').eq('id', questionId).eq('school_id', user.school_id).maybeSingle()
   if (!question) return c.json({ error: 'Question not found', code: 'NOT_FOUND' }, 404)
@@ -432,7 +500,7 @@ questionBanksRouter.get('/questions/:questionId{[0-9a-fA-F-]{36}}/versions', asy
       .eq('question_id', questionId).eq('school_id', user.school_id)
       .order('version_number', { ascending: false })
     if (error) return databaseError(c, error, 'Could not load question history')
-    return c.json({ data: data || [] })
+    return c.json({ data: (data || []).map(mapQuestionVersion) })
   } catch (error) {
     return databaseError(c, error, 'Could not load question history')
   }

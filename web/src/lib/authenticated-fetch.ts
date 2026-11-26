@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import * as Sentry from '@sentry/nextjs'
 import { getCurrentAccessToken, refreshAccessToken } from './auth-session'
+import { ACCOUNT_CONTEXT_HEADER, getActiveAccountId } from './account-preference'
 import { createClient } from './supabase/client'
 
 const refreshes = new WeakMap<SupabaseClient, Promise<string | null>>()
@@ -50,6 +51,9 @@ export async function authenticatedFetch(
     // place alongside this one causes browsers to combine both values.
     const headers = Object.fromEntries(new Headers(init.headers).entries())
     delete headers.authorization
+    delete headers[ACCOUNT_CONTEXT_HEADER.toLowerCase()]
+    const activeAccountId = getActiveAccountId()
+    if (activeAccountId) headers[ACCOUNT_CONTEXT_HEADER] = activeAccountId
     try {
       const response = await fetch(input, {
         ...init,
@@ -79,7 +83,7 @@ export async function authenticatedFetch(
   }
 
   const accessToken = suppliedToken ?? await getCurrentAccessToken(supabase)
-  if (!accessToken) return new Response(null, { status: 401, statusText: 'Unauthenticated' })
+  if (!accessToken) return sessionEndedResponse()
   let response = await request(accessToken)
   if (!await isExpiredAccessTokenResponse(response)) return response
 

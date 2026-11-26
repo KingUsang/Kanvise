@@ -4,14 +4,21 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   rpc: vi.fn(),
   user: { id: 'admin-1', school_id: 'school-1', role: 'admin' } as any,
+  account: { id: 'school-1', membershipId: 'membership-1', role: 'admin' } as any,
 }))
 
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
-  requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    if (mocks.account) c.set('account', mocks.account)
+    await next()
+  },
+  requireMembershipRole: (...roles: string[]) => async (c: any, next: () => Promise<void>) => {
+    if (!roles.includes(c.get('account')?.role)) return c.json({ error: 'Insufficient role', code: 'INSUFFICIENT_ROLE' }, 403)
+    await next()
+  },
 }))
 
 import { classesRouter } from './classes'
@@ -30,9 +37,25 @@ describe('class-first API aliases', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'admin' }
+  })
+
+  it('requires the verified active account context before class access', async () => {
+    mocks.account = null
+
+    const response = await classesRouter.request('/class-1/subjects', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Physics' }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'ACCOUNT_CONTEXT_REQUIRED' })
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('adds a subject atomically for an admin and keeps tenant identity in the RPC', async () => {
+    mocks.user = { id: 'admin-1', school_id: 'legacy-school', role: 'admin' }
+    mocks.account = { id: 'account-1', membershipId: 'membership-1', role: 'admin' }
     mocks.from.mockImplementation((table: string) => {
       if (table === 'programmes') return query({ data: { id: 'class-1', name: 'JAMB 2027', is_published: false }, error: null })
       if (table === 'schools') return query({ data: { account_type: 'centre' }, error: null })
@@ -42,22 +65,35 @@ describe('class-first API aliases', () => {
 
     const response = await classesRouter.request('/class-1/subjects', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: 'Physics', tutor_ids: ['tutor-1'] }),
+      body: JSON.stringify({ name: 'Physics', tutor_ids: ['11111111-1111-4111-8111-111111111111'] }),
     })
 
     expect(response.status).toBe(201)
     expect(mocks.rpc).toHaveBeenCalledWith('add_programme_subject', expect.objectContaining({
-      p_school_id: 'school-1', p_created_by: 'admin-1', p_programme_id: 'class-1',
-      p_slug: 'jamb-2027-physics', p_tutor_ids: ['tutor-1'],
+      p_school_id: 'account-1', p_created_by: 'admin-1', p_programme_id: 'class-1',
+      p_slug: 'jamb-2027-physics', p_tutor_ids: ['11111111-1111-4111-8111-111111111111'],
     }))
   })
 
   it('rejects ordinary tutors before subject creation', async () => {
     mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'tutor' }
     const response = await classesRouter.request('/class-1/subjects', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Physics' }),
     })
     expect(response.status).toBe(403)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed tutor_ids before class or RPC lookups', async () => {
+    const response = await classesRouter.request('/class-1/subjects', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Physics', tutor_ids: ['not-a-uuid'] }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_TUTOR_IDS' })
+    expect(mocks.from).not.toHaveBeenCalled()
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
@@ -74,6 +110,7 @@ describe('class-first API aliases', () => {
 
   it('does not expose centre-wide timetable to a tutor', async () => {
     mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'tutor' }
 
     const response = await classesRouter.request('/timetable')
 
@@ -119,6 +156,7 @@ describe('class-first API aliases', () => {
 
   it('limits a tutor schedule read to subjects assigned to that tutor', async () => {
     mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'tutor' }
     mocks.from.mockImplementation((table: string) => {
       if (table === 'programmes') return query({ data: { id: 'class-1' }, error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })

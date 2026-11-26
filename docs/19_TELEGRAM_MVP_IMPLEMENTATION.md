@@ -1,3 +1,8 @@
+> [!WARNING]
+> **Document status: Evidence**
+>
+> The retained body is proposal, research, backlog, or incident evidence rather than approved product behavior, architecture authority, or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+
 # Telegram MVP implementation
 
 Telegram is a teaching companion, not a replacement Kanvise interface. Tutors continue to teach with Telegram text, screenshots, voice notes and files. Kanvise sends the timely messages around that teaching and remains the source of truth for enrolment, payments, assignments, mocks, and attendance records.

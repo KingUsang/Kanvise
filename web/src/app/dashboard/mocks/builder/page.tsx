@@ -22,17 +22,17 @@ export default async function MockBuilderPage() {
     }
   );
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
+  const { data: claimsData, error } = await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
 
-  if (!token) {
+  if (error || !claims) {
     redirect("/auth/login");
   }
 
   // The backend extracts user details from the token
   return (
     <Suspense fallback={<div className="p-8 text-center animate-pulse">Loading builder...</div>}>
-      <MockBuilderClient token={token} />
+      <MockBuilderClient />
     </Suspense>
   );
 }

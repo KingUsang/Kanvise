@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
+import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
+import type { AccountContext } from '../types'
 import type { AppVariables } from '../types'
 import {
   createPresignedDownload,
@@ -20,6 +21,18 @@ import type { TablesUpdate } from '../lib/database.types'
 export const storageRouter = new Hono<{ Variables: AppVariables }>()
 
 storageRouter.use('*', jwtVerificationMiddleware, profileResolutionMiddleware)
+storageRouter.use('*', accountContextMiddleware)
+storageRouter.use('*', async (c, next) => {
+  const account = c.get('account') as AccountContext | undefined
+  if (!account) return c.json({ error: 'Tutoring account context is required', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
+  const user = c.get('user')
+  c.set('user', {
+    ...user,
+    school_id: account.id,
+    role: account.role === 'learner' ? 'student' : account.role,
+  })
+  await next()
+})
 
 async function canUploadToCourse(user: AppVariables['user'], courseId: string) {
   if (!user.school_id) return false

@@ -1,3 +1,8 @@
+> [!WARNING]
+> **Document status: Superseded**
+>
+> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](docs/engineering/README.md) and the [document authority map](docs/engineering/DOCUMENT_AUTHORITY.md).
+
 **Version:** 1.0 | **Prepared by:** Architecture Team | **Date:** June 2026
 
 **Status:** Approved — Do Not Deviate Without Team Sign-Off

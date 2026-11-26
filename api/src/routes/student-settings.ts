@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, tenantMiddleware } from '../middleware/auth'
+import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware, requireMembershipRole, requireRole, tenantMiddleware } from '../middleware/auth'
 import { publicFileUrl } from '../storage/r2'
 import { validateStudentProfileUpdate } from '../domain/student-settings'
 import { validateStudentSubjectCombination } from '../domain/student-subject-combination'
+import { uuidSchema } from '../lib/api-contract'
 import type { TenantVariables } from '../types'
 import type { TablesUpdate } from '../lib/database.types'
 
@@ -11,12 +12,13 @@ export const studentSettingsRouter = new Hono<{ Variables: TenantVariables }>()
 // This router is mounted at `/`. Keep student auth on individual endpoints so
 // it cannot run for unrelated centre-admin routes.
 
-studentSettingsRouter.get('/students/me/settings', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
+studentSettingsRouter.get('/students/me/settings', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, requireMembershipRole('learner'), async c => {
   const user = c.get('user')
+  const account = c.get('account')!
   const [{ data: profile, error }, { data: school, error: schoolError }] = await Promise.all([
     supabase.from('user_profiles').select('id, kanvise_user_id, first_name, last_name, email, bio, profile_photo_key')
-      .eq('id', user.id).eq('school_id', user.school_id).eq('role', 'student').maybeSingle(),
-    supabase.from('schools').select('id, name').eq('id', user.school_id).maybeSingle(),
+      .eq('id', user.id).maybeSingle(),
+    supabase.from('schools').select('id, name').eq('id', account.id).maybeSingle(),
   ])
   if (error || schoolError) return c.json({ error: 'Could not load your settings', code: 'SETTINGS_LOAD_FAILED' }, 500)
   if (!profile) return c.json({ error: 'Student profile not found', code: 'NOT_FOUND' }, 404)
@@ -27,14 +29,14 @@ studentSettingsRouter.get('/students/me/settings', jwtVerificationMiddleware, pr
   } })
 })
 
-studentSettingsRouter.patch('/students/me/settings', jwtVerificationMiddleware, profileResolutionMiddleware, tenantMiddleware, requireRole('student'), async c => {
+studentSettingsRouter.patch('/students/me/settings', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, requireMembershipRole('learner'), async c => {
   const user = c.get('user')
   const body = await c.req.json()
   const { errors, updates } = validateStudentProfileUpdate(body)
   if (errors.length) return c.json({ error: 'Check your profile details', code: 'VALIDATION_ERROR', details: errors }, 400)
   if (!Object.keys(updates).length) return c.json({ error: 'No supported changes provided', code: 'NO_CHANGES' }, 400)
   const { data, error } = await supabase.from('user_profiles').update(updates as TablesUpdate<'user_profiles'>)
-    .eq('id', user.id).eq('school_id', user.school_id).eq('role', 'student')
+    .eq('id', user.id)
     .select('id, kanvise_user_id, first_name, last_name, email, bio, profile_photo_key').maybeSingle()
   if (error) return c.json({ error: 'Could not update your profile', code: 'SETTINGS_UPDATE_FAILED' }, 500)
   if (!data) return c.json({ error: 'Student profile not found', code: 'NOT_FOUND' }, 404)
@@ -49,6 +51,9 @@ studentSettingsRouter.get('/students/me/subject-combination', jwtVerificationMid
   const user = c.get('user')
   const programmeId = c.req.query('programme_id')
   if (!programmeId) return c.json({ error: 'programme_id is required', code: 'VALIDATION_ERROR' }, 400)
+  if (!uuidSchema.safeParse(programmeId).success) {
+    return c.json({ error: 'programme_id must be a valid UUID', code: 'VALIDATION_ERROR' }, 400)
+  }
   const client = supabase as any
   const [{ data: enrolment, error: enrolmentError }, { data: selections, error: selectionError }] = await Promise.all([
     supabase.from('enrolments').select('id').eq('school_id', user.school_id).eq('student_id', user.id).eq('programme_id', programmeId).maybeSingle(),
@@ -66,6 +71,12 @@ studentSettingsRouter.put('/students/me/subject-combination', jwtVerificationMid
   const programmeId = typeof body.programme_id === 'string' && body.programme_id ? body.programme_id : null
   const validated = validateStudentSubjectCombination(body.course_ids)
   if (!programmeId || 'error' in validated) return c.json({ error: !programmeId ? 'programme_id is required' : validated.error, code: 'VALIDATION_ERROR' }, 400)
+  if (!uuidSchema.safeParse(programmeId).success) {
+    return c.json({ error: 'programme_id must be a valid UUID', code: 'VALIDATION_ERROR' }, 400)
+  }
+  if (validated.courseIds.some(courseId => !uuidSchema.safeParse(courseId).success)) {
+    return c.json({ error: 'Each selected subject must use a valid UUID', code: 'VALIDATION_ERROR' }, 400)
+  }
 
   const [{ data: enrolment, error: enrolmentError }, { data: programme, error: programmeError }, { data: subProgrammes, error: subProgrammeError }] = await Promise.all([
     supabase.from('enrolments').select('id').eq('school_id', user.school_id).eq('student_id', user.id).eq('programme_id', programmeId).maybeSingle(),

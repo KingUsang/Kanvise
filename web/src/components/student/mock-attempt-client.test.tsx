@@ -48,7 +48,7 @@ describe('MockAttemptClient timeout', () => {
   })
 
   it('locks answers and finalizes directly after the deadline', async () => {
-    render(<MockAttemptClient data={data} token="token" />)
+    render(<MockAttemptClient data={data} />)
 
     expect(screen.getByRole('alert')).toHaveTextContent('Time is up')
     expect(screen.getByRole('button', { name: 'Flag' })).toBeDisabled()
@@ -72,7 +72,7 @@ describe('MockAttemptClient timeout', () => {
         { ...data.questions[0], id: 'physics-1', section_title: 'Physics', plain_text: 'What is velocity?' },
         { ...data.questions[0], id: 'physics-2', section_title: 'Physics', plain_text: 'What is acceleration?' },
       ],
-    }} token="token" />)
+    }} />)
 
     expect(screen.getByRole('navigation', { name: 'Mock subjects' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Physics/ }))

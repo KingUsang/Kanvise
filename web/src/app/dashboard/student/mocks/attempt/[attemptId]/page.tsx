@@ -4,5 +4,5 @@ import { requireServerAccessToken } from '@/lib/server-session'
 
 export default async function MockAttemptPage({ params }: { params: Promise<{ attemptId: string }> }) {
   const [{ attemptId }, token] = await Promise.all([params, requireServerAccessToken()])
-  return <MockAttemptClient data={await getStudentAttempt(attemptId, token)} token={token} />
+  return <MockAttemptClient data={await getStudentAttempt(attemptId, token)} />
 }

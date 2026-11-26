@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const mocks = vi.hoisted(() => ({ pathname: '/dashboard/student' }))
 
-vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname }))
+vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname, useRouter: () => ({ replace: vi.fn() }) }))
 vi.mock('@supabase/ssr', () => ({ createBrowserClient: vi.fn() }))
 vi.mock('@/lib/push-notifications', () => ({ detachBrowserPushOnLogout: vi.fn() }))
 
@@ -18,9 +18,9 @@ describe('StudentShell navigation', () => {
   }
 
   it('uses visible mobile destinations without a hamburger for programme students', () => {
-    renderShell(<StudentShell studentName="Ada Student" schoolName="Bright Minds"><p>Content</p></StudentShell>)
+    renderShell(<StudentShell learnerName="Ada Learner" accountName="Bright Minds"><p>Content</p></StudentShell>)
 
-    const mobileNavigation = screen.getByRole('navigation', { name: 'Student navigation' })
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })
     expect(mobileNavigation).toHaveTextContent('Home')
     expect(mobileNavigation).toHaveTextContent('Learn')
     expect(mobileNavigation).toHaveTextContent('Mocks')
@@ -31,9 +31,9 @@ describe('StudentShell navigation', () => {
   })
 
   it('keeps standalone navigation focused on home and mocks', () => {
-    renderShell(<StudentShell studentName="Ada Student" schoolName="Kanvise" hasCentreLearning={false}><p>Content</p></StudentShell>)
+    renderShell(<StudentShell learnerName="Ada Learner" accountName="Kanvise" hasClassLearning={false}><p>Content</p></StudentShell>)
 
-    const mobileNavigation = screen.getByRole('navigation', { name: 'Student navigation' })
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })
     expect(mobileNavigation).toHaveTextContent('Home')
     expect(mobileNavigation).toHaveTextContent('Mocks')
     expect(mobileNavigation).not.toHaveTextContent('Learn')

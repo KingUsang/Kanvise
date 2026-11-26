@@ -8,14 +8,15 @@ export default async function SubmissionsPage({
   params: Promise<{ assignmentId: string }>
 }) {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: claimsData, error } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
 
-  if (!session) {
+  if (error || !claims) {
     redirect('/')
   }
 
   // Next.js Middleware handles role protection.
-  const role = session.user.app_metadata?.kanvise_role || session.user.app_metadata?.role
+  const role = claims.app_metadata?.kanvise_role || claims.app_metadata?.role
 
   if (role !== "admin" && role !== "tutor") {
      redirect('/dashboard') // Students can't access this page
@@ -26,7 +27,7 @@ export default async function SubmissionsPage({
 
   return (
     <div className="h-full">
-      <SubmissionsClient assignmentId={assignmentId} session={session} />
+      <SubmissionsClient assignmentId={assignmentId} />
     </div>
   )
 }

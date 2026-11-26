@@ -15,6 +15,11 @@ vi.mock('../storage/r2', async importOriginal => {
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    const role = mocks.user.role === 'student' ? 'learner' : mocks.user.role
+    c.set('account', { id: mocks.user.school_id, membershipId: 'membership-1', role })
+    await next()
+  },
 }))
 
 import { storageRouter } from './storage'

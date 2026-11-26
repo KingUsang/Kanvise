@@ -1,33 +1,44 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
+import {
+  accountContextMiddleware,
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  requireMembershipRole,
+} from "../middleware/auth";
+import type { AccountContext } from "../types";
 
 type Variables = {
   user: any;
+  account: AccountContext;
 };
 
 export const subProgrammesRouter = new Hono<{ Variables: Variables }>();
 
-// Apply authentication middleware
-subProgrammesRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
-
-// Middleware to enforce Admin role for modifying routes
-const enforceAdmin = async (c: any, next: any) => {
-  const profile = c.get("user");
-  if (profile.role !== "admin") {
-    return c.json({ error: "Only admins can perform this action", code: "FORBIDDEN" }, 403);
+const accountUserProjection = async (c: any, next: any) => {
+  const user = c.get("user");
+  const account = c.get("account") as AccountContext | undefined;
+  if (!account) {
+    return c.json({ error: "Tutoring account context is required", code: "ACCOUNT_CONTEXT_REQUIRED" }, 400);
   }
+  c.set("user", {
+    ...user,
+    school_id: account.id,
+    role: account.role === "learner" ? "student" : account.role,
+  });
   await next();
 };
 
-// Middleware to enforce Admin or Tutor role
-const enforceAdminOrTutor = async (c: any, next: any) => {
-  const profile = c.get("user");
-  if (profile.role !== "admin" && profile.role !== "tutor") {
-    return c.json({ error: "Students cannot access curriculum management", code: "FORBIDDEN" }, 403);
-  }
-  await next();
-};
+subProgrammesRouter.use(
+  "*",
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  accountContextMiddleware,
+  accountUserProjection,
+);
+
+const enforceAdmin = requireMembershipRole("admin");
+const enforceAdminOrTutor = requireMembershipRole("admin", "tutor");
 
 // Create a new sub-programme
 subProgrammesRouter.post("/", enforceAdmin, async (c) => {
@@ -162,6 +173,7 @@ subProgrammesRouter.patch("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
+    if (!id) return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
     const updates = await c.req.json();
     
     // Ensure school_id cannot be spoofed
@@ -194,6 +206,7 @@ subProgrammesRouter.post("/:id/publish", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
+    if (!id) return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
 
     const { data, error } = await supabase
       .from("sub_programmes")
@@ -217,6 +230,7 @@ subProgrammesRouter.delete("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
+    if (!id) return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
 
     const { data: subProgramme, error: subProgrammeError } = await supabase
       .from("sub_programmes")

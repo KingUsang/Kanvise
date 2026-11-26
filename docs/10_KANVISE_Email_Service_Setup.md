@@ -1,3 +1,8 @@
+> [!WARNING]
+> **Document status: Evidence**
+>
+> The retained body is dated progress, audit, checklist, setup, or deployment evidence rather than standing authority or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+
 # Kanvise Email Service Setup
 
 Kanvise sends platform email through Resend from the Hono API. Supabase Auth remains responsible for account-verification and password-reset email.

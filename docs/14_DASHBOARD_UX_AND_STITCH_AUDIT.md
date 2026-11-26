@@ -1,3 +1,8 @@
+> [!WARNING]
+> **Document status: Evidence**
+>
+> The retained body is dated progress, audit, checklist, setup, or deployment evidence rather than standing authority or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+
 # Kanvise Dashboard UX and Stitch Audit
 
 **Status:** Route audit complete; follow-up backlog remains

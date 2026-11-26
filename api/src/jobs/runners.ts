@@ -71,7 +71,10 @@ export async function runTimetableMaterializationJob(dependencies = defaults) {
 }
 
 export async function runLiveClassReminderJob(now = new Date(), dependencies = defaults) {
-  const start = new Date(now.getTime() + 10 * 60_000)
+  // The scheduler runs every five minutes, but a process restart or a delayed
+  // tick can move a class past the old 10-minute lower bound permanently. Keep
+  // the upper bound bounded while allowing unsent upcoming classes to catch up.
+  const start = now
   const end = new Date(now.getTime() + 15 * 60_000)
   const classes = await dependencies.repository.findDueLiveClasses(start, end, 50)
   let failures = 0

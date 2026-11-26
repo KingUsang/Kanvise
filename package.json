@@ -2,6 +2,11 @@
   "name": "kanvise-monorepo",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "npm@10.9.8",
+  "engines": {
+    "node": ">=22.23.0 <23",
+    "npm": ">=10.9.0 <11"
+  },
   "workspaces": [
     "web",
     "api"
@@ -9,7 +14,11 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=web\" \"npm run dev --workspace=api\"",
     "build": "npm run build --workspaces",
-    "db:types": "supabase gen types typescript --linked --schema public > api/src/lib/database.types.ts",
+    "db:types": "supabase gen types typescript --local --schema public > api/src/lib/database.types.ts",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset --local --no-seed",
+    "db:test": "supabase test db",
+    "db:verify": "npm run db:reset && npm run db:test && npm run db:types",
     "install:all": "npm install"
   },
   "devDependencies": {

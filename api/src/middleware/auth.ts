@@ -1,12 +1,15 @@
 import { Context, Next } from 'hono'
 import * as Sentry from '@sentry/node'
 import { supabase } from '../lib/supabase'
+import type { AccountContext, MembershipRole } from '../types'
 
-import { decode, verifyWithJwks } from 'hono/jwt'
+import { createJwtVerifier } from './jwt-verifier'
 
 export type Variables = {
   user: any;
   jwt_payload: any;
+  account: AccountContext;
+  tenant: { id: string };
 };
 
 function setSentryUserContext(user: { id?: string; kanvise_user_id?: string; school_id?: string | null }) {
@@ -15,59 +18,7 @@ function setSentryUserContext(user: { id?: string; kanvise_user_id?: string; sch
   if (user.school_id) Sentry.setTag('school_id', user.school_id)
 }
 
-export function resolveTrustedProfileClaims(jwtPayload: any) {
-  const appMetadata = jwtPayload?.app_metadata || {}
-  const role = appMetadata.kanvise_role || appMetadata.role
-  const { school_id, kanvise_user_id, profile_id } = appMetadata
-
-  if (!role || !kanvise_user_id || !profile_id) return null
-
-  return {
-    id: profile_id,
-    supabase_auth_id: jwtPayload.sub,
-    role,
-    school_id: school_id || null,
-    kanvise_user_id,
-    email: jwtPayload.email || null,
-  }
-}
-
-// In-memory cache for JWKS public keys — fetched once on first request, reused forever
-// (until server restarts). Supabase rarely rotates keys.
-let cachedJwks: any[] | null = null
-
-async function getJwks(): Promise<any[]> {
-  if (cachedJwks) return cachedJwks
-
-  // Per Supabase docs: https://supabase.com/docs/guides/auth/jwks
-  // The correct public JWKS endpoint path is /.well-known/jwks.json — no auth header needed
-  const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch JWKS from Supabase: ${res.status} ${await res.text()}`)
-  }
-
-  const { keys } = await res.json() as { keys: any[] }
-  cachedJwks = keys
-  console.log(`[JWT] Fetched and cached ${keys.length} JWKS key(s)`)
-  return cachedJwks!
-}
-
-// Kanvise's staging and production Supabase projects use asymmetric signing
-// keys. Verify user tokens against the project's public JWKS, rather than
-// keeping a shared JWT secret on the API server.
-const verifyJWT = async (token: string) => {
-  const { header } = decode(token)
-  const keys = await getJwks()
-  const allowedAlgorithms = [...new Set(keys.map((key) => key.alg).filter(Boolean))]
-  if (!allowedAlgorithms.includes(header.alg)) {
-    throw new Error(`Unsupported JWT signing algorithm: ${header.alg}`)
-  }
-  return await verifyWithJwks(token, {
-    keys,
-    allowedAlgorithms: allowedAlgorithms as any,
-  })
-}
+const verifyJWT = createJwtVerifier({ supabaseUrl: process.env.SUPABASE_URL || '' })
 
 export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
   const authHeader = c.req.header('Authorization')
@@ -82,7 +33,7 @@ export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
     c.set('jwt_payload', payload)
     await next()
   } catch (error: any) {
-    console.error('[JWT] Verification failed:', error)
+    console.error('[JWT] Verification failed:', error?.name || 'unknown')
     if (error.name === 'JwtTokenExpired') {
       return c.json({ error: 'Token has expired', code: 'TOKEN_EXPIRED' }, 401)
     }
@@ -92,56 +43,31 @@ export const jwtVerificationMiddleware = async (c: Context, next: Next) => {
 
 export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   const jwtPayload = c.get('jwt_payload')
-  const supabaseAuthId = jwtPayload.sub
-  
-  // Fast path: only app_metadata is trusted for authorisation claims.
-  // Supabase users can edit user_metadata themselves, so it must never decide
-  // role, tenant, or profile identity.
-  const trustedClaims = resolveTrustedProfileClaims(jwtPayload)
-
-  if (trustedClaims) {
-    let resolvedClaims = trustedClaims
-    // Student activation state is canonical in Postgres. Check it even when an
-    // older token already contains claims so a pre-acceptance session cannot
-    // enter the dashboard.
-    if (trustedClaims.role === 'student') {
-      const { data: currentProfile } = await supabase
-        .from('user_profiles')
-        .select('school_id, is_active, onboarding_status')
-        .eq('id', trustedClaims.id)
-        .eq('supabase_auth_id', supabaseAuthId)
-        .maybeSingle()
-      if (currentProfile?.is_active === false) {
-        return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
-      }
-      const invitationCompletion = c.req.path.includes('/auth/profile/activate') || c.req.path.includes('/auth/profile/init')
-      if (currentProfile?.onboarding_status !== 'active' && !invitationCompletion) {
-        return c.json({ error: 'Accept your invitation to finish setting up this account', code: 'ACCOUNT_PENDING' }, 403)
-      }
-      if (currentProfile?.school_id) resolvedClaims = { ...trustedClaims, school_id: currentProfile.school_id }
-    }
-    c.set('user', resolvedClaims)
-    setSentryUserContext(resolvedClaims)
-    return await next()
+  const supabaseAuthId = jwtPayload?.sub
+  if (!supabaseAuthId) {
+    return c.json({ error: 'Invalid verified identity', code: 'INVALID_IDENTITY' }, 401)
   }
-  
-  // Slow path - lookup from DB
+
+  const isProfileInit = c.req.method === 'POST' && c.req.path === '/auth/profile/init'
   const { data: profile, error } = await supabase
     .from('user_profiles')
     .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active, onboarding_status')
     .eq('supabase_auth_id', supabaseAuthId)
-    .single()
-    
-  if (error || !profile) {
-    // If it's the init profile endpoint, the user doesn't have a profile yet but needs to pass through
-    if (c.req.path.includes('/auth/profile/init')) {
-      c.set('user', { supabase_auth_id: supabaseAuthId })
+    .maybeSingle()
+
+  if (error) {
+    return c.json({ error: 'Could not resolve your profile right now', code: 'PROFILE_LOOKUP_FAILED' }, 503)
+  }
+
+  if (!profile) {
+    if (isProfileInit) {
+      c.set('user', { supabase_auth_id: supabaseAuthId, email: jwtPayload.email || null })
       return await next()
     }
     return c.json({ error: 'User profile not found', code: 'PROFILE_NOT_FOUND' }, 403)
   }
 
-  if (profile.is_active === false) {
+  if (profile.is_active !== true) {
     return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
   }
 
@@ -163,26 +89,6 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   c.set('user', resolvedUser)
   setSentryUserContext(resolvedUser)
 
-  // Existing users may have been issued tokens before trusted claims moved to
-  // app_metadata. Backfill from the canonical profile without blocking access
-  // if the Auth admin update is temporarily unavailable. The new claims take
-  // effect when Supabase next refreshes the user's token.
-  try {
-    if (profile.role === 'student' && profile.onboarding_status !== 'active') return await next()
-    await supabase.auth.admin.updateUserById(supabaseAuthId, {
-      app_metadata: {
-        ...(jwtPayload.app_metadata || {}),
-        role: profile.role,
-        kanvise_role: profile.role,
-        school_id: profile.school_id,
-        kanvise_user_id: profile.kanvise_user_id,
-        profile_id: profile.id,
-      },
-    })
-  } catch (metadataError) {
-    console.error('[auth] Failed to backfill trusted profile claims:', metadataError)
-  }
-  
   await next()
 }
 
@@ -204,6 +110,73 @@ export const tenantMiddleware = async (c: Context, next: Next) => {
     }, 403)
   }
   
+  await next()
+}
+
+export const ACCOUNT_CONTEXT_HEADER = 'X-Kanvise-Account-Id'
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isMembershipRole(value: unknown): value is MembershipRole {
+  return value === 'admin' || value === 'tutor' || value === 'learner'
+}
+
+/**
+ * Resolve the account named by the request, never by profile/JWT projections.
+ * The membership and active-account reads intentionally happen on every
+ * protected request so revocation is effective without waiting for a token
+ * refresh. The selected account ID is a request hint, not proof of access.
+ */
+export const accountContextMiddleware = async (c: Context, next: Next) => {
+  const user = c.get('user')
+  const accountId = c.req.header(ACCOUNT_CONTEXT_HEADER)?.trim()
+  if (!accountId || !UUID_PATTERN.test(accountId)) {
+    return c.json({ error: 'A valid tutoring account must be selected', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('account_memberships')
+    .select('id, school_id, role, status')
+    .eq('person_id', user.id)
+    .eq('school_id', accountId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (membershipError) {
+    return c.json({ error: 'Could not verify the selected tutoring account', code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503)
+  }
+  if (!membership || !isMembershipRole(membership.role)) {
+    return c.json({ error: 'You are not an active member of this tutoring account', code: 'ACCOUNT_ACCESS_DENIED' }, 403)
+  }
+
+  const { data: account, error: accountError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('id', accountId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (accountError) {
+    return c.json({ error: 'Could not verify the selected tutoring account', code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503)
+  }
+  if (!account) {
+    return c.json({ error: 'This tutoring account is unavailable', code: 'ACCOUNT_ACCESS_DENIED' }, 403)
+  }
+
+  const context: AccountContext = {
+    id: account.id,
+    membershipId: membership.id,
+    role: membership.role,
+  }
+  c.set('account', context)
+  c.set('tenant', { id: context.id })
+  await next()
+}
+
+export const requireMembershipRole = (...roles: MembershipRole[]) => async (c: Context, next: Next) => {
+  const account = c.get('account') as AccountContext | undefined
+  if (!account || !roles.includes(account.role)) {
+    return c.json({ error: 'This action is not available for your account membership', code: 'INSUFFICIENT_ROLE' }, 403)
+  }
   await next()
 }
 

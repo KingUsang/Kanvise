@@ -16,11 +16,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { useActiveAccountId } from "@/lib/account-preference";
+import { classQueryKeys } from "@/lib/class-query-keys";
+import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
 
 type Tutor = { id: string; first_name: string; last_name: string };
-type Course = { id: string; name: string };
-type TeachingClass = { id: string; name: string; courses: Course[] };
-type LiveClass = {
+type Subject = { id: string; name: string };
+type LegacyTeachingClass = LegacyClassRecord;
+type LegacyLiveClass = {
   id: string;
   title: string;
   scheduled_at: string;
@@ -29,18 +32,24 @@ type LiveClass = {
   tutor_id: string;
   access_mode: "anyone_with_link" | "enrolled_learners";
   share_url?: string | null;
-  course?: Course | null;
+  course?: Subject | null;
   tutor?: Tutor | null;
   series?: { id: string; recurrence_group_id?: string | null } | null;
 };
+type LiveClass = ProductSubjectLink<LegacyLiveClass>;
 type Props = {
   capabilities: { isAdmin: boolean; isTutor: boolean };
   user: Tutor;
 };
+type ScheduleQueryData = {
+  classes: LiveClass[];
+  teachingClasses: ProductClassRecord<LegacyTeachingClass>[];
+  tutors: Tutor[];
+};
 type Composer = { date: Date; hour: number; existing?: LiveClass } | null;
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-// A centre can teach well into the evening. Keep the complete day available in
+// A tutoring account can teach well into the evening. Keep the complete day available in
 // a scrollable grid rather than silently clipping sessions after office hours.
 const startHour = 7;
 const endHour = 24;
@@ -94,6 +103,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   const searchParams = useSearchParams();
   const api = process.env.NEXT_PUBLIC_API_URL;
   const queryClient = useQueryClient();
+  const accountId = useActiveAccountId();
   const [week, setWeek] = useState(() => startOfWeek(new Date()));
   const [mobileDay, setMobileDay] = useState(new Date());
   const [mobileMonth, setMobileMonth] = useState(() =>
@@ -118,8 +128,8 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   const [repeat, setRepeat] = useState(false);
   const [repeatDays, setRepeatDays] = useState<number[]>([]);
   const scheduleLoadError = "We couldn't load your live-class schedule. Please try again.";
-  const scheduleQuery = useQuery({
-    queryKey: dashboardQueryKeys.schedule,
+  const scheduleQuery = useQuery<ScheduleQueryData>({
+    queryKey: classQueryKeys.dashboardSchedule(accountId),
     staleTime: 30_000,
     refetchOnMount: "always",
     refetchOnWindowFocus: "always",
@@ -143,8 +153,8 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           : { data: [] };
         const team = (tutorBody.data || []) as Tutor[];
         return {
-          classes: (classBody?.data || []) as LiveClass[],
-          teachingClasses: (courseBody.data || []) as TeachingClass[],
+          classes: (classBody?.data || []).map((session: LegacyLiveClass) => adaptSubjectLink(session)),
+          teachingClasses: (courseBody.data || []).map((item: LegacyTeachingClass) => adaptClassRecord(item)),
           tutors: team.some((item) => item.id === user.id)
             ? team
             : [user, ...team],
@@ -201,7 +211,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     [visible],
   );
   const selectedClass = teachingClasses.find((item) => item.id === classId);
-  const selectedClassSubjects = selectedClass?.courses || [];
+  const selectedClassSubjects = selectedClass?.subjects || [];
   const existingSessionLocked = Boolean(
     composer?.existing && composer.existing.status !== "scheduled",
   );
@@ -224,7 +234,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     open(new Date());
     setAccess("enrolled_learners");
     const parentClass = teachingClasses.find((item) =>
-      item.courses.some((course) => course.id === selectedCourse),
+      item.subjects.some((subject) => subject.id === selectedCourse),
     );
     if (selectedCourse && parentClass) {
       setClassId(parentClass.id);
@@ -273,7 +283,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   function open(day: Date, hour = 10, existing?: LiveClass) {
     const scheduled = existing ? new Date(existing.scheduled_at) : day;
     const parentClass = teachingClasses.find((item) =>
-      item.courses.some((course) => course.id === existing?.course?.id),
+      item.subjects.some((subject) => subject.id === existing?.subject?.id),
     );
     setComposer({ date: day, hour, existing });
     setDate(dateInput(scheduled));
@@ -286,7 +296,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     setDuration(String(existing?.duration_minutes || 60));
     setAccess(existing?.access_mode || "anyone_with_link");
     setClassId(parentClass?.id || "");
-    setCourseId(existing?.course?.id || "");
+    setCourseId(existing?.subject?.id || "");
     setTutorId(existing?.tutor_id || user.id);
     setRepeat(false);
     setRepeatDays([]);
@@ -342,18 +352,18 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           }),
         });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Could not save this live class");
+      if (!response.ok) throw new Error(body.error || "Could not save this session");
       setComposer(null);
       toast.success(
         composer.existing
-          ? "Live class updated"
+          ? "Session updated"
           : repeat
-            ? "Recurring live classes scheduled"
-            : "Live class scheduled",
+            ? "Recurring sessions scheduled"
+            : "Session scheduled",
       );
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: dashboardQueryKeys.schedule,
+          queryKey: classQueryKeys.dashboardSchedule(accountId),
         }),
         queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.timetable,
@@ -362,14 +372,14 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
         ...(classId
           ? [
               queryClient.invalidateQueries({
-                queryKey: ["class-schedule", classId],
+                queryKey: classQueryKeys.schedule(accountId, classId),
               }),
             ]
           : []),
       ]);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Could not save this live class",
+        error instanceof Error ? error.message : "Could not save this session",
       );
     } finally {
       setSaving(false);
@@ -382,11 +392,11 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     });
     const body = await response.json();
     if (!response.ok)
-      return toast.error(body.error || "Could not cancel this live class");
+      return toast.error(body.error || "Could not cancel this session");
     setComposer(null);
-    toast.success("Live class cancelled");
+    toast.success("Session cancelled");
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
+      queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
     ]);
@@ -406,7 +416,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     setComposer(null);
     toast.success("Recurring series ended");
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.schedule }),
+      queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
     ]);
@@ -416,7 +426,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
       method: "POST",
     });
     const body = await response.json();
-    if (!response.ok) return toast.error(body.error || "Could not start this live class");
+    if (!response.ok) return toast.error(body.error || "Could not start this session");
     window.open(item.share_url || `/class/${item.id}`, "_blank", "noopener,noreferrer");
   }
   async function copyClassroomLink(value: string) {
@@ -468,7 +478,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#994704] px-4 text-sm font-semibold text-white"
         >
           <Plus size={18} />
-          Schedule live class
+          Schedule session
         </button>
       </header>
       <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white shadow-sm">
@@ -529,13 +539,14 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
             <Loader2 className="mr-2 animate-spin" size={18} />
             Loading schedule…
           </div>
-        ) : scheduleQuery.isError ? (
+        ) : scheduleQuery.isError && !scheduleQuery.data ? (
           <div className="flex h-96 flex-col items-center justify-center gap-3 px-6 text-center text-sm text-[#66616c]">
             <p>{scheduleLoadError}</p>
             <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold text-[#2e2877] underline">Try again</button>
           </div>
         ) : (
           <>
+            {scheduleQuery.isError ? <div role="status" aria-live="polite" aria-atomic="true" className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Schedule refresh failed; showing your last saved calendar. <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold underline">Try again</button></div> : null}
             <div
               ref={calendarGridRef}
               className="hidden overflow-auto md:block md:max-h-[calc(100vh-190px)]"
@@ -599,7 +610,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                                   {item.duration_minutes} min
                                 </span>
                                 <span className="mt-1 block truncate opacity-75">
-                                  {item.course?.name || "Private link"}
+                                  {item.subject?.name || "Private link"}
                                 </span>
                               </button>
                             ))}
@@ -720,7 +731,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                               </span>
                             </div>
                             <p className="mt-1 text-xs text-[#66616c]">
-                              {item.course?.name || "Private link"} ·{" "}
+                              {item.subject?.name || "Private link"} ·{" "}
                               {clock(new Date(item.scheduled_at))} ·{" "}
                               {item.duration_minutes} min
                             </p>
@@ -751,7 +762,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                       onClick={() => open(mobileDay)}
                       className="w-full rounded-xl border border-dashed border-[#c8c0d3] px-4 py-7 text-center text-sm font-semibold text-[#2e2877]"
                     >
-                      Schedule a live class on this day
+                      Schedule a session on this day
                     </button>
                   )}
                 </div>
@@ -772,7 +783,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                   {composer.existing ? "Live session details" : "Add to schedule"}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold text-[#180d62]">
-                  {composer.existing ? "Edit live session" : "New live class"}
+                  {composer.existing ? "Edit session" : "New session"}
                 </h2>
               </div>
               <button
@@ -786,7 +797,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
             </div>
             <div className="mt-6 space-y-4">
               <label className="block text-sm font-semibold">
-                Live class title
+                Session title
                 <input
                   required
                   value={title}
@@ -801,10 +812,10 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                   className="rounded-lg border border-[#c8c0d3] bg-[#f8f7ff] p-3 text-sm leading-6 text-[#514b5b]"
                 >
                   {composer.existing.status === "live"
-                    ? "This live class has already started. It cannot be edited or cancelled here. Join as host to end it."
+                    ? "This session has already started. It cannot be edited or cancelled here. Join as host to end it."
                     : composer.existing.status === "completed"
-                      ? "This live class has already ended. Its details are read-only."
-                      : "This live class has already been cancelled. Its details are read-only."}
+                      ? "This session has already ended. Its details are read-only."
+                      : "This session has already been cancelled. Its details are read-only."}
                 </p>
               )}
               {!composer.existing && (
@@ -853,8 +864,8 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                         );
                         setClassId(nextClassId);
                         setCourseId(
-                          nextClass?.courses.length === 1
-                            ? nextClass.courses[0].id
+                          nextClass?.subjects.length === 1
+                            ? nextClass.subjects[0].id
                             : "",
                         );
                       }}
@@ -993,7 +1004,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
               )}
               {access === "anyone_with_link" && !composer.existing && (
                 <p className="rounded-lg bg-[#fff0e3] p-3 text-xs text-[#7a3903]">
-                  Private-link sessions are one-off so each live class has its own
+                  Private-link sessions are one-off so each session has its own
                   secure learner link.
                 </p>
               )}
@@ -1002,7 +1013,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                   role="alert"
                   className="rounded-lg bg-[#fff0ed] p-3 text-sm font-semibold text-[#8d2f22]"
                 >
-                  This tutor already has a live class at that time.
+                  This tutor already has a session at that time.
                 </p>
               )}
               {!existingSessionLocked && (
@@ -1019,7 +1030,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                     ? "Saving…"
                     : composer.existing
                       ? "Save changes"
-                      : "Schedule live class"}
+                      : "Schedule session"}
                 </button>
               )}
               {composer.existing && (
@@ -1040,7 +1051,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2e2877] text-sm font-semibold text-white hover:bg-[#1a1555]"
                     >
                       <Video size={16} />
-                      {composer.existing.status === 'live' ? 'Join as host' : 'Open live class'}
+                      {composer.existing.status === 'live' ? 'Join as host' : 'Open session'}
                     </a>
                   )}
                   {composer.existing.status === "scheduled" && (
@@ -1049,7 +1060,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                       onClick={() => void cancel(composer.existing!)}
                       className="min-h-11 rounded-xl border border-[#c44b3b] text-sm font-semibold text-[#a43a2a]"
                     >
-                      Cancel live class
+                      Cancel session
                     </button>
                   )}
                   {composer.existing.series && (

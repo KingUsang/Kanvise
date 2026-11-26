@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
+import {
+  accountContextMiddleware,
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  requireMembershipRole,
+} from "../middleware/auth";
 import {
   assertPrivateFileKey,
   createPresignedDownload,
@@ -9,9 +14,11 @@ import {
   verifyPrivateUpload,
 } from "../storage/r2";
 import { loadStudentCourseIds } from "../lib/student-course-access";
+import type { AccountContext } from "../types";
 
 type Variables = {
   user: any;
+  account: AccountContext;
 };
 
 export const notesRouter = new Hono<{ Variables: Variables }>();
@@ -25,20 +32,27 @@ export function withoutPrivateFileKey<T extends Record<string, any>>(note: T): O
 
 // Apply authentication middleware
 notesRouter.use("*", jwtVerificationMiddleware, profileResolutionMiddleware);
-
-// Middleware to enforce Admin or Tutor role
-const enforceAdminOrTutor = async (c: any, next: any) => {
-  const profile = c.get("user");
-  if (profile.role !== "admin" && profile.role !== "tutor") {
-    return c.json({ error: "Students cannot perform this action", code: "FORBIDDEN" }, 403);
-  }
+notesRouter.use("*", accountContextMiddleware);
+notesRouter.use("*", async (c, next) => {
+  const account = c.get("account") as AccountContext | undefined;
+  if (!account) return c.json({ error: "Tutoring account context is required", code: "ACCOUNT_CONTEXT_REQUIRED" }, 400);
+  const user = c.get("user");
+  c.set("user", {
+    ...user,
+    school_id: account.id,
+    role: account.role === "learner" ? "student" : account.role,
+  });
   await next();
-};
+});
+
+const enforceAdminOrTutor = requireMembershipRole("admin", "tutor");
+const enforceLearner = requireMembershipRole("learner");
+const enforceAccountMember = requireMembershipRole("admin", "tutor", "learner");
 
 // Student materials library. This aggregate route avoids one request per course
 // and uses the same programme/sub-programme/course entitlement resolver as the
 // rest of the student portal.
-notesRouter.get("/me", async (c) => {
+notesRouter.get("/me", enforceLearner, async (c) => {
   try {
     const profile = c.get("user");
     if (profile.role !== "student") return c.json({ error: "Only students can view this library", code: "FORBIDDEN" }, 403);
@@ -85,6 +99,7 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
     }
 
     const courseId = c.req.param("courseId");
+    if (!courseId) return c.json({ error: "Course not found", code: "NOT_FOUND" }, 404);
     const body = await c.req.json();
     const { title, description, file_key, file_name, file_type, file_size_bytes } = body;
 
@@ -164,12 +179,12 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       return c.json({ error: error.message, code: error.code }, error.status);
     }
     console.error(`POST /notes/:courseId error:`, error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not create learning material", code: "NOTE_CREATE_FAILED" }, 500);
   }
 });
 
 // List all notes for a course
-notesRouter.get("/:courseId", async (c) => {
+notesRouter.get("/:courseId", enforceAccountMember, async (c) => {
   try {
     const profile = c.get("user");
     if (!profile.school_id) {
@@ -177,6 +192,7 @@ notesRouter.get("/:courseId", async (c) => {
     }
 
     const courseId = c.req.param("courseId");
+    if (!courseId) return c.json({ error: "Course not found", code: "NOT_FOUND" }, 404);
 
     // Enrolment / Assignment Check
     if (profile.role === "student") {
@@ -224,7 +240,7 @@ notesRouter.get("/:courseId", async (c) => {
     return c.json({ data: enhancedNotes });
   } catch (error: any) {
     console.error(`GET /notes/:courseId error:`, error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not load learning materials", code: "MATERIALS_LOAD_FAILED" }, 500);
   }
 });
 
@@ -233,6 +249,7 @@ notesRouter.delete("/:id", enforceAdminOrTutor, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
+    if (!id) return c.json({ error: "Note not found", code: "NOT_FOUND" }, 404);
 
     const { data: note, error: fetchError } = await supabase
       .from("notes")
@@ -276,6 +293,6 @@ notesRouter.delete("/:id", enforceAdminOrTutor, async (c) => {
     return c.json({ message: "Note deleted successfully" });
   } catch (error: any) {
     console.error(`DELETE /notes/:id error:`, error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not delete learning material", code: "NOTE_DELETE_FAILED" }, 500);
   }
 });

@@ -1,5 +1,7 @@
 import { supabase } from './supabase'
 
+const db = supabase as any
+
 export type StudentEnrolment = {
   programme_id: string | null
   sub_programme_id: string | null
@@ -46,6 +48,15 @@ export function resolveStudentCourses<T extends StudentCourse>(
 }
 
 export async function loadStudentCourseIds(studentId: string, schoolId: string) {
+  const { data: membership, error: membershipError } = await db.from('student_centre_memberships')
+    .select('id')
+    .eq('student_id', studentId)
+    .eq('school_id', schoolId)
+    .eq('status', 'active')
+    .maybeSingle()
+  if (membershipError) throw new Error('Could not resolve student course access')
+  if (!membership) return []
+
   const [{ data: enrolments, error: enrolmentsError }, { data: courses, error: coursesError }, { data: subProgrammes, error: subProgrammesError }] = await Promise.all([
     supabase.from('enrolments').select('programme_id, sub_programme_id, course_id')
       .eq('student_id', studentId).eq('school_id', schoolId),

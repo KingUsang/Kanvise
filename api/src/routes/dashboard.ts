@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import {
+  ACCOUNT_CONTEXT_HEADER,
+  accountContextMiddleware,
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
-  tenantMiddleware,
   Variables,
 } from "../middleware/auth";
+import type { AccountContext } from "../types";
 import { resolveStudentCourses } from "../lib/student-course-access";
 import {
   loadStudentMockAudience,
@@ -18,16 +20,34 @@ export const dashboardRouter = new Hono<{ Variables: Variables }>();
 
 dashboardRouter.use("*", jwtVerificationMiddleware);
 dashboardRouter.use("*", profileResolutionMiddleware);
+const accountUserProjection = async (c: any, next: any) => {
+  const account = c.get("account") as AccountContext | undefined;
+  if (!account) return next();
+  const user = c.get("user");
+  c.set("user", {
+    ...user,
+    school_id: account.id,
+    role: account.role === "learner" ? "student" : account.role,
+  });
+  await next();
+};
+
 dashboardRouter.use("*", async (c, next) => {
-  // Standalone-mock students have no school. Keep every staff/centre route
-  // tenant-protected, but let their capability-aware home load.
-  if (
-    c.req.path === "/dashboard/student" ||
-    c.req.path === "/dashboard/student/progress"
-  )
-    return next();
-  return tenantMiddleware(c, next);
+  const user = c.get("user");
+  const standaloneMockRoute =
+    (c.req.path === "/dashboard/student" ||
+      c.req.path === "/dashboard/student/progress") &&
+    user.role === "student" &&
+    !user.school_id &&
+    !c.req.header(ACCOUNT_CONTEXT_HEADER);
+
+  // Standalone-mock students have no tutoring account. This is the explicit
+  // compatibility exception; every account-backed request resolves the
+  // selected active membership instead of using profile school_id.
+  if (standaloneMockRoute) return next();
+  return accountContextMiddleware(c, next);
 });
+dashboardRouter.use("*", accountUserProjection);
 
 async function loadNeedsGrading(schoolId: string, tutorId?: string) {
   let assignmentsQuery = supabase
@@ -438,7 +458,7 @@ dashboardRouter.get("/student", async (c) => {
     .slice(0, 6)
     .map((item) => ({
       ...item,
-      course_name: courseNames.get(item.course_id) || "Course",
+      course_name: (item.course_id && courseNames.get(item.course_id)) || "Course",
     }));
   const assignmentsDue = (assignments || [])
     .filter((item) => !submittedAssignmentIds.has(item.id))
@@ -653,7 +673,7 @@ dashboardRouter.get("/student/progress", async (c) => {
     return c.json({
       data: buildStudentProgress({
         courses: courses || [],
-        classes: classes || [],
+        classes: (classes || []).flatMap((item) => item.course_id ? [{ id: item.id, course_id: item.course_id }] : []),
         attendance: attendance || [],
         assignments: assignments || [],
         submissions: submissions || [],

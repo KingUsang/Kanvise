@@ -18,6 +18,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { useActiveAccountId } from "@/lib/account-preference";
+import { classQueryKeys } from "@/lib/class-query-keys";
 import {
   ClassAssessmentsPanel,
   ClassLearnersPanel,
@@ -40,27 +42,33 @@ import { AssignmentsClient } from "@/components/dashboard/assignments/assignment
 import { SessionDetailClient } from "../schedule/session-detail-client";
 import { ClassSessionComposer } from "./class-session-composer";
 import { startNavigationProgress } from "@/components/navigation/NavigationProgress";
+import { WorkspaceHeader } from "@/components/dashboard/page-header";
+import { LinkButton } from "@/components/dashboard/action-controls";
+import { ErrorState, PageLoadingState, RefreshNotice, SectionLoadingState } from "@/components/dashboard/async-states";
+import {
+  adaptClassRecord,
+  adaptSubjectLink,
+  productTerms,
+  type LegacyClassRecord,
+  type ProductClassRecord,
+  type ProductSubject,
+  type ProductSubjectLink,
+} from '@/lib/product-terminology';
 
-type Subject = { id: string; name: string; tutor_ids?: string[] };
+type Subject = ProductSubject;
 type TutorPerson = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string };
-type ClassData = {
-  id: string;
-  name: string;
-  description?: string | null;
-  is_published: boolean;
-  teaching_mode: string;
-  courses: Subject[];
-  enrolled_count?: number;
-};
-type LiveClass = {
+type LegacyClassData = LegacyClassRecord;
+type ClassData = ProductClassRecord<LegacyClassData>;
+type LegacyLiveClass = {
   id: string;
   title: string;
   scheduled_at: string;
   status: string;
   course_id: string;
-  course?: { name: string } | null;
+  course?: Subject | null;
   share_url?: string | null;
 };
+type LiveClass = ProductSubjectLink<LegacyLiveClass>;
 type Mock = {
   id: string;
   title: string;
@@ -89,15 +97,16 @@ type Note = {
   file_name?: string | null;
   file_size_bytes?: number | null;
 };
-type RecurringSlot = {
+type LegacyRecurringSlot = {
   id: string;
   title?: string | null;
   course_id: string;
   weekday: number;
   start_time: string;
   duration_minutes?: number | null;
-  course?: { name: string } | null;
+  course?: Subject | null;
 };
+type RecurringSlot = ProductSubjectLink<LegacyRecurringSlot>;
 type ScheduleData = { sessions: LiveClass[]; recurring_slots: RecurringSlot[] };
 type LearnerSignal = {
   id: string;
@@ -160,7 +169,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "assessments", label: "Assessments" },
   { id: "materials", label: "Materials" },
   { id: "tutors", label: "Tutors" },
-  { id: "learners", label: "Students" },
+  { id: "learners", label: productTerms.learners },
   { id: "performance", label: "Performance" },
 ];
 const dateFormat = new Intl.DateTimeFormat(undefined, {
@@ -177,7 +186,6 @@ const activityFormat = new Intl.DateTimeFormat(undefined, {
 
 export function ClassWorkspaceClient({
   classId,
-  token,
   viewerId,
   isTutor = false,
   canManageStudents = false,
@@ -185,7 +193,6 @@ export function ClassWorkspaceClient({
   canManageTutors = false,
 }: {
   classId: string;
-  token: string;
   viewerId?: string;
   isTutor?: boolean;
   canManageStudents?: boolean;
@@ -194,6 +201,7 @@ export function ClassWorkspaceClient({
 }) {
   const api = process.env.NEXT_PUBLIC_API_URL;
   const queryClient = useQueryClient();
+  const accountId = useActiveAccountId();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -235,32 +243,38 @@ export function ClassWorkspaceClient({
       );
     }
     const requestedSubject = searchParams.get('subject');
-    if (requestedSubject) setActiveSubject(requestedSubject);
+    setActiveSubject(requestedSubject || 'all');
   }, [searchParams, canManageStudents, canManageTutors]);
 
+  useEffect(() => {
+    const syncSubjectFromUrl = () => setActiveSubject(new URL(window.location.href).searchParams.get('subject') || 'all');
+    window.addEventListener('popstate', syncSubjectFromUrl);
+    return () => window.removeEventListener('popstate', syncSubjectFromUrl);
+  }, []);
+
+  const selectSubject = (subjectId: string) => {
+    const url = new URL(window.location.href);
+    if (subjectId === 'all') url.searchParams.delete('subject');
+    else url.searchParams.set('subject', subjectId);
+    window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    setActiveSubject(subjectId);
+  };
+
   const classQuery = useQuery({
-    queryKey: ["class-workspace", classId],
+    queryKey: classQueryKeys.workspace(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/classes/${classId}`);
       const body = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(body?.error || "Could not load this class");
-      return body.data as ClassData;
+      return adaptClassRecord(body.data as LegacyClassData);
     },
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: true,
   });
   const data = classQuery.data;
-  useEffect(() => {
-    if (!data || activeSubject === 'all' || data.courses.some((subject) => subject.id === activeSubject)) return
-    setActiveSubject('all')
-    const url = new URL(window.location.href)
-    url.searchParams.delete('subject')
-    url.searchParams.delete('course_id')
-    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
-  }, [activeSubject, data])
   const tutorsQuery = useQuery({
-    queryKey: ['class-tutors', classId],
+    queryKey: classQueryKeys.tutors(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/users?roles=admin,tutor`);
       const body = await response.json().catch(() => null);
@@ -282,22 +296,22 @@ export function ClassWorkspaceClient({
     staleTime: 30_000,
   });
   const scheduleQuery = useQuery({
-    queryKey: ["class-schedule", classId],
+    queryKey: classQueryKeys.schedule(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/classes/${classId}/schedule`);
       const body = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(body?.error || "Could not load this class schedule");
       return {
-        sessions: body?.data?.sessions || [],
-        recurring_slots: body?.data?.recurring_slots || [],
+        sessions: (body?.data?.sessions || []).map((session: LegacyLiveClass) => adaptSubjectLink(session)),
+        recurring_slots: (body?.data?.recurring_slots || []).map((slot: LegacyRecurringSlot) => adaptSubjectLink(slot)),
       } as ScheduleData;
     },
     staleTime: 30_000,
     refetchInterval: (query) => query.state.data?.sessions.some(s => s.status === 'live') ? 15000 : false,
   });
   const mocksQuery = useQuery({
-    queryKey: ["class-mocks", classId],
+    queryKey: classQueryKeys.mocks(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/mocks`);
       const body = await response.json().catch(() => null);
@@ -308,7 +322,7 @@ export function ClassWorkspaceClient({
     staleTime: 60_000,
   });
   const assignmentsQuery = useQuery({
-    queryKey: ["class-assignments", classId],
+    queryKey: classQueryKeys.assignments(accountId, classId),
     queryFn: async () => {
       const response = await authenticatedApiFetch(`${api}/assignments?page_size=100`);
       const body = await response.json().catch(() => null);
@@ -320,15 +334,15 @@ export function ClassWorkspaceClient({
   });
   const visibleMaterialSubjectIds = useMemo(
     () =>
-      data?.courses
+      data?.subjects
         .filter(
           (subject) => activeSubject === "all" || subject.id === activeSubject,
         )
         .map((subject) => subject.id) || [],
-    [activeSubject, data?.courses],
+    [activeSubject, data?.subjects],
   );
   const materialsQuery = useQuery({
-    queryKey: ["class-materials", classId, activeSubject],
+    queryKey: classQueryKeys.materials(accountId, classId, activeSubject),
     queryFn: async () => {
       const responses = await Promise.all(
         visibleMaterialSubjectIds.map(async (courseId) => {
@@ -350,7 +364,7 @@ export function ClassWorkspaceClient({
     refetchOnWindowFocus: false,
   });
   const insightsQuery = useQuery({
-    queryKey: ["class-insights", classId, activeSubject],
+    queryKey: classQueryKeys.insights(accountId, classId, activeSubject),
     queryFn: async () => {
       const query =
         activeSubject === "all"
@@ -375,12 +389,7 @@ export function ClassWorkspaceClient({
       : null;
   const detailLearnerId = selectedLearnerId || singletonLearnerId;
   const learnerDetailQuery = useQuery({
-    queryKey: [
-      "class-learner-detail",
-      classId,
-      activeSubject,
-      detailLearnerId,
-    ],
+    queryKey: classQueryKeys.learnerDetail(accountId, classId, activeSubject, detailLearnerId),
     queryFn: async () => {
       const params = new URLSearchParams({ learner_id: detailLearnerId! });
       if (activeSubject !== "all") params.set("course_id", activeSubject);
@@ -403,13 +412,16 @@ export function ClassWorkspaceClient({
   const insights = insightsQuery.data || null;
 
   const subjectIds = useMemo(
-    () => new Set(data?.courses.map((subject) => subject.id) || []),
+    () => new Set(data?.subjects.map((subject) => subject.id) || []),
     [data],
   );
+  useEffect(() => {
+    if (data && activeSubject !== 'all' && !subjectIds.has(activeSubject)) selectSubject('all');
+  }, [activeSubject, data, subjectIds]);
   const selectedSubject =
     activeSubject === "all"
       ? null
-      : data?.courses.find((subject) => subject.id === activeSubject);
+      : data?.subjects.find((subject) => subject.id === activeSubject);
   const selectedName = selectedSubject?.name || "All subjects";
   const subjectSuffix = activeSubject === "all" ? "" : `&subject=${encodeURIComponent(activeSubject)}`;
   const classSessions = sessions.filter(
@@ -441,86 +453,58 @@ export function ClassWorkspaceClient({
       (learner) => learner.attention === "Needs attention",
     ) || [];
 
-  if (classQuery.isPending) return <WorkspaceLoading />;
+  if (classQuery.isPending) return <PageLoadingState label="Loading class workspace" />;
   if (!data)
-    return (
-      <main className="w-full">
-        <div className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-6 text-sm text-[#8d2f22]">
-          <p>This class could not be loaded.</p>
-          <button
-            onClick={() => void classQuery.refetch()}
-            className="mt-3 rounded-lg border border-[#8d2f22] px-3 py-2 text-sm font-semibold"
-          >
-            Try again
-          </button>
-        </div>
-      </main>
-    );
+    return <ErrorState message="This class could not be loaded." onRetry={() => void classQuery.refetch()} />;
 
   return (
     <>
       <main className="w-full pb-20 sm:pb-0">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#625e69]">
-          <Link
+        {classQuery.isError ? <WorkspaceQueryNotice label="Class workspace" cached onRetry={() => void classQuery.refetch()} /> : null}
+        <WorkspaceHeader
+          className="mt-4"
+          back={<LinkButton
             href="/dashboard/classes"
-            className="inline-flex items-center gap-2 transition-colors hover:text-[#2e2877]"
+            variant="quiet"
           >
-            <ArrowLeft size={16} /> Classes
-          </Link>
-          <span aria-hidden="true" className="text-[#aaa5af]">
-            /
-          </span>
-          <span className="max-w-48 truncate text-[#46414a]">{data.name}</span>
-        </div>
-        <header className="mt-4">
-          <div className="flex flex-col gap-4 border-b border-dashboard-outline pb-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-2xl font-bold tracking-tight text-[#180d62] sm:text-[28px]">
-                  {data.name}
-                </h1>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${data.is_published ? "bg-[#e7f5eb] text-[#14532d]" : "bg-[#f5f3f2] text-[#625e69]"}`}
-                >
-                  {data.is_published ? "Published" : "Draft"}
-                </span>
-              </div>
-              <p className="mt-1.5 text-sm text-dashboard-muted">
-                {data.courses.length > 1
-                  ? "Multi-subject class"
-                  : "Single-subject class"}
-                {data.description ? ` · ${data.description}` : ""}
-              </p>
-            </div>
-            {canManageClass ? <Link
-              href={`/dashboard/classes/${classId}/subjects/new`}
-              className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#312783] px-3.5 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70 sm:w-fit"
-            >
-              <Plus size={17} /> Add subject
-            </Link> : null}
-          </div>
-          {data.courses.length > 1 ? (
+            <ArrowLeft aria-hidden="true" size={16} /> Classes
+          </LinkButton>}
+          title={data.name}
+          status={data.is_published ? "Published" : "Draft"}
+          description={<>
+            {data.subjects.length > 1 ? "Multi-subject class" : "Single-subject class"}
+            {data.description ? ` · ${data.description}` : ""}
+          </>}
+          actions={canManageClass ? <LinkButton
+            href={`/dashboard/classes/${classId}/subjects/new`}
+            variant="primary"
+            fullWidthMobile
+          >
+            <Plus aria-hidden="true" size={17} /> Add subject
+          </LinkButton> : null}
+        >
+          {data.subjects.length > 1 ? (
             <div className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none]">
               <SubjectChip
                 label="All subjects"
                 active={activeSubject === "all"}
-                onClick={() => navigate(workspaceSubjectHref(classId, "all", activeTab))}
+                onClick={() => selectSubject("all")}
               >
                 All subjects
               </SubjectChip>
-              {data.courses.map((subject) => (
+              {data.subjects.map((subject) => (
                 <SubjectChip
                   key={subject.id}
                   label={subject.name}
                   active={activeSubject === subject.id}
-                  onClick={() => navigate(workspaceSubjectHref(classId, subject.id, activeTab))}
+                  onClick={() => selectSubject(subject.id)}
                 >
                   {subject.name}
                 </SubjectChip>
               ))}
             </div>
           ) : null}
-        </header>
+        </WorkspaceHeader>
         <div className="mt-2">
           <WorkspaceRail activeTab={activeTab} isOneToOne={classQuery.data?.teaching_mode === 'one_to_one'} canManageTutors={canManageTutors} onSelect={(tab) => {
             navigate(`/dashboard/classes/${classId}?tab=${tab}${activeSubject === 'all' ? '' : `&subject=${encodeURIComponent(activeSubject)}`}`)
@@ -531,32 +515,33 @@ export function ClassWorkspaceClient({
               mocksQuery.isPending ||
               assignmentsQuery.isPending ||
               insightsQuery.isPending ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
               ) : (
-                <Overview
-                  upcoming={upcoming}
-                  sessions={classSessions}
-                  mocks={[
-                    ...classMocks,
-                    ...classAssignments.map(toAssignmentAsAssessment),
-                  ]}
-                  insights={insights}
-                  needsAttention={needsAttention}
-                  selectedName={selectedName}
-                  subjects={data.courses}
-                  onSelectSubject={(subjectId) => navigate(workspaceSubjectHref(classId, subjectId, 'overview'))}
-                  onCreateAssessment={() => {
-                    navigate(
-                      `/dashboard/classes/${classId}?tab=assessments${subjectSuffix}`,
-                    );
-                    setOpenAssessmentCreator((value) => value + 1);
-                  }}
-                  onOpenSchedule={() => setShowSessionComposer(true)}
-                  onAddMaterial={() => {
-                    navigate(`/dashboard/classes/${classId}?tab=materials`);
-                    setShowMaterialUpload(true);
-                  }}
-                />
+                <>
+                  {scheduleQuery.isError && <WorkspaceQueryNotice label="Schedule" cached={Boolean(scheduleQuery.data)} onRetry={() => void scheduleQuery.refetch()} />}
+                  {mocksQuery.isError && <WorkspaceQueryNotice label="Quiz" cached={Boolean(mocksQuery.data)} onRetry={() => void mocksQuery.refetch()} />}
+                  {assignmentsQuery.isError && <WorkspaceQueryNotice label="Assignment" cached={Boolean(assignmentsQuery.data)} onRetry={() => void assignmentsQuery.refetch()} />}
+                  {insightsQuery.isError && <WorkspaceQueryNotice label="Learning signals" cached={Boolean(insightsQuery.data)} onRetry={() => void insightsQuery.refetch()} />}
+                  {!((scheduleQuery.isError && !scheduleQuery.data) || (mocksQuery.isError && !mocksQuery.data) || (assignmentsQuery.isError && !assignmentsQuery.data) || (insightsQuery.isError && !insightsQuery.data)) ? <Overview
+                    upcoming={upcoming}
+                    sessions={classSessions}
+                    mocks={[...classMocks, ...classAssignments.map(toAssignmentAsAssessment)]}
+                    insights={insights}
+                    needsAttention={needsAttention}
+                    selectedName={selectedName}
+                    subjects={data.subjects}
+                    onSelectSubject={selectSubject}
+                    onCreateAssessment={() => {
+                      router.push(`/dashboard/classes/${classId}?tab=assessments`);
+                      setOpenAssessmentCreator((value) => value + 1);
+                    }}
+                    onOpenSchedule={() => setShowSessionComposer(true)}
+                    onAddMaterial={() => {
+                      router.push(`/dashboard/classes/${classId}?tab=materials`);
+                      setShowMaterialUpload(true);
+                    }}
+                  /> : null}
+                </>
               ))}
             {activeTab === "schedule" &&
               (sessionId ? (
@@ -567,9 +552,12 @@ export function ClassWorkspaceClient({
                   />
                 </section>
               ) : scheduleQuery.isPending ? (
-                <WorkspaceSectionLoading cards={2} />
+                <SectionLoadingState label="Loading class information" cards={2} />
+              ) : scheduleQuery.isError && !scheduleQuery.data ? (
+                <WorkspaceQueryNotice label="Schedule" onRetry={() => void scheduleQuery.refetch()} />
               ) : (
                 <div className="mt-6 space-y-5">
+                  {scheduleQuery.isError && <WorkspaceQueryNotice label="Schedule" cached onRetry={() => void scheduleQuery.refetch()} />}
                   <ClassSchedulePanel
                     sessions={classSessions.map(toSessionItem)}
                     recurringSlots={schedule.recurring_slots
@@ -581,8 +569,8 @@ export function ClassWorkspaceClient({
                       .map((slot): ClassRecurringSlotItem => ({
                         id: slot.id,
                         title:
-                          slot.title || slot.course?.name || "Teaching session",
-                        subject: slot.course?.name || "Subject",
+                          slot.title || slot.subject?.name || "Teaching session",
+                        subject: slot.subject?.name || productTerms.subject,
                         weekday: slot.weekday,
                         startTime: slot.start_time,
                         durationMinutes: slot.duration_minutes,
@@ -609,7 +597,6 @@ export function ClassWorkspaceClient({
                   <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   <SubmissionsClient
                     assignmentId={assessmentId}
-                    session={{ access_token: token }}
                     embedded
                   />
                 </section>
@@ -617,7 +604,7 @@ export function ClassWorkspaceClient({
                 <section className="mt-5">
                   <ClassAssessmentBackButton classId={classId} subjectId={activeSubject} onNavigate={navigate} />
                   {assessmentMode === "builder" ? (
-                    <MockBuilderClient token={token} embedded />
+                    <MockBuilderClient embedded />
                   ) : (
                     <MockResultsClient
                       mockId={assessmentId}
@@ -636,7 +623,7 @@ export function ClassWorkspaceClient({
                         Create quiz
                       </h2>
                       <p className="mt-1 text-sm text-dashboard-muted">
-                        This quiz is only for students in {data.name}.
+                        This quiz is only for learners in {data.name}.
                       </p>
                     </div>
                     <button
@@ -651,7 +638,7 @@ export function ClassWorkspaceClient({
                       Back to assessments
                     </button>
                   </div>
-                  <MockBuilderClient token={token} embedded />
+                  <MockBuilderClient embedded />
                 </section>
               ) : isCreatingAssignment ? (
                 <section className="mt-5">
@@ -659,9 +646,13 @@ export function ClassWorkspaceClient({
                   <AssignmentsClient embedded />
                 </section>
               ) : mocksQuery.isPending || assignmentsQuery.isPending ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
+              ) : (mocksQuery.isError && !mocksQuery.data) || (assignmentsQuery.isError && !assignmentsQuery.data) ? (
+                <><WorkspaceQueryNotice label={mocksQuery.isError ? "Quiz" : "Assignment"} onRetry={() => void (mocksQuery.isError ? mocksQuery.refetch() : assignmentsQuery.refetch())} /></>
               ) : (
                 <div className="mt-5">
+                  {mocksQuery.isError && <WorkspaceQueryNotice label="Quiz" cached onRetry={() => void mocksQuery.refetch()} />}
+                  {assignmentsQuery.isError && <WorkspaceQueryNotice label="Assignment" cached onRetry={() => void assignmentsQuery.refetch()} />}
                   <ClassAssessmentsPanel
                     assessments={[
                       ...classMocks.map((mock) => toAssessmentItem(mock, data)),
@@ -691,9 +682,12 @@ export function ClassWorkspaceClient({
             {activeTab === "materials" &&
               (materialsQuery.isPending &&
               visibleMaterialSubjectIds.length > 0 ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
+              ) : materialsQuery.isError && !materialsQuery.data ? (
+                <WorkspaceQueryNotice label="Materials" onRetry={() => void materialsQuery.refetch()} />
               ) : (
                 <div className="mt-5">
+                  {materialsQuery.isError && <WorkspaceQueryNotice label="Materials" cached onRetry={() => void materialsQuery.refetch()} />}
                   <ClassMaterialsPanel
                     materials={materials.map((material) =>
                       toMaterialItem(material, data),
@@ -715,9 +709,12 @@ export function ClassWorkspaceClient({
               ))}
             {activeTab === "learners" &&
               (insightsQuery.isPending || (canManageStudents && studentRosterQuery.isPending) ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
+              ) : insightsQuery.isError && !insightsQuery.data ? (
+                <WorkspaceQueryNotice label="Learners" onRetry={() => void insightsQuery.refetch()} />
               ) : (
                 <div className="mt-5">
+                  {insightsQuery.isError && <WorkspaceQueryNotice label="Learners" cached onRetry={() => void insightsQuery.refetch()} />}
                   <ClassLearnersPanel
                     learners={mergeLearnersWithPendingInvitations(insights?.learners || [], studentRosterQuery.data || [], classId)}
                     onInvite={
@@ -734,21 +731,22 @@ export function ClassWorkspaceClient({
             {activeTab === 'tutors' && canManageTutors ? (
               <ClassTutorsPanel
                 classId={classId}
-                subjects={activeSubject === 'all' ? data.courses : data.courses.filter(subject => subject.id === activeSubject)}
+                subjects={data.subjects}
                 tutors={tutorsQuery.data || []}
                 loading={tutorsQuery.isPending}
                 onChanged={async () => {
                   await Promise.all([
-                    queryClient.invalidateQueries({ queryKey: ['class-workspace', classId] }),
-                    queryClient.invalidateQueries({ queryKey: ['class-tutors', classId] }),
-                    queryClient.invalidateQueries({ queryKey: ['tutors'] }),
+                    queryClient.invalidateQueries({ queryKey: classQueryKeys.workspace(accountId, classId) }),
+                    queryClient.invalidateQueries({ queryKey: classQueryKeys.tutors(accountId, classId) }),
                   ]);
                 }}
               />
             ) : null}
             {activeTab === "performance" &&
               (insightsQuery.isPending ? (
-                <WorkspaceSectionLoading cards={3} />
+                <SectionLoadingState label="Loading class information" cards={3} />
+              ) : insightsQuery.isError && !insightsQuery.data ? (
+                <WorkspaceQueryNotice label="Performance" onRetry={() => void insightsQuery.refetch()} />
               ) : (
                 <ClassPerformance
                   insights={insights}
@@ -778,13 +776,13 @@ export function ClassWorkspaceClient({
       <ClassMaterialUploadDialog
         open={showMaterialUpload}
         onClose={() => setShowMaterialUpload(false)}
-        subjects={activeSubject === 'all' ? data.courses : data.courses.filter(subject => subject.id === activeSubject)}
+        subjects={data.subjects}
         initialSubjectId={activeSubject === "all" ? null : activeSubject}
         api={api}
         onUploaded={async () => {
           await Promise.all([
             queryClient.invalidateQueries({
-              queryKey: ["class-materials", classId],
+              queryKey: classQueryKeys.materials(accountId, classId, activeSubject),
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.summary,
@@ -801,7 +799,7 @@ export function ClassWorkspaceClient({
         onInvited={async () => {
           await Promise.all([
             queryClient.invalidateQueries({
-              queryKey: ["class-insights", classId],
+              queryKey: classQueryKeys.insights(accountId, classId, activeSubject),
             }),
             queryClient.invalidateQueries({
               queryKey: ["class-student-roster", classId],
@@ -818,13 +816,13 @@ export function ClassWorkspaceClient({
         onSaved={() => {
           void Promise.all([
             queryClient.invalidateQueries({
-              queryKey: ["class-schedule", classId],
+              queryKey: classQueryKeys.schedule(accountId, classId),
             }),
             queryClient.invalidateQueries({
-              queryKey: ["class-insights", classId],
+              queryKey: classQueryKeys.insights(accountId, classId, activeSubject),
             }),
             queryClient.invalidateQueries({
-              queryKey: dashboardQueryKeys.schedule,
+              queryKey: classQueryKeys.dashboardSchedule(accountId),
             }),
             queryClient.invalidateQueries({
               queryKey: dashboardQueryKeys.timetable,
@@ -835,7 +833,7 @@ export function ClassWorkspaceClient({
           ]);
         }}
         classId={classId}
-        subjects={activeSubject === 'all' ? data.courses : data.courses.filter(subject => subject.id === activeSubject)}
+        subjects={data.subjects}
         initialCourseId={activeSubject === "all" ? undefined : activeSubject}
         viewerId={viewerId}
         isTutor={isTutor}
@@ -888,7 +886,7 @@ function ClassTutorsPanel({
       <div><h2 className="text-lg font-bold text-[#27242d]">Class tutors</h2><p className="mt-1 text-sm text-dashboard-muted">Assign members of your teaching team to the subjects they teach.</p></div>
       <Link href={`/dashboard/tutors?class=${classId}`} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#312783] px-4 text-sm font-bold text-[#312783]">Invite tutor</Link>
     </div>
-    {loading ? <WorkspaceSectionLoading cards={2} /> : subjects.map(subject => <article key={subject.id} className="rounded-2xl border border-dashboard-outline bg-white p-5 shadow-dashboard-card">
+    {loading ? <SectionLoadingState label="Loading class information" cards={2} /> : subjects.map(subject => <article key={subject.id} className="rounded-2xl border border-dashboard-outline bg-white p-5 shadow-dashboard-card">
       <h3 className="font-bold text-[#27242d]">{subject.name}</h3>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {tutors.map(tutor => {
@@ -901,7 +899,7 @@ function ClassTutorsPanel({
             {updating === key ? <span className="ml-auto text-xs text-dashboard-muted">Saving…</span> : null}
           </label>;
         })}
-        {!tutors.length ? <p className="text-sm text-dashboard-muted">Invite a tutor to your tutoring agency before assigning this subject.</p> : null}
+        {!tutors.length ? <p className="text-sm text-dashboard-muted">Invite a tutor to your tutoring account before assigning this subject.</p> : null}
       </div>
     </article>)}
   </section>;
@@ -932,7 +930,7 @@ function WorkspaceRail({
             aria-current={activeTab === tab.id ? "page" : undefined}
             className={`relative min-h-12 shrink-0 border-b-[3px] px-4 py-3 text-left text-sm font-semibold transition ${activeTab === tab.id ? "border-[#994704] text-[#211969]" : "border-transparent text-[#625e69] hover:text-[#211969]"}`}
           >
-            {tab.id === "learners" && isOneToOne ? "Student" : tab.label}
+            {tab.id === "learners" && isOneToOne ? productTerms.learner : tab.label}
           </button>
         ))}
       </nav>
@@ -970,10 +968,10 @@ function LearnerDetailSheet({
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-dashboard-outline bg-white/95 px-5 py-4 backdrop-blur sm:px-7">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">
-              Student evidence
+              Learner evidence
             </p>
             <h2 className="mt-1 text-lg font-bold text-[#180d62]">
-              {detail?.name || "Student"}
+              {detail?.name || productTerms.learner}
             </h2>
           </div>
           <button
@@ -986,7 +984,7 @@ function LearnerDetailSheet({
         </div>
         <div className="p-5 sm:p-7">
           {loading ? (
-            <WorkspaceSectionLoading cards={3} />
+            <SectionLoadingState label="Loading class information" cards={3} />
           ) : error ? (
             <div className="rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-5 text-sm text-[#8d2f22]">
               <p>{error}</p>
@@ -1048,11 +1046,6 @@ function ClassAssessmentBackButton({ classId, subjectId, onNavigate }: { classId
   );
 }
 
-function workspaceSubjectHref(classId: string, subjectId: string, tab: Tab) {
-  const params = new URLSearchParams({ tab })
-  if (subjectId !== 'all') params.set('subject', subjectId)
-  return `/dashboard/classes/${classId}?${params.toString()}`
-}
 const weekdays = [
   "Monday",
   "Tuesday",
@@ -1082,7 +1075,7 @@ function RecurringSchedule({ slots }: { slots: RecurringSlot[] }) {
             className="rounded-xl border border-dashboard-outline bg-[#fbfaff] px-4 py-3"
           >
             <p className="font-bold text-[#27242d]">
-              {slot.title || slot.course?.name || "Teaching session"}
+              {slot.title || slot.subject?.name || "Teaching session"}
             </p>
             <p className="mt-1 text-sm text-dashboard-muted">
               {weekdays[slot.weekday - 1] || "Weekly"} ·{" "}
@@ -1111,7 +1104,7 @@ function toSessionItem(session: LiveClass): ClassSessionItem {
   return {
     id: session.id,
     title: session.title,
-    subject: session.course?.name || "Subject",
+    subject: session.subject?.name || productTerms.subject,
     startsAt: session.scheduled_at,
     status,
     shareUrl: session.share_url,
@@ -1129,7 +1122,7 @@ function toAssessmentItem(mock: Mock, data: ClassData): ClassAssessmentItem {
   return {
     id: mock.id,
     title: mock.title,
-    subject: data.courses.find((subject) => subject.id === mock.course_id)
+    subject: data.subjects.find((subject) => subject.id === mock.course_id)
       ?.name,
     type: "mock",
     status,
@@ -1162,8 +1155,8 @@ function toMaterialItem(material: Note, data: ClassData): ClassMaterialItem {
     title: material.title,
     description: material.description || null,
     subject:
-      data.courses.find((subject) => subject.id === material.course_id)?.name ||
-      "Subject",
+      data.subjects.find((subject) => subject.id === material.course_id)?.name ||
+      productTerms.subject,
     type,
     publishedAt: material.created_at,
     downloadUrl: material.download_url,
@@ -1225,7 +1218,7 @@ function ClassPerformance({
       </section>
     );
   if (insights.learners.length === 1) {
-    if (learnerDetailLoading) return <div className="mt-6"><WorkspaceSectionLoading cards={3} /></div>;
+    if (learnerDetailLoading) return <div className="mt-6"><SectionLoadingState label="Loading class information" cards={3} /></div>;
     if (learnerDetailError) return <section className="mt-6 rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-6 text-sm text-[#8d2f22]"><p>{learnerDetailError}</p><button type="button" onClick={onRetryLearnerDetail} className="mt-3 rounded-lg border border-[#8d2f22] px-3 py-2 font-semibold">Try again</button></section>;
     const learner = learnerDetail || insights.learners[0];
     return (
@@ -1302,9 +1295,10 @@ function SubjectChip({
 }) {
   return (
     <button
+      type="button"
       aria-label={label}
       onClick={onClick}
-      className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${active ? "bg-[#2e2877] text-white shadow-sm" : "border border-[#d8d3d0] bg-white text-[#474551] hover:border-[#2e2877]/40 hover:text-[#180d62]"}`}
+      className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 py-2 text-sm font-semibold outline-none transition-colors focus-visible:outline-2 focus-visible:outline-dashboard-primary focus-visible:outline-offset-2 ${active ? "bg-[#2e2877] text-white shadow-sm" : "border border-[#d8d3d0] bg-white text-[#474551] hover:border-[#2e2877]/40 hover:text-[#180d62]"}`}
     >
       {children}
     </button>
@@ -1383,7 +1377,7 @@ function Overview({
       id: `session-${session.id}`,
       kind: "Session",
       title: session.title,
-      detail: `${session.course?.name || selectedName} · ${dateFormat.format(new Date(session.scheduled_at))}`,
+      detail: `${session.subject?.name || selectedName} · ${dateFormat.format(new Date(session.scheduled_at))}`,
       date: session.scheduled_at,
       tone: "session" as const,
     })),
@@ -1393,7 +1387,7 @@ function Overview({
           ? toAssignmentAsAssessment(assessment as Assignment)
           : toAssessmentItem(
               assessment as Mock,
-              { courses: subjects } as ClassData,
+              { subjects } as ClassData,
             );
       return {
         id: `assessment-${item.id}`,
@@ -1411,7 +1405,7 @@ function Overview({
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <WorkspaceMetric
           icon={<UsersRound size={18} />}
-          label="Total students"
+          label="Total learners"
           value={String(insights?.learners.length ?? 0)}
           detail="Enrolled in this class"
         />
@@ -1509,7 +1503,7 @@ function Overview({
           <div className="mt-4 space-y-2.5">
             <WorkspaceAction
               icon={<CalendarDays size={17} />}
-              title="Schedule live class"
+              title="Schedule session"
               description="Choose a date and time"
               onClick={onOpenSchedule}
               primary
@@ -1972,39 +1966,8 @@ function formatStatus(status: string) {
     ? status.charAt(0).toUpperCase() + status.slice(1)
     : "Assessment";
 }
-function WorkspaceLoading() {
-  return (
-    <main className="w-full animate-pulse">
-      <div className="h-4 w-24 rounded bg-[#e9e6e5]" />
-      <section className="mt-5 rounded-2xl border border-dashboard-outline bg-white p-6">
-        <div className="h-3 w-14 rounded bg-[#e9e6e5]" />
-        <div className="mt-3 h-9 w-64 max-w-full rounded bg-[#e9e6e5]" />
-        <div className="mt-8 h-11 w-full rounded bg-[#f1eeee]" />
-      </section>
-      <section className="mt-6 grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
-        <div className="h-60 rounded-2xl border border-dashboard-outline bg-white" />
-        <div className="h-60 rounded-2xl border border-dashboard-outline bg-white" />
-      </section>
-    </main>
-  );
-}
-function WorkspaceSectionLoading({ cards }: { cards: number }) {
-  return (
-    <section
-      className="mt-6 animate-pulse rounded-2xl border border-dashboard-outline bg-white shadow-dashboard-card"
-      aria-busy="true"
-      aria-label="Loading class information"
-    >
-      <div className="border-b border-dashboard-outline px-5 py-5 sm:px-6">
-        <div className="h-3 w-24 rounded bg-[#e9e6e5]" />
-        <div className="mt-3 h-6 w-48 max-w-full rounded bg-[#e9e6e5]" />
-        <div className="mt-3 h-4 w-80 max-w-full rounded bg-[#f1eeee]" />
-      </div>
-      <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
-        {Array.from({ length: cards }, (_, index) => (
-          <div key={index} className="h-28 rounded-xl bg-[#f7f5f4]" />
-        ))}
-      </div>
-    </section>
-  );
+function WorkspaceQueryNotice({ label, cached = false, onRetry }: { label: string; cached?: boolean; onRetry: () => void }) {
+  return cached
+    ? <RefreshNotice message={`${label} could not refresh. Showing the last saved data.`} onRetry={onRetry} />
+    : <ErrorState size="compact" message={`${label} could not be loaded.`} onRetry={onRetry} />;
 }

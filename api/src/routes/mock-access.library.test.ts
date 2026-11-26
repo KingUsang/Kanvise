@@ -60,6 +60,7 @@ describe('standalone mock library', () => {
       if (table === 'mock_exams') return query({ data: {
         id: 'mock-1', school_id: 'school-1', audience_scope: 'course', course_id: 'course-1', programme_id: null, sections: [],
       }, error: null })
+      if (table === 'student_centre_memberships') return query({ data: { id: 'membership-1' }, error: null })
       if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
       if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })

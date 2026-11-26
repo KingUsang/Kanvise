@@ -15,7 +15,7 @@ export default async function QuestionBanksPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const role = user.app_metadata?.kanvise_role || user.app_metadata?.role || user.user_metadata?.kanvise_role
+  const role = user.app_metadata?.kanvise_role || user.app_metadata?.role
   if (!['admin', 'tutor'].includes(role)) redirect('/dashboard')
 
   return <QuestionBanksClient />

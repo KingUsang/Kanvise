@@ -1,0 +1,76 @@
+import path from 'node:path'
+import { test, expect } from './fixtures'
+import { recordAssignment, recordMaterial, recordSubmission } from './support/evidence'
+import { loadManifest, taggedValue } from './support/run-manifest'
+
+const fixture = path.resolve('e2e/fixtures/journey-document.pdf')
+
+test('[J04] real R2 material and assignment travel from admin to student and back for grading', async ({ browser, page }) => {
+  test.setTimeout(240_000)
+  const manifest = await loadManifest()
+  const tenant = manifest.tenants[0]
+  const programme = manifest.database.find((item) => item.table === 'programmes')
+  const course = manifest.database.find((item) => item.table === 'courses')
+  expect(tenant).toBeTruthy()
+  expect(programme).toBeTruthy()
+  expect(course).toBeTruthy()
+  const materialTitle = taggedValue(manifest.runId, 'Material')
+  const assignmentTitle = taggedValue(manifest.runId, 'Assignment')
+  const feedback = taggedValue(manifest.runId, 'Good-work')
+
+  await page.goto(`/dashboard/classes/${programme!.id}?tab=materials`)
+  await page.getByRole('button', { name: 'Add material', exact: true }).click()
+  const materialDialog = page.getByRole('dialog', { name: 'Upload material' })
+  await materialDialog.locator('input[type=file]').setInputFiles(fixture)
+  await materialDialog.getByLabel('Title').fill(materialTitle)
+  await materialDialog.getByLabel(/Description/).fill('A real private staging document.')
+  await materialDialog.getByRole('button', { name: 'Add material' }).click()
+  await expect(page.getByText('Material added to this subject')).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByText(materialTitle, { exact: true })).toBeVisible()
+  const material = await recordMaterial(tenant.id, course!.id, materialTitle)
+  expect(material.file_key).toContain(tenant.id)
+
+  await page.goto(`/dashboard/classes/${programme!.id}?tab=assessments&create=assignment&class_id=${programme!.id}&course_id=${course!.id}`)
+  await page.getByLabel('Assignment Title').fill(assignmentTitle)
+  await page.getByLabel('Assignment Question(s)').fill('Explain the result shown in the attached staging document.')
+  const deadline = new Date(Date.now() + 2 * 60 * 60_000).toISOString().slice(0, 16)
+  await page.getByLabel('Submission Deadline').fill(deadline)
+  await page.locator('#file-upload').setInputFiles(fixture)
+  await page.getByRole('button', { name: 'Publish Assignment' }).click()
+  await expect(page.getByText('Assignment published')).toBeVisible({ timeout: 60_000 })
+  const assignment = await recordAssignment(tenant.id, course!.id, assignmentTitle)
+
+  const studentContext = await browser.newContext({ storageState: process.env.E2E_STUDENT_STATE_PATH })
+  const studentPage = await studentContext.newPage()
+  await studentPage.goto('/dashboard/student/materials')
+  await expect(studentPage.getByText(materialTitle, { exact: true })).toBeVisible({ timeout: 30_000 })
+  await studentPage.goto('/dashboard/student/assignments')
+  await studentPage.getByRole('button', { name: new RegExp(assignmentTitle) }).click()
+  await studentPage.locator('input[type=file]').setInputFiles(fixture)
+  await studentPage.getByRole('button', { name: 'Submit assignment' }).click()
+  await expect(studentPage.getByText('Assignment submitted successfully.')).toBeVisible({ timeout: 60_000 })
+  await expect(studentPage.getByText('Submitted', { exact: true })).toBeVisible()
+  const submission = await recordSubmission(tenant.id, assignment.id)
+  expect(submission.file_key).toContain(tenant.id)
+  await studentContext.close()
+
+  await page.goto(`/dashboard/classes/${programme!.id}?tab=assessments&assessment=assignment&assessment_id=${assignment.id}`)
+  await expect(page.getByText('Journey Student')).toBeVisible({ timeout: 30_000 })
+  await page.getByLabel('Score').fill('84')
+  await page.getByLabel('Feedback for the student').fill(feedback)
+  await page.getByRole('button', { name: 'Save grade' }).click()
+  await expect(page.getByText('Grade and feedback saved')).toBeVisible({ timeout: 30_000 })
+
+  const reviewed = await recordSubmission(tenant.id, assignment.id)
+  expect(Number(reviewed.score)).toBe(84)
+  expect(reviewed.feedback).toBe(feedback)
+  expect(reviewed.reviewed_at).toBeTruthy()
+
+  const gradedContext = await browser.newContext({ storageState: process.env.E2E_STUDENT_STATE_PATH })
+  const gradedPage = await gradedContext.newPage()
+  await gradedPage.goto('/dashboard/student/assignments')
+  await gradedPage.getByRole('button', { name: new RegExp(assignmentTitle) }).click()
+  await expect(gradedPage.getByText('84 marks')).toBeVisible({ timeout: 30_000 })
+  await expect(gradedPage.getByText(feedback, { exact: true })).toBeVisible()
+  await gradedContext.close()
+})

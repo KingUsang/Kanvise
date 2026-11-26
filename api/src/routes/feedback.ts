@@ -2,10 +2,15 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import * as Sentry from '@sentry/node'
 import { supabase } from '../lib/supabase'
-import { jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
+import {
+  accountContextMiddleware,
+  jwtVerificationMiddleware,
+  profileResolutionMiddleware,
+  requireMembershipRole,
+} from '../middleware/auth'
 import { getEmailConfig } from '../emails/config'
 import { sendEmail } from '../emails/provider-router'
-import type { AppVariables } from '../types'
+import type { AccountContext, AppVariables } from '../types'
 import { buildPrivateFileKey, createPresignedDownload, uploadPrivateObject, validatePrivateUploadMetadata } from '../storage/r2'
 
 export const feedbackRouter = new Hono<{ Variables: AppVariables }>()
@@ -25,7 +30,20 @@ async function sendReceipt(report: any, user: any) {
 }
 
 feedbackRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware)
-feedbackRouter.post('/', async c => {
+feedbackRouter.use('/*', accountContextMiddleware)
+feedbackRouter.use('/*', async (c, next) => {
+  const account = c.get('account') as AccountContext | undefined
+  if (!account) return c.json({ error: 'Tutoring account context is required', code: 'ACCOUNT_CONTEXT_REQUIRED' }, 400)
+  const user = c.get('user')
+  c.set('user', {
+    ...user,
+    school_id: account.id,
+    role: account.role === 'learner' ? 'student' : account.role,
+  })
+  await next()
+})
+
+feedbackRouter.post('/', requireMembershipRole('admin', 'tutor', 'learner'), async c => {
   const user = c.get('user') as any
   const body = await c.req.json().catch(() => null) as any
   const kind = body?.kind === 'bug' || body?.kind === 'feature' ? body.kind : null

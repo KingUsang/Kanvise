@@ -2,6 +2,7 @@ import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { mapApiError, notFoundHandler, requestIdMiddleware } from "./lib/api-contract";
 import * as Sentry from "@sentry/node";
 // TypeScript's legacy Node resolution cannot resolve the SDK's runtime-specific
 // export, while Node resolves it correctly at runtime.
@@ -21,6 +22,7 @@ const app = new Hono();
 
 // Middleware
 // Sentry starts before route middleware so it captures unhandled 5xx responses.
+app.use("/*", requestIdMiddleware);
 app.use("/*", sentry(app));
 // Handled 5xx responses (including intentional 503s) do not throw, so the
 // error middleware cannot report them by itself. Capture them after routes
@@ -42,6 +44,8 @@ app.use("/*", cors({
   origin: (origin) => resolveCorsOrigin(origin),
   credentials: true,
 }));
+app.onError(mapApiError);
+app.notFound(notFoundHandler);
 
 import { authRouter } from "./routes/auth";
 import { publicRegistrationRouter } from './routes/public-registration';
@@ -81,6 +85,7 @@ import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
 import { demoAnalysisRouter } from './routes/demo-analysis';
 import { feedbackResolutionRouter, feedbackRouter } from './routes/feedback';
+import { waitlistRouter } from './routes/waitlist';
 
 app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
@@ -117,6 +122,7 @@ app.route('/feedback', feedbackRouter);
 app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
 app.route("/demo/analyze", demoAnalysisRouter);
+app.route('/', waitlistRouter);
 if (isTelegramEnabled()) {
   app.route('/telegram', telegramRouter);
   app.route('/telegram', telegramWebhookRouter);
@@ -238,102 +244,6 @@ app.get("/waitlist/count", async (c) => {
   }
 });
 
-app.post("/waitlist", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { contact_name, contact_email, centre_name, contact_phone, estimated_student_count, wants_beta_testing } = body;
-
-    const normalizedName = typeof contact_name === 'string' ? contact_name.trim() : '';
-    const normalizedEmail = typeof contact_email === 'string' ? contact_email.trim().toLowerCase() : '';
-    const normalizedCentre = typeof centre_name === 'string' ? centre_name.trim() : '';
-    const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
-    const parsedStudentCount = estimated_student_count === undefined || estimated_student_count === null || estimated_student_count === ''
-      ? null
-      : Number.parseInt(String(estimated_student_count), 10);
-
-    if (!normalizedEmail || !normalizedName || !normalizedCentre) {
-      return c.json({ error: "Missing required fields" }, 400);
-    }
-    if (!emailLooksValid || normalizedEmail.length > 320 || normalizedName.length > 120 || normalizedCentre.length > 160) {
-      return c.json({ error: "Invalid waitlist details" }, 400);
-    }
-    if (parsedStudentCount !== null && (!Number.isFinite(parsedStudentCount) || parsedStudentCount < 0 || parsedStudentCount > 1_000_000)) {
-      return c.json({ error: "Invalid estimated student count" }, 400);
-    }
-
-    // Check for duplicate email
-    const { data: existingUser, error: checkError } = await supabase
-      .from("waitlist_signups")
-      .select("id, created_at")
-      .ilike("contact_email", normalizedEmail)
-      .maybeSingle();
-
-    if (existingUser) {
-      const { count } = await supabase
-        .from('waitlist_signups')
-        .select('*', { count: 'exact', head: true })
-        .lte('created_at', existingUser.created_at);
-      return c.json({
-        message: "You're already on the list!",
-        position: count || 1,
-        already_joined: true,
-      }, 409);
-    }
-
-    if (checkError) {
-      console.error("Error checking duplicate:", checkError);
-      return c.json({ error: "Failed to verify email." }, 500);
-    }
-
-    // Insert new signup
-    const { data: signup, error: insertError } = await supabase.from("waitlist_signups").insert([
-      {
-        contact_name: normalizedName,
-        contact_email: normalizedEmail,
-        centre_name: normalizedCentre,
-        contact_phone: typeof contact_phone === 'string' ? contact_phone.trim().slice(0, 40) || null : null,
-        estimated_student_count: parsedStudentCount,
-        wants_beta_testing: wants_beta_testing ? true : false,
-        status: "pending",
-      },
-    ]).select('id, created_at').single();
-
-    if (insertError) {
-      if (insertError.code === '23505') {
-        const { data: duplicate } = await supabase
-          .from('waitlist_signups')
-          .select('id, created_at')
-          .ilike('contact_email', normalizedEmail)
-          .maybeSingle();
-        if (duplicate) {
-          const { count } = await supabase
-            .from('waitlist_signups')
-            .select('*', { count: 'exact', head: true })
-            .lte('created_at', duplicate.created_at);
-          return c.json({ message: "You're already on the list!", position: count || 1, already_joined: true }, 409);
-        }
-      }
-      console.error("Error inserting waitlist signup:", insertError);
-      return c.json({ error: "Failed to join waitlist. Please try again." }, 500);
-    }
-
-    const { count, error: countError } = await supabase
-      .from('waitlist_signups')
-      .select('*', { count: 'exact', head: true })
-      .lte('created_at', signup.created_at);
-    if (countError) console.error('Error calculating waitlist position:', countError);
-
-    return c.json({
-      message: "Successfully joined the waitlist!",
-      position: count || 1,
-      already_joined: false,
-    }, 201);
-  } catch (error) {
-    console.error("Waitlist endpoint error:", error);
-    return c.json({ error: "Internal server error" }, 500);
-  }
-});
-
 app.post("/suggestions", async (c) => {
   try {
     const body = await c.req.json();
@@ -348,7 +258,8 @@ app.post("/suggestions", async (c) => {
       return c.json({ error: "Suggestion is too long (max 2000 characters)" }, 400);
     }
 
-    const { error: insertError } = await supabase.from("feature_suggestions").insert([
+    // feature_suggestions has no migration, so it is absent from the generated database types.
+    const { error: insertError } = await (supabase as any).from("feature_suggestions").insert([
       {
         suggestion,
         email: email || null,

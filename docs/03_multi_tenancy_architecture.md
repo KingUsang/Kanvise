@@ -1,3 +1,8 @@
+> [!WARNING]
+> **Document status: Superseded**
+>
+> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+
 # Acada — Multi-Tenancy Architecture Document
 
 **Version:** 1.0  

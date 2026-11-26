@@ -1,102 +1,82 @@
 # Kanvise
 
-> B2B edtech infrastructure for Nigerian tutorial centres and tutors.
+Kanvise is a tutoring workspace for Tutors, Learners, and tutoring accounts.
+Tutoring accounts manage Classes, Subjects, assignments, live sessions, learner
+progress, and account operations from one product.
 
 **Website:** [kanvise.com](https://kanvise.com)
 
-Kanvise helps tutorial centres run core learning operations in one place: live classes, programmes and courses, mock-exam workflows, student progress, and payment flows. The platform is designed as a multi-tenant application, with an organisation or school providing the boundary for data access.
-
-## What is in this repository
-
-- A Next.js web application for the public site, authentication, onboarding, dashboards, and virtual classrooms.
-- A Hono API that provides authenticated, tenant-aware backend routes.
-- Supabase integration for authentication and application data.
-- LiveKit server routes for room hosting, token issuance, webhooks, and session-ending flows.
-- Paystack integration points for enrolment payments and webhook handling.
-- Routes for schools, users, programmes, sub-programmes, courses, enrolments, live classes, mock exams, and storage.
-
-## Architecture
+## Repository layout
 
 ```text
 Kanvise
-├── web/                    # Next.js 15 + React 19 frontend
-│   ├── src/app/            # App Router pages and server routes
-│   └── src/components/     # Landing, classroom, and shared UI
-└── api/                    # Hono + TypeScript backend
+├── web/                    # Next.js 16 + React 19 frontend
+│   ├── src/app/            # App Router pages and route handlers
+│   └── src/components/     # Public, dashboard, and classroom UI
+└── api/                    # Hono + TypeScript API on Node.js 22
     ├── src/routes/         # Domain API routes
-    ├── src/middleware/     # JWT, profile, role, and tenant middleware
+    ├── src/middleware/     # Auth, profile, role, and account middleware
     └── src/lib/            # Supabase and shared backend utilities
 ```
 
-The frontend and API run as separate workspaces. Tenant middleware resolves the active school context before protected domain routes are handled, helping keep organisation data isolated.
+The repository is an npm workspace. The root `package-lock.json` is the single
+lockfile and root commands own installation and orchestration. The web app and
+API run as separate workspaces.
 
-## Tech stack
+## Current topology
 
-- Next.js 15, React 19, TypeScript, and Tailwind CSS
-- Hono and Node.js for the API
-- Supabase for authentication and data
-- LiveKit for live video-classroom capabilities
-- Paystack for payment workflows
-- Cloudflare R2-compatible storage integration
+- Next.js runs the web application and dashboard on Vercel.
+- Hono runs the API and separately owned scheduler/worker roles on persistent
+  compute.
+- Supabase owns Auth and PostgreSQL; Cloudflare R2 owns application objects.
+- PlugNMeet owns live-room media. Its recorder capacity uses AWS infrastructure.
+- Paystack provides payment-provider integration for supported enrolment flows.
 
-## Run locally
+See the [engineering index](docs/engineering/README.md) for current standards,
+accepted decisions, runbooks, and the document authority map. Historical
+topology documents are evidence, not instructions for new work.
 
-### Prerequisites
+## Prerequisites and setup
 
-- Node.js 18 or newer
-- A Supabase project
-- A LiveKit project or self-hosted LiveKit server
-- Paystack test credentials for payment flows
-
-### Installation
+Use Node.js `22.23.1` and npm `10.9.8` (the supported Node 22/npm 10 toolchain).
+The repository declares the same policy in `package.json` and `.nvmrc`.
 
 ```bash
 git clone https://github.com/KingUsang/Kanvise.git
 cd Kanvise
 npm install
+cp web/.env.example web/.env.local
+cp api/.env.example api/.env
 ```
 
-Create environment files for the web app and API with credentials appropriate to your local environment. The application expects variables in this family:
+Fill the local placeholders with disposable development credentials. The API
+example is the configuration inventory for the typed runtime contract; never
+commit real secrets. Browser-visible web configuration belongs in
+`web/.env.local`, while API secrets stay server-side in `api/.env`.
+
+## Root commands
 
 ```bash
-# web
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_LIVEKIT_URL=
-LIVEKIT_API_KEY=
-LIVEKIT_API_SECRET=
-PAYSTACK_SECRET_KEY=
-
-# api
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_JWT_SECRET=
-PAYSTACK_SECRET_KEY=
-PORT=3001
+npm run dev                         # run web and API together
+npm run build                       # build both workspaces
+npm test --workspace=api            # API tests
+npm run lint --workspace=web        # web lint
+npm run type-check --workspace=web  # web TypeScript check
+npm test --workspace=web            # web tests
 ```
 
-Run the web application and API together:
+The web app defaults to [http://localhost:3000](http://localhost:3000) and the
+API to [http://localhost:3001](http://localhost:3001). Workspace environment
+templates are [web/.env.example](web/.env.example) and
+[api/.env.example](api/.env.example).
 
-```bash
-npm run dev
-```
+## Engineering entrypoints
 
-The web app starts on [http://localhost:3000](http://localhost:3000) and the API defaults to port `3001`.
+- [Engineering standards and authority](docs/engineering/README.md)
+- [Current document authority map](docs/engineering/DOCUMENT_AUTHORITY.md)
+- [Implementation deviations](docs/deviations.md)
+- [API runtime environment contract](api/src/config/runtime-env.ts)
+- [Web workspace instructions](web/README.md)
 
-### Production build
-
-```bash
-npm run build
-```
-
-## Engineering highlights
-
-- **Tenant-aware backend:** protected routes use JWT, profile-resolution, role, and tenant middleware before accessing school data.
-- **Real-time classroom foundation:** the web app includes LiveKit token, host, webhook, and room-control routes alongside collaborative classroom components.
-- **Payment-aware enrolment:** enrolment flows initialize Paystack transactions, while webhooks support server-side payment events.
-- **Separation of concerns:** a workspace layout keeps UI concerns in Next.js and domain API responsibilities in Hono.
-
-## Security
-
-Environment files are ignored by Git. Do not commit credentials, service-role keys, payment secrets, or LiveKit secrets. Use test credentials for local development and rotate any key that is ever exposed.
+Keep changes focused, preserve unrelated worktree changes, and report the
+exact commit and commands used for verification.

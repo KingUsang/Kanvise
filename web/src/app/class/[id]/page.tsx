@@ -10,7 +10,7 @@ export default async function Page({ params }: PageProps) {
   const resolvedParams = await params
   const classId = resolvedParams.id
 
-  // ── 1. Get the authenticated user's session from the cookie ────────────────
+  // ── 1. Verify the authenticated user's claims from the cookie ──────────────
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,11 +23,10 @@ export default async function Page({ params }: PageProps) {
     },
   )
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
 
-  if (!session) {
+  if (claimsError || !claims) {
     // ── No session: check if this class allows public access ──────────────────
     const honoUrl = process.env.NEXT_PUBLIC_API_URL
     let classInfo: { title: string; status: string; access_mode: string; centre_name: string; centre_logo_url: string | null } | null = null

@@ -2,7 +2,7 @@
 
 import { ClassesWorkspace } from "@/components/dashboard/schedule/classes-workspace";
 import { MocksManagementClient } from "@/components/dashboard/mocks/mocks-management-client";
-import { CentreTimetableClient } from "@/components/dashboard/timetable/centre-timetable-client";
+import { TimetableClient } from "@/components/dashboard/timetable/centre-timetable-client";
 import { ClassWorkspaceClient } from "@/components/dashboard/classes/class-workspace-client";
 import { useDashboardSession } from "@/lib/dashboard-session";
 
@@ -70,7 +70,7 @@ export function TimetableRouteClient() {
   const query = useDashboardSession();
   if (query.isPending) return <RouteLoading />;
   if (query.isError) return <RouteError query={query} />;
-  return <CentreTimetableClient />;
+  return <TimetableClient />;
 }
 
 export function ClassWorkspaceRouteClient({ classId }: { classId: string }) {
@@ -80,7 +80,6 @@ export function ClassWorkspaceRouteClient({ classId }: { classId: string }) {
   return (
     <ClassWorkspaceClient
       classId={classId}
-      token={query.data.token}
       viewerId={query.data.user.id}
       isTutor={query.data.capabilities.isTutor && !query.data.capabilities.isAdmin}
       canManageStudents={query.data.capabilities.isAdmin}

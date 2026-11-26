@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { titleFromFileName, uploadFileWithProgress } from "@/lib/upload-with-progress"
-import { Session } from "@supabase/supabase-js"
+import { authenticatedApiFetch } from "@/lib/authenticated-fetch"
 import { toast } from "sonner"
 import { DashboardPageHeader } from "@/components/dashboard/page-header"
 
 interface NotesClientProps {
-  session: Session
+  role: string | null | undefined
+  profileId: string | null
 }
 
 interface Course {
@@ -37,6 +37,13 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
+async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.clone().json().catch(() => null) as { error?: unknown } | null
+  if (typeof body?.error === "string" && body.error) return body.error
+  if (response.status === 401) return "Your session has ended. Please sign in again."
+  return fallback
+}
+
 interface Note {
   id: string
   title: string
@@ -60,8 +67,7 @@ const ACCEPTED_FILE_TYPES = new Set([
   "image/png",
 ])
 
-export function NotesClient({ session }: NotesClientProps) {
-  const supabase = createClient()
+export function NotesClient({ role, profileId: currentProfileId }: NotesClientProps) {
   const [courses, setCourses] = useState<Course[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedCourse, setSelectedCourse] = useState("")
@@ -79,25 +85,6 @@ export function NotesClient({ session }: NotesClientProps) {
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const role = session.user.app_metadata?.kanvise_role || session.user.app_metadata?.role
-  // Content rows use user_profiles.id. Auth IDs and human-readable Kanvise
-  // IDs are deliberately not interchangeable with that UUID.
-  const currentProfileId = typeof session.user.app_metadata?.profile_id === 'string'
-    ? session.user.app_metadata.profile_id
-    : null
-
-  // Server-rendered session props are a snapshot. Fetch the browser session at
-  // request time so a long-open dashboard never sends an expired JWT to the API.
-  const getAccessToken = async () => {
-    const { data: { session: currentSession }, error } = await supabase.auth.getSession()
-
-    if (error || !currentSession) {
-      throw new Error("Your session has expired. Please sign in again.")
-    }
-
-    return currentSession.access_token
-  }
-
   useEffect(() => {
     fetchCourses()
   }, [])
@@ -112,12 +99,7 @@ export function NotesClient({ session }: NotesClientProps) {
 
   const fetchCourses = async () => {
     try {
-      const accessToken = await getAccessToken()
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      })
+      const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`)
       
       if (!res.ok) throw new Error("We could not load your subjects. Please try again.")
       const json = await res.json()
@@ -134,14 +116,11 @@ export function NotesClient({ session }: NotesClientProps) {
     setIsLoadingNotes(true)
     setLoadError("")
     try {
-      const accessToken = await getAccessToken()
       let allNotes: Note[] = []
       
       // For simplicity in UI, we'll fetch notes for all available courses sequentially or in parallel
       const fetchPromises = courses.map(async (course) => {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${course.id}`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        })
+        const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${course.id}`)
         if (!res.ok) throw new Error(`Could not load materials for ${course.name}`)
         const { data } = await res.json()
         return data
@@ -227,12 +206,10 @@ export function NotesClient({ session }: NotesClientProps) {
 
     try {
       // 1. Get presigned URL
-      const presignToken = await getAccessToken()
-      const presignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/presign/upload`, {
+      const presignRes = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/presign/upload`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${presignToken}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           file_name: file.name,
@@ -244,8 +221,7 @@ export function NotesClient({ session }: NotesClientProps) {
       })
 
       if (!presignRes.ok) {
-        const error = await presignRes.json()
-        throw new Error(error.error || "Failed to get upload URL")
+        throw new Error(await responseErrorMessage(presignRes, "Failed to get upload URL"))
       }
 
       const { data: { presigned_url, file_key } } = await presignRes.json()
@@ -255,12 +231,10 @@ export function NotesClient({ session }: NotesClientProps) {
 
       // 3. Record note in database
       setUploadStage("saving")
-      const recordToken = await getAccessToken()
-      const recordRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${selectedCourse}`, {
+      const recordRes = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${selectedCourse}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${recordToken}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           title: title.trim(),
@@ -273,8 +247,7 @@ export function NotesClient({ session }: NotesClientProps) {
       })
 
       if (!recordRes.ok) {
-        const error = await recordRes.json()
-        throw new Error(error.error || "Failed to record note")
+        throw new Error(await responseErrorMessage(recordRes, "Failed to record note"))
       }
 
       toast.success("Material shared with students.")
@@ -301,15 +274,10 @@ export function NotesClient({ session }: NotesClientProps) {
 
   const handleDelete = async (noteId: string) => {
     try {
-      const accessToken = await getAccessToken()
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${noteId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
+      const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${noteId}`, { method: "DELETE" })
 
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || "Failed to delete note")
+        throw new Error(await responseErrorMessage(res, "Failed to delete note"))
       }
 
       toast.success("Resource deleted")

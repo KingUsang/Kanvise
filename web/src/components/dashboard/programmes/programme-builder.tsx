@@ -2,10 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
@@ -18,6 +17,10 @@ import {
   programmeBuilderStep,
   saveProgrammeDraft,
 } from '@/lib/programme-draft'
+import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { useActiveAccountId } from '@/lib/account-preference'
+import { classQueryKeys } from '@/lib/class-query-keys'
+import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
 
 type Tutor = { id: string; first_name?: string; last_name?: string; email?: string; role: string }
 type Identity = { id: string; school_id: string }
@@ -35,7 +38,7 @@ const newSubject = (defaultTutorId = ''): ProgrammeDraftSubject => ({ clientId: 
 export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const supabase = useMemo(() => createClient(), [])
+  const accountId = useActiveAccountId()
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [tutors, setTutors] = useState<Tutor[]>([])
   const [draft, setDraft] = useState<ProgrammeDraftData>(emptyDraft)
@@ -59,16 +62,17 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
+    const request = (input: RequestInfo | URL, init: RequestInit = {}) => authenticatedApiFetch(input, { ...init, signal: controller.signal })
     async function initialise() {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) return router.replace('/')
-        const headers = { Authorization: `Bearer ${session.access_token}` }
-        const requests = [fetch(`${apiUrl}/auth/me`, { headers }), fetch(`${apiUrl}/users?roles=admin,tutor`, { headers }), fetch(`${apiUrl}/schools/me`, { headers })]
-        const payoutRequest = fetch(`${apiUrl}/payments/summary`, { headers })
-        if (programmeId) requests.push(fetch(`${apiUrl}/programmes/${programmeId}`, { headers }))
+        const requests = [request(`${apiUrl}/auth/me`), request(`${apiUrl}/users?roles=admin,tutor`), request(`${apiUrl}/schools/me`)]
+        const payoutRequest = request(`${apiUrl}/payments/summary`)
+        if (programmeId) requests.push(request(`${apiUrl}/programmes/${programmeId}`))
         const responses = await Promise.all(requests)
-        if (responses.some(response => !response.ok)) throw new Error('Could not load class setup')
+        const failedResponse = responses.find(response => !response.ok)
+        if (failedResponse?.status === 401) return router.replace('/')
+        if (failedResponse) throw new Error(responseErrorMessage(failedResponse, 'Could not load class setup'))
         const [profileBody, tutorBody, schoolBody, programmeBody] = await Promise.all(responses.map(response => response.json()))
         if (!active) return
         const currentIdentity = { id: profileBody.user.id, school_id: profileBody.user.school_id }
@@ -105,14 +109,14 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
           setSavedProgramme({ id: data.id, slug: data.slug, is_published: data.is_published })
         }
       } catch (error) {
-        toast.error('Could not open class setup', { description: error instanceof Error ? error.message : 'Please try again.' })
+        if (active) toast.error('Could not open class setup', { description: safeApiErrorMessage(error, 'Please try again.') })
       } finally {
         if (active) { setLoading(false); setHydrated(true) }
       }
     }
     void initialise()
-    return () => { active = false }
-  }, [apiUrl, programmeId, router, supabase])
+    return () => { active = false; controller.abort() }
+  }, [accountId, apiUrl, programmeId, router])
 
   useEffect(() => {
     if (!hydrated || !identity || databaseSaved || savedProgramme?.is_published) return
@@ -156,24 +160,15 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     setStep(current => Math.min(current + 1, steps.length - 1))
   }
 
-  async function token() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) throw new Error('Your session has expired')
-    return session.access_token
-  }
-
   async function uploadCover(programme: SavedProgramme, file: File) {
-    const accessToken = await token()
-    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }
     const metadata = { file_name: file.name, content_type: file.type, file_size_bytes: file.size, entity_type: 'programme_thumbnail', context_id: programme.id }
-    const presign = await fetch(`${apiUrl}/storage/presign/public`, { method: 'POST', headers, body: JSON.stringify(metadata) })
-    const presignBody = await presign.json()
-    if (!presign.ok) throw new Error(presignBody.error || 'Could not prepare image upload')
+    const presign = await authenticatedApiFetch(`${apiUrl}/storage/presign/public`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(metadata) })
+    const presignBody = await readApiBody<{ data?: { presigned_url?: string; file_key?: string } }>(presign)
+    if (!presign.ok || !presignBody?.data?.presigned_url || !presignBody.data.file_key) throw new Error(responseErrorMessage(presign, 'Could not prepare image upload'))
     setCoverUploadProgress(0)
     await uploadFileWithProgress(presignBody.data.presigned_url, file, setCoverUploadProgress)
-    const confirm = await fetch(`${apiUrl}/storage/public/confirm`, { method: 'POST', headers, body: JSON.stringify({ ...metadata, file_key: presignBody.data.file_key }) })
-    const confirmBody = await confirm.json()
-    if (!confirm.ok) throw new Error(confirmBody.error || 'Could not attach the cover image')
+    const confirm = await authenticatedApiFetch(`${apiUrl}/storage/public/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...metadata, file_key: presignBody.data.file_key }) })
+    if (!confirm.ok) throw new Error(responseErrorMessage(confirm, 'Could not attach the cover image'))
     setCoverUploadError('')
   }
 
@@ -185,7 +180,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       await uploadCover(savedProgramme, coverFile)
       toast.success('Cover uploaded')
     } catch (error) {
-      setCoverUploadError(error instanceof Error ? error.message : 'Cover upload failed')
+      setCoverUploadError(safeApiErrorMessage(error, 'Cover upload failed'))
     } finally {
       setSaving(false)
       setSaveStage('idle')
@@ -193,10 +188,10 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     }
   }
 
-  async function createProgramme(accessToken: string) {
-    const response = await fetch(`${apiUrl}/programmes/setup`, {
+  async function createProgramme() {
+    const response = await authenticatedApiFetch(`${apiUrl}/programmes/setup`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: draft.name,
         description: draft.description,
@@ -204,23 +199,23 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
         subjects: draft.subjects.map(subject => ({ name: subject.name, description: subject.description, tutor_ids: subject.tutorIds })),
       }),
     })
-    const body = await response.json()
-    if (!response.ok) throw new Error(body.error || 'Could not create class')
+    const body = await readApiBody<{ data?: { programme?: SavedProgramme } }>(response)
+    if (!response.ok || !body?.data?.programme) throw new Error(responseErrorMessage(response, 'Could not create class'))
     return { id: body.data.programme.id, slug: body.data.programme.slug, is_published: false } as SavedProgramme
   }
 
-  async function updateProgramme(accessToken: string) {
+  async function updateProgramme() {
     if (!programmeId) throw new Error('Class not found')
-    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }
-    const programmeResponse = await fetch(`${apiUrl}/programmes/${programmeId}`, { method: 'PATCH', headers, body: JSON.stringify({ name: draft.name, description: draft.description, price: Number(draft.price) }) })
-    const programmeBody = await programmeResponse.json()
-    if (!programmeResponse.ok) throw new Error(programmeBody.error || 'Could not update class')
+    const jsonHeaders = { 'Content-Type': 'application/json' }
+    const programmeResponse = await authenticatedApiFetch(`${apiUrl}/programmes/${programmeId}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ name: draft.name, description: draft.description, price: Number(draft.price) }) })
+    const programmeBody = await readApiBody<{ data?: { slug?: string; is_published?: boolean } }>(programmeResponse)
+    if (!programmeResponse.ok || !programmeBody?.data) throw new Error(responseErrorMessage(programmeResponse, 'Could not update programme'))
 
     const retainedIds = new Set(draft.subjects.map(subject => subject.id).filter(Boolean))
     for (const existingId of initialSubjects.current.keys()) {
       if (!retainedIds.has(existingId)) {
-        const response = await fetch(`${apiUrl}/courses/${existingId}`, { method: 'DELETE', headers })
-        if (!response.ok) throw new Error('Could not remove a subject')
+        const response = await authenticatedApiFetch(`${apiUrl}/courses/${existingId}`, { method: 'DELETE' })
+        if (!response.ok) throw new Error(responseErrorMessage(response, 'Could not remove a subject'))
       }
     }
 
@@ -228,19 +223,20 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     for (const [index, subject] of draft.subjects.entries()) {
       let subjectId = subject.id
       const payload = { name: subject.name, slug: `${draft.name}-${subject.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''), description: subject.description, programme_id: programmeId, price: 0, currency: 'NGN', is_available_separately: false, sort_order: index }
-      const response = await fetch(subjectId ? `${apiUrl}/courses/${subjectId}` : `${apiUrl}/courses`, { method: subjectId ? 'PATCH' : 'POST', headers, body: JSON.stringify(payload) })
-      const body = await response.json()
-      if (!response.ok) throw new Error(body.error || `Could not save ${subject.name}`)
-      subjectId = subjectId || body.data.id
+      const response = await authenticatedApiFetch(subjectId ? `${apiUrl}/courses/${subjectId}` : `${apiUrl}/courses`, { method: subjectId ? 'PATCH' : 'POST', headers: jsonHeaders, body: JSON.stringify(payload) })
+      const body = await readApiBody<{ data?: { id?: string } }>(response)
+      const createdSubjectId = body?.data?.id
+      if (!response.ok || (!subjectId && !createdSubjectId)) throw new Error(responseErrorMessage(response, `Could not save ${subject.name}`))
+      subjectId = subjectId || createdSubjectId
       const before = new Set(initialSubjects.current.get(subjectId!) || [])
       const after = new Set(subject.tutorIds)
       for (const tutorId of before) if (!after.has(tutorId)) {
-        const removal = await fetch(`${apiUrl}/courses/${subjectId}/tutors/${tutorId}`, { method: 'DELETE', headers })
-        if (!removal.ok) throw new Error(`Could not update tutors for ${subject.name}`)
+        const removal = await authenticatedApiFetch(`${apiUrl}/courses/${subjectId}/tutors/${tutorId}`, { method: 'DELETE' })
+        if (!removal.ok) throw new Error(responseErrorMessage(removal, `Could not update tutors for ${subject.name}`))
       }
       for (const tutorId of after) if (!before.has(tutorId)) {
-        const assignment = await fetch(`${apiUrl}/courses/${subjectId}/tutors`, { method: 'POST', headers, body: JSON.stringify({ tutor_id: tutorId }) })
-        if (!assignment.ok) throw new Error(`Could not assign a tutor to ${subject.name}`)
+        const assignment = await authenticatedApiFetch(`${apiUrl}/courses/${subjectId}/tutors`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ tutor_id: tutorId }) })
+        if (!assignment.ok) throw new Error(responseErrorMessage(assignment, `Could not assign a tutor to ${subject.name}`))
       }
       persisted.push({ ...subject, id: subjectId, clientId: subjectId! })
     }
@@ -257,8 +253,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
     setSaveStage('saving')
     try {
       let uploadFailed = false
-      const accessToken = await token()
-      const programme = isEditing ? await updateProgramme(accessToken) : await createProgramme(accessToken)
+      const programme = isEditing ? await updateProgramme() : await createProgramme()
       setSavedProgramme(programme)
       if (identity) clearProgrammeDraft(identity.school_id, identity.id, programmeId || 'new')
       setDatabaseSaved(true)
@@ -273,20 +268,19 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
       }
       if (publish) {
         setSaveStage('publishing')
-        const response = await fetch(`${apiUrl}/programmes/${programme.id}/publish`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } })
-        const body = await response.json()
-        if (!response.ok) throw new Error(body.error || 'Class is not ready to publish')
+        const response = await authenticatedApiFetch(`${apiUrl}/programmes/${programme.id}/publish`, { method: 'POST' })
+        if (!response.ok) throw new Error(responseErrorMessage(response, 'Class is not ready to publish'))
         setSavedProgramme(current => current ? { ...current, is_published: true } : current)
         toast.success('Class published')
       } else toast.success('Class saved as a draft')
       if (!uploadFailed) {
-        await queryClient.invalidateQueries({ queryKey: ['programmes'] })
+        await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
         router.refresh()
         startNavigationProgress()
         router.push('/dashboard/programmes')
       }
     } catch (error) {
-      toast.error(publish ? 'Could not publish class' : 'Could not save class', { description: error instanceof Error ? error.message : 'Please try again.' })
+      toast.error(publish ? 'Could not publish class' : 'Could not save class', { description: safeApiErrorMessage(error, 'Please try again.') })
     } finally {
       setSaving(false)
       setSaveStage('idle')

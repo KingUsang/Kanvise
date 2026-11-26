@@ -19,7 +19,7 @@ type PreflightData = {
   subject_combination?: { programme_id: string; required_count: number; courses: Array<{ id: string; name: string }>; selected_course_ids: string[] } | null
 }
 
-export function MockPreflightClient({ data, token, startPath, backHref = '/dashboard/student/mocks' }: { data: PreflightData; token: string; startPath?: string; backHref?: string }) {
+export function MockPreflightClient({ data, startPath, backHref = '/dashboard/student/mocks' }: { data: PreflightData; startPath?: string; backHref?: string }) {
   const router = useRouter()
   const [accepted, setAccepted] = useState(false)
   const [starting, setStarting] = useState(false)

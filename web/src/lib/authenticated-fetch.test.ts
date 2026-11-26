@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { authenticatedFetch } from './authenticated-fetch'
+import { clearActiveAccountId, setActiveAccountId } from './account-preference'
 
 describe('authenticatedFetch', () => {
-  beforeEach(() => vi.restoreAllMocks())
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    clearActiveAccountId()
+  })
 
   it('refreshes once and retries the same request after an expired access token', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
@@ -84,6 +88,19 @@ describe('authenticatedFetch', () => {
     }))
   })
 
+  it('returns a parseable session-ended response when no current token exists', async () => {
+    const getSession = vi.fn().mockResolvedValue({ data: { session: null } })
+    const supabase = { auth: { getSession, onAuthStateChange: vi.fn(), refreshSession: vi.fn() } } as any
+
+    const response = await authenticatedFetch(supabase, '/dashboard/student')
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({
+      error: 'Your session has ended. Please sign in again.',
+      code: 'SESSION_EXPIRED',
+    })
+  })
+
   it('replaces a caller-supplied Authorization header instead of sending two bearer tokens', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
 
@@ -96,6 +113,20 @@ describe('authenticatedFetch', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/mocks/mock-1', expect.objectContaining({
       headers: { Authorization: 'Bearer current-token', 'x-request-id': 'request-1' },
+    }))
+  })
+
+  it('attaches the active account preference to every authenticated request', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const accountId = '22222222-2222-4222-8222-222222222222'
+    setActiveAccountId(accountId)
+
+    await authenticatedFetch({ auth: { refreshSession: vi.fn() } } as any, '/dashboard', 'current-token', {
+      headers: { 'X-Kanvise-Account-Id': 'stale-account' },
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/dashboard', expect.objectContaining({
+      headers: { Authorization: 'Bearer current-token', 'X-Kanvise-Account-Id': accountId },
     }))
   })
 
@@ -114,6 +145,7 @@ describe('authenticatedFetch', () => {
 
     expect(responses.every(response => response.status === 200)).toBe(true)
     expect(refreshSession).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
 })

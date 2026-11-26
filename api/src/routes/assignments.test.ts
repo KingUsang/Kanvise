@@ -12,8 +12,11 @@ vi.mock('../middleware/auth', () => ({
     c.set('user', { id: 'admin-1', school_id: 'school-1', role: 'admin', kanvise_user_id: 'KNV-ADM-1', supabase_auth_id: 'auth-1' })
     await next()
   },
-  tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
-  requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    c.set('account', { id: 'school-1', membershipId: 'membership-1', role: 'admin' })
+    await next()
+  },
+  requireMembershipRole: () => async (_c: any, next: () => Promise<void>) => next(),
 }))
 
 import { courseAssignmentsRouter } from './assignments'

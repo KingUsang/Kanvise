@@ -45,7 +45,7 @@ function formatRemaining(seconds: number) {
   return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}` : `${minutes}:${String(secs).padStart(2, '0')}`
 }
 
-export function MockAttemptClient({ data, token, guest = false }: { data: AttemptData; token?: string; guest?: boolean }) {
+export function MockAttemptClient({ data, guest = false }: { data: AttemptData; guest?: boolean }) {
   const router = useRouter()
   const questions = useMemo(() => data.questions || [], [data.questions])
   const initial = useMemo(() => new Map<string, SavedAnswer>((data.answers || []).map((answer): [string, SavedAnswer] => [answer.mock_version_question_id, {
@@ -111,7 +111,7 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
       if (!offline) toast.error(error instanceof Error ? error.message : 'Could not save answer')
       return false
     }
-  }, [data.attempt.id, guest, timedOut, token])
+  }, [data.attempt.id, guest, timedOut])
 
   const changeAnswer = useCallback((questionId: string, patch: Partial<SavedAnswer>, delayed = false) => {
     if (timedOut) return
@@ -155,7 +155,7 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
       return false
     }
     finally { setSubmitting(false); setConfirming(false) }
-  }, [answers, data.attempt.id, guest, guestEmail, guestName, guestPhone, router, save, timedOut, token])
+  }, [answers, data.attempt.id, guest, guestEmail, guestName, guestPhone, router, save, timedOut])
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000)

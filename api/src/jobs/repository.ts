@@ -87,10 +87,11 @@ export const jobsRepository: JobsRepository = {
       .order('scheduled_at', { ascending: true })
       .limit(limit)
     if (error) throw error
-    return (data || []).map((item) => ({
+    // Reminders are addressed through course enrolments, so classes without a course have no recipients.
+    return (data || []).flatMap((item) => item.course_id ? [{
       id: item.id, schoolId: item.school_id, courseId: item.course_id, title: item.title,
       courseName: (item.course as any)?.name || 'Your course', startsAt: item.scheduled_at,
-    }))
+    }] : [])
   },
 
   async markLiveClassReminderSent(id) {

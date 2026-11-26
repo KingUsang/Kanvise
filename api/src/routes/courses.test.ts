@@ -1,0 +1,101 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mocks = vi.hoisted(() => ({ from: vi.fn(), accountRole: 'admin' as string }))
+
+vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
+vi.mock('../middleware/auth', () => ({
+  jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
+  profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => {
+    c.set('user', { id: 'admin-1', school_id: 'school-1', role: mocks.accountRole })
+    await next()
+  },
+  accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
+    c.set('account', { id: 'school-1', membershipId: 'membership-1', role: mocks.accountRole })
+    await next()
+  },
+}))
+
+import { coursesRouter } from './courses'
+
+function query(result: any, calls: Array<[string, ...any[]]>) {
+  const builder: any = {
+    select: (...args: any[]) => { calls.push(['select', ...args]); return builder },
+    eq: (...args: any[]) => { calls.push(['eq', ...args]); return builder },
+    is: (...args: any[]) => { calls.push(['is', ...args]); return builder },
+    order: (...args: any[]) => { calls.push(['order', ...args]); return builder },
+    single: () => Promise.resolve(result),
+    maybeSingle: () => Promise.resolve(result),
+    then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
+  }
+  return builder
+}
+
+describe('course list filters', () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.accountRole = 'admin' })
+
+  it('rejects malformed boolean filters before querying', async () => {
+    const response = await coursesRouter.request('/?standalone=yes')
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('retains valid boolean filter behavior', async () => {
+    const calls: Array<[string, ...any[]]> = []
+    mocks.from.mockReturnValue(query({ data: [{ id: 'course-1' }], error: null }, calls))
+    const response = await coursesRouter.request('/?standalone=true&is_published=false')
+    expect(response.status).toBe(200)
+    expect(calls).toContainEqual(['is', 'programme_id', null])
+    expect(calls).toContainEqual(['is', 'sub_programme_id', null])
+    expect(calls).toContainEqual(['eq', 'is_published', false])
+  })
+
+  it('returns a safe service error when Tutor assignment lookup fails', async () => {
+    mocks.accountRole = 'tutor'
+    mocks.from.mockImplementation((table: string) => table === 'tutor_course_assignments'
+      ? query({ data: null, error: { message: 'private database detail', code: 'XX000' } }, [])
+      : query({ data: [], error: null }, []))
+
+    const response = await coursesRouter.request('/')
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body).toEqual({ error: 'Could not resolve your subject access', code: 'SUBJECT_ACCESS_FAILED' })
+    expect(JSON.stringify(body)).not.toContain('private database detail')
+  })
+
+  it('does not allow unsupported membership roles through the Subject router', async () => {
+    mocks.accountRole = 'super_admin'
+    const response = await coursesRouter.request('/')
+
+    expect(response.status).toBe(403)
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('maps a Subject lookup failure separately from a missing Subject', async () => {
+    mocks.from.mockReturnValue(query({ data: null, error: { message: 'private database detail', code: 'XX000' } }, []))
+
+    const response = await coursesRouter.request('/subject-1')
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body).toEqual({ error: 'Could not load this subject', code: 'SUBJECT_READ_FAILED' })
+    expect(JSON.stringify(body)).not.toContain('private database detail')
+  })
+
+  it('hides Subject tutor assignments from an unassigned Tutor', async () => {
+    mocks.accountRole = 'tutor'
+    let calls = 0
+    mocks.from.mockImplementation((table: string) => {
+      calls += 1
+      if (table === 'courses') return query({ data: { id: 'subject-1' }, error: null }, [])
+      return query({ data: null, error: { code: 'PGRST116' } }, [])
+    })
+
+    const response = await coursesRouter.request('/subject-1/tutors')
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toMatchObject({ code: 'NOT_FOUND' })
+    expect(calls).toBe(2)
+  })
+})
