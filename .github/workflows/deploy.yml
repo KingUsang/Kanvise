@@ -1,4 +1,4 @@
-name: Verify and deploy API to Azure
+name: Verify and deploy API
 
 on:
   push:
@@ -11,9 +11,10 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: azure-api-${{ github.ref_name }}
+  group: api-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -53,7 +54,7 @@ jobs:
 
   migrations:
     name: Apply database migrations
-    needs: [verify, changes]
+    needs: [verify, changes, certification]
     # Production must reconcile its full ordered migration history on every
     # deploy. A prior code-only deploy can otherwise leave production running
     # code that references a migration applied only in staging. Staging still
@@ -85,13 +86,50 @@ jobs:
       - name: Record remote migration history
         run: supabase migration list --db-url "$SUPABASE_DB_URL"
 
+  certification:
+    name: Require certified staging commit
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Find a successful real-journey gate for this exact commit
+        if: github.ref_name == 'main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflow = 'staging-e2e.yml'
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflow,
+              head_sha: context.sha,
+              status: 'completed',
+              per_page: 100,
+            })
+            for (const run of runs) {
+              if (run.conclusion !== 'success') continue
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: run.id,
+                per_page: 100,
+              })
+              const gate = jobs.find(job => job.name === 'journeys' && job.conclusion === 'success')
+              if (gate) {
+                core.info(`Commit ${context.sha} was certified by ${run.html_url}`)
+                return
+              }
+            }
+            core.setFailed(`Commit ${context.sha} has no successful Staging real journey gate. Promote staging to main without rewriting the certified SHA.`)
+
   deploy:
     name: Deploy ${{ github.ref_name }}
-    needs: [verify, migrations]
+    needs: [verify, migrations, certification]
     # A skipped migration job means this commit has no database change; it must
     # not prevent a normal API-only deployment.
     if: >-
       always() && needs.verify.result == 'success' &&
+      (needs.certification.result == 'success' || needs.certification.result == 'skipped') &&
       (needs.migrations.result == 'success' || needs.migrations.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -106,10 +144,10 @@ jobs:
       - name: Upload compiled API to server
         uses: appleboy/scp-action@v1.0.0
         with:
-          host: ${{ secrets.AZURE_API_HOST }}
-          username: ${{ secrets.AZURE_API_USER }}
-          key: ${{ secrets.AZURE_API_SSH_KEY }}
-          port: ${{ secrets.AZURE_API_PORT || 22 }}
+          host: ${{ secrets.API_SERVER_HOST }}
+          username: ${{ secrets.API_SERVER_USER }}
+          key: ${{ secrets.API_SERVER_SSH_KEY }}
+          port: ${{ secrets.API_SERVER_PORT || 22 }}
           timeout: 30s
           command_timeout: 10m
           source: api/dist/*
@@ -133,10 +171,10 @@ jobs:
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
           CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
         with:
-          host: ${{ secrets.AZURE_API_HOST }}
-          username: ${{ secrets.AZURE_API_USER }}
-          key: ${{ secrets.AZURE_API_SSH_KEY }}
-          port: ${{ secrets.AZURE_API_PORT || 22 }}
+          host: ${{ secrets.API_SERVER_HOST }}
+          username: ${{ secrets.API_SERVER_USER }}
+          key: ${{ secrets.API_SERVER_SSH_KEY }}
+          port: ${{ secrets.API_SERVER_PORT || 22 }}
           timeout: 30s
           command_timeout: 10m
           envs: DEPLOY_BRANCH,DEPLOY_DIRECTORY,APP_PORT,SYSTEMD_SERVICE,RELEASE_SHA,NODE_ENV,SCHEDULED_JOBS_ENABLED,TELEGRAM_ENABLED,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_WEBHOOK_SECRET,FRONTEND_URL,CORS_ALLOWED_ORIGINS
@@ -204,4 +242,5 @@ jobs:
           API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
         run: |
           test -n "$API_HEALTH_URL"
-          curl --fail --show-error --silent --retry 5 --retry-delay 5 "$API_HEALTH_URL/health"
+          response="$(curl --fail --show-error --silent --retry 5 --retry-delay 5 "$API_HEALTH_URL/health")"
+          node -e 'const h=JSON.parse(process.argv[1]); if(h.release_sha!==process.env.GITHUB_SHA) throw new Error(`API release mismatch: ${h.release_sha}`)' "$response"
