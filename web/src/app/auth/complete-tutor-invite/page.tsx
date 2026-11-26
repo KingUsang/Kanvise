@@ -7,6 +7,7 @@ import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AuthAlert, authInputClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
 import { passwordUpdateErrorMessage } from '@/lib/auth-error-message'
+import { meetsPasswordPolicy, PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, PASSWORD_REQUIREMENTS } from '@/lib/password-policy'
 
 function CompleteTutorInviteContent() {
   const searchParams = useSearchParams()
@@ -33,6 +34,10 @@ function CompleteTutorInviteContent() {
         setFullName(`${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim())
       }
       setLoading(false)
+    }).catch(() => {
+      if (!live) return
+      setError("This invitation session has expired. Ask your administrator to send a new invitation.")
+      setLoading(false)
     })
     return () => { live = false }
   }, [inviteToken, supabase])
@@ -42,6 +47,7 @@ function CompleteTutorInviteContent() {
     if (!inviteToken) return
     const parts = fullName.trim().split(/\s+/), firstName = parts.slice(0, -1).join(' '), lastName = parts.at(-1) || ''
     if (!firstName || !lastName) { setError('Enter your full name.'); return }
+    if (!meetsPasswordPolicy(password)) { setError(PASSWORD_REQUIREMENTS); return }
     setSubmitting(true)
     setError(null)
     try {
@@ -67,7 +73,7 @@ function CompleteTutorInviteContent() {
     }
   }
 
-  return <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8"><section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12"><Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>{loading ? <div className="flex min-h-56 items-center justify-center gap-3 text-sm text-[#625e6e]"><Loader2 className="animate-spin" size={19}/>Opening your invitation…</div> : error && !email ? <div className="py-6 text-center"><h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Invitation unavailable</h1><p className="mt-3 text-sm leading-6 text-[#625e6e]">{error}</p></div> : <><header className="mb-7 text-center"><h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Complete your account creation</h1><p className="mt-3 text-sm leading-6 text-[#625e6e]">Set a password to join your tutoring agency.</p><p className="mt-2 break-all text-sm font-medium text-[#302c39]">{email}</p></header>{error && <AuthAlert>{error}</AuthAlert>}<form onSubmit={finish} className="space-y-5"><Field id="full-name" label="Full name" value={fullName} onChange={setFullName} placeholder="John Doe" /><div><label className="mb-2 block text-sm font-medium text-[#302c39]" htmlFor="password">Create password</label><div className="relative"><input id="password" required minLength={8} pattern="(?=.*[A-Z])(?=.*\d).{8,}" title="Use at least 8 characters, one uppercase letter, and one number" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className={`${authInputClass} pr-12`} /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[#777382] hover:bg-[#f2f0f7]" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div><p className="mt-2 text-xs leading-5 text-[#716d78]">At least 8 characters, one uppercase letter, and one number.</p></div><button type="submit" disabled={submitting} className={authPrimaryButtonClass}>{submitting ? <><Loader2 className="animate-spin" size={18}/>Setting up account…</> : <>Join tutoring agency<ArrowRight size={16}/></>}</button></form></>}</section></main>
+  return <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8"><section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12"><Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>{loading ? <div className="flex min-h-56 items-center justify-center gap-3 text-sm text-[#625e6e]"><Loader2 className="animate-spin" size={19}/>Opening your invitation…</div> : error && !email ? <div className="py-6 text-center"><h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Invitation unavailable</h1><p className="mt-3 text-sm leading-6 text-[#625e6e]">{error}</p></div> : <><header className="mb-7 text-center"><h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Complete your account creation</h1><p className="mt-3 text-sm leading-6 text-[#625e6e]">Set a password to join your tutoring agency.</p><p className="mt-2 break-all text-sm font-medium text-[#302c39]">{email}</p></header>{error && <AuthAlert>{error}</AuthAlert>}<form onSubmit={finish} className="space-y-5"><Field id="full-name" label="Full name" value={fullName} onChange={setFullName} placeholder="John Doe" /><div><label className="mb-2 block text-sm font-medium text-[#302c39]" htmlFor="password">Create password</label><div className="relative"><input id="password" required minLength={PASSWORD_MIN_LENGTH} pattern={PASSWORD_PATTERN} title={PASSWORD_REQUIREMENTS} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className={`${authInputClass} pr-12`} /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[#777382] hover:bg-[#f2f0f7]" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div><p className="mt-2 text-xs leading-5 text-[#716d78]">{PASSWORD_REQUIREMENTS}</p></div><button type="submit" disabled={submitting} className={authPrimaryButtonClass}>{submitting ? <><Loader2 className="animate-spin" size={18}/>Setting up account…</> : <>Join tutoring agency<ArrowRight size={16}/></>}</button></form></>}</section></main>
 }
 
 function Field({ id, label, value, onChange, placeholder }: { id: string; label: string; value: string; onChange: (value: string) => void; placeholder: string }) { return <div><label className="mb-2 block text-sm font-medium text-[#302c39]" htmlFor={id}>{label}</label><input id={id} required value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={authInputClass} /></div> }

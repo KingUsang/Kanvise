@@ -212,10 +212,15 @@ function RegisterContent() {
     if (resendSeconds > 0) return
     setResendLoading(true);
     setError(null);
-    const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
-    if (resendError) setError(recoveryRequestErrorMessage(resendError));
-    else setResendSeconds(60)
-    setResendLoading(false);
+    try {
+      const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
+      if (resendError) setError(recoveryRequestErrorMessage(resendError));
+      else setResendSeconds(60)
+    } catch {
+      setError(recoveryRequestErrorMessage(null));
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleGoogleStart = (event: React.MouseEvent<HTMLAnchorElement>) => {

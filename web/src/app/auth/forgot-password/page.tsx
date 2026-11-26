@@ -32,12 +32,17 @@ export default function ForgotPasswordPage() {
     event?.preventDefault()
     setLoading(true)
     setError(null)
-    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email)
-    setLoading(false)
-    if (recoveryError) return setError(recoveryRequestErrorMessage(recoveryError))
-    setCode("")
-    setResendIn(60)
-    setStep("code")
+    try {
+      const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email)
+      if (recoveryError) return setError(recoveryRequestErrorMessage(recoveryError))
+      setCode("")
+      setResendIn(60)
+      setStep("code")
+    } catch {
+      setError(recoveryRequestErrorMessage(null))
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function verifyCode(event: React.FormEvent) {
@@ -45,15 +50,20 @@ export default function ForgotPasswordPage() {
     if (!/^\d{6}$/.test(code)) return setError("Enter the six-digit code from your email.")
     setLoading(true)
     setError(null)
-    const { data, error: verificationError } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: "recovery",
-    })
-    setLoading(false)
-    if (verificationError || !data.session) return setError(verificationErrorMessage(verificationError))
-    router.push("/auth/reset-password")
-    router.refresh()
+    try {
+      const { data, error: verificationError } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: "recovery",
+      })
+      if (verificationError || !data.session) return setError(verificationErrorMessage(verificationError))
+      router.push("/auth/reset-password")
+      router.refresh()
+    } catch {
+      setError(verificationErrorMessage(null))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8">

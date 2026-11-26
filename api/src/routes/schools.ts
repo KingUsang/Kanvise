@@ -118,7 +118,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     return c.json({ error: profileError.message }, 500)
   }
 
-  // Update the trusted tenant claim used by the API fast path and RLS.
+  // Update the app_metadata school claim kept for web redirect hints and legacy RLS. The API does not use it for authorization.
   const { data: userData } = await supabase.auth.admin.getUserById(user.supabase_auth_id)
   if (userData.user) {
     const currentMetadata = userData.user.app_metadata || {}

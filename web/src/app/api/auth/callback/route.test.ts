@@ -43,4 +43,19 @@ describe('Google OAuth callback', () => {
     }))
     expect(response.headers.get('location')).toBe('https://kanvise.test/dashboard/student')
   })
+
+  it('sends a deadline with profile init and redirects to the error page when it fails', async () => {
+    mocks.cookie = ''
+    const fetchMock = vi.fn().mockRejectedValue(new DOMException('timed out', 'TimeoutError'))
+    vi.stubGlobal('fetch', fetchMock)
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: 'tok' }, user: { id: 'u', user_metadata: {} } },
+      error: null,
+    })
+
+    const response = await GET(new Request('https://kanvise.test/api/auth/callback?code=c&role=student'))
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/auth\/profile\/init$/), expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    expect(response.headers.get('location')).toContain('/auth/auth-code-error?reason=profile_init_failed')
+  })
 })

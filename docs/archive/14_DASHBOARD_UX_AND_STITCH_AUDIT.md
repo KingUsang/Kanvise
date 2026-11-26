@@ -421,16 +421,7 @@ Hiding a sidebar item is not security. Hono route middleware and Supabase RLS re
 
 ## 5. Authentication claim decision
 
-The JWT fast path is retained, but authorization claims are read from Supabase `app_metadata`, not `user_metadata`.
-
-- `user_profiles` is canonical.
-- Trusted server code copies role, school, profile, and Kanvise ID claims into `app_metadata`.
-- The API uses those signed claims as its fast path.
-- If trusted claims are missing, the API loads the profile from the database.
-- After a canonical lookup, the API backfills trusted claims for existing users; those claims become active after token refresh.
-- `user_metadata` is reserved for editable presentation fields such as first and last name.
-
-This matches the existing RLS migrations, which already read role and school from `app_metadata`.
+> **Superseded.** The JWT-claim fast path described in the original decision was dropped. The API resolves the profile from `user_profiles` by verified Auth ID on every request and verifies an active account membership for the selected account (see [auth, authorization and tenancy standard](../engineering/standards/03-auth-authorization-tenancy.md)). `app_metadata` role and school claims are redirect hints and RLS compatibility data only, and `user_metadata` is never used for authorization.
 
 ## 6. Confirmed UX issues and decisions
 

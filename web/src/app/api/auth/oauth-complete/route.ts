@@ -13,8 +13,10 @@ export async function POST(request: Request) {
   if (!firstName || !lastName) return NextResponse.json({ error: 'Enter your first and last name.' }, { status: 400 })
   if (context.intent === 'educator' && context.accountType === 'centre' && !centreName) return NextResponse.json({ error: 'Enter your tutoring agency name.' }, { status: 400 })
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return NextResponse.json({ error: 'Your Google session has expired. Start again.' }, { status: 401 })
+  // Verify the user with the Auth server first; the session is read only to get the access token.
+  const { data: { user: verifiedUser } } = await supabase.auth.getUser()
+  const { data: { session } } = verifiedUser ? await supabase.auth.getSession() : { data: { session: null } }
+  if (!verifiedUser || !session) return NextResponse.json({ error: 'Your Google session has expired. Start again.' }, { status: 401 })
 
   const existing = await fetch(`${getApiUrl()}/auth/me`, { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' })
   if (existing.ok && context.intent !== 'invitation') {

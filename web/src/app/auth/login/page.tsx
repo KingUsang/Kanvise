@@ -38,18 +38,20 @@ function LoginContent() {
     setLoading(true);
     setError(null);
 
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      setError(signInErrorMessage(signInError));
-      setLoading(false);
-      return;
-    }
-
+    let signedIn = false
     try {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInErrorMessage(signInError));
+        setLoading(false);
+        return;
+      }
+      signedIn = true
+
       if (!signInData.session?.access_token) throw new Error('Your session could not be started')
       // Existing accounts created before trusted role claims were introduced
       // need one profile resolution before routing. The API backfills the
@@ -68,7 +70,7 @@ function LoginContent() {
         redirect: redirectParams,
       }))
     } catch {
-      setError("You're signed in, but Kanvise couldn't finish loading your account. Try again.")
+      setError(signedIn ? "You're signed in, but Kanvise couldn't finish loading your account. Try again." : signInErrorMessage(null))
       setLoading(false)
     }
   };

@@ -70,7 +70,12 @@ function CompleteInvitationContent() {
         : { first_name: firstName.trim(), last_name: lastName.trim(), account_invitation_token: token }
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify(body) })
       if (!response.ok) throw new Error('invitation_completion_failed')
-      await supabase.auth.refreshSession()
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+      if (refreshError || !refreshed.session) {
+        // The invitation is already accepted; a fresh sign-in picks up the new role claims.
+        window.location.assign('/auth/login')
+        return
+      }
       window.location.assign(invitation.role === 'student' ? '/dashboard/student' : '/dashboard')
     } catch (reason) {
       setError(reason instanceof Error && reason.message === 'session_unavailable'
