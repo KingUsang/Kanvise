@@ -1,4 +1,30 @@
-# plugNmeet Integration Reference — for implementation agents
+# plugNmeet integration reference
+
+**Status:** Reference (upstream API contract plus Kanvise usage notes)
+**Owner:** Kanvise engineering
+**Last verified:** 2026-11-26 against `api/src/plugnmeet/client.ts` and `api/src/routes/webhooks.ts`
+
+This is a reference, not a runbook. For enabling the pilot see
+[plugNmeet enrolled-class pilot](plugnmeet-enrolled-pilot.md). The upstream API
+sections below were compiled from plugnmeet.org and were not re-checked against
+the pinned server version; treat them as **unverified** until confirmed against
+the deployed server.
+
+Verified against the code on this date:
+
+- Calls are `POST {PLUGNMEET_SERVER_URL}/auth/...` with `API-KEY` and
+  `HASH-SIGNATURE` headers (`api/src/plugnmeet/client.ts`).
+- Rooms are created with `max_participants: 1000`, `empty_timeout: 900` and
+  `copyright_conf.display: false`.
+- `webhook_url` is sent only when `PLUGNMEET_WEBHOOK_URL` is set. Kanvise receives
+  events at `POST /webhooks/plugnmeet`, which stores them in
+  `plugnmeet_webhook_inbox` before processing.
+- `logout_url` is `${FRONTEND_URL}/dashboard` for every participant (return-path
+  follow-up: DEV-TRK-029-01).
+- The sections that mention LiveKit, Quick Check, guest demo rooms, Azure and AWS
+  describe the earlier design. The current implementation scope is in
+  [archived architecture v3](../archive/kanvise-live-class-architecture-v3.md). Do not
+  extend LiveKit behaviour from them.
 
 Compiled directly from plugnmeet.org official docs (fetched, not from training memory or search snippets). Every section below is sourced; anything not verified is marked as such at the bottom.
 
@@ -45,7 +71,7 @@ pinned plugNmeet server version. Do not derive REST paths from SDK method names.
   "metadata": {
     "room_title": "string",
     "welcome_message": "string",
-    "webhook_url": "https://api.kanvise.ng/webhooks/plugnmeet",
+    "webhook_url": "https://<kanvise-api-host>/webhooks/plugnmeet",
     "logout_url": "string",
     "room_features": { "...": "see below" },
     "default_lock_settings": { "...": "optional" },
