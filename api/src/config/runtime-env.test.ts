@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { CORE_PRODUCTION_VARIABLES, isTelegramEnabled, isWebPushEnabled, validateProductionEnvironment } from './runtime-env'
+import { CORE_PRODUCTION_VARIABLES, isWebPushEnabled, validateProductionEnvironment } from './runtime-env'
 
 const validProductionEnv = {
   NODE_ENV: 'production',
@@ -42,7 +42,7 @@ describe('validateProductionEnvironment', () => {
     expect(() => validateProductionEnvironment({ NODE_ENV: 'staging' } as NodeJS.ProcessEnv)).not.toThrow()
   })
 
-  it('accepts the complete core production environment with Telegram disabled', () => {
+  it('accepts the complete core production environment', () => {
     expect(() => validateProductionEnvironment(validProductionEnv)).not.toThrow()
   })
 
@@ -51,21 +51,9 @@ describe('validateProductionEnvironment', () => {
       .toThrow(/EMAIL_FROM.*GEMINI_API_KEY.*KANVISE_INTERNAL_SECRET/)
   })
 
-  it('requires Telegram secrets only when Telegram is enabled', () => {
-    expect(() => validateProductionEnvironment({ ...validProductionEnv, TELEGRAM_ENABLED: 'true' }))
-      .toThrow('TELEGRAM_BOT_TOKEN')
-  })
-
   it('rejects insecure production origins', () => {
     expect(() => validateProductionEnvironment({ ...validProductionEnv, FRONTEND_URL: 'http://example.com' }))
       .toThrow('FRONTEND_URL must use HTTPS')
-  })
-})
-
-describe('isTelegramEnabled', () => {
-  it('is opt-in', () => {
-    expect(isTelegramEnabled({} as NodeJS.ProcessEnv)).toBe(false)
-    expect(isTelegramEnabled({ TELEGRAM_ENABLED: 'true' } as NodeJS.ProcessEnv)).toBe(true)
   })
 })
 

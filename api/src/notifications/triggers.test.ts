@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-vi.mock('../telegram/delivery', () => ({ announceTelegramClassReminder: vi.fn(async () => undefined) }))
 import {
   notifyClassCancelled,
   notifyAssignmentDeadline,

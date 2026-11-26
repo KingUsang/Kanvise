@@ -1,13 +1,12 @@
 import cron, { type ScheduledTask } from 'node-cron'
-import { isTelegramEnabled } from '../config/runtime-env'
-import { createGuardedJob, runAssignmentDeadlineJob, runLiveClassReminderJob, runMockPublicationJob, runTelegramAttendanceCloseJob, runTimetableMaterializationJob } from './runners'
+import { createGuardedJob, runAssignmentDeadlineJob, runLiveClassReminderJob, runMockPublicationJob, runTimetableMaterializationJob } from './runners'
 import { runLiveClassRecordingJob } from './live-class-recording'
 import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 import { reconcileInactivePlugNmeetClasses } from '../plugnmeet/room-lifecycle'
 import { deallocateIdlePlugNmeet, warmPlugNmeetForUpcomingClasses } from '../plugnmeet/classroom-lifecycle'
 import { runOnboardingDripJob } from './onboarding-drip'
 
-export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
+export function startScheduledJobs() {
   const jobs = [
     { expression: '0 * * * *', guarded: createGuardedJob('onboarding_drip', () => runOnboardingDripJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('mock_publication', () => runMockPublicationJob()) },
@@ -24,9 +23,6 @@ export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
     { expression: '* * * * *', guarded: createGuardedJob('live_class_recording', () => runLiveClassRecordingJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('recorder_fleet', () => reconcileRecorderFleet()) },
   ]
-  if (isTelegramEnabled(env)) {
-    jobs.push({ expression: '* * * * *', guarded: createGuardedJob('telegram_attendance_close', () => runTelegramAttendanceCloseJob()) })
-  }
   const tasks: ScheduledTask[] = jobs.map(({ expression, guarded }) => cron.schedule(expression, () => {
     void guarded.run().catch((error) => console.error('job.execution_failed', { expression, error }))
   }))

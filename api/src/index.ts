@@ -13,7 +13,7 @@ import { supabase } from "./lib/supabase";
 import { validateProductionPaymentSecrets } from "./config/payment-secrets";
 import { resolveCorsOrigin } from "./config/cors";
 import { startScheduledJobs } from "./jobs/scheduler";
-import { isTelegramEnabled, validateProductionEnvironment } from "./config/runtime-env";
+import { validateProductionEnvironment } from "./config/runtime-env";
 
 validateProductionPaymentSecrets();
 validateProductionEnvironment();
@@ -81,7 +81,6 @@ import { studentSettingsRouter } from "./routes/student-settings";
 import { mockAccessRouter, mockOfferAdminRouter } from "./routes/mock-access";
 import { studentMembershipsRouter } from "./routes/student-memberships";
 import { guestMocksRouter } from './routes/guest-mocks';
-import { telegramRouter, telegramWebhookRouter } from './routes/telegram';
 import { pushRouter } from './routes/push';
 import { demoAnalysisRouter } from './routes/demo-analysis';
 import { feedbackResolutionRouter, feedbackRouter } from './routes/feedback';
@@ -123,10 +122,6 @@ app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
 app.route("/demo/analyze", demoAnalysisRouter);
 app.route('/', waitlistRouter);
-if (isTelegramEnabled()) {
-  app.route('/telegram', telegramRouter);
-  app.route('/telegram', telegramWebhookRouter);
-}
 // Promo routes are intentionally confined to this prefix. Mounting this router at
 // `/` caused its router-wide admin middleware to run for unrelated routes such as
 // `/students/me/settings`.

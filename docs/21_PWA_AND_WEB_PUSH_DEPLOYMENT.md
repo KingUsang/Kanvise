@@ -25,7 +25,7 @@ WEB_PUSH_VAPID_PRIVATE_KEY=<environment private key>
 WEB_PUSH_SUBJECT=mailto:notifications@kanvise.com
 ```
 
-If the feature flag is false, existing email, Telegram, and in-app delivery continue while Web Push is skipped.
+If the feature flag is false, existing email and in-app delivery continue while Web Push is skipped.
 
 ## Verification
 

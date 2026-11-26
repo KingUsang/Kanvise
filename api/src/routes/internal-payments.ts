@@ -3,7 +3,6 @@ import { Hono } from 'hono'
 import { isUnsafeSecret } from '../config/payment-secrets'
 import { ensurePaymentConfirmationEmail } from '../emails/ensure-payment-confirmation'
 import { supabase } from '../lib/supabase'
-import { deliverTelegramToStudent } from '../telegram/delivery'
 
 export const internalPaymentsRouter = new Hono()
 
@@ -127,17 +126,6 @@ internalPaymentsRouter.post('/confirm', async (c) => {
     return c.json({ error: 'Payment confirmed, but receipt delivery failed', retryable: true }, 503)
   }
 
-  // Telegram is an opt-in convenience channel. A delivery failure must never
-  // undo a confirmed payment or make the verified Paystack webhook retry.
-  const telegram = await deliverTelegramToStudent({
-    schoolId: result.school_id,
-    userId: result.student_id,
-    eventType: 'payment_confirmed',
-    relatedEntityId: result.payment_id,
-    text: `✅ Payment confirmed\n\n${result.target_name} — ${amount}\nReference: ${result.paystack_reference}`,
-    button: { text: 'View receipt', url: `${frontendUrl.replace(/\/$/, '')}/dashboard/payments` },
-  })
-
   return c.json({
     message: 'Enrolment created and access granted',
     data: {
@@ -147,7 +135,6 @@ internalPaymentsRouter.post('/confirm', async (c) => {
       email_sent: true,
       email_id: email.id,
       email_already_sent: email.alreadySent,
-      telegram_delivery: telegram,
     },
   })
 })

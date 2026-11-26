@@ -325,10 +325,7 @@ paymentsRouter.get("/status/:reference", enforceLearner, async (c) => {
 
   if (error) return c.json({ error: "Could not load payment status", code: "PAYMENT_STATUS_FAILED" }, 500);
   if (!data) return c.json({ error: "Payment not found", code: "PAYMENT_NOT_FOUND" }, 404);
-  const { data: paidTelegramChat, error: telegramError } = await (supabase as any).from('telegram_chats')
-    .select('id').eq('school_id', data.school_id).eq('purpose', 'paid_teaching').eq('status', 'active').maybeSingle()
-  if (telegramError) return c.json({ error: 'Could not load payment status', code: 'PAYMENT_STATUS_FAILED' }, 500)
-  return c.json({ data: { ...data, telegram_paid_access_available: Boolean(paidTelegramChat) } });
+  return c.json({ data });
 });
 
 // POST /payments/status/:reference/confirm — authenticated return-page fallback.

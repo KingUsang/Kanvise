@@ -23,7 +23,7 @@ deleting historical evidence.
 | `17_*` | Superseded for cross-cutting authority | Historical intent and feature discovery only; verify against standards/code/migrations |
 | `docs/archive/07_KANVISE_LiveKit_Integration_Contract.md`, `kanvise-live-class-architecture-v3.md`, `docs/operations/livekit-*` | Historical | Retired LiveKit-era evidence; do not extend current PlugNMeet behavior from it |
 | `plugnmeet-integration-reference.md`, `plugnmeet-phase-0-validation-plan.md`, `docs/operations/plugnmeet-enrolled-pilot.md` | Reference/audit evidence | Verify current provider contract and configuration before use |
-| `10_*`, `11_*`, `12_*`, `13_*`, `19_*`, `21_*`, `25_*`, `29_*`, `30_*`, `31_*`, `32_*`, `33_*`, `34_*` | Progress, audit, incident, plan, or test evidence | Useful inputs; not standing architecture or conventions |
+| `10_*`, `11_*`, `12_*`, `13_*`, `21_*`, `25_*`, `29_*`, `30_*`, `31_*`, `32_*`, `33_*`, `34_*` | Progress, audit, incident, plan, or test evidence | Useful inputs; not standing architecture or conventions |
 | `15_*`, `18_*` and other Mock-named plans | Historical/superseded terminology | Mine behavior only after translating to the Quiz domain |
 | `*:Zone.Identifier` | Repository artifact | Never authority; remove through scoped repository cleanup |
 
