@@ -45,14 +45,15 @@ export async function GET(request: Request) {
     // that already target this callback and do not carry our Google context.
     if (accountInvitationToken) return NextResponse.redirect(new URL(`/auth/complete-invitation?token=${encodeURIComponent(accountInvitationToken)}`, origin))
     const role = url.searchParams.get('role')
-    const inviteToken = url.searchParams.get('invite_token')
-    if (role === 'tutor' && inviteToken) return NextResponse.redirect(new URL(`/auth/complete-tutor-invite?invite_token=${encodeURIComponent(inviteToken)}`, origin))
+    // Legacy signed tutor invites were retired (DEV-SEC-008). Tutors join
+    // only through durable invitations, so an old tutor link goes to /invite.
+    if (role === 'tutor') return NextResponse.redirect(new URL('/invite', origin))
     const next = safeRedirectPath(url.searchParams.get('next'))
     if (!role) return NextResponse.redirect(new URL(next || '/', origin))
 
     let init: Response | null = null
     try {
-      init = await fetch(`${getApiUrl()}/auth/profile/init`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ flow: role, first_name: data.user.user_metadata?.first_name || '', last_name: data.user.user_metadata?.last_name || '', invite_token: inviteToken || undefined }), signal: AbortSignal.timeout(PROFILE_INIT_TIMEOUT_MS) })
+      init = await fetch(`${getApiUrl()}/auth/profile/init`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ flow: role, first_name: data.user.user_metadata?.first_name || '', last_name: data.user.user_metadata?.last_name || '' }), signal: AbortSignal.timeout(PROFILE_INIT_TIMEOUT_MS) })
     } catch (initError) {
       console.error('[auth/callback] profile init failed', initError instanceof Error ? initError.name : 'unknown')
     }

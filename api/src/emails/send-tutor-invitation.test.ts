@@ -3,7 +3,7 @@ import { sendTutorInvitation, type EmailTransport } from './send-tutor-invitatio
 
 const input = {
   to: 'tutor@example.com',
-  inviteUrl: 'https://kanvise.com/join?token=signed-token',
+  inviteUrl: 'https://kanvise.com/invite?token=durable-token',
   invitedByName: 'Ada Okafor',
   schoolName: 'Bright Minds Academy',
   expiresAt: '2026-07-27T12:00:00.000Z',

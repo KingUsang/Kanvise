@@ -80,9 +80,9 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     families: [
       {
         policy: 'public',
-        paths: ['/tutor-invite/preview', '/invitation/preview', '/invitation/start'],
+        paths: ['/invitation/preview', '/invitation/start'],
         observedMiddleware: [],
-        exception: 'Signed invitation-token flows intentionally precede router authentication.',
+        exception: 'Durable invitation-token flows intentionally precede router authentication.',
       },
       {
         policy: 'authenticated-pre-account',
@@ -114,7 +114,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
     exception: 'Provider signatures and webhook-specific verification own this boundary.',
   }),
   router('/dashboard', 'dashboardRouter', 'src/routes/dashboard.ts', 'protected-account', membershipSequence, {
-    exception: 'Standalone-mock student home and progress explicitly bypass account resolution only when no tutoring account is selected; account-backed dashboard requests use accountContextMiddleware.',
+    exception: 'Student home and progress use standaloneAwareAccountContext: with no header a single active membership is resolved, and only a student with no membership and no profile account continues without a tenant. Every other dashboard request uses accountContextMiddleware.',
   }),
   router('/programmes', 'programmesRouter', 'src/routes/programmes.ts', 'protected-account', membershipSequence),
   router('/classes', 'classesRouter', 'src/routes/classes.ts', 'protected-account', membershipSequence),

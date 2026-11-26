@@ -1,11 +1,68 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
+import { getConnInfo } from '@hono/node-server/conninfo'
+import type { Context } from 'hono'
+
 // In-process fixed-window limiter keyed by client address. State lives in one
 // process, so it slows abuse per instance and does not replace an edge limit
 // (DEV-PUB-001).
-export function clientAddress(c: { req: { header(name: string): string | undefined } }) {
+
+/** Header the Next.js route handlers use to pass the visitor address. */
+export const PROXY_CLIENT_IP_HEADER = 'x-kanvise-client-ip'
+/** Header carrying KANVISE_PROXY_SECRET from the Next.js route handlers. */
+export const PROXY_SECRET_HEADER = 'x-kanvise-proxy-secret'
+const MIN_PROXY_SECRET_LENGTH = 16
+
+type AddressContext = { req: { header(name: string): string | undefined }; env?: unknown }
+
+function digest(value: string) {
+  return createHash('sha256').update(value).digest()
+}
+
+/**
+ * True only when the request carries the configured proxy secret. Hashing
+ * both sides gives equal-length buffers, so the compare is constant-time and
+ * does not leak the secret length. An unset or short secret trusts nobody.
+ */
+export function hasTrustedProxySecret(c: AddressContext, configured = process.env.KANVISE_PROXY_SECRET) {
+  const secret = configured?.trim()
+  const presented = c.req.header(PROXY_SECRET_HEADER)
+  if (!secret || secret.length < MIN_PROXY_SECRET_LENGTH || !presented) return false
+  return timingSafeEqual(digest(presented), digest(secret))
+}
+
+function plausibleAddress(value: string | undefined) {
+  const candidate = value?.trim()
+  return candidate && candidate.length <= 64 && /^[0-9A-Fa-f:.]+$/.test(candidate) ? candidate : null
+}
+
+function socketAddress(c: AddressContext) {
+  try {
+    return getConnInfo(c as unknown as Context).remote.address || null
+  } catch {
+    // app.request() in tests and non-Node adapters have no socket.
+    return null
+  }
+}
+
+/**
+ * Rate-limit key for the caller (DEV-PUB-004).
+ *
+ * 1. The visitor address forwarded by the Kanvise web proxy, only when the
+ *    request also carries KANVISE_PROXY_SECRET.
+ * 2. Otherwise the last X-Forwarded-For entry. Caddy on the API host appends
+ *    the address of the peer that connected to it, so a caller cannot choose
+ *    the last entry. cf-connecting-ip and x-real-ip are not trusted because
+ *    Caddy passes them through from the caller unchanged.
+ * 3. Otherwise the socket address (direct connection to the Node server).
+ */
+export function clientAddress(c: AddressContext) {
+  if (hasTrustedProxySecret(c)) {
+    const forwardedClient = plausibleAddress(c.req.header(PROXY_CLIENT_IP_HEADER))
+    if (forwardedClient) return forwardedClient
+  }
   const forwarded = c.req.header('x-forwarded-for')?.split(',').map((value) => value.trim()).filter(Boolean)
-  return c.req.header('cf-connecting-ip')
-    || c.req.header('x-real-ip')
-    || forwarded?.at(-1)
+  return forwarded?.at(-1)
+    || socketAddress(c)
     || 'unknown'
 }
 

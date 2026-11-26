@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Loader2, X, AlertCircle, CheckCircle2, ChevronDown, Search } from "lucide-react";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { accountContextHeaders } from "@/lib/account-preference";
 
 interface Bank {
   id: number;
@@ -54,7 +55,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         const res = await fetch(`${apiUrl}/payments/banks`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { ...accountContextHeaders(), Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load banks");
@@ -85,6 +86,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              ...accountContextHeaders(),
               Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({ account_number: accountNumber, bank_code: bankCode })
@@ -119,6 +121,7 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...accountContextHeaders(),
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({

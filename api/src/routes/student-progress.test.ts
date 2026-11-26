@@ -12,6 +12,10 @@ vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
   profileResolutionMiddleware: async (c: any, next: () => Promise<void>) => { c.set('user', mocks.user); await next() },
   accountContextMiddleware: async (c: any, next: () => Promise<void>) => { c.set('account', { ...mocks.account, role: mocks.user.role === 'student' ? 'learner' : mocks.user.role }); await next() },
+  lookupDefaultAccount: async () => ({ kind: 'none' }),
+  accountContextUnavailable: (c: any) => c.json({ code: 'ACCOUNT_CONTEXT_UNAVAILABLE' }, 503),
+  accountSelectionRequired: (c: any) => c.json({ code: 'ACCOUNT_SELECTION_REQUIRED' }, 409),
+  resolveAccountContext: async () => { throw new Error('not expected in this test') },
   tenantMiddleware: async (_c: any, next: () => Promise<void>) => next(),
 }))
 

@@ -178,7 +178,7 @@ describe('POST /waitlist abuse limits and count errors', () => {
     let last = 0
     for (let i = 0; i < 31; i += 1) {
       last = (await router.request('/waitlist', {
-        method: 'POST', headers: { 'content-type': 'application/json', 'x-real-ip': '3.3.3.3' },
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '3.3.3.3' },
         body: JSON.stringify({ ...validBody, contact_email: `u${i}@example.com` }),
       })).status
     }

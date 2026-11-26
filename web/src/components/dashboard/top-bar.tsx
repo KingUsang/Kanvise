@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import { clearActiveAccountId } from '@/lib/account-preference'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getDashboardNavItems, type DashboardCapabilities } from '@/config/dashboard-navigation'
@@ -59,6 +60,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
       await detachBrowserPushOnLogout(sessionData.session?.access_token)
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+      clearActiveAccountId()
       window.location.href = '/auth/login'
     } catch {
       setIsSigningOut(false)

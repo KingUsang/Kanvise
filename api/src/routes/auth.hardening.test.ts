@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   updateUserById: vi.fn(),
   generateLink: vi.fn(),
   findAccountInvitation: vi.fn(),
-  validateInviteToken: vi.fn(),
   user: { id: 'profile-1', supabase_auth_id: 'auth-1', role: 'student' } as any,
 }))
 
@@ -17,7 +16,6 @@ vi.mock('../lib/supabase', () => ({
     auth: { admin: { updateUserById: mocks.updateUserById, generateLink: mocks.generateLink } },
   },
 }))
-vi.mock('../lib/invites', () => ({ validateInviteToken: mocks.validateInviteToken }))
 vi.mock('../emails/ensure-welcome-email', () => ({ ensureWelcomeEmail: vi.fn() }))
 vi.mock('../lib/account-invitations', () => ({
   findAccountInvitation: mocks.findAccountInvitation,
@@ -148,11 +146,10 @@ describe('auth route hardening', () => {
       expect(await response.json()).toMatchObject({ code: 'INVITATION_INVALID' })
     })
 
-    it('tutor-invite preview returns 503 on a database error', async () => {
-      mocks.validateInviteToken.mockReturnValue({ invite_id: 'i', school_id: 's', email: 'a@b.c' })
-      mocks.from.mockReturnValue(chain({ data: null, error: { code: 'XX000' } }))
-      const response = await post('/tutor-invite/preview', { invite_token: 'x' })
-      expect(response.status).toBe(503)
+    it('the retired legacy tutor-invite preview route is gone (DEV-SEC-008)', async () => {
+      const response = await post('/tutor-invite/preview', { invite_token: 'payload.signature' })
+      expect(response.status).toBe(404)
+      expect(mocks.from).not.toHaveBeenCalled()
     })
   })
 

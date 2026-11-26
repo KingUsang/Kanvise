@@ -58,4 +58,15 @@ describe('Google OAuth callback', () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/auth\/profile\/init$/), expect.objectContaining({ signal: expect.any(AbortSignal) }))
     expect(response.headers.get('location')).toContain('/auth/auth-code-error?reason=profile_init_failed')
   })
+
+  it('sends a retired legacy tutor invite link to /invite without the token (DEV-SEC-008)', async () => {
+    mocks.cookie = ''
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await GET(new Request('https://kanvise.test/api/auth/callback?code=c&role=tutor&invite_token=legacy.signature'))
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(response.headers.get('location')).toBe('https://kanvise.test/invite')
+  })
 })

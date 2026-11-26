@@ -48,7 +48,6 @@ describe('POST /schools/me/invite/tutor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv('FRONTEND_URL', 'https://kanvise.com')
-    vi.stubEnv('INVITE_TOKEN_SECRET', 'test-invite-secret')
   })
 
   it('retains the invite and returns its URL when email delivery fails', async () => {

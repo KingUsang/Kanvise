@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, Landmark, Wallet, Plus, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { accountContextHeaders } from "@/lib/account-preference";
 import EditPayoutModal from "@/components/dashboard/payments/edit-payout-modal";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
@@ -27,7 +28,7 @@ export default function PaymentsPage() {
         
         // Fetch summary
       const summaryRes = await fetch(`${apiUrl}/payments/summary`, {
-        headers: { Authorization: `Bearer ${sessionToken}` }
+        headers: { ...accountContextHeaders(), Authorization: `Bearer ${sessionToken}` }
       });
         
         if (!summaryRes.ok) {
@@ -38,7 +39,7 @@ export default function PaymentsPage() {
         
         // Fetch payments
       const paymentsRes = await fetch(`${apiUrl}/payments`, {
-        headers: { Authorization: `Bearer ${sessionToken}` }
+        headers: { ...accountContextHeaders(), Authorization: `Bearer ${sessionToken}` }
       });
         
         if (!paymentsRes.ok) {
@@ -62,9 +63,10 @@ export default function PaymentsPage() {
   }, []);
 
   const resolveItemName = (payment: any) => {
-    if (payment.sub_programmes?.name) return payment.sub_programmes.name;
+    // Sub-programmes are kept in the data but not shown in the UI (DEV-SUB-006).
     if (payment.courses?.name) return payment.courses.name;
     if (payment.programmes?.name) return payment.programmes.name;
+    if (payment.sub_programmes) return "Class";
     return "Item no longer available";
   };
 

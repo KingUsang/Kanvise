@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { clientAddress, createIpRateLimiter } from './ip-rate-limit'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { clientAddress, createIpRateLimiter, hasTrustedProxySecret } from './ip-rate-limit'
 
 describe('createIpRateLimiter', () => {
   it('blocks after the limit and reports seconds to wait', () => {
@@ -25,11 +25,39 @@ describe('createIpRateLimiter', () => {
   })
 })
 
-describe('clientAddress', () => {
+describe('clientAddress (DEV-PUB-004)', () => {
+  const secret = 'proxy-secret-for-tests-0123456789'
   const req = (headers: Record<string, string>) => ({ req: { header: (n: string) => headers[n.toLowerCase()] } })
-  it('prefers the edge header and falls back to the last forwarded hop', () => {
-    expect(clientAddress(req({ 'cf-connecting-ip': '1.1.1.1', 'x-forwarded-for': '2.2.2.2' }))).toBe('1.1.1.1')
+
+  beforeEach(() => { vi.stubEnv('KANVISE_PROXY_SECRET', secret) })
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('ignores spoofable edge headers and uses the last forwarded hop', () => {
+    expect(clientAddress(req({ 'cf-connecting-ip': '1.1.1.1', 'x-real-ip': '3.3.3.3', 'x-forwarded-for': '2.2.2.2' }))).toBe('2.2.2.2')
     expect(clientAddress(req({ 'x-forwarded-for': '9.9.9.9, 2.2.2.2' }))).toBe('2.2.2.2')
+    expect(clientAddress(req({ 'cf-connecting-ip': '1.1.1.1' }))).toBe('unknown')
     expect(clientAddress(req({}))).toBe('unknown')
+  })
+
+  it('ignores a forwarded client address without the proxy secret', () => {
+    expect(clientAddress(req({ 'x-kanvise-client-ip': '7.7.7.7', 'x-forwarded-for': '2.2.2.2' }))).toBe('2.2.2.2')
+    expect(clientAddress(req({ 'x-kanvise-client-ip': '7.7.7.7', 'x-kanvise-proxy-secret': 'wrong', 'x-forwarded-for': '2.2.2.2' }))).toBe('2.2.2.2')
+  })
+
+  it('uses the forwarded client address when the proxy secret matches', () => {
+    expect(clientAddress(req({ 'x-kanvise-client-ip': '7.7.7.7', 'x-kanvise-proxy-secret': secret, 'x-forwarded-for': '2.2.2.2' }))).toBe('7.7.7.7')
+    expect(clientAddress(req({ 'x-kanvise-client-ip': '2001:db8::1', 'x-kanvise-proxy-secret': secret }))).toBe('2001:db8::1')
+  })
+
+  it('rejects a malformed forwarded address even with the secret', () => {
+    expect(clientAddress(req({ 'x-kanvise-client-ip': 'not an ip', 'x-kanvise-proxy-secret': secret, 'x-forwarded-for': '2.2.2.2' }))).toBe('2.2.2.2')
+  })
+
+  it('trusts nobody when the secret is unset or too short', () => {
+    vi.stubEnv('KANVISE_PROXY_SECRET', '')
+    expect(hasTrustedProxySecret(req({ 'x-kanvise-proxy-secret': '' }))).toBe(false)
+    expect(clientAddress(req({ 'x-kanvise-client-ip': '7.7.7.7', 'x-kanvise-proxy-secret': 'anything', 'x-forwarded-for': '2.2.2.2' }))).toBe('2.2.2.2')
+    vi.stubEnv('KANVISE_PROXY_SECRET', 'short')
+    expect(clientAddress(req({ 'x-kanvise-client-ip': '7.7.7.7', 'x-kanvise-proxy-secret': 'short', 'x-forwarded-for': '2.2.2.2' }))).toBe('2.2.2.2')
   })
 })

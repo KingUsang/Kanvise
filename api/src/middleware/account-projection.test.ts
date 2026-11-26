@@ -9,8 +9,8 @@ vi.mock('../lib/supabase', () => {
   }
   return { supabase: { from: () => value } }
 })
-vi.mock('./auth', () => ({
-  ACCOUNT_CONTEXT_HEADER: 'X-Kanvise-Account-Id',
+vi.mock('./auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./auth')>()),
   accountContextMiddleware: async (c: any, next: () => Promise<void>) => {
     mocks.resolved()
     c.set('account', { id: 'account-1', membershipId: 'm-1', role: 'learner' })
@@ -64,6 +64,16 @@ describe('account user projection', () => {
     const response = await app({ id: 'u', role: 'student', school_id: 'profile' }).request('/')
     await expect(response.json()).resolves.toMatchObject({ user: { school_id: 'account-9' } })
     expect(mocks.resolved).toHaveBeenCalledWith('account-9')
+    mocks.memberships = []
+  })
+
+  it('asks for a selection when a header-less student has several memberships', async () => {
+    mocks.resolved.mockClear()
+    mocks.memberships = [{ school_id: 'account-1' }, { school_id: 'account-2' }]
+    const response = await app({ id: 'u', role: 'student', school_id: null }).request('/')
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({ code: 'ACCOUNT_SELECTION_REQUIRED' })
+    expect(mocks.resolved).not.toHaveBeenCalled()
     mocks.memberships = []
   })
 

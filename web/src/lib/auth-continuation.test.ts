@@ -12,8 +12,14 @@ describe('postAuthDestination', () => {
   })
 
   it('preserves invite acceptance for an existing account', () => {
-    expect(postAuthDestination({ role: 'student', redirect: '/join?token=invite-token' }))
-      .toBe('/join?token=invite-token')
+    expect(postAuthDestination({ role: 'student', redirect: '/invite?token=invite-token' }))
+      .toBe('/invite?token=invite-token')
+  })
+
+  it('keeps durable invite acceptance for staff and drops the retired /join path', () => {
+    expect(postAuthDestination({ role: 'tutor', redirect: '/invite?token=invite-token' }))
+      .toBe('/invite?token=invite-token')
+    expect(postAuthDestination({ role: 'tutor', redirect: '/join?token=legacy' })).toBe('/dashboard')
   })
 
   it('keeps an agency administrator without an agency in setup', () => {

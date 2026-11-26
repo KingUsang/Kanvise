@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import {
-  ACCOUNT_CONTEXT_HEADER,
   accountContextMiddleware,
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
   Variables,
 } from "../middleware/auth";
+import { standaloneAwareAccountContext } from "../middleware/account-projection";
 import type { AccountContext } from "../types";
 import { resolveStudentCourses } from "../lib/student-course-access";
 import {
@@ -34,17 +34,17 @@ const accountUserProjection = async (c: any, next: any) => {
 
 dashboardRouter.use("*", async (c, next) => {
   const user = c.get("user");
-  const standaloneMockRoute =
+  const studentHomeRoute =
     (c.req.path === "/dashboard/student" ||
       c.req.path === "/dashboard/student/progress") &&
-    user.role === "student" &&
-    !user.school_id &&
-    !c.req.header(ACCOUNT_CONTEXT_HEADER);
+    user.role === "student";
 
   // Standalone-mock students have no tutoring account. This is the explicit
-  // compatibility exception; every account-backed request resolves the
-  // selected active membership instead of using profile school_id.
-  if (standaloneMockRoute) return next();
+  // compatibility exception: with no header, a student's single active
+  // membership is still resolved and only a student with none (and no
+  // profile account) continues without a tenant. Every other request
+  // resolves the selected active membership instead of profile school_id.
+  if (studentHomeRoute) return standaloneAwareAccountContext(c, next);
   return accountContextMiddleware(c, next);
 });
 dashboardRouter.use("*", accountUserProjection);

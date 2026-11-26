@@ -65,6 +65,21 @@ describe('route policy inventory', () => {
     }
   })
 
+  it('keeps non-browser callers (webhooks, internal service, public routers) outside account context middleware', () => {
+    const accountSources = new Set(routePolicyInventory
+      .filter((entry) => entry.policy !== 'public' && entry.policy !== 'webhook' && entry.policy !== 'internal-service')
+      .map((entry) => entry.source))
+    const outside = routePolicyInventory.filter((entry) => entry.kind === 'router'
+      && ['public', 'webhook', 'internal-service'].includes(entry.policy)
+      && !accountSources.has(entry.source))
+    expect(outside.map((entry) => entry.router)).toEqual(expect.arrayContaining(['webhooksRouter', 'internalPaymentsRouter', 'publicLiveClassesRouter', 'healthRouter']))
+    for (const entry of outside) {
+      const source = readFileSync(resolve(process.cwd(), entry.source), 'utf8')
+      expect(source, `${entry.key} must not require a selected account`).not.toMatch(/accountContextMiddleware|standaloneAwareAccountContext/)
+      expect(entry.observedMiddleware).not.toContain('accountContextMiddleware')
+    }
+  })
+
   it('moves live-class and slides routers off the profile tenant (DEV-SEC-005, DEV-API-007)', () => {
     for (const routerName of ['liveClassesRouter', 'slidesRouter']) {
       const entry = routePolicyInventory.find((candidate) => candidate.router === routerName)
