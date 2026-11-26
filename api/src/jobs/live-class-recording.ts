@@ -169,16 +169,32 @@ export async function runLiveClassRecordingJob(now = new Date(), limit = 3) {
         continue
       }
       if (job.job_type === 'recording_process') await processRecording(job)
-      await (supabase as any).from('live_class_jobs').update({ status: 'complete', completed_at: new Date().toISOString(), last_error: null, locked_by: null, locked_until: null }).eq('id', job.id)
+      const { error: completeError } = await (supabase as any).from('live_class_jobs').update({ status: 'complete', completed_at: new Date().toISOString(), last_error: null, locked_by: null, locked_until: null }).eq('id', job.id)
+      // The lease expiry returns the job to the queue if this write is lost.
+      if (completeError) console.error('[recording] could not record job completion', { jobId: job.id, error: completeError })
       processed += 1
     } catch (jobError: any) {
       failures += 1
       const message = String(jobError?.message || jobError).slice(0, 500)
       const attempt = (job.attempts || 0) + 1
-      await (supabase as any).from('live_class_jobs').update({ status: attempt >= RECORDING_MAX_ATTEMPTS ? 'failed' : 'pending', last_error: message, locked_by: null, locked_until: null, available_at: new Date(Date.now() + 5 * 60_000).toISOString() }).eq('id', job.id)
+      const { error: retryError } = await (supabase as any).from('live_class_jobs').update({ status: attempt >= RECORDING_MAX_ATTEMPTS ? 'failed' : 'pending', last_error: message, locked_by: null, locked_until: null, available_at: new Date(Date.now() + 5 * 60_000).toISOString() }).eq('id', job.id)
+      if (retryError) console.error('[recording] could not record job failure', { jobId: job.id, error: retryError })
       // Recording delivery and AI processing are intentionally independent:
       // students can still watch a verified R2 video if Deepgram/Gemini fails.
-      await (supabase as any).from('live_class_recaps').upsert({ live_class_id: job.live_class_id, status: 'failed', failure_reason: message, updated_at: new Date().toISOString() }, { onConflict: 'live_class_id' })
+      // Only the final attempt marks the recap failed, and the row carries the
+      // tenant columns the table requires so the write cannot be rejected.
+      if (attempt >= RECORDING_MAX_ATTEMPTS && job.job_type === 'recording_process') {
+        try {
+          const context = await loadContext(job.live_class_id)
+          const { error: recapFailError } = await (supabase as any).from('live_class_recaps').upsert({
+            live_class_id: job.live_class_id, school_id: context.school_id, course_id: context.course_id, tutor_id: context.tutor_id,
+            status: 'failed', failure_reason: message, updated_at: new Date().toISOString(),
+          }, { onConflict: 'live_class_id' })
+          if (recapFailError) throw recapFailError
+        } catch (recapError) {
+          console.error('[recording] could not persist recap failure', { liveClassId: job.live_class_id, error: recapError })
+        }
+      }
       console.error('[recording] processing failed', { liveClassId: job.live_class_id, error: message })
     }
   }

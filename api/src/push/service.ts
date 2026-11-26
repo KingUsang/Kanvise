@@ -1,6 +1,7 @@
 import webpush from 'web-push'
 import { configureWebPush } from './config'
 import { pushRepository } from './repository'
+import { retryWrite } from '../lib/retry-write'
 import type { NotificationEvent } from '../notifications/types'
 
 export type PushPayload = { title: string; body: string; url: string; tag: string }
@@ -20,6 +21,7 @@ export async function sendWebPushNotification(input: {
 
   for (const subscription of subscriptions) {
     const key = `${input.event}:${input.relatedEntityId}:${input.userId}:${subscription.id}`
+    let sentToProvider = false
     try {
       const delivery = await pushRepository.beginDelivery({
         key, subscriptionId: subscription.id, userId: input.userId, schoolId: input.schoolId, event: input.event,
@@ -28,15 +30,21 @@ export async function sendWebPushNotification(input: {
         result.alreadySent += 1
         continue
       }
-      await pushRepository.markAttempt(key, delivery.attempt_count + 1)
+      if (!await pushRepository.claim(key)) {
+        result.alreadySent += 1
+        continue
+      }
       await webpush.sendNotification({
         endpoint: subscription.endpoint,
         expirationTime: subscription.expiration_time ? new Date(subscription.expiration_time).getTime() : null,
         keys: { p256dh: subscription.p256dh, auth: subscription.auth },
       }, JSON.stringify(input.payload), { TTL: 60 * 60 * 24 })
-      await pushRepository.markSent(key)
+      sentToProvider = true
       result.sent += 1
+      // Delivered. A failing ledger write is retried and never turns the push into a failure.
+      if (!await retryWrite(() => pushRepository.markSent(key))) console.error('push.sent_state_write_failed', { key })
     } catch (error) {
+      if (sentToProvider) continue
       const code = statusCode(error)
       if (code === 404 || code === 410) {
         await pushRepository.deleteSubscriptionById(subscription.id)

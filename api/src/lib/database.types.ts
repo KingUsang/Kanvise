@@ -610,14 +610,14 @@ isOneToOne: false
                   ]
                 },"email_deliveries": {
                   Row: {
-                    "attempt_count": number,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"provider_message_id": string | null,"recipient_email": string,"sent_at": string | null,"status": string,"updated_at": string
+                    "attempt_count": number,"claimed_until": string | null,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"provider_message_id": string | null,"recipient_email": string,"sent_at": string | null,"status": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email": string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email": string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email"?: string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"provider_message_id"?: string | null,"recipient_email"?: string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
 
@@ -2205,14 +2205,14 @@ isOneToOne: false
                   ]
                 },"push_deliveries": {
                   Row: {
-                    "attempt_count": number,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"school_id": string,"sent_at": string | null,"status": string,"subscription_id": string,"updated_at": string,"user_id": string
+                    "attempt_count": number,"claimed_until": string | null,"created_at": string,"event_type": string,"id": string,"idempotency_key": string,"last_error": string | null,"school_id": string,"sent_at": string | null,"status": string,"subscription_id": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"school_id": string,"sent_at"?: string | null,"status"?: string,"subscription_id": string,"updated_at"?: string,"user_id": string
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"last_error"?: string | null,"school_id": string,"sent_at"?: string | null,"status"?: string,"subscription_id": string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "attempt_count"?: number,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"school_id"?: string,"sent_at"?: string | null,"status"?: string,"subscription_id"?: string,"updated_at"?: string,"user_id"?: string
+                    "attempt_count"?: number,"claimed_until"?: string | null,"created_at"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"last_error"?: string | null,"school_id"?: string,"sent_at"?: string | null,"status"?: string,"subscription_id"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -3080,6 +3080,12 @@ isOneToOne: false
 { Args: { "p_job_types": (string)[],"p_lease_seconds"?: number,"p_limit"?: number,"p_worker": string }; Returns: {
               "attempts": number,"completed_at": string | null,"created_at": string,"dedupe_key": string,"id": string,"job_type": string,"last_error": string | null,"locked_by": string | null,"locked_until": string | null,"max_attempts": number,"payload": NonNullable<Json>,"run_at": string,"status": string,"updated_at": string
             }[]
+                           },
+"claim_email_delivery":
+{ Args: { "p_key": string,"p_lease_seconds"?: number }; Returns: boolean
+                           },
+"claim_push_delivery":
+{ Args: { "p_key": string,"p_lease_seconds"?: number }; Returns: boolean
                            },
 "complete_durable_job":
 { Args: { "p_id": string,"p_worker": string }; Returns: boolean

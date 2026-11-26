@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { sendWelcomeEmail } from './send-welcome'
+import { retryWrite } from '../lib/retry-write'
 
 type Delivery = {
   idempotency_key: string
@@ -11,7 +12,7 @@ type Delivery = {
 export type WelcomeDeliveryStore = {
   createIfMissing(input: { idempotencyKey: string; recipientEmail: string }): Promise<void>
   get(idempotencyKey: string): Promise<Delivery>
-  markAttempt(idempotencyKey: string, attemptCount: number): Promise<void>
+  claim(idempotencyKey: string): Promise<boolean>
   markSent(idempotencyKey: string, providerMessageId: string | null): Promise<void>
   markFailed(idempotencyKey: string, safeError: string): Promise<void>
 }
@@ -33,13 +34,10 @@ const deliveryStore: WelcomeDeliveryStore = {
     if (error || !data) throw error || new Error('Email delivery record not found')
     return data as Delivery
   },
-  async markAttempt(idempotencyKey, attemptCount) {
-    const { error } = await supabase.from('email_deliveries').update({
-      status: 'pending',
-      attempt_count: attemptCount,
-      updated_at: new Date().toISOString(),
-    }).eq('idempotency_key', idempotencyKey)
+  async claim(idempotencyKey) {
+    const { data, error } = await (supabase as any).rpc('claim_email_delivery', { p_key: idempotencyKey, p_lease_seconds: 300 })
     if (error) throw error
+    return Boolean(data)
   },
   async markSent(idempotencyKey, providerMessageId) {
     const { error } = await supabase.from('email_deliveries').update({
@@ -47,6 +45,7 @@ const deliveryStore: WelcomeDeliveryStore = {
       provider_message_id: providerMessageId,
       sent_at: new Date().toISOString(),
       last_error: null,
+      claimed_until: null,
       updated_at: new Date().toISOString(),
     }).eq('idempotency_key', idempotencyKey)
     if (error) throw error
@@ -55,6 +54,7 @@ const deliveryStore: WelcomeDeliveryStore = {
     const { error } = await supabase.from('email_deliveries').update({
       status: 'failed',
       last_error: safeError.slice(0, 500),
+      claimed_until: null,
       updated_at: new Date().toISOString(),
     }).eq('idempotency_key', idempotencyKey)
     if (error) throw error
@@ -86,8 +86,10 @@ export async function ensureWelcomeEmail(
     return { sent: true, id: existing.provider_message_id, alreadySent: true }
   }
 
+  let providerAccepted = false
   try {
-    await dependencies.store.markAttempt(idempotencyKey, existing.attempt_count + 1)
+    // Atomic claim so two workers cannot both send the welcome email.
+    if (!await dependencies.store.claim(idempotencyKey)) return { sent: false, id: null, alreadySent: false }
     const result = await dependencies.send({
       to: input.recipientEmail,
       firstName: input.firstName,
@@ -95,11 +97,14 @@ export async function ensureWelcomeEmail(
       role: input.role,
       idempotencyKey,
     })
-    await dependencies.store.markSent(idempotencyKey, result.id)
+    providerAccepted = true
+    // The email is delivered. A failing ledger write must not mark it failed.
+    const recorded = await retryWrite(() => dependencies.store.markSent(idempotencyKey, result.id))
+    if (!recorded) console.error('email.sent_state_write_failed', { event: 'welcome', idempotencyKey })
     return { sent: true, id: result.id, alreadySent: false }
   } catch (error) {
     const safeError = error instanceof Error ? error.message : 'Unknown email delivery error'
-    await dependencies.store.markFailed(idempotencyKey, safeError)
+    if (!providerAccepted) await dependencies.store.markFailed(idempotencyKey, safeError)
     console.error('email.delivery_failed', { event: 'welcome', idempotencyKey, error: safeError })
     return { sent: false, id: null, alreadySent: false }
   }

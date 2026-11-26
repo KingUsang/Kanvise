@@ -23,10 +23,12 @@ export async function reconcileRecorderFleet(now = new Date()) {
   if (!configured()) return { name: 'recorder_fleet', skipped: true, desiredCapacity: 0 }
   const warmFrom = now.toISOString()
   const warmTo = new Date(now.getTime() + 10 * 60_000).toISOString()
+  // Keep the recorder up while uploads and merges finish after a class ends.
+  const cooldownFrom = new Date(now.getTime() - 45 * 60_000).toISOString()
   const { data, error } = await (supabase as any).from('live_classes')
     .select('id, status, scheduled_at, ended_at')
     .eq('classroom_provider', 'plugnmeet')
-    .or(`and(status.eq.scheduled,scheduled_at.gte.${warmFrom},scheduled_at.lte.${warmTo}),status.eq.live`)
+    .or(`and(status.eq.scheduled,scheduled_at.gte.${warmFrom},scheduled_at.lte.${warmTo}),status.in.(starting,ready,live,ending),and(status.eq.completed,ended_at.gte.${cooldownFrom}))`)
   if (error) throw error
   const activeWindows = data || []
   const desiredCapacity = activeWindows.length ? 1 : 0
@@ -50,7 +52,8 @@ export async function reconcileRecorderFleet(now = new Date()) {
     if (readinessError) throw readinessError
   }
   if (desiredCapacity === 0 && ['running', 'pending'].includes(controller.state_before || '')) {
-    await (supabase as any).from('recorder_fleet_readiness').upsert({ singleton: true, vm_state: 'stopped', service_state: 'unknown', updated_at: now.toISOString() }, { onConflict: 'singleton' })
+    const { error: stoppedError } = await (supabase as any).from('recorder_fleet_readiness').upsert({ singleton: true, vm_state: 'stopped', service_state: 'unknown', updated_at: now.toISOString() }, { onConflict: 'singleton' })
+    if (stoppedError) throw stoppedError
   }
   return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id), captureCapacity: 2,
     capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }

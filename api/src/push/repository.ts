@@ -59,22 +59,22 @@ export const pushRepository = {
     return data as { status: 'pending' | 'sent' | 'failed'; attempt_count: number }
   },
 
-  async markAttempt(key: string, attemptCount: number) {
-    const { error } = await db.from('push_deliveries').update({
-      status: 'pending', attempt_count: attemptCount, last_error: null, updated_at: new Date().toISOString(),
-    }).eq('idempotency_key', key)
+  async claim(key: string) {
+    // One UPDATE decides the winner, so concurrent workers never both send.
+    const { data, error } = await db.rpc('claim_push_delivery', { p_key: key, p_lease_seconds: 300 })
     if (error) throw error
+    return Boolean(data)
   },
 
   async markSent(key: string) {
     const now = new Date().toISOString()
-    const { error } = await db.from('push_deliveries').update({ status: 'sent', sent_at: now, last_error: null, updated_at: now }).eq('idempotency_key', key)
+    const { error } = await db.from('push_deliveries').update({ status: 'sent', sent_at: now, last_error: null, claimed_until: null, updated_at: now }).eq('idempotency_key', key)
     if (error) throw error
   },
 
   async markFailed(key: string, message: string) {
     const { error } = await db.from('push_deliveries').update({
-      status: 'failed', last_error: message.slice(0, 500), updated_at: new Date().toISOString(),
+      status: 'failed', last_error: message.slice(0, 500), claimed_until: null, updated_at: new Date().toISOString(),
     }).eq('idempotency_key', key)
     if (error) throw error
   },

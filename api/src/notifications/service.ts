@@ -8,6 +8,7 @@ import {
   type NotificationResult,
 } from './types'
 import { sendWebPushNotification } from '../push/service'
+import { retryWrite } from '../lib/retry-write'
 
 type Logger = Pick<Console, 'info' | 'error'>
 
@@ -117,6 +118,7 @@ export async function deliverNotification<K extends NotificationEvent>(
       }
 
       const key = `${request.event}:${request.relatedEntityId}:${recipient.id}`
+      let providerAccepted = false
       try {
         await dependencies.repository.createDelivery(key, request.event, recipient.email)
         const delivery = await dependencies.repository.getDelivery(key)
@@ -125,16 +127,25 @@ export async function deliverNotification<K extends NotificationEvent>(
           return
         }
 
-        await dependencies.repository.markDeliveryAttempt(key, delivery.attempt_count + 1)
+        // Atomic claim: another worker holding the delivery means it is theirs to send.
+        if (!await dependencies.repository.claimDelivery(key)) {
+          result.emailsAlreadySent += 1
+          return
+        }
         const emailEvent = notificationEmailEvents[request.event]
         const sent = await dependencies.sendEmail(emailEvent, {
           ...request.emailInput(recipient),
           to: recipient.email,
           idempotencyKey: key,
         } as never)
-        await dependencies.repository.markDeliverySent(key, sent.id)
+        providerAccepted = true
         result.emailsSent += 1
+        // The provider accepted the message. If the ledger write keeps failing the
+        // delivery stays claimed rather than failed, so it is not re-sent at once.
+        const recorded = await retryWrite(() => dependencies.repository.markDeliverySent(key, sent.id))
+        if (!recorded) dependencies.logger.error('notification.email_sent_state_write_failed', { key })
       } catch (error) {
+        if (providerAccepted) return
         const message = errorMessage(error)
         try { await dependencies.repository.markDeliveryFailed(key, message) } catch { /* retain original failure */ }
         result.failures.push({ recipientId: recipient.id, channel: 'email', error: message })

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-type DeliveryState = { status: string }
+type DeliveryState = { status: string, attempt_count?: number }
 
 const state = {
   users: [] as Array<{ id: string, first_name: string | null, email: string | null, created_at: string, role: string }>,
@@ -10,6 +10,13 @@ const state = {
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
+    async rpc(name: string, args: { p_key: string }) {
+      if (name !== 'claim_email_delivery') throw new Error(`Unexpected rpc: ${name}`)
+      const existing = state.deliveries.get(args.p_key)
+      if (!existing || existing.status === 'sent') return { data: false, error: null }
+      state.deliveries.set(args.p_key, { status: 'pending', attempt_count: (existing.attempt_count || 0) + 1 })
+      return { data: true, error: null }
+    },
     from(table: string) {
       if (table === 'user_profiles') {
         return {
@@ -31,14 +38,14 @@ vi.mock('../lib/supabase', () => ({
           },
           maybeSingle: vi.fn(async () => ({ data: state.deliveries.get(key) ?? null, error: null })),
           upsert: vi.fn(async (payload: { idempotency_key: string, status: string }) => {
-            state.deliveries.set(payload.idempotency_key, { status: payload.status })
+            if (!state.deliveries.has(payload.idempotency_key)) state.deliveries.set(payload.idempotency_key, { status: 'pending', attempt_count: 0 })
             return { error: null }
           }),
           update(values: { status?: string }) {
             return {
               eq: vi.fn(async (_column: string, value: string) => {
                 const existing = state.deliveries.get(value)
-                if (existing) state.deliveries.set(value, { status: values.status ?? existing.status })
+                if (existing) state.deliveries.set(value, { ...existing, status: values.status ?? existing.status })
                 return { error: null }
               }),
             }
@@ -113,19 +120,28 @@ describe('runOnboardingDripJob', () => {
     expect(state.sentEvents).toEqual(['meet_kavi'])
   })
 
-  it('does not skip ahead when an earlier step is pending or failed', async () => {
+  it('retries a failed step instead of blocking the user forever', async () => {
     state.users = [{
-      id: 'user-1',
-      first_name: 'Ada',
-      email: 'ada@example.com',
-      created_at: new Date(Date.now() - (20 * 24 * 60 * 60 * 1000)).toISOString(),
-      role: 'admin',
+      id: 'user-1', first_name: 'Ada', email: 'ada@example.com',
+      created_at: new Date(Date.now() - (20 * 24 * 60 * 60 * 1000)).toISOString(), role: 'admin',
     }]
-    state.deliveries.set('drip_founder_letter_user-1', { status: 'failed' })
+    state.deliveries.set('drip_founder_letter_user-1', { status: 'failed', attempt_count: 1 })
 
     await runOnboardingDripJob()
 
-    expect(state.sentEvents).toEqual([])
+    expect(state.sentEvents).toEqual(['founder_letter'])
+    expect(state.deliveries.get('drip_founder_letter_user-1')?.status).toBe('sent')
+  })
+
+  it('moves past a step that used every attempt', async () => {
+    state.users = [{
+      id: 'user-1', first_name: 'Ada', email: 'ada@example.com',
+      created_at: new Date(Date.now() - (20 * 24 * 60 * 60 * 1000)).toISOString(), role: 'admin',
+    }]
+    state.deliveries.set('drip_founder_letter_user-1', { status: 'failed', attempt_count: 5 })
+
+    await runOnboardingDripJob()
+
+    expect(state.sentEvents).toEqual(['meet_kavi'])
   })
 })
-

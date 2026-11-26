@@ -21,7 +21,7 @@ export type NotificationRepository = {
   }): Promise<boolean>
   createDelivery(key: string, event: NotificationEvent, recipientEmail: string): Promise<void>
   getDelivery(key: string): Promise<DeliveryRecord>
-  markDeliveryAttempt(key: string, attemptCount: number): Promise<void>
+  claimDelivery(key: string): Promise<boolean>
   markDeliverySent(key: string, providerMessageId: string | null): Promise<void>
   markDeliveryFailed(key: string, error: string): Promise<void>
 }
@@ -139,24 +139,24 @@ export const notificationRepository: NotificationRepository = {
     return data as DeliveryRecord
   },
 
-  async markDeliveryAttempt(key, attemptCount) {
-    const { error } = await supabase.from('email_deliveries').update({
-      status: 'pending', attempt_count: attemptCount, updated_at: new Date().toISOString(),
-    }).eq('idempotency_key', key)
+  async claimDelivery(key) {
+    // One UPDATE decides the winner, so two workers never both send.
+    const { data, error } = await (supabase as any).rpc('claim_email_delivery', { p_key: key, p_lease_seconds: 300 })
     if (error) throw error
+    return Boolean(data)
   },
 
   async markDeliverySent(key, providerMessageId) {
     const { error } = await supabase.from('email_deliveries').update({
       status: 'sent', provider_message_id: providerMessageId, sent_at: new Date().toISOString(),
-      last_error: null, updated_at: new Date().toISOString(),
+      last_error: null, claimed_until: null, updated_at: new Date().toISOString(),
     }).eq('idempotency_key', key)
     if (error) throw error
   },
 
   async markDeliveryFailed(key, message) {
     const { error } = await supabase.from('email_deliveries').update({
-      status: 'failed', last_error: message.slice(0, 500), updated_at: new Date().toISOString(),
+      status: 'failed', last_error: message.slice(0, 500), claimed_until: null, updated_at: new Date().toISOString(),
     }).eq('idempotency_key', key)
     if (error) throw error
   },

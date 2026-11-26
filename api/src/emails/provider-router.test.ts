@@ -94,6 +94,21 @@ describe('email provider routing', () => {
     }))
   })
 
+  it('fails closed without sending when the capacity reservation cannot be checked', async () => {
+    const resend = vi.fn<ProviderSender>().mockResolvedValue({ id: 'resend-unused' })
+    const usageStore: EmailProviderUsageStore = {
+      reserve: vi.fn(async () => { throw new Error('database unavailable') }),
+      record: vi.fn(async () => undefined),
+    }
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await expect(sendUsingProviderChain({
+      event: 'welcome', order: ['resend'], payload, senders: { resend }, usageStore,
+      dailyLimits: { resend: 100, brevo: 300, mailjet: 200 }, usageThresholdPercent: 90,
+    })).rejects.toThrow(/capacity_check_failed/)
+    expect(resend).not.toHaveBeenCalled()
+  })
+
   it('maps Kanvise email fields to the Brevo HTTP API without exposing the key in the body', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(
       JSON.stringify({ messageId: '<brevo-message-id>' }),

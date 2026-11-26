@@ -30,11 +30,12 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
       if (active) {
         // `isRoomActive` proves the provider room exists, not that a tutor or
         // learner joined. Only webhooks promote ready -> live.
-        await (supabase as any).from('live_classes').update({
+        const { error: monitorError } = await (supabase as any).from('live_classes').update({
           provider_room_status: liveClass.status === 'starting' || liveClass.status === 'ready' ? 'ready' : 'active',
           provider_room_checked_at: now.toISOString(), provider_error_at: null, provider_error_message: null,
           ...(liveClass.status === 'starting' ? { status: 'ready', room_ready_at: now.toISOString() } : {}),
         }).eq('id', liveClass.id).eq('status', liveClass.status)
+        if (monitorError) throw monitorError
         continue
       }
       if (liveClass.status === 'starting' || liveClass.status === 'ready') {
@@ -74,12 +75,13 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
       // interrupted and let the VM idle safely.
       const deadline = new Date(new Date(liveClass.scheduled_at).getTime() + (Number(liveClass.duration_minutes || 240) + 60) * 60_000)
       const terminal = now >= deadline && (liveClass.status === 'live' || liveClass.status === 'ending')
-      await (supabase as any).from('live_classes').update({
+      const { error: unavailableError } = await (supabase as any).from('live_classes').update({
         ...(terminal ? { status: 'interrupted' } : {}),
         provider_room_status: 'unavailable', provider_room_checked_at: now.toISOString(),
         provider_error_at: now.toISOString(),
         provider_error_message: error instanceof Error ? error.message.slice(0, 500) : 'Provider state could not be checked',
       }).eq('id', liveClass.id).eq('status', liveClass.status)
+      if (unavailableError) console.error('live_class.plugnmeet_monitor_write_failed', { class_id: liveClass.id, error: unavailableError })
       if (terminal) interrupted += 1
       console.warn('live_class.plugnmeet_reconciliation_failed', {
         class_id: liveClass.id,

@@ -27,7 +27,7 @@ export const jobsRepository: JobsRepository = {
 
   async claimDueMocks(now, limit) {
     const { data: candidates, error } = await supabase.from('mock_exams')
-      .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, direct_link_enabled, direct_link_access_mode, direct_link_price_kobo, direct_link_slug, course:courses(name), programme:programmes(name)')
+      .select('id, status, school_id, course_id, programme_id, audience_scope, tutor_id, title, course:courses(name), programme:programmes(name)')
       .in('status', ['draft', 'published'])
       .eq('notification_sent', false)
       .not('publish_at', 'is', null)
@@ -39,7 +39,6 @@ export const jobsRepository: JobsRepository = {
     const claimed: DueMock[] = []
     for (const candidate of candidates || []) {
       if (candidate.status === 'published') {
-        await ensureScheduledDirectLink(candidate)
         claimed.push(toDueMock(candidate))
         continue
       }
@@ -55,7 +54,6 @@ export const jobsRepository: JobsRepository = {
           p_published_at: now.toISOString(),
         })
         if (publishError) throw publishError
-        await ensureScheduledDirectLink(candidate)
         claimed.push(toDueMock(candidate))
         continue
       }
@@ -127,19 +125,6 @@ export const jobsRepository: JobsRepository = {
     }
     return results
   },
-}
-
-async function ensureScheduledDirectLink(mock: any) {
-  if (!mock.direct_link_enabled) return
-  const { data: version, error: versionError } = await supabase.from('mock_exam_versions').select('id')
-    .eq('school_id', mock.school_id).eq('mock_exam_id', mock.id).order('version_number', { ascending: false }).limit(1).maybeSingle()
-  if (versionError || !version) throw versionError || new Error('Published mock version not found')
-  const { error } = await (supabase as any).from('mock_access_offers').insert({
-    school_id: mock.school_id, created_by: mock.tutor_id, mock_exam_id: mock.id, mock_exam_version_id: version.id,
-    slug: mock.direct_link_slug || `mock-${mock.id.slice(0, 8)}`, audience_scope: 'public_link', access_mode: mock.direct_link_access_mode || 'free_claim',
-    price_kobo: mock.direct_link_access_mode === 'paid' ? mock.direct_link_price_kobo || 0 : 0, attempts_included: 1, is_active: true,
-  })
-  if (error && error.code !== '23505') throw error
 }
 
 function toDueMock(mock: any): DueMock {
