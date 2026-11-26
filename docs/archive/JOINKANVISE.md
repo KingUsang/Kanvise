@@ -1,3 +1,5 @@
+> **Archived. Historical product document.** Pre-pivot onboarding and positioning text (invite-only schools and tutorial centres). Current terminology is in [Product domain and terminology](../engineering/standards/01-product-domain-and-terminology.md). It is not a current contract and must not be implemented from. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md) and DEV-DOC-001 in the [deviation register](../deviations.md).
+
 ## **KANVISE** 
 
 ## Brand Guidelines 

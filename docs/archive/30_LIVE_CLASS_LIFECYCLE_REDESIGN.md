@@ -1,3 +1,5 @@
+> **Archived tracker.** The lifecycle states it describes are implemented; its rollout checks and the whiteboard boundary remain open. Its open items were folded into the [deviation register](../deviations.md) as DEV-TRK-030-01 to DEV-TRK-030-02 (section "Older tracker items folded into this register"). The register is the single bug list; this file is dated evidence and is no longer updated. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
 # Live-class lifecycle redesign
 
 **Status:** implementation contract — staging validation required before production

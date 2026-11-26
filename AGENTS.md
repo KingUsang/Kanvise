@@ -16,8 +16,8 @@ Start with:
 - `docs/engineering/decisions/` for accepted architectural decisions.
 - `docs/deviations.md` for known conflicts between code and standards. It does
   not authorize implementation.
-- The feature-specific document in `docs/` before changing an established
-  workflow.
+- The matching guide in `docs/operations/` (setup and deployment) or
+  `docs/runbooks/` (incident response) before changing an established workflow.
 
 Current stack: Next.js (`web/`) on Vercel, Hono API (`api/`) on Oracle behind
 systemd, Supabase (Auth and PostgreSQL), Cloudflare R2 storage and PlugNMeet for

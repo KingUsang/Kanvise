@@ -1,7 +1,9 @@
+> **Archived tracker.** Progress log for the email and notification build (July 2026). The current setup guide is [email setup](../operations/email-setup.md). Its open items were folded into the [deviation register](../deviations.md) as DEV-TRK-010-01 to DEV-TRK-010-03 (section "Older tracker items folded into this register"). The register is the single bug list; this file is dated evidence and is no longer updated. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
 > [!WARNING]
 > **Document status: Evidence**
 >
-> The retained body is dated progress, audit, checklist, setup, or deployment evidence rather than standing authority or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is dated progress, audit, checklist, setup, or deployment evidence rather than standing authority or current release proof. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Kanvise Email and Notification Implementation Progress
 

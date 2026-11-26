@@ -1,3 +1,5 @@
+> **Archived. Historical product document.** Brand and experience narrative. Current UI direction lives under [design references](../design/README.md) and the UI standard. It is not a current contract and must not be implemented from. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md) and DEV-DOC-001 in the [deviation register](../deviations.md).
+
 # **THE KANVISE EXPERIENCE** 
 
 The Kanvise Experience matters just as much as the solution or product we are building. We are able to successfully map out the difference between a tutorial on KANVISE and a tutorial that is not. 

@@ -1,7 +1,9 @@
+> **Archived tracker.** Audit checkpoint recorded 20 July 2026. Current setup is in [Cloudflare R2 setup](../operations/cloudflare-r2-public-setup.md); upload lifecycle gaps are DEV-INT-008, DEV-INT-010 and DEV-UPL-*. Its open items were folded into the [deviation register](../deviations.md) as DEV-TRK-012-01 (section "Older tracker items folded into this register"). The register is the single bug list; this file is dated evidence and is no longer updated. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
 > [!WARNING]
 > **Document status: Evidence**
 >
-> The retained body is dated progress, audit, checklist, setup, or deployment evidence rather than standing authority or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is dated progress, audit, checklist, setup, or deployment evidence rather than standing authority or current release proof. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Cloudflare R2 Audit Checkpoint
 
