@@ -8,6 +8,9 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
+// Refuse hosted projects: this script deletes Auth users and schools.
+require('./scripts/lib/require-local-supabase.cjs').requireLocalSupabase(SUPABASE_URL, 'unseed.js');
+
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
