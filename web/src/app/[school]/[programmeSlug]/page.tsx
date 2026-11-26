@@ -1,7 +1,9 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { CheckoutButton } from "../../../components/public/checkout-button";
 import { requireServerAccessToken } from "@/lib/server-session";
+import { serverAccountContextHeaders } from "@/lib/server/server-account";
+import { ACCOUNT_SELECTION_REQUIRED, accountPickerHref } from "@/lib/account-cookie";
 
 async function getProgramme(slug: string) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -18,15 +20,19 @@ async function getProgramme(slug: string) {
   return json.data;
 }
 
-async function getDraftPreview(programmeId: string, schoolSlug: string) {
-  const token = await requireServerAccessToken();
+async function getDraftPreview(programmeId: string, schoolSlug: string, returnPath: string) {
+  const [token, accountHeaders] = await Promise.all([requireServerAccessToken(), serverAccountContextHeaders()]);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = { ...accountHeaders, Authorization: `Bearer ${token}` };
   const [programmeResponse, schoolResponse] = await Promise.all([
     fetch(`${apiUrl}/programmes/${programmeId}`, { headers, cache: "no-store" }),
     fetch(`${apiUrl}/schools/me`, { headers, cache: "no-store" }),
   ]);
-  if (!programmeResponse.ok || !schoolResponse.ok) return null;
+  if (!programmeResponse.ok || !schoolResponse.ok) {
+    const codes = await Promise.all([programmeResponse, schoolResponse].map(response => response.ok ? null : response.json().then(body => body?.code).catch(() => null)));
+    if (codes.includes(ACCOUNT_SELECTION_REQUIRED)) redirect(accountPickerHref(returnPath));
+    return null;
+  }
   const [programmeBody, schoolBody] = await Promise.all([programmeResponse.json(), schoolResponse.json()]);
   if (schoolBody.data?.slug !== schoolSlug || programmeBody.data?.is_published) return null;
   return {
@@ -48,7 +54,9 @@ export default async function ProgrammePage({
   const { school: schoolSlug, programmeSlug } = await params;
   const { preview } = await searchParams;
   const isDraftPreview = Boolean(preview);
-  const data = isDraftPreview ? await getDraftPreview(preview!, schoolSlug) : await getProgramme(programmeSlug);
+  const data = isDraftPreview
+    ? await getDraftPreview(preview!, schoolSlug, `/${encodeURIComponent(schoolSlug)}/${encodeURIComponent(programmeSlug)}?preview=${encodeURIComponent(preview!)}`)
+    : await getProgramme(programmeSlug);
 
   if (!data) notFound();
 

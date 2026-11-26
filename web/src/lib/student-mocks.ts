@@ -1,4 +1,8 @@
 import { getApiUrl } from '@/config/api'
+import { ServerApiError } from '@/lib/server-api-error'
+
+/** Extra request headers, e.g. X-Kanvise-Account-Id from serverAccountContextHeaders(). */
+type ApiHeaders = Record<string, string>
 
 export type StudentMockCard = {
   id: string
@@ -37,12 +41,12 @@ export type UnlockedMock = {
   } | null
 }
 
-async function api<T>(path: string, accessToken: string): Promise<T> {
+async function api<T>(path: string, accessToken: string, headers: ApiHeaders = {}): Promise<T> {
   const response = await fetch(`${getApiUrl()}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store',
+    headers: { ...headers, Authorization: `Bearer ${accessToken}` }, cache: 'no-store',
   })
   const body = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(body?.error || 'Could not load this page')
+  if (!response.ok) throw new ServerApiError(body?.error || 'Could not load this page', response.status, body?.code)
   return body.data
 }
 
@@ -54,20 +58,20 @@ export function getUnlockedMocks(accessToken: string) {
   return api<UnlockedMock[]>('/my-mocks', accessToken)
 }
 
-export function getMockPreflight(mockId: string, accessToken: string) {
-  return api<any>(`/mocks/${mockId}/preflight`, accessToken)
+export function getMockPreflight(mockId: string, accessToken: string, headers: ApiHeaders = {}) {
+  return api<any>(`/mocks/${mockId}/preflight`, accessToken, headers)
 }
 
-export function getStudentAttempt(attemptId: string, accessToken: string) {
+export function getStudentAttempt(attemptId: string, accessToken: string, headers: ApiHeaders = {}) {
   return fetch(`${getApiUrl()}/attempts/${attemptId}`, {
-    headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store',
+    headers: { ...headers, Authorization: `Bearer ${accessToken}` }, cache: 'no-store',
   }).then(async response => {
     const body = await response.json().catch(() => null)
-    if (!response.ok) throw new Error(body?.error || 'Could not load your attempt')
+    if (!response.ok) throw new ServerApiError(body?.error || 'Could not load your attempt', response.status, body?.code)
     return { ...body.data, server_now: body.server_now }
   })
 }
 
-export function getStudentMockResult(attemptId: string, accessToken: string) {
-  return api<any>(`/attempts/${attemptId}/results`, accessToken)
+export function getStudentMockResult(attemptId: string, accessToken: string, headers: ApiHeaders = {}) {
+  return api<any>(`/attempts/${attemptId}/results`, accessToken, headers)
 }
