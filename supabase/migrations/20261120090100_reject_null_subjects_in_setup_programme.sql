@@ -48,11 +48,13 @@ BEGIN
   IF nullif(btrim(p_name), '') IS NULL OR nullif(btrim(p_slug), '') IS NULL THEN
     RAISE EXCEPTION USING errcode = '22023', message = 'PROGRAMME_DETAILS_REQUIRED';
   END IF;
-  IF CASE
-       WHEN p_subjects IS NULL THEN true
-       WHEN jsonb_typeof(p_subjects) <> 'array' THEN true
-       ELSE jsonb_array_length(p_subjects) = 0
-     END THEN
+  -- jsonb_typeof(NULL) is NULL, so coalesce it to fail closed. The length
+  -- check runs only once p_subjects is known to be an array, because
+  -- jsonb_array_length raises on scalars and objects.
+  IF coalesce(jsonb_typeof(p_subjects), 'null') <> 'array' THEN
+    RAISE EXCEPTION USING errcode = '22023', message = 'SUBJECT_REQUIRED';
+  END IF;
+  IF jsonb_array_length(p_subjects) = 0 THEN
     RAISE EXCEPTION USING errcode = '22023', message = 'SUBJECT_REQUIRED';
   END IF;
   IF EXISTS (
