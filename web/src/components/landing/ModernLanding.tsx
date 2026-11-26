@@ -1391,9 +1391,9 @@ export default function ModernLanding() {
               Spot struggling students early.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
-              Kanvise uses AI to spot patterns across class responses,
-              assessments and participation, so tutors can see who needs support
-              and what to do next.
+              Kanvise brings class responses, assessments and participation
+              together so tutors can see who may need support. The learners
+              and figures shown on this page are sample data.
             </p>
           </div>
           <div className="mt-14 grid gap-5 lg:grid-cols-2">

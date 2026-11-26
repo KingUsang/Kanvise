@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, ReactNode } from 'react'
+import { useEffect, useRef, ReactNode } from 'react'
 import { toast } from 'sonner'
 
 type AntiCheatWrapperProps = {
@@ -8,33 +8,48 @@ type AntiCheatWrapperProps = {
   onAutoSubmit: () => void
 }
 
+// Time away is measured with Date.now() from the moment the page was hidden, so a
+// throttled background timer cannot under-count it. The auto-submit callback is
+// held in a ref so a parent re-render never resets the away clock (DEV-QUIZ-030).
+export const AWAY_LIMIT_MS = 120_000
+
 export function AntiCheatWrapper({ children, onAutoSubmit }: AntiCheatWrapperProps) {
+  const submitRef = useRef(onAutoSubmit)
+  useEffect(() => { submitRef.current = onAutoSubmit })
+
   useEffect(() => {
-    let blurTimer: ReturnType<typeof setInterval>
-    let secondsAway = 0
+    let hiddenAt: number | null = null
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    function leave() {
+      if (hiddenAt === null) return
+      hiddenAt = null
+      if (timer) clearTimeout(timer)
+      toast.error("Quiz automatically submitted due to leaving the exam window for 2 minutes.")
+      submitRef.current()
+    }
 
     function handleVisibilityChange() {
       if (document.hidden) {
-        blurTimer = setInterval(() => {
-          secondsAway += 1
-          if (secondsAway >= 120) {
-            clearInterval(blurTimer)
-            toast.error("Mock automatically submitted due to leaving the exam window for 2 minutes.")
-            onAutoSubmit()
-          }
-        }, 1000)
-      } else {
-        if (blurTimer) clearInterval(blurTimer)
-        secondsAway = 0
+        if (hiddenAt !== null) return
+        hiddenAt = Date.now()
+        timer = setTimeout(() => {
+          if (hiddenAt !== null && Date.now() - hiddenAt >= AWAY_LIMIT_MS - 50) leave()
+        }, AWAY_LIMIT_MS)
+      } else if (hiddenAt !== null) {
+        const away = Date.now() - hiddenAt
+        if (timer) clearTimeout(timer)
+        if (away >= AWAY_LIMIT_MS) leave()
+        else hiddenAt = null
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      if (blurTimer) clearInterval(blurTimer)
+      if (timer) clearTimeout(timer)
     }
-  }, [onAutoSubmit])
+  }, [])
 
   return (
     <div

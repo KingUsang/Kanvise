@@ -5,8 +5,6 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { QuestionContent, type ContentBlock } from '@/components/questions/question-content'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
-import { getApiUrl } from '@/config/api'
-import { InsightModal } from './insight-modal'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
 type MockAnswer = {
@@ -80,13 +78,6 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [savingAnswerId, setSavingAnswerId] = useState<string | null>(null)
-  const [insight, setInsight] = useState<any>(null)
-  const loadInsight = async (studentId: string) => {
-    const res = await fetch(`${getApiUrl()}/demo/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId, courseId: 'mock' }) })
-    const json = await res.json().catch(() => null)
-    if (!res.ok || !json?.data?.analysis) throw new Error(json?.error || 'Could not load the student insight')
-    setInsight(json.data.analysis)
-  }
   const [grantingAttemptId, setGrantingAttemptId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState('')
   const [drafts, setDrafts] = useState<Record<string, { score: string; feedback: string }>>({})
@@ -211,7 +202,6 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
 
   return (
     <>
-      <InsightModal insight={insight} onClose={() => setInsight(null)} />
     <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-8">
       <DashboardPageHeader
         breadcrumb={embedded ? <>Class assessments <span className="px-1">›</span> {data.mock.title}</> : <><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</>}
@@ -239,7 +229,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
               return (
                 <div key={attempt.id} role="button" tabIndex={0} onClick={() => selectAttempt(attempt.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') selectAttempt(attempt.id) }} className={`w-full cursor-pointer border-b border-outline-variant px-5 py-4 text-left transition-colors last:border-0 ${attempt.id === selectedAttemptId ? 'bg-primary-fixed' : 'hover:bg-surface-container-low'}`}>
                   <span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-semibold text-on-surface">{studentName(attempt)}</span><span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${pendingAttempt ? 'bg-[#fff3e8] text-[#994704]' : 'bg-green-100 text-green-800'}`}>{pendingAttempt ? 'Pending' : 'Graded'}</span></span>
-                  <span className="mt-2 flex justify-between items-center text-xs text-on-surface-variant"><span>{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleDateString('en-NG') : 'Not submitted'}</span><span className="font-semibold">Total: {attemptScore(attempt)}/{maximumScore(attempt)}</span>{studentName(attempt).includes('Emeka') && <button onClick={(event) => { event.stopPropagation(); void loadInsight(attempt.student_id) }} className="ml-2 bg-purple-100 text-purple-700 px-2 py-1 rounded shadow text-[10px] font-bold">AI Analyze</button>}</span>
+                  <span className="mt-2 flex justify-between items-center text-xs text-on-surface-variant"><span>{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleDateString('en-NG') : 'Not submitted'}</span><span className="font-semibold">Total: {attemptScore(attempt)}/{maximumScore(attempt)}</span></span>
                 </div>
               )
             })}

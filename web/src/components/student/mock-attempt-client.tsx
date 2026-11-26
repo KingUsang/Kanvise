@@ -10,12 +10,12 @@ import { ExamCalculator } from './exam-calculator'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import { AntiCheatWrapper } from "./anti-cheat-wrapper"
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import {
+  clearAttemptAnswers, createLatestWinsQueue, purgeStaleQueuedAnswers, queuedAnswerKey,
+  readQueuedAnswer, writeQueuedAnswer, type QueuedAnswer,
+} from './attempt-answer-queue'
 
-type SavedAnswer = {
-  selected_option_version_id: string | null
-  theory_answer_text: string | null
-  is_flagged: boolean
-}
+type SavedAnswer = QueuedAnswer
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'offline' | 'error'
 type AttemptQuestion = {
@@ -25,14 +25,10 @@ type AttemptQuestion = {
 }
 type AttemptData = {
   server_now: string
-  attempt: { id: string; deadline_at: string | null }
+  attempt: { id: string; deadline_at: string | null; student_id?: string }
   mock: { title: string; calculator_mode: 'none' | 'basic' | 'scientific'; [key: string]: unknown }
   questions: AttemptQuestion[]
   answers: Array<{ mock_version_question_id: string; selected_option_version_id: string | null; theory_answer_text: string | null; is_flagged: boolean }>
-}
-
-function queuedAnswerKey(attemptId: string, questionId: string) {
-  return `kanvise-attempt-${attemptId}-${questionId}`
 }
 
 function formatRemaining(seconds: number) {
@@ -52,6 +48,11 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
     is_flagged: answer.is_flagged === true,
   }])), [data.answers])
   const [answers, setAnswers] = useState<Map<string, SavedAnswer>>(initial)
+  // Always holds the newest answers, so rapid edits and flag toggles merge into the
+  // latest intent instead of a stale render's copy (DEV-QUIZ-026, DEV-QUIZ-031).
+  const answersRef = useRef<Map<string, SavedAnswer>>(initial)
+  const userId = data.attempt.student_id || 'learner'
+  const timedOutRef = useRef(false)
   const [saveStates, setSaveStates] = useState<Map<string, SaveState>>(new Map())
   const [current, setCurrent] = useState(0)
   const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -70,60 +71,70 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
   const remaining = data.attempt.deadline_at
     ? Math.max(0, Math.ceil((new Date(data.attempt.deadline_at).getTime() - (now + serverOffset)) / 1000)) : null
   const timedOut = remaining === 0
+  timedOutRef.current = timedOut
   const answeredCount = questions.filter((question) => {
     const answer = answers.get(question.id)
     return Boolean(answer?.selected_option_version_id || answer?.theory_answer_text?.trim())
   }).length
   const unanswered = questions.length - answeredCount
 
-  const save = useCallback(async (questionId: string, answer: SavedAnswer): Promise<boolean> => {
-    if (timedOut) return false
+  const attemptId = data.attempt.id
+  const sendAnswer = useCallback(async (questionId: string, answer: SavedAnswer, isCurrent: () => boolean): Promise<boolean> => {
+    if (timedOutRef.current) return false
+    const storageKey = queuedAnswerKey(userId, attemptId, questionId)
     if (!navigator.onLine) {
-      localStorage.setItem(queuedAnswerKey(data.attempt.id, questionId), JSON.stringify(answer))
+      writeQueuedAnswer(localStorage, storageKey, answer)
       setSaveStates(states => new Map(states).set(questionId, 'offline'))
       return false
     }
     setSaveStates(states => new Map(states).set(questionId, 'saving'))
     try {
-      const answerPath = `/attempts/${data.attempt.id}/answers/${questionId}`
-      const response = await authenticatedApiFetch(`${getApiUrl()}${answerPath}`, {
+      const response = await authenticatedApiFetch(`${getApiUrl()}/attempts/${attemptId}/answers/${questionId}`, {
         method: 'PUT', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(answer),
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not save answer')
-      localStorage.removeItem(queuedAnswerKey(data.attempt.id, questionId))
+      // A newer edit may have been queued while this request was in flight; its
+      // stored copy must stay until it is saved too.
+      if (isCurrent()) localStorage.removeItem(storageKey)
       setSaveStates(states => new Map(states).set(questionId, 'saved'))
       return true
     } catch (error) {
-      localStorage.setItem(queuedAnswerKey(data.attempt.id, questionId), JSON.stringify(answer))
+      writeQueuedAnswer(localStorage, storageKey, answer)
       const offline = !navigator.onLine
       setSaveStates(states => new Map(states).set(questionId, offline ? 'offline' : 'error'))
       if (!offline) toast.error(error instanceof Error ? error.message : 'Could not save answer')
       return false
     }
-  }, [data.attempt.id, timedOut])
+  }, [attemptId, userId])
+  const queueRef = useRef<ReturnType<typeof createLatestWinsQueue<SavedAnswer>> | null>(null)
+  const sendRef = useRef(sendAnswer)
+  useEffect(() => { sendRef.current = sendAnswer }, [sendAnswer])
+  if (!queueRef.current) queueRef.current = createLatestWinsQueue<SavedAnswer>((questionId, answer, isCurrent) => sendRef.current(questionId, answer, isCurrent))
+  const save = useCallback((questionId: string, answer: SavedAnswer): Promise<boolean> => queueRef.current!.enqueue(questionId, answer), [])
 
   const changeAnswer = useCallback((questionId: string, patch: Partial<SavedAnswer>, delayed = false) => {
     if (timedOut) return
-    const next = { selected_option_version_id: null, theory_answer_text: null, is_flagged: false, ...answers.get(questionId), ...patch }
-    setAnswers(values => new Map(values).set(questionId, next))
+    const next = { selected_option_version_id: null, theory_answer_text: null, is_flagged: false, ...answersRef.current.get(questionId), ...patch }
+    answersRef.current = new Map(answersRef.current).set(questionId, next)
+    setAnswers(answersRef.current)
     // Persist first so an app reload, browser crash, or sudden network loss
     // cannot discard the newest edit while the request is still in flight.
-    localStorage.setItem(queuedAnswerKey(data.attempt.id, questionId), JSON.stringify(next))
+    writeQueuedAnswer(localStorage, queuedAnswerKey(userId, attemptId, questionId), next)
     const pending = debounce.current.get(questionId)
     if (pending) clearTimeout(pending)
     if (delayed) debounce.current.set(questionId, setTimeout(() => void save(questionId, next), 700))
     else void save(questionId, next)
-  }, [answers, data.attempt.id, save, timedOut])
+  }, [attemptId, save, timedOut, userId])
 
   const submit = useCallback(async (): Promise<boolean> => {
     setSubmitting(true)
     try {
       for (const timer of debounce.current.values()) clearTimeout(timer)
       if (!timedOut) {
-        const persisted = await Promise.all([...answers.entries()].map(([questionId, answer]) => save(questionId, answer)))
+        const persisted = await Promise.all([...answersRef.current.entries()].map(([questionId, answer]) => save(questionId, answer)))
         if (persisted.some((saved) => !saved)) {
           throw new Error('Your answers are safely queued on this device, but reconnect before submitting so they can reach the exam server.')
         }
@@ -135,6 +146,7 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not submit quiz')
+      clearAttemptAnswers(localStorage, userId, attemptId)
       toast.success(timedOut ? 'Time is up. Your quiz has been finalized.' : 'Your quiz has been submitted.')
       startNavigationProgress(); router.replace(`/dashboard/student/mocks/result/${data.attempt.id}`)
       return true
@@ -143,11 +155,15 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
       return false
     }
     finally { setSubmitting(false); setConfirming(false) }
-  }, [answers, data.attempt.id, router, save, timedOut])
+  }, [attemptId, router, save, timedOut, userId])
 
   useEffect(() => {
+    // Remaining time is derived from Date.now() and the server offset, never from
+    // counting ticks, so background throttling cannot drift it (DEV-QUIZ-030).
     const interval = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(interval)
+    const refresh = () => setNow(Date.now())
+    document.addEventListener('visibilitychange', refresh)
+    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', refresh) }
   }, [])
 
   useEffect(() => {
@@ -174,23 +190,26 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
   }, [isOnline, submit, timedOut])
 
   useEffect(() => {
+    purgeStaleQueuedAnswers(localStorage, userId)
+  }, [userId])
+
+  useEffect(() => {
     async function retryQueued() {
-      if (timedOut) return
+      if (timedOutRef.current) return
       for (const question of questions) {
-        const raw = localStorage.getItem(queuedAnswerKey(data.attempt.id, question.id))
-        if (raw) {
-          try {
-            const answer = JSON.parse(raw) as SavedAnswer
-            setAnswers(values => new Map(values).set(question.id, answer))
-            await save(question.id, answer)
-          } catch { localStorage.removeItem(queuedAnswerKey(data.attempt.id, question.id)) }
+        const key = queuedAnswerKey(userId, attemptId, question.id)
+        const answer = readQueuedAnswer(localStorage, key)
+        if (answer) {
+          answersRef.current = new Map(answersRef.current).set(question.id, answer)
+          setAnswers(answersRef.current)
+          await save(question.id, answer)
         }
       }
     }
     void retryQueued()
     window.addEventListener('online', retryQueued)
     return () => window.removeEventListener('online', retryQueued)
-  }, [data.attempt.id, questions, save, timedOut])
+  }, [attemptId, questions, save, userId])
 
   useEffect(() => {
     function keyboard(event: KeyboardEvent) {

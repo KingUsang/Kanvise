@@ -29,6 +29,7 @@ import {
 } from "./mock-import-progress";
 import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 import { MockBuilderStepProgress } from "./mock-builder-step-progress";
+import { toLocalDateInput, toLocalDateTimeInput, toLocalTimeInput } from "./mock-builder-schedule";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 type Course = {
@@ -441,12 +442,12 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           setResultReleaseMode(mockData.result_release_mode || "score_only");
           setAvailableFrom(
             mockData.available_from
-              ? new Date(mockData.available_from).toISOString().slice(0, 16)
+              ? toLocalDateTimeInput(mockData.available_from)
               : "",
           );
           setClosesAt(
             mockData.closes_at
-              ? new Date(mockData.closes_at).toISOString().slice(0, 16)
+              ? toLocalDateTimeInput(mockData.closes_at)
               : "",
           );
 
@@ -459,9 +460,8 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
 
           if (mockData.publish_at) {
             setPublishMode("scheduled");
-            const d = new Date(mockData.publish_at);
-            setPublishDate(d.toISOString().split("T")[0]);
-            setPublishTime(d.toTimeString().substring(0, 5));
+            setPublishDate(toLocalDateInput(mockData.publish_at));
+            setPublishTime(toLocalTimeInput(mockData.publish_at));
           }
 
           const assembledQuestions = (assemblyData.sections || []).flatMap(
