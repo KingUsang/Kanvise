@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../lib/database.types'
 import { supabase } from '../lib/supabase'
+import { clientAddress, createIpRateLimiter, type IpRateLimiter } from '../lib/ip-rate-limit'
 
 type WaitlistSignup = Pick<Database['public']['Tables']['waitlist_signups']['Row'], 'id' | 'created_at'>
 type WaitlistInsert = Pick<Database['public']['Tables']['waitlist_signups']['Insert'],
@@ -47,11 +48,19 @@ function duplicateResponse(position: number | null) {
   return { message: "You're already on the list!", position: position || 1, already_joined: true }
 }
 
-export function createWaitlistRouter(store: WaitlistStore) {
+// Public endpoint behind the web proxy, so keep the per-address limit generous.
+const defaultWaitlistLimiter = () => createIpRateLimiter({ limit: 30, windowMs: 10 * 60_000 })
+
+export function createWaitlistRouter(store: WaitlistStore, limiter: IpRateLimiter = defaultWaitlistLimiter()) {
   const router = new Hono()
 
   router.post('/waitlist', async (c) => {
     try {
+      const retryAfter = limiter.hit(clientAddress(c))
+      if (retryAfter !== null) {
+        c.header('Retry-After', String(retryAfter))
+        return c.json({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' }, 429)
+      }
       let rawBody: unknown
       try {
         rawBody = await c.req.json()
@@ -89,7 +98,8 @@ export function createWaitlistRouter(store: WaitlistStore) {
 
       const { data: existingUser, error: checkError } = await store.findByEmail(contactEmail)
       if (existingUser) {
-        const { count } = await store.countThrough(existingUser.created_at)
+        const { count, error: countError } = await store.countThrough(existingUser.created_at)
+        if (countError) console.error('Error calculating waitlist position:', countError)
         return c.json(duplicateResponse(count), 409)
       }
       if (checkError) {
@@ -111,7 +121,8 @@ export function createWaitlistRouter(store: WaitlistStore) {
         if (insertError.code === '23505') {
           const { data: duplicate } = await store.findByEmail(contactEmail)
           if (duplicate) {
-            const { count } = await store.countThrough(duplicate.created_at)
+            const { count, error: countError } = await store.countThrough(duplicate.created_at)
+            if (countError) console.error('Error calculating waitlist position:', countError)
             return c.json(duplicateResponse(count), 409)
           }
         }

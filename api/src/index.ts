@@ -85,6 +85,8 @@ import { pushRouter } from './routes/push';
 import { demoAnalysisRouter } from './routes/demo-analysis';
 import { feedbackResolutionRouter, feedbackRouter } from './routes/feedback';
 import { waitlistRouter } from './routes/waitlist';
+import { clientAddress } from './lib/ip-rate-limit';
+import { suggestionsRouter } from './routes/suggestions';
 
 app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
@@ -122,6 +124,7 @@ app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
 app.route("/demo/analyze", demoAnalysisRouter);
 app.route('/', waitlistRouter);
+app.route('/', suggestionsRouter);
 // Promo routes are intentionally confined to this prefix. Mounting this router at
 // `/` caused its router-wide admin middleware to run for unrelated routes such as
 // `/students/me/settings`.
@@ -144,14 +147,6 @@ const landingEventNames = new Set([
 ]);
 
 const landingEventRateLimits = new Map<string, { count: number; resetAt: number }>();
-
-function clientAddress(c: { req: { header(name: string): string | undefined } }) {
-  const forwarded = c.req.header('x-forwarded-for')?.split(',').map((value) => value.trim()).filter(Boolean);
-  return c.req.header('cf-connecting-ip')
-    || c.req.header('x-real-ip')
-    || forwarded?.at(-1)
-    || 'unknown';
-}
 
 function pruneExpiredRateLimits(now: number) {
   if (landingEventRateLimits.size < 2_000) return;
@@ -235,41 +230,6 @@ app.get("/waitlist/count", async (c) => {
     return c.json({ count: count || 0 }, 200);
   } catch (error) {
     console.error("Waitlist count error:", error);
-    return c.json({ error: "Internal server error" }, 500);
-  }
-});
-
-app.post("/suggestions", async (c) => {
-  try {
-    const body = await c.req.json();
-    const suggestion = typeof body.suggestion === "string" ? body.suggestion.trim() : "";
-    const email = typeof body.email === "string" ? body.email.trim() : null;
-
-    if (!suggestion) {
-      return c.json({ error: "Suggestion text is required" }, 400);
-    }
-
-    if (suggestion.length > 2000) {
-      return c.json({ error: "Suggestion is too long (max 2000 characters)" }, 400);
-    }
-
-    // feature_suggestions has no migration, so it is absent from the generated database types.
-    const { error: insertError } = await (supabase as any).from("feature_suggestions").insert([
-      {
-        suggestion,
-        email: email || null,
-        status: "pending",
-      },
-    ]);
-
-    if (insertError) {
-      console.error("Error inserting suggestion:", insertError);
-      return c.json({ error: "Failed to submit suggestion. Please try again." }, 500);
-    }
-
-    return c.json({ message: "Thank you! We've added this to our roadmap." }, 201);
-  } catch (error) {
-    console.error("Suggestion endpoint error:", error);
     return c.json({ error: "Internal server error" }, 500);
   }
 });

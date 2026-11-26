@@ -15,6 +15,10 @@ describe('programme setup migration', () => {
 
   it('always inserts programmes and subjects unpublished', () => {
     expect(sql.match(/false, p_created_by/g)).toHaveLength(2)
-    expect(coursesRoute).toContain('delete updates.is_published')
+    // PATCH accepts only allow-listed columns, so is_published can never be set through it.
+    const patchSchema = coursesRoute.slice(coursesRoute.indexOf('const subjectUpdateSchema'), coursesRoute.indexOf('.partial().strict()'))
+    expect(patchSchema).toContain('sort_order')
+    expect(patchSchema).not.toContain('is_published')
+    expect(coursesRoute).toContain('.partial().strict()')
   })
 })

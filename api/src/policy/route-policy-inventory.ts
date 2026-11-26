@@ -147,6 +147,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/users/me/push', 'pushRouter', 'src/routes/push.ts', 'protected-account', membershipSequence),
   router('/demo/analyze', 'demoAnalysisRouter', 'src/routes/demo-analysis.ts', 'protected-account', membershipSequence),
   router('/', 'waitlistRouter', 'src/routes/waitlist.ts', 'public', []),
+  router('/', 'suggestionsRouter', 'src/routes/suggestions.ts', 'public', []),
   router('/schools/me/promos', 'promosRouter', 'src/routes/promos.ts', 'protected-account', membershipSequence),
   router('/', 'mockAccessRouter', 'src/routes/mock-access.ts', 'mixed', jwtAndProfile, {
     families: [
@@ -185,7 +186,6 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/', 'studentSettingsRouter', 'src/routes/student-settings.ts', 'protected-account', membershipSequence),
   inline('POST', '/analytics/landing-events'),
   inline('GET', '/waitlist/count'),
-  inline('POST', '/suggestions'),
 ]
 
 export function discoverMountedRouteKeys(source: string): string[] {
