@@ -140,6 +140,8 @@ reviewed as code changes, not treated as harmless test edits.
 
 ## Staging certification and production gate
 
+> Current state (`DEV-TEST-031`): the automated staging journey workflows run only by manual `workflow_dispatch` and gate nothing on staging. The `main` certification job in `deploy.yml` is unchanged and still expects a successful run for the SHA. The text below is the target design.
+
 Production promotion uses the exact full Git SHA certified in staging; no
 rebasing, rebuilding from different source, or independently drifting web/API
 commit. The gate verifies both deployments report that SHA before testing.
