@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import type { TablesUpdate } from "../lib/database.types";
 import { supabase } from "../lib/supabase";
 import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware } from "../middleware/auth";
 import { strictBooleanQuerySchema } from "../lib/api-contract";
@@ -376,7 +377,7 @@ coursesRouter.patch("/:id", enforceAdmin, async (c) => {
 
     const { data, error } = await supabase
       .from("courses")
-      .update(updates)
+      .update(updates as TablesUpdate<"courses">)
       .eq("id", id)
       .eq("school_id", profile.school_id)
       .select()

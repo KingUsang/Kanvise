@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import type { TablesUpdate } from "../lib/database.types";
 import { supabase } from "../lib/supabase";
 import {
   accountContextMiddleware,
@@ -198,7 +199,7 @@ subProgrammesRouter.patch("/:id", enforceAdmin, async (c) => {
 
     const { data, error } = await supabase
       .from("sub_programmes")
-      .update(updates)
+      .update(updates as TablesUpdate<"sub_programmes">)
       .eq("id", id)
       .eq("school_id", profile.school_id) // Tenant isolation
       .select()
