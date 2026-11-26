@@ -11,6 +11,18 @@
 --
 -- Not changed here: the notification delivery policies from
 -- 20260720145358 already use the correct mapping.
+--
+-- Policy names: PostgreSQL keeps only the first 63 bytes of an identifier
+-- (NAMEDATALEN - 1). Three policies in 20260706000001 have longer names, so
+-- they were stored truncated and pg_policies holds the short form. They were
+-- never dropped, renamed or replaced by a later migration, and they still
+-- compare student_id with auth.uid(). This migration uses the stored names:
+--   enrolments:  "Users can view their own enrolments or admins view all school e"
+--                (created as "...admins view all school enrolments")
+--   payments:    "Users can view their own payments or admins view school payment"
+--                (created as "...admins view school payments")
+--   submissions: "Students view their own submissions, tutors view assigned cours"
+--                (created as "...tutors view assigned course submissions")
 
 -- Pre-check: every policy altered below must exist. ALTER POLICY on a missing
 -- policy fails with a bare "policy does not exist" error, so list all missing
@@ -24,10 +36,10 @@ BEGIN
   FROM (VALUES
     ('user_profiles',      'Users can view profiles in their school'),
     ('user_profiles',      'Users can update their own profile'),
-    ('enrolments',         'Users can view their own enrolments or admins view all school enrolments'),
-    ('payments',           'Users can view their own payments or admins view school payments'),
+    ('enrolments',         'Users can view their own enrolments or admins view all school e'),
+    ('payments',           'Users can view their own payments or admins view school payment'),
     ('attendance_records', 'Students view attendance, admins/tutors manage'),
-    ('submissions',        'Students view their own submissions, tutors view assigned course submissions'),
+    ('submissions',        'Students view their own submissions, tutors view assigned cours'),
     ('submissions',        'Students can insert their own submissions'),
     ('mock_attempts',      'Students view and create their own attempts'),
     ('mock_answers',       'Students manage their own answers during active attempt'),
@@ -61,13 +73,13 @@ USING (
   supabase_auth_id = (SELECT auth.uid()) OR (school_id = public.current_user_school_id() AND (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
 );
 
-ALTER POLICY "Users can view their own enrolments or admins view all school enrolments"
+ALTER POLICY "Users can view their own enrolments or admins view all school e"
 ON public.enrolments
 USING (
   student_id IN (SELECT profile.id FROM public.user_profiles AS profile WHERE profile.supabase_auth_id = (SELECT auth.uid())) OR (school_id = public.current_user_school_id() AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('admin', 'tutor'))
 );
 
-ALTER POLICY "Users can view their own payments or admins view school payments"
+ALTER POLICY "Users can view their own payments or admins view school payment"
 ON public.payments
 USING (
   student_id IN (SELECT profile.id FROM public.user_profiles AS profile WHERE profile.supabase_auth_id = (SELECT auth.uid())) OR (school_id = public.current_user_school_id() AND (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
@@ -79,7 +91,7 @@ USING (
   school_id = public.current_user_school_id() AND (student_id IN (SELECT profile.id FROM public.user_profiles AS profile WHERE profile.supabase_auth_id = (SELECT auth.uid())) OR (auth.jwt() -> 'app_metadata' ->> 'role') IN ('admin', 'tutor'))
 );
 
-ALTER POLICY "Students view their own submissions, tutors view assigned course submissions"
+ALTER POLICY "Students view their own submissions, tutors view assigned cours"
 ON public.submissions
 USING (
   student_id IN (SELECT profile.id FROM public.user_profiles AS profile WHERE profile.supabase_auth_id = (SELECT auth.uid())) OR (school_id = public.current_user_school_id() AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('admin', 'tutor'))

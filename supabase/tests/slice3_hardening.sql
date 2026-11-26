@@ -208,19 +208,21 @@ SELECT ok(
 );
 
 -- DEV-DB-015: self-row policies map auth.uid() to the Profile.
-SELECT ok(
-  NOT EXISTS (
-    SELECT 1 FROM pg_policies
+-- Names longer than 63 bytes are stored truncated, so the enrolments and
+-- payments names below are the stored (short) form. Counting matches makes
+-- the check fail if a name is wrong instead of passing on no rows.
+SELECT is(
+  (SELECT count(*)::int FROM pg_policies
     WHERE schemaname = 'public'
       AND (tablename, policyname) IN (
         ('user_profiles', 'Users can update their own profile'),
-        ('enrolments', 'Users can view their own enrolments or admins view all school enrolments'),
-        ('payments', 'Users can view their own payments or admins view school payments'),
+        ('enrolments', 'Users can view their own enrolments or admins view all school e'),
+        ('payments', 'Users can view their own payments or admins view school payment'),
         ('attendance_records', 'Students view attendance, admins/tutors manage'),
         ('mock_attempts', 'Students view and create their own attempts'),
         ('notifications', 'Users view and manage their own notifications'))
-      AND qual NOT LIKE '%supabase_auth_id%'
-  ),
+      AND qual LIKE '%supabase_auth_id%'),
+  6,
   'self-row policies compare the Auth ID through supabase_auth_id'
 );
 
