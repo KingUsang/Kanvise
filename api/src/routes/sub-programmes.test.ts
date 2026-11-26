@@ -126,4 +126,34 @@ describe('DELETE /sub-programmes/:id', () => {
     expect(await response.json()).toMatchObject({ code: 'NOT_FOUND' })
     expect(mocks.from).toHaveBeenCalledTimes(1)
   })
+
+  describe('PATCH allow-list', () => {
+    const patch = (body: unknown) => subProgrammesRouter.request('/sub-1', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+
+    it.each([
+      ['school_id', { school_id: 'other' }],
+      ['created_by', { created_by: 'x' }],
+      ['is_published', { is_published: true }],
+      ['programme_id', { programme_id: 'p' }],
+      ['unknown column', { name: 'A', nope: 1 }],
+    ])('rejects %s with 400 and does not write', async (_l, body) => {
+      const response = await patch(body)
+      expect(response.status).toBe(400)
+      expect(await response.json()).toMatchObject({ code: 'INVALID_SUB_PROGRAMME_UPDATE' })
+      expect(mocks.from).not.toHaveBeenCalled()
+    })
+
+    it('forwards only allowed fields, scoped to the account', async () => {
+      const q: any = query({ data: { id: 'sub-1' }, error: null })
+      q.update = vi.fn(() => q)
+      q.single = vi.fn(async () => ({ data: { id: 'sub-1' }, error: null }))
+      mocks.from.mockReturnValue(q)
+      const response = await patch({ name: 'B', is_available_separately: true, price: 5 })
+      expect(response.status).toBe(200)
+      expect(q.update).toHaveBeenCalledWith({ name: 'B', is_available_separately: true, price: 5 })
+      expect(q.eq).toHaveBeenCalledWith('school_id', 'school-1')
+    })
+  })
 })

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { supabase } from "../lib/supabase";
 import {
   accountContextMiddleware,
@@ -168,17 +169,28 @@ subProgrammesRouter.get("/", enforceAdminOrTutor, async (c) => {
   }
 });
 
+// Columns a sub-programme PATCH may change. school_id, id, created_by, is_published,
+// programme_id and timestamps are not client-writable here.
+const subProgrammeUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  slug: z.string().trim().min(1).max(200),
+  description: z.string().max(5000).nullable(),
+  price: z.union([z.number().finite(), z.string().max(32)]),
+  currency: z.string().trim().min(1).max(8),
+  is_available_separately: z.boolean(),
+}).partial().strict();
+
 // Update sub-programme
 subProgrammesRouter.patch("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
     if (!id) return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
-    const updates = await c.req.json();
-    
-    // Ensure school_id cannot be spoofed
-    delete updates.school_id;
-    delete updates.id;
+    const parsedUpdates = subProgrammeUpdateSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsedUpdates.success) {
+      return c.json({ error: "Invalid class section update", code: "INVALID_SUB_PROGRAMME_UPDATE" }, 400);
+    }
+    const updates: Record<string, any> = { ...parsedUpdates.data };
     if (updates.is_available_separately === false) updates.price = 0;
     if (updates.is_available_separately === true && !(parseFloat(updates.price) > 0)) {
       return c.json({ error: "Enter a price before allowing separate purchase", code: "PRICE_REQUIRED" }, 400);
