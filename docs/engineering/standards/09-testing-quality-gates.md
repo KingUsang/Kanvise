@@ -151,6 +151,15 @@ release. Required journey IDs are explicit; an absent spec, skipped project,
 missing provider, incomplete manifest, cleanup refusal, or deployment mismatch
 fails certification.
 
+Real-device testing (BrowserStack journey `BS01` on Android devices) is
+optional until Kanvise has a BrowserStack account. A run without BrowserStack
+credentials is a complete certification when every other required journey and
+check passes. Setting both `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`
+enables the real-device projects and makes `BS01` required. Setting the
+`Staging E2E` environment variable `E2E_REQUIRE_REAL_DEVICES=true` makes
+real-device certification mandatory, so missing credentials fail the gate. A
+single credential without the other is a configuration error.
+
 ## Flakes and failures
 
 A failing required test blocks merge/release. First classify product regression,

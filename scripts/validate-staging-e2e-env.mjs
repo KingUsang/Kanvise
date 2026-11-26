@@ -1,3 +1,5 @@
+import { realDeviceMode } from './staging-certification-lib.mjs'
+
 const required = [
   'E2E_BASE_URL',
   'E2E_API_URL',
@@ -17,13 +19,17 @@ const required = [
   'R2_SECRET_ACCESS_KEY',
   'R2_BUCKET_NAME',
   'PAYSTACK_SECRET_KEY',
-  'BROWSERSTACK_USERNAME',
-  'BROWSERSTACK_ACCESS_KEY',
 ]
 
 const missing = required.filter((name) => !process.env[name]?.trim())
 if (missing.length) {
   console.error(`Missing Staging E2E configuration: ${missing.join(', ')}`)
+  process.exit(1)
+}
+
+const realDevices = realDeviceMode()
+if (realDevices.problems.length) {
+  console.error(realDevices.problems.join('\n'))
   process.exit(1)
 }
 
@@ -41,3 +47,4 @@ if (!/^[0-9a-f]{40}$/.test(process.env.E2E_EXPECTED_SHA)) {
 }
 
 console.log(`Validated staging E2E configuration for ${process.env.E2E_RUN_ID}`)
+console.log(realDevices.enabled ? 'BrowserStack real-device journeys enabled' : 'BrowserStack real-device journeys skipped (optional; no credentials)')
