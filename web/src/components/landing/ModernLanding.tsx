@@ -220,6 +220,29 @@ const tools = [
   },
 ] as const;
 
+const cartonMotionPaths = [
+  {
+    path: "M 30 -42 C 88 24 178 79 270 119 S 328 151 346 166",
+    begin: "0s",
+  },
+  {
+    path: "M 245 -48 C 270 24 302 78 324 118 S 340 151 346 166",
+    begin: "-1.6s",
+  },
+  {
+    path: "M 650 -42 C 598 22 522 77 445 116 S 374 151 346 166",
+    begin: "-3.2s",
+  },
+  {
+    path: "M 540 -48 C 522 18 480 76 426 116 S 370 151 346 166",
+    begin: "-4.8s",
+  },
+  {
+    path: "M 115 -46 C 150 18 212 74 282 115 S 328 151 346 166",
+    begin: "-6.4s",
+  },
+] as const;
+
 const features = [
   {
     number: "01",
@@ -232,6 +255,15 @@ const features = [
   },
   {
     number: "02",
+    name: "Payments",
+    verb: "Collect",
+    headline: "Collect payments without chasing DMs.",
+    copy: "Give your tutoring business a professional payment page. Whether you teach independently or run an agency, when a student pays their enrolment updates and you can see what is paid, outstanding and ready for follow-up.",
+    accent: "#C26627",
+    type: "payments",
+  },
+  {
+    number: "03",
     name: "Student management",
     verb: "Manage",
     headline: "Students, classes and enrolment in one place.",
@@ -240,7 +272,7 @@ const features = [
     type: "students",
   },
   {
-    number: "03",
+    number: "04",
     name: "Materials",
     verb: "Share",
     headline: "Share materials in the right context.",
@@ -249,7 +281,7 @@ const features = [
     type: "materials",
   },
   {
-    number: "04",
+    number: "05",
     name: "Assignments",
     verb: "Assign",
     headline: "Give work. Receive it. Respond.",
@@ -258,7 +290,7 @@ const features = [
     type: "assignments",
   },
   {
-    number: "05",
+    number: "06",
     name: "Quizzes & mocks",
     verb: "Assess",
     headline: "Create, publish and grade automatically.",
@@ -267,22 +299,13 @@ const features = [
     type: "quiz",
   },
   {
-    number: "06",
+    number: "07",
     name: "Attendance",
     verb: "Attendance",
     headline: "Know who showed up.",
     copy: "Attendance is tied to the actual class session and the student record, ready for follow-up.",
     accent: "#2E2877",
     type: "attendance",
-  },
-  {
-    number: "07",
-    name: "Payments",
-    verb: "Collect",
-    headline: "Know what has been paid and what is still outstanding.",
-    copy: "Keep payment and enrolment status connected to the right student and class.",
-    accent: "#C26627",
-    type: "payments",
   },
   {
     number: "08",
@@ -302,7 +325,7 @@ const faqs = [
   ],
   [
     "Who is Kanvise built for?",
-    "Independent tutors, one-on-one tutors and tutorial centres that want to teach online without stitching together several disconnected tools.",
+    "Independent tutors, one-on-one tutors and tutoring agencies that want to teach online without stitching together several disconnected tools.",
   ],
   [
     "Is Kanvise just another video-class platform?",
@@ -855,8 +878,6 @@ function FeatureSurface({ type }: { type: (typeof features)[number]["type"] }) {
 }
 
 export default function ModernLanding() {
-  const [activeTool, setActiveTool] = useState<number | null>(0);
-  const exploredTools = useRef(new Set<number>());
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -900,14 +921,6 @@ export default function ModernLanding() {
     return () => observer.disconnect();
   }, []);
 
-  function selectTool(index: number) {
-    setActiveTool(index);
-    if (!exploredTools.current.has(index)) {
-      exploredTools.current.add(index);
-      trackLandingEvent("tool_explored", { tool: tools[index].name });
-    }
-  }
-
   function startForm() {
     if (formStarted.current) return;
     formStarted.current = true;
@@ -925,8 +938,8 @@ export default function ModernLanding() {
           contact_name: form.name,
           contact_email: form.email,
           centre_name:
-            form.type === "Tutorial centre"
-              ? "Tutorial centre"
+            form.type === "Tutoring agency"
+              ? "Tutoring agency"
               : `${form.type}: ${form.name}`,
           wants_beta_testing: true,
         }),
@@ -1005,7 +1018,7 @@ export default function ModernLanding() {
 
       <section
         data-analytics-section="hero"
-        className="relative overflow-hidden bg-[#fbf9f8] pb-20 pt-24 text-[#3C3027] sm:pt-28 lg:min-h-[900px] lg:pb-28 lg:pt-36"
+        className="relative overflow-hidden bg-[#fbf9f8] pb-20 pt-24 text-[#3C3027] sm:pt-28 lg:h-[100svh] lg:min-h-[720px] lg:pb-6 lg:pt-28"
       >
         <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_75%_20%,rgba(46,40,119,.12)_0,transparent_34%),radial-gradient(circle_at_12%_88%,rgba(194,102,39,.08)_0,transparent_28%)]" />
         <div className="pointer-events-none absolute inset-0 opacity-[.05] [background-image:linear-gradient(rgba(46,40,119,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(46,40,119,.7)_1px,transparent_1px)] [background-size:64px_64px]" />
@@ -1013,22 +1026,12 @@ export default function ModernLanding() {
           <div data-landing-reveal className="landing-reveal relative z-10">
             <p className="inline-flex items-center gap-2 rounded-full border border-[#C2B59B]/55 bg-white px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[.12em] text-[#2E2877] shadow-sm sm:text-[10px] sm:tracking-[.14em]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#C26627]" /> For
-              independent tutors and tutorial centres
+              independent tutors and tutoring agencies
             </p>
             <h1 className="mt-5 max-w-[640px] text-[2.1rem] font-medium leading-[1.05] tracking-[-.04em] sm:mt-6 sm:text-[2.75rem] lg:text-[3.25rem]">
               Running one tutorial shouldn&apos;t take{" "}
               <span className="text-[#C26627]">seven tools.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-sm leading-6 text-[#474551] sm:mt-6 sm:text-lg sm:leading-8">
-              <span className="sm:hidden">
-                Run your classes and see which students need your attention.
-              </span>
-              <span className="hidden sm:inline">
-                Kanvise brings live classes, students, materials, assignments,
-                quizzes, payments and performance into one place. Tutors can see
-                who needs attention before a student falls behind.
-              </span>
-            </p>
             <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
               <a
                 href="#access"
@@ -1063,112 +1066,62 @@ export default function ModernLanding() {
           </div>
           <div
             data-landing-reveal
-            className="landing-reveal landing-reveal-delay-1 relative mx-auto h-[430px] w-full max-w-[700px] sm:h-[570px]"
+            className="landing-reveal landing-reveal-delay-1 relative mx-auto h-[270px] w-full max-w-[680px] sm:h-[400px] lg:h-[430px]"
           >
-            <div className="landing-pulse-glow absolute inset-[8%_2%_12%] rounded-[42%] bg-[#C2B59B]/35 blur-3xl" />
-            <div className="landing-tutor-visual absolute inset-x-[2%] bottom-[13%] top-[12%] z-10 overflow-hidden rounded-[2rem] border border-[#C2B59B]/60 bg-[linear-gradient(145deg,#2E2877,#C2B59B)] shadow-[0_24px_70px_rgba(46,40,119,.18)]">
+            <div className="landing-pulse-glow absolute inset-[12%_6%_8%] rounded-[42%] bg-[#C2B59B]/35 blur-3xl" />
+            <div className="landing-tutor-visual absolute inset-0 z-10 overflow-hidden rounded-[1.5rem] bg-[#FBF9F8] sm:rounded-[2rem]">
               <Image
                 priority
-                src="/landing/kanvise-tutor-overwhelmed-v1.png"
-                alt="An online tutor overwhelmed by disconnected tools"
+                src="/landing/kanvise-empty-carton-orange-v2.png"
+                alt="Disconnected teaching tools moving into one organised Kanvise workspace"
                 fill
-                className="object-contain object-bottom"
+                className="object-contain object-center"
                 sizes="(max-width: 1024px) 85vw, 48vw"
               />
-              <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#2E2877] to-transparent" />
             </div>
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible sm:hidden"
-            >
-              <g
-                fill="none"
-                stroke="#C26627"
-                strokeLinecap="round"
-                strokeWidth="0.55"
-                opacity="0.58"
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[1.5rem] sm:rounded-[2rem]">
+              <svg
+                viewBox="0 0 680 430"
+                preserveAspectRatio="none"
+                className="h-full w-full overflow-visible"
               >
-                <path d="M10 27 C29 25 44 31 55 42" />
-                <path d="M50 7 C54 20 58 30 62 36" />
-                <path d="M90 22 C82 27 77 33 74 40" />
-                <path d="M96 50 C86 52 81 51 78 49" />
-                <path d="M85 74 C79 68 75 64 72 61" />
-                <path d="M16 74 C35 70 48 65 57 59" />
-                <path d="M5 50 C29 48 45 50 54 52" />
-              </g>
-              <g fill="#C26627" opacity="0.78">
-                <circle cx="55" cy="42" r="0.65" />
-                <circle cx="62" cy="36" r="0.65" />
-                <circle cx="74" cy="40" r="0.65" />
-                <circle cx="78" cy="49" r="0.65" />
-                <circle cx="72" cy="61" r="0.65" />
-                <circle cx="57" cy="59" r="0.65" />
-                <circle cx="54" cy="52" r="0.65" />
-              </g>
-            </svg>
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              className="pointer-events-none absolute inset-0 z-20 hidden h-full w-full overflow-visible sm:block"
-            >
-              <g
-                fill="none"
-                stroke="#C26627"
-                strokeLinecap="round"
-                strokeWidth="0.7"
-                opacity="0.72"
-              >
-                <path d="M10 27 C30 20 44 22 57 27" />
-                <path d="M50 7 C55 14 59 18 64 20" />
-                <path d="M90 22 C82 20 78 23 75 28" />
-                <path d="M96 50 C85 49 80 45 78 40" />
-                <path d="M85 74 C79 62 76 56 73 53" />
-                <path d="M16 74 C36 63 49 52 56 46" />
-                <path d="M5 50 C29 48 45 43 55 38" />
-              </g>
-              <g fill="#C26627" opacity="0.88">
-                <circle cx="57" cy="27" r="0.75" />
-                <circle cx="64" cy="20" r="0.75" />
-                <circle cx="75" cy="28" r="0.75" />
-                <circle cx="78" cy="40" r="0.75" />
-                <circle cx="73" cy="53" r="0.75" />
-                <circle cx="56" cy="46" r="0.75" />
-                <circle cx="55" cy="38" r="0.75" />
-              </g>
-            </svg>
-            {tools.map((item, index) => {
-              const Icon = item.icon;
-              const selected = activeTool === index;
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => selectTool(index)}
-                  onFocus={() => selectTool(index)}
-                  onMouseEnter={() => selectTool(index)}
-                  style={{ animationDelay: `${index * 0.16}s` }}
-                  aria-label={`${item.name}: ${item.detail}`}
-                  className={`group landing-tool-float absolute z-30 ${item.position} grid h-12 w-12 place-items-center rounded-xl border bg-white text-[#2E2877] shadow-[0_10px_28px_rgba(46,40,119,.16)] transition duration-300 hover:-translate-y-1 ${selected ? "scale-105 border-[#C26627] ring-2 ring-[#C26627]/15" : "border-[#C2B59B]/55"}`}
-                >
-                  <Icon size={23} />
-                  <span
-                    className={`pointer-events-none absolute z-40 min-w-[150px] rounded-xl border border-[#C2B59B]/55 bg-white p-2.5 text-left shadow-[0_12px_30px_rgba(46,40,119,.16)] transition duration-200 ${item.tooltip} ${selected ? "visible opacity-100" : "invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"}`}
+              {tools.slice(0, 5).map((tool, index) => {
+                const Icon = tool.icon;
+                const motion = cartonMotionPaths[index];
+                return (
+                  <foreignObject
+                    key={tool.name}
+                    x="-18"
+                    y="-18"
+                    width="52"
+                    height="52"
                   >
-                    <b className="block text-[10px] text-[#2E2877]">
-                      {item.name}
-                    </b>
-                    <small className="mt-0.5 block text-[8px] leading-3 text-[#3C3027]/70">
-                      {item.detail}
-                    </small>
-                  </span>
-                </button>
-              );
-            })}
+                    <div className="grid h-9 w-9 place-items-center rounded-lg border border-white/80 bg-white/95 shadow-[0_8px_20px_rgba(46,40,119,.22)] sm:h-11 sm:w-11 sm:rounded-xl">
+                      <Icon size={20} />
+                    </div>
+                    <animateMotion
+                      dur="8s"
+                      begin={motion.begin}
+                      repeatCount="indefinite"
+                      path={motion.path}
+                      rotate="0"
+                    />
+                    <animate
+                      attributeName="opacity"
+                      values="0;1;1;0"
+                      keyTimes="0;0.06;0.88;1"
+                      dur="8s"
+                      begin={motion.begin}
+                      repeatCount="indefinite"
+                    />
+                  </foreignObject>
+                );
+              })}
+              </svg>
+            </div>
           </div>
         </div>
-        <div className="relative mx-auto mt-8 grid max-w-[900px] grid-cols-3 divide-x divide-[#C2B59B]/45 border-y border-[#C2B59B]/45 px-5 py-5 text-center sm:mt-14">
+        <div className="relative mx-auto mt-8 grid max-w-[900px] grid-cols-3 divide-x divide-[#C2B59B]/45 border-y border-[#C2B59B]/45 px-5 py-5 text-center sm:mt-14 lg:mt-5 lg:py-3">
           <div>
             <b className="text-2xl text-[#C26627]">7</b>
             <span className="mt-1 block text-[8px] uppercase tracking-widest text-[#474551]/65">
@@ -1694,7 +1647,7 @@ export default function ModernLanding() {
                       className="mt-2 w-full rounded-xl border border-[#ddd6e4] bg-[#F7F5F2] px-4 py-3 text-sm font-normal outline-none focus:border-[#2E2877]"
                     >
                       <option>Independent tutor</option>
-                      <option>Tutorial centre</option>
+                      <option>Tutoring agency</option>
                     </select>
                   </label>
                 </div>

@@ -25,7 +25,7 @@ describe('dashboard workspaces', () => {
     expect(getDashboardWorkspaceForPath('/dashboard/students')).toBe('centre')
   })
 
-  it('keeps tutor management exclusive to centre admins', () => {
+  it('keeps tutor management exclusive to agency administrators', () => {
     expect(getDashboardNavItems({ isAdmin: true, isTutor: false }).some(item => item.href === '/dashboard/tutors')).toBe(true)
     const independentTutor = { isAdmin: false, isTutor: true, organisationType: 'independent' as const }
     const independentAdminTutor = { isAdmin: true, isTutor: true, organisationType: 'independent' as const }
@@ -33,5 +33,11 @@ describe('dashboard workspaces', () => {
     expect(getDashboardNavItems(independentAdminTutor).some(item => item.href === '/dashboard/tutors')).toBe(false)
     expect(canAccessDashboardPath('/dashboard/tutors', independentTutor)).toBe(false)
     expect(canAccessDashboardPath('/dashboard/tutors', independentAdminTutor)).toBe(false)
+  })
+
+  it('makes the shared profile available to tutors and administrators', () => {
+    expect(canAccessDashboardPath('/dashboard/profile', { isAdmin: false, isTutor: true })).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/profile', { isAdmin: true, isTutor: false })).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/profile', { isAdmin: false, isTutor: false })).toBe(false)
   })
 })

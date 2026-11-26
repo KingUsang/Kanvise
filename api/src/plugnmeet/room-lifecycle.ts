@@ -5,33 +5,90 @@ import { plugNmeet } from './client'
 // Kanvise state machine when a provider delivery is delayed or unavailable.
 export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit = 100) {
   const { data: classes, error } = await (supabase as any).from('live_classes')
-    .select('id, provider_room_id')
+    .select('id, provider_room_id, status, scheduled_at, duration_minutes, start_requested_at')
     .eq('classroom_provider', 'plugnmeet')
-    .eq('status', 'live')
-    .order('started_at', { ascending: true })
+    .in('status', ['starting', 'ready', 'live', 'ending'])
+    .order('scheduled_at', { ascending: true })
     .limit(limit)
   if (error) throw error
 
   let completed = 0
+  let reset = 0
+  let interrupted = 0
   let checked = 0
   for (const liveClass of classes || []) {
     const roomId = String(liveClass.provider_room_id || liveClass.id)
     try {
       checked += 1
-      if (await plugNmeet.isRoomActive(roomId)) {
-        await (supabase as any).from('live_classes').update({ provider_room_status: 'active', provider_room_checked_at: now.toISOString() })
-          .eq('id', liveClass.id).eq('status', 'live')
+      const active = await plugNmeet.isRoomActive(roomId)
+      console.info('live_class.plugnmeet_reconciliation_checked', {
+        class_id: liveClass.id,
+        room_id: roomId,
+        class_status: liveClass.status,
+        provider_active: active,
+      })
+      if (active) {
+        // `isRoomActive` proves the provider room exists, not that a tutor or
+        // learner joined. Only webhooks promote ready -> live.
+        await (supabase as any).from('live_classes').update({
+          provider_room_status: liveClass.status === 'starting' || liveClass.status === 'ready' ? 'ready' : 'active',
+          provider_room_checked_at: now.toISOString(), provider_error_at: null, provider_error_message: null,
+          ...(liveClass.status === 'starting' ? { status: 'ready', room_ready_at: now.toISOString() } : {}),
+        }).eq('id', liveClass.id).eq('status', liveClass.status)
         continue
       }
-      const { error: updateError } = await (supabase as any).from('live_classes')
-        .update({ status: 'completed', ended_at: now.toISOString(), provider_room_status: 'ended', provider_room_checked_at: now.toISOString() })
-        .eq('id', liveClass.id).eq('status', 'live')
-      if (updateError) throw updateError
-      completed += 1
+      if (liveClass.status === 'starting' || liveClass.status === 'ready') {
+        // Nobody entered before PlugNmeet's empty timeout. The scheduled class
+        // can safely be started again with the same Kanvise class ID.
+        const { error: resetError } = await (supabase as any).rpc('prepare_live_class_provider_recovery', {
+          p_live_class_id: liveClass.id, p_provider_room_id: roomId,
+        })
+        if (resetError) throw resetError
+        console.warn('live_class.plugnmeet_recovery_prepared', {
+          class_id: liveClass.id, room_id: roomId, previous_status: liveClass.status, reason: 'provider_room_inactive',
+        })
+        reset += 1
+        continue
+      }
+      const deadline = new Date(new Date(liveClass.scheduled_at).getTime() + (Number(liveClass.duration_minutes || 240) + 60) * 60_000)
+      if (liveClass.status === 'ending' || now >= deadline) {
+        const { error: updateError } = await (supabase as any).from('live_classes')
+          .update({ status: 'completed', ended_at: now.toISOString(), provider_room_status: 'ended', provider_room_checked_at: now.toISOString() })
+          .eq('id', liveClass.id).eq('status', liveClass.status)
+        if (updateError) throw updateError
+        completed += 1
+      } else {
+        const { error: recoveryError } = await (supabase as any).rpc('prepare_live_class_provider_recovery', {
+          p_live_class_id: liveClass.id, p_provider_room_id: roomId,
+        })
+        if (recoveryError) throw recoveryError
+        console.warn('live_class.plugnmeet_recovery_prepared', {
+          class_id: liveClass.id, room_id: roomId, previous_status: liveClass.status, reason: 'provider_room_inactive',
+        })
+        reset += 1
+      }
     } catch (error) {
-      // A provider outage must never end a potentially active class.
-      console.warn('[plugnmeet] room lifecycle reconciliation skipped room', { roomId, error })
+      // A temporary outage must never immediately end a potentially active
+      // class. But a 15-minute class cannot truthfully remain "live" for days:
+      // once its maximum window plus a generous hour has elapsed, surface it as
+      // interrupted and let the VM idle safely.
+      const deadline = new Date(new Date(liveClass.scheduled_at).getTime() + (Number(liveClass.duration_minutes || 240) + 60) * 60_000)
+      const terminal = now >= deadline && (liveClass.status === 'live' || liveClass.status === 'ending')
+      await (supabase as any).from('live_classes').update({
+        ...(terminal ? { status: 'interrupted' } : {}),
+        provider_room_status: 'unavailable', provider_room_checked_at: now.toISOString(),
+        provider_error_at: now.toISOString(),
+        provider_error_message: error instanceof Error ? error.message.slice(0, 500) : 'Provider state could not be checked',
+      }).eq('id', liveClass.id).eq('status', liveClass.status)
+      if (terminal) interrupted += 1
+      console.warn('live_class.plugnmeet_reconciliation_failed', {
+        class_id: liveClass.id,
+        room_id: roomId,
+        class_status: liveClass.status,
+        marked_interrupted: terminal,
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
-  return { name: 'plugnmeet_room_lifecycle', checked, completed }
+  return { name: 'plugnmeet_room_lifecycle', checked, completed, reset, interrupted }
 }

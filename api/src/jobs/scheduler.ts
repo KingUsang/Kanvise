@@ -15,8 +15,12 @@ export function startScheduledJobs(env: NodeJS.ProcessEnv = process.env) {
     { expression: '*/30 * * * *', guarded: createGuardedJob('assignment_deadline', () => runAssignmentDeadlineJob()) },
     { expression: '17 */6 * * *', guarded: createGuardedJob('timetable_materialization', () => runTimetableMaterializationJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('plugnmeet_classroom_warmup', () => warmPlugNmeetForUpcomingClasses()) },
-    { expression: '*/5 * * * *', guarded: createGuardedJob('plugnmeet_classroom_idle_shutdown', () => deallocateIdlePlugNmeet()) },
-    { expression: '*/5 * * * *', guarded: createGuardedJob('plugnmeet_room_lifecycle', () => reconcileInactivePlugNmeetClasses()) },
+    // Reconcile first, then decide whether the VM may sleep. Separate cron
+    // callbacks could race and let stale database state keep the VM alive.
+    { expression: '*/5 * * * *', guarded: createGuardedJob('plugnmeet_room_lifecycle', async () => {
+      await reconcileInactivePlugNmeetClasses()
+      return deallocateIdlePlugNmeet()
+    }) },
     { expression: '* * * * *', guarded: createGuardedJob('live_class_recording', () => runLiveClassRecordingJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('recorder_fleet', () => reconcileRecorderFleet()) },
   ]

@@ -17,6 +17,7 @@ function query(result: any) {
     in: vi.fn(() => builder),
     update: vi.fn(() => builder),
     insert: vi.fn(() => builder),
+    upsert: vi.fn(() => builder),
     order: vi.fn(() => builder),
     single: vi.fn(async () => result),
     maybeSingle: vi.fn(async () => result),
@@ -83,15 +84,15 @@ describe('student import access and validation', () => {
     expect(mocks.from).not.toHaveBeenCalled()
   })
 
-  it('allows the invited student to supply their own name later', async () => {
+  it('validates the invitation email before querying the database', async () => {
     const response = await usersRouter.request('/students/import', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ students: [{ email: 'student@example.test' }] }),
+      body: JSON.stringify({ students: [{ email: 'not-an-email' }] }),
     })
 
     expect(response.status).toBe(400)
     const body = await response.json() as any
-    expect(body.errors[0].errors).toEqual(['Choose a programme'])
+    expect(body.errors[0].errors).toEqual(['Email address is invalid'])
   })
 
   it('does not treat a phone number as an activation method', async () => {
@@ -188,6 +189,7 @@ describe('student import access and validation', () => {
         return query({ data: profileCalls === 1 ? [] : insertedStudent, error: null })
       }
       if (table === 'enrolments') return query({ data: null, error: null })
+      if (table === 'pending_student_enrolments') return query({ data: null, error: null })
       throw new Error(`Unexpected table: ${table}`)
     })
     mocks.rpc.mockResolvedValue({ data: 42, error: null })
@@ -200,7 +202,7 @@ describe('student import access and validation', () => {
 
     expect(response.status).toBe(201)
     const body = await response.json() as any
-    expect(body.data).toMatchObject({ created: 1, enrolled: 1, invited: 0, skipped: 1 })
+    expect(body.data).toMatchObject({ created: 1, enrolled: 0, pending: 1, invited: 0, skipped: 1 })
     expect(body.data.errors).toEqual([{ row: 1, errors: ['Could not add student'] }])
     expect(JSON.stringify(body)).not.toContain('SMTP provider secret')
     expect(mocks.sendStudentInvitation).toHaveBeenCalledOnce()

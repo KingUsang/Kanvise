@@ -412,6 +412,18 @@ export async function createPresignedDownload(
   return getSignedUrl(client, command, { expiresIn })
 }
 
+export async function privateObjectExists(fileKey: string, schoolId: string) {
+  assertPrivateFileKey(fileKey, schoolId)
+  const { client, bucketName } = configuredClient()
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: bucketName, Key: fileKey }))
+    return true
+  } catch (error: any) {
+    if (error?.$metadata?.httpStatusCode === 404 || error?.name === 'NotFound' || error?.name === 'NoSuchKey') return false
+    throw error
+  }
+}
+
 function signatureMatches(contentType: string, bytes: Uint8Array) {
   if (contentType === 'application/pdf') {
     return Buffer.from(bytes).subarray(0, 5).toString() === '%PDF-'

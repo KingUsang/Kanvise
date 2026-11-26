@@ -16,10 +16,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
 }))
 
-vi.mock("@/components/auth/auth-logo", () => ({
-  AuthLogo: () => <div>Kanvise</div>,
-}))
-
 describe("InvitationPage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -31,7 +27,7 @@ describe("InvitationPage", () => {
     const user = userEvent.setup()
     render(<StrictMode><InvitationPage /></StrictMode>)
 
-    const button = await screen.findByRole("button", { name: "Continue to account setup" })
+    const button = await screen.findByRole("button", { name: "Continue" })
     expect(verifyOtp).not.toHaveBeenCalled()
     expect(window.location.search).toBe("")
 
@@ -50,9 +46,9 @@ describe("InvitationPage", () => {
     const user = userEvent.setup()
     render(<InvitationPage />)
 
-    await user.click(await screen.findByRole("button", { name: "Continue to account setup" }))
+    await user.click(await screen.findByRole("button", { name: "Continue" }))
 
-    expect(await screen.findByRole("heading", { name: "This link cannot be used" })).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "This link can’t be used" })).toBeInTheDocument()
     expect(screen.getByRole("alert")).toHaveTextContent("expired or was already used")
     expect(push).not.toHaveBeenCalled()
   })
@@ -61,7 +57,7 @@ describe("InvitationPage", () => {
     window.history.replaceState({}, "", "/auth/invitation?token_hash=0123456789abcdef&type=recovery")
     render(<InvitationPage />)
 
-    expect(await screen.findByRole("heading", { name: "This link cannot be used" })).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "This link can’t be used" })).toBeInTheDocument()
     expect(verifyOtp).not.toHaveBeenCalled()
   })
 })

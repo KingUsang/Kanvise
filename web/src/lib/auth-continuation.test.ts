@@ -16,7 +16,7 @@ describe('postAuthDestination', () => {
       .toBe('/join?token=invite-token')
   })
 
-  it('keeps a centre admin without a centre in setup', () => {
+  it('keeps an agency administrator without an agency in setup', () => {
     expect(postAuthDestination({ role: 'admin', schoolId: null, redirect: '/mock/biology' }))
       .toBe('/dashboard/school-setup')
   })

@@ -8,7 +8,7 @@ import { Button } from '@/components/dashboard/action-controls'
 import { Dialog } from '@/components/dashboard/dialog'
 import { Field, fieldControlClassName, fieldDescribedBy } from '@/components/dashboard/form-fields'
 
-type InviteField = 'firstName' | 'lastName' | 'email'
+type InviteField = 'email'
 type InviteErrors = Partial<Record<InviteField, string>>
 
 export function ClassStudentInviteDialog({
@@ -26,19 +26,13 @@ export function ClassStudentInviteDialog({
   api: string | undefined
   onInvited: () => Promise<void> | void
 }) {
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
   const [sending, setSending] = useState(false)
   const [errors, setErrors] = useState<InviteErrors>({})
 
   useEffect(() => {
     if (!open) return
-    setFirstName('')
-    setLastName('')
     setEmail('')
-    setPhone('')
     setSending(false)
     setErrors({})
   }, [open])
@@ -47,11 +41,9 @@ export function ClassStudentInviteDialog({
 
   const validate = () => {
     const nextErrors: InviteErrors = {}
-    if (!firstName.trim()) nextErrors.firstName = 'Enter the student’s first name.'
-    if (!lastName.trim()) nextErrors.lastName = 'Enter the student’s last name.'
     if (!email.trim()) nextErrors.email = 'Enter the student’s email address.'
     setErrors(nextErrors)
-    const firstError = (['firstName', 'lastName', 'email'] as const).find((field) => nextErrors[field])
+    const firstError = (['email'] as const).find((field) => nextErrors[field])
     if (firstError) window.requestAnimationFrame(() => document.getElementById(`student-${firstError}`)?.focus())
     return Object.keys(nextErrors).length === 0
   }
@@ -67,10 +59,7 @@ export function ClassStudentInviteDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           students: [{
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
             email: email.trim(),
-            phone: phone.trim() || undefined,
             programme_id: classId,
           }],
           send_invitations: true,
@@ -80,7 +69,7 @@ export function ClassStudentInviteDialog({
       if (!response.ok) throw new Error(body?.errors?.[0]?.errors?.[0] || body?.error || 'Could not add this student')
       if (body?.data?.errors?.length) throw new Error(body.data.errors[0]?.errors?.[0] || 'Could not add this student')
       await onInvited()
-      toast.success('Student added and invitation sent')
+      toast.success('Invitation sent. The student will join this class after accepting it.')
       onClose()
     } catch (error) {
       toast.error('Could not add student', { description: error instanceof Error ? error.message : 'Try again.' })
@@ -102,41 +91,11 @@ export function ClassStudentInviteDialog({
     >
       <form onSubmit={(event) => void submit(event)} noValidate className="mt-5">
         {Object.keys(errors).length ? <div role="alert" className="mb-4 rounded-dashboard-control border border-dashboard-danger/30 bg-dashboard-danger/5 px-4 py-3 text-sm text-dashboard-danger">Fix the highlighted fields before sending the invitation.</div> : null}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="student-firstName" label="First name" required error={errors.firstName}>
-            <input
-              id="student-firstName"
-              data-dialog-initial-focus
-              required
-              type="text"
-              autoComplete="given-name"
-              value={firstName}
-              onChange={(event) => setFirstName(event.target.value)}
-              disabled={sending}
-              aria-invalid={Boolean(errors.firstName)}
-              aria-describedby={fieldDescribedBy('student-firstName', undefined, errors.firstName)}
-              className={fieldControlClassName}
-            />
-          </Field>
-          <Field id="student-lastName" label="Last name" required error={errors.lastName}>
-            <input
-              id="student-lastName"
-              required
-              type="text"
-              autoComplete="family-name"
-              value={lastName}
-              onChange={(event) => setLastName(event.target.value)}
-              disabled={sending}
-              aria-invalid={Boolean(errors.lastName)}
-              aria-describedby={fieldDescribedBy('student-lastName', undefined, errors.lastName)}
-              className={fieldControlClassName}
-            />
-          </Field>
-        </div>
-        <div className="mt-4">
+        <div className="mt-5">
           <Field id="student-email" label="Email address" required error={errors.email}>
             <input
               id="student-email"
+              data-dialog-initial-focus
               required
               type="email"
               autoComplete="email"
@@ -145,19 +104,6 @@ export function ClassStudentInviteDialog({
               disabled={sending}
               aria-invalid={Boolean(errors.email)}
               aria-describedby={fieldDescribedBy('student-email', undefined, errors.email)}
-              className={fieldControlClassName}
-            />
-          </Field>
-        </div>
-        <div className="mt-4">
-          <Field id="student-phone" label="Phone number" optional>
-            <input
-              id="student-phone"
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              disabled={sending}
               className={fieldControlClassName}
             />
           </Field>

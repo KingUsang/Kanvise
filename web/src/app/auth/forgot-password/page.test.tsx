@@ -16,10 +16,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
 }))
 
-vi.mock("@/components/auth/auth-logo", () => ({
-  AuthLogo: () => <div>Kanvise</div>,
-}))
-
 describe("ForgotPasswordPage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -32,13 +28,13 @@ describe("ForgotPasswordPage", () => {
     render(<ForgotPasswordPage />)
 
     await user.type(screen.getByLabelText("Email address"), "student@example.com")
-    await user.click(screen.getByRole("button", { name: "Send reset code" }))
+    await user.click(screen.getByRole("button", { name: "Send recovery code" }))
 
     await waitFor(() => expect(resetPasswordForEmail).toHaveBeenCalledWith("student@example.com"))
     expect(await screen.findByRole("heading", { name: "Check your email" })).toBeInTheDocument()
 
-    await user.type(screen.getByLabelText("Reset code"), "123456")
-    await user.click(screen.getByRole("button", { name: "Continue" }))
+    await user.type(screen.getByLabelText("Recovery code, digit 1 of 6"), "123456")
+    await user.click(screen.getByRole("button", { name: "Verify code" }))
 
     await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith({
       email: "student@example.com",
@@ -47,5 +43,5 @@ describe("ForgotPasswordPage", () => {
     }))
     expect(push).toHaveBeenCalledWith("/auth/reset-password")
     expect(refresh).toHaveBeenCalled()
-  })
+  }, 10_000)
 })

@@ -131,7 +131,9 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
     mute_on_start: true,
     allow_screen_share: true,
     admin_only_webcams: false,
-    allow_view_other_webcams: true,
+    // Attendees should not see every participant's camera. PlugNmeet still
+    // lets moderators (the tutor and school admins) see all webcams.
+    allow_view_other_webcams: false,
     allow_view_other_users_list: true,
     enable_analytics: true,
     allow_virtual_bg: false,
@@ -141,16 +143,16 @@ export function enrolledRoomFeatures(): PlugNmeetRoomFeatures {
     recording_features: {
       is_allow: true,
       is_allow_cloud: true,
-      is_allow_local: false,
+      is_allow_local: true,
       // The single recorder worker is registered before this setting is
       // enabled in deployed environments, so every enrolled class records.
       enable_auto_cloud_recording: false,
       only_record_admin_webcams: false,
     },
     chat_features: { is_allow: true, is_allow_file_upload: false },
-    shared_note_pad_features: { is_allow: false },
+    shared_note_pad_features: { is_allow: true },
     whiteboard_features: { is_allow: true },
-    external_media_player_features: { is_allow: false },
+    external_media_player_features: { is_allow: true },
     external_broadcasting_features: { is_allow: false, is_allow_rtmp: false },
     waiting_room_features: { is_active: false },
     breakout_room_features: { is_allow: false },
@@ -209,7 +211,9 @@ export function createGuestRoomRequest(input: {
   const features = enrolledRoomFeatures()
   features.enable_analytics = false
   features.recording_features = {
-    is_allow: false, is_allow_cloud: false, is_allow_local: false,
+    // Shared classes are recordable too. Only the authenticated tutor receives
+    // moderator permissions, so anonymous guests cannot control recording.
+    is_allow: true, is_allow_cloud: true, is_allow_local: false,
     enable_auto_cloud_recording: false, only_record_admin_webcams: false,
   }
   features.insights_features = { is_allow: false }
@@ -234,20 +238,43 @@ export function createGuestRoomRequest(input: {
 async function request<T>(path: string, payload: Record<string, unknown>): Promise<PlugNmeetResponse<T>> {
   const { serverUrl, apiKey, apiSecret } = config()
   const body = JSON.stringify(payload)
-  const response = await fetch(`${serverUrl}/auth${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'API-KEY': apiKey,
-      'HASH-SIGNATURE': signPlugNmeetBody(body, apiSecret),
-    },
-    body,
-  })
-  const json = await response.json().catch(() => ({})) as PlugNmeetResponse<T>
-  if (!response.ok || json.status === false) {
-    throw new Error(`PlugNmeet ${path} failed (${response.status}): ${json.msg || 'unknown error'}`)
+  const roomId = typeof payload.room_id === 'string' ? payload.room_id : undefined
+  const startedAt = Date.now()
+  try {
+    const response = await fetch(`${serverUrl}/auth${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'API-KEY': apiKey,
+        'HASH-SIGNATURE': signPlugNmeetBody(body, apiSecret),
+      },
+      body,
+    })
+    const json = await response.json().catch(() => ({})) as PlugNmeetResponse<T>
+    if (!response.ok || json.status === false) {
+      console.error('live_class.plugnmeet_api_rejected', {
+        operation: path,
+        room_id: roomId,
+        http_status: response.status,
+        provider_status: json.status,
+        provider_status_code: json.status_code,
+        provider_message: json.msg || 'unknown error',
+        elapsed_ms: Date.now() - startedAt,
+      })
+      throw new Error(`PlugNmeet ${path} failed (${response.status}): ${json.msg || 'unknown error'}`)
+    }
+    return json
+  } catch (error) {
+    if (!(error instanceof Error && error.message.startsWith(`PlugNmeet ${path} failed`))) {
+      console.error('live_class.plugnmeet_api_transport_failed', {
+        operation: path,
+        room_id: roomId,
+        elapsed_ms: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+    throw error
   }
-  return json
 }
 
 export const plugNmeet = {

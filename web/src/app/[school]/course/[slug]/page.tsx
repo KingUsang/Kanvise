@@ -291,7 +291,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
             <div className="space-y-4">
               <h4 className="font-bold text-white tracking-widest uppercase text-sm">Quick Links</h4>
               <ul className="space-y-3 text-primary-fixed/80">
-                <li><a className="hover:text-secondary transition-colors" href={`/${resolvedParams.school}`}>All Programmes</a></li>
+                <li><a className="hover:text-secondary transition-colors" href={`/${resolvedParams.school}`}>All classes</a></li>
                 <li><Link className="hover:text-secondary transition-colors" href="/auth/login">Student Login</Link></li>
               </ul>
             </div>

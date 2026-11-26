@@ -758,6 +758,9 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
   const centreAccessEnabled = accessMode === "centre" || accessMode === "both";
   const shareLinkEnabled = accessMode === "direct" || accessMode === "both";
   const selectedSubjectSections = subjectSections;
+  const scopedClassCourses = contextualCourseId
+    ? (classContext?.courses || []).filter((subject) => subject.id === contextualCourseId)
+    : classContext?.courses || [];
   const programmeOptions = Array.from(
     new Map(
       courses
@@ -778,7 +781,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
   }>;
   const coursesForSelectedProgramme = classContext
     ? courses.filter((course) =>
-        classContext.courses.some((subject) => subject.id === course.id),
+        scopedClassCourses.some((subject) => subject.id === course.id),
       )
     : centreAccessEnabled && programmeFilterId
       ? courses.filter((course) => course.programme_id === programmeFilterId)
@@ -1503,7 +1506,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       toast.error(
         classContext
           ? "Add a quiz title before continuing"
-          : "Add a mock title and choose a valid centre target",
+          : "Add a mock title and choose a valid tutoring agency target",
       );
       return;
     }
@@ -1765,7 +1768,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
         startNavigationProgress();
         router.push(
           classContext
-            ? `/dashboard/classes/${classContext.id}?tab=assessments`
+            ? `/dashboard/classes/${classContext.id}?tab=assessments${contextualCourseId ? `&subject=${encodeURIComponent(contextualCourseId)}` : ""}`
             : "/dashboard/mocks",
         );
       } else {
@@ -3099,7 +3102,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                     }}
                     className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"
                   >
-                    <option value="">Choose a programme subject</option>
+                    <option value="">Choose a class subject</option>
                     {availableSubjectCourses.map((course) => (
                       <option key={course.id} value={course.id}>
                         {mockCourseLabel(course)}
@@ -3139,7 +3142,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               <p className="mt-2 text-xs leading-5 text-[#716c76]">
                 {centreAccessEnabled
                   ? "Only students enrolled in every selected programme subject will receive this mock."
-                  : "Add the subjects in this exam yourself. They are not connected to your centre."}
+                  : "Add the subjects in this exam yourself. They are not connected to your tutoring agency."}
               </p>
             </div>
             {selectedSubjectCourses.length === 0 ? (
@@ -3354,7 +3357,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                   <h2 className="mt-1 text-2xl font-bold text-[#180d62]">
                     {classContext ? "Create quiz" : "Upload your mock paper"}
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#716c76]">
+                  <p className="mt-2 text-sm leading-6 text-[#716c76]">
                     Upload one PDF or DOCX and Kanvise will extract the
                     questions, detect subjects and prepare an editable draft.
                     No file? You can continue and build it manually.
@@ -3418,7 +3421,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                     )}
                 </div>
               )}
-              {(subjectSections.length > 0 || classContext?.courses.length) && (
+              {(subjectSections.length > 0 || scopedClassCourses.length > 0) && (
                 <div className="mt-5 rounded-xl border border-[#e4e2e1] bg-white">
                   <div className="flex items-center justify-between border-b border-[#e4e2e1] px-4 py-3">
                     <h3 className="text-sm font-bold text-[#27242d]">
@@ -3433,7 +3436,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                   <div className="divide-y divide-[#eeeae6]">
                     {(subjectSections.length
                       ? subjectSections
-                      : (classContext?.courses || []).map((subject) => ({
+                      : scopedClassCourses.map((subject) => ({
                           id: subject.id,
                           name: subject.name,
                           courseId: subject.id,

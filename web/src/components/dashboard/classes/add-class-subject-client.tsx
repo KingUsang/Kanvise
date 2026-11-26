@@ -10,6 +10,7 @@ import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { useDashboardSession, dashboardQueryKeys } from '@/lib/dashboard-session'
 import { useActiveAccountId } from '@/lib/account-preference'
 import { classQueryKeys } from '@/lib/class-query-keys'
+import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 
 type Tutor = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string }
 
@@ -73,6 +74,7 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
       if (!response.ok) throw new Error(body?.error || 'Could not add this subject')
       const subjectId = body?.data?.subject?.id
       toast.success('Subject added')
+      startNavigationProgress()
       router.push(`/dashboard/classes/${classId}${subjectId ? `?subject=${subjectId}` : ''}`)
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: classQueryKeys.workspace(accountId, classId) }),

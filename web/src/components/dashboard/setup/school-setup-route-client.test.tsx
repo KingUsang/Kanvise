@@ -28,7 +28,7 @@ describe('dashboard school data boundary', () => {
     renderRoute()
 
     expect(screen.getByText('Loading your centre details…')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Centre profile' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Tutoring agency profile' })).toBeInTheDocument())
     expect(mocks.authenticatedApiFetch).toHaveBeenCalledWith(expect.stringContaining('/schools/me'), expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }))
   })
 
@@ -37,7 +37,7 @@ describe('dashboard school data boundary', () => {
 
     renderRoute()
 
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Name your centre' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Name your tutoring agency' })).toBeInTheDocument())
   })
 
   it('shows a safe retry state for service failures', async () => {
@@ -56,7 +56,7 @@ describe('dashboard school data boundary', () => {
     renderRoute('setup', 1)
 
     await waitFor(() => expect(screen.getByText('Your session has ended. Please sign in again.')).toBeInTheDocument())
-    expect(screen.queryByRole('heading', { name: 'Centre profile' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Tutoring agency profile' })).not.toBeInTheDocument()
     expect(mocks.authenticatedApiFetch).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button', { name: 'Sign in again' }))
     expect(mocks.replace).toHaveBeenCalledWith('/auth/login?redirect=%2Fdashboard%2Fschool-setup')

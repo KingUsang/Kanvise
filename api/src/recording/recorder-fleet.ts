@@ -26,7 +26,6 @@ export async function reconcileRecorderFleet(now = new Date()) {
   const { data, error } = await (supabase as any).from('live_classes')
     .select('id, status, scheduled_at, ended_at')
     .eq('classroom_provider', 'plugnmeet')
-    .not('course_id', 'is', null)
     .or(`and(status.eq.scheduled,scheduled_at.gte.${warmFrom},scheduled_at.lte.${warmTo}),status.eq.live`)
   if (error) throw error
   const activeWindows = data || []
@@ -55,6 +54,25 @@ export async function reconcileRecorderFleet(now = new Date()) {
   }
   return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id), captureCapacity: 2,
     capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }
+}
+
+export async function recorderFleetReadiness(now = new Date()) {
+  if (!configured()) return { state: 'unavailable' as const, message: 'Recording is not configured.' }
+  const { data, error } = await (supabase as any).from('recorder_fleet_readiness')
+    .select('vm_state, service_state, last_heartbeat_at')
+    .eq('singleton', true)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return { state: 'starting' as const, message: 'The recorder is starting.' }
+  const heartbeatAt = data.last_heartbeat_at ? new Date(data.last_heartbeat_at).getTime() : 0
+  const heartbeatFresh = heartbeatAt > now.getTime() - 3 * 60_000
+  if (data.vm_state === 'running' && data.service_state === 'healthy' && heartbeatFresh) {
+    return { state: 'ready' as const }
+  }
+  if (['starting', 'pending', 'running'].includes(String(data.vm_state))) {
+    return { state: 'starting' as const, message: 'The recorder is starting.' }
+  }
+  return { state: 'unavailable' as const, message: 'Recording is unavailable. You can continue the class.' }
 }
 
 /**

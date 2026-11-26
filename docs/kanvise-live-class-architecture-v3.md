@@ -109,12 +109,22 @@ Kanvise has two intentionally different room profiles:
    plugNmeet client so a tutor can share a low-friction class without first
    creating a programme. Kanvise still creates the temporary room and issues a
    short-lived guest join token; the browser never receives the plugNmeet API
-   secret. This profile does **not** run transcription, Quick Check, recording,
-   reconciled student attendance, recap generation, or recap notifications.
+   secret. This profile supports tutor-controlled cloud recording and a
+   revocable recording-view link, but does **not** run transcription, Quick
+   Check, reconciled student attendance, recap generation, or recap
+   notifications.
 
 The guest path still keeps the Kanvise `live_classes` row, hashed share token,
 expiry/revocation controls, and tutor ownership. "Standalone" describes the
 classroom experience, not an unauthenticated plugNmeet deployment.
+
+The canonical authenticated classroom address is `/class/:id`; it contains no
+role-bearing query parameter. `POST /live-classes/:id/enter` resolves host or
+participant authority on the server. A PlugNmeet room is a disposable provider
+generation beneath the durable Kanvise class: an unexpected empty-room expiry
+returns the class to `scheduled` and increments `provider_generation`, allowing
+the tutor to reopen it without marking the class ended. Only an explicit end
+transition or the bounded expiry window makes the class terminal.
 
 ### 3.2 Student bandwidth policy
 

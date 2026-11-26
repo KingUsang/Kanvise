@@ -26,6 +26,7 @@ describe('StudentShell navigation', () => {
     expect(mobileNavigation).toHaveTextContent('Mocks')
     expect(mobileNavigation).toHaveTextContent('Progress')
     expect(screen.queryByRole('button', { name: 'Open menu' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Report a problem' })).toHaveLength(2)
     expect(within(mobileNavigation).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
   })
 

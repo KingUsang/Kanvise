@@ -9,7 +9,11 @@ describe('PlugNmeet provider contract', () => {
     expect(request.empty_timeout).toBe(900)
     expect(request.metadata.room_features.enable_analytics).toBe(true)
     expect(request.metadata.room_features.recording_features.enable_auto_cloud_recording).toBe(false)
+    expect(request.metadata.room_features.recording_features.is_allow_local).toBe(true)
     expect(request.metadata.room_features.allow_screen_share).toBe(true)
+    expect(request.metadata.room_features.allow_view_other_webcams).toBe(false)
+    expect(request.metadata.room_features.shared_note_pad_features.is_allow).toBe(true)
+    expect(request.metadata.room_features.external_media_player_features.is_allow).toBe(true)
     expect(request.metadata.room_features.chat_features.is_allow_file_upload).toBe(false)
     expect(request.metadata.room_features.insights_features.transcription_features?.is_allow).toBe(false)
     expect(request.metadata.room_features.insights_features.ai_features?.ai_text_chat_features?.is_allow).toBe(true)
@@ -31,9 +35,11 @@ describe('PlugNmeet provider contract', () => {
     expect(enrolledRoomFeatures().end_to_end_encryption_features.is_enabled).toBe(false)
   })
 
-  it('creates a restricted guest room on the same PlugNmeet server', () => {
+  it('creates a guest room with manual cloud recording on the same PlugNmeet server', () => {
     const request = createGuestRoomRequest({ roomId: 'guest-1', title: 'Try class', schoolId: 'school-1', courseId: null })
-    expect(request.metadata.room_features.recording_features.is_allow).toBe(false)
+    expect(request.metadata.room_features.recording_features.is_allow).toBe(true)
+    expect(request.metadata.room_features.recording_features.is_allow_cloud).toBe(true)
+    expect(request.metadata.room_features.recording_features.enable_auto_cloud_recording).toBe(false)
     expect(request.metadata.room_features.enable_analytics).toBe(false)
     expect(request.metadata.room_features.insights_features.is_allow).toBe(false)
     expect(request.metadata.extra_data.course_id).toBe('')

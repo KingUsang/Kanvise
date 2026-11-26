@@ -4,8 +4,8 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import PlugNmeetClassroom from '@/app/class/[id]/PlugNmeetClassroom'
 
-type PublicClass = { title: string; status: string; access_mode: 'anyone_with_link' | 'enrolled_learners'; scheduled_at: string; centre_name: string; centre_logo_url: string | null }
-type JoinData = { room_id: string; join_token: string; server_url: string; client_files: { css_files: string[]; js_files: string[] }; class_title: string; is_host: boolean }
+type PublicClass = { title: string; status: string; access_mode: 'anyone_with_link' | 'enrolled_learners'; scheduled_at: string; centre_name: string; centre_logo_url: string | null; can_host?: boolean }
+type JoinData = { room_id: string; join_token: string; server_url: string; client_files: { css_files: string[]; js_files: string[] }; class_title: string; is_host: boolean; share_url?: string | null }
 
 export default function PublicClassroom({ shareToken }: { shareToken: string }) {
   const [info, setInfo] = useState<PublicClass | null>(null)
@@ -14,15 +14,17 @@ export default function PublicClassroom({ shareToken }: { shareToken: string }) 
   const [error, setError] = useState<string | null>(null)
   const [joined, setJoined] = useState<JoinData | null>(null)
   const [signedIn, setSignedIn] = useState(false)
+  const [hostEntering, setHostEntering] = useState(false)
   const apiUrl = process.env.NEXT_PUBLIC_API_URL!
   const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), [])
 
   const load = useCallback(async () => {
-    const response = await fetch(`${apiUrl}/public/live-classes/${shareToken}`, { credentials: 'include', cache: 'no-store' })
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch(`${apiUrl}/public/live-classes/${shareToken}`, { credentials: 'include', cache: 'no-store', headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined })
     const body = await response.json().catch(() => null)
     if (!response.ok) { setError(body?.error || 'This class link is unavailable'); return }
     setInfo(body.data); setError(null)
-  }, [apiUrl, shareToken])
+  }, [apiUrl, shareToken, supabase])
 
   useEffect(() => { void load() }, [load])
   useEffect(() => { void supabase.auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session))) }, [supabase])
@@ -31,6 +33,31 @@ export default function PublicClassroom({ shareToken }: { shareToken: string }) 
     const timer = window.setInterval(() => void load(), 10_000)
     return () => window.clearInterval(timer)
   }, [info?.status, load])
+
+  const enterAsHost = useCallback(async () => {
+    if (hostEntering || joined || !info?.can_host) return
+    setHostEntering(true); setError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const response = await fetch(`${apiUrl}/public/live-classes/${shareToken}/enter`, {
+        method: 'POST', credentials: 'include', headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const body = await response.json().catch(() => null)
+      if (response.status === 202 || response.status === 409) {
+        window.setTimeout(() => void enterAsHost(), 4_000)
+        return
+      }
+      if (!response.ok) throw new Error(body?.error || 'Could not open this class')
+      if (body?.data?.room_id && body?.data?.join_token) setJoined(body.data)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not open this class')
+    } finally { setHostEntering(false) }
+  }, [apiUrl, hostEntering, info?.can_host, joined, shareToken, supabase])
+
+  useEffect(() => {
+    if (info?.can_host && ['scheduled', 'live'].includes(info.status) && !joined) void enterAsHost()
+  }, [info?.can_host, info?.status])
 
   const join = async () => {
     setJoining(true); setError(null)
@@ -46,11 +73,11 @@ export default function PublicClassroom({ shareToken }: { shareToken: string }) 
     } catch { setError('Could not reach Kanvise. Check your connection and try again.') } finally { setJoining(false) }
   }
 
-  if (joined) return <PlugNmeetClassroom roomId={joined.room_id} joinToken={joined.join_token} serverUrl={joined.server_url} clientFiles={joined.client_files} classId={`shared-${shareToken}`} isHost={false} classTitle={joined.class_title} />
+  if (joined) return <PlugNmeetClassroom roomId={joined.room_id} joinToken={joined.join_token} serverUrl={joined.server_url} clientFiles={joined.client_files} classId={`shared-${shareToken}`} isHost={joined.is_host} classTitle={joined.class_title} shareUrl={joined.share_url || undefined} />
   const unavailable = info?.status === 'completed' || info?.status === 'cancelled' || info?.status === 'revoked'
   return <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans"><section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm">
     <div className="flex items-center gap-3">{info?.centre_logo_url ? <img src={info.centre_logo_url} alt="" className="h-11 w-11 rounded-xl object-cover" /> : <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eeeaff] text-[#2e2877]"><span className="material-symbols-outlined">school</span></div>}<div><p className="text-xs font-semibold uppercase tracking-[.12em] text-[#994704]">{info?.centre_name || 'Kanvise'}</p><h1 className="text-xl font-bold text-[#180d62]">{info?.title || 'Loading class…'}</h1></div></div>
-    {unavailable ? <p className="mt-6 text-sm leading-6 text-[#66616c]">This class has ended. Ask your tutor for their next class link.</p> : info?.status === 'scheduled' ? <p className="mt-6 text-sm leading-6 text-[#66616c]">Your tutor has not started this class yet. Keep this page open—we’ll let you in when it begins.</p> : info?.access_mode === 'enrolled_learners' ? <><p className="mt-6 text-sm leading-6 text-[#66616c]">This class is for enrolled learners. {signedIn ? 'Your account will be checked before you join.' : 'Sign in with your learner account to join.'}</p><button type="button" onClick={() => { if (signedIn) void join(); else window.location.href = `/auth/login?next=${encodeURIComponent(window.location.pathname)}` }} disabled={joining} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50">{joining ? 'Joining classroom…' : signedIn ? 'Join class' : 'Sign in to join'}</button></> : <><p className="mt-6 text-sm leading-6 text-[#66616c]">Enter your name to join. You do not need an account.</p><label className="mt-5 block text-sm font-semibold text-[#1b1c1c]">Your name<input value={name} onChange={event => setName(event.target.value)} maxLength={60} autoComplete="name" className="mt-2 min-h-12 w-full rounded-lg border border-[#8b8580] px-3 font-normal" placeholder="e.g. Emmanuel" /></label><button type="button" onClick={() => void join()} disabled={joining || name.trim().length < 2} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50">{joining ? 'Joining classroom…' : 'Join class'}</button></>}
+    {unavailable ? <p className="mt-6 text-sm leading-6 text-[#66616c]">This class has ended. Ask your tutor for their next class link.</p> : info?.can_host ? <p className="mt-6 text-sm leading-6 text-[#66616c]">Opening your tutor classroom…</p> : info?.status === 'scheduled' ? <p className="mt-6 text-sm leading-6 text-[#66616c]">Your tutor has not started this class yet. Keep this page open—we’ll let you in when it begins.</p> : info?.access_mode === 'enrolled_learners' ? <><p className="mt-6 text-sm leading-6 text-[#66616c]">This class is for enrolled learners. {signedIn ? 'Your account will be checked before you join.' : 'Sign in with your learner account to join.'}</p><button type="button" onClick={() => { if (signedIn) void join(); else window.location.href = `/auth/login?next=${encodeURIComponent(window.location.pathname)}` }} disabled={joining} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50">{joining ? 'Joining classroom…' : signedIn ? 'Join class' : 'Sign in to join'}</button></> : <><p className="mt-6 text-sm leading-6 text-[#66616c]">Enter your name to join. You do not need an account.</p><label className="mt-5 block text-sm font-semibold text-[#1b1c1c]">Your name<input value={name} onChange={event => setName(event.target.value)} maxLength={60} autoComplete="name" className="mt-2 min-h-12 w-full rounded-lg border border-[#8b8580] px-3 font-normal" placeholder="e.g. Emmanuel" /></label><button type="button" onClick={() => void join()} disabled={joining || name.trim().length < 2} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50">{joining ? 'Joining classroom…' : 'Join class'}</button></>}
     {error ? <p role="alert" className="mt-4 text-sm text-[#ba1a1a]">{error}</p> : null}
   </section></main>
 }

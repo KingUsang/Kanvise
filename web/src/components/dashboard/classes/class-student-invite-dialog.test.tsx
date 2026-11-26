@@ -42,17 +42,14 @@ describe('ClassStudentInviteDialog', () => {
     renderInvite()
     const dialog = await screen.findByRole('dialog', { name: 'Add student' })
     expect(dialog).toHaveAccessibleDescription('They will receive an email to set up their account.')
-    expect(screen.getByRole('textbox', { name: 'First name' })).toHaveAttribute('autocomplete', 'given-name')
-    expect(screen.getByRole('textbox', { name: 'Last name' })).toHaveAttribute('autocomplete', 'family-name')
     expect(screen.getByRole('textbox', { name: 'Email address' })).toHaveAttribute('type', 'email')
-    expect(screen.getByRole('textbox', { name: /Phone number/ })).toHaveAttribute('type', 'tel')
     expect(screen.getByRole('button', { name: 'Send invitation' })).toHaveClass('min-h-11')
 
     fireEvent.submit(dialog.querySelector('form') as HTMLFormElement)
 
     expect(await screen.findByText('Fix the highlighted fields before sending the invitation.')).toHaveAttribute('role', 'alert')
-    expect(screen.getAllByRole('alert')).toHaveLength(4)
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'First name' })).toHaveFocus())
+    expect(screen.getAllByRole('alert')).toHaveLength(2)
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Email address' })).toHaveFocus())
     expect(mocks.authenticatedApiFetch).not.toHaveBeenCalled()
   })
 
@@ -60,10 +57,7 @@ describe('ClassStudentInviteDialog', () => {
     mocks.authenticatedApiFetch.mockResolvedValue(response({ data: {} }))
     const { onClose, onInvited } = renderInvite()
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'First name' }), { target: { value: ' Ada ' } })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Last name' }), { target: { value: ' Lovelace ' } })
     fireEvent.change(screen.getByRole('textbox', { name: 'Email address' }), { target: { value: 'ada@example.test' } })
-    fireEvent.change(screen.getByRole('textbox', { name: /Phone number/ }), { target: { value: ' 555-0100 ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send invitation' }))
 
     await waitFor(() => expect(onInvited).toHaveBeenCalledTimes(1))
@@ -74,20 +68,18 @@ describe('ClassStudentInviteDialog', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          students: [{ first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.test', phone: '555-0100', programme_id: 'class-1' }],
+          students: [{ email: 'ada@example.test', programme_id: 'class-1' }],
           send_invitations: true,
         }),
       }),
     )
-    expect(mocks.toast.success).toHaveBeenCalledWith('Student added and invitation sent')
+    expect(mocks.toast.success).toHaveBeenCalledWith('Invitation sent. The student will join this class after accepting it.')
   })
 
   it('keeps the dialog open while the invitation is pending', async () => {
     let resolveResponse: (value: Response) => void = () => undefined
     mocks.authenticatedApiFetch.mockReturnValue(new Promise<Response>((resolve) => { resolveResponse = resolve }))
     const { onClose } = renderInvite()
-    fireEvent.change(screen.getByRole('textbox', { name: 'First name' }), { target: { value: 'Ada' } })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Last name' }), { target: { value: 'Lovelace' } })
     fireEvent.change(screen.getByRole('textbox', { name: 'Email address' }), { target: { value: 'ada@example.test' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send invitation' }))
 

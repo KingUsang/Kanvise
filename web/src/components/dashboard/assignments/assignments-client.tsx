@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronDown, CloudUpload, FileText } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -75,6 +75,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
         if (!classRes.ok) throw new Error(responseErrorMessage(classRes, classBody, "Could not load this class"));
         const classSubjectIds = new Set((classBody?.data?.courses || []).map((course: any) => course.id));
         visibleCourses = loadedCourses.filter((course: any) => classSubjectIds.has(course.id));
+        if (contextualCourseId) visibleCourses = visibleCourses.filter((course: any) => course.id === contextualCourseId);
         nextClassContextName = classBody?.data?.name || "This class";
       }
 
@@ -93,6 +94,14 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
   const classContextName = assignmentQuery.data?.classContextName || null;
   const assignments = assignmentQuery.data?.assignments || [];
   const isFetching = assignmentQuery.isPending;
+
+  // A subject deep link preselects its subject once the class subjects load.
+  useEffect(() => {
+    const loaded = assignmentQuery.data?.courses || [];
+    if (contextualCourseId && loaded.some((course: any) => course.id === contextualCourseId)) {
+      setCourseId(contextualCourseId);
+    }
+  }, [contextualCourseId, assignmentQuery.data?.courses]);
 
   const handleSubmit = async (publish: boolean) => {
     if (!courseId || !title || !description || !deadline) {
@@ -159,7 +168,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
           queryClient.invalidateQueries({ queryKey: ["class-insights", classContextId] }),
         ]);
         startNavigationProgress();
-        router.push(`/dashboard/classes/${classContextId}?tab=assessments`);
+        router.push(`/dashboard/classes/${classContextId}?tab=assessments${contextualCourseId ? `&subject=${encodeURIComponent(contextualCourseId)}` : ''}`);
         return;
       }
       setTitle("");
@@ -231,6 +240,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
                     id="course-select"
                     value={courseId}
                     onChange={(e) => setCourseId(e.target.value)}
+                    disabled={Boolean(contextualCourseId)}
                     className="w-full cursor-pointer appearance-none rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-base text-dashboard-foreground outline-none focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"
                   >
                     <option disabled value="">Select a Subject...</option>
@@ -241,7 +251,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-dashboard-muted" />
                 </div>
                 {courses.length === 0 && !isFetching && (
-                  <p className="text-xs leading-5 text-dashboard-muted">No subjects are available. Ask the centre admin to create a subject or assign one to you.</p>
+                  <p className="text-xs leading-5 text-dashboard-muted">No subjects are available. Ask the agency administrator to create a subject or assign one to you.</p>
                 )}
               </div>
 

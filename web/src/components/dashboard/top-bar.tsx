@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { detachBrowserPushOnLogout } from '@/lib/push-notifications'
 import { AccountSwitcher } from '@/components/account/account-switcher'
+import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 
 interface TopBarProps {
   user: {
@@ -38,7 +39,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   const navigateTo = (href: string) => {
     if (capabilities.setupRequired && href !== '/dashboard/school-setup') {
       setIsSearchOpen(false)
-      toast.info('Create your centre first', {
+      toast.info('Create your tutoring agency first', {
         description: 'This page will unlock as soon as you complete the required setup.',
       })
       return
@@ -124,6 +125,9 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
       {/* User identity */}
       <div className="flex items-center space-x-3 sm:space-x-6">
         {!capabilities.setupRequired && <AccountSwitcher compact />}
+        <div className="md:hidden">
+          <FeedbackDialog compact />
+        </div>
         <div className="relative">
           <button
             type="button"
@@ -155,6 +159,16 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
               role="menu"
               className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-lg border border-[#c8c5d2] bg-white shadow-[0_12px_32px_rgba(46,40,119,0.16)]"
             >
+              <Link
+                href="/dashboard/profile"
+                role="menuitem"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#1b1c1c] hover:bg-[#f5f3f2] focus:bg-[#f5f3f2] focus:outline-none"
+              >
+                <span className="material-symbols-outlined text-[20px] text-[#2e2877]">account_circle</span>
+                <span>Profile</span>
+              </Link>
               <button
                 type="button"
                 role="menuitem"

@@ -39,7 +39,7 @@ const STATUS_FILTERS = [
   { value: 'draft', label: 'Draft' },
 ] as const
 
-const ACTIVE_ENROLMENT_MESSAGE = 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+const ACTIVE_ENROLMENT_MESSAGE = 'This class has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
 
 export function ProgrammesClient() {
   const queryClient = useQueryClient()
@@ -154,11 +154,11 @@ export function ProgrammesClient() {
       const body = await readApiBody<{ code?: string }>(response)
       if (!response.ok) throw new Error(body?.code === 'ACTIVE_ENROLMENTS_EXIST'
         ? ACTIVE_ENROLMENT_MESSAGE
-        : responseErrorMessage(response, 'Could not delete programme'))
+        : responseErrorMessage(response, 'Could not delete class'))
       toast.success('Class deleted')
       await queryClient.invalidateQueries({ queryKey: classQueryKeys.programmes(accountId) })
     } catch (error) {
-      toast.error('Could not delete programme', { description: safeApiErrorMessage(error, 'Please try again.', [ACTIVE_ENROLMENT_MESSAGE]) })
+      toast.error('Could not delete class', { description: safeApiErrorMessage(error, 'Please try again.', [ACTIVE_ENROLMENT_MESSAGE]) })
     } finally {
       setDeletingId(null)
     }
@@ -215,9 +215,9 @@ export function ProgrammesClient() {
       ) : programmesQuery.isSuccess && programmes.length === 0 ? (
         <EmptyState
           icon={<School aria-hidden="true" size={24} />}
-          title="Create your first class"
-          body="Add the subjects, learners and sessions you will teach together."
-          action={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>Create class</LinkButton> : <p className="text-sm text-dashboard-muted">Your centre admin creates classes and assigns you the subjects you teach.</p>}
+          title={canCreate ? 'Create your first class' : 'No classes assigned yet'}
+          body={canCreate ? 'Add the subjects, learners and sessions you will teach together.' : 'Your tutoring agency administrator creates classes and assigns you the subjects you teach.'}
+          action={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>Create class</LinkButton> : undefined}
         />
       ) : visibleProgrammes.length ? (
         <ul aria-label="Classes" className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -244,7 +244,7 @@ export function ProgrammesClient() {
               <div className="flex flex-wrap gap-2 p-4">
                 <LinkButton href={programme.courses_count ? `/dashboard/classes/${programme.id}` : `/dashboard/classes/new`} variant="primary">{programme.courses_count ? 'Open class' : 'Continue setup'}</LinkButton>
                 {schoolSlug && <a href={`/${schoolSlug}/${programme.slug}${programme.is_published ? '' : `?preview=${programme.id}`}`} target="_blank" rel="noreferrer" className={actionControlClassName({ variant: 'secondary' })}>Preview enrolment page</a>}
-                {schoolSlug && <Button variant="secondary" onClick={() => void copyLink(programme)}>Copy enrolment link</Button>}
+                {schoolSlug && programme.is_published && <Button variant="secondary" onClick={() => void copyLink(programme)}>Copy enrolment link</Button>}
                 {canCreate && !programme.is_published && <Button variant="secondary" pending={publishingId === programme.id} pendingLabel="Publishing…" onClick={() => void publish(programme)} className="sm:ml-auto">Publish</Button>}
                 {canCreate && <Button variant="danger" pending={deletingId === programme.id} pendingLabel="Deleting…" onClick={() => void deleteProgramme(programme)} className={programme.is_published ? '' : 'sm:ml-auto'}>Delete</Button>}
               </div>

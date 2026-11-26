@@ -4,7 +4,7 @@ import { plugNmeet } from '../plugnmeet/client'
 import { notifyClassRecapPublished } from '../notifications/triggers'
 
 type RecordingJob = { id: string; job_type: 'recording_process' | 'recording_finalize'; live_class_id: string; payload: Record<string, unknown>; attempts: number }
-type RecordingContext = { id: string; school_id: string; course_id: string; tutor_id: string; title: string; provider_room_id: string | null; classroom_provider: string }
+type RecordingContext = { id: string; school_id: string; course_id: string | null; tutor_id: string; title: string; provider_room_id: string | null; classroom_provider: string }
 
 function requiredEnv(name: string) {
   const value = process.env[name]?.trim()
@@ -78,12 +78,15 @@ function summaryBody(summary: Record<string, string>) {
 async function loadContext(classId: string): Promise<RecordingContext> {
   const { data, error } = await (supabase as any).from('live_classes').select('id, school_id, course_id, tutor_id, title, provider_room_id, classroom_provider').eq('id', classId).maybeSingle()
   if (error || !data) throw error || new Error('Live class not found')
-  if (data.classroom_provider !== 'plugnmeet' || !data.course_id) throw new Error('Only enrolled PlugNmeet classes can be processed')
+  if (data.classroom_provider !== 'plugnmeet') throw new Error('Only PlugNmeet classes can be processed')
   return data as RecordingContext
 }
 
 async function processRecording(job: RecordingJob) {
   const liveClass = await loadContext(job.live_class_id)
+  // Guest-class recordings are delivered for playback, but there is no
+  // enrolled course in which to publish an AI-generated recap.
+  if (!liveClass.course_id) return
   const { data: recording, error: recordingError } = await (supabase as any).from('live_class_recordings').select('id, r2_file_key, content_type').eq('live_class_id', liveClass.id).eq('status', 'ready').maybeSingle()
   if (recordingError || !recording?.r2_file_key) throw recordingError || new Error('A verified R2 recording is not available yet')
 
@@ -117,10 +120,12 @@ async function finalizeRecording(job: RecordingJob) {
       ended_at: segment.ended_at || new Date().toISOString(), updated_at: new Date().toISOString(),
     }, { onConflict: 'live_class_id' })
     if (recordingError) throw recordingError
-    const { error: jobError } = await (supabase as any).from('live_class_jobs').upsert({
-      job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString(),
-    }, { onConflict: 'job_type,live_class_id' })
-    if (jobError) throw jobError
+    if (liveClass.course_id) {
+      const { error: jobError } = await (supabase as any).from('live_class_jobs').upsert({
+        job_type: 'recording_process', live_class_id: liveClass.id, payload: {}, status: 'pending', available_at: new Date().toISOString(),
+      }, { onConflict: 'job_type,live_class_id' })
+      if (jobError) throw jobError
+    }
     return false
   }
 

@@ -480,6 +480,7 @@ html {
 .landing-tool-float {
   animation: landing-tool-float 7s ease-in-out infinite;
 }
+
 .landing-pulse-glow {
   animation: landing-pulse-glow 9s ease-in-out infinite;
 }

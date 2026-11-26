@@ -4,6 +4,12 @@
 **Date:** June 2026  
 **Status:** Approved — DevOps Reference Document
 
+> **Operational update — 15 October 2026:** The Hono API now runs on an Oracle
+> Cloud ARM64 VM in Frankfurt. The Scaleway/Azure host instructions below are
+> historical migration context and must not be used for current deployments.
+> The current topology and deployment procedure are documented in
+> `docs/operations/oracle-api-deployment.md`.
+
 ---
 
 ## Purpose

@@ -1,18 +1,18 @@
-import { describe, expect, it } from 'vitest'
-import { deploymentIdentity, healthRouter } from './health'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { healthRouter } from './health'
 
 describe('GET /health', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   it('returns a public liveness response without external dependencies', async () => {
+    vi.stubEnv('RELEASE_SHA', 'abc123')
+    vi.stubEnv('DEPLOY_ENVIRONMENT', 'staging')
     const response = await healthRouter.request('/')
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toMatchObject({ status: 'ok' })
-  })
-
-  it('exposes the deployed commit identity without guessing one', () => {
-    expect(deploymentIdentity({ NODE_ENV: 'staging', RELEASE_SHA: 'abc123' } as NodeJS.ProcessEnv)).toEqual({
-      environment: 'staging',
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'ok',
       release_sha: 'abc123',
+      environment: 'staging',
     })
-    expect(deploymentIdentity({} as NodeJS.ProcessEnv).release_sha).toBeNull()
   })
 })

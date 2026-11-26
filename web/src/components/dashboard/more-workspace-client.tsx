@@ -14,7 +14,7 @@ const accountItems = [
 
 export function MoreWorkspaceClient() {
   const query = useDashboardSession()
-  if (query.isPending) return <div className="rounded-2xl border border-dashboard-outline bg-white p-8 text-sm text-dashboard-muted">Opening {productTerms.tutoringAccount} tools…</div>
+  if (query.isPending) return <div className="grid animate-pulse gap-3 sm:grid-cols-2" aria-busy="true" aria-label="Loading administration tools">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-28 rounded-2xl border border-dashboard-outline bg-white" />)}</div>
   if (query.isError || !query.data.capabilities.isAdmin) return <div className="rounded-2xl border border-[#f0c7c1] bg-white p-8 text-sm text-[#8d2f22]">These {productTerms.tutoringAccount} tools are available to administrators.</div>
   const independent = query.data.capabilities.organisationType === 'independent'
   const items = accountItems.filter(item => !item.accountOnly || !independent)

@@ -12,6 +12,12 @@ node_modules/
 web/.next/
 web/out/
 
+# generated test output
+test-results/
+web/test-results/
+playwright-report/
+web/playwright-report/
+
 # api build output
 api/dist/
 

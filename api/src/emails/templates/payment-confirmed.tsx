@@ -10,8 +10,7 @@ export function PaymentConfirmedEmail({ logoUrl, ...input }: PaymentConfirmedEma
     <Text style={templateStyles.detail}><strong>Amount:</strong> {input.amount}</Text>
     <Text style={templateStyles.detail}><strong>Reference:</strong> {input.paymentReference}</Text>
     <Text style={templateStyles.detail}><strong>Paid:</strong> {formatEmailDate(input.paidAt)}</Text>
-    <EmailButton href={input.dashboardUrl}>Access your programme</EmailButton>
+    <EmailButton href={input.dashboardUrl}>Access your class</EmailButton>
     <Text style={templateStyles.note}>Keep this email as your payment receipt.</Text>
   </BrandedLayout>
 }
-

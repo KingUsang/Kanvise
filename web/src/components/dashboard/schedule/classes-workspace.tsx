@@ -31,6 +31,7 @@ type LegacyLiveClass = {
   status: "scheduled" | "live" | "completed" | "cancelled";
   tutor_id: string;
   access_mode: "anyone_with_link" | "enrolled_learners";
+  share_url?: string | null;
   course?: Subject | null;
   tutor?: Tutor | null;
   series?: { id: string; recurrence_group_id?: string | null } | null;
@@ -426,7 +427,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     });
     const body = await response.json();
     if (!response.ok) return toast.error(body.error || "Could not start this session");
-    window.open(`/class/${item.id}?start=true`, "_blank", "noopener,noreferrer");
+    window.open(item.share_url || `/class/${item.id}`, "_blank", "noopener,noreferrer");
   }
   async function copyClassroomLink(value: string) {
     try {
@@ -457,6 +458,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   const availableTutors = eligibleTutorIds.length
     ? tutors.filter((item) => eligibleTutorIds.includes(item.id))
     : tutors;
+  const canChooseTutor = capabilities.isAdmin && !composer?.existing;
   // DashboardShell owns the page gutter. Calendar must not add another layer
   // of horizontal padding or it visibly drifts from the other workspace pages.
   return (
@@ -547,7 +549,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
             {scheduleQuery.isError ? <div role="status" aria-live="polite" aria-atomic="true" className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Schedule refresh failed; showing your last saved calendar. <button type="button" onClick={() => void scheduleQuery.refetch()} className="font-semibold underline">Try again</button></div> : null}
             <div
               ref={calendarGridRef}
-              className="hidden overflow-auto md:block md:max-h-[calc(100vh-260px)]"
+              className="hidden overflow-auto md:block md:max-h-[calc(100vh-190px)]"
             >
               <div className="grid min-w-[1020px] grid-cols-[72px_repeat(7,minmax(132px,1fr))]">
                 <div className="sticky left-0 top-0 z-30 border-b border-r border-[#eeeae6] bg-white" />
@@ -570,7 +572,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                   const hour = startHour + offset;
                   return (
                     <div key={hour} className="contents">
-                      <div className="sticky left-0 z-10 min-h-[74px] border-b border-r border-[#eeeae6] bg-white px-2 pt-2 text-right text-xs font-semibold text-[#8b8580]">
+                      <div className="sticky left-0 z-10 min-h-[92px] border-b border-r border-[#eeeae6] bg-white px-2 pt-2 text-right text-xs font-semibold text-[#8b8580]">
                         {String(hour).padStart(2, "0")}:00
                       </div>
                       {days.map((day) => {
@@ -582,7 +584,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                         return (
                           <div
                             key={`${dateInput(day)}-${hour}`}
-                            className="relative min-h-[74px] border-b border-r border-[#f0eded] p-1.5 last:border-r-0"
+                            className="relative min-h-[92px] border-b border-r border-[#f0eded] p-1.5 last:border-r-0"
                           >
                             <button
                               onClick={() => open(day, hour)}
@@ -914,7 +916,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                   )}
                 </>
               )}
-              {capabilities.isAdmin && !composer.existing && (
+              {canChooseTutor && (
                 <label className="block text-sm font-semibold">
                   Tutor
                   <select
@@ -1035,7 +1037,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => void copyClassroomLink(`${window.location.origin}/class/${composer.existing!.id}`)}
+                    onClick={() => void copyClassroomLink(composer.existing!.share_url || `${window.location.origin}/class/${composer.existing!.id}`)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#2e2877] text-sm font-semibold text-[#2e2877]"
                   >
                     <Copy size={16} />
@@ -1045,7 +1047,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                     <a
                       target="_blank"
                       rel="noopener noreferrer"
-                      href={`/class/${composer.existing!.id}?start=true`}
+                      href={composer.existing!.share_url || `/class/${composer.existing!.id}`}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2e2877] text-sm font-semibold text-white hover:bg-[#1a1555]"
                     >
                       <Video size={16} />

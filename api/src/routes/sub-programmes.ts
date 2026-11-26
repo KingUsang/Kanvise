@@ -67,7 +67,7 @@ subProgrammesRouter.post("/", enforceAdmin, async (c) => {
       .single();
       
     if (!progCheck || progError) {
-      return c.json({ error: "Invalid programme", code: "INVALID_PARENT" }, 400);
+      return c.json({ error: "Invalid class", code: "INVALID_PARENT" }, 400);
     }
 
     // Check slug uniqueness within school
@@ -104,7 +104,7 @@ subProgrammesRouter.post("/", enforceAdmin, async (c) => {
 
     if (error) throw error;
 
-    return c.json({ data, message: "Sub-programme created successfully" }, 201);
+    return c.json({ data, message: "Class section created successfully" }, 201);
   } catch (error: any) {
     console.error("POST /sub-programmes error:", error);
     return c.json({ error: error.message || "Internal server error" }, 500);
@@ -193,9 +193,9 @@ subProgrammesRouter.patch("/:id", enforceAdmin, async (c) => {
       .single();
 
     if (error) throw error;
-    if (!data) return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
+    if (!data) return c.json({ error: "Class section not found", code: "NOT_FOUND" }, 404);
 
-    return c.json({ data, message: "Sub-programme updated" });
+    return c.json({ data, message: "Class section updated" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
@@ -219,7 +219,7 @@ subProgrammesRouter.post("/:id/publish", enforceAdmin, async (c) => {
     if (error) throw error;
     if (!data) return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
 
-    return c.json({ message: "Sub-programme published" });
+    return c.json({ message: "Class section published" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }
@@ -270,7 +270,7 @@ subProgrammesRouter.delete("/:id", enforceAdmin, async (c) => {
     if (enrolmentError) throw enrolmentError;
     if (activeEnrolment) {
       return c.json({
-        error: "Sub-programme cannot be deleted while students are enrolled",
+        error: "Class section cannot be deleted while students are enrolled",
         code: "ACTIVE_ENROLMENTS",
       }, 409);
     }
@@ -288,7 +288,7 @@ subProgrammesRouter.delete("/:id", enforceAdmin, async (c) => {
       return c.json({ error: "Sub-programme not found", code: "NOT_FOUND" }, 404);
     }
     
-    return c.json({ message: "Sub-programme deleted" });
+    return c.json({ message: "Class section deleted" });
   } catch (error: any) {
     return c.json({ error: error.message || "Internal server error" }, 500);
   }

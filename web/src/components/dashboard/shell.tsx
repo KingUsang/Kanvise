@@ -31,21 +31,16 @@ export function DashboardShell({
   const sessionQuery = useDashboardSession(!setupRequired);
   const capabilities: DashboardCapabilities = setupRequired
     ? { isAdmin: true, isTutor: false, setupRequired: true }
-    : sessionQuery.data?.capabilities || { isAdmin: false, isTutor: false };
+    : sessionQuery.data?.capabilities || {
+        isAdmin: user.role === "admin",
+        isTutor: user.role === "tutor",
+      };
   const canAccessCurrentPath = canAccessDashboardPath(pathname, capabilities);
 
   React.useEffect(() => {
     if (!setupRequired && sessionQuery.isSuccess && !canAccessCurrentPath)
       router.replace("/dashboard?notice=not-authorised");
   }, [canAccessCurrentPath, router, sessionQuery.isSuccess, setupRequired]);
-
-  if (!setupRequired && sessionQuery.isPending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f3f2] font-sans text-sm text-[#474551]">
-        Opening your workspace…
-      </div>
-    );
-  }
 
   if (!setupRequired && sessionQuery.isError) {
     return (

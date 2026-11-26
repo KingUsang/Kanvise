@@ -34,9 +34,9 @@ async function allocateStudentId() {
   throw new Error('Student ID allocation is temporarily unavailable. Please try again.');
 }
 
-// POST /users/students/import — Add existing tutorial-centre students and
-// immediately enrol each in its programme. Activation emails are optional, but
-// enabled by default for rows that have an email address.
+// POST /users/students/import — Invite students to the centre. Class targets
+// stay pending until account acceptance; already-active students are enrolled
+// immediately because no activation step remains for them.
 usersRouter.post('/students/import', enforceAdmin, async (c) => {
   const admin = c.get('user');
   const account = c.get('account');
@@ -67,7 +67,6 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
     }
     if (row.email && !EMAIL_PATTERN.test(row.email)) errors.push('Email address is invalid');
     if (!row.email) errors.push('Email address is required');
-    if (!row.programme_id) errors.push('Choose a programme');
     return errors.length ? [{ row: row.row, errors }] : [];
   });
   const emailRows = new Map<string, number[]>();
@@ -86,15 +85,15 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
   if (validationErrors.length) return c.json({ error: 'Fix the highlighted rows before importing', code: 'VALIDATION_ERROR', errors: validationErrors }, 400);
 
   try {
-    const programmeIds = [...new Set(normalizedRows.map((row) => row.programme_id))];
-    const { data: programmes, error: programmesError } = await supabase
+    const programmeIds = [...new Set(normalizedRows.map((row) => row.programme_id).filter(Boolean))];
+    const { data: programmes, error: programmesError } = programmeIds.length ? await supabase
       .from('programmes')
       .select('id, name')
       .eq('school_id', account.id)
-      .in('id', programmeIds);
+      .in('id', programmeIds) : { data: [], error: null };
     if (programmesError) throw programmesError;
     const knownProgrammeIds = new Set((programmes || []).map((programme) => programme.id));
-    const unknownProgrammes = normalizedRows.filter((row) => !knownProgrammeIds.has(row.programme_id));
+    const unknownProgrammes = normalizedRows.filter((row) => row.programme_id && !knownProgrammeIds.has(row.programme_id));
     if (unknownProgrammes.length) {
       return c.json({ error: 'One or more programmes do not belong to your centre', code: 'INVALID_PROGRAMME', errors: unknownProgrammes.map((row) => ({ row: row.row, errors: ['Programme not found'] })) }, 400);
     }
@@ -106,7 +105,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
       .single();
     if (schoolError || !school) throw schoolError || new Error('Could not load your centre');
     const programmeNames = new Map((programmes || []).map((programme) => [programme.id, programme.name]));
-    const invitedByName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Your centre administrator';
+    const invitedByName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Your agency administrator';
 
     const emails = [...new Set(normalizedRows.map((row) => row.email).filter((email): email is string => Boolean(email)))];
     const { data: existingProfiles, error: existingError } = emails.length ? await supabase
@@ -120,7 +119,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
       return c.json({ error: 'Student invitations are not configured', code: 'INVITATIONS_UNAVAILABLE' }, 503);
     }
     const profilesByEmail = new Map((existingProfiles || []).filter((profile) => profile.email).map((profile) => [profile.email!, profile]));
-    const summary = { created: 0, enrolled: 0, invited: 0, skipped: 0, errors: [] as Array<{ row: number; errors: string[] }> };
+    const summary = { created: 0, enrolled: 0, pending: 0, invited: 0, skipped: 0, errors: [] as Array<{ row: number; errors: string[] }> };
 
     for (const row of normalizedRows) {
       try {
@@ -146,16 +145,22 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
           summary.created += 1;
         }
 
-        const { data: existingEnrolment, error: enrolmentLookupError } = await supabase.from('enrolments').select('id').eq('school_id', account.id).eq('student_id', student.id).eq('programme_id', row.programme_id).maybeSingle();
-        if (enrolmentLookupError) throw enrolmentLookupError;
-        if (!existingEnrolment) {
-          const { error: enrolmentError } = await supabase.from('enrolments').insert({ school_id: account.id, student_id: student.id, programme_id: row.programme_id, source: 'admin_import', granted_by: admin.id, imported_at: new Date().toISOString() } as any);
-          if (enrolmentError) throw enrolmentError;
-          summary.enrolled += 1;
+        if (row.programme_id) {
+          const { data: existingEnrolment, error: enrolmentLookupError } = await supabase.from('enrolments').select('id').eq('school_id', account.id).eq('student_id', student.id).eq('programme_id', row.programme_id).maybeSingle();
+          if (enrolmentLookupError) throw enrolmentLookupError;
+          if (!existingEnrolment && student.onboarding_status === 'active') {
+            const { error: enrolmentError } = await supabase.from('enrolments').insert({ school_id: account.id, student_id: student.id, programme_id: row.programme_id, source: 'admin_import', granted_by: admin.id, imported_at: new Date().toISOString() } as any);
+            if (enrolmentError) throw enrolmentError;
+            summary.enrolled += 1;
+          } else if (!existingEnrolment) {
+            const { error: pendingError } = await (supabase as any).from('pending_student_enrolments').upsert({ school_id: account.id, student_profile_id: student.id, programme_id: row.programme_id, invited_by: admin.id }, { onConflict: 'student_profile_id,programme_id', ignoreDuplicates: true });
+            if (pendingError) throw pendingError;
+            summary.pending += 1;
+          }
         }
 
         if (sendInvitations && row.email && student.onboarding_status !== 'active') {
-          const programmeName = programmeNames.get(row.programme_id) || 'your programme';
+          const programmeName = programmeNames.get(row.programme_id) || 'your centre';
           const invitationData = {
             first_name: row.first_name || student.first_name || '',
             last_name: row.last_name || student.last_name || '',
@@ -191,7 +196,7 @@ usersRouter.post('/students/import', enforceAdmin, async (c) => {
     }
 
     summary.skipped = summary.errors.length;
-    return c.json({ data: summary, message: `Imported ${summary.created} student${summary.created === 1 ? '' : 's'}.` }, 201);
+    return c.json({ data: summary, message: `Invited ${summary.invited} student${summary.invited === 1 ? '' : 's'}.` }, 201);
   } catch (error: any) {
     return c.json({ error: 'Could not import students', code: 'IMPORT_UNAVAILABLE' }, 503);
   }
@@ -292,6 +297,13 @@ usersRouter.get("/students", enforceAdmin, async (c) => {
 
     if (enrolmentsError) throw enrolmentsError;
 
+    const { data: pendingTargets, error: pendingTargetsError } = await (supabase as any)
+      .from('pending_student_enrolments')
+      .select('id, student_profile_id, programme_id, programmes(id, name)')
+      .eq('school_id', account.id)
+      .in('student_profile_id', studentIds);
+    if (pendingTargetsError) throw pendingTargetsError;
+
     // 3. Join in JS
     const studentsWithEnrolments = students.map((student) => {
       const studentEnrolments = (enrolments || []).filter((e) => e.student_id === student.id);
@@ -303,12 +315,89 @@ usersRouter.get("/students", enforceAdmin, async (c) => {
         ...student,
         profile_photo_url: profilePhotoUrl,
         enrolments: studentEnrolments,
+        pending_enrolments: (pendingTargets || []).filter((target: any) => target.student_profile_id === student.id),
       };
     });
 
     return c.json({ data: studentsWithEnrolments });
   } catch (error: any) {
     return c.json({ error: 'Could not load Learners right now', code: 'PEOPLE_UNAVAILABLE' }, 503);
+  }
+});
+
+// POST /users/students/:id/invitation/resend — replace a pending activation
+// link. Creating the invitation expires any older pending link for this email.
+usersRouter.post('/students/:id/invitation/resend', enforceAdmin, async (c) => {
+  try {
+    const admin = c.get('user');
+    const account = c.get('account');
+    const studentId = c.req.param('id') as string;
+    const { data: student, error: studentError } = await supabase
+      .from('user_profiles')
+      .select('id, email, first_name, last_name, onboarding_status')
+      .eq('id', studentId).eq('school_id', account.id).eq('role', 'student').maybeSingle();
+    if (studentError) throw studentError;
+    if (!student) return c.json({ error: 'Student not found', code: 'NOT_FOUND' }, 404);
+    if (student.onboarding_status === 'active') return c.json({ error: 'This student has already accepted their invitation', code: 'STUDENT_ACTIVE' }, 409);
+    if (!student.email) return c.json({ error: 'This student has no email address', code: 'EMAIL_REQUIRED' }, 400);
+
+    const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '');
+    if (!frontendUrl) return c.json({ error: 'Student invitations are not configured', code: 'INVITATIONS_UNAVAILABLE' }, 503);
+    const [{ data: school, error: schoolError }, { data: pendingTargets, error: pendingError }] = await Promise.all([
+      supabase.from('schools').select('name').eq('id', account.id).single(),
+      (supabase as any).from('pending_student_enrolments').select('programmes(name)').eq('school_id', account.id).eq('student_profile_id', student.id),
+    ]);
+    if (schoolError || !school) throw schoolError || new Error('Could not load your centre');
+    if (pendingError) throw pendingError;
+    const firstTarget = pendingTargets?.[0]?.programmes;
+    const className = Array.isArray(firstTarget) ? firstTarget[0]?.name : firstTarget?.name;
+    const invitedByName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Your agency administrator';
+    const durable = await createAccountInvitation({
+      schoolId: account.id,
+      invitedBy: admin.id,
+      role: 'student',
+      email: student.email,
+      studentProfileId: student.id,
+      metadata: {
+        first_name: student.first_name || '', last_name: student.last_name || '', school_name: school.name,
+        programme_name: className || 'your centre', invited_by_name: invitedByName, app_url: frontendUrl,
+      },
+    });
+    await sendStudentInvitation({
+      to: student.email,
+      inviteUrl: `${frontendUrl}/invite?token=${encodeURIComponent(durable.token)}`,
+      invitedByName, schoolName: school.name, programmeName: className || 'your centre', expiresAt: durable.expiresAt,
+    });
+    await supabase.from('user_profiles').update({ onboarding_status: 'invited' } as any).eq('id', student.id);
+    return c.json({ data: { expires_at: durable.expiresAt }, message: 'Invitation resent' });
+  } catch (error: any) {
+    return c.json({ error: error.message || 'Could not resend invitation' }, 500);
+  }
+});
+
+// DELETE /users/students/:id/invitation — cancel an unaccepted invitation and
+// every class target that was waiting on that acceptance. Accepted enrolments
+// are never touched by this endpoint.
+usersRouter.delete('/students/:id/invitation', enforceAdmin, async (c) => {
+  try {
+    const admin = c.get('user');
+    const account = c.get('account');
+    const studentId = c.req.param('id') as string;
+    const { data: student, error: studentError } = await supabase
+      .from('user_profiles').select('id, onboarding_status').eq('id', studentId).eq('school_id', account.id).eq('role', 'student').maybeSingle();
+    if (studentError) throw studentError;
+    if (!student) return c.json({ error: 'Student not found', code: 'NOT_FOUND' }, 404);
+    if (student.onboarding_status === 'active') return c.json({ error: 'Accepted students cannot have their invitation cancelled', code: 'STUDENT_ACTIVE' }, 409);
+    const now = new Date().toISOString();
+    const [{ error: invitationError }, { error: pendingError }, { error: profileError }] = await Promise.all([
+      (supabase as any).from('account_invitations').update({ status: 'cancelled', updated_at: now }).eq('school_id', account.id).eq('student_profile_id', student.id).eq('status', 'pending'),
+      (supabase as any).from('pending_student_enrolments').delete().eq('school_id', account.id).eq('student_profile_id', student.id),
+      supabase.from('user_profiles').update({ onboarding_status: 'not_invited' } as any).eq('id', student.id),
+    ]);
+    if (invitationError || pendingError || profileError) throw invitationError || pendingError || profileError;
+    return c.json({ message: 'Invitation cancelled' });
+  } catch (error: any) {
+    return c.json({ error: error.message || 'Could not cancel invitation' }, 500);
   }
 });
 

@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { meetsPasswordPolicy, passwordChecks } from "@/lib/password-policy";
+import { AuthAlert, authInputClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
+import { passwordUpdateErrorMessage } from '@/lib/auth-error-message'
 
 export default function AcceptInvitationPage() {
   const supabase = useMemo(() => createClient(), []);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [fullName, setFullName] = useState('');
   const [checking, setChecking] = useState(true);
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -24,7 +28,7 @@ export default function AcceptInvitationPage() {
       const user = result.data.user
       if (!mounted) return;
       if (!user) {
-        setError("This invitation link has expired, was already used, or was opened in a different browser.");
+        setError("Your sign-in didn't finish. Open the invitation again to continue.");
       } else {
         const metadata = user.user_metadata || {};
         setInvitation({
@@ -33,6 +37,7 @@ export default function AcceptInvitationPage() {
           schoolName: String(metadata.school_name || ""),
           programmeName: String(metadata.programme_name || ""),
         });
+        setFullName(`${String(metadata.first_name || '')} ${String(metadata.last_name || '')}`.trim())
         setReady(true);
       }
       setChecking(false);
@@ -41,7 +46,8 @@ export default function AcceptInvitationPage() {
   }, [supabase]);
 
   const checks = passwordChecks(password);
-  const valid = Boolean(invitation.firstName.trim() && invitation.lastName.trim()) && meetsPasswordPolicy(password) && password === confirmation;
+  const nameParts = fullName.trim().split(/\s+/), parsedFirstName = nameParts.slice(0, -1).join(' '), parsedLastName = nameParts.at(-1) || ''
+  const valid = Boolean(parsedFirstName && parsedLastName) && meetsPasswordPolicy(password) && password === confirmation;
 
   async function acceptInvitation(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,66 +55,63 @@ export default function AcceptInvitationPage() {
     setSaving(true);
     setError(null);
     try {
-      const firstName = invitation.firstName.trim();
-      const lastName = invitation.lastName.trim();
+      const firstName = parsedFirstName;
+      const lastName = parsedLastName;
       const { error: passwordError } = await supabase.auth.updateUser({
         password,
         data: { first_name: firstName, last_name: lastName },
       });
-      if (passwordError) throw passwordError;
+      if (passwordError) {
+        setError(passwordUpdateErrorMessage(passwordError));
+        setSaving(false);
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Your account session could not be started");
+      if (!session) throw new Error('session_unavailable');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) throw new Error("Account activation is temporarily unavailable");
+      if (!apiUrl) throw new Error('activation_unavailable');
       const response = await fetch(`${apiUrl}/auth/profile/activate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ first_name: firstName, last_name: lastName }),
       });
-      const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error || "Your account could not be activated");
+      if (!response.ok) throw new Error('activation_failed');
       setSuccess(true);
       window.setTimeout(() => window.location.assign("/dashboard/student"), 1800);
-    } catch (activationError) {
-      setError(activationError instanceof Error ? activationError.message : "Your invitation could not be accepted");
+    } catch {
+      setError("We couldn't finish accepting this invitation right now. Try again.");
       setSaving(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f5f3] px-4 py-10 text-[#1b1c1c] sm:flex sm:items-center sm:justify-center">
-      <section className="mx-auto w-full max-w-[520px] rounded-2xl border border-[#e4e2e1] bg-white p-6 shadow-sm sm:p-10">
-        <Link href="/" className="mb-9 block text-center text-2xl font-bold tracking-tight text-[#2e2877]">Kanvise</Link>
+    <main className="flex min-h-screen items-center justify-center bg-white px-4 py-6 text-[#1b1c1c] sm:bg-[#f7f7f9] sm:px-8 sm:py-8">
+      <section className="w-full max-w-[500px] rounded-[20px] border border-[#e1e0e6] bg-white px-5 py-8 sm:rounded-[24px] sm:px-10 sm:py-11 lg:px-12">
+        <Link href="/" aria-label="Kanvise home" className="mx-auto mb-9 flex w-fit items-center justify-center"><img src="/kanvise_logo_small_blue.png" alt="" className="h-11 w-11 object-contain" /></Link>
         {checking ? (
           <div className="flex items-center justify-center gap-3 py-16 text-[#6a6874]"><Loader2 className="animate-spin" size={20} /> Checking your invitation…</div>
         ) : success ? (
           <div className="py-10 text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Invitation accepted</p>
-            <h1 className="mt-3 text-3xl font-bold text-[#2e2877]">Your account is ready</h1>
+            <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Your account is ready</h1>
             <p className="mt-3 text-sm leading-6 text-[#6a6874]">Taking you to your learning dashboard now.</p>
           </div>
         ) : !ready ? (
           <div className="py-8 text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Invitation unavailable</p>
-            <h1 className="mt-3 text-3xl font-bold text-[#2e2877]">Request a fresh setup email</h1>
+            <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Your sign-in didn’t finish</h1>
             <p className="mt-3 text-sm leading-6 text-[#6a6874]">{error}</p>
-            <Link href="/auth/forgot-password" className="mt-7 inline-flex rounded-lg bg-[#994704] px-6 py-3 font-bold text-white">Send me a new setup code</Link>
+            <Link href="/auth/login" className="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#994704] px-6 text-sm font-semibold text-white">Back to sign in</Link>
           </div>
         ) : (
           <>
-            <header className="mb-8">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Student invitation</p>
-              <h1 className="mt-2 text-3xl font-bold text-[#2e2877]">Accept your invitation</h1>
+            <header className="mb-7 text-center">
+              <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Accept your invitation</h1>
               <p className="mt-3 text-sm leading-6 text-[#6a6874]">
                 Create your profile and password{invitation.programmeName ? ` to access ${invitation.programmeName}` : ""}{invitation.schoolName ? ` at ${invitation.schoolName}` : ""}.
               </p>
             </header>
-            {error && <div className="mb-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+            {error && <AuthAlert>{error}</AuthAlert>}
             <form onSubmit={acceptInvitation} className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <TextField id="first-name" label="First name" value={invitation.firstName} autoComplete="given-name" onChange={firstName => setInvitation(current => ({ ...current, firstName }))} />
-                <TextField id="last-name" label="Last name" value={invitation.lastName} autoComplete="family-name" onChange={lastName => setInvitation(current => ({ ...current, lastName }))} />
-              </div>
+              <TextField id="full-name" label="Full name" value={fullName} autoComplete="name" onChange={setFullName} />
               <PasswordField id="password" label="Create password" value={password} onChange={setPassword} shown={showPassword} onToggle={() => setShowPassword(value => !value)} />
               <div className="rounded-lg border border-[#e4e2e1] bg-[#f9f7f4] p-4 text-sm text-[#6a6874]">
                 <p className={checks.hasMinLength ? "text-green-700" : ""}>• At least 8 characters</p>
@@ -116,10 +119,10 @@ export default function AcceptInvitationPage() {
                 <p className={checks.hasUppercase ? "mt-2 text-green-700" : "mt-2"}>• One uppercase letter</p>
                 <p className={checks.hasNumber ? "mt-2 text-green-700" : "mt-2"}>• One number</p>
               </div>
-              <PasswordField id="password-confirmation" label="Confirm password" value={confirmation} onChange={setConfirmation} shown={showPassword} onToggle={() => setShowPassword(value => !value)} />
+              <PasswordField id="password-confirmation" label="Confirm password" value={confirmation} onChange={setConfirmation} shown={showConfirmation} onToggle={() => setShowConfirmation(value => !value)} />
               {confirmation && password !== confirmation && <p className="text-sm text-red-600">Passwords do not match.</p>}
-              <button type="submit" disabled={!valid || saving} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#994704] py-4 font-bold text-white disabled:opacity-50">
-                {saving && <Loader2 className="animate-spin" size={18} />}{saving ? "Activating account…" : "Accept invitation"}
+              <button type="submit" disabled={!valid || saving} className={authPrimaryButtonClass}>
+                {saving ? <><Loader2 className="animate-spin" size={18}/>Activating account…</> : <>Accept invitation<ArrowRight size={16}/></>}
               </button>
             </form>
           </>
@@ -130,9 +133,9 @@ export default function AcceptInvitationPage() {
 }
 
 function TextField({ id, label, value, autoComplete, onChange }: { id: string; label: string; value: string; autoComplete: string; onChange: (value: string) => void }) {
-  return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">{label}</label><input id={id} required autoComplete={autoComplete} value={value} onChange={event => onChange(event.target.value)} className="w-full rounded-lg border border-[#c8c5d2] px-4 py-3.5 outline-none focus:border-[#2e2877]" /></div>;
+  return <div><label htmlFor={id} className="mb-2 block text-sm font-medium text-[#302c39]">{label}</label><input id={id} required autoComplete={autoComplete} value={value} onChange={event => onChange(event.target.value)} className={authInputClass} /></div>;
 }
 
 function PasswordField({ id, label, value, onChange, shown, onToggle }: { id: string; label: string; value: string; onChange: (value: string) => void; shown: boolean; onToggle: () => void }) {
-  return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#474551]">{label}</label><div className="relative"><input id={id} required autoComplete="new-password" type={shown ? "text" : "password"} value={value} onChange={event => onChange(event.target.value)} className="w-full rounded-lg border border-[#c8c5d2] px-4 py-3.5 pr-12 outline-none focus:border-[#2e2877]" /><button type="button" onClick={onToggle} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9b98a3]" aria-label={shown ? "Hide password" : "Show password"}>{shown ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>;
+  return <div><label htmlFor={id} className="mb-2 block text-sm font-medium text-[#302c39]">{label}</label><div className="relative"><input id={id} required autoComplete="new-password" type={shown ? "text" : "password"} value={value} onChange={event => onChange(event.target.value)} className={`${authInputClass} pr-12`} /><button type="button" onClick={onToggle} className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[#777382] hover:bg-[#f2f0f7]" aria-label={shown ? "Hide password" : "Show password"}>{shown ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>;
 }

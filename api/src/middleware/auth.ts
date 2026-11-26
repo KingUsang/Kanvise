@@ -51,7 +51,7 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
   const isProfileInit = c.req.method === 'POST' && c.req.path === '/auth/profile/init'
   const { data: profile, error } = await supabase
     .from('user_profiles')
-    .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active')
+    .select('id, role, school_id, kanvise_user_id, first_name, last_name, email, is_active, onboarding_status')
     .eq('supabase_auth_id', supabaseAuthId)
     .maybeSingle()
 
@@ -69,6 +69,11 @@ export const profileResolutionMiddleware = async (c: Context, next: Next) => {
 
   if (profile.is_active !== true) {
     return c.json({ error: 'This account has been deactivated', code: 'ACCOUNT_INACTIVE' }, 403)
+  }
+
+  const invitationCompletion = c.req.path.includes('/auth/profile/activate') || c.req.path.includes('/auth/profile/init')
+  if (profile.role === 'student' && profile.onboarding_status !== 'active' && !invitationCompletion) {
+    return c.json({ error: 'Accept your invitation to finish setting up this account', code: 'ACCOUNT_PENDING' }, 403)
   }
   
   const resolvedUser = {
