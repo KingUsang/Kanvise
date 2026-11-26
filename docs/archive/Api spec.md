@@ -1,3 +1,7 @@
+> **Archived. Superseded by:** [Backend API](../engineering/standards/05-backend-api.md), [ADR 0003](../engineering/decisions/0003-compatible-api-envelope-and-schema-validation.md) and the route code in `api/src/routes`.
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-REPO-009, DEV-ARC-008).
+
 ## **Kanvise — Full API Speci�cation** 
 
 ## **Version:** 1.0 

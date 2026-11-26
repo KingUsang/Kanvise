@@ -1,3 +1,7 @@
+> **Archived. Superseded by:** [System architecture](../engineering/standards/02-system-architecture.md) and the [decision ledger](../engineering/DECISION_LEDGER.md).
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-REPO-009, DEV-ARC-008).
+
 
 **Version:** 1.0 | **Prepared by:** Architecture Team | **Date:** June 2026
 

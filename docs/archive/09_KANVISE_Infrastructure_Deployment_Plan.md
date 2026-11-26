@@ -1,3 +1,7 @@
+> **Archived. Superseded by:** [Deployment and operations](../engineering/standards/12-deployment-operations.md), [Oracle API deployment](../operations/oracle-api-deployment.md) and the [runbooks](../runbooks/README.md).
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-REPO-009, DEV-ARC-008).
+
 # Kanvise — Infrastructure & Deployment Plan
 **Version:** 1.0  
 **Prepared by:** Architecture Team  

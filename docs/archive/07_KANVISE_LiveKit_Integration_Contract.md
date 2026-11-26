@@ -1,7 +1,11 @@
+> **Archived. Superseded by:** [PlugNMeet integration reference](../plugnmeet-integration-reference.md) and [Integrations, storage and async work](../engineering/standards/08-integrations-storage-async.md). This LiveKit contract is historical..
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-REPO-009, DEV-ARC-008).
+
 > [!WARNING]
 > **Document status: Historical**
 >
-> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Kanvise — LiveKit Integration API Contract
 **Version:** 1.0  

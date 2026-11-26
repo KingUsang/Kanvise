@@ -1,3 +1,7 @@
+> **Archived. Superseded by:** [Auth, authorization and tenancy](../engineering/standards/03-auth-authorization-tenancy.md) and the middleware in `api/src/middleware/auth.ts`.
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-REPO-009, DEV-ARC-008).
+
 ## **Kanvise — Authentication & Authorisation** 
 
 ## **Speci�cation** 

@@ -1,7 +1,11 @@
+> **Archived. Superseded by:** [Backend API](../engineering/standards/05-backend-api.md), [ADR 0003](../engineering/decisions/0003-compatible-api-envelope-and-schema-validation.md) and the route code in `api/src/routes`.
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-REPO-009, DEV-ARC-008).
+
 > [!WARNING]
 > **Document status: Superseded**
 >
-> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Kanvise — Full API Specification
 **Version:** 1.0  

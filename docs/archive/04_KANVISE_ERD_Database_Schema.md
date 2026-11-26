@@ -1,7 +1,11 @@
+> **Archived. Superseded by:** [Database and migrations](../engineering/standards/04-database-and-migrations.md) and the applied files in `supabase/migrations`.
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-REPO-009, DEV-ARC-008).
+
 > [!WARNING]
 > **Document status: Superseded**
 >
-> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Kanvise — Entity Relationship Diagram & Database Schema
 **Version:** 1.0  
