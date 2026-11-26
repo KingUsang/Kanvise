@@ -8,7 +8,9 @@ const test = base.extend<Fixtures>({
   remoteBrowser: async ({ playwright }, run, testInfo) => {
     const username = process.env.BROWSERSTACK_USERNAME
     const accessKey = process.env.BROWSERSTACK_ACCESS_KEY
-    if (!username || !accessKey) throw new Error('BrowserStack credentials are required; real-device certification cannot be skipped')
+    // Projects for this spec exist only when real devices are enabled, so
+    // missing credentials here mean E2E_REQUIRE_REAL_DEVICES=true is unmet.
+    if (!username || !accessKey) throw new Error('BrowserStack credentials are required when real-device journeys are enabled')
     const pixel = testInfo.project.name.includes('pixel')
     const caps = {
       browser: 'chrome',

@@ -1,4 +1,31 @@
-export const REQUIRED_JOURNEYS = ['D00', 'J01', 'J02', 'J03', 'J04', 'J05', 'J06', 'J07', 'J08', 'UX01', 'BS01']
+export const REQUIRED_JOURNEYS = ['D00', 'J01', 'J02', 'J03', 'J04', 'J05', 'J06', 'J07', 'J08', 'UX01']
+
+// BrowserStack real-device journeys are optional until the project has a
+// BrowserStack account. They run, and become required, only when both
+// credentials are present or E2E_REQUIRE_REAL_DEVICES=true.
+export const REAL_DEVICE_JOURNEYS = ['BS01']
+export const REAL_DEVICE_CREDENTIALS = ['BROWSERSTACK_USERNAME', 'BROWSERSTACK_ACCESS_KEY']
+
+export function realDeviceMode(env = process.env) {
+  const flag = env.E2E_REQUIRE_REAL_DEVICES?.trim() || ''
+  const problems = []
+  if (!['', 'true', 'false'].includes(flag)) problems.push(`E2E_REQUIRE_REAL_DEVICES must be true or false, not ${flag}`)
+  const required = flag === 'true'
+  const missing = REAL_DEVICE_CREDENTIALS.filter((name) => !env[name]?.trim())
+  const enabled = missing.length === 0
+  // A single credential is a misconfiguration, not an opt-out.
+  if (missing.length && (required || missing.length < REAL_DEVICE_CREDENTIALS.length)) {
+    problems.push(`Missing real-device configuration: ${missing.join(', ')}`)
+  }
+  return { enabled, required, problems }
+}
+
+export function requiredJourneys(env = process.env) {
+  const { enabled, required } = realDeviceMode(env)
+  return enabled || required
+    ? [...REQUIRED_JOURNEYS, ...REAL_DEVICE_JOURNEYS]
+    : [...REQUIRED_JOURNEYS]
+}
 
 export function collectTests(report) {
   const tests = []
@@ -12,10 +39,10 @@ export function collectTests(report) {
   return tests
 }
 
-export function certificationProblems(report, manifest) {
+export function certificationProblems(report, manifest, env = process.env) {
   const tests = collectTests(report)
-  const problems = []
-  for (const id of REQUIRED_JOURNEYS) {
+  const problems = [...realDeviceMode(env).problems]
+  for (const id of requiredJourneys(env)) {
     if (!tests.some((test) => test.title.includes(`[${id}]`))) problems.push(`missing required journey ${id}`)
   }
   for (const test of tests) {
