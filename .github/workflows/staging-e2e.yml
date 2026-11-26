@@ -1,10 +1,6 @@
 name: Staging real journey gate
 
 on:
-  deployment_status:
-  workflow_run:
-    workflows: ['Verify and deploy API']
-    types: [completed]
   workflow_dispatch:
     inputs:
       expected_sha:

@@ -1,8 +1,6 @@
 name: Clean abandoned staging E2E runs
 
 on:
-  schedule:
-    - cron: '17 3 * * *'
   workflow_dispatch:
 
 permissions:
