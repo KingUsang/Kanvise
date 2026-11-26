@@ -38,5 +38,21 @@ ALTER TABLE public.user_profiles
 ALTER TABLE public.user_profiles
   VALIDATE CONSTRAINT user_profiles_role_supported_check;
 
-ALTER TABLE public.user_profiles
-  DROP CONSTRAINT IF EXISTS user_profiles_role_check;
+-- The original inline CHECK is named user_profiles_role_check by default.
+-- Drop whichever CHECK still names super_admin, without relying on the name.
+DO $$
+DECLARE
+  old_constraint record;
+BEGIN
+  FOR old_constraint IN
+    SELECT conname
+    FROM pg_catalog.pg_constraint
+    WHERE conrelid = 'public.user_profiles'::regclass
+      AND contype = 'c'
+      AND conname <> 'user_profiles_role_supported_check'
+      AND pg_catalog.pg_get_constraintdef(oid) LIKE '%super_admin%'
+  LOOP
+    EXECUTE format('ALTER TABLE public.user_profiles DROP CONSTRAINT %I', old_constraint.conname);
+  END LOOP;
+END
+$$;
