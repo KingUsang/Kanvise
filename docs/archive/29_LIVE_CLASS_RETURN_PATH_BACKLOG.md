@@ -1,3 +1,5 @@
+> **Archived tracker.** Backlog item for the PlugNMeet exit redirect. Its open items were folded into the [deviation register](../deviations.md) as DEV-TRK-029-01 (section "Older tracker items folded into this register"). The register is the single bug list; this file is dated evidence and is no longer updated. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
 # Live class return-path backlog
 
 ## Problem

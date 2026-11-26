@@ -1,3 +1,7 @@
+> **Archived. Superseded by:** the [PlugNMeet integration reference](../operations/plugnmeet-integration-reference.md) and the [enrolled-class pilot runbook](../operations/plugnmeet-enrolled-pilot.md). The Azure, AWS recorder, live egress and Kanvise-owned Quick Check design below is research only.
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-INT-014, DEV-ARC-008).
+
 # Kanvise Live Class Architecture v3 — plugNmeet Integration
 
 > **Current implementation scope (2026-09-21):** enrolled-room access, native

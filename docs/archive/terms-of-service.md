@@ -1,3 +1,5 @@
+> **Archived copy.** The published terms are `web/public/terms-of-service.md`, which `/terms` renders. This root copy was byte-identical to it and nothing reads it. The text still describes retired providers and features and has not had qualified legal review (DEV-DOC-002). Do not edit this copy; see DEV-REPO-020.
+
 # Kanvise Terms of Service
 
 **Effective date:** 6 October 2026

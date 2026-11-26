@@ -1,7 +1,11 @@
+> **Archived. Superseded by:** decisions DOM-007, DOM-009 and DOM-010 in the [decision ledger](../engineering/DECISION_LEDGER.md). Standalone, public, paid, marketplace and guest Quiz flows are retired (DEV-DOC-013, DEV-QUIZ-016); nothing in this plan is carried forward.
+>
+> Kept as historical evidence only; do not extend it. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md). Archived in the repository documentation clean-up (DEV-INT-014, DEV-ARC-008).
+
 > [!WARNING]
 > **Document status: Historical**
 >
-> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is evidence, not authority for new behavior. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Kanvise Mock Marketplace Delivery Plan
 

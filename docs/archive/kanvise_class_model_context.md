@@ -1,3 +1,5 @@
+> **Archived. Historical product document.** Snapshot of the class-first model discussion. The adopted Class, Subject and Session terms are in [Product domain and terminology](../engineering/standards/01-product-domain-and-terminology.md). It is not a current contract and must not be implemented from. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md) and DEV-DOC-001 in the [deviation register](../deviations.md).
+
 # Kanvise class-first model (context doc)
 
 Paste this into any chat, doc, or ticket when you need the same context.

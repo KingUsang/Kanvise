@@ -1,7 +1,9 @@
+> **Archived tracker.** LiveKit-era research brief (10 September 2026); the current classroom runs on PlugNMeet and the Cloudflare Realtime SFU experiment it proposes was never approved (DEV-DOC-015). Its open items were folded into the [deviation register](../deviations.md) as DEV-TRK-025-01 (section "Older tracker items folded into this register"). The register is the single bug list; this file is dated evidence and is no longer updated. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
 > [!WARNING]
 > **Document status: Evidence**
 >
-> The retained body is proposal, research, backlog, or incident evidence rather than approved product behavior, architecture authority, or current release proof. For current engineering guidance, follow the [Kanvise engineering index](engineering/README.md) and the [document authority map](engineering/DOCUMENT_AUTHORITY.md).
+> The retained body is proposal, research, backlog, or incident evidence rather than approved product behavior, architecture authority, or current release proof. For current engineering guidance, follow the [Kanvise engineering index](../engineering/README.md) and the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
 
 # Kanvise Live Class Workspace: Code Audit and UX Recommendation
 

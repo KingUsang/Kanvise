@@ -1,3 +1,5 @@
+> **Archived. Historical product document.** Version 1.0 (October 2026) pilot email sequence. Current email templates are in `api/src/emails/templates` and setup is in [email setup](../operations/email-setup.md). It is not a current contract and must not be implemented from. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md) and DEV-DOC-001 in the [deviation register](../deviations.md).
+
 ## **KANVISE -Product Email Library & Design Specification** 
 
 Version 1.0 — October 2026 

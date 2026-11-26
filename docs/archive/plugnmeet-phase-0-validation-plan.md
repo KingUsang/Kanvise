@@ -1,3 +1,5 @@
+> **Archived tracker.** Evidence-gathering plan that preceded the PlugNMeet pilot. Current behaviour is described in the [PlugNMeet integration reference](../operations/plugnmeet-integration-reference.md). Its open items were folded into the [deviation register](../deviations.md) as DEV-TRK-PNM-01 (section "Older tracker items folded into this register"). The register is the single bug list; this file is dated evidence and is no longer updated. See the [document authority map](../engineering/DOCUMENT_AUTHORITY.md).
+
 # Kanvise plugNmeet Phase 0 Validation Plan
 
 **Status:** Required before implementation planning

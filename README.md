@@ -89,6 +89,7 @@ templates are [web/.env.example](web/.env.example) and
 
 - [Engineering standards and authority](docs/engineering/README.md)
 - [Current document authority map](docs/engineering/DOCUMENT_AUTHORITY.md)
+- [Operations guides](docs/operations/) (email, R2, PWA push, PlugNMeet, Oracle API deployment) and [runbooks](docs/runbooks/README.md)
 - [Implementation deviations](docs/deviations.md), the single bug and conflict register
 - [Archived documents](docs/archive/) (superseded or historical; never authority)
 - [API runtime environment contract](api/src/config/runtime-env.ts)

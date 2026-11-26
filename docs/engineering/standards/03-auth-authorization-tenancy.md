@@ -122,6 +122,27 @@ resource IDs are always checked within that account. Cross-account support
 jobs require a separate, auditable service capability; `super_admin` is not a
 shortcut.
 
+## Dashboard page access
+
+Carried over from the retired dashboard roles document (`docs/archive/17_DASHBOARD_ROLES_AND_PRIVILEGES.md`),
+translated to current terms. Page access is a usability layer; the rules in
+"Authorization rules" still decide every read and write.
+
+- Account-wide pages are Admin-only: account setup, Programmes and Courses,
+  Tutors, Learners, and Payments.
+- Dashboard, Schedule, Attendance, and Quizzes are shared. An Admin sees the
+  whole account; a Tutor sees and manages only Courses and Sessions assigned to
+  them.
+- Notes and Assignments are Tutor capabilities. An Admin gets them only when
+  assigned to a Course. An Admin does not become a Tutor because the account
+  has no other Tutors; the explicit Course assignment is the source of truth.
+- Inside a Class workspace the Tutors view is shown only to an Admin. Assigned
+  Tutors get a read-only Learner roster. Invitation, enrolment, and removal
+  controls stay Admin-only. Independent Tutor accounts never see a Teaching Team
+  surface.
+- A new dashboard page must be added to `web/src/config/dashboard-navigation.ts`
+  and covered by the relevant Hono authorization tests.
+
 ## Invitations and share links
 
 Invitations use high-entropy opaque tokens stored only as hashes. They are

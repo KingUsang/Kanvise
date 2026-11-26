@@ -1,3 +1,5 @@
+> **Archived copy.** The published privacy policy is `web/public/privacy-policy.md`, which `/privacy` renders. This root copy was byte-identical to it and nothing reads it. The text still describes retired providers and features and has not had qualified legal review (DEV-DOC-002). Do not edit this copy; see DEV-REPO-020.
+
 # Kanvise Privacy Policy
 
 **Effective date:** 3 October 2026
