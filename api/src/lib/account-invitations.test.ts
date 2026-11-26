@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountInvitationStatus, createInvitationToken, invitationTokenHash } from './account-invitations'
+import { accountInvitationStatus, createInvitationToken, invitationFailureResponse, invitationTokenHash } from './account-invitations'
 
 describe('durable invitation tokens', () => {
   it('creates URL-safe 256-bit tokens and stores only deterministic hashes', () => {
@@ -20,5 +20,24 @@ describe('durable invitation tokens', () => {
     ['revoked', '2026-10-13T00:00:00.000Z', 'revoked'],
   ])('resolves %s invitations with expiry %s as %s', (status, expires_at, expected) => {
     expect(accountInvitationStatus({ status, expires_at }, Date.parse('2026-10-12T00:00:00.000Z'))).toBe(expected)
+  })
+})
+
+describe('invitation rejection mapping', () => {
+  it.each([
+    ['INVITATION_EXPIRED', 410],
+    ['INVITATION_NOT_FOUND', 404],
+    ['INVITATION_EMAIL_MISMATCH', 403],
+    ['INVITATION_NOT_PENDING', 409],
+  ])('maps %s to %i with a stable code', (code, status) => {
+    const result = invitationFailureResponse({ message: code })
+    expect(result.status).toBe(status)
+    expect(result.body.code).toBe(code)
+  })
+
+  it('never echoes an unrecognised database message', () => {
+    const result = invitationFailureResponse({ message: 'relation "account_invitations" does not exist' })
+    expect(result.status).toBe(503)
+    expect(JSON.stringify(result.body)).not.toContain('relation')
   })
 })

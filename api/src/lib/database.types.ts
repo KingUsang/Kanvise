@@ -3071,6 +3071,9 @@ isOneToOne: false
 "cancel_recurring_live_class":
 { Args: { "p_actor_id": string,"p_school_id": string,"p_slot_id": string }; Returns: number
                            },
+"cancel_student_invitation":
+{ Args: { "p_school_id": string,"p_student_id": string }; Returns: Json
+                           },
 "claim_free_mock_offer":
 { Args: { "p_now": string,"p_offer_id": string,"p_student_id": string }; Returns: {
               "entitlement_id": string,"newly_claimed": boolean
@@ -3089,6 +3092,9 @@ isOneToOne: false
                            },
 "complete_durable_job":
 { Args: { "p_id": string,"p_worker": string }; Returns: boolean
+                           },
+"complete_student_invitation":
+{ Args: { "p_email": string,"p_first_name": string,"p_last_name": string,"p_supabase_auth_id": string,"p_token_hash": string }; Returns: Json
                            },
 "confirm_mock_order_payment":
 { Args: { "p_amount_kobo": number,"p_now": string,"p_paystack_reference": string,"p_paystack_transaction_id": string }; Returns: {
@@ -3140,6 +3146,9 @@ isOneToOne: false
 "create_recurring_live_class_series":
 { Args: { "p_actor_id": string,"p_course_id": string,"p_duration_minutes": number,"p_school_id": string,"p_start_time": string,"p_starts_on": string,"p_timezone": string,"p_title": string,"p_tutor_id": string,"p_weekdays": (number)[] }; Returns: string
                            },
+"create_school_for_admin":
+{ Args: { "p_account_type": string,"p_admin_id": string,"p_contact_email"?: string,"p_contact_phone"?: string,"p_description"?: string,"p_name": string,"p_slug": string }; Returns: Json
+                           },
 "current_user_school_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -3152,8 +3161,14 @@ isOneToOne: false
 "fail_durable_job":
 { Args: { "p_error": string,"p_id": string,"p_retry_seconds"?: number,"p_worker": string }; Returns: boolean
                            },
+"import_roster_students":
+{ Args: { "p_invited_by": string,"p_rows": Json,"p_school_id": string }; Returns: Json
+                           },
 "increment_user_sequence":
 { Args: { "p_role": string }; Returns: number
+                           },
+"issue_account_invitation":
+{ Args: { "p_email": string,"p_expires_at": string,"p_invited_by": string,"p_metadata"?: Json,"p_role": string,"p_school_id": string,"p_student_profile_id"?: string,"p_token_hash": string }; Returns: Json
                            },
 "materialize_class_timetable":
 { Args: { "p_horizon_days"?: number,"p_school_id": string,"p_timetable_id": string }; Returns: number
@@ -3180,8 +3195,14 @@ isOneToOne: false
 "record_email_provider_result":
 { Args: { "p_cooldown_until"?: string,"p_error"?: string,"p_provider": string,"p_quota_failure"?: boolean,"p_recipient_count": number,"p_succeeded": boolean }; Returns: undefined
                            },
+"record_invitation_start":
+{ Args: { "p_invitation_id": string,"p_supabase_auth_id": string }; Returns: Json
+                           },
 "record_telegram_attendance_checkin":
 { Args: { "p_chat_id": number,"p_telegram_user_id": number,"p_window_id": string }; Returns: Json
+                           },
+"register_user_profile":
+{ Args: { "p_email": string,"p_first_name": string,"p_intent_token_hash"?: string,"p_invitation_token_hash"?: string,"p_last_name": string,"p_role": string,"p_supabase_auth_id": string }; Returns: Json
                            },
 "release_scheduler_lease":
 { Args: { "p_holder": string,"p_name": string }; Returns: undefined
@@ -3206,6 +3227,9 @@ isOneToOne: false
 { Args: { "p_content_blocks": Json,"p_course_id": string,"p_editor_id": string,"p_explanation_blocks": Json,"p_grading_rubric_blocks": Json,"p_marks": number,"p_options": Json,"p_plain_text": string,"p_question_id": string,"p_school_id": string,"p_stimulus_id": string,"p_subject_name": string,"p_subtopic": string,"p_topic": string }; Returns: {
               "question_id": string,"version_id": string,"version_number": number
             }[]
+                           },
+"revoke_tutor_invitation":
+{ Args: { "p_school_id": string,"p_tutor_invite_id": string }; Returns: Json
                            },
 "save_guest_mock_answer":
 { Args: { "p_attempt_id": string,"p_guest_id": string,"p_is_flagged": boolean,"p_mock_version_question_id": string,"p_now": string,"p_selected_option_version_id": string,"p_theory_answer_text": string }; Returns: {
