@@ -26,9 +26,20 @@ export function visitorAddress(request: HeaderSource) {
  * Returns the client address and proxy secret headers, or nothing when the
  * secret is not configured (the API then ignores forwarded addresses anyway).
  */
+/** Same minimum the API applies; a shorter secret is ignored there. */
+export const MIN_PROXY_SECRET_LENGTH = 16
+let warnedShortSecret = false
+
 export function proxyClientHeaders(request: HeaderSource, secret = process.env.KANVISE_PROXY_SECRET): Record<string, string> {
   const configured = secret?.trim()
   const address = visitorAddress(request)
+  if (configured && configured.length < MIN_PROXY_SECRET_LENGTH) {
+    if (!warnedShortSecret) {
+      warnedShortSecret = true
+      console.warn(`KANVISE_PROXY_SECRET is shorter than ${MIN_PROXY_SECRET_LENGTH} characters and is not sent; the API rate limits all proxied visitors as one client.`)
+    }
+    return {}
+  }
   if (!configured || !address) return {}
   return { [PROXY_CLIENT_IP_HEADER]: address, [PROXY_SECRET_HEADER]: configured }
 }

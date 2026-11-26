@@ -6,7 +6,7 @@ import {
   accountPickerHref,
   isValidAccountId,
 } from '@/lib/account-cookie'
-import { isAccountSelectionRequired } from '@/lib/server-api-error'
+import { isAccountAccessDenied, isAccountSelectionRequired } from '@/lib/server-api-error'
 
 export { ServerApiError, isAccountSelectionRequired } from '@/lib/server-api-error'
 
@@ -26,14 +26,18 @@ export async function serverAccountContextHeaders(): Promise<Record<string, stri
 }
 
 /**
- * Runs a server-side API load and sends the user to the account picker when
- * the API needs an account selection, instead of rendering an error screen.
+ * Runs a server-side API load and sends the user to the account picker,
+ * instead of rendering an error screen, when the API needs an account
+ * selection or rejects the account named by the cookie (a stale selection, or
+ * one left by a previous user on this browser). Server Components cannot
+ * write cookies, so the picker clears the stale value once memberships load.
  */
 export async function withAccountPicker<T>(load: () => Promise<T>, returnPath: string): Promise<T> {
   try {
     return await load()
   } catch (error) {
     if (isAccountSelectionRequired(error)) redirect(accountPickerHref(returnPath))
+    if (isAccountAccessDenied(error) && await serverActiveAccountId()) redirect(accountPickerHref(returnPath))
     throw error
   }
 }

@@ -44,6 +44,17 @@ async function openAccountPickerIfRequired(response: Response) {
   window.location.assign(accountPickerHref(`${window.location.pathname}${window.location.search}`))
 }
 
+/**
+ * fetch for callers that build their own Authorization and
+ * accountContextHeaders() instead of using authenticatedFetch. It adds only
+ * the account picker redirect on 409 ACCOUNT_SELECTION_REQUIRED.
+ */
+export async function accountScopedFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, init)
+  await openAccountPickerIfRequired(response)
+  return response
+}
+
 function sessionEndedResponse() {
   return new Response(
     JSON.stringify({ error: 'Your session has ended. Please sign in again.', code: 'SESSION_EXPIRED' }),

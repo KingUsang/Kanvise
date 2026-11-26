@@ -5,6 +5,7 @@ import { OAUTH_CONTEXT_COOKIE, readOAuthContext } from '@/lib/auth/oauth-context
 import { postAuthDestination, type KanviseRole } from '@/lib/auth-continuation'
 import { getApiUrl } from '@/config/api'
 import { safeRedirectPath } from '@/lib/safe-redirect'
+import { ACCOUNT_COOKIE_NAME } from '@/lib/account-cookie'
 
 const PROFILE_INIT_TIMEOUT_MS = 10_000
 
@@ -67,6 +68,8 @@ export async function GET(request: Request) {
     const destination = postAuthDestination({ role: body?.user?.role as KanviseRole, schoolId: body?.user?.school_id, redirect: context.returnTo })
     const response = NextResponse.redirect(new URL(destination, origin))
     response.cookies.delete(OAUTH_CONTEXT_COOKIE)
+    // A new sign-in starts without a previously selected account (DEV-SEC-005).
+    response.cookies.delete(ACCOUNT_COOKIE_NAME)
     return response
   }
 

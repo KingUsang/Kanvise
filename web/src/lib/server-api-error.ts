@@ -1,4 +1,4 @@
-import { ACCOUNT_SELECTION_REQUIRED } from './account-cookie'
+import { ACCOUNT_ACCESS_DENIED, ACCOUNT_SELECTION_REQUIRED } from './account-cookie'
 
 /**
  * Error thrown by server-side API helpers so pages can react to the API code.
@@ -13,4 +13,8 @@ export class ServerApiError extends Error {
 
 export function isAccountSelectionRequired(error: unknown) {
   return error instanceof ServerApiError && error.code === ACCOUNT_SELECTION_REQUIRED
+}
+
+export function isAccountAccessDenied(error: unknown) {
+  return error instanceof ServerApiError && error.code === ACCOUNT_ACCESS_DENIED
 }

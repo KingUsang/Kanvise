@@ -42,6 +42,8 @@ describe('Google OAuth callback', () => {
       cache: 'no-store',
     }))
     expect(response.headers.get('location')).toBe('https://kanvise.test/dashboard/student')
+    // A previous session's account selection is cleared on sign-in.
+    expect(response.headers.getSetCookie().some(cookie => cookie.startsWith('kanvise_account=;'))).toBe(true)
   })
 
   it('sends a deadline with profile init and redirects to the error page when it fails', async () => {

@@ -58,8 +58,26 @@ describe('account request context', () => {
       account: { id: ACCOUNT_A, membershipId: 'membership-admin', role: 'admin' },
     })
     // The lookup is for any role: no role filter, only the person and active status.
-    expect(lookup.eq.mock.calls).toEqual([['person_id', 'person-1'], ['status', 'active']])
+    expect(lookup.eq.mock.calls).toEqual([['person_id', 'person-1'], ['status', 'active'], ['school.is_active', true]])
     expect(lookup.limit).toHaveBeenCalledWith(2)
+  })
+
+  it('excludes memberships of deactivated accounts from the no-header fallback', async () => {
+    vi.clearAllMocks()
+    // The person also holds an active membership in a deactivated account; the
+    // inner join on schools.is_active drops it, so only ACCOUNT_A is returned.
+    const lookup = listQuery({ data: [{ school_id: ACCOUNT_A, school: { id: ACCOUNT_A } }], error: null })
+    mocks.from
+      .mockImplementationOnce(() => lookup)
+      .mockImplementationOnce(() => query({ data: { id: 'membership-a', school_id: ACCOUNT_A, role: 'learner', status: 'active' }, error: null }))
+      .mockImplementationOnce(() => query({ data: { id: ACCOUNT_A }, error: null }))
+
+    const response = await app({ id: 'person-1', role: 'student' }).request('/settings')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ account: { id: ACCOUNT_A } })
+    expect(lookup.select).toHaveBeenCalledWith(expect.stringContaining('schools!inner'))
+    expect(lookup.eq).toHaveBeenCalledWith('school.is_active', true)
   })
 
   it('asks a tutor with two active memberships and no header to choose an account', async () => {

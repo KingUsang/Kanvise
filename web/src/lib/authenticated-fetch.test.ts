@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { authenticatedFetch } from './authenticated-fetch'
+import { accountScopedFetch, authenticatedFetch } from './authenticated-fetch'
 import { clearActiveAccountId, setActiveAccountId } from './account-preference'
 
 function pickerSupabase() {
@@ -174,6 +174,19 @@ describe('authenticatedFetch', () => {
     await authenticatedFetch(pickerSupabase(), '/two', 'current-token')
 
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('opens the account picker from raw-fetch callers that use accountScopedFetch', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'ACCOUNT_SELECTION_REQUIRED' }), { status: 409 }))
+    const assign = vi.fn()
+    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, pathname: '/class/class-1', search: '', assign } as unknown as Location)
+    const init = { method: 'POST', headers: { Authorization: 'Bearer caller-token' } }
+
+    const response = await accountScopedFetch('/live-classes/class-1/enter', init)
+
+    expect(response.status).toBe(409)
+    expect(fetchMock).toHaveBeenCalledWith('/live-classes/class-1/enter', init)
+    expect(assign).toHaveBeenCalledWith('/account/select?redirect=%2Fclass%2Fclass-1')
   })
 
 })

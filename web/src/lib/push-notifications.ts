@@ -1,5 +1,6 @@
 import { getApiUrl } from '@/config/api'
 import { accountContextHeaders } from './account-preference'
+import { accountScopedFetch } from './authenticated-fetch'
 
 export type BrowserPushState = 'loading' | 'unsupported' | 'blocked' | 'disabled' | 'enabled' | 'unavailable'
 
@@ -21,7 +22,7 @@ async function registration() {
 }
 
 async function config(token: string) {
-  const response = await fetch(`${getApiUrl()}/users/me/push/config`, { headers: { Authorization: `Bearer ${token}`, ...accountContextHeaders() } })
+  const response = await accountScopedFetch(`${getApiUrl()}/users/me/push/config`, { headers: { Authorization: `Bearer ${token}`, ...accountContextHeaders() } })
   const body = await response.json().catch(() => null)
   if (!response.ok) throw new Error(body?.error || 'Could not load browser notification settings')
   return body.data as { enabled: boolean; publicKey: string | null }
@@ -48,7 +49,7 @@ export async function enableBrowserPush(token: string): Promise<void> {
   if (!subscription) {
     subscription = await worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationServerKey(pushConfig.publicKey) })
   }
-  const response = await fetch(`${getApiUrl()}/users/me/push/subscriptions`, {
+  const response = await accountScopedFetch(`${getApiUrl()}/users/me/push/subscriptions`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...accountContextHeaders() },
     body: JSON.stringify(subscription.toJSON()),
@@ -64,7 +65,7 @@ export async function disableBrowserPush(token: string): Promise<void> {
   if (!supported()) return
   const subscription = await (await registration()).pushManager.getSubscription()
   if (!subscription) return
-  const response = await fetch(`${getApiUrl()}/users/me/push/subscriptions`, {
+  const response = await accountScopedFetch(`${getApiUrl()}/users/me/push/subscriptions`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...accountContextHeaders() },
     body: JSON.stringify({ endpoint: subscription.endpoint }),
@@ -82,7 +83,7 @@ export async function detachBrowserPushOnLogout(token: string | null | undefined
     const subscription = await (await registration()).pushManager.getSubscription().catch(() => null)
     if (!subscription) return
     if (token) {
-      await fetch(`${getApiUrl()}/users/me/push/subscriptions`, {
+      await accountScopedFetch(`${getApiUrl()}/users/me/push/subscriptions`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...accountContextHeaders() },
         body: JSON.stringify({ endpoint: subscription.endpoint }),

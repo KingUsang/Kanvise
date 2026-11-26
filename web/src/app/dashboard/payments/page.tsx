@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, Landmark, Wallet, Plus, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { accountContextHeaders } from "@/lib/account-preference";
+import { accountScopedFetch } from "@/lib/authenticated-fetch";
 import EditPayoutModal from "@/components/dashboard/payments/edit-payout-modal";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
@@ -27,7 +28,7 @@ export default function PaymentsPage() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         
         // Fetch summary
-      const summaryRes = await fetch(`${apiUrl}/payments/summary`, {
+      const summaryRes = await accountScopedFetch(`${apiUrl}/payments/summary`, {
         headers: { ...accountContextHeaders(), Authorization: `Bearer ${sessionToken}` }
       });
         
@@ -38,7 +39,7 @@ export default function PaymentsPage() {
         const summaryData = await summaryRes.json();
         
         // Fetch payments
-      const paymentsRes = await fetch(`${apiUrl}/payments`, {
+      const paymentsRes = await accountScopedFetch(`${apiUrl}/payments`, {
         headers: { ...accountContextHeaders(), Authorization: `Bearer ${sessionToken}` }
       });
         
