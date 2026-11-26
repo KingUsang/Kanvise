@@ -5,6 +5,8 @@ on:
     branches: [main, staging]
     paths:
       - 'api/**'
+      - 'package.json'
+      - 'package-lock.json'
       - 'supabase/migrations/**'
       - 'scripts/operations/deploy-api-on-oracle.sh'
       - '.github/workflows/deploy.yml'

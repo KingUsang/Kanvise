@@ -19,19 +19,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  journeys:
+  # DEV-SEC-013: this job has no secrets. It proves the commit under test is
+  # already part of the protected staging history before the secret-bearing
+  # job below checks it out or runs any repository code from it.
+  trusted-ref:
+    name: Require a staging commit
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'staging' &&
+       github.event.workflow_run.head_repository.full_name == github.repository) ||
       (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' &&
        (github.event.deployment.environment == 'staging' || github.event.deployment.environment == 'Preview'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.verify.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+      - name: Verify the candidate SHA is reachable from origin/staging
+        id: verify
+        env:
+          CANDIDATE_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.event.deployment.sha }}
+        run: |
+          set -eu
+          case "$CANDIDATE_SHA" in
+            *[!0-9a-f]*|'') echo "Candidate must be a full lowercase commit SHA" >&2; exit 1 ;;
+          esac
+          test "${#CANDIDATE_SHA}" -eq 40
+          git cat-file -e "${CANDIDATE_SHA}^{commit}"
+          git merge-base --is-ancestor "$CANDIDATE_SHA" origin/staging
+          echo "sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+
+  journeys:
+    needs: trusted-ref
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: Staging E2E
     env:
       E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
       E2E_API_URL: ${{ vars.E2E_API_URL }}
-      E2E_EXPECTED_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.event.deployment.sha }}
+      E2E_EXPECTED_SHA: ${{ needs.trusted-ref.outputs.sha }}
       E2E_RUN_ID: E2E-${{ github.run_id }}-${{ github.run_attempt }}
       E2E_ARTIFACT_DIR: test-results/staging-evidence
       E2E_AUTH_STATE_PATH: /tmp/kanvise-${{ github.run_id }}-${{ github.run_attempt }}-admin-state.json
