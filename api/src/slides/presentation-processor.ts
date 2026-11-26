@@ -3,6 +3,7 @@ import { buildPrivateFileKey, deletePrivateObject, readPrivateObject, uploadPriv
 import { MAX_SLIDE_PAGES } from './conversion-policy'
 import { readPdfPageCount } from './pdf-metadata'
 import { convertPdfToImages } from '../workers/pdf-converter'
+import { durableJobStore, runDurableJobs, type DurableJobHandlers, type DurableJobStore } from '../jobs/durable-jobs'
 
 const db = supabase as any
 
@@ -40,12 +41,53 @@ export async function processPresentation(id: string) {
   } catch (error) {
     await Promise.all(pageImageKeys.map((key) => deletePrivateObject(key, material.school_id).catch(() => undefined)))
     const message = error instanceof Error ? error.message : 'The PDF could not be read'
-    await db.from('live_class_presentations').update({
+    // If this write fails, throw so the durable job is retried instead of
+    // leaving the presentation in 'processing' with the job marked complete.
+    const { error: failedError } = await db.from('live_class_presentations').update({
       processing_status: 'failed', processing_error: message.slice(0, 500), processing_started_at: null,
     }).eq('id', id)
+    if (failedError) throw failedError
   }
 }
 
-export function enqueuePresentationProcessing(id: string) {
-  setTimeout(() => void processPresentation(id), 0)
+export const PRESENTATION_JOB_TYPE = 'presentation_processing'
+const STALLED_AFTER_MS = 2 * 60_000
+
+export const presentationJobHandlers: DurableJobHandlers = {
+  [PRESENTATION_JOB_TYPE]: async (job) => processPresentation(String(job.payload.presentationId)),
+}
+
+export function runPresentationJobs(store: DurableJobStore = durableJobStore) {
+  return runDurableJobs({ handlers: presentationJobHandlers, store, limit: 2, leaseSeconds: 600 })
+}
+
+/**
+ * Record the work durably, then try to run it straight away. If either step
+ * fails, the scheduler's requeueStalledPresentations sweep recovers the row
+ * because it stays in 'processing'.
+ */
+export async function enqueuePresentationProcessing(id: string, store: DurableJobStore = durableJobStore) {
+  try {
+    await store.enqueue({ jobType: PRESENTATION_JOB_TYPE, dedupeKey: `presentation:${id}`, payload: { presentationId: id } })
+    void runPresentationJobs(store).catch((error) => console.error('[presentations] immediate job run failed', error))
+  } catch (error) {
+    console.error('[presentations] enqueue failed; the scheduler will retry', error)
+  }
+}
+
+/** Restart recovery: presentations left in 'processing' get a job again. */
+export async function requeueStalledPresentations(now = new Date(), store: DurableJobStore = durableJobStore) {
+  const { data, error } = await db.from('live_class_presentations').select('id')
+    .eq('processing_status', 'processing').lt('processing_started_at', new Date(now.getTime() - STALLED_AFTER_MS).toISOString()).limit(50)
+  if (error) throw error
+  for (const row of data || []) {
+    await store.enqueue({ jobType: PRESENTATION_JOB_TYPE, dedupeKey: `presentation:${row.id}`, payload: { presentationId: row.id } })
+  }
+  return (data || []).length
+}
+
+export async function runPresentationRecoveryJob() {
+  const requeued = await requeueStalledPresentations()
+  const result = await runPresentationJobs()
+  return { ...result, name: 'presentation_processing', requeued }
 }

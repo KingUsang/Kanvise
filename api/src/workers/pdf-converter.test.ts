@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { convertPdfToImages, type PdfConversionMessage } from './pdf-converter'
 
 function createOnePagePdf() {
@@ -40,5 +40,39 @@ describe('PDF converter worker', () => {
   it('rejects malformed PDF bytes', async () => {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
     await expect(convertPdfToImages(new Uint8Array([1, 2, 3]), () => {}, async () => pdfjs)).rejects.toThrow()
+  })
+})
+
+describe('PDF converter cleanup', () => {
+  it('destroys the loading task and cleans the page when the emit callback fails', async () => {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const destroy = vi.fn(async () => {})
+    const cleanup = vi.fn()
+    const fake = {
+      ...pdfjs,
+      getDocument: () => ({
+        promise: Promise.resolve({
+          numPages: 1,
+          getPage: async () => ({
+            cleanup,
+            getViewport: () => ({ width: 100, height: 100 }),
+            render: () => ({ promise: Promise.resolve() }),
+          }),
+        }),
+        destroy,
+      }),
+    } as any
+    await expect(convertPdfToImages(new Uint8Array([1]), (message) => {
+      if (message.type === 'page') throw new Error('upload failed')
+    }, async () => fake)).rejects.toThrow('upload failed')
+    expect(cleanup).toHaveBeenCalledTimes(1)
+    expect(destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it('destroys the loading task when the document cannot be parsed', async () => {
+    const destroy = vi.fn(async () => {})
+    const fake = { getDocument: () => ({ promise: Promise.reject(new Error('bad pdf')), destroy }) } as any
+    await expect(convertPdfToImages(new Uint8Array([1]), () => {}, async () => fake)).rejects.toThrow('bad pdf')
+    expect(destroy).toHaveBeenCalledTimes(1)
   })
 })

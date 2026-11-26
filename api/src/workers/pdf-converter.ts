@@ -42,45 +42,48 @@ export async function convertPdfToImages(
     standardFontDataUrl: standardFontDataUrl,
   });
 
-  const pdfDocument = await loadingTask.promise;
-  const numPages = pdfDocument.numPages;
+  try {
+    const pdfDocument = await loadingTask.promise;
+    const numPages = pdfDocument.numPages;
 
-  await emit({ type: 'start', numPages });
+    await emit({ type: 'start', numPages });
 
-  for (let i = 1; i <= numPages; i++) {
-    const page = await pdfDocument.getPage(i);
-    
-    // Use roughly 150 DPI, but cap the raster size so one large page cannot
-    // exhaust the API worker's memory.
-    const baseScale = 2.08;
-    const naturalViewport = page.getViewport({ scale: 1 });
-    const maxPixels = 2_000_000;
-    const scale = Math.min(baseScale, Math.sqrt(maxPixels / (naturalViewport.width * naturalViewport.height)));
-    const viewport = page.getViewport({ scale: Math.max(0.5, scale) });
-    
-    const canvas = createCanvas(viewport.width, viewport.height);
-    
-    const renderContext = {
-      canvas: canvas as any,
-      viewport,
-    };
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdfDocument.getPage(i);
+      try {
+        // Use roughly 150 DPI, but cap the raster size so one large page cannot
+        // exhaust the API worker's memory.
+        const baseScale = 2.08;
+        const naturalViewport = page.getViewport({ scale: 1 });
+        const maxPixels = 2_000_000;
+        const scale = Math.min(baseScale, Math.sqrt(maxPixels / (naturalViewport.width * naturalViewport.height)));
+        const viewport = page.getViewport({ scale: Math.max(0.5, scale) });
 
-    await page.render(renderContext).promise;
-    
-    // Encode as JPEG (85% quality by default in napi-rs/canvas if we don't specify, or we can just use 'jpeg')
-    const jpegBuffer = await canvas.encode('jpeg');
-    const jpegData = new Uint8Array(jpegBuffer.byteLength)
-    jpegData.set(jpegBuffer)
-    await emit({ type: 'page', pageNumber: i, buffer: jpegData, width: viewport.width, height: viewport.height });
-    
-    // Clean up page resources
-    page.cleanup();
+        const canvas = createCanvas(viewport.width, viewport.height);
+
+        const renderContext = {
+          canvas: canvas as any,
+          viewport,
+        };
+
+        await page.render(renderContext).promise;
+
+        // Encode as JPEG (85% quality by default in napi-rs/canvas if we don't specify, or we can just use 'jpeg')
+        const jpegBuffer = await canvas.encode('jpeg');
+        const jpegData = new Uint8Array(jpegBuffer.byteLength)
+        jpegData.set(jpegBuffer)
+        await emit({ type: 'page', pageNumber: i, buffer: jpegData, width: viewport.width, height: viewport.height });
+      } finally {
+        // Page resources are released even when render, encode or emit fails.
+        page.cleanup();
+      }
+    }
+
+    await emit({ type: 'complete' });
+  } finally {
+    // The document is destroyed on every path, including parse and upload errors.
+    await loadingTask.destroy();
   }
-
-  // Clean up document resources
-  await loadingTask.destroy();
-  
-  await emit({ type: 'complete' });
 }
 
 // Worker entry point. Importing this module in tests does not execute it.
