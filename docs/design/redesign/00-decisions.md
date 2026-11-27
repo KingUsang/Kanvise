@@ -2,7 +2,7 @@
 
 Status: working draft, agreed in conversation with the owner on 27 Nov 2026.
 Reference research: the Bobbin AppAtlas on branch `research/bobbin-appatlas`
-(`scratch/bobbin-appatlas/`), and Preply Live class Insights.
+(`scratch/bobbin-appatlas/`), and Preply Lesson Insights.
 
 This file records what has been decided. The journey specs in this folder
 build on it. If a journey spec contradicts this file, this file wins until it
@@ -13,34 +13,36 @@ is updated.
 1. **Independent tutors first:** one-to-one, or small groups.
 2. **Tutoring agencies second:** a team of admins and tutors. Same product, with
    team features on top.
-3. **Online teaching only.** Every live class happens in the Kanvise classroom.
-   There is no in-person live class flow and no in-person recording.
+3. **Online teaching only.** Every lesson happens in the Kanvise classroom.
+   There is no in-person lesson flow and no in-person recording.
 4. The tutorial-centre and bootcamp audience (priced multi-subject cohorts,
    gated enrolment pages) is the old audience and is not designed for.
 
 ## 2. Core structure
 
 - **Course:** an ongoing teaching relationship. One subject, one or more
-  students, one or more tutors. It holds the course plan, live classes, homework,
+  students, one or more tutors. It holds the course plan, lessons, homework,
   quizzes and resources. Bobbin's definition fits: "a course pairs a student
   with a tutor over time".
-- **Live class:** one scheduled sitting of a course. Created in three steps: who is
+- **Lesson:** one scheduled sitting of a course. Created in three steps: who is
   attending, then topic and time, then review.
 - Kanvise's old Class → Subject → Session structure is replaced in the UI by
-  Course → Live class. The database can follow later; new screens may sit on the
+  Course → Lesson. The database can follow later; new screens may sit on the
   existing tables first.
 
-### Words for the live session
+### Words for the teaching session
 
-- The scheduled, live online session is a **live class**. Tutors already think in
-  terms of creating and joining a live class, and Nigerian tutoring platforms use
-  the same words. The person teaching is a tutor, never a "lesson teacher".
+- One scheduled online session is a **lesson**. That is what parents book and
+  pay for in one-to-one tutoring, in Nigeria (Tuteria, "lesson teachers") and in
+  the UK (Tutorful, Sherpa, GoStudent), and what Bobbin and Preply use.
+- **Live** is a status, not a noun: **Live now** on the dashboard, a **Live**
+  chip on the lesson. The classroom is the place: **Join classroom**.
+- Search also matches "live class", so tutors who type it still find lessons.
 - Tutors also teach families abroad, so wording must read naturally in Nigeria,
-  the UK and North America. "Live class" works in all three.
-- Related words: **New live class**, **Join live class**, **Live now**, **Class
-  report** (written after a live class), **Class tools** (the panel in the
-  classroom). **Lesson plan** keeps its usual meaning: the plan for one live
-  class.
+  the UK and North America.
+- Related words: **New lesson**, **Lesson report** (written after a lesson),
+  **Lesson tools** (the panel in the classroom), **Lesson plan** (the plan for
+  one lesson), "₦5,000 per lesson".
 
 ## 3. Course plan (the curriculum)
 
@@ -79,27 +81,27 @@ is updated.
   keeps it short. Full adaptive testing is later.
 - **Results:** per topic, knew or didn't know, with the questions and answers as
   proof. Kavi proposes plan changes (mark known topics, put gaps first, suggest
-  the first live class's topic). The tutor accepts, edits or ignores them.
+  the first lesson's topic). The tutor accepts, edits or ignores them.
 - **Access:** no guest flow. The student already has an email, so the diagnostic
   email carries a sign-in link (passwordless) that logs them in as themselves
   and opens the test. A student without an email cannot be sent one; the button
   explains why and offers **Add email**.
 
-## 6. Class report (observations)
+## 6. Lesson report (observations)
 
-- The observation is the class report, written in plain words with real
+- The observation is the lesson report, written in plain words with real
   examples. There is no rating or scoring system.
 - Sections: **What we covered** (topics, which tick off on the course plan),
   **What went well**, **What to work on** (with examples), **Homework**.
 - The tutor writes it, or uses **Draft with Kavi**, which writes it from the
-  live class recording. The tutor edits and confirms it.
+  lesson recording. The tutor edits and confirms it.
 - It goes to the student only after the tutor confirms it. Parents receive it
   later.
 
 ## 7. Student page
 
 - What is called the "learner model" in the adaptive-loop spec is, on screen,
-  simply the student's page: their goal, course plan progress, recent live class
+  simply the student's page: their goal, course plan progress, recent lesson
   reports, and quiz and homework results.
 - Kavi can read it to answer questions such as "how is this student doing?".
 
@@ -129,7 +131,7 @@ is updated.
   2. Who do you mostly teach? Children and teens, adults, or both (whether a
      parent is the default payer and contact)
   3. How do you usually teach? One-to-one, small groups, or both (wizard and
-     class report defaults)
+     lesson report defaults)
   4. What do you teach? (Kavi's starting point for course plans and quizzes)
   5. Do you already have students? (setup starts with adding students, or with
      the sample course)
@@ -179,8 +181,8 @@ is updated.
 
 - A "Who pays?" contact on each student: the student or a parent. A contact, not
   an account.
-- A rate per course: per live class, monthly, or a prepaid package.
-- Invoices built from completed live classes. The tutor reviews and sends.
+- A rate per course: per lesson, monthly, or a prepaid package.
+- Invoices built from completed lessons. The tutor reviews and sends.
 - Charging for late cancellations is left out for now.
 - The payer gets a link to a simple invoice page and pays through Paystack.
 - Statuses: Draft, Sent, Paid, Overdue, Void.
@@ -191,7 +193,7 @@ is updated.
 - Report approvals (agency-only, later).
 - Public booking page for new students (later).
 - Parent accounts (parents receive emails and links, no login).
-- In-person live classes and in-person recording.
+- In-person lessons and in-person recording.
 
 ## Open items
 

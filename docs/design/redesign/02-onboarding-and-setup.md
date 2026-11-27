@@ -3,7 +3,7 @@
 Status: draft for owner review. Builds on `00-decisions.md` and `01-app-shell.md`.
 
 **Who:** a new tutor or agency owner, right after creating their account.
-**Goal:** in about five minutes, go from an empty account to a first live class on
+**Goal:** in about five minutes, go from an empty account to a first lesson on
 the calendar, without wondering what to do next.
 
 Login and sign-up screens themselves are deferred (decisions, open items).
@@ -134,9 +134,9 @@ deletes data.
 **Header:** **Welcome to Kanvise, Alex**. No subtitle; Kavi does the talking.
 
 **Main card (left, about 2/3 width):**
-- Kavi mark, then: **Let's get your first live class on the calendar.** and **A few
+- Kavi mark, then: **Let's get your first lesson on the calendar.** and **A few
   quick steps and you're ready to teach. I'll help with course plans, quizzes
-  and class reports from there.**
+  and lesson reports from there.**
 - A progress bar with **0/5 completed** on the right.
 - Five step rows. Each row: an icon in a soft circle, the step name, a time
   chip (**1 min**, **2 mins**), a **Next** chip on the first unfinished step, a
@@ -146,14 +146,14 @@ deletes data.
 
 | # | Step | Time | Reason line | Button | Opens |
 |---|---|---|---|---|---|
-| 1 | Add your students | 2 mins | Students are the people you teach. Parents get class reports and invoices later. | **Add students** | Add student dialog (spec 06). If they said "Yes, I have students", the dialog opens on the **Import a list** tab. |
+| 1 | Add your students | 2 mins | Students are the people you teach. Parents get lesson reports and invoices later. | **Add students** | Add student dialog (spec 06). If they said "Yes, I have students", the dialog opens on the **Import a list** tab. |
 | 2 | Create a course | 2 mins | A course pairs a student with you over time and holds the course plan. | **Create course** | New course wizard (spec 04) |
-| 3 | Find out what they know | 1 min | Optional. A short check before the first live class shows where to start. | **Send diagnostic** | Step 4 of the course wizard, for the course from step 2 |
-| 4 | Schedule your first live class | 1 min | Put it on the calendar and your student gets the link. | **Schedule live class** | New live class wizard (spec 05) |
+| 3 | Find out what they know | 1 min | Optional. A short check before the first lesson shows where to start. | **Send diagnostic** | Step 4 of the course wizard, for the course from step 2 |
+| 4 | Schedule your first lesson | 1 min | Put it on the calendar and your student gets the link. | **Schedule lesson** | New lesson wizard (spec 05) |
 | 5 | Check your classroom | 1 min | Test your camera, microphone and speakers before a student is waiting. | **Test classroom** | Device check (spec 07) |
 
 **Steps for an agency admin:** the same, with **Invite a tutor** as step 1
-(**Tutors run the live classes. Add yourself or a colleague.**), and "Find out what
+(**Tutors run the lessons. Add yourself or a colleague.**), and "Find out what
 they know" dropped, keeping five steps.
 
 **Rules:**
@@ -169,9 +169,9 @@ they know" dropped, keeping five steps.
 
 **Right column (about 1/3):**
 - **Get started with confidence:** a short video (60–90s) of a tutor's first
-  live class on Kanvise, with a play overlay. Plays in place.
+  lesson on Kanvise, with a play overlay. Plays in place.
 - **Visit the help guide**, with an external-link icon.
-- **Explore the sample course:** **See a course with live classes, reports and a
+- **Explore the sample course:** **See a course with lessons, reports and a
   course plan before you add your own.** Button **Open sample course** (spec
   04, sample state). Hidden once the user deletes sample data.
 
@@ -187,7 +187,7 @@ they know" dropped, keeping five steps.
 - The progress bar and the sidebar card fill to the new count.
 - **Next** moves to the next unfinished step.
 - If the step was finished somewhere else (for example the user scheduled a
-  live class from the calendar), it is ticked the same way the next time `/setup`
+  lesson from the calendar), it is ticked the same way the next time `/setup`
   is shown.
 
 ---
@@ -197,7 +197,7 @@ they know" dropped, keeping five steps.
 When the fifth step is ticked:
 - Confetti-style burst behind the main card (subtle, 1s, skipped with reduced
   motion).
-- Kavi: **You're all set. Your first live class is on {day, time}. I'll remind you
+- Kavi: **You're all set. Your first lesson is on {day, time}. I'll remind you
   before it starts.**
 - Button **Go to dashboard**.
 - The Setup sidebar item and card fade out.
@@ -218,6 +218,6 @@ When the fifth step is ticked:
 
 - Onboarding answers stored per account (and per person for "how they teach").
 - Setup step completion worked out from real data where possible (has a
-  student, has a course, has a live class, has a sent diagnostic, has a passed
+  student, has a course, has a lesson, has a sent diagnostic, has a passed
   device check), plus explicit "skipped" flags.
 - Sample course data, kept separate from real data and deletable in one action.
