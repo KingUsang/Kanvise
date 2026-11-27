@@ -1,4 +1,4 @@
-import { notifyAssignmentDeadline, notifyLiveClassReminder, notifyMockPublished } from '../notifications/triggers'
+import { notifyAssignmentDeadline, notifyClassCancelled, notifyLiveClassReminder, notifyMockPublished } from '../notifications/triggers'
 import { jobsRepository, type JobsRepository } from './repository'
 import { durableJobStore, type DurableJob, type DurableJobHandlers, type DurableJobStore } from './durable-jobs'
 
@@ -10,6 +10,7 @@ export type JobsDependencies = {
   notifyMock: typeof notifyMockPublished
   notifyClass: typeof notifyLiveClassReminder
   notifyAssignment: typeof notifyAssignmentDeadline
+  notifyCancelled: typeof notifyClassCancelled
   enqueue: DurableJobStore['enqueue']
   logger: Logger
 }
@@ -19,6 +20,7 @@ const defaults: JobsDependencies = {
   notifyMock: notifyMockPublished,
   notifyClass: notifyLiveClassReminder,
   notifyAssignment: notifyAssignmentDeadline,
+  notifyCancelled: notifyClassCancelled,
   enqueue: (input) => durableJobStore.enqueue(input),
   logger: console,
 }
@@ -29,6 +31,8 @@ function summary(name: string, processed: number, failures: number) {
 
 export const MOCK_NOTIFY_JOB = 'notify_mock_published'
 export const LIVE_CLASS_REMINDER_JOB = 'notify_live_class_reminder'
+// Queued by the cancel_live_class_with_outbox RPC in the same transaction as the cancellation.
+export const CLASS_CANCELLED_NOTIFY_JOB = 'notify_class_cancelled'
 
 export async function runMockPublicationJob(now = new Date(), dependencies = defaults) {
   const mocks = await dependencies.repository.claimDueMocks(now, 50)
@@ -151,6 +155,11 @@ export function createNotificationJobHandlers(dependencies = defaults): DurableJ
       const liveClass = job.payload as any
       const delivery = await dependencies.notifyClass(liveClass) as Delivery
       await finishNotification(job, delivery.failures.length, () => dependencies.repository.markLiveClassReminderSent(liveClass.id), dependencies, 'live_class_reminder')
+    },
+    [CLASS_CANCELLED_NOTIFY_JOB]: async (job) => {
+      // Channel state is stored per recipient, so a retry only re-sends failed channels.
+      const delivery = await dependencies.notifyCancelled(job.payload as any) as Delivery
+      await finishNotification(job, delivery.failures.length, async () => {}, dependencies, 'class_cancelled')
     },
   }
 }

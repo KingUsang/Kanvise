@@ -15,6 +15,7 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
   let completed = 0
   let reset = 0
   let interrupted = 0
+  let endRetried = 0
   let checked = 0
   for (const liveClass of classes || []) {
     const roomId = String(liveClass.provider_room_id || liveClass.id)
@@ -27,6 +28,16 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
         class_status: liveClass.status,
         provider_active: active,
       })
+      if (active && liveClass.status === 'ending') {
+        // The end request did not reach the provider (or its webhook was lost).
+        // Retry it here until the room closes; the class is only completed once
+        // the provider confirms the room is gone (DEV-LVC-005).
+        await plugNmeet.endRoom(roomId)
+        await (supabase as any).from('live_classes').update({ provider_room_checked_at: now.toISOString() })
+          .eq('id', liveClass.id).eq('status', 'ending')
+        endRetried += 1
+        continue
+      }
       if (active) {
         // `isRoomActive` proves the provider room exists, not that a tutor or
         // learner joined. Only webhooks promote ready -> live.
@@ -92,5 +103,5 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
       })
     }
   }
-  return { name: 'plugnmeet_room_lifecycle', checked, completed, reset, interrupted }
+  return { name: 'plugnmeet_room_lifecycle', checked, completed, reset, interrupted, endRetried }
 }

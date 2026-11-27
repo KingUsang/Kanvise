@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { retryDelaySeconds, runDurableJobs, type DurableJob, type DurableJobStore } from './durable-jobs'
+
+const rpc = vi.hoisted(() => vi.fn())
+vi.mock('../lib/supabase', () => ({ supabase: { rpc } }))
+import { durableJobStore, retryDelaySeconds, runDurableJobs, type DurableJob, type DurableJobStore } from './durable-jobs'
 
 function store(jobs: DurableJob[]): DurableJobStore & { complete: any; fail: any } {
   return {
@@ -60,5 +63,20 @@ describe('runDurableJobs', () => {
   it('caps backoff at one hour', () => {
     expect(retryDelaySeconds(1)).toBe(30)
     expect(retryDelaySeconds(20)).toBe(3600)
+  })
+})
+
+describe('durable job operator actions (DEV-INT-003)', () => {
+  it('cancels and replays through the dedicated RPCs', async () => {
+    rpc.mockResolvedValue({ data: true, error: null })
+    await expect(durableJobStore.cancel!('job-1')).resolves.toBe(true)
+    await expect(durableJobStore.replay!('job-1')).resolves.toBe(true)
+    expect(rpc).toHaveBeenCalledWith('cancel_durable_job', { p_id: 'job-1' })
+    expect(rpc).toHaveBeenCalledWith('replay_durable_job', { p_id: 'job-1' })
+  })
+
+  it('reports false when the job is not in a cancellable or replayable state', async () => {
+    rpc.mockResolvedValue({ data: false, error: null })
+    await expect(durableJobStore.replay!('running-job')).resolves.toBe(false)
   })
 })

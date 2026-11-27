@@ -17,6 +17,9 @@ export type DurableJobStore = {
   complete(id: string, worker: string): Promise<boolean>
   fail(id: string, worker: string, message: string, retrySeconds: number): Promise<boolean>
   extend?(id: string, worker: string, leaseSeconds: number): Promise<boolean>
+  /** Operator actions. Dead-lettered jobs are status 'failed'. */
+  cancel?(id: string): Promise<boolean>
+  replay?(id: string): Promise<boolean>
 }
 
 const db = supabase as any
@@ -51,6 +54,25 @@ export const durableJobStore: DurableJobStore = {
     if (error) throw error
     return Boolean(data)
   },
+  async cancel(id) {
+    const { data, error } = await db.rpc('cancel_durable_job', { p_id: id })
+    if (error) throw error
+    return Boolean(data)
+  },
+  async replay(id) {
+    const { data, error } = await db.rpc('replay_durable_job', { p_id: id })
+    if (error) throw error
+    return Boolean(data)
+  },
+}
+
+/** List dead-lettered (failed) jobs, newest first, for operators. */
+export async function listDeadLetterJobs(limit = 50) {
+  const { data, error } = await db.from('durable_jobs')
+    .select('id, job_type, dedupe_key, attempts, max_attempts, last_error, updated_at')
+    .eq('status', 'failed').order('updated_at', { ascending: false }).limit(Math.max(1, Math.min(limit, 200)))
+  if (error) throw error
+  return (data || []) as Array<{ id: string; job_type: string; dedupe_key: string; attempts: number; max_attempts: number; last_error: string | null; updated_at: string }>
 }
 
 export const workerId = `${process.env.HOSTNAME || 'api'}:${process.pid}:${randomUUID().slice(0, 8)}`

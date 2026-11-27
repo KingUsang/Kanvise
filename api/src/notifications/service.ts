@@ -74,7 +74,21 @@ export async function deliverNotification<K extends NotificationEvent>(
   for (let offset = 0; offset < tenantRecipients.length; offset += batchSize) {
     const batch = tenantRecipients.slice(offset, offset + batchSize)
     await Promise.all(batch.map(async (recipient) => {
-      try {
+      const channelKey = (channel: 'in_app' | 'push' | 'email') => ({
+        schoolId: request.schoolId, event: request.event, relatedEntityId: request.relatedEntityId, recipientId: recipient.id, channel,
+      })
+      // Channel state is bookkeeping only: a failure to read or write it must
+      // never block delivery or turn into a delivery failure.
+      const alreadySent = async (channel: 'in_app' | 'push' | 'email') => {
+        try { return Boolean(await dependencies.repository.channelAlreadySent?.(channelKey(channel))) } catch { return false }
+      }
+      const record = async (channel: 'in_app' | 'push' | 'email', status: 'sent' | 'failed' | 'skipped', message?: string) => {
+        try { await dependencies.repository.recordChannel?.(channelKey(channel), status, message) } catch (error) {
+          dependencies.logger.error('notification.channel_state_write_failed', { channel, error: errorMessage(error) })
+        }
+      }
+
+      if (!await alreadySent('in_app')) try {
         const created = await dependencies.repository.createInApp({
           schoolId: request.schoolId,
           recipientId: recipient.id,
@@ -85,11 +99,13 @@ export async function deliverNotification<K extends NotificationEvent>(
           relatedEntityId: request.relatedEntityId,
         })
         if (created) result.inAppCreated += 1
+        await record('in_app', 'sent')
       } catch (error) {
         result.failures.push({ recipientId: recipient.id, channel: 'in_app', error: errorMessage(error) })
+        await record('in_app', 'failed', errorMessage(error))
       }
 
-      try {
+      if (!await alreadySent('push')) try {
         const push = await (dependencies.sendPush || sendWebPushNotification)({
           userId: recipient.id,
           schoolId: request.schoolId,
@@ -108,12 +124,22 @@ export async function deliverNotification<K extends NotificationEvent>(
         for (const failure of push.failures) {
           result.failures.push({ recipientId: recipient.id, channel: 'push', error: failure.error })
         }
+        if (push.failures.length) await record('push', 'failed', push.failures[0].error)
+        else await record('push', push.sent || push.alreadySent ? 'sent' : 'skipped')
       } catch (error) {
         result.failures.push({ recipientId: recipient.id, channel: 'push', error: errorMessage(error) })
+        await record('push', 'failed', errorMessage(error))
       }
 
+      const emailEvent = notificationEmailEvents[request.event]
+      if (!emailEvent || !request.emailInput) return
       if (!recipient.email) {
         result.skippedNoEmail += 1
+        await record('email', 'skipped', 'Recipient has no email address')
+        return
+      }
+      if (await alreadySent('email')) {
+        result.emailsAlreadySent += 1
         return
       }
 
@@ -124,6 +150,7 @@ export async function deliverNotification<K extends NotificationEvent>(
         const delivery = await dependencies.repository.getDelivery(key)
         if (delivery.status === 'sent') {
           result.emailsAlreadySent += 1
+          await record('email', 'sent')
           return
         }
 
@@ -132,7 +159,6 @@ export async function deliverNotification<K extends NotificationEvent>(
           result.emailsAlreadySent += 1
           return
         }
-        const emailEvent = notificationEmailEvents[request.event]
         const sent = await dependencies.sendEmail(emailEvent, {
           ...request.emailInput(recipient),
           to: recipient.email,
@@ -147,11 +173,13 @@ export async function deliverNotification<K extends NotificationEvent>(
           dependencies.logger.error('notification.email_sent_state_write_failed', { key })
           await holdSentClaim('email_deliveries', key)
         }
+        await record('email', 'sent')
       } catch (error) {
         if (providerAccepted) return
         const message = errorMessage(error)
         try { await dependencies.repository.markDeliveryFailed(key, message) } catch { /* retain original failure */ }
         result.failures.push({ recipientId: recipient.id, channel: 'email', error: message })
+        await record('email', 'failed', message)
       }
     }))
   }

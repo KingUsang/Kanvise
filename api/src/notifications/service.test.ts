@@ -149,4 +149,49 @@ describe('deliverNotification', () => {
     expect(result).toMatchObject({ inAppCreated: 1, emailsSent: 1, pushSent: 0 })
     expect(result.failures).toContainEqual(expect.objectContaining({ channel: 'push', error: 'push unavailable' }))
   })
+
+  it('records and retries each channel independently (DEV-NTF-004)', async () => {
+    const state = new Map<string, string>()
+    const repository = {
+      ...fakeRepository([{ id: 'student-1', schoolId: 'school-1', email: 'one@example.com', firstName: 'Ada' }]),
+      async channelAlreadySent(key: any) { return state.get(key.channel) === 'sent' },
+      async recordChannel(key: any, status: string) { state.set(key.channel, status) },
+    }
+    const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+    const sendPush = vi.fn()
+      .mockResolvedValueOnce({ sent: 0, alreadySent: 0, skipped: 0, failures: [{ error: 'push service down' }] })
+      .mockResolvedValue({ sent: 1, alreadySent: 0, skipped: 0, failures: [] })
+
+    const first = await deliverNotification(request, { repository, sendEmail, sendPush, logger: quietLogger })
+    expect(first.failures).toEqual([expect.objectContaining({ channel: 'push' })])
+    expect(Object.fromEntries(state)).toEqual({ in_app: 'sent', push: 'failed', email: 'sent' })
+
+    const retry = await deliverNotification(request, { repository, sendEmail, sendPush, logger: quietLogger })
+    expect(retry.failures).toEqual([])
+    expect(Object.fromEntries(state)).toEqual({ in_app: 'sent', push: 'sent', email: 'sent' })
+    expect(sendPush).toHaveBeenCalledTimes(2)
+    expect(sendEmail).toHaveBeenCalledOnce()
+    expect(repository.notifications).toHaveLength(1)
+  })
+
+  it('does not let a failing state write break delivery', async () => {
+    const repository = {
+      ...fakeRepository([{ id: 'student-1', schoolId: 'school-1', email: null, firstName: 'Ada' }]),
+      async recordChannel() { throw new Error('ledger down') },
+    }
+    const sendPush = vi.fn(async () => ({ sent: 1, alreadySent: 0, skipped: 0, failures: [] }))
+    const result = await deliverNotification(request, { repository, sendEmail: vi.fn(), sendPush, logger: quietLogger })
+    expect(result.failures).toEqual([])
+    expect(result.inAppCreated).toBe(1)
+  })
+
+  it('delivers a recap in-app and by push without any email template (DEV-NTF-003)', async () => {
+    const repository = fakeRepository([{ id: 'student-1', schoolId: 'school-1', email: 'one@example.com', firstName: 'Ada' }])
+    const sendEmail = vi.fn()
+    const sendPush = vi.fn(async () => ({ sent: 1, alreadySent: 0, skipped: 0, failures: [] }))
+    const { emailInput: _unused, ...base } = request
+    const result = await deliverNotification({ ...base, event: 'class_recap_ready' as const }, { repository, sendEmail, sendPush, logger: quietLogger })
+    expect(result).toMatchObject({ inAppCreated: 1, pushSent: 1, emailsSent: 0, skippedNoEmail: 0 })
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
 })

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ from: vi.fn(), ensureReady: vi.fn() }))
+const mocks = vi.hoisted(() => ({ from: vi.fn(), ensureReady: vi.fn(), createRoom: vi.fn(), persist: vi.fn() }))
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
 vi.mock('../middleware/auth', () => ({
   jwtVerificationMiddleware: async (_c: any, next: () => Promise<void>) => next(),
@@ -9,6 +9,12 @@ vi.mock('../middleware/auth', () => ({
   requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
 }))
 vi.mock('../plugnmeet/classroom-lifecycle', () => ({ ensurePlugNmeetReady: mocks.ensureReady, isPlugNmeetHealthy: vi.fn() }))
+
+vi.mock('../plugnmeet/provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../plugnmeet/provider')>()),
+  createPlugNmeetRoom: mocks.createRoom,
+  persistProvider: mocks.persist,
+}))
 
 import { liveClassesRouter } from './live-classes'
 
@@ -41,5 +47,45 @@ describe('POST /live-classes/start-now', () => {
     const response = await liveClassesRouter.request('/start-now', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ access_mode: 'anyone_with_link' }) })
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({ code: 'INVALID_TUTOR' })
+  })
+
+  it('never deletes the class row once the provider room exists (DEV-LVC-003)', async () => {
+    mocks.ensureReady.mockResolvedValue({ state: 'ready' })
+    mocks.createRoom.mockResolvedValue({ providerRoomId: 'class-1-g1' })
+    mocks.persist.mockRejectedValue(new Error('database down'))
+    const calls: string[] = []
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'account_memberships') return chain({ data: { id: 'membership-1' }, error: null })
+      if (table === 'tutor_course_assignments') return chain({ data: { course_id: 'course-1' }, error: null })
+      if (table === 'courses') return chain({ data: { id: 'course-1', name: 'Mathematics' }, error: null })
+      if (table === 'live_classes') {
+        const value = chain({ data: { id: 'class-1', title: 'Mathematics class', course_id: 'course-1', tutor_id: 'tutor-1', duration_minutes: 60 }, error: null })
+        value.delete = () => { calls.push('delete'); return value }
+        value.update = (payload: any) => { calls.push(`update:${payload.status}`); return value }
+        return value
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+    const response = await liveClassesRouter.request('/start-now', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ course_id: 'course-1' }) })
+    expect(response.status).toBe(500)
+    expect(await response.json()).toMatchObject({ code: 'CLASS_START_FAILED', data: { id: 'class-1' } })
+    expect(calls).toEqual(['update:starting'])
+  })
+
+  it('still removes the placeholder row when the provider room was never created', async () => {
+    mocks.ensureReady.mockResolvedValue({ state: 'ready' })
+    mocks.createRoom.mockRejectedValue(new Error('provider down'))
+    const calls: string[] = []
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'account_memberships') return chain({ data: { id: 'membership-1' }, error: null })
+      if (table === 'tutor_course_assignments') return chain({ data: { course_id: 'course-1' }, error: null })
+      if (table === 'courses') return chain({ data: { id: 'course-1', name: 'Mathematics' }, error: null })
+      const value = chain({ data: { id: 'class-1', title: 'Mathematics class', course_id: 'course-1', tutor_id: 'tutor-1', duration_minutes: 60 }, error: null })
+      value.delete = () => { calls.push('delete'); return value }
+      return value
+    })
+    const response = await liveClassesRouter.request('/start-now', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ course_id: 'course-1' }) })
+    expect(response.status).toBe(500)
+    expect(calls).toEqual(['delete'])
   })
 })
