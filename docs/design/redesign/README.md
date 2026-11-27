@@ -10,7 +10,7 @@ Read in order. `00-decisions.md` wins if anything conflicts.
 | 03-dashboard.md | Today, This week, Needs attention, Kavi suggests | Draft for review |
 | 04-courses-plan-and-diagnostic.md | Courses, the new course wizard, course plan, diagnostic | Draft for review |
 | 05-lessons-and-scheduling.md | Lessons list, calendar, new lesson wizard, lesson page | Draft for review |
-| 06 Students (planned) | Students list, add student, student page | Not started |
+| 06-students.md | Students list, add and import, student page, parents | Draft for review |
 | 07 Classroom (planned) | Device check, joining, lesson tools, ending, admin observer | Not started |
 | 08 Lesson report (planned) | After the lesson, Draft with Kavi | Not started |
 | 09 Student app (planned) | What students see | Not started |
