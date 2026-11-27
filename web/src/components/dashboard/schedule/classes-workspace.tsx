@@ -20,7 +20,7 @@ import { useActiveAccountId } from "@/lib/account-preference";
 import { classQueryKeys } from "@/lib/class-query-keys";
 import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { viewerTimeZoneLabel } from '@/lib/viewer-timezone';
+import { instantTimeZoneLabel, viewerTimeZoneLabel } from '@/lib/viewer-timezone';
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 import { Dialog } from '@/components/ui/dialog'
 
@@ -38,6 +38,7 @@ type LegacyLiveClass = {
   share_url?: string | null;
   course?: Subject | null;
   tutor?: Tutor | null;
+  timezone?: string | null;
   series?: { id: string; recurrence_group_id?: string | null } | null;
 };
 type LiveClass = ProductSubjectLink<LegacyLiveClass>;
@@ -739,7 +740,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
                             </div>
                             <p className="mt-1 text-xs text-[#66616c]">
                               {item.subject?.name || "Private link"} ·{" "}
-                              {clock(new Date(item.scheduled_at))} ·{" "}
+                              {clock(new Date(item.scheduled_at))} {instantTimeZoneLabel(item.timezone, new Date(item.scheduled_at))} ·{" "}
                               {item.duration_minutes} min
                             </p>
                             <button
