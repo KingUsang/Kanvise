@@ -67,7 +67,7 @@ Subtitle **Add a student and, if you like, put them on a course.**
 | First name | Required | |
 | Last name | Required | |
 | Student's email (optional) | Valid email | Line: **Leave blank if they don't have one. Without an email they can't sign in, but you can still send them their lesson links yourself.** |
-| Parent or guardian | Shown open by default if the account teaches children; collapsed under **+ Add a parent** if adults or both | Parent's name, parent's email, phone (optional, for WhatsApp). Line: **Parents get lesson summaries and invoices. They don't get a login.** |
+| Parent or guardian | Shown open by default if the account teaches children; collapsed under **+ Add a parent** if adults or both | Parent's name, parent's email, phone (optional, for WhatsApp). Line: **For your records and for messaging them. Parents don't get a login.** |
 | Timezone | Pre-filled with the tutor's timezone, searchable | Line: **Lesson times are shown to them in this timezone.** Important for families abroad. |
 | Course (optional) | Dropdown of courses | **Put on a course now** |
 
