@@ -23,6 +23,6 @@ export const getStudentDashboard = cache(async (accessToken: string): Promise<St
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("Failed to load student dashboard");
+  if (!response.ok) throw new Error("Failed to load learner dashboard");
   return (await response.json()).data;
 });

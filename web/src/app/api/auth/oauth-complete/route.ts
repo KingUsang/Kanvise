@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const existing = await fetch(`${getApiUrl()}/auth/me`, { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' })
   if (existing.ok && context.intent !== 'invitation') {
     const existingBody = await existing.json()
-    if (context.intent === 'student' && existingBody.user.role !== 'student') return NextResponse.json({ error: 'This Google account belongs to a staff account. Use a student account to continue.' }, { status: 409 })
+    if (context.intent === 'student' && existingBody.user.role !== 'student') return NextResponse.json({ error: 'This Google account belongs to a staff account. Use a learner account to continue.' }, { status: 409 })
     const response = NextResponse.json({ destination: postAuthDestination({ role: existingBody.user.role as KanviseRole, schoolId: existingBody.user.school_id, redirect: context.returnTo }) })
     response.cookies.delete(OAUTH_CONTEXT_COOKIE)
     return response

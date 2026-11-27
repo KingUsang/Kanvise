@@ -26,7 +26,7 @@ export type StudentAssignment = {
 export const getStudentAssignments = cache(async (accessToken: string): Promise<StudentAssignment[]> => {
   return fetchAllPages<StudentAssignment>(
     (page) => fetch(`${getApiUrl()}/assignments/me?page=${page}&page_size=100`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }),
-    "Failed to load student assignments",
-    () => "Failed to load student assignments",
+    "Failed to load learner assignments",
+    () => "Failed to load learner assignments",
   );
 });

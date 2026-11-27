@@ -65,7 +65,7 @@ describe('question-bank authoring helpers', () => {
     expect(canAccessDashboardPath('/dashboard/timetable', centre)).toBe(true)
   })
 
-  it('keeps a new Admin inside school setup until a centre is created', () => {
+  it('keeps a new Admin inside tutoring account setup until a tutoring account is created', () => {
     const onboarding = { isAdmin: true, isTutor: false, setupRequired: true }
     expect(getDashboardNavItems(onboarding).map(item => item.href)).toContain('/dashboard/classes')
     expect(getDashboardNavItems(onboarding).map(item => item.href)).toContain('/dashboard/school-setup')

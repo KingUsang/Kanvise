@@ -89,7 +89,7 @@ function RegisterContent() {
           if (profileBody?.user?.role !== 'student') {
             await supabase.auth.signOut()
             clearActiveAccountId()
-            throw new Error('This email belongs to a staff account. Use a student email to continue.')
+            throw new Error('This email belongs to a staff account. Use a learner email to continue.')
           }
           const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
           if (refreshError || !refreshed.session) throw refreshError || new Error('Your session could not be refreshed')
@@ -245,7 +245,7 @@ function RegisterContent() {
 
         {isStudentFlow && !studentFlowHasContext ? <div className="py-6 text-center">
           <h1 className="text-[1.75rem] font-semibold tracking-[-.03em] text-[#211969]">Choose a class first</h1>
-          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#625e6e]">Student sign-up starts from a class or invitation link so we can keep your place and access details together.</p>
+          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#625e6e]">Learner sign-up starts from a class or invitation link so we can keep your place and access details together.</p>
           <div className="mt-7 space-y-3"><Link href={redirectParam || '/'} className={authPrimaryButtonClass}>Return to class<ArrowRight size={16}/></Link><Link href="/auth/login" className="flex min-h-12 w-full items-center justify-center rounded-xl border border-[#d7d5df] px-5 text-sm font-medium text-[#2e2877] hover:bg-[#fafafa]">Back to sign in</Link></div>
         </div> : !isCodeStep ? (
           <>
@@ -258,7 +258,7 @@ function RegisterContent() {
               <button type="button" onClick={() => setAccountType('independent')} aria-pressed={accountType === 'independent'} className={`min-h-11 rounded-lg px-3 text-sm font-medium transition ${accountType === 'independent' ? 'bg-white text-[#211969] shadow-[0_1px_4px_rgba(27,28,28,.10)]' : 'text-[#696572] hover:text-[#2e2877]'}`}>Independent tutor</button>
               <button type="button" onClick={() => setAccountType('centre')} aria-pressed={accountType === 'centre'} className={`min-h-11 rounded-lg px-3 text-sm font-medium transition ${accountType === 'centre' ? 'bg-white text-[#211969] shadow-[0_1px_4px_rgba(27,28,28,.10)]' : 'text-[#696572] hover:text-[#2e2877]'}`}>Tutoring agency</button>
               </div>
-              <p className="mt-3 text-sm leading-5 text-[#625e6e]">{accountType === 'independent' ? 'For tutors managing their own students and classes.' : 'For teams managing tutors, classes and students.'}</p>
+              <p className="mt-3 text-sm leading-5 text-[#625e6e]">{accountType === 'independent' ? 'For tutors managing their own learners and classes.' : 'For teams managing tutors, classes and learners.'}</p>
             </fieldset>}
             <GoogleAuthButton onClick={handleGoogleStart} href={`/api/auth/google?intent=${isStudentFlow ? 'student' : 'educator'}${!isStudentFlow ? `&account_type=${accountType}` : ''}${accountType === 'centre' && centreName.trim() ? `&agency_name=${encodeURIComponent(centreName.trim())}` : ''}${redirectParam ? `&return_to=${encodeURIComponent(redirectParam)}` : ''}${studentRegistrationToken ? `&registration_intent=${encodeURIComponent(studentRegistrationToken)}` : ''}`} />
             <AuthMethodDivider />

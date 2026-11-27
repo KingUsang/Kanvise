@@ -221,7 +221,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
           <div className="rounded-xl border border-dashboard-outline bg-[#faf9ff] px-5 py-4">
             <p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">Class assessment</p>
             <h2 className="mt-1 text-xl font-bold text-[#180d62]">Create assignment</h2>
-            <p className="mt-1 text-sm text-dashboard-muted">{classContextName ? `This assignment is only for students in ${classContextName}.` : "Choose a subject, add the work and set a deadline."}</p>
+            <p className="mt-1 text-sm text-dashboard-muted">{classContextName ? `This assignment is only for learners in ${classContextName}.` : "Choose a subject, add the work and set a deadline."}</p>
           </div>
         ) : (
           <DashboardPageHeader
@@ -350,7 +350,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
 
           {/* Card Footer Actions */}
           <div className="flex flex-col gap-4 rounded-b bg-dashboard-surface p-4 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0 flex-1">{isLoading ? <UploadTaskStatus label={saveStage === "uploading" ? "Uploading assignment file" : "Saving assignment"} progress={saveStage === "uploading" ? uploadProgress : null} /> : <p className="text-xs leading-5 text-dashboard-muted">Save a draft to finish later, or publish when students should receive it.</p>}</div>
+            <div className="min-w-0 flex-1">{isLoading ? <UploadTaskStatus label={saveStage === "uploading" ? "Uploading assignment file" : "Saving assignment"} progress={saveStage === "uploading" ? uploadProgress : null} /> : <p className="text-xs leading-5 text-dashboard-muted">Save a draft to finish later, or publish when learners should receive it.</p>}</div>
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center justify-end gap-3">
@@ -390,7 +390,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
         <div className="flex flex-col gap-1 flex-shrink-0">
           <h2 className="text-lg font-semibold text-dashboard-foreground">Recent assignments</h2>
           <p className="text-sm font-light text-dashboard-muted">
-            Track upcoming deadlines and student submissions.
+            Track upcoming deadlines and learner submissions.
           </p>
         </div>
 

@@ -17,22 +17,22 @@ function renderRoute(mode: 'setup' | 'settings' = 'setup', retry: number | boole
   return render(<QueryClientProvider client={queryClient}><SchoolSetupRouteClient mode={mode} /></QueryClientProvider>)
 }
 
-describe('dashboard school data boundary', () => {
+describe('dashboard tutoring account data boundary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('loads the configured school through the authenticated query client', async () => {
+  it('loads the configured tutoring account through the authenticated query client', async () => {
     mocks.authenticatedApiFetch.mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'school-1', name: 'Bright Future', slug: 'bright-future', is_active: true } }), { status: 200 }))
 
     renderRoute()
 
-    expect(screen.getByText('Loading your centre details…')).toBeInTheDocument()
+    expect(screen.getByText('Loading your tutoring account details…')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Tutoring agency profile' })).toBeInTheDocument())
     expect(mocks.authenticatedApiFetch).toHaveBeenCalledWith(expect.stringContaining('/schools/me'), expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }))
   })
 
-  it('keeps first-time setup available when Hono reports no configured school', async () => {
+  it('keeps first-time setup available when Hono reports no configured tutoring account', async () => {
     mocks.authenticatedApiFetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'User does not belong to a school' }), { status: 400 }))
 
     renderRoute()
@@ -46,7 +46,7 @@ describe('dashboard school data boundary', () => {
     renderRoute()
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument())
-    expect(screen.getByText('We could not load your centre details. Please try again.')).toBeInTheDocument()
+    expect(screen.getByText('We could not load your tutoring account details. Please try again.')).toBeInTheDocument()
     expect(screen.queryByText('internal transport details')).not.toBeInTheDocument()
   })
 

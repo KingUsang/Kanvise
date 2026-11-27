@@ -37,8 +37,8 @@ type ResultsData = {
 }
 
 function studentName(attempt: Attempt) {
-  if (attempt.student) return [attempt.student.first_name, attempt.student.last_name].filter(Boolean).join(' ') || 'Student'
-  return attempt.guest_name ? `${attempt.guest_name} (Guest)` : 'Guest Student'
+  if (attempt.student) return [attempt.student.first_name, attempt.student.last_name].filter(Boolean).join(' ') || 'Learner'
+  return attempt.guest_name ? `${attempt.guest_name} (Guest)` : 'Guest Learner'
 }
 
 function studentEmail(attempt: Attempt) {
@@ -95,7 +95,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Please try again.'
       setLoadError(message)
-      toast.error('Could not load mock results', { description: message })
+      toast.error('Could not load quiz results', { description: message })
     } finally {
       setIsLoading(false)
     }
@@ -149,7 +149,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
   const exportCsv = () => {
     if (!data || data.attempts.length === 0) return
     const rows = [
-      ['Student', 'Email', 'Status', 'MCQ score', 'Theory score', 'Total score', 'Maximum score', 'Submitted at'],
+      ['Learner', 'Email', 'Status', 'MCQ score', 'Theory score', 'Total score', 'Maximum score', 'Submitted at'],
       ...data.attempts.map((attempt) => [
         studentName(attempt),
         attempt.student?.email || '',
@@ -177,7 +177,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
       const response = await authenticatedApiFetch(`${apiUrl}/mocks/${mockId}/attempt-grants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attempt_id: attempt.id, reason: 'Allowed from the mock results page' }),
+        body: JSON.stringify({ attempt_id: attempt.id, reason: 'Allowed from the quiz results page' }),
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not allow another attempt')
@@ -189,8 +189,8 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
     }
   }
 
-  if (isLoading) return <div className="py-20 text-center text-on-surface-variant">Loading mock results…</div>
-  if (!data) return <div className="py-20 text-center"><span className="material-symbols-outlined text-4xl text-error">cloud_off</span><p className="mt-3 font-semibold text-on-surface">Mock results are unavailable</p><p className="mt-1 text-sm text-on-surface-variant">{loadError}</p><div className="mt-5 flex justify-center gap-4"><button type="button" onClick={() => void loadResults()} className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white">Try again</button><Link href="/dashboard/mocks" className="px-4 py-2 text-sm font-semibold text-primary">Back to mocks</Link></div></div>
+  if (isLoading) return <div className="py-20 text-center text-on-surface-variant">Loading quiz results…</div>
+  if (!data) return <div className="py-20 text-center"><span className="material-symbols-outlined text-4xl text-error">cloud_off</span><p className="mt-3 font-semibold text-on-surface">Quiz results are unavailable</p><p className="mt-1 text-sm text-on-surface-variant">{loadError}</p><div className="mt-5 flex justify-center gap-4"><button type="button" onClick={() => void loadResults()} className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white">Try again</button><Link href="/dashboard/mocks" className="px-4 py-2 text-sm font-semibold text-primary">Back to quizzes</Link></div></div>
 
   const pending = data.attempts.filter(needsGrading).length
   const averageMcq = data.attempts.length
@@ -204,8 +204,8 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
     <>
     <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-8">
       <DashboardPageHeader
-        breadcrumb={embedded ? <>Class assessments <span className="px-1">›</span> {data.mock.title}</> : <><Link href="/dashboard/mocks" className="hover:text-primary">Mocks</Link> <span className="px-1">›</span> {data.mock.title}</>}
-        title="Mock results"
+        breadcrumb={embedded ? <>Class assessments <span className="px-1">›</span> {data.mock.title}</> : <><Link href="/dashboard/mocks" className="hover:text-primary">Quizzes</Link> <span className="px-1">›</span> {data.mock.title}</>}
+        title="Quiz results"
         description={`Review scores and mark written answers for ${data.mock.course?.name || 'this subject'}.`}
         actions={<button type="button" onClick={exportCsv} disabled={data.attempts.length === 0} className="inline-flex items-center justify-center gap-2 rounded-md border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-50">
           <span className="material-symbols-outlined text-lg">download</span> Export CSV
@@ -219,7 +219,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
       </section>
 
       {data.attempts.length === 0 ? (
-        <section className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-20 text-center"><h2 className="text-xl font-semibold text-dashboard-foreground">No submissions yet</h2><p className="mt-2 text-dashboard-muted">Student submissions will appear here.</p></section>
+        <section className="rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-6 py-20 text-center"><h2 className="text-xl font-semibold text-dashboard-foreground">No submissions yet</h2><p className="mt-2 text-dashboard-muted">Learner submissions will appear here.</p></section>
       ) : (
         <div className="grid min-h-[620px] gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="overflow-hidden rounded-lg border border-outline-variant bg-white">
@@ -227,10 +227,10 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
             {data.attempts.map((attempt) => {
               const pendingAttempt = needsGrading(attempt)
               return (
-                <div key={attempt.id} role="button" tabIndex={0} onClick={() => selectAttempt(attempt.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') selectAttempt(attempt.id) }} className={`w-full cursor-pointer border-b border-outline-variant px-5 py-4 text-left transition-colors last:border-0 ${attempt.id === selectedAttemptId ? 'bg-primary-fixed' : 'hover:bg-surface-container-low'}`}>
+                <button type="button" key={attempt.id} aria-pressed={attempt.id === selectedAttemptId} onClick={() => selectAttempt(attempt.id)} className={`block w-full cursor-pointer border-b border-outline-variant px-5 py-4 text-left transition-colors last:border-0 ${attempt.id === selectedAttemptId ? 'bg-primary-fixed' : 'hover:bg-surface-container-low'}`}>
                   <span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-semibold text-on-surface">{studentName(attempt)}</span><span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${pendingAttempt ? 'bg-[#fff3e8] text-[#994704]' : 'bg-green-100 text-green-800'}`}>{pendingAttempt ? 'Pending' : 'Graded'}</span></span>
                   <span className="mt-2 flex justify-between items-center text-xs text-on-surface-variant"><span>{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleDateString('en-NG') : 'Not submitted'}</span><span className="font-semibold">Total: {attemptScore(attempt)}/{maximumScore(attempt)}</span></span>
-                </div>
+                </button>
               )
             })}
           </aside>
@@ -256,7 +256,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
                     <div className="rounded-lg bg-surface-container-low p-5 text-sm leading-7 text-on-surface whitespace-pre-wrap">{selectedAnswer.theory_answer_text || 'No answer provided.'}</div>
                     <div className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)]">
                       <label className="text-sm font-semibold text-on-surface">Score<input type="number" min="0" max={selectedAnswer.question.marks} value={currentDraft.score} onChange={(event) => setDrafts((current) => ({ ...current, [selectedAnswer.id]: { ...currentDraft, score: event.target.value } }))} className="mt-2 w-full rounded-md border border-outline-variant px-3 py-2.5 focus:border-primary focus:outline-none" /></label>
-                      <label className="text-sm font-semibold text-on-surface">Tutor feedback<textarea value={currentDraft.feedback} onChange={(event) => setDrafts((current) => ({ ...current, [selectedAnswer.id]: { ...currentDraft, feedback: event.target.value } }))} placeholder="Add useful feedback for the student…" className="mt-2 min-h-24 w-full resize-y rounded-md border border-outline-variant px-3 py-2.5 focus:border-primary focus:outline-none" /></label>
+                      <label className="text-sm font-semibold text-on-surface">Tutor feedback<textarea value={currentDraft.feedback} onChange={(event) => setDrafts((current) => ({ ...current, [selectedAnswer.id]: { ...currentDraft, feedback: event.target.value } }))} placeholder="Add useful feedback for the learner…" className="mt-2 min-h-24 w-full resize-y rounded-md border border-outline-variant px-3 py-2.5 focus:border-primary focus:outline-none" /></label>
                     </div>
                   </div>
                   <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant bg-surface-container-low px-6 py-4"><div className="flex gap-2">{selectedTheoryAnswers.map((answer, index) => <button key={answer.id} type="button" onClick={() => setSelectedQuestionIndex(index)} aria-label={`Open theory question ${index + 1}`} className={`size-8 rounded text-xs font-bold ${index === selectedQuestionIndex ? 'bg-primary text-white' : answer.tutor_score !== null ? 'bg-green-100 text-green-800' : 'bg-white text-on-surface-variant'}`}>{index + 1}</button>)}</div><div className="flex gap-3"><button type="button" onClick={() => void saveGrade(selectedAnswer)} disabled={savingAnswerId === selectedAnswer.id} className="rounded-md border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface disabled:opacity-50">Save grade</button><button type="button" onClick={() => void saveGrade(selectedAnswer, true)} disabled={savingAnswerId === selectedAnswer.id} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">{selectedQuestionIndex < selectedTheoryAnswers.length - 1 ? 'Save & next question' : 'Complete & next'} <span aria-hidden>→</span></button></div></footer>

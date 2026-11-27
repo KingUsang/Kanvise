@@ -14,7 +14,6 @@ import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import { getApiUrl } from '@/config/api';
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog';
 import { BrowserPushPrompt } from '@/components/pwa/browser-push-prompt';
-import { BrowserPushEngagementTracker } from '@/components/pwa/browser-push-engagement-tracker';
 import type { StudentDashboardData } from '@/lib/student-dashboard';
 import { adaptLearnerDashboard, productTerms } from '@/lib/product-terminology';
 import { AccountSwitcher } from '@/components/account/account-switcher';
@@ -98,7 +97,6 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
   const mobileNavigation = resolvedClassLearning ? mobileClassNavigation : mobileStandaloneNavigation;
 
   return <div className="min-h-screen overflow-x-clip bg-[#f8f7f5] text-[#25232d]">
-    <BrowserPushEngagementTracker />
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-[#2e2877] lg:flex">{nav}</aside>
     <div className="min-w-0 lg:pl-64">
       <header className="sticky top-0 z-30 flex h-16 min-w-0 items-center gap-2 border-b border-[#e7e3df] bg-white/95 px-3 backdrop-blur sm:gap-3 sm:px-6 lg:px-10">

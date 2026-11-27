@@ -178,7 +178,7 @@ export function AttendanceClient() {
 
         <div className="bg-white border border-[#c2b59b] p-6 rounded-lg shadow-sm relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-[#ba1a1a]/10 rounded-bl-full -mr-4 -mt-4"></div>
-          <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">At-Risk Students</p>
+          <p className="text-[12px] font-semibold text-[#474551] uppercase tracking-wider mb-2">At-Risk Learners</p>
           <div className="flex items-baseline gap-2">
             <span className="text-[40px] leading-[48px] font-bold text-[#ba1a1a]">{metrics?.at_risk_students || 0}</span>
           </div>
@@ -194,7 +194,7 @@ export function AttendanceClient() {
         <div className="p-6 border-b border-[#c2b59b] flex justify-between items-center bg-[#fbf9f8]">
           <div>
             <h3 className="text-[20px] font-semibold text-[#1b1c1c]">Class attendance</h3>
-            <p className="text-[14px] text-[#474551]">Student arrival times and time spent in completed classes.</p>
+            <p className="text-[14px] text-[#474551]">Learner arrival times and time spent in completed classes.</p>
           </div>
         </div>
         
@@ -207,7 +207,7 @@ export function AttendanceClient() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-[#f5f3f2] border-b border-[#c2b59b]">
-                <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Student Name</th>
+                <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Learner Name</th>
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Class / Cohort</th>
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Join Time</th>
                 <th className="p-4 text-[12px] font-semibold text-[#474551] uppercase tracking-wider whitespace-nowrap">Duration</th>

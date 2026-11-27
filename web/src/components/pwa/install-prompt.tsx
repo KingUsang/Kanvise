@@ -3,6 +3,7 @@
 import { Download, Share2, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isBrowserPushPromptVisible, PROMPT_VISIBILITY_EVENT } from '@/lib/pwa/prompt-coordination'
 import { INSTALL_ELIGIBLE_EVENT, isInstallEligible } from '@/lib/pwa/install-eligibility'
 
 type InstallPromptEvent = Event & {
@@ -12,7 +13,7 @@ type InstallPromptEvent = Event & {
 
 const DISMISSED_KEY = 'kanvise-install-dismissed-at'
 const DISMISS_MS = 30 * 24 * 60 * 60 * 1000
-// Never interrupt auth, payment, form-building, mock attempts, or a class.
+// Never interrupt auth, payment, form-building, Quiz attempts, or a class.
 const SAFE_DASHBOARD_PATHS = new Set(['/dashboard', '/dashboard/schedule', '/dashboard/student', '/dashboard/student/classes'])
 
 function isStandalone() {
@@ -43,13 +44,18 @@ export function InstallPrompt() {
       setVisible(
         SAFE_DASHBOARD_PATHS.has(pathname)
         && isInstallEligible()
+        && !isBrowserPushPromptVisible()
         && !isStandalone()
         && Date.now() - dismissedAt >= DISMISS_MS,
       )
     }
     refresh()
     window.addEventListener(INSTALL_ELIGIBLE_EVENT, refresh)
-    return () => window.removeEventListener(INSTALL_ELIGIBLE_EVENT, refresh)
+    window.addEventListener(PROMPT_VISIBILITY_EVENT, refresh)
+    return () => {
+      window.removeEventListener(INSTALL_ELIGIBLE_EVENT, refresh)
+      window.removeEventListener(PROMPT_VISIBILITY_EVENT, refresh)
+    }
   }, [pathname])
 
   function dismiss() {

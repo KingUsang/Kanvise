@@ -24,7 +24,7 @@ export function MockBuilderStepProgress({
 
   return (
     <nav
-      aria-label="Mock builder steps"
+      aria-label="Quiz builder steps"
       className="sticky top-16 z-20 -mx-4 mb-6 border-y border-[#e4e2e1] bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:mb-8 sm:rounded-xl sm:border sm:px-3"
     >
       <div className="sm:hidden">
@@ -37,7 +37,7 @@ export function MockBuilderStepProgress({
         <div
           className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e4e2f2]"
           role="progressbar"
-          aria-label="Mock creation progress"
+          aria-label="Quiz creation progress"
           aria-valuemin={1}
           aria-valuemax={steps.length}
           aria-valuenow={currentIndex + 1}

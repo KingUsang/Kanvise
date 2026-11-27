@@ -9,7 +9,7 @@ async function getSchool(slug: string) {
   });
   if (!res.ok) {
     if (res.status === 404) return null;
-    throw new Error("Failed to fetch school");
+    throw new Error("Failed to fetch tutoring account");
   }
   return res.json();
 }
@@ -179,7 +179,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
       <footer className="w-full py-10 px-6 md:px-margin-desktop flex flex-col md:flex-row justify-between items-start gap-gutter bg-primary text-on-primary font-body-sm text-body-sm mt-stack-lg border-t-4 border-secondary">
         <div>
           <div className="font-headline-sm text-headline-sm font-black text-on-primary">{school.name}</div>
-          <p className="mt-2 text-primary-fixed-dim/80">Classes and student learning are powered by Kanvise.</p>
+          <p className="mt-2 text-primary-fixed-dim/80">Classes and learning are powered by Kanvise.</p>
         </div>
         {school.contact_email && <a className="text-primary-fixed-dim/80 hover:text-secondary-fixed" href={`mailto:${school.contact_email}`}>Contact {school.name}</a>}
       </footer>

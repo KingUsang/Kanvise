@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildPrePublishReview } from "./mock-builder-validation";
 
 const base = {
-  title: "Mixed science mock",
+  title: "Mixed science quiz",
   accessMode: "centre" as const,
   courseId: "course-1",
   questions: [{ question_type: "mcq" as const, question_text: "What is 2 + 2?", marks: 1, options: [
@@ -13,11 +13,11 @@ const base = {
 };
 
 describe("buildPrePublishReview", () => {
-  it("allows a valid centre mock", () => {
+  it("allows a valid tutoring account quiz", () => {
     expect(buildPrePublishReview(base)).toEqual({ errors: [], warnings: [] });
   });
 
-  it("allows a direct-link mock without a centre subject", () => {
+  it("allows a direct-link quiz without a tutoring account subject", () => {
     const review = buildPrePublishReview({ ...base, accessMode: "direct", courseId: "", audienceScope: "direct_link" });
     expect(review.errors).toEqual([]);
   });
@@ -72,7 +72,7 @@ describe("buildPrePublishReview", () => {
     expect(review.errors).toContain("Assign every question-bank item to a subject section.");
   });
 
-  it("allows a direct-link multi-subject mock with custom subject sections", () => {
+  it("allows a direct-link multi-subject quiz with custom subject sections", () => {
     const review = buildPrePublishReview({
       ...base,
       accessMode: "direct",

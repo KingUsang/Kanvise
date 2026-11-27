@@ -115,9 +115,9 @@ export function DashboardHomeClient() {
     (isTutor ? data.my_today_schedule : data.today_schedule) || [];
   const firstName = sessionQuery.data.user.first_name;
   const description = isAdminTutor
-    ? "See what needs your attention across teaching, assessments, students and payments."
+    ? "See what needs your attention across teaching, assessments, learners and payments."
     : isAdmin
-      ? "Keep classes, assessments, students and payments moving."
+      ? "Keep classes, assessments, learners and payments moving."
       : "See your classes, subjects and assessment work in one place.";
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-NG", {
@@ -161,7 +161,7 @@ export function DashboardHomeClient() {
           )}
           <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
             <StatCard
-              title="Enrolled Students"
+              title="Enrolled Learners"
               value={admin.total_students}
               icon="groups"
               subtitle="Across the tutoring agency"
@@ -180,7 +180,7 @@ export function DashboardHomeClient() {
               isRevenue
             />
             <StatCard
-              title={isAdminTutor ? "Tutors" : "Mock Answers to Grade"}
+              title={isAdminTutor ? "Tutors" : "Quiz Answers to Grade"}
               value={
                 isAdminTutor
                   ? admin.tutors_count
@@ -220,7 +220,7 @@ export function DashboardHomeClient() {
               subtitle="Waiting for your review"
             />
             <StatCard
-              title="Mock Answers to Grade"
+              title="Quiz Answers to Grade"
               value={tutor.mocks?.pending_count || 0}
               icon="quiz"
               subtitle={`${tutor.mocks?.active_count || 0} active mocks`}

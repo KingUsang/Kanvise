@@ -1189,7 +1189,7 @@ function mergeLearnersWithPendingInvitations(learners: LearnerSignal[], students
     .filter((student) => !activeIds.has(student.id) && student.pending_enrolments?.some((item) => item.programme_id === classId))
     .map((student): LearnerRow => ({
       id: student.id,
-      name: [student.first_name, student.last_name].filter(Boolean).join(' ') || student.email || 'Invited student',
+      name: [student.first_name, student.last_name].filter(Boolean).join(' ') || student.email || 'Invited learner',
       attention: 'no_signal',
       invitationPending: true,
     }));
@@ -1510,7 +1510,7 @@ function Overview({
             <WorkspaceAction
               icon={<FilePlus2 size={17} />}
               title="Create assessment"
-              description="Create a mock or assignment for this class"
+              description="Create a quiz or assignment for this class"
               onClick={onCreateAssessment}
             />
             <WorkspaceAction

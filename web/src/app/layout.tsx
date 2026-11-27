@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import NavigationProgress from "@/components/navigation/NavigationProgress";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { BrowserPushEngagementTracker } from "@/components/pwa/browser-push-engagement-tracker";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { UnsavedChangesProvider } from "@/components/navigation/UnsavedChangesContext";
 import { Analytics } from "@vercel/analytics/next";
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   applicationName: "Kanvise",
   title: "Kanvise | One workspace for smarter tutoring",
   description:
-    "Teach live, manage students, assess learning and see who needs attention in one connected tutoring workspace.",
+    "Teach live, manage learners, assess learning and see who needs attention in one connected tutoring workspace.",
   icons: {
     icon: "/kanvise_logo_small_blue.png",
     apple: "/icons/apple-touch-icon.png",
@@ -56,6 +57,7 @@ export default function RootLayout({
         </UnsavedChangesProvider>
         <ServiceWorkerRegistration />
         <InstallPrompt />
+        <BrowserPushEngagementTracker />
         <Analytics />
         <Toaster position="bottom-right" richColors />
       </body>

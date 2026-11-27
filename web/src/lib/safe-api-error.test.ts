@@ -13,7 +13,7 @@ describe('safe API error boundary', () => {
 
   it('preserves explicitly allow-listed safe feature messages', () => {
     const missingTutorMessage = 'Assign tutors to: Chemistry, Biology'
-    const activeEnrolmentMessage = 'This programme has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+    const activeEnrolmentMessage = 'This programme has enrolled learners, so it cannot be deleted. Unpublish it instead to remove it from the learner page.'
 
     expect(safeApiErrorMessage(new Error(missingTutorMessage), 'Review the class setup.', [missingTutorMessage])).toBe(missingTutorMessage)
     expect(safeApiErrorMessage(new Error(activeEnrolmentMessage), 'Try again.', [activeEnrolmentMessage])).toBe(activeEnrolmentMessage)

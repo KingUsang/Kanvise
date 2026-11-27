@@ -132,9 +132,9 @@ function importErrorMessage(body: any, fileLabel: "PDF" | "Word document") {
   )
     return `Kanvise could not find usable questions in this ${fileLabel.toLowerCase()}. Check the file contains the question paper, then try again.`;
   if (body?.code === "IMPORT_RATE_LIMITED")
-    return "Kanvise is processing too many document imports right now. Your mock has not changed—try this file again in a few minutes.";
+    return "Kanvise is processing too many document imports right now. Your quiz has not changed—try this file again in a few minutes.";
   if (body?.code === "IMPORT_TEMPORARILY_UNAVAILABLE")
-    return "The document reader is temporarily unavailable. Your mock has not changed—try again shortly.";
+    return "The document reader is temporarily unavailable. Your quiz has not changed—try again shortly.";
   return `Kanvise could not import this ${fileLabel.toLowerCase()}. Your mock has not changed. Try another file or add questions manually.`;
 }
 
@@ -377,7 +377,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
         } else if (classRes) {
           toast.error("Could not load class context", {
             description:
-              "You can still create this mock from the assessment library.",
+              "You can still create this quiz from the assessment library.",
           });
         }
         if (banksRes.ok) {
@@ -391,7 +391,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
         }
       } catch (err) {
         console.error("Failed to fetch courses", err);
-        toast.error("Could not prepare the mock builder", {
+        toast.error("Could not prepare the quiz builder", {
           description:
             err instanceof Error
               ? err.message
@@ -541,7 +541,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
             })),
           );
         } else {
-          toast.error("Could not open this mock", {
+          toast.error("Could not open this quiz", {
             description: "It may no longer exist or you may not have access.",
           });
           startNavigationProgress();
@@ -549,7 +549,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
         }
       } catch (err) {
         console.error("Failed to fetch mock data", err);
-        toast.error("Could not open this mock", {
+        toast.error("Could not open this quiz", {
           description: "Check your connection and try again.",
         });
       } finally {
@@ -761,7 +761,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       ? courses.filter((course) => course.programme_id === programmeFilterId)
       : courses;
   const audienceSummary = classContext
-    ? `Students in ${classContext.name}`
+    ? `Learners in ${classContext.name}`
     : "Anyone with the link";
   const selectedSubjectCourses = selectedSubjectSections.map((section) => {
     const linkedCourse = section.courseId
@@ -987,7 +987,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
     setActiveSubjectCourseId(section.id);
     setNewSubjectName("");
     setBuilderActionMessage(
-      `${name} added. ${subjectSections.length + 1} subjects in this mock.`,
+      `${name} added. ${subjectSections.length + 1} subjects in this quiz.`,
     );
   };
 
@@ -1015,7 +1015,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
             item.sectionId !== targetSectionId,
         ),
       );
-      setBuilderActionMessage("Question removed from this mock.");
+      setBuilderActionMessage("Question removed from this quiz.");
       return;
     }
     setSelectedBankQuestions((current) => [
@@ -1477,7 +1477,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       toast.error(
         classContext
           ? "Add a quiz title before continuing"
-          : "Add a mock title and choose a valid tutoring agency target",
+          : "Add a quiz title and choose a valid tutoring agency target",
       );
       return;
     }
@@ -1559,7 +1559,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           throw new Error(
             mockBody?.details?.[0] ||
               mockBody?.error ||
-              "Failed to update mock",
+              "Failed to update quiz",
           );
       } else {
         // 1. Create Parent Mock
@@ -1578,7 +1578,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           throw new Error(
             mockBody?.details?.[0] ||
               mockBody?.error ||
-              "Failed to create mock",
+              "Failed to create quiz",
           );
         mockId = mockBody.data.id;
       }
@@ -1701,7 +1701,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
         );
         if (!publishResponse.ok) {
           const body = await publishResponse.json().catch(() => null);
-          throw new Error(body?.error || "Failed to publish mock");
+          throw new Error(body?.error || "Failed to publish quiz");
         }
         const body = await publishResponse.json().catch(() => null);
         publishMessage =
@@ -1711,7 +1711,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       // 4. Navigate away
       const publicationMessage = shouldPublish
         ? publishMessage ||
-          (publishMode === "scheduled" ? "Mock scheduled" : "Mock published")
+          (publishMode === "scheduled" ? "Quiz scheduled" : "Quiz published")
         : "Draft saved";
       if (navigateOnSuccess) {
         toast.success(publicationMessage);
@@ -1749,7 +1749,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       }
     } catch (err) {
       console.error(err);
-      toast.error("Could not save the mock", {
+      toast.error("Could not save the quiz", {
         description: err instanceof Error ? err.message : "Please try again.",
       });
     } finally {
@@ -1794,7 +1794,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
     if (!target) return;
     if (direction === 1 && builderStep === "setup" && !classContext) {
       if (!title.trim()) {
-        toast.error("Give this mock a title before continuing");
+        toast.error("Give this quiz a title before continuing");
         return;
       }
     }
@@ -1880,10 +1880,10 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
         <div className="bg-[#fff4f2] border-l-4 border-[#ba1a1a] text-[#ba1a1a] p-4 mb-6 rounded shadow-sm">
           <p className="font-semibold text-[15px] flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px]">lock</span>
-            Published mock
+            Published quiz
           </p>
           <p className="text-[13px] mt-1">
-            This version has already been given to students, so its questions
+            This version has already been given to learners, so its questions
             and settings are locked to keep their results fair.
           </p>
         </div>
@@ -1891,7 +1891,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
 
       {subjectToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+          <div role="dialog" aria-modal="true" aria-label="Confirm deleting Subject" className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-[#ba1a1a]">
                 warning
@@ -1899,7 +1899,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               Delete Subject?
             </h3>
             <p className="text-[14px] text-[#474551] mb-6">
-              This removes the subject and its questions from this unsaved mock.
+              This removes the subject and its questions from this unsaved quiz.
               This cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
@@ -1921,7 +1921,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       )}
       {setupChangeToConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+          <div role="dialog" aria-modal="true" aria-label="Confirm changing setup" className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-[#ba1a1a]">
                 warning
@@ -1953,7 +1953,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       {/* Delete Confirmation Modal */}
       {questionToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+          <div role="dialog" aria-modal="true" aria-label="Confirm deleting question" className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-[#ba1a1a]">
                 warning
@@ -1984,14 +1984,14 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
 
       {isReviewOpen && publishReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-2xl">
+          <div role="dialog" aria-modal="true" aria-label="Before you publish" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C26627]">
                   Before you publish
                 </p>
                 <h3 className="mt-1 text-2xl font-bold text-[#1b1c1c]">
-                  Review this mock
+                  Review this quiz
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-[#474551]">
                   Check the questions and settings below. Imported content is
@@ -2056,7 +2056,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
             {publishReview.errors.length === 0 &&
               publishReview.warnings.length === 0 && (
                 <div className="mt-5 rounded-lg border border-[#b7dec6] bg-[#f2fbf5] p-4 text-sm text-[#166534]">
-                  The mock passed the pre-publish checks. You can still edit it
+                  The quiz passed the pre-publish checks. You can still edit it
                   after closing this review.
                 </div>
               )}
@@ -2082,8 +2082,8 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                 )}
                 {isSaving
                   ? publishMode === "scheduled"
-                    ? "Scheduling mock…"
-                    : "Publishing mock…"
+                    ? "Scheduling quiz…"
+                    : "Publishing quiz…"
                   : publishMode === "scheduled"
                     ? "Confirm schedule"
                     : "Confirm and publish"}
@@ -2107,15 +2107,15 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           className="mb-8 border-b border-[#e4e2e1] pb-4"
           title={
             isEditMode
-              ? "Edit Mock"
+              ? "Edit Quiz"
               : classContext
                 ? `Create assessment · ${classContext.name}`
-                : "Build a Mock"
+                : "Build a Quiz"
           }
           description={
             classContext
-              ? "It is only for students in this class."
-              : "Build a standalone mock, then share it with its link."
+              ? "It is only for learners in this class."
+              : "Build a standalone quiz, then share it with its link."
           }
           actions={
             <>
@@ -2128,7 +2128,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                 <span className="material-symbols-outlined text-[18px]">
                   preview
                 </span>
-                Preview as student
+                Preview as learner
               </button>
               <button
                 onClick={() => handleSave(false)}
@@ -2408,7 +2408,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                   <span className="mr-1 text-sm font-semibold text-[#474551]">
                     {isMultiSubject
                       ? `Add to ${activeSubjectSection?.name || "this subject"}`
-                      : "Add to this mock"}
+                      : "Add to this quiz"}
                   </span>
                   <button
                     type="button"
@@ -3032,7 +3032,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                   Subject sections
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">
-                  Choose the exact subjects for this mock, then add or import
+                  Choose the exact subjects for this quiz, then add or import
                   each subject’s questions separately.
                 </p>
               </div>
@@ -3061,7 +3061,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                       setSubjectSections((current) => [...current, section]);
                       setActiveSubjectCourseId(section.id);
                       setBuilderActionMessage(
-                        `${course.name} added. ${subjectSections.length + 1} subjects in this mock.`,
+                        `${course.name} added. ${subjectSections.length + 1} subjects in this quiz.`,
                       );
                     }}
                     className="w-full rounded-lg border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm"
@@ -3105,13 +3105,13 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               )}
               <p className="mt-2 text-xs leading-5 text-[#716c76]">
                 {centreAccessEnabled
-                  ? "Only students enrolled in every selected programme subject will receive this mock."
+                  ? "Only learners enrolled in every selected programme subject will receive this quiz."
                   : "Add the subjects in this exam yourself. They are not connected to your tutoring agency."}
               </p>
             </div>
             {selectedSubjectCourses.length === 0 ? (
               <div className="mt-4 rounded-xl border border-dashed border-[#c8c5d2] p-8 text-center text-sm text-[#716c76]">
-                Add the subjects for this mock—for example, English, Physics,
+                Add the subjects for this quiz—for example, English, Physics,
                 Chemistry and Biology.
               </div>
             ) : (
@@ -3263,7 +3263,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
             <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 text-sm text-[#474551] sm:flex-row sm:items-center sm:justify-between">
               <span>
                 <strong className="block text-[#2e2877]">
-                  Check the student experience
+                  Check the learner experience
                 </strong>
                 Preview subject switching, question navigation, and mobile
                 layout without creating an attempt or result.
@@ -3274,7 +3274,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                 disabled={draftPreviewQuestions.length === 0}
                 className="shrink-0 rounded-lg border border-[#2e2877] bg-white px-4 py-2.5 font-semibold text-[#2e2877] disabled:opacity-45"
               >
-                Preview as student
+                Preview as learner
               </button>
             </div>
             <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#eeeae6] pt-5 sm:flex-row sm:justify-end">
@@ -3297,7 +3297,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                   </span>
                 )}
                 {isSaving
-                  ? "Publishing mock…"
+                  ? "Publishing quiz…"
                   : publishMode === "scheduled"
                     ? "Review schedule"
                     : "Review and publish"}
@@ -3484,14 +3484,14 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                       </summary>
                       <div className="border-t border-[#e4e2e1] p-4">
                         <label className="sr-only" htmlFor="mock-instructions">
-                          Instructions for students
+                          Instructions for learners
                         </label>
                         <textarea
                           id="mock-instructions"
                           value={description}
                           disabled={isReadOnly}
                           onChange={(e) => setDescription(e.target.value)}
-                          placeholder="What should students know before they begin?"
+                          placeholder="What should learners know before they begin?"
                           className="min-h-[100px] w-full resize-y rounded border border-[#c8c5d2] bg-white px-3.5 py-2.5 text-[14px] text-[#474551] outline-none focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] disabled:bg-[#f5f3f2]"
                         />
                       </div>
@@ -3503,7 +3503,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                           Assigned to {classContext.name}
                         </p>
                         <p className="mt-1 text-xs leading-5 text-[#716c76]">
-                          This quiz is only for students in this class. Its
+                          This quiz is only for learners in this class. Its
                           subject rows are fixed to this class; review imported
                           questions under the appropriate subject.
                         </p>
@@ -3680,7 +3680,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                       <div className="space-y-5 border-t border-[#e4e2e1] p-4">
                         <div>
                           <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
-                            Calculator students can use
+                            Calculator learners can use
                           </label>
                           <select
                             value={calculatorMode}
@@ -3699,7 +3699,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                             </option>
                           </select>
                           <p className="mt-1.5 text-xs leading-5 text-[#787582]">
-                            The calculator opens inside the exam, so students do
+                            The calculator opens inside the exam, so learners do
                             not need to leave the page.
                           </p>
                         </div>
@@ -3751,7 +3751,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
 
                         <div>
                           <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
-                            What students see after submitting
+                            What learners see after submitting
                           </label>
                           <select
                             value={resultReleaseMode}
@@ -3768,7 +3768,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                               Score and corrections immediately
                             </option>
                             <option value="after_close">
-                              Corrections after the mock closes
+                              Corrections after the quiz closes
                             </option>
                             <option value="after_theory_grading">
                               Corrections after theory is graded
@@ -3781,14 +3781,14 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                             Optional attempt window
                           </p>
                           <p className="mt-1 text-xs leading-5 text-[#787582]">
-                            Use this only when a published mock should open
+                            Use this only when a published quiz should open
                             later or close automatically.
                           </p>
                         </div>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div>
                             <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
-                              Students can start from
+                              Learners can start from
                             </label>
                             <input
                               type="datetime-local"
@@ -3800,14 +3800,14 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                               className="w-full rounded border border-[#c8c5d2] bg-white px-3 py-2.5 text-sm disabled:bg-[#f5f3f2]"
                             />
                             <p className="mt-1 text-xs leading-5 text-[#787582]">
-                              Publishing makes the mock visible on the student
+                              Publishing makes the quiz visible on the learner
                               dashboard, but they cannot start answering
                               questions until this time.
                             </p>
                           </div>
                           <div>
                             <label className="mb-1.5 block text-[13px] font-medium text-[#474551]">
-                              {classContext ? "Quiz closes" : "Mock closes"}
+                              Quiz closes
                             </label>
                             <input
                               type="datetime-local"
@@ -3836,7 +3836,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                               <strong className="block text-[#1b1c1c]">
                                 Mix question order
                               </strong>
-                              Each student sees the questions in a stable but
+                              Each learner sees the questions in a stable but
                               different order.
                             </span>
                           </label>

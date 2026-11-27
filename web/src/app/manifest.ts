@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/dashboard',
     name: 'Kanvise',
     short_name: 'Kanvise',
-    description: 'Run classes, learn, complete assessments, and manage your school from Kanvise.',
+    description: 'Run classes, learn, complete assessments, and manage your tutoring account from Kanvise.',
     start_url: '/dashboard',
     scope: '/',
     display: 'standalone',

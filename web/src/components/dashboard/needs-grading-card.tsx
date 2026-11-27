@@ -37,7 +37,7 @@ export function NeedsGradingCard({ items }: { items: GradingItem[] }) {
             <Link href={item.href || `/dashboard/assignments/${item.id}/submissions`} key={`${item.kind || 'assignment'}-${item.id}`} className={`block p-6 transition-colors hover:bg-[#fbf9f8] ${index !== items.length - 1 ? 'border-b border-[#f0eded]' : ''}`}>
               <div className="flex justify-between items-center mb-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${item.kind === 'mock' ? 'bg-[#fff3e8] text-[#994704]' : 'bg-[#eeedff] text-[#2e2877]'}`}>{item.kind === 'mock' ? 'Mock' : 'Assignment'}</span>
+                  <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${item.kind === 'mock' ? 'bg-[#fff3e8] text-[#994704]' : 'bg-[#eeedff] text-[#2e2877]'}`}>{item.kind === 'mock' ? 'Quiz' : 'Assignment'}</span>
                   <h4 className="truncate text-[#1b1c1c] font-medium text-[16px]">{item.title}</h4>
                 </div>
                 <span className="material-symbols-outlined text-[#c8c5d2] text-[20px]">chevron_right</span>
@@ -61,7 +61,7 @@ export function NeedsGradingCard({ items }: { items: GradingItem[] }) {
       {/* Footer */}
       <div className="p-4 border-t border-[#f0eded] mt-auto flex items-center justify-center gap-5">
         <Link href="/dashboard/mocks" className="text-[#c26627] font-semibold text-[14px] hover:text-[#994704] transition-colors">
-          Mocks
+          Quizzes
         </Link>
         <Link href="/dashboard/assignments" className="text-[#c26627] font-semibold text-[14px] hover:text-[#994704] transition-colors">
           Assignments

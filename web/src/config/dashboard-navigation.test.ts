@@ -4,19 +4,19 @@ import { canAccessDashboardPath, getDashboardNavItems, getDashboardWorkspaceForP
 describe('dashboard workspaces', () => {
   it('gives an admin-tutor the mobile work areas that matter while teaching', () => {
     expect(getDashboardWorkspaces({ isAdmin: true, isTutor: true }).map(item => item.label))
-      .toEqual(['Home', 'Classes', 'Mocks', 'Calendar', 'More'])
+      .toEqual(['Home', 'Classes', 'Quizzes', 'Calendar', 'More'])
   })
 
   it('only shows areas the current role can use', () => {
     expect(getDashboardWorkspaces({ isAdmin: false, isTutor: true }).map(item => item.label))
-      .toEqual(['Home', 'Classes', 'Mocks', 'Calendar'])
+      .toEqual(['Home', 'Classes', 'Quizzes', 'Calendar'])
     expect(getDashboardWorkspaces({ isAdmin: true, isTutor: false }).map(item => item.label))
-      .toEqual(['Home', 'Classes', 'Mocks', 'Calendar', 'More'])
+      .toEqual(['Home', 'Classes', 'Quizzes', 'Calendar', 'More'])
   })
 
-  it('shows only the truthful setup destination until a new centre exists', () => {
+  it('shows only the truthful setup destination until a new tutoring account exists', () => {
     expect(getDashboardWorkspaces({ isAdmin: true, isTutor: false, setupRequired: true }))
-      .toEqual([expect.objectContaining({ label: 'Set up centre', href: '/dashboard/school-setup', area: 'centre' })])
+      .toEqual([expect.objectContaining({ label: 'Set up tutoring account', href: '/dashboard/school-setup', area: 'centre' })])
   })
 
   it('keeps secondary pages inside their parent workspace', () => {

@@ -8,7 +8,7 @@ export async function createStudentRegistrationIntent(returnTo: string) {
   })
   const body = await response.json().catch(() => null)
   if (!response.ok || !body?.token) {
-    throw new Error(body?.error || 'Could not start student registration')
+    throw new Error(body?.error || 'Could not start learner registration')
   }
   return body.token as string
 }

@@ -40,7 +40,7 @@ const STATUS_FILTERS = [
   { value: 'draft', label: 'Draft' },
 ] as const
 
-const ACTIVE_ENROLMENT_MESSAGE = 'This class has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+const ACTIVE_ENROLMENT_MESSAGE = 'This class has enrolled learners, so it cannot be deleted. Unpublish it instead to remove it from the learner page.'
 
 export function ProgrammesClient() {
   const queryClient = useQueryClient()

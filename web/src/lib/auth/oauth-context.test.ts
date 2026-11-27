@@ -5,7 +5,7 @@ describe('OAuth context', () => {
   beforeEach(() => { process.env.AUTH_CONTEXT_SECRET = 'a-secure-test-secret-that-is-long-enough' })
   afterEach(() => { delete process.env.AUTH_CONTEXT_SECRET })
 
-  it('round trips a safe student continuation', () => {
+  it('round trips a safe learner continuation', () => {
     const signed = createOAuthContext({ intent: 'student', returnTo: '/school/physics', registrationIntent: 'opaque' }, 1_000)
     expect(readOAuthContext(signed, 2_000)).toMatchObject({ intent: 'student', returnTo: '/school/physics', registrationIntent: 'opaque' })
   })

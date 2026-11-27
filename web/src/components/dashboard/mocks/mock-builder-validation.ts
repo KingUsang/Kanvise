@@ -37,10 +37,10 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
   const warnings: string[] = [];
   const audienceScope = input.audienceScope || "course";
   const totalQuestions = input.questions.length + input.selectedBankQuestions.length;
-  if (!input.title.trim()) errors.push("Add a title for the mock.");
-  if (!input.accessMode) errors.push("Choose who can take this mock before publishing.");
+  if (!input.title.trim()) errors.push("Add a title for the quiz.");
+  if (!input.accessMode) errors.push("Choose who can take this quiz before publishing.");
   if (input.accessMode === "centre" || input.accessMode === "both") {
-    if (audienceScope === "course" && !input.courseId) errors.push("Choose the subject this mock is for.");
+    if (audienceScope === "course" && !input.courseId) errors.push("Choose the subject this quiz is for.");
   }
   if (totalQuestions === 0) errors.push("Add at least one question.");
   // A section is required for every multi-subject question. Section names are
@@ -70,7 +70,7 @@ export function buildPrePublishReview(input: ReviewInput): PrePublishReview {
   const duplicates = new Set(allTexts.filter((text, index) => allTexts.indexOf(text) !== index));
   if (duplicates.size) warnings.push(`${duplicates.size} duplicate question${duplicates.size === 1 ? "" : "s"} detected.`);
 
-  if (!input.isUntimed && (!Number.isFinite(input.timeLimit) || input.timeLimit <= 0)) errors.push("Set a positive time limit or choose an untimed mock.");
+  if (!input.isUntimed && (!Number.isFinite(input.timeLimit) || input.timeLimit <= 0)) errors.push("Set a positive time limit or choose an untimed quiz.");
   if (input.publishMode === "scheduled") {
     const scheduledAt = input.publishDate && input.publishTime ? new Date(`${input.publishDate}T${input.publishTime}:00`) : null;
     if (!scheduledAt || Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now()) errors.push("Choose a future publication date and time.");

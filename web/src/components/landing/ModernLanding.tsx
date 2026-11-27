@@ -178,7 +178,7 @@ const tools = [
   },
   {
     name: "WhatsApp",
-    detail: "Student communication",
+    detail: "Learner communication",
     icon: WhatsAppBrandIcon,
     position: "left-[46%] top-[3%]",
     tooltip: "left-1/2 top-full mt-3 -translate-x-1/2",
@@ -206,7 +206,7 @@ const tools = [
   },
   {
     name: "Google Sheets",
-    detail: "Student and result tracking",
+    detail: "Learner and result tracking",
     icon: SheetsBrandIcon,
     position: "left-[1%] top-[46%]",
     tooltip: "left-full ml-3 top-1/2 -translate-y-1/2",
@@ -255,24 +255,15 @@ const features = [
   },
   {
     number: "02",
-    name: "Payments",
-    verb: "Collect",
-    headline: "Collect payments without chasing DMs.",
-    copy: "Give your tutoring business a professional payment page. Whether you teach independently or run an agency, when a student pays their enrolment updates and you can see what is paid, outstanding and ready for follow-up.",
-    accent: "#C26627",
-    type: "payments",
-  },
-  {
-    number: "03",
-    name: "Student management",
+    name: "Learner management",
     verb: "Manage",
-    headline: "Students, classes and enrolment in one place.",
-    copy: "See who belongs to each class, their information and the activity that matters in one place.",
+    headline: "Learners, Classes and enrolment in one place.",
+    copy: "See who belongs to each Class, their information and the activity that matters in one place.",
     accent: "#2E2877",
     type: "students",
   },
   {
-    number: "04",
+    number: "03",
     name: "Materials",
     verb: "Share",
     headline: "Share materials in the right context.",
@@ -281,7 +272,7 @@ const features = [
     type: "materials",
   },
   {
-    number: "05",
+    number: "04",
     name: "Assignments",
     verb: "Assign",
     headline: "Give work. Receive it. Respond.",
@@ -290,29 +281,29 @@ const features = [
     type: "assignments",
   },
   {
-    number: "06",
-    name: "Quizzes & mocks",
+    number: "05",
+    name: "Quizzes",
     verb: "Assess",
     headline: "Create, publish and grade automatically.",
-    copy: "Run quick quizzes or full mocks, then see the results without marking every answer by hand.",
+    copy: "Create Quizzes for a Class, then see the results without marking every answer by hand.",
     accent: "#C26627",
     type: "quiz",
   },
   {
-    number: "07",
+    number: "06",
     name: "Attendance",
     verb: "Attendance",
     headline: "Know who showed up.",
-    copy: "Attendance is tied to the actual class session and the student record, ready for follow-up.",
+    copy: "Attendance is tied to the actual class session and the Learner record, ready for follow-up.",
     accent: "#2E2877",
     type: "attendance",
   },
   {
-    number: "08",
-    name: "Student performance",
+    number: "07",
+    name: "Learner performance",
     verb: "Act early",
-    headline: "Spot struggling students early.",
-    copy: "Bring scores, attendance and participation together so tutors can step in before a difficulty becomes a lasting setback.",
+    headline: "See how each Learner is doing.",
+    copy: "Bring scores, attendance and participation together so tutors can see who may need support.",
     accent: "#2E2877",
     type: "performance",
   },
@@ -321,7 +312,7 @@ const features = [
 const faqs = [
   [
     "What exactly is Kanvise?",
-    "Kanvise is a connected workspace for running online tutoring: live classes, students, materials, assignments, quizzes, attendance, payments and performance intelligence.",
+    "Kanvise is a connected workspace for running online tutoring: live classes, Learners, materials, assignments, Quizzes, attendance and Learner progress.",
   ],
   [
     "Who is Kanvise built for?",
@@ -329,11 +320,11 @@ const faqs = [
   ],
   [
     "Is Kanvise just another video-class platform?",
-    "No. Live teaching is one part of the story. Kanvise keeps what happens before, during and after class connected so tutors can understand and support students.",
+    "No. Live teaching is one part of the story. Kanvise keeps what happens before, during and after class connected so tutors can understand and support Learners.",
   ],
   [
-    "What does the AI actually do?",
-    "During a class, it can suggest a knowledge-check question from the teaching context. Across assessments, it can help surface recurring difficulty and a useful next action for the tutor.",
+    "Does Kanvise use AI?",
+    "Not as a product feature today. Kanvise shows your own scores, attendance and participation side by side so you can decide who needs support.",
   ],
   [
     "Why join the waitlist now?",
@@ -501,7 +492,7 @@ function ProductShell({
             </span>{" "}
             Kanvise
           </div>
-          {["Overview", "Schedule", "Students", "Work", "Performance"].map(
+          {["Overview", "Schedule", "Learners", "Work", "Performance"].map(
             (item, index) => (
               <p
                 key={item}
@@ -558,7 +549,7 @@ function FeatureSurface({ type }: { type: (typeof features)[number]["type"] }) {
         <div className="overflow-hidden rounded-xl border border-[#d8d1e4] bg-white shadow-sm">
           <Image
             src="/landing/kanvise-live-class-workspace-v1.png"
-            alt="A tutor leading a video class with a digital whiteboard, student video tiles and class chat"
+            alt="A tutor leading a video class with a digital whiteboard, Learner video tiles and class chat"
             width={1672}
             height={941}
             className="h-auto w-full"
@@ -580,14 +571,14 @@ function FeatureSurface({ type }: { type: (typeof features)[number]["type"] }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[8px] uppercase tracking-wider text-[#8a8391]">
-              18 students
+              18 Learners
             </p>
             <h4 className="text-base font-bold text-[#2E2877]">
               Your class, beyond a list
             </h4>
           </div>
           <button className="rounded-lg bg-[#2e2877] px-3 py-2 text-[8px] font-bold text-white">
-            Add student
+            Add Learner
           </button>
         </div>
         <div className="mt-4 space-y-2">
@@ -772,47 +763,6 @@ function FeatureSurface({ type }: { type: (typeof features)[number]["type"] }) {
             state="Absent"
             danger
           />
-        </div>
-      </ProductShell>
-    );
-  if (type === "payments")
-    return (
-      <ProductShell>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[8px] text-[#8a8391]">October collection</p>
-            <h4 className="text-base font-bold text-[#2E2877]">
-              JAMB 2027 class
-            </h4>
-          </div>
-          <b className="text-lg text-[#2E2877]">₦228,000</b>
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {[
-            ["Paid", "12"],
-            ["Pending", "4"],
-            ["Overdue", "2"],
-          ].map(([label, value], i) => (
-            <div
-              key={label}
-              className="rounded-xl border border-[#e9e4ef] bg-white p-3"
-            >
-              <span className="text-[8px] text-[#847d90]">{label}</span>
-              <b
-                className={`mt-1 block text-xl ${i === 2 ? "text-[#b94d31]" : "text-[#2E2877]"}`}
-              >
-                {value}
-              </b>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 rounded-xl bg-[#eefaf7] p-4">
-          <p className="flex items-center gap-2 text-[9px] font-bold text-[#176c5c]">
-            <Check size={12} /> Payment confirmed for Chiamaka Eze
-          </p>
-          <p className="mt-1 text-[8px] text-[#5d7b75]">
-            Her enrolment record has been updated automatically.
-          </p>
         </div>
       </ProductShell>
     );
@@ -1029,7 +979,7 @@ export default function ModernLanding() {
               independent tutors and tutoring agencies
             </p>
             <h1 className="mt-5 max-w-[640px] text-[2.1rem] font-medium leading-[1.05] tracking-[-.04em] sm:mt-6 sm:text-[2.75rem] lg:text-[3.25rem]">
-              Running one tutorial shouldn&apos;t take{" "}
+              Running one tutoring account shouldn&apos;t take{" "}
               <span className="text-[#C26627]">seven tools.</span>
             </h1>
             <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
@@ -1201,7 +1151,7 @@ export default function ModernLanding() {
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#68616e] sm:text-lg">
               Teach, share, assign, assess and follow up without rebuilding the
-              story of each student across different tools.
+              story of each Learner across different tools.
             </p>
           </div>
           <div className="relative mx-auto mt-14 max-w-[1080px]">
@@ -1230,7 +1180,7 @@ export default function ModernLanding() {
                       <div>
                         <b className="block text-sm">Physics · JAMB 2027</b>
                         <span className="text-[8px] text-white/55">
-                          Newton&apos;s laws · 18 students
+                          Newton&apos;s laws · 18 Learners
                         </span>
                       </div>
                       <button className="rounded-lg bg-[#C26627] px-3 py-2 text-[8px] font-bold text-white">
@@ -1280,10 +1230,10 @@ export default function ModernLanding() {
                       Latest signal
                     </span>
                     <p className="mt-3 text-[9px] font-semibold leading-4">
-                      8 students repeatedly struggled with wave interference.
+                      Wave interference Quiz: 8 Learners scored below 50%.
                     </p>
                     <button className="mt-3 text-[8px] font-bold text-[#2E2877]">
-                      See the evidence →
+                      See the results →
                     </button>
                   </div>
                 </div>
@@ -1309,7 +1259,7 @@ export default function ModernLanding() {
               Everything tutors need in one place.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#68616e]">
-              Teach, manage students, share materials and assess learning in one
+              Teach, manage Learners, share materials and assess learning in one
               connected workspace.
             </p>
           </div>
@@ -1385,14 +1335,14 @@ export default function ModernLanding() {
             className="landing-reveal mx-auto max-w-3xl text-center"
           >
             <p className="text-xs font-bold uppercase tracking-[.18em] text-[#C26627]">
-              From learning activity to insight
+              From learning activity to results
             </p>
             <h2 className="mt-4 text-[1.8rem] font-medium leading-[1.1] tracking-[-.035em] sm:text-[2.75rem]">
-              Spot struggling students early.
+              See how each Learner is doing.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
               Kanvise brings class responses, assessments and participation
-              together so tutors can see who may need support. The learners
+              together so tutors can see who may need support. The Learners
               and figures shown on this page are sample data.
             </p>
           </div>
@@ -1435,7 +1385,7 @@ export default function ModernLanding() {
                   ))}
                 </div>
                 <button className="mt-4 w-full rounded-lg bg-[#C26627] py-3 text-[9px] font-bold text-white">
-                  Send to 18 students
+                  Send to 18 Learners
                 </button>
               </div>
             </div>
@@ -1449,7 +1399,7 @@ export default function ModernLanding() {
                     Across their work
                   </span>
                   <h3 className="mt-2 text-xl font-bold">
-                    A pattern no single score could show.
+                    Scores across their work.
                   </h3>
                 </div>
                 <Lightbulb className="mt-1 shrink-0 text-[#F7F5F2]" />
@@ -1461,10 +1411,10 @@ export default function ModernLanding() {
                   </span>
                   <div>
                     <p className="text-[9px] font-bold text-[#b6472c]">
-                      Repeated difficulty detected
+                      Sample scores
                     </p>
                     <h4 className="mt-1 text-base font-bold text-[#2E2877]">
-                      Wave interference · 8 students
+                      Wave interference · 8 Learners
                     </h4>
                   </div>
                 </div>
@@ -1480,18 +1430,17 @@ export default function ModernLanding() {
                         style={{ height: `${Math.max(28, score)}px` }}
                       />
                       <span className="text-[7px] text-[#99919f]">
-                        {i < 3 ? `Quiz ${i + 1}` : `Mock ${i - 2}`}
+                        {`Quiz ${i + 1}`}
                       </span>
                     </div>
                   ))}
                 </div>
                 <div className="mt-5 rounded-xl bg-[#F7F5F2] p-3">
                   <b className="text-[9px] text-[#2E2877]">
-                    Suggested tutor action
+                    Tutor notes
                   </b>
                   <p className="mt-1 text-[9px] leading-4 text-[#5f5868]">
-                    Revisit interference before the next session and assign
-                    targeted practice.
+                    You decide what to revisit before the next session.
                   </p>
                 </div>
               </div>
@@ -1512,7 +1461,7 @@ export default function ModernLanding() {
             One connected tutoring workflow
           </p>
           <h2 className="mt-4 text-[1.8rem] font-medium tracking-[-.035em] text-[#2E2877] sm:text-[2.75rem]">
-            Teach the class. Understand the student.
+            Teach the Class. Follow each Learner.
           </h2>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-wider text-[#4d4655]">
             {[
@@ -1638,7 +1587,7 @@ export default function ModernLanding() {
                     />
                   </label>
                   <label className="text-xs font-semibold sm:col-span-2">
-                    Tutorial type
+                    Account type
                     <select
                       value={form.type}
                       onChange={(e) =>

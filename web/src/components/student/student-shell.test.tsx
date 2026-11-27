@@ -17,7 +17,7 @@ describe('StudentShell navigation', () => {
     return render(<QueryClientProvider client={queryClient}>{element}</QueryClientProvider>)
   }
 
-  it('uses visible mobile destinations without a hamburger for programme students', () => {
+  it('uses visible mobile destinations without a hamburger for programme learners', () => {
     renderShell(<StudentShell learnerName="Ada Learner" accountName="Bright Minds"><p>Content</p></StudentShell>)
 
     const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })
@@ -30,7 +30,7 @@ describe('StudentShell navigation', () => {
     expect(within(mobileNavigation).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('keeps standalone navigation focused on home and mocks', () => {
+  it('keeps standalone navigation focused on home and quizzes', () => {
     renderShell(<StudentShell learnerName="Ada Learner" accountName="Kanvise" hasClassLearning={false}><p>Content</p></StudentShell>)
 
     const mobileNavigation = screen.getByRole('navigation', { name: 'Learner navigation' })

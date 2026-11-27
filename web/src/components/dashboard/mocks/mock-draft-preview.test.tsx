@@ -34,7 +34,7 @@ describe('MockDraftPreview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Physics' }))
     expect(screen.getByText('Physics · Question 1 of 1')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Student’s written answer…')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Learner’s written answer…')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Exit preview/ }))
     expect(onClose).toHaveBeenCalledOnce()

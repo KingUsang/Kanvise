@@ -102,7 +102,7 @@ export function MocksManagementClient({
       );
       const body = await response.json().catch(() => null);
       if (!response.ok)
-        throw new Error(body?.error || "Failed to archive mock");
+        throw new Error(body?.error || "Failed to archive quiz");
       toast.success("Submission closed", {
         description: "Its attempts and results are still available.",
       });
@@ -112,7 +112,7 @@ export function MocksManagementClient({
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ]);
     } catch (error) {
-      toast.error("Could not archive the mock", {
+      toast.error("Could not archive the quiz", {
         description:
           error instanceof Error ? error.message : "Please try again.",
       });
@@ -154,7 +154,7 @@ export function MocksManagementClient({
               id="archive-mock-title"
               className="text-lg font-semibold text-[#1b1c1c]"
             >
-              Close submission for this mock?
+              Close submission for this quiz?
             </h2>
             <p className="mt-2 text-sm text-[#474551]">
               {mockToArchive.title} will leave the active list, but its attempts
@@ -193,7 +193,7 @@ export function MocksManagementClient({
         {/* Status Tabs */}
         <div className="flex bg-[#f5f3f2] p-1 rounded-md border border-[#c8c5d2] overflow-x-auto w-full lg:w-auto">
           {[
-            { id: "all", label: "All Mocks" },
+            { id: "all", label: "All Quizzes" },
             { id: "draft", label: "Drafts" },
             { id: "published", label: "Published" },
             { id: "archived", label: "Closed" },
@@ -223,7 +223,7 @@ export function MocksManagementClient({
               onChange={(e) => setFilterCourse(e.target.value)}
               className="appearance-none bg-white border border-[#c8c5d2] text-[#1b1c1c] text-[14px] py-2 pl-4 pr-10 focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] rounded-md shadow-sm min-w-[220px]"
             >
-              <option value="all">All subjects and standalone mocks</option>
+              <option value="all">All subjects and standalone quizzes</option>
               {uniqueCourses.map((courseName) => (
                 <option key={courseName} value={courseName}>
                   {courseName}
@@ -253,7 +253,7 @@ export function MocksManagementClient({
             </div>
           ) : mocksQuery.isLoading ? (
             <div className="p-8 text-center text-sm text-[#474551]">
-              Loading mocks…
+              Loading quizzes…
             </div>
           ) : filteredMocks.length === 0 ? (
             filterStatus === "all" ? (
@@ -328,7 +328,7 @@ export function MocksManagementClient({
                         }}
                         className="text-[#994704]"
                       >
-                        Edit mock
+                        Edit quiz
                       </button>
                     ) : (
                       <button
@@ -360,7 +360,7 @@ export function MocksManagementClient({
             <thead>
               <tr className="bg-[#f5f3ed] border-b border-[#c2b59b]">
                 <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">
-                  Mock Details
+                  Quiz Details
                 </th>
                 <th className="py-4 px-6 text-[12px] font-semibold text-[#474551] uppercase tracking-widest">
                   Status
@@ -382,7 +382,7 @@ export function MocksManagementClient({
                         error
                       </span>
                       <p className="font-semibold">
-                        We could not load your mocks
+                        We could not load your quizzes
                       </p>
                       <p className="text-[14px] mt-1">{apiError}</p>
                       <button
@@ -565,7 +565,7 @@ export function MocksManagementClient({
                             }}
                             className="text-[#994704] text-[12px] font-semibold hover:underline"
                           >
-                            Edit Mock
+                            Edit Quiz
                           </button>
                         )}
                         {mock.status === "archived" && (

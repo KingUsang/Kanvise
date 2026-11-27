@@ -26,7 +26,7 @@ vi.mock('sonner', () => ({
 const data = {
   server_now: '2026-08-10T10:00:01.000Z',
   attempt: { id: 'attempt-1', deadline_at: '2026-08-10T10:00:00.000Z' },
-  mock: { title: 'JAMB Mock', calculator_mode: 'none' as const },
+  mock: { title: 'JAMB Quiz', calculator_mode: 'none' as const },
   questions: [{
     id: 'question-1', section_title: 'Mathematics', marks: 1, question_type: 'mcq' as const,
     plain_text: 'What is 2 + 2?', content_blocks: [] as never[], stimulus: null,
@@ -63,7 +63,7 @@ describe('MockAttemptClient timeout', () => {
     )
   })
 
-  it('groups a multi-subject mock into subject navigation and local question numbers', () => {
+  it('groups a multi-subject quiz into subject navigation and local question numbers', () => {
     render(<MockAttemptClient data={{
       ...data,
       attempt: { id: 'attempt-2', deadline_at: null },

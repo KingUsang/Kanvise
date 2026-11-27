@@ -781,6 +781,9 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
         <div className="fixed inset-0 z-50 bg-black/40">
           <form
             onSubmit={save}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Schedule a session"
             className="absolute bottom-0 max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:inset-x-0 sm:bottom-auto sm:top-1/2 sm:mx-auto sm:max-w-lg sm:-translate-y-1/2 sm:rounded-2xl sm:p-7"
           >
             <div className="flex items-start justify-between">
