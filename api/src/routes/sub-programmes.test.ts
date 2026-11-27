@@ -34,6 +34,10 @@ function query(result: any) {
     eq: vi.fn(() => builder),
     or: vi.fn(() => builder),
     limit: vi.fn(() => builder),
+    in: vi.fn(() => builder),
+    not: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    single: vi.fn(async () => result),
     maybeSingle: vi.fn(async () => result),
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
   }
@@ -155,5 +159,42 @@ describe('DELETE /sub-programmes/:id', () => {
       expect(q.update).toHaveBeenCalledWith({ name: 'B', is_available_separately: true, price: 5 })
       expect(q.eq).toHaveBeenCalledWith('school_id', 'school-1')
     })
+  })
+})
+
+describe('sub-programme failure mapping', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'admin' }
+  })
+  const create = () => subProgrammesRouter.request('/', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Group A', slug: 'group-a', programme_id: '22222222-2222-4222-8222-222222222222' }),
+  })
+
+  it('maps a parent lookup outage to a safe service error', async () => {
+    mocks.from.mockReturnValue(query({ data: null, error: { code: '57014', message: 'statement timeout on programmes' } }))
+    const response = await create()
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Could not create this class section', code: 'SUB_PROGRAMME_CREATE_FAILED' })
+  })
+
+  it('keeps INVALID_PARENT for a successful empty lookup', async () => {
+    mocks.from.mockReturnValue(query({ data: null, error: { code: 'PGRST116', message: 'no rows' } }))
+    const response = await create()
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_PARENT' })
+  })
+
+  it('does not turn a tutor assignment lookup failure into an empty list', async () => {
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' } as any
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'tutor' }
+    mocks.from.mockImplementation((table: string) => table === 'tutor_course_assignments'
+      ? query({ data: null, error: { message: 'connection reset' } })
+      : query({ data: [], error: null }))
+    const response = await subProgrammesRouter.request('/')
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Could not load class sections', code: 'SUB_PROGRAMME_LIST_FAILED' })
   })
 })

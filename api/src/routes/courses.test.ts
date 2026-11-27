@@ -23,6 +23,7 @@ function query(result: any, calls: Array<[string, ...any[]]>) {
     eq: (...args: any[]) => { calls.push(['eq', ...args]); return builder },
     is: (...args: any[]) => { calls.push(['is', ...args]); return builder },
     order: (...args: any[]) => { calls.push(['order', ...args]); return builder },
+    range: (...args: any[]) => { calls.push(['range', ...args]); return builder },
     single: () => Promise.resolve(result),
     maybeSingle: () => Promise.resolve(result),
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
@@ -48,6 +49,16 @@ describe('course list filters', () => {
     expect(calls).toContainEqual(['is', 'programme_id', null])
     expect(calls).toContainEqual(['is', 'sub_programme_id', null])
     expect(calls).toContainEqual(['eq', 'is_published', false])
+    expect(calls).toContainEqual(['range', 0, 500])
+    await expect(response.json()).resolves.toEqual({ data: [{ id: 'course-1' }], pagination: { limit: 500, offset: 0, has_more: false } })
+  })
+
+  it('rejects an unbounded page request', async () => {
+    for (const qs of ['limit=0', 'limit=501', 'offset=-1']) {
+      const response = await coursesRouter.request(`/?${qs}`)
+      expect(response.status).toBe(400)
+    }
+    expect(mocks.from).not.toHaveBeenCalled()
   })
 
   it('returns a safe service error when Tutor assignment lookup fails', async () => {
@@ -142,3 +153,55 @@ describe('subject PATCH allow-list', () => {
     await expect(response.json()).resolves.toMatchObject({ code: 'INVALID_PARENT' })
   })
 })
+
+describe('subject create and delete contract', () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.accountRole = 'admin' })
+  const create = (body: unknown) => coursesRouter.request('/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+
+  it('rejects loosely typed or unknown create fields before any query', async () => {
+    for (const body of [
+      { name: 123, slug: 'maths' },
+      { name: 'Maths', slug: 'Maths Upper' },
+      { name: 'Maths', slug: 'maths', price: '12abc' },
+      { name: 'Maths', slug: 'maths', currency: 'naira' },
+      { name: 'Maths', slug: 'maths', is_published: true },
+      { name: 'Maths', slug: 'maths', programme_id: 'not-a-uuid' },
+    ]) {
+      const response = await create(body)
+      expect(response.status, JSON.stringify(body)).toBe(400)
+      await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    }
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('maps a parent lookup failure to a service error, not INVALID_PARENT', async () => {
+    mocks.from.mockImplementation(() => query({ data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }, []))
+    const response = await create({ name: 'Maths', slug: 'maths', programme_id: '22222222-2222-4222-8222-222222222222' })
+    expect(response.status).toBe(500)
+    const body = await response.json()
+    expect(body).toEqual({ error: 'Could not create this subject', code: 'SUBJECT_CREATE_FAILED' })
+  })
+
+  it('stores a canonical numeric price', async () => {
+    const insert = vi.fn()
+    mocks.from.mockImplementation((table: string) => {
+      const b: any = query(table === 'courses' && insert.mock.calls.length > 0 ? { data: { id: 'c1' }, error: null } : { data: null, error: null }, [])
+      b.insert = (row: any) => { insert(row); return query({ data: { id: 'c1' }, error: null }, []) }
+      return b
+    })
+    const response = await create({ name: 'Maths', slug: 'maths', price: '1500.50', currency: 'NGN' })
+    expect(response.status).toBe(201)
+    expect(insert.mock.calls[0][0]).toMatchObject({ price: 1500.5, currency: 'NGN', is_available_separately: true })
+  })
+
+  it('reports an absent subject on delete instead of success', async () => {
+    mocks.from.mockImplementation(() => {
+      const b: any = query({ data: [], error: null }, [])
+      b.delete = () => b
+      return b
+    })
+    const response = await coursesRouter.request('/22222222-2222-4222-8222-222222222222', { method: 'DELETE' })
+    expect(response.status).toBe(404)
+  })
+})
+

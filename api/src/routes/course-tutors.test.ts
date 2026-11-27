@@ -24,6 +24,7 @@ function query(result: any) {
     or: () => builder,
     in: () => builder,
     order: () => builder,
+    range: () => builder,
     single: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
   }

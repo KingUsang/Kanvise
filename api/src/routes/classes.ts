@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { supabase } from '../lib/supabase'
 import {
   accountContextMiddleware,
@@ -36,26 +37,48 @@ const accountUserProjection = async (c: any, next: any) => {
 }
 
 async function visibleClassSubjects(user: any, classId: string): Promise<CourseRow[] | null> {
-  const [{ data: programme, error: programmeError }, { data: subProgrammes, error: subError }, { data: courses, error: courseError }] = await Promise.all([
+  const [{ data: programme, error: programmeError }, { data: subProgrammes, error: subError }] = await Promise.all([
     supabase.from('programmes').select('id').eq('id', classId).eq('school_id', user.school_id).maybeSingle(),
-    supabase.from('sub_programmes').select('id, programme_id').eq('school_id', user.school_id).eq('programme_id', classId),
-    supabase.from('courses').select('id, name, programme_id, sub_programme_id').eq('school_id', user.school_id),
+    supabase.from('sub_programmes').select('id, programme_id').eq('school_id', user.school_id).eq('programme_id', classId).limit(1000),
   ])
-  if (programmeError || subError || courseError) throw programmeError || subError || courseError
+  if (programmeError || subError) throw programmeError || subError
   if (!programme) return null
 
-  const subProgrammeIds = new Set((subProgrammes || []).map((item: any) => item.id))
-  const classSubjects = ((courses || []) as CourseRow[]).filter((course) =>
-    course.programme_id === classId || (course.sub_programme_id && subProgrammeIds.has(course.sub_programme_id)),
-  )
+  // Scope Subjects in SQL to this Class instead of loading the whole account (DEV-CLS-001).
+  const subProgrammeIds = (subProgrammes || []).map((item: any) => item.id)
+  let coursesQuery = supabase.from('courses').select('id, name, programme_id, sub_programme_id').eq('school_id', user.school_id)
+  coursesQuery = subProgrammeIds.length > 0
+    ? coursesQuery.or(`programme_id.eq.${classId},sub_programme_id.in.(${subProgrammeIds.join(',')})`)
+    : coursesQuery.eq('programme_id', classId)
+  const { data: courses, error: courseError } = await coursesQuery.limit(1000)
+  if (courseError) throw courseError
+  const classSubjects = (courses || []) as CourseRow[]
   if (user.role !== 'tutor') return classSubjects
 
   const { data: assignments, error } = await supabase.from('tutor_course_assignments')
     .select('course_id').eq('school_id', user.school_id).eq('tutor_id', user.id)
   if (error) throw error
   const assigned = new Set((assignments || []).map((assignment: any) => assignment.course_id))
-  return classSubjects.filter((course) => assigned.has(course.id))
+  const visible = classSubjects.filter((course) => assigned.has(course.id))
+  // A Tutor with no assignment in this Class must not learn that it exists.
+  return visible.length > 0 ? visible : null
 }
+
+const isoFilterSchema = z.string().max(40)
+  .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:\d{2})?)?$/)
+  .refine((value) => Number.isFinite(Date.parse(value)))
+const scheduleQuerySchema = z.object({
+  course_id: uuidSchema.optional(),
+  from: isoFilterSchema.optional(),
+  to: isoFilterSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(500).default(200),
+}).refine((q) => !q.from || !q.to || Date.parse(q.from) <= Date.parse(q.to))
+const timetableQuerySchema = z.object({
+  course_id: uuidSchema.optional(),
+  tutor_id: uuidSchema.optional(),
+})
+const optionalQuery = (c: any, names: string[]) =>
+  Object.fromEntries(names.map((name) => [name, c.req.query(name) || undefined]))
 
 function classAccessMiddleware() {
   return [jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection, requireMembershipRole('admin', 'tutor')] as const
@@ -114,11 +137,15 @@ classesRouter.get('/:id/schedule', ...classAccessMiddleware(), async (c) => {
   try {
     const user = c.get('user')
     const classId = c.req.param('id')
-    if (!classId) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
-    const subjects = await visibleClassSubjects(user, classId)
-    if (!subjects?.length) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+    if (!uuidSchema.safeParse(classId).success) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+    const parsedQuery = scheduleQuerySchema.safeParse(optionalQuery(c, ['course_id', 'from', 'to', 'limit']))
+    if (!parsedQuery.success) return c.json({ error: 'Invalid schedule filters', code: 'VALIDATION_ERROR' }, 400)
+    const { course_id: requestedSubject, from, to, limit } = parsedQuery.data
+    const subjects = await visibleClassSubjects(user, classId as string)
+    if (!subjects) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
+    // An existing Class with no Subjects yet is a valid empty schedule (DEV-CLS-002).
+    if (subjects.length === 0) return c.json({ data: { subjects: [], sessions: [], recurring_slots: [] } })
 
-    const requestedSubject = c.req.query('course_id')
     const visibleSubjectIds = requestedSubject
       ? subjects.filter((subject) => subject.id === requestedSubject).map((subject) => subject.id)
       : subjects.map((subject) => subject.id)
@@ -130,10 +157,9 @@ classesRouter.get('/:id/schedule', ...classAccessMiddleware(), async (c) => {
       .in('course_id', visibleSubjectIds)
       .order('scheduled_at', { ascending: true })
     if (user.role === 'tutor') sessionsQuery = sessionsQuery.eq('tutor_id', user.id)
-    const from = c.req.query('from')
-    const to = c.req.query('to')
     if (from) sessionsQuery = sessionsQuery.gte('scheduled_at', from)
     if (to) sessionsQuery = sessionsQuery.lte('scheduled_at', to)
+    sessionsQuery = sessionsQuery.limit(limit)
 
     let slotsQuery = (supabase as any).from('class_timetable_slots')
       .select('id, course_id, tutor_id, weekday, start_time, duration_minutes, starts_on, ends_on, title, source, recurrence_group_id, timetable_id, course:courses(id, name), tutor:user_profiles!class_timetable_slots_tutor_id_fkey(id, first_name, last_name)')
@@ -143,13 +169,14 @@ classesRouter.get('/:id/schedule', ...classAccessMiddleware(), async (c) => {
       .order('weekday', { ascending: true })
       .order('start_time', { ascending: true })
     if (user.role === 'tutor') slotsQuery = slotsQuery.eq('tutor_id', user.id)
+    slotsQuery = slotsQuery.limit(1000)
 
     const [{ data: sessions, error: sessionsError }, { data: recurringSlots, error: slotsError }] = await Promise.all([sessionsQuery, slotsQuery])
     if (sessionsError || slotsError) throw sessionsError || slotsError
     return c.json({ data: { subjects, sessions: sessions || [], recurring_slots: recurringSlots || [] } })
   } catch (error: any) {
     console.error('[classes] schedule read failed:', error)
-    return c.json({ error: error.message || 'Could not load class schedule', code: 'CLASS_SCHEDULE_READ_FAILED' }, 500)
+    return c.json({ error: 'Could not load class schedule', code: 'CLASS_SCHEDULE_READ_FAILED' }, 500)
   }
 })
 
@@ -158,6 +185,8 @@ classesRouter.get('/:id/schedule', ...classAccessMiddleware(), async (c) => {
 classesRouter.get('/timetable', ...classAccessMiddleware(), async (c) => {
   const user = c.get('user')
   if (user.role !== 'admin') return c.json({ error: 'Only admins can view the centre timetable', code: 'FORBIDDEN' }, 403)
+  const parsedFilters = timetableQuerySchema.safeParse(optionalQuery(c, ['course_id', 'tutor_id']))
+  if (!parsedFilters.success) return c.json({ error: 'Invalid timetable filters', code: 'VALIDATION_ERROR' }, 400)
   try {
     const { data: school, error: schoolError } = await supabase.from('schools')
       .select('account_type')
@@ -173,16 +202,15 @@ classesRouter.get('/timetable', ...classAccessMiddleware(), async (c) => {
       .is('deleted_at', null)
       .order('weekday', { ascending: true })
       .order('start_time', { ascending: true })
-    const courseId = c.req.query('course_id')
-    const tutorId = c.req.query('tutor_id')
+    const { course_id: courseId, tutor_id: tutorId } = parsedFilters.data
     if (courseId) query = query.eq('course_id', courseId)
     if (tutorId) query = query.eq('tutor_id', tutorId)
-    const { data, error } = await query
+    const { data, error } = await query.limit(1000)
     if (error) throw error
     return c.json({ data: data || [] })
   } catch (error: any) {
     console.error('[classes] timetable read failed:', error)
-    return c.json({ error: error.message || 'Could not load centre timetable', code: 'TIMETABLE_READ_FAILED' }, 500)
+    return c.json({ error: 'Could not load centre timetable', code: 'TIMETABLE_READ_FAILED' }, 500)
   }
 })
 
