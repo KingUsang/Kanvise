@@ -25,9 +25,15 @@ export function resolveCorsOrigin(origin: string, env: NodeJS.ProcessEnv = proce
 
   if (getAllowedOrigins(env).has(normalisedOrigin)) return normalisedOrigin
 
-  // Vercel creates a different hostname for each preview deployment. These
-  // origins still use HTTPS and are limited to Vercel's own domain.
-  if (normalisedOrigin.startsWith('https://') && normalisedOrigin.endsWith('.vercel.app')) {
+  // Vercel creates a different hostname for each preview deployment. Previews
+  // are accepted only for the team suffix named in CORS_VERCEL_PREVIEW_SUFFIX
+  // (for example "-kanvise.vercel.app"), so another team's *.vercel.app project
+  // is never a credentialed origin. Without the setting no preview is allowed.
+  const suffix = (env.CORS_VERCEL_PREVIEW_SUFFIX || '').trim().toLowerCase()
+  if (suffix.startsWith('-') && suffix.endsWith('.vercel.app') && suffix.length > '-.vercel.app'.length
+    && /^https:\/\/[a-z0-9-]+$/.test(normalisedOrigin.toLowerCase().slice(0, -'.vercel.app'.length))
+    && normalisedOrigin.toLowerCase().endsWith(suffix)
+    && normalisedOrigin.length > 'https://'.length + suffix.length) {
     return normalisedOrigin
   }
 

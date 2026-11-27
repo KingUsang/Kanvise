@@ -30,6 +30,7 @@ describe('notification recipient resolution', () => {
         data: { id: 'course-1', programme_id: 'programme-1', sub_programme_id: null }, error: null,
       })
       if (table === 'enrolments') return query({ data: [{ student_id: 'student-1' }], error: null }, { or: enrolmentOr })
+      if (table === 'account_memberships') return query({ data: [{ person_id: 'student-1' }], error: null })
       if (table === 'user_profiles') return query({
         data: [{ id: 'student-1', school_id: 'school-1', email: 'student@example.com', first_name: 'Ada' }], error: null,
       })
@@ -42,5 +43,17 @@ describe('notification recipient resolution', () => {
       id: 'student-1', schoolId: 'school-1', email: 'student@example.com', firstName: 'Ada',
     }])
     expect(enrolmentOr).toHaveBeenCalledWith('course_id.eq.course-1,programme_id.eq.programme-1')
+  })
+
+  it('drops recipients without an active Learner membership (DEV-NTF-001)', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'courses') return query({ data: { id: 'course-1', programme_id: null, sub_programme_id: null }, error: null })
+      if (table === 'enrolments') return query({ data: [{ student_id: 'revoked' }], error: null })
+      if (table === 'account_memberships') return query({ data: [], error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    await expect(notificationRepository.resolveRecipients('school-1', {
+      enrolment: { type: 'course', id: 'course-1' },
+    })).resolves.toEqual([])
   })
 })

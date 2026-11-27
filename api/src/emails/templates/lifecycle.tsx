@@ -38,6 +38,7 @@ export function WelcomePilotEmail({ firstName, actionUrl, logoUrl }: LifecycleEm
       <Text style={styles.copy}><strong>See the gaps. Close them early.</strong></Text>
       <Text style={styles.copy}>Welcome to Kanvise.</Text>
       <Text style={styles.copy}>Let's do this. 👀</Text>
+      <Button href={actionUrl} style={styles.button}>Open Kanvise →</Button>
       <Text style={styles.signature}>The Kanvise Team</Text>
     </BrandedLayout>
   )

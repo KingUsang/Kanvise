@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { listCourseLearnerIds } from '../lib/student-course-access'
 
 export type DueMock = {
   id: string; schoolId: string; courseId: string | null; programmeId: string | null
@@ -109,14 +110,13 @@ export const jobsRepository: JobsRepository = {
 
     const results: DueAssignment[] = []
     for (const assignment of data || []) {
-      const [{ data: enrolments, error: enrolmentError }, { data: submissions, error: submissionError }] = await Promise.all([
-        supabase.from('enrolments').select('student_id').eq('school_id', assignment.school_id).eq('course_id', assignment.course_id),
+      const [learnerIds, { data: submissions, error: submissionError }] = await Promise.all([
+        listCourseLearnerIds(assignment.school_id, assignment.course_id),
         supabase.from('submissions').select('student_id').eq('school_id', assignment.school_id).eq('assignment_id', assignment.id),
       ])
-      if (enrolmentError) throw enrolmentError
       if (submissionError) throw submissionError
       const submitted = new Set((submissions || []).map((item) => item.student_id))
-      const recipientIds = [...new Set((enrolments || []).map((item) => item.student_id))].filter((id) => !submitted.has(id))
+      const recipientIds = learnerIds.filter((id) => !submitted.has(id))
       results.push({
         id: assignment.id, schoolId: assignment.school_id, courseId: assignment.course_id,
         title: assignment.title, courseName: (assignment.course as any)?.name || 'Your course',

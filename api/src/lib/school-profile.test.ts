@@ -51,6 +51,7 @@ describe('school profile normalization', () => {
 
   it('keeps centre pages away from application routes', () => {
     expect(isReservedSchoolSlug('Dashboard')).toBe(true)
+    for (const slug of ['guest', 'invite', 'live', 'privacy', 'terms', 'direct-assignment']) expect(isReservedSchoolSlug(slug)).toBe(true)
     expect(schoolSlugCandidates('Dashboard', undefined, 2)).toEqual(['dashboard-centre', 'dashboard-centre-2'])
     expect(() => normalizeSchoolProfileUpdate({ slug: 'auth' })).toThrow(/reserved/i)
     expect(normalizeSchoolProfileUpdate({ slug: 'bright-future' })).toEqual({ slug: 'bright-future' })

@@ -38,4 +38,17 @@ describe('public tutoring-account people projections', () => {
     expect((await response.json()).data.tutors).toEqual([{ id: 'tutor-active', first_name: 'Ada', last_name: 'Okafor', bio: null, role: 'tutor' }])
     expect(profileQuery.eq).toHaveBeenCalledWith('is_active', true)
   })
+
+  it('serializes a reviewed public Subject projection without the tenant id (DEV-PUB-013)', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'courses') return query({ data: { id: 'c1', name: 'Maths', slug: 'maths', description: null, price: 0, school_id: 'school-1' }, error: null })
+      if (table === 'schools') return query({ data: { id: 'school-1', name: 'Bright', slug: 'bright' }, error: null })
+      throw new Error(`Unexpected table: ${table}`)
+    })
+    const response = await publicRouter.request('/courses/maths')
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.data.course).toEqual({ id: 'c1', name: 'Maths', slug: 'maths', description: null, price: 0 })
+    expect(body.data.course).not.toHaveProperty('school_id')
+  })
 })

@@ -13,7 +13,7 @@ import { directAssignmentsRouter, publicDirectAssignmentsRouter } from './direct
 
 function query(result: any, ranges: any[] = []) {
   const builder: any = {
-    select: () => builder, eq: () => builder, order: () => builder, insert: () => builder,
+    select: () => builder, eq: () => builder, limit: () => builder, order: () => builder, insert: () => builder,
     range: (...args: any[]) => { ranges.push(args); return builder },
     maybeSingle: async () => result, single: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
@@ -68,5 +68,38 @@ describe('direct assignments', () => {
       body: JSON.stringify({ title: 'T', description: 'D', deadline_at: new Date(Date.now() + 7_200_000).toISOString(), expires_at: '2100-01-01' }),
     })
     expect(response.status).toBe(400)
+  })
+
+  describe('anonymous submission abuse controls (DEV-ASG-002)', () => {
+    const link = { data: { id: 'd1', school_id: 'school-1', expires_at: '2099-01-01', revoked_at: null }, error: null }
+    const body = { guest_name: 'Ada', response_text: 'My answer' }
+
+    it('stops accepting responses once the per-link cap is reached', async () => {
+      const results = [link, { data: null, error: null, count: 500 }]
+      mocks.from.mockImplementation(() => query(results.shift() ?? { data: null, error: null }))
+      const response = await post(`/${token}/submit`, body)
+      expect(response.status).toBe(409)
+      expect(await response.json()).toMatchObject({ code: 'SUBMISSION_LIMIT_REACHED' })
+    })
+
+    it('replays an exact duplicate instead of inserting another row', async () => {
+      const inserts = vi.fn()
+      const results = [link, { data: null, error: null, count: 1 }, { data: { id: 's1', submitted_at: 'now' }, error: null }]
+      mocks.from.mockImplementation(() => {
+        const q = query(results.shift() ?? { data: null, error: null })
+        q.insert = (...args: any[]) => { inserts(...args); return q }
+        return q
+      })
+      const response = await post(`/${token}/submit`, body)
+      expect(response.status).toBe(200)
+      expect(inserts).not.toHaveBeenCalled()
+    })
+
+    it('rate limits a single address', async () => {
+      mocks.from.mockReturnValue(query({ data: null, error: null }))
+      let last = 0
+      for (let i = 0; i < 12; i += 1) last = (await post(`/${token}/submit`, body)).status
+      expect(last).toBe(429)
+    })
   })
 })

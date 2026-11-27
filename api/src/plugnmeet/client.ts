@@ -235,6 +235,9 @@ export function createGuestRoomRequest(input: {
   }
 }
 
+// Bounded control-plane deadline so a stalled provider cannot hold a request (DEV-INT-005).
+const PLUGNMEET_REQUEST_TIMEOUT_MS = 15_000
+
 async function request<T>(path: string, payload: Record<string, unknown>): Promise<PlugNmeetResponse<T>> {
   const { serverUrl, apiKey, apiSecret } = config()
   const body = JSON.stringify(payload)
@@ -249,6 +252,7 @@ async function request<T>(path: string, payload: Record<string, unknown>): Promi
         'HASH-SIGNATURE': signPlugNmeetBody(body, apiSecret),
       },
       body,
+      signal: AbortSignal.timeout(PLUGNMEET_REQUEST_TIMEOUT_MS),
     })
     const json = await response.json().catch(() => ({})) as PlugNmeetResponse<T>
     if (!response.ok || json.status === false) {

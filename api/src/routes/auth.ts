@@ -395,7 +395,10 @@ authRouter.post('/profile/init', async (c) => {
 authRouter.get('/me', async (c) => {
   const user = c.get('user')
   const { data: profile, error } = await supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle()
-  if (error) return c.json({ error: error.message }, 500)
+  if (error) {
+    console.error('[auth/me] profile lookup failed', { code: error.code, message: error.message })
+    return c.json({ error: 'Could not load your profile', code: 'DATABASE_ERROR' }, 500)
+  }
   return c.json({ user: profile ? { ...user, ...profile, supabase_auth_id: user.supabase_auth_id } : user })
 })
 
@@ -476,7 +479,10 @@ authRouter.patch('/me', async (c) => {
     .select()
     .single()
     
-  if (error) return c.json({ error: error.message }, 500)
+  if (error) {
+    console.error('[auth/profile] update failed', { code: error.code, message: error.message })
+    return c.json({ error: 'Could not update your profile', code: 'DATABASE_ERROR' }, 500)
+  }
 
   await syncAuthMetadata('auth/me', user.supabase_auth_id, {
     user_metadata: {

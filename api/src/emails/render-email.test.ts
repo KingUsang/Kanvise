@@ -86,6 +86,13 @@ describe('initial email templates', () => {
     }
   })
 
+  it('renders the dashboard action in the Tutor/Admin welcome (DEV-EML-007)', async () => {
+    const result = await renderEmail('welcome', {
+      firstName: 'Ada', role: 'tutor', dashboardUrl: 'https://kanvise.com/dashboard',
+    } as any, logoUrl)
+    expect(result.html).toContain('https://kanvise.com/dashboard')
+  })
+
   it('escapes user-provided markup in HTML while preserving it as text', async () => {
     const unsafeName = '<img src=x onerror=alert(1)>'
     const result = await renderEmail('welcome', {

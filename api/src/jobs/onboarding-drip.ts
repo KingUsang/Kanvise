@@ -19,12 +19,21 @@ const DRIP_STEPS = [
 // not retry hourly forever. Later steps for that user still proceed.
 const MAX_STEP_ATTEMPTS = 5
 
+// Only accounts young enough to still owe a step are scanned, in a bounded batch
+// ordered oldest first (DEV-JOB-002).
+const LAST_TRIGGER_MS = Math.max(...DRIP_STEPS.map((step) => step.trigger))
+const SCAN_WINDOW_MS = LAST_TRIGGER_MS + ONE_DAY
+const SCAN_BATCH_SIZE = 500
+
 export async function runOnboardingDripJob() {
   const config = getEmailConfig()
   const { data: users, error } = await supabase
     .from('user_profiles')
     .select('id, first_name, email, created_at, role')
     .in('role', ['admin', 'tutor'])
+    .gte('created_at', new Date(Date.now() - SCAN_WINDOW_MS).toISOString())
+    .order('created_at', { ascending: true })
+    .limit(SCAN_BATCH_SIZE)
 
   if (error || !users) {
     console.error('Failed to fetch users for drip job', error)

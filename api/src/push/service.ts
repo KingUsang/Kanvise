@@ -20,6 +20,12 @@ export async function sendWebPushNotification(input: {
   const subscriptions = await pushRepository.listSubscriptions(input.userId, input.schoolId)
 
   for (const subscription of subscriptions) {
+    // A locally known-expired endpoint is removed instead of attempted (DEV-PSH-003).
+    if (subscription.expiration_time && new Date(subscription.expiration_time).getTime() <= Date.now()) {
+      try { await pushRepository.deleteSubscriptionById(subscription.id) } catch (error) { console.error('push.expired_subscription_cleanup_failed', error) }
+      result.skipped += 1
+      continue
+    }
     const key = `${input.event}:${input.relatedEntityId}:${input.userId}:${subscription.id}`
     let sentToProvider = false
     try {

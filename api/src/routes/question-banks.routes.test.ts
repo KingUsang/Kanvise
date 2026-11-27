@@ -88,3 +88,24 @@ describe('Bank capability contract (DEV-QBK-005)', () => {
     expect(body.data[1]).toMatchObject({ can_edit: false, can_contribute: true })
   })
 })
+
+describe('Question media bank binding (DEV-QBK-009)', () => {
+  const OTHER_BANK = '44444444-4444-4444-8444-444444444444'
+  const MEDIA = '55555555-5555-4555-8555-555555555555'
+  const create = () => app.request(`/question-banks/${BANK}/questions`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      question_type: 'theory', plain_text: 'Q', marks: 1, options: [],
+      content_blocks: [{ type: 'image', media_id: MEDIA }],
+    }),
+  })
+
+  it('rejects an image that belongs to another bank before creating the question', async () => {
+    h.db.tables['question_banks'] = { data: { id: BANK, school_id: 'school-1', owner_id: 'tutor-1', visibility: 'centre', archived_at: null } }
+    h.db.tables['question_media'] = { data: [{ id: MEDIA, storage_key: `schools/school-1/private/question_media/${OTHER_BANK}/a.png` }] }
+    const res = await create()
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
+    expect(h.db.rpcCalls).toHaveLength(0)
+  })
+})

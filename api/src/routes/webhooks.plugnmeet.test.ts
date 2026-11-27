@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn() }))
+const mocks = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn(), hasAccess: vi.fn() }))
+vi.mock('../lib/student-course-access', () => ({ studentHasCourseAccess: mocks.hasAccess }))
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
 vi.mock('../plugnmeet/client', () => ({ verifyPlugNmeetWebhook: () => true }))
 vi.mock('../storage/r2', () => ({ createPresignedUpload: vi.fn(), verifyPrivateUpload: vi.fn() }))
@@ -39,7 +40,7 @@ const post = (body: string) => webhooksRouter.request('/plugnmeet', { method: 'P
 const liveClass = { id: 'class-1', school_id: 's1', status: 'live', course_id: 'c1', tutor_id: 't1', classroom_provider: 'plugnmeet', provider_room_id: 'room-1' }
 
 describe('PlugNmeet webhook inbox', () => {
-  beforeEach(() => { mocks.from.mockReset(); mocks.rpc.mockReset() })
+  beforeEach(() => { mocks.from.mockReset(); mocks.rpc.mockReset(); mocks.hasAccess.mockReset(); mocks.hasAccess.mockResolvedValue(true) })
 
   it('does not mark the inbox row processed when a state write fails', async () => {
     const calls = install((call) => {
@@ -56,6 +57,19 @@ describe('PlugNmeet webhook inbox', () => {
     expect(inboxUpdates).toHaveLength(1)
     expect(inboxUpdates[0].payload.processed_at).toBeUndefined()
     expect(inboxUpdates[0].payload.last_error).toBe('insert failed')
+  })
+
+  it('records no attendance when the participant has no canonical course access', async () => {
+    mocks.hasAccess.mockResolvedValue(false)
+    const calls = install((call) => {
+      if (call.table === 'plugnmeet_webhook_inbox' && call.op === 'upsert') return { data: { id: 'i1', processed_at: null, attempts: 0 } }
+      if (call.table === 'live_classes' && call.op === 'select') return { data: liveClass }
+      return {}
+    })
+    const response = await post(event('participant_joined', { participant: { user_id: 'u1' } }))
+    expect(response.status).toBe(200)
+    expect(mocks.hasAccess).toHaveBeenCalledWith('u1', 's1', 'c1')
+    expect(calls.filter((call) => call.table === 'attendance_records' && call.op === 'insert')).toHaveLength(0)
   })
 
   it('marks the inbox row processed after every write succeeds', async () => {
