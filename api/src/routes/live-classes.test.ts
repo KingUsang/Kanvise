@@ -465,13 +465,15 @@ describe('live classes API - list and read authorization (DEV-LVC-008, DEV-LVC-0
 
   it('bounds the list with a stable range and reports pagination', async () => {
     const range = vi.fn()
-    const q = builder({ data: [{ id: 'a', status: 'scheduled' }, { id: 'b', status: 'scheduled' }], error: null })
+    const q = builder({ data: [{ id: 'a', status: 'scheduled' }, { id: 'b', status: 'scheduled' }, { id: 'c', status: 'scheduled' }], error: null })
     q.range = (from: number, to: number) => { range(from, to); return q }
     mocks.from.mockReturnValue(q)
     const response = await liveClassesRouter.request('/?page=3&page_size=2&status=scheduled')
     expect(response.status).toBe(200)
-    expect(range).toHaveBeenCalledWith(4, 5)
-    expect((await response.json() as any).pagination).toEqual({ page: 3, page_size: 2, has_more: true })
+    expect(range).toHaveBeenCalledWith(4, 6)
+    const body = await response.json() as any
+    expect(body.data).toHaveLength(2)
+    expect(body.pagination).toEqual({ page: 3, page_size: 2, has_more: true })
   })
 
   it('denies a role outside the supported audience on a per-Class read', async () => {

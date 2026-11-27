@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 type AttendanceFilters = {
   programmes: { id: string; name: string }[]
@@ -31,14 +32,17 @@ export function AttendanceClient() {
   const filtersQuery = useQuery<AttendanceFilters>({
     queryKey: ['attendance-filters'],
     queryFn: async () => {
-      const [progRes, classRes, courseRes] = await Promise.all([
+      const [progRes, classes, courseRes] = await Promise.all([
         authenticatedApiFetch(`${apiUrl}/programmes`),
-        authenticatedApiFetch(`${apiUrl}/live-classes`),
+        fetchAllPages<any>(
+          (page) => authenticatedApiFetch(`${apiUrl}/live-classes?page=${page}&page_size=100`),
+          'Could not load attendance filters',
+        ),
         authenticatedApiFetch(`${apiUrl}/courses`),
       ])
-      if (!progRes.ok || !classRes.ok || !courseRes.ok) throw new Error('Could not load attendance filters')
-      const [{ data: programmes }, { data: classes }, { data: courseData }] = await Promise.all([
-        progRes.json(), classRes.json(), courseRes.json(),
+      if (!progRes.ok || !courseRes.ok) throw new Error('Could not load attendance filters')
+      const [{ data: programmes }, { data: courseData }] = await Promise.all([
+        progRes.json(), courseRes.json(),
       ])
       return { programmes: programmes || [], classes: classes || [], courses: courseData || [] }
     },

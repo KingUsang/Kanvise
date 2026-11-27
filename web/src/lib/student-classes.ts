@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { getApiUrl } from "@/config/api";
 
 export type StudentClass = {
@@ -20,10 +21,12 @@ export type StudentClass = {
 };
 
 export const getStudentClasses = cache(async (accessToken: string): Promise<StudentClass[]> => {
-  const response = await fetch(`${getApiUrl()}/live-classes`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("Failed to load student classes");
-  return (await response.json()).data;
+  return fetchAllPages<StudentClass>(
+    (page) => fetch(`${getApiUrl()}/live-classes?page=${page}&page_size=100`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    }),
+    "Failed to load student classes",
+    () => "Failed to load student classes",
+  );
 });

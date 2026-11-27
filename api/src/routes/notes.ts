@@ -80,9 +80,10 @@ notesRouter.get("/me", enforceLearner, async (c) => {
       .eq("school_id", profile.school_id).in("course_id", courseIds)
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
-      .range(pagination.offset, pagination.offset + pagination.pageSize - 1);
+      .range(pagination.offset, pagination.offset + pagination.pageSize);
     if (error) throw error;
-    const notes = await Promise.all((data || []).map(async ({ file_key, ...note }) => {
+    const hasMore = (data || []).length > pagination.pageSize;
+    const notes = await Promise.all((data || []).slice(0, pagination.pageSize).map(async ({ file_key, ...note }) => {
       try {
         return {
           ...note,
@@ -100,7 +101,7 @@ notesRouter.get("/me", enforceLearner, async (c) => {
         return { ...note, download_url: null, download_available: false }
       }
     }))
-    return c.json({ data: notes, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: notes.length === pagination.pageSize } });
+    return c.json({ data: notes, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: hasMore } });
   } catch (error: any) {
     console.error("GET /notes/me error:", error);
     return c.json({ error: "Could not load learning materials", code: "MATERIALS_LOAD_FAILED" }, 500);
@@ -255,12 +256,13 @@ notesRouter.get("/:courseId", enforceAccountMember, async (c) => {
       .eq("school_id", profile.school_id)
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
-      .range(pagination.offset, pagination.offset + pagination.pageSize - 1);
+      .range(pagination.offset, pagination.offset + pagination.pageSize);
 
     if (error) throw error;
+    const hasMore = (notes || []).length > pagination.pageSize;
 
     // Only the returned page is signed.
-    const enhancedNotes = await Promise.all((notes || []).map(async (note) => {
+    const enhancedNotes = await Promise.all((notes || []).slice(0, pagination.pageSize).map(async (note) => {
       const download_url = await createPresignedDownload(note.file_key, profile.school_id);
       return {
         ...withoutPrivateFileKey(note),
@@ -268,7 +270,7 @@ notesRouter.get("/:courseId", enforceAccountMember, async (c) => {
       };
     }));
 
-    return c.json({ data: enhancedNotes, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: enhancedNotes.length === pagination.pageSize } });
+    return c.json({ data: enhancedNotes, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: hasMore } });
   } catch (error: any) {
     console.error(`GET /notes/:courseId error:`, error);
     return c.json({ error: "Could not load learning materials", code: "MATERIALS_LOAD_FAILED" }, 500);

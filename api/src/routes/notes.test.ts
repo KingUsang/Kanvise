@@ -82,15 +82,24 @@ describe('notes routes', () => {
 
   it('paginates the course list and signs only the returned page', async () => {
     const rangeSpy = vi.fn()
-    const rows = [{ id: 'n1', file_key: 'k1' }, { id: 'n2', file_key: 'k2' }]
+    // The route reads one extra row to learn whether another page exists.
+    const rows = [{ id: 'n1', file_key: 'k1' }, { id: 'n2', file_key: 'k2' }, { id: 'n3', file_key: 'k3' }]
     mocks.from.mockImplementation(() => query({ data: rows, error: null }, rangeSpy))
     const response = await notesRouter.request(`/${COURSE}?page=2&page_size=2`)
     const body = await response.json() as any
     expect(response.status).toBe(200)
-    expect(rangeSpy).toHaveBeenCalledWith(2, 3)
+    expect(rangeSpy).toHaveBeenCalledWith(2, 4)
     expect(mocks.download).toHaveBeenCalledTimes(2)
     expect(body.data[0].file_key).toBeUndefined()
+    expect(body.data).toHaveLength(2)
     expect(body.pagination).toEqual({ page: 2, page_size: 2, has_more: true })
+  })
+
+  it('reports no further page when the total is an exact multiple of the page size', async () => {
+    const rows = [{ id: 'n1', file_key: 'k1' }, { id: 'n2', file_key: 'k2' }]
+    mocks.from.mockImplementation(() => query({ data: rows, error: null }, vi.fn()))
+    const response = await notesRouter.request(`/${COURSE}?page=1&page_size=2`)
+    expect((await response.json() as any).pagination.has_more).toBe(false)
   })
 
   it('rejects invalid pagination before querying notes', async () => {

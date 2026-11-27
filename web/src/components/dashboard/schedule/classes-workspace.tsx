@@ -19,6 +19,7 @@ import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 import { useActiveAccountId } from "@/lib/account-preference";
 import { classQueryKeys } from "@/lib/class-query-keys";
 import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 type Tutor = { id: string; first_name: string; last_name: string };
 type Subject = { id: string; name: string };
@@ -136,15 +137,19 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     queryFn: async () => {
       try {
         const requests: Promise<Response>[] = [
-          authenticatedApiFetch(`${api}/live-classes`),
           authenticatedApiFetch(`${api}/classes`),
         ];
         if (capabilities.isAdmin)
           requests.push(authenticatedApiFetch(`${api}/users/tutors`));
-        const [classResponse, courseResponse, tutorResponse] =
-          await Promise.all(requests);
-        const classBody = await classResponse.json().catch(() => null);
-        if (!classResponse.ok) throw new Error(scheduleLoadError);
+        const [classRows, [courseResponse, tutorResponse]] = await Promise.all([
+          fetchAllPages<LegacyLiveClass>(
+            (page) => authenticatedApiFetch(`${api}/live-classes?page=${page}&page_size=100`),
+            scheduleLoadError,
+            () => scheduleLoadError,
+          ),
+          Promise.all(requests),
+        ]);
+        const classBody = { data: classRows };
         const courseBody = courseResponse.ok
           ? await courseResponse.json()
           : { data: [] };

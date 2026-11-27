@@ -111,6 +111,10 @@ DECLARE
   merged jsonb;
   updated_row public.live_class_presentations%ROWTYPE;
 BEGIN
+  IF p_annotations IS NULL OR p_page IS NULL THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'invalid');
+  END IF;
+
   SELECT * INTO current_row
   FROM public.live_class_presentations
   WHERE id = p_presentation_id AND live_class_id = p_live_class_id AND school_id = p_school_id
@@ -126,6 +130,8 @@ BEGIN
   merged := pg_catalog.jsonb_set(
     COALESCE(current_row.annotations, '{}'::jsonb), ARRAY[p_page::text], p_annotations, true
   );
+  -- jsonb text adds a space after each ':' and ',', so this limit is slightly
+  -- stricter than the compact JSON size the API documents (DEV-LVC-031).
   IF pg_catalog.octet_length(merged::text) > p_max_bytes THEN
     RETURN pg_catalog.jsonb_build_object('status', 'too_large');
   END IF;

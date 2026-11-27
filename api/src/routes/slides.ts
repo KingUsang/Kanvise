@@ -104,9 +104,11 @@ slidesRouter.get('/:id/presentations', async (c) => {
     .eq('live_class_id', access.liveClass.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
-    .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
+    .range(pagination.offset, pagination.offset + pagination.pageSize)
   if (error) return c.json({ error: 'Could not load presentation materials', code: 'SERVICE_UNAVAILABLE' }, 503)
-  const rows: any[] = data || []
+  const fetchedRows: any[] = data || []
+  const hasMore = fetchedRows.length > pagination.pageSize
+  const rows = fetchedRows.slice(0, pagination.pageSize)
   // Only the active material carries its annotations; the rest are fetched on demand.
   const active = rows.find((row) => row.is_active)
   if (active) {
@@ -120,7 +122,7 @@ slidesRouter.get('/:id/presentations', async (c) => {
     tutor_identity: access.liveClass.tutor_id,
     presentations: rows.map((row) => publicPresentation(row, { includeAnnotations: Boolean(row.is_active) })),
     legacy_slide_urls: rows.length || pagination.page > 1 ? [] : (access.liveClass.slides_urls || []),
-    pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: rows.length === pagination.pageSize },
+    pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: hasMore },
   } })
 })
 
@@ -329,6 +331,7 @@ slidesRouter.patch('/:id/presentations/:presentationId/annotations', async (c) =
   if (data?.status === 'revision_conflict') {
     return c.json({ error: 'Annotations changed since you loaded them', code: 'REVISION_CONFLICT', revision: data.revision }, 409)
   }
+  if (data?.status === 'invalid') return c.json({ error: 'Invalid page annotations', code: 'INVALID_ANNOTATIONS' }, 400)
   if (data?.status === 'too_large') return c.json({ error: 'Annotations exceed the material limit', code: 'ANNOTATIONS_TOO_LARGE' }, 400)
   if (data?.status !== 'ok') return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
   return c.json({ data: publicPresentation(data.presentation) })

@@ -1,3 +1,4 @@
+import { fetchAllPages } from '@/lib/fetch-all-pages'
 import { getApiUrl } from '@/config/api'
 
 export type StudentMaterial = {
@@ -8,8 +9,8 @@ export type StudentMaterial = {
 }
 
 export async function getStudentMaterials(accessToken: string): Promise<StudentMaterial[]> {
-  const response = await fetch(`${getApiUrl()}/notes/me`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
-  const body = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(body?.error || 'Could not load learning materials')
-  return body.data || []
+  return fetchAllPages<StudentMaterial>(
+    (page) => fetch(`${getApiUrl()}/notes/me?page=${page}&page_size=100`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' }),
+    'Could not load learning materials',
+  )
 }

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getApiUrl } from '@/config/api'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 import type { StudentMaterial } from '@/lib/student-materials'
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 function fileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -37,10 +38,11 @@ export function StudentMaterialsClient() {
   const materialsQuery = useQuery<StudentMaterial[]>({
     queryKey: ['student-materials'],
     queryFn: async () => {
-      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/notes/me`, { cache: 'no-store' })
-      const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.error || 'Could not load learning materials')
-      return body.data || []
+      const client = createClient()
+      return fetchAllPages<StudentMaterial>(
+        (page) => authenticatedFetch(client, `${getApiUrl()}/notes/me?page=${page}&page_size=100`, { cache: 'no-store' }),
+        'Could not load learning materials',
+      )
     },
   })
   const materials = materialsQuery.data ?? []

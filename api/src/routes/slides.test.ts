@@ -245,6 +245,17 @@ describe('private classroom presentations API', () => {
     expect((await slidesRouter.request('/class-1/presentations/material-1/activate', { method: 'POST' })).status).toBe(404)
   })
 
+  it('maps an invalid annotation payload rejected by the database function to 400', async () => {
+    queue({ data: liveClass(), error: null }, { data: material(), error: null })
+    mocks.rpc.mockResolvedValue({ data: { status: 'invalid' }, error: null })
+    const response = await slidesRouter.request('/class-1/presentations/material-1/annotations', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ page: 1, annotations: [] }),
+    })
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_ANNOTATIONS' })
+  })
+
   it('returns 409 with the current revision when annotations are stale', async () => {
     queue({ data: liveClass(), error: null }, { data: material(), error: null })
     mocks.rpc.mockResolvedValue({ data: { status: 'revision_conflict', revision: 4 }, error: null })

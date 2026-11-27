@@ -25,7 +25,6 @@ import { LIVE_CLASS_STATUSES, cancelReasonSchema, createIssueCode, createLiveCla
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
 
-const DEFAULT_LIST_LOOKBACK_MS = 90 * 24 * 60 * 60 * 1000
 const isoFilter = z.string().max(64).refine((value) => Number.isFinite(Date.parse(value)), 'Invalid date').transform((value) => new Date(value).toISOString())
 const listQuerySchema = z.object({
   course_id: z.string().trim().min(1).max(64).optional(),
@@ -437,14 +436,14 @@ liveClassesRouter.get('/', async (c) => {
 
   if (course_id) query = query.eq('course_id', course_id)
   if (status) query = query.eq('status', status)
-  // Without an explicit lower bound, history older than the default window is
-  // omitted so the unfiltered list stays bounded as Session history grows.
-  const lowerBound = from ?? (to ? undefined : new Date(Date.now() - DEFAULT_LIST_LOOKBACK_MS).toISOString())
-  if (lowerBound) query = query.gte('scheduled_at', lowerBound)
+  if (from) query = query.gte('scheduled_at', from)
   if (to) query = query.lte('scheduled_at', to)
-  query = query.range(pagination.offset, pagination.offset + pagination.pageSize - 1)
+  // One extra row tells us whether another page exists.
+  query = query.range(pagination.offset, pagination.offset + pagination.pageSize)
 
-  const { data, error } = await query
+  const { data: fetched, error } = await query
+  const hasMore = (fetched || []).length > pagination.pageSize
+  const data = (fetched || []).slice(0, pagination.pageSize)
 
   if (error) {
     console.error('[live-classes] list error:', error)
@@ -464,7 +463,7 @@ liveClassesRouter.get('/', async (c) => {
     recording: undefined,
     recap: undefined,
   }))
-  return c.json({ data: enriched, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: (data || []).length === pagination.pageSize } })
+  return c.json({ data: enriched, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: hasMore } })
 })
 
 // ── DELETE /live-classes/series/:seriesId — End a direct weekly series ───
