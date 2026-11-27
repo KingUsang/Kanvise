@@ -4,6 +4,8 @@ import { getCookie, setCookie } from 'hono/cookie'
 import { supabase } from '../lib/supabase'
 import { createPresignedDownload, privateObjectExists } from '../storage/r2'
 import { getPlugNmeetClientConfig, providerForClass } from '../plugnmeet/provider'
+import { PRESENTATION_LIST_COLUMNS, publicPresentation } from '../slides/presentation-projection'
+import { parseOffsetPagination } from '../lib/api-contract'
 
 export const publicLiveClassesRouter = new Hono()
 const db = supabase as any
@@ -47,18 +49,6 @@ function publicClassData(liveClass: any, viewer?: any) {
     centre_logo_url: liveClass.school?.logo_url || null,
     access_mode: liveClass.access_mode,
     can_host: Boolean(viewer && viewer.role === 'tutor' && viewer.id === liveClass.tutor_id),
-  }
-}
-
-function publicPresentation(row: any) {
-  const pageImageKeys = row.page_image_keys && typeof row.page_image_keys === 'object' ? row.page_image_keys : {}
-  return {
-    id: row.id, filename: row.filename, file_size_bytes: row.file_size_bytes,
-    page_count: row.page_count, processing_status: row.processing_status || 'ready',
-    processing_error: row.processing_error || null, sort_order: row.sort_order,
-    current_page: row.current_page, is_active: row.is_active, annotations: row.annotations || {},
-    page_images_ready: Object.keys(pageImageKeys).length,
-    created_at: row.created_at, updated_at: row.updated_at,
   }
 }
 
@@ -215,9 +205,26 @@ publicLiveClassesRouter.get('/:shareToken/presentations', async c => {
     if (!liveClass || liveClass.share_link_revoked_at || liveClass.status !== 'live') return c.json({ error: 'This class is unavailable', code: 'CLASS_UNAVAILABLE' }, 404)
     const [guest, member] = await Promise.all([currentGuest(liveClass.id, c), recognisedMember(c, liveClass)])
     if (!guest && !member) return c.json({ error: 'Join this class before viewing its materials', code: 'GUEST_SESSION_REQUIRED' }, 401)
-    const { data, error } = await db.from('live_class_presentations').select('*').eq('live_class_id', liveClass.id).order('sort_order', { ascending: true }).order('created_at', { ascending: true })
+    const pagination = parseOffsetPagination(c.req.query('page'), c.req.query('page_size') ?? '100')
+    if (!pagination) return c.json({ error: 'Invalid pagination parameters', code: 'INVALID_PAGINATION' }, 400)
+    const { data, error } = await db.from('live_class_presentations').select(PRESENTATION_LIST_COLUMNS).eq('live_class_id', liveClass.id)
+      .order('sort_order', { ascending: true }).order('created_at', { ascending: true })
+      .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
     if (error) throw error
-    return c.json({ data: { teaching_mode: liveClass.teaching_mode || 'whiteboard', tutor_identity: liveClass.tutor_id, presentations: (data || []).map(publicPresentation), legacy_slide_urls: [] } })
+    const rows: any[] = data || []
+    // Only the active material carries annotations; others are omitted.
+    const active = rows.find((row) => row.is_active)
+    if (active) {
+      const { data: withAnnotations, error: annotationError } = await db.from('live_class_presentations').select('annotations')
+        .eq('id', active.id).eq('live_class_id', liveClass.id).maybeSingle()
+      if (annotationError) throw annotationError
+      active.annotations = withAnnotations?.annotations || {}
+    }
+    return c.json({ data: {
+      teaching_mode: liveClass.teaching_mode || 'whiteboard', tutor_identity: liveClass.tutor_id,
+      presentations: rows.map((row) => publicPresentation(row, { includeAnnotations: Boolean(row.is_active) })), legacy_slide_urls: [],
+      pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: rows.length === pagination.pageSize },
+    } })
   } catch (error) {
     console.error('[public-live-class] presentations failed', error)
     return c.json({ error: 'Could not load presentation materials', code: 'PRESENTATIONS_FAILED' }, 500)

@@ -13,6 +13,7 @@ import {
   createPresignedUpload,
   createPresignedDownload,
   deletePrivateObject,
+  StorageError,
   uploadPrivateObject,
   verifyPrivateUpload,
 } from '../storage/r2'
@@ -24,10 +25,14 @@ import {
 } from '../slides/conversion-policy'
 import { enqueuePresentationProcessing } from '../slides/presentation-processor'
 import { readPdfPageCount } from '../slides/pdf-metadata'
+import { PRESENTATION_LIST_COLUMNS, publicPresentation } from '../slides/presentation-projection'
+import { enqueueObjectDeletion } from '../jobs/storage-cleanup'
+import { mapApiError, parseOffsetPagination } from '../lib/api-contract'
 
 export const slidesRouter = new Hono()
 const db = supabase as any
 const MAX_ANNOTATION_BYTES = 512 * 1024
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 type LiveClassAccess = ClassroomRecord & {
   teaching_mode: 'whiteboard' | 'presentation'
@@ -50,25 +55,6 @@ async function requireClass(c: any, manage = false) {
   }
 }
 
-function publicPresentation(row: any) {
-  const pageImageKeys = row.page_image_keys && typeof row.page_image_keys === 'object' ? row.page_image_keys : {}
-  return {
-    id: row.id,
-    filename: row.filename,
-    file_size_bytes: row.file_size_bytes,
-    page_count: row.page_count,
-    processing_status: row.processing_status || 'ready',
-    processing_error: row.processing_error || null,
-    sort_order: row.sort_order,
-    current_page: row.current_page,
-    is_active: row.is_active,
-    annotations: row.annotations || {},
-    page_images_ready: Object.keys(pageImageKeys).length,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }
-}
-
 function validPageAnnotations(value: unknown) {
   if (!Array.isArray(value) || value.length > 500) return false
   return value.every((stroke: any) => stroke
@@ -80,11 +66,23 @@ function validPageAnnotations(value: unknown) {
       && point.x >= 0 && point.x <= 1 && point.y >= 0 && point.y <= 1))
 }
 
+class PresentationLookupError extends Error {}
+
+// A failed lookup must surface as a dependency failure, not as "not found".
 async function findPresentation(classId: string, presentationId: string) {
-  const { data } = await db.from('live_class_presentations').select('*')
+  const { data, error } = await db.from('live_class_presentations').select('*')
     .eq('id', presentationId).eq('live_class_id', classId).maybeSingle()
+  if (error) throw new PresentationLookupError('presentation lookup failed')
   return data
 }
+
+slidesRouter.onError((error, c) => {
+  if (error instanceof PresentationLookupError) {
+    console.error('[presentations] lookup failed', error)
+    return c.json({ error: 'Material service is temporarily unavailable. Please retry.', code: 'SERVICE_UNAVAILABLE' }, 503)
+  }
+  return mapApiError(error, c)
+})
 
 async function deletePageImages(presentation: any, schoolId: string) {
   const keys = presentation?.page_image_keys && typeof presentation.page_image_keys === 'object'
@@ -100,16 +98,29 @@ async function deletePageImages(presentation: any, schoolId: string) {
 slidesRouter.get('/:id/presentations', async (c) => {
   const access = await requireClass(c)
   if ('response' in access) return access.response
-  const { data, error } = await db.from('live_class_presentations').select('*')
+  const pagination = parseOffsetPagination(c.req.query('page'), c.req.query('page_size') ?? '100')
+  if (!pagination) return c.json({ error: 'Invalid pagination parameters', code: 'INVALID_PAGINATION' }, 400)
+  const { data, error } = await db.from('live_class_presentations').select(PRESENTATION_LIST_COLUMNS)
     .eq('live_class_id', access.liveClass.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
-  if (error) return c.json({ error: 'Could not load presentation materials' }, 500)
+    .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
+  if (error) return c.json({ error: 'Could not load presentation materials', code: 'SERVICE_UNAVAILABLE' }, 503)
+  const rows: any[] = data || []
+  // Only the active material carries its annotations; the rest are fetched on demand.
+  const active = rows.find((row) => row.is_active)
+  if (active) {
+    const { data: withAnnotations, error: annotationError } = await db.from('live_class_presentations').select('annotations')
+      .eq('id', active.id).eq('live_class_id', access.liveClass.id).maybeSingle()
+    if (annotationError) return c.json({ error: 'Could not load presentation materials', code: 'SERVICE_UNAVAILABLE' }, 503)
+    active.annotations = withAnnotations?.annotations || {}
+  }
   return c.json({ data: {
     teaching_mode: access.liveClass.teaching_mode,
     tutor_identity: access.liveClass.tutor_id,
-    presentations: (data || []).map(publicPresentation),
-    legacy_slide_urls: data?.length ? [] : (access.liveClass.slides_urls || []),
+    presentations: rows.map((row) => publicPresentation(row, { includeAnnotations: Boolean(row.is_active) })),
+    legacy_slide_urls: rows.length || pagination.page > 1 ? [] : (access.liveClass.slides_urls || []),
+    pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: rows.length === pagination.pageSize },
   } })
 })
 
@@ -172,7 +183,10 @@ slidesRouter.post('/:id/presentations/:presentationId/complete', async (c) => {
     const message = error instanceof Error ? error.message : 'Could not verify uploaded PDF'
     await db.from('live_class_presentations').update({ processing_status: 'failed', processing_error: message.slice(0, 500) })
       .eq('id', presentation.id).eq('live_class_id', access.liveClass.id)
-    return c.json({ error: message, code: 'UPLOAD_VERIFICATION_FAILED' }, 400)
+    // Diagnostic text stays in the row for operators; the response is generic
+    // unless the storage layer produced a deliberate user-facing validation error.
+    const safe = error instanceof StorageError ? error.message : 'The uploaded file could not be verified'
+    return c.json({ error: safe, code: 'UPLOAD_VERIFICATION_FAILED' }, 400)
   }
 })
 
@@ -266,12 +280,12 @@ slidesRouter.post('/:id/presentations/:presentationId/activate', async (c) => {
   if ('response' in access) return access.response
   const presentation = await findPresentation(access.liveClass.id, c.req.param('presentationId'))
   if (!presentation) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
-  await db.from('live_class_presentations').update({ is_active: false }).eq('live_class_id', access.liveClass.id)
-  const { data, error } = await db.from('live_class_presentations').update({ is_active: true })
-    .eq('id', presentation.id).eq('live_class_id', access.liveClass.id).select('*').single()
-  if (error) return c.json({ error: 'Could not activate material' }, 500)
-  await db.from('live_classes').update({ teaching_mode: 'presentation' }).eq('id', access.liveClass.id)
-  return c.json({ data: publicPresentation(data) })
+  const { data, error } = await db.rpc('activate_presentation', {
+    p_school_id: access.user.school_id, p_live_class_id: access.liveClass.id, p_presentation_id: presentation.id,
+  })
+  if (error) return c.json({ error: 'Could not activate material', code: 'SERVICE_UNAVAILABLE' }, 503)
+  if (data?.status !== 'ok') return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
+  return c.json({ data: publicPresentation(data.presentation) })
 })
 
 slidesRouter.patch('/:id/presentations/:presentationId/page', async (c) => {
@@ -294,32 +308,47 @@ slidesRouter.patch('/:id/presentations/:presentationId/annotations', async (c) =
   if ('response' in access) return access.response
   const presentation = await findPresentation(access.liveClass.id, c.req.param('presentationId'))
   if (!presentation) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
-  const body = await c.req.json()
-  if (!Number.isInteger(body.page) || body.page < 1 || body.page > presentation.page_count || !validPageAnnotations(body.annotations) && body.annotations?.length !== 0) {
+  const body = await c.req.json().catch(() => null)
+  if (!body || !Number.isInteger(body.page) || body.page < 1 || body.page > presentation.page_count || !validPageAnnotations(body.annotations) && body.annotations?.length !== 0) {
     return c.json({ error: 'Invalid page annotations', code: 'INVALID_ANNOTATIONS' }, 400)
   }
-  const nextAnnotations = { ...(presentation.annotations || {}), [String(body.page)]: body.annotations }
-  if (Buffer.byteLength(JSON.stringify(nextAnnotations)) > MAX_ANNOTATION_BYTES) {
-    return c.json({ error: 'Annotations exceed the material limit', code: 'ANNOTATIONS_TOO_LARGE' }, 400)
+  const expectedRevision = body.revision ?? null
+  if (expectedRevision !== null && (!Number.isInteger(expectedRevision) || expectedRevision < 0)) {
+    return c.json({ error: 'Invalid annotation revision', code: 'INVALID_REVISION' }, 400)
   }
-  const { data, error } = await db.from('live_class_presentations').update({ annotations: nextAnnotations })
-    .eq('id', presentation.id).eq('live_class_id', access.liveClass.id).select('*').single()
-  if (error) return c.json({ error: 'Could not save annotations' }, 500)
-  return c.json({ data: publicPresentation(data) })
+  const { data, error } = await db.rpc('save_presentation_annotations', {
+    p_school_id: access.user.school_id,
+    p_live_class_id: access.liveClass.id,
+    p_presentation_id: presentation.id,
+    p_page: body.page,
+    p_annotations: body.annotations,
+    p_expected_revision: expectedRevision,
+    p_max_bytes: MAX_ANNOTATION_BYTES,
+  })
+  if (error) return c.json({ error: 'Could not save annotations', code: 'SERVICE_UNAVAILABLE' }, 503)
+  if (data?.status === 'revision_conflict') {
+    return c.json({ error: 'Annotations changed since you loaded them', code: 'REVISION_CONFLICT', revision: data.revision }, 409)
+  }
+  if (data?.status === 'too_large') return c.json({ error: 'Annotations exceed the material limit', code: 'ANNOTATIONS_TOO_LARGE' }, 400)
+  if (data?.status !== 'ok') return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
+  return c.json({ data: publicPresentation(data.presentation) })
 })
 
 slidesRouter.patch('/:id/presentations/reorder', async (c) => {
   const access = await requireClass(c, true)
   if ('response' in access) return access.response
-  const { ordered_ids: ids } = await c.req.json()
-  if (!Array.isArray(ids) || new Set(ids).size !== ids.length || ids.some((id) => typeof id !== 'string')) {
+  const { ordered_ids: ids } = await c.req.json().catch(() => ({ ordered_ids: null }))
+  if (!Array.isArray(ids) || new Set(ids).size !== ids.length || ids.some((id) => typeof id !== 'string' || !UUID_PATTERN.test(id))) {
     return c.json({ error: 'ordered_ids must contain unique material IDs', code: 'INVALID_ORDER' }, 400)
   }
-  const { data: existing } = await db.from('live_class_presentations').select('id').eq('live_class_id', access.liveClass.id)
-  if (ids.length !== existing?.length || existing.some((row: any) => !ids.includes(row.id))) {
-    return c.json({ error: 'Order must include every class material exactly once', code: 'INVALID_ORDER' }, 400)
+  const { data, error } = await db.rpc('reorder_presentations', {
+    p_school_id: access.user.school_id, p_live_class_id: access.liveClass.id, p_ordered_ids: ids,
+  })
+  if (error) return c.json({ error: 'Could not reorder materials', code: 'SERVICE_UNAVAILABLE' }, 503)
+  if (data?.status === 'order_mismatch') {
+    return c.json({ error: 'Order must include every class material exactly once', code: 'INVALID_ORDER' }, 409)
   }
-  await Promise.all(ids.map((id, sortOrder) => db.from('live_class_presentations').update({ sort_order: sortOrder }).eq('id', id).eq('live_class_id', access.liveClass.id)))
+  if (data?.status !== 'ok') return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
   return c.json({ data: { ordered_ids: ids } })
 })
 
@@ -330,7 +359,8 @@ slidesRouter.patch('/:id/presentations/:presentationId', async (c) => {
   if (!filename || filename.length > 255) return c.json({ error: 'Filename must be 1–255 characters', code: 'INVALID_FILENAME' }, 400)
   const { data, error } = await db.from('live_class_presentations').update({ filename })
     .eq('id', c.req.param('presentationId')).eq('live_class_id', access.liveClass.id).select('*').maybeSingle()
-  if (error || !data) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
+  if (error) return c.json({ error: 'Could not rename material', code: 'SERVICE_UNAVAILABLE' }, 503)
+  if (!data) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
   return c.json({ data: publicPresentation(data) })
 })
 
@@ -347,10 +377,15 @@ slidesRouter.delete('/:id/presentations/:presentationId', async (c) => {
   if ('response' in access) return access.response
   const presentation = await findPresentation(access.liveClass.id, c.req.param('presentationId'))
   if (!presentation) return c.json({ error: 'Material not found', code: 'NOT_FOUND' }, 404)
-  await deletePrivateObject(presentation.file_key, access.user.school_id)
-  await deletePageImages(presentation, access.user.school_id)
+  // Remove the metadata row first, then queue object cleanup durably, so a
+  // database failure never leaves a visible record pointing at deleted objects.
   const { error } = await db.from('live_class_presentations').delete().eq('id', presentation.id).eq('live_class_id', access.liveClass.id)
   if (error) return c.json({ error: 'Could not remove material' }, 500)
+  await enqueueObjectDeletion(presentation.file_key, access.user.school_id)
+  const pageKeys = presentation.page_image_keys && typeof presentation.page_image_keys === 'object'
+    ? Object.values(presentation.page_image_keys).filter((key): key is string => typeof key === 'string')
+    : []
+  await Promise.all(pageKeys.map((key) => enqueueObjectDeletion(key, access.user.school_id)))
   if (presentation.is_active) {
     await db.from('live_classes').update({ teaching_mode: 'whiteboard' }).eq('id', access.liveClass.id)
   }

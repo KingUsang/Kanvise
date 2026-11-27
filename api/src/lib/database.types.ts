@@ -1008,14 +1008,14 @@ isOneToOne: false
                   ]
                 },"live_class_presentations": {
                   Row: {
-                    "annotations": NonNullable<Json>,"created_at": string,"current_page": number,"file_key": string,"file_size_bytes": number,"filename": string,"id": string,"is_active": boolean,"live_class_id": string,"page_count": number | null,"page_image_dimensions": NonNullable<Json>,"page_image_keys": NonNullable<Json>,"processing_error": string | null,"processing_started_at": string | null,"processing_status": string,"school_id": string,"sort_order": number,"updated_at": string,"uploaded_by": string
+                    "annotations": NonNullable<Json>,"annotations_revision": number,"created_at": string,"current_page": number,"file_key": string,"file_size_bytes": number,"filename": string,"id": string,"is_active": boolean,"live_class_id": string,"page_count": number | null,"page_image_dimensions": NonNullable<Json>,"page_image_keys": NonNullable<Json>,"processing_error": string | null,"processing_started_at": string | null,"processing_status": string,"school_id": string,"sort_order": number,"updated_at": string,"uploaded_by": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "annotations"?: NonNullable<Json>,"created_at"?: string,"current_page"?: number,"file_key": string,"file_size_bytes": number,"filename": string,"id"?: string,"is_active"?: boolean,"live_class_id": string,"page_count"?: number | null,"page_image_dimensions"?: NonNullable<Json>,"page_image_keys"?: NonNullable<Json>,"processing_error"?: string | null,"processing_started_at"?: string | null,"processing_status"?: string,"school_id": string,"sort_order"?: number,"updated_at"?: string,"uploaded_by": string
+                    "annotations"?: NonNullable<Json>,"annotations_revision"?: number,"created_at"?: string,"current_page"?: number,"file_key": string,"file_size_bytes": number,"filename": string,"id"?: string,"is_active"?: boolean,"live_class_id": string,"page_count"?: number | null,"page_image_dimensions"?: NonNullable<Json>,"page_image_keys"?: NonNullable<Json>,"processing_error"?: string | null,"processing_started_at"?: string | null,"processing_status"?: string,"school_id": string,"sort_order"?: number,"updated_at"?: string,"uploaded_by": string
                   }
                   Update: {
-                    "annotations"?: NonNullable<Json>,"created_at"?: string,"current_page"?: number,"file_key"?: string,"file_size_bytes"?: number,"filename"?: string,"id"?: string,"is_active"?: boolean,"live_class_id"?: string,"page_count"?: number | null,"page_image_dimensions"?: NonNullable<Json>,"page_image_keys"?: NonNullable<Json>,"processing_error"?: string | null,"processing_started_at"?: string | null,"processing_status"?: string,"school_id"?: string,"sort_order"?: number,"updated_at"?: string,"uploaded_by"?: string
+                    "annotations"?: NonNullable<Json>,"annotations_revision"?: number,"created_at"?: string,"current_page"?: number,"file_key"?: string,"file_size_bytes"?: number,"filename"?: string,"id"?: string,"is_active"?: boolean,"live_class_id"?: string,"page_count"?: number | null,"page_image_dimensions"?: NonNullable<Json>,"page_image_keys"?: NonNullable<Json>,"processing_error"?: string | null,"processing_started_at"?: string | null,"processing_status"?: string,"school_id"?: string,"sort_order"?: number,"updated_at"?: string,"uploaded_by"?: string
                   }
                   Relationships: [
                     {
@@ -3062,6 +3062,9 @@ isOneToOne: false
             "acquire_scheduler_lease":
 { Args: { "p_holder": string,"p_name": string,"p_ttl_seconds": number }; Returns: boolean
                            },
+"activate_presentation":
+{ Args: { "p_live_class_id": string,"p_presentation_id": string,"p_school_id": string }; Returns: Json
+                           },
 "add_programme_subject":
 { Args: { "p_created_by": string,"p_description": string,"p_name": string,"p_programme_id": string,"p_school_id": string,"p_slug": string,"p_tutor_ids": (string)[] }; Returns: Json
                            },
@@ -3216,6 +3219,9 @@ isOneToOne: false
 "remove_user_from_school":
 { Args: { "p_school_id": string,"p_target_user_id": string }; Returns: Json
                            },
+"reorder_presentations":
+{ Args: { "p_live_class_id": string,"p_ordered_ids": (string)[],"p_school_id": string }; Returns: Json
+                           },
 "replace_authored_mock_questions":
 { Args: { "p_author_id": string,"p_mock_exam_id": string,"p_questions": Json,"p_school_id": string }; Returns: {
               "bank_id": string,"question_count": number,"section_id": string
@@ -3236,6 +3242,9 @@ isOneToOne: false
                            },
 "revoke_tutor_invitation":
 { Args: { "p_school_id": string,"p_tutor_invite_id": string }; Returns: Json
+                           },
+"save_presentation_annotations":
+{ Args: { "p_annotations": Json,"p_expected_revision": number,"p_live_class_id": string,"p_max_bytes": number,"p_page": number,"p_presentation_id": string,"p_school_id": string }; Returns: Json
                            },
 "save_guest_mock_answer":
 { Args: { "p_attempt_id": string,"p_guest_id": string,"p_is_flagged": boolean,"p_mock_version_question_id": string,"p_now": string,"p_selected_option_version_id": string,"p_theory_answer_text": string }; Returns: {

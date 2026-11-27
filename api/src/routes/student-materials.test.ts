@@ -32,6 +32,7 @@ function query(result: any, inSpy = vi.fn(), eqSpy = vi.fn()) {
     select: () => value, eq: (...args: any[]) => { eqSpy(...args); return value },
     in: (...args: any[]) => { inSpy(...args); return value },
     order: () => value,
+    range: () => value,
     maybeSingle: async () => result,
     single: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),

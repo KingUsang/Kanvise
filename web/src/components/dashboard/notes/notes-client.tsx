@@ -368,7 +368,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                       onChange={handleFileChange}
                       className="hidden" 
                       type="file" 
-                      accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"
+                      accept=".pdf,.docx,.pptx,.jpg,.jpeg,.png"
                     />
                   </div>
                 </div>
