@@ -40,7 +40,7 @@ is updated.
 - Search also matches "live class", so tutors who type it still find lessons.
 - Tutors also teach families abroad, so wording must read naturally in Nigeria,
   the UK and North America.
-- Related words: **New lesson**, **Lesson report** (written after a lesson),
+- Related words: **New lesson**, **Lesson summary** (written after a lesson),
   **Lesson tools** (the panel in the classroom), **Lesson plan** (the plan for
   one lesson), "₦5,000 per lesson".
 
@@ -86,16 +86,24 @@ is updated.
   it, send it on WhatsApp, or email it. Opening it identifies the student, so no
   sign-in is needed and no guest record is created.
 
-## 6. Lesson report (observations)
+## 6. Lesson summary (observations)
 
-- The observation is the lesson report, written in plain words with real
+- Called **Lesson summary** (as in Bobbin, Preply and today's Kanvise "recap").
+- Nothing is emailed for now. Students see the summary, the recording and any
+  homework in their own app. The tutor can **Copy** the summary to share it
+  anywhere (for example WhatsApp).
+- **Homework is set by the tutor** (or an agency admin): from the course's
+  Homework tab, from the lesson summary, or from Lesson tools. Kavi can suggest
+  homework; the tutor confirms it.
+
+- The observation is the lesson summary, written in plain words with real
   examples. There is no rating or scoring system.
 - Sections: **What we covered** (topics, which tick off on the course plan),
   **What went well**, **What to work on** (with examples), **Homework**.
 - The tutor writes it, or uses **Draft with Kavi**, which writes it from the
   lesson recording. The tutor edits and confirms it.
-- It goes to the student only after the tutor confirms it. Parents receive it
-  later.
+- The student sees it only after the tutor completes it. Parents are out of
+  scope for now.
 
 ## 7. Student page
 
@@ -130,7 +138,7 @@ is updated.
   2. Who do you mostly teach? Children and teens, adults, or both (whether a
      parent is the default payer and contact)
   3. How do you usually teach? One-to-one, small groups, or both (wizard and
-     lesson report defaults)
+     lesson summary defaults)
   4. What do you teach? (Kavi's starting point for course plans and quizzes)
   5. Do you already have students? (setup starts with adding students, or with
      the sample course)
@@ -189,7 +197,8 @@ is updated.
 ## 14a. Students, links and guests
 
 - Every lesson belongs to a course (as in Bobbin). A trial is a short course.
-  There are no one-off lessons.
+  There are no one-off lessons and no lessons without a course.
+- A student's email is optional, as in Bobbin; most students will have one.
 - A student's email is optional. Students with an email get an invitation to
   set a password and sign in to their account (homework, reports, quizzes).
 - Every student has their **own join link** for each lesson, shown on the
@@ -198,6 +207,13 @@ is updated.
   waiting room.
 - No guest flows: share-link assignments and "Anyone with the link" lessons are
   retired.
+
+## 14b. Admins in a tutor's lesson
+
+- As in Bobbin: an admin who joins a lesson they don't teach is first asked
+  **Join as an admin?** ("your attendance won't count toward the tutor's").
+  They can then start and lead the lesson, shown as **Admin, leads the room**,
+  and it never counts as the tutor attending. This settles DEV-ACC-004.
 
 ## 15. Out of scope for now
 

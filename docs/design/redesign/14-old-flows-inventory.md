@@ -45,7 +45,7 @@ the first redesign pass.
 |---|---|---|---|
 | `/class/[id]` | Join the PlugNMeet classroom; preparing state; admin takeover | Keep, rebuilt around Lesson tools | 07 Classroom |
 | `/live/[shareToken]` | "Anyone with the link" guest classroom | Retire (owner decision: no guest flows) | 07 |
-| `/recording/[shareToken]` | Shared recording link | Keep for students and parents (signed link) | 08 Lesson report |
+| `/recording/[shareToken]` | Shared recording link | Keep for students and parents (signed link) | 08 Lesson summary |
 | Recordings and recaps (API) | Recording processing and AI summaries | Keep: feeds Draft with Kavi | 08 |
 | Recorder fleet, provider wake (API) | Infrastructure for the classroom | No UI change | none |
 

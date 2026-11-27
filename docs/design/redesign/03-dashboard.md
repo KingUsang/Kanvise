@@ -65,7 +65,7 @@ next visit.
 |---|---|---|
 | Starts in more than 15 minutes | **Planned** (blue) | **Prepare** → lesson page, Lesson plan tab |
 | Starts within 15 minutes, or running | **Starting soon** / **Live** (orange pulse dot) | **Join** (video camera icon, indigo) → classroom (spec 07) |
-| Ended, report not written | **Awaiting report** (amber) | **Write report** → lesson report (spec 08) |
+| Ended, report not written | **Awaiting summary** (amber) | **Write summary** → lesson summary (spec 08) |
 | Report done | **Complete** (green) | none; the row opens the lesson |
 | Cancelled | **Cancelled** (grey, struck-through topic) | none |
 
@@ -94,7 +94,7 @@ up".
 
 | Row | Shows | Goes to |
 |---|---|---|
-| Lesson reports to write | **2 lesson reports to write** · "From lessons that have ended" | Lessons filtered to Awaiting report |
+| Lesson summaries to write | **2 lesson summaries to write** · "From lessons that have ended" | Lessons filtered to Awaiting summary |
 | Homework to mark | **3 submissions to mark** · "Handed in and waiting for you" | Homework filtered to To mark |
 | Diagnostics finished | **1 diagnostic to review** · "Casey finished the check you sent" | That diagnostic's results (spec 04, DIAG-R) |
 | Quiz answers to mark | **4 written answers to mark** · only if a quiz has written answers | Quizzes filtered to To mark |
@@ -141,6 +141,6 @@ The same layout, plus:
 
 - Lesson list for today and this week, with status as above.
 - Counts for each Needs attention row.
-- Kavi suggestions from stored evidence (diagnostic results, lesson reports,
+- Kavi suggestions from stored evidence (diagnostic results, lesson summaries,
   marked work). Until Kavi's backend exists, simple rules produce them (for
   example "lowest diagnostic topic"), shown the same way.

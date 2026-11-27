@@ -67,7 +67,7 @@ Subtitle **Add a student and, if you like, put them on a course.**
 | First name | Required | |
 | Last name | Required | |
 | Student's email (optional) | Valid email | Line: **Leave blank if they don't have one. Without an email they can't sign in, but you can still send them their lesson links yourself.** |
-| Parent or guardian | Shown open by default if the account teaches children; collapsed under **+ Add a parent** if adults or both | Parent's name, parent's email, phone (optional, for WhatsApp). Line: **Parents get lesson reports and invoices. They don't get a login.** |
+| Parent or guardian | Shown open by default if the account teaches children; collapsed under **+ Add a parent** if adults or both | Parent's name, parent's email, phone (optional, for WhatsApp). Line: **Parents get lesson summaries and invoices. They don't get a login.** |
 | Who pays? | Shown only when billing is on | **The parent** · **The student** |
 | Timezone | Pre-filled with the tutor's timezone, searchable | Line: **Lesson times are shown to them in this timezone.** Important for families abroad. |
 | Course (optional) | Dropdown of courses | **Put on a course now** |
@@ -133,7 +133,7 @@ primary **Edit**.
 3:12 PM" or "London · 2:12 PM") · **Parent**.
 
 **Tabs (underline):** **Summary** · **Courses** · **Lessons** · **Homework and
-quizzes** · **Reports** · **Attendance**.
+quizzes** · **Summaries** · **Attendance**.
 
 ### Summary tab
 
@@ -145,8 +145,8 @@ Left column:
   (**12 of 32 topics taught**), counts of **Knows it** and **Needs work**, and
   the next topic (**Next: Factorising**). Opens the course plan filtered to this
   student.
-- **Latest report:** the most recent lesson report (What went well, What to work
-  on), with **All reports ›**.
+- **Latest summary:** the most recent lesson summary (What went well, What to work
+  on), with **All summaries ›**.
 
 Right column:
 - **Next lesson:** date, time, topic, with **Open**. Empty: **No lesson
@@ -174,10 +174,10 @@ Everything set for this student, with status (**To do**, **Handed in**,
 **Marked**, **Late**) and score where marked. Diagnostic results appear here
 too, labelled **Diagnostic**.
 
-### Reports tab
+### Summaries tab
 
-Every lesson report for this student, newest first, each expandable. **Share
-▾** on each: **Email to parent**, **Export as PDF**.
+Every lesson summary for this student, newest first, each expandable, with
+**Copy** on each.
 
 ### Attendance tab
 
@@ -228,7 +228,7 @@ template columns plus courses and status. Toast: **Export ready.**
   **Accept invitation**, which lets them set a password and sign in.
 - **Reminder** after 3 days if not accepted (once).
 - **Parent welcome** (when a parent is added): who the tutor is, what they'll
-  receive (lesson reports, later invoices), and that they don't need an account.
+  receive (lesson summaries, later invoices), and that they don't need an account.
 
 ## Data needed (for the build)
 

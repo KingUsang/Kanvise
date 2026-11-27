@@ -5,7 +5,7 @@ and `05-lessons-and-scheduling.md`.
 
 **Who:** tutors, students, and agency admins who observe.
 **Goal:** get everyone into the lesson with working audio, keep the tutor's
-plan and notes at hand while teaching, and end cleanly so the lesson report can
+plan and notes at hand while teaching, and end cleanly so the lesson summary can
 follow.
 
 ## What Kanvise owns and what PlugNMeet owns
@@ -47,7 +47,7 @@ from a Kanvise button above the room (CR-07b).
 Tutor:   Dashboard / lesson page › Join classroom
            → CR-01 pre-entry (too early / waking / ready)
            → CR-03 room with Lesson tools (not started → running)
-           → CR-06 end lesson → CR-07 lesson ended → Lesson report (spec 08)
+           → CR-06 end lesson → CR-07 lesson ended → Lesson summary (spec 08)
 Student: Dashboard › Join classroom, or their own join link
            → CR-02 waiting for the tutor (if not started)
            → room (no Lesson tools)
@@ -120,7 +120,7 @@ the tutor a push and email, CR-11.)
      **Starting reloads the classroom.**
    - Running: a green dot and **Running · 12 min**, the topic and time.
 3. **Today's objectives:** the objectives from the lesson plan as a tick-list.
-   Ticking one marks it as taught (it pre-fills the lesson report). Empty:
+   Ticking one marks it as taught (it pre-fills the lesson summary). Empty:
    **No objectives for this lesson.** with **Add one**.
 4. **Shortcuts** (each opens in the panel, with a back arrow):
    - **Lesson plan:** the plan, read-only here, with **Edit** opening the lesson
@@ -141,7 +141,7 @@ the tutor a push and email, CR-11.)
 7. **Quick check:** **Ask a quick question.** Pick a question from the lesson's
    quiz or type one, with **Generate with Kavi**. It runs as a PlugNMeet quiz
    poll (answers hidden until it closes). Results appear here and feed the
-   lesson report.
+   lesson summary.
 8. **End lesson** (bottom, outline, red text).
 
 **Phone and narrow screens:** Lesson tools becomes a drawer opened from a
@@ -183,10 +183,10 @@ Kanvise page, light again (back to the app's look). A centred card:
 - **Lesson ended · 58 minutes.**
 - **Who came:** **Casey · 56 min**, **Alex · 41 min (joined late)**.
 - What happens next:
-  - If recording was on: Kavi mark, **Kavi is drafting your lesson report from
+  - If recording was on: Kavi mark, **Kavi is drafting your lesson summary from
     the recording. This usually takes about 5 minutes.** A progress line.
-  - If not: **Write your lesson report so Casey knows what to work on.**
-- Primary **Write lesson report** (spec 08; if Kavi's draft is still coming, the
+  - If not: **Write your lesson summary so Casey knows what to work on.**
+- Primary **Write lesson summary** (spec 08; if Kavi's draft is still coming, the
   report opens with your ticked objectives and notes, and the draft slots in
   when ready).
 - Secondary **Back to dashboard**.
@@ -209,12 +209,13 @@ instead of **Join classroom**. It opens a confirmation:
   join from that account instead."
 - **Cancel** · **Join as observer**.
 
-Observers enter as non-moderators with camera and microphone off, and see a
+An admin who only watches enters with camera and microphone off and sees a
 read-only Lesson tools (plan, objectives, students).
 
-**Admin takeover** (starting or running a lesson when the tutor is absent) is
-still an open product decision (DEV-ACC-004). Today's behaviour is kept until
-the owner decides.
+After confirming, the admin gets the same pre-entry choice as a tutor (CR-01):
+**Start lesson** or **Go in without starting**. An admin who starts or leads the
+lesson is shown as **Admin, leads the room** in Activity and attendance, and it
+never counts as the tutor attending (as in Bobbin; settles DEV-ACC-004).
 
 ## CR-10 · Device check
 
@@ -254,7 +255,7 @@ alerts** / **Not now**.
 
 | Action | Tutor of the lesson | Agency admin | Student on the lesson |
 |---|---|---|---|
-| Start, end | Yes | Pending DEV-ACC-004 | No |
+| Start, end | Yes | Yes, after **Join as an admin?** (never counts as the tutor) | No |
 | Lesson tools | Full | Read-only (as observer) | No |
 | Present files, screen share | Yes | No | No |
 | Join | Yes | As observer | Yes, once started |

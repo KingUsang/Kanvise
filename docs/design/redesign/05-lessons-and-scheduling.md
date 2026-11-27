@@ -17,7 +17,7 @@ classroom.
 |---|---|---|
 | Planned | In the future | Blue |
 | Live | Started in the classroom and not ended | Orange, pulsing dot |
-| Awaiting report | Ended; the tutor hasn't completed the report | Amber |
+| Awaiting summary | Ended; the tutor hasn't completed the report | Amber |
 | Complete | Report done | Green |
 | Cancelled | Cancelled | Grey |
 
@@ -37,7 +37,7 @@ classroom.
 **Header:** **Lessons** · "Every lesson across all your courses." · primary
 **New lesson**.
 
-**Status tabs (underline):** **All** · **Planned** · **Awaiting report** ·
+**Status tabs (underline):** **All** · **Planned** · **Awaiting summary** ·
 **Complete** · **Cancelled**. Each shows a count when above 0.
 
 **Toolbar:** **Filter** (Course, Student, Tutor for admins, Date range) and
@@ -187,7 +187,7 @@ course) · **Repeats** (if part of a series).
 
 - **Live:** the chip pulses orange, the button reads **Rejoin classroom**, and
   the activity timeline updates as people join and leave.
-- **Awaiting report:** a banner at the top of the main column: **This lesson has
+- **Awaiting summary:** a banner at the top of the main column: **This lesson has
   ended. Write the report so Casey knows what to work on.** Button **Write
   report** (spec 08). The tabs become **Report** · **Lesson plan** · **Notes** ·
   **Recording**.

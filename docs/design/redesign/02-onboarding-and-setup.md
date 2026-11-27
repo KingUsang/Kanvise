@@ -136,7 +136,7 @@ deletes data.
 **Main card (left, about 2/3 width):**
 - Kavi mark, then: **Let's get your first lesson on the calendar.** and **A few
   quick steps and you're ready to teach. I'll help with course plans, quizzes
-  and lesson reports from there.**
+  and lesson summaries from there.**
 - A progress bar with **0/5 completed** on the right.
 - Five step rows. Each row: an icon in a soft circle, the step name, a time
   chip (**1 min**, **2 mins**), a **Next** chip on the first unfinished step, a
@@ -146,7 +146,7 @@ deletes data.
 
 | # | Step | Time | Reason line | Button | Opens |
 |---|---|---|---|---|---|
-| 1 | Add your students | 2 mins | Students are the people you teach. Parents get lesson reports and invoices later. | **Add students** | Add student dialog (spec 06). If they said "Yes, I have students", the dialog opens on the **Import a list** tab. |
+| 1 | Add your students | 2 mins | Students are the people you teach. Parents get lesson summaries and invoices later. | **Add students** | Add student dialog (spec 06). If they said "Yes, I have students", the dialog opens on the **Import a list** tab. |
 | 2 | Create a course | 2 mins | A course pairs a student with you over time and holds the course plan. | **Create course** | New course wizard (spec 04) |
 | 3 | Find out what they know | 1 min | Optional. A short check before the first lesson shows where to start. | **Send diagnostic** | Step 4 of the course wizard, for the course from step 2 |
 | 4 | Schedule your first lesson | 1 min | Put it on the calendar and your student gets the link. | **Schedule lesson** | New lesson wizard (spec 05) |

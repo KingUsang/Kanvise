@@ -12,7 +12,7 @@ Read in order. `00-decisions.md` wins if anything conflicts.
 | 05-lessons-and-scheduling.md | Lessons list, calendar, new lesson wizard, lesson page | Draft for review |
 | 06-students.md | Students list, add and import, student page, parents | Draft for review |
 | 07-classroom.md | PlugNMeet boundary, pre-entry, waiting, Lesson tools, ending, observer, device check, alerts | Draft for review |
-| 08-lesson-report.md | Writing, Kavi drafts, sending, parent view, missed lessons | Draft for review |
+| 08-lesson-summary.md | What happens after a lesson, writing, Kavi drafts, completing, copy, missed lessons | Draft for review |
 | 09 Student app (planned) | What students see | Not started |
 | 10 Homework (planned) | Set, hand in, mark | Not started |
 | 11 Quizzes (planned) | Create, generate with Kavi, take, mark | Not started |
