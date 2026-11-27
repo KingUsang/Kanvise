@@ -8,6 +8,7 @@ import { getApiUrl } from "@/config/api";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 import { useActiveAccountId } from "@/lib/account-preference";
 import type { StudentAssignment } from "@/lib/student-assignments";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 type Status = "all" | "pending" | "submitted" | "graded" | "overdue";
 const allowedTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "image/jpeg", "image/png"];
@@ -39,10 +40,11 @@ export function StudentAssignmentsClient({ assignments: seededAssignments }: { a
     queryKey: ["student-assignments", activeAccountId],
     initialData: seededAssignments,
     queryFn: async () => {
-      const response = await authenticatedApiFetch(`${getApiUrl()}/assignments/me`, { cache: "no-store" });
-      const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(responseErrorMessage(response, body));
-      return body.data || [];
+      return fetchAllPages<StudentAssignment>(
+        (page) => authenticatedApiFetch(`${getApiUrl()}/assignments/me?page=${page}&page_size=100`, { cache: "no-store" }),
+        "Could not load assignments",
+        (response, body) => responseErrorMessage(response, body),
+      );
     },
   });
   const assignments = assignmentsQuery.data ?? [];

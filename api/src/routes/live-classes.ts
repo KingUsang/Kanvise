@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { createHash, randomBytes } from 'node:crypto'
 import { supabase } from '../lib/supabase'
 import {
@@ -18,8 +19,19 @@ import { createPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persis
 import { publishClassRecap } from '../jobs/live-class-recording'
 import { reconcileRecorderFleet, recorderFleetReadiness } from '../recording/recorder-fleet'
 import { classShareUrl, encryptClassLinkToken } from '../lib/class-links'
+import { parseOffsetPagination } from '../lib/api-contract'
+import { recordingLifecycle, recordingLifecycleFailure } from '../lib/recording-lifecycle'
+import { LIVE_CLASS_STATUSES, cancelReasonSchema, createIssueCode, createLiveClassSchema, updateIssueCode, updateLiveClassSchema, weekdayOf } from '../lib/live-class-schedule'
 
 export const liveClassesRouter = new Hono<{ Variables: TenantVariables }>()
+
+const isoFilter = z.string().max(64).refine((value) => Number.isFinite(Date.parse(value)), 'Invalid date').transform((value) => new Date(value).toISOString())
+const listQuerySchema = z.object({
+  course_id: z.string().trim().min(1).max(64).optional(),
+  status: z.enum(LIVE_CLASS_STATUSES).optional(),
+  from: isoFilter.optional(),
+  to: isoFilter.optional(),
+}).refine((q) => !q.from || !q.to || q.from <= q.to)
 
 function statusActionMessage(status: string, action: 'update' | 'cancel') {
   if (status === 'starting') return `This live class is being prepared and cannot be ${action === 'update' ? 'edited' : 'cancelled'}.`
@@ -88,6 +100,8 @@ liveClassesRouter.use(
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
   accountContextMiddleware, accountUserProjection,
+  // Only the supported audiences may read or act on Sessions (DEV-LVC-033).
+  requireRole('admin', 'tutor', 'student'),
 )
 
 // ── GET /live-classes/:id/readiness/stream — SSE readiness feed ───────────
@@ -196,29 +210,29 @@ liveClassesRouter.get('/:id/readiness', async (c) => {
 
 liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
-  const body = await c.req.json()
+  const rawBody = await c.req.json().catch(() => null)
+  if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
+    return c.json({ error: 'Invalid request body', code: 'VALIDATION_ERROR' }, 400)
+  }
+  const parsed = createLiveClassSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    const code = createIssueCode(parsed.error, rawBody as Record<string, unknown>)
+    const message = code === 'MISSING_FIELDS' ? 'Missing required fields'
+      : code === 'SCHEDULED_IN_PAST' ? 'Cannot schedule a live class in the past'
+        : code === 'INVALID_DURATION' ? 'Duration must be between 15 and 240 minutes'
+          : 'Invalid schedule details'
+    return c.json({ error: message, code }, 400)
+  }
+  const body = parsed.data
   const { course_id, title, scheduled_at, duration_minutes } = body
   // A tutor can only create a class for themselves. Resolve that server-side
   // so the UI never needs to collect or trust a tutor selection for them.
-  const requestedTutorId = typeof body.tutor_id === 'string' ? body.tutor_id : ''
-  const tutor_id = user.role === 'tutor' ? user.id : requestedTutorId
-  const accessMode = body.access_mode === 'anyone_with_link' ? 'anyone_with_link' : 'enrolled_learners'
+  const tutor_id = user.role === 'tutor' ? user.id : body.tutor_id || ''
+  const accessMode = body.access_mode
   const isRecurring = body.recurrence === 'weekly'
-  const recurrenceDays = Array.isArray(body.recurrence_days)
-    ? [...new Set((body.recurrence_days as unknown[]).map((value): number => Number(value)))].filter((day) => Number.isInteger(day) && day >= 1 && day <= 7)
-    : []
 
-  if ((!course_id && accessMode === 'enrolled_learners') || !tutor_id || !title || !scheduled_at || !duration_minutes || (isRecurring && (!body.starts_on || !body.start_time))) {
+  if ((!course_id && accessMode === 'enrolled_learners') || !tutor_id) {
     return c.json({ error: 'Missing required fields', code: 'MISSING_FIELDS' }, 400)
-  }
-
-  const scheduledDate = new Date(scheduled_at)
-  if (!Number.isFinite(scheduledDate.getTime()) || scheduledDate < new Date()) {
-    return c.json({ error: 'Cannot schedule a live class in the past', code: 'SCHEDULED_IN_PAST' }, 400)
-  }
-
-  if (typeof duration_minutes !== 'number' || duration_minutes < 15 || duration_minutes > 240) {
-    return c.json({ error: 'Duration must be between 15 and 240 minutes', code: 'INVALID_DURATION' }, 400)
   }
 
   if (accessMode === 'anyone_with_link' && isRecurring) {
@@ -231,7 +245,7 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
     .from('tutor_course_assignments')
     .select('course_id')
     .eq('tutor_id', tutor_id)
-    .eq('course_id', course_id)
+    .eq('course_id', course_id as string)
     .eq('school_id', user.school_id)
     .maybeSingle() : { data: true, error: null }
 
@@ -240,8 +254,8 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   }
 
   if (isRecurring) {
-    const timezone = typeof body.timezone === 'string' && body.timezone ? body.timezone : 'UTC'
-    const days = recurrenceDays.length ? recurrenceDays : [new Date(`${body.starts_on}T12:00:00`).getDay() || 7]
+    const timezone = body.timezone as string
+    const days = body.recurrence_days ? [...new Set(body.recurrence_days)] : [weekdayOf(body.starts_on as string)]
     const { data: seriesId, error: recurringError } = await supabase.rpc('create_recurring_live_class_series' as any, {
       p_school_id: user.school_id,
       p_actor_id: user.id,
@@ -384,13 +398,23 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
 
 liveClassesRouter.get('/', async (c) => {
   const user = c.get('user')
-  const { course_id, status } = c.req.query()
+  const parsedFilters = listQuerySchema.safeParse({
+    course_id: c.req.query('course_id') || undefined,
+    status: c.req.query('status') || undefined,
+    from: c.req.query('from') || undefined,
+    to: c.req.query('to') || undefined,
+  })
+  if (!parsedFilters.success) return c.json({ error: 'Invalid live class filters', code: 'VALIDATION_ERROR' }, 400)
+  const { course_id, status, from, to } = parsedFilters.data
+  const pagination = parseOffsetPagination(c.req.query('page'), c.req.query('page_size') ?? '100')
+  if (!pagination) return c.json({ error: 'Invalid pagination parameters', code: 'INVALID_PAGINATION' }, 400)
 
   let query = supabase
     .from('live_classes')
     .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses!live_classes_course_id_fkey(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
+    .order('id', { ascending: true })
 
   if (user.role === 'tutor') {
     query = query.eq('tutor_id', user.id)
@@ -403,7 +427,7 @@ liveClassesRouter.get('/', async (c) => {
     } catch {
       return c.json({ error: 'Failed to resolve class access', code: 'CLASS_ACCESS_FAILED' }, 500)
     }
-    if (!courseIds.length) return c.json({ data: [] })
+    if (!courseIds.length) return c.json({ data: [], pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: false } })
     if (course_id && !courseIds.includes(course_id)) {
       return c.json({ error: 'Not enrolled in this course', code: 'NOT_ENROLLED' }, 403)
     }
@@ -412,8 +436,14 @@ liveClassesRouter.get('/', async (c) => {
 
   if (course_id) query = query.eq('course_id', course_id)
   if (status) query = query.eq('status', status)
+  if (from) query = query.gte('scheduled_at', from)
+  if (to) query = query.lte('scheduled_at', to)
+  // One extra row tells us whether another page exists.
+  query = query.range(pagination.offset, pagination.offset + pagination.pageSize)
 
-  const { data, error } = await query
+  const { data: fetched, error } = await query
+  const hasMore = (fetched || []).length > pagination.pageSize
+  const data = (fetched || []).slice(0, pagination.pageSize)
 
   if (error) {
     console.error('[live-classes] list error:', error)
@@ -433,7 +463,7 @@ liveClassesRouter.get('/', async (c) => {
     recording: undefined,
     recap: undefined,
   }))
-  return c.json({ data: enriched })
+  return c.json({ data: enriched, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: hasMore } })
 })
 
 // ── DELETE /live-classes/series/:seriesId — End a direct weekly series ───
@@ -471,7 +501,11 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
   if ('response' in access) return access.response
   const { liveClass: existing } = access
   const { id } = c.req.param()
-  const body = await c.req.json()
+  const rawBody = await c.req.json().catch(() => null)
+  const parsedBody = updateLiveClassSchema.safeParse(rawBody)
+  if (!parsedBody.success) {
+    return c.json({ error: 'Invalid class update', code: updateIssueCode(parsedBody.error) }, 400)
+  }
 
   if (existing.status !== 'scheduled') {
     return c.json({ error: statusActionMessage(existing.status, 'update'), code: 'CLASS_NOT_EDITABLE' }, 409)
@@ -481,26 +515,30 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
     return c.json({ error: 'You can only update classes assigned to you', code: 'NOT_CLASS_TUTOR' }, 403)
   }
 
-  const { title, scheduled_at, duration_minutes } = body
-  const isRescheduled = scheduled_at !== undefined && scheduled_at !== existing.scheduled_at
+  const { title, scheduled_at, duration_minutes } = parsedBody.data
+  const isRescheduled = scheduled_at !== undefined && scheduled_at !== new Date(String(existing.scheduled_at)).toISOString()
+  // The status predicate makes the write conditional on the state that was
+  // validated above; a concurrent start or cancel yields zero rows (DEV-LVC-032).
   const { data, error } = await supabase
     .from('live_classes')
     .update({
-      title,
-      scheduled_at,
-      duration_minutes,
+      ...(title !== undefined ? { title } : {}),
+      ...(scheduled_at !== undefined ? { scheduled_at } : {}),
+      ...(duration_minutes !== undefined ? { duration_minutes } : {}),
       ...(isRescheduled ? { notification_sent: false } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
     .eq('school_id', user.school_id)
+    .eq('status', 'scheduled')
     .select()
-    .single()
+    .maybeSingle()
 
   if (error) {
     if (error.code === '23P01') return c.json({ error: 'This tutor already has a class at that time', code: 'TUTOR_TIME_CONFLICT' }, 409)
     return c.json({ error: 'Failed to update class' }, 500)
   }
+  if (!data) return c.json({ error: 'This live class changed while you were editing it. Refresh to see its latest status.', code: 'CLASS_STATE_CHANGED' }, 409)
 
   return c.json({ data })
 })
@@ -510,7 +548,10 @@ liveClassesRouter.patch('/:id', requireRole('admin', 'tutor'), async (c) => {
 liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
-  const reason = c.req.query('reason') || undefined
+  const rawReason = c.req.query('reason')
+  const parsedReason = rawReason === undefined || rawReason === '' ? { success: true as const, data: undefined } : cancelReasonSchema.safeParse(rawReason)
+  if (!parsedReason.success) return c.json({ error: 'Cancellation reason must be 1 to 500 characters', code: 'VALIDATION_ERROR' }, 400)
+  const reason = parsedReason.data
   const access = await requireClassroom(c)
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
@@ -527,9 +568,10 @@ liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
     .eq('school_id', user.school_id)
     .eq('status', 'scheduled')
     .select()
-    .single()
+    .maybeSingle()
 
-  if (error || !data) return c.json({ error: 'Failed to cancel class' }, 500)
+  if (error) return c.json({ error: 'Failed to cancel class' }, 500)
+  if (!data) return c.json({ error: 'This live class changed before it could be cancelled. Refresh to see its latest status.', code: 'CLASS_STATE_CHANGED' }, 409)
 
   // Recipients are resolved through course enrolments, so a class without a course has nobody to notify.
   const notification = data.course_id ? await notifyClassCancelled({
@@ -672,6 +714,18 @@ liveClassesRouter.post('/:id/join', requireRole('tutor', 'student', 'admin'), as
   if ('response' in access) return access.response
   const liveClass = access.liveClass as any
 
+  // Shared classes are joined through their opaque link. A Learner who only
+  // knows the Session UUID must also present the active share token (DEV-LVC-027).
+  if (liveClass.access_mode === 'anyone_with_link' && user.role === 'student') {
+    const body = await c.req.json().catch(() => ({})) as { share_token?: unknown }
+    const presented = typeof body?.share_token === 'string' ? body.share_token : ''
+    const expected = typeof liveClass.share_token_hash === 'string' ? liveClass.share_token_hash : ''
+    const matches = Boolean(presented && expected) && createHash('sha256').update(presented).digest('hex') === expected
+    if (!matches || liveClass.share_link_revoked_at) {
+      return c.json({ error: 'Use the shared class link to join this class', code: 'SHARE_TOKEN_REQUIRED' }, 403)
+    }
+  }
+
   if (providerForClass({ accessMode: liveClass.access_mode, schoolId: user.school_id, persisted: liveClass.classroom_provider }) === 'plugnmeet') {
     if (liveClass.status !== 'live') return c.json({ error: 'Your tutor has not started this live class yet. Please check back shortly.', code: 'CLASS_NOT_LIVE' }, 409)
     console.info('live_class.reentry_requested', {
@@ -707,9 +761,14 @@ liveClassesRouter.get('/:id/recording', async (c) => {
   if (access.liveClass.classroom_provider !== 'plugnmeet' || (sharedClass && !access.isHost && user.role !== 'admin')) {
     return c.json({ error: 'Recording is not available for this class', code: 'RECORDING_UNAVAILABLE' }, 404)
   }
-  const { data, error } = await (supabase as any).from('live_class_recordings').select('id, status, provider_recording_id, r2_file_key, content_type, file_size_bytes, started_at, ended_at').eq('live_class_id', access.liveClass.id).eq('status', 'ready').maybeSingle()
+  const { data: rows, error } = await (supabase as any).from('live_class_recordings').select('id, status, provider_recording_id, r2_file_key, content_type, file_size_bytes, started_at, ended_at').eq('live_class_id', access.liveClass.id).order('created_at', { ascending: false }).limit(10)
   if (error) return c.json({ error: 'Could not load recording', code: 'RECORDING_UNAVAILABLE' }, 500)
-  if (!data) return c.json({ error: 'Recording is not ready', code: 'RECORDING_NOT_READY' }, 404)
+  const lifecycle = recordingLifecycle(rows)
+  const data = lifecycle.ready
+  if (!data) {
+    const failure = recordingLifecycleFailure(lifecycle.status)
+    return c.json({ error: failure.error, code: failure.code, recording_status: lifecycle.status }, failure.status)
+  }
   let playbackUrl: string | null = null
   if (data.r2_file_key) {
     try {

@@ -5,6 +5,7 @@ import { titleFromFileName, uploadFileWithProgress } from "@/lib/upload-with-pro
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch"
 import { toast } from "sonner"
 import { DashboardPageHeader } from "@/components/dashboard/page-header"
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 interface NotesClientProps {
   role: string | null | undefined
@@ -120,10 +121,11 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
       
       // For simplicity in UI, we'll fetch notes for all available courses sequentially or in parallel
       const fetchPromises = courses.map(async (course) => {
-        const res = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${course.id}`)
-        if (!res.ok) throw new Error(`Could not load materials for ${course.name}`)
-        const { data } = await res.json()
-        return data
+        return fetchAllPages<Note>(
+          (page) => authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/notes/${course.id}?page=${page}&page_size=100`),
+          `Could not load materials for ${course.name}`,
+          () => `Could not load materials for ${course.name}`,
+        )
       })
 
       const results = await Promise.all(fetchPromises)
@@ -368,7 +370,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                       onChange={handleFileChange}
                       className="hidden" 
                       type="file" 
-                      accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"
+                      accept=".pdf,.docx,.pptx,.jpg,.jpeg,.png"
                     />
                   </div>
                 </div>

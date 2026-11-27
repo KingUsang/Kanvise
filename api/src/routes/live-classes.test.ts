@@ -23,12 +23,19 @@ vi.mock('../middleware/auth', () => ({
   requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
 }))
 
+vi.mock('../notifications/triggers', () => ({ notifyClassCancelled: vi.fn().mockResolvedValue({ sent: 0 }), notifyClassRecapPublished: vi.fn() }))
+vi.mock('../storage/r2', () => ({
+  createPresignedDownload: vi.fn().mockResolvedValue('https://signed.example/recording.mp4'),
+  privateObjectExists: vi.fn().mockResolvedValue(true),
+}))
+
+import { createHash } from 'node:crypto'
 import { liveClassesRouter } from './live-classes'
 
 function builder(result: any) {
   const value: any = {
     select: () => value, insert: () => value, update: () => value, eq: () => value,
-    in: () => value, order: () => value,
+    in: () => value, order: () => value, range: () => value, gte: () => value, lte: () => value, limit: () => value, is: () => value,
     maybeSingle: async () => result, single: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
   }
@@ -343,5 +350,195 @@ describe('live classes API - host permissions', () => {
 
     expect(response.status).toBe(403)
     expect((await response.json() as any).code).toBe('NOT_CLASS_TUTOR')
+  })
+})
+
+const future = () => new Date(Date.now() + 86_400_000).toISOString()
+const json = (body: unknown, method = 'POST') => ({ method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+const scheduledClass = { id: 'class-1', school_id: 'school-1', course_id: 'course-1', tutor_id: 'tutor-1', status: 'scheduled', title: 'Maths', scheduled_at: future(), school: { name: 'Centre' } }
+
+describe('live classes API - schedule validation (DEV-LVC-002, DEV-LVC-030)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+  })
+  const base = { course_id: 'course-1', tutor_id: 'tutor-1', title: 'Math', scheduled_at: '2030-01-07T13:30:00.000Z', duration_minutes: 60 }
+
+  it.each([
+    ['unknown access mode', { access_mode: 'public' }],
+    ['unknown recurrence', { recurrence: 'daily' }],
+    ['weekday outside 1-7', { recurrence: 'weekly', recurrence_days: [0, 8], starts_on: '2030-01-07', start_time: '14:30', timezone: 'UTC' }],
+    ['non-numeric weekday', { recurrence: 'weekly', recurrence_days: ['monday'], starts_on: '2030-01-07', start_time: '14:30', timezone: 'UTC' }],
+    ['empty weekday list', { recurrence: 'weekly', recurrence_days: [], starts_on: '2030-01-07', start_time: '14:30', timezone: 'UTC' }],
+    ['missing timezone on a series', { recurrence: 'weekly', starts_on: '2030-01-07', start_time: '14:30' }],
+    ['invalid timezone', { recurrence: 'weekly', starts_on: '2030-01-07', start_time: '14:30', timezone: 'Mars/Olympus' }],
+    ['impossible date', { recurrence: 'weekly', starts_on: '2030-02-31', start_time: '14:30', timezone: 'UTC' }],
+    ['malformed start time', { recurrence: 'weekly', starts_on: '2030-01-07', start_time: '25:99', timezone: 'UTC' }],
+    ['non-integer duration', { duration_minutes: 60.5 }],
+  ])('rejects %s with 400 instead of normalising it', async (_name, patch) => {
+    const response = await liveClassesRouter.request('/', json({ ...base, ...patch }))
+    expect(response.status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('canonicalises the scheduled date before storing it', async () => {
+    const insert = vi.fn()
+    const q = builder({ data: { id: 'class-1' }, error: null })
+    q.insert = (row: any) => { insert(row); return q }
+    mocks.from.mockReturnValue(q)
+    const when = new Date(Date.now() + 86_400_000)
+    const response = await liveClassesRouter.request('/', json({ ...base, scheduled_at: when.toString() }))
+    expect(response.status).toBe(201)
+    expect(insert.mock.calls[0][0].scheduled_at).toBe(when.toISOString().replace(/\.\d{3}Z$/, '.000Z'))
+  })
+
+  it('applies the create bounds to PATCH and rejects empty or unknown updates', async () => {
+    mocks.from.mockReturnValue(builder({ data: scheduledClass, error: null }))
+    for (const body of [{}, { title: '   ' }, { duration_minutes: 5 }, { scheduled_at: '2001-01-01T00:00:00Z' }, { status: 'live' }]) {
+      const response = await liveClassesRouter.request('/class-1', json(body, 'PATCH'))
+      expect(response.status).toBe(400)
+    }
+  })
+
+  it('rejects an oversized cancellation reason', async () => {
+    const response = await liveClassesRouter.request(`/class-1?reason=${'x'.repeat(501)}`, { method: 'DELETE' })
+    expect(response.status).toBe(400)
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+})
+
+describe('live classes API - lifecycle races (DEV-LVC-032, DEV-TEST-020)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+  })
+
+  it('updates conditionally on scheduled status and returns the row', async () => {
+    const eq = vi.fn()
+    const write = builder({ data: { ...scheduledClass, title: 'New' }, error: null })
+    write.eq = (...args: any[]) => { eq(...args); return write }
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(write)
+    const response = await liveClassesRouter.request('/class-1', json({ title: 'New' }, 'PATCH'))
+    expect(response.status).toBe(200)
+    expect(eq).toHaveBeenCalledWith('status', 'scheduled')
+  })
+
+  it('maps a lost reschedule race to 409', async () => {
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(builder({ data: null, error: null }))
+    const response = await liveClassesRouter.request('/class-1', json({ title: 'New' }, 'PATCH'))
+    expect(response.status).toBe(409)
+    expect((await response.json() as any).code).toBe('CLASS_STATE_CHANGED')
+  })
+
+  it('maps a lost cancel race to 409 instead of 500', async () => {
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(builder({ data: null, error: null }))
+    const response = await liveClassesRouter.request('/class-1', { method: 'DELETE' })
+    expect(response.status).toBe(409)
+    expect((await response.json() as any).code).toBe('CLASS_STATE_CHANGED')
+  })
+
+  it('cancels a scheduled class and notifies enrolled learners', async () => {
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(builder({ data: { ...scheduledClass, status: 'cancelled' }, error: null }))
+    const response = await liveClassesRouter.request('/class-1?reason=Illness', { method: 'DELETE' })
+    expect(response.status).toBe(200)
+    expect((await response.json() as any).data.status).toBe('cancelled')
+  })
+
+  it('reports a database failure while cancelling as 500', async () => {
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(builder({ data: null, error: { message: 'down' } }))
+    const response = await liveClassesRouter.request('/class-1', { method: 'DELETE' })
+    expect(response.status).toBe(500)
+  })
+})
+
+describe('live classes API - list and read authorization (DEV-LVC-008, DEV-LVC-033)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+  })
+
+  it.each(['?status=bogus', '?from=nope', '?page=0', '?page_size=101', '?from=2030-02-01&to=2030-01-01'])('rejects invalid list query %s', async (qs) => {
+    const response = await liveClassesRouter.request(`/${qs}`)
+    expect(response.status).toBe(400)
+  })
+
+  it('bounds the list with a stable range and reports pagination', async () => {
+    const range = vi.fn()
+    const q = builder({ data: [{ id: 'a', status: 'scheduled' }, { id: 'b', status: 'scheduled' }, { id: 'c', status: 'scheduled' }], error: null })
+    q.range = (from: number, to: number) => { range(from, to); return q }
+    mocks.from.mockReturnValue(q)
+    const response = await liveClassesRouter.request('/?page=3&page_size=2&status=scheduled')
+    expect(response.status).toBe(200)
+    expect(range).toHaveBeenCalledWith(4, 6)
+    const body = await response.json() as any
+    expect(body.data).toHaveLength(2)
+    expect(body.pagination).toEqual({ page: 3, page_size: 2, has_more: true })
+  })
+
+  it('denies a role outside the supported audience on a per-Class read', async () => {
+    mocks.user = { id: 'root-1', school_id: 'school-1', role: 'super_admin' }
+    mocks.from.mockReturnValue(builder({ data: scheduledClass, error: null }))
+    const response = await liveClassesRouter.request('/class-1')
+    expect(response.status).toBe(403)
+    expect((await response.json() as any).code).toBe('INSUFFICIENT_ROLE')
+  })
+})
+
+describe('live classes API - shared class join by Learner (DEV-LVC-027)', () => {
+  const token = 'sharetoken123'
+  const shared = { id: 'class-1', school_id: 'school-1', course_id: null, tutor_id: 'tutor-1', status: 'live', access_mode: 'anyone_with_link', share_token_hash: createHash('sha256').update(token).digest('hex'), share_link_revoked_at: null, provider_room_id: 'room-1' }
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'student-1', school_id: 'school-1', role: 'student' }
+  })
+
+  it('rejects a Learner who knows only the class UUID', async () => {
+    mocks.from.mockReturnValue(builder({ data: shared, error: null }))
+    const response = await liveClassesRouter.request('/class-1/join', { method: 'POST' })
+    expect(response.status).toBe(403)
+    expect((await response.json() as any).code).toBe('SHARE_TOKEN_REQUIRED')
+  })
+
+  it('rejects a wrong or revoked share token', async () => {
+    mocks.from.mockReturnValue(builder({ data: shared, error: null }))
+    expect((await liveClassesRouter.request('/class-1/join', json({ share_token: 'wrongtoken12' }))).status).toBe(403)
+    mocks.from.mockReturnValue(builder({ data: { ...shared, share_link_revoked_at: new Date().toISOString() }, error: null }))
+    expect((await liveClassesRouter.request('/class-1/join', json({ share_token: token }))).status).toBe(403)
+  })
+
+  it('admits a Learner who presents the active share token', async () => {
+    mocks.from.mockReturnValue(builder({ data: shared, error: null }))
+    const response = await liveClassesRouter.request('/class-1/join', json({ share_token: token }))
+    expect(response.status).toBe(200)
+  })
+})
+
+describe('live classes API - recording lifecycle (DEV-LVC-019)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
+  })
+  const withRecordings = (rows: any[]) => mocks.from.mockImplementation((table: string) => table === 'live_class_recordings'
+    ? builder({ data: rows, error: null })
+    : builder({ data: { ...scheduledClass, status: 'completed', classroom_provider: 'plugnmeet', access_mode: 'enrolled_learners' }, error: null }))
+
+  it.each([
+    [[], 404, 'RECORDING_NOT_READY', 'none'],
+    [[{ id: 'r1', status: 'pending' }], 409, 'RECORDING_PROCESSING', 'processing'],
+    [[{ id: 'r1', status: 'uploaded' }], 409, 'RECORDING_PROCESSING', 'processing'],
+    [[{ id: 'r1', status: 'failed' }], 409, 'RECORDING_FAILED', 'failed'],
+  ])('distinguishes %j', async (rows, status, code, recordingStatus) => {
+    withRecordings(rows as any[])
+    const response = await liveClassesRouter.request('/class-1/recording')
+    expect(response.status).toBe(status)
+    expect(await response.json()).toMatchObject({ code, recording_status: recordingStatus })
+  })
+
+  it('returns a signed URL only for a ready recording', async () => {
+    withRecordings([{ id: 'r1', status: 'ready', r2_file_key: 'k.mp4' }])
+    const response = await liveClassesRouter.request('/class-1/recording')
+    expect(response.status).toBe(200)
+    expect((await response.json() as any).data.playback_url).toBe('https://signed.example/recording.mp4')
   })
 })

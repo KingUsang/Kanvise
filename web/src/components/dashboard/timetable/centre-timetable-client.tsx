@@ -96,11 +96,17 @@ export function TimetableClient(_: Props) {
     queryKey: dashboardQueryKeys.timetable,
     staleTime: 30_000,
     queryFn: async (): Promise<ProductTimetableSlot[]> => {
-      const response = await authenticatedApiFetch(`${api}/classes/timetable`);
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(body.error || "Could not load timetable");
-      return (body.data || []).map((slot: TimetableSlot) => adaptSubjectLink(slot));
+      // The API pages the timetable; follow pages until it reports no more.
+      const rows: TimetableSlot[] = [];
+      for (let page = 1; page <= 50; page += 1) {
+        const response = await authenticatedApiFetch(`${api}/classes/timetable?page=${page}&page_size=100`);
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok)
+          throw new Error(body.error || "Could not load timetable");
+        rows.push(...(body.data || []));
+        if (!body.pagination?.has_more) break;
+      }
+      return rows.map((slot: TimetableSlot) => adaptSubjectLink(slot));
     },
   });
   const slots = timetableQuery.data || [];

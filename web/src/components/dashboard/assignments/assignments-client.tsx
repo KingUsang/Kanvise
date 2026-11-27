@@ -12,6 +12,7 @@ import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
 import { useActiveAccountId } from "@/lib/account-preference";
 import { assignmentQueryKeys } from "@/lib/assignment-query-keys";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 function responseErrorMessage(response: Response, body: any, fallback: string) {
   if (typeof body?.error === "string" && body.error) return body.error;
@@ -79,13 +80,15 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
         nextClassContextName = classBody?.data?.name || "This class";
       }
 
-      const resAssignments = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments?page=1&page_size=20`);
-      const assignmentBody = await resAssignments.json().catch(() => null);
-      if (!resAssignments.ok) throw new Error(responseErrorMessage(resAssignments, assignmentBody, "Could not load assignments"));
+      const allAssignments = await fetchAllPages<any>(
+        (page) => fetch(`${process.env.NEXT_PUBLIC_API_URL}/assignments?page=${page}&page_size=100`),
+        "Could not load assignments",
+        (response, body) => responseErrorMessage(response, body, "Could not load assignments"),
+      );
       return {
         courses: visibleCourses,
         classContextName: nextClassContextName,
-        assignments: assignmentBody?.data || [],
+        assignments: allAssignments,
       };
     },
   });

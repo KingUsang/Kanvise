@@ -13,13 +13,12 @@ describe('verified live-class entry', () => {
     expect(pageSource).toContain('<PreparingClassroom')
   })
 
-  it('preserves the public fallback messages and leaves start/join to the canonical class link', () => {
-    expect(pageSource).toContain('Class not found')
-    expect(pageSource).toContain('This class is for enrolled learners only')
-    expect(pageSource).toContain('Use the class link')
-    expect(pageSource).toContain('access_mode')
+  it('never reads a class by bare id without a session and leaves start/join to the canonical class link', () => {
+    // A bare class id is not a capability: no public by-id read, only the opaque token redirect.
+    expect(pageSource).not.toContain('/public/live-classes/by-id')
+    expect(pageSource).toContain('Use the class link or sign in')
+    expect(pageSource).toContain('redirect(`/live/${shareToken}`)')
     // The canonical link has no ?start=true flag; PreparingClassroom resolves host or guest on the client.
     expect(pageSource).not.toContain('isStarting')
-    expect(pageSource).not.toContain('searchParams')
   })
 })

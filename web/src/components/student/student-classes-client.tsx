@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getApiUrl } from "@/config/api";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { StudentClass } from "@/lib/student-classes";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 type View = "all" | "upcoming" | "past";
 type ClassResources = { summary?: string | null; loading?: boolean; error?: string };
@@ -39,10 +40,11 @@ export function StudentClassesClient() {
   const classesQuery = useQuery<StudentClass[]>({
     queryKey: ["student-classes"],
     queryFn: async () => {
-      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/live-classes`, { cache: "no-store" });
-      const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error || "Failed to load live classes");
-      return body.data || [];
+      const client = createClient();
+      return fetchAllPages<StudentClass>(
+        (page) => authenticatedFetch(client, `${getApiUrl()}/live-classes?page=${page}&page_size=100`, { cache: "no-store" }),
+        "Failed to load live classes",
+      );
     },
     refetchInterval: 15_000,
     refetchOnWindowFocus: true,

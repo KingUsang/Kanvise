@@ -4,6 +4,9 @@ import { getCookie, setCookie } from 'hono/cookie'
 import { supabase } from '../lib/supabase'
 import { createPresignedDownload, privateObjectExists } from '../storage/r2'
 import { getPlugNmeetClientConfig, providerForClass } from '../plugnmeet/provider'
+import { PRESENTATION_LIST_COLUMNS, publicPresentation } from '../slides/presentation-projection'
+import { parseOffsetPagination } from '../lib/api-contract'
+import { recordingLifecycle, recordingLifecycleFailure } from '../lib/recording-lifecycle'
 
 export const publicLiveClassesRouter = new Hono()
 const db = supabase as any
@@ -50,18 +53,6 @@ function publicClassData(liveClass: any, viewer?: any) {
   }
 }
 
-function publicPresentation(row: any) {
-  const pageImageKeys = row.page_image_keys && typeof row.page_image_keys === 'object' ? row.page_image_keys : {}
-  return {
-    id: row.id, filename: row.filename, file_size_bytes: row.file_size_bytes,
-    page_count: row.page_count, processing_status: row.processing_status || 'ready',
-    processing_error: row.processing_error || null, sort_order: row.sort_order,
-    current_page: row.current_page, is_active: row.is_active, annotations: row.annotations || {},
-    page_images_ready: Object.keys(pageImageKeys).length,
-    created_at: row.created_at, updated_at: row.updated_at,
-  }
-}
-
 async function currentGuest(classId: string, c: any) {
   const token = getCookie(c, cookieName)
   if (!token || !/^[A-Za-z0-9_-]{40,}$/.test(token)) return null
@@ -72,38 +63,62 @@ async function currentGuest(classId: string, c: any) {
   return data
 }
 
+// A dependency outage must never read as "not a member" (DEV-LVC-029).
+class MemberLookupError extends Error {}
+
+function memberLookupUnavailable(c: any) {
+  return c.json({ error: 'We could not verify your access right now. Please try again shortly.', code: 'MEMBER_LOOKUP_UNAVAILABLE' }, 503)
+}
+
 async function recognisedMember(c: any, liveClass: any) {
   const header = c.req.header('Authorization')
   if (!header?.startsWith('Bearer ')) return null
   const { data: auth, error: authError } = await supabase.auth.getUser(header.slice(7))
-  if (authError || !auth.user) return null
-  const { data } = await db.from('user_profiles').select('id, school_id, role, first_name, last_name, kanvise_user_id')
+  if (authError) {
+    const status = (authError as any).status
+    // 4xx means the token itself is invalid; anything else is an Auth outage.
+    if (typeof status === 'number' && status >= 400 && status < 500) return null
+    throw new MemberLookupError('auth lookup failed')
+  }
+  if (!auth.user) return null
+  const { data, error } = await db.from('user_profiles').select('id, school_id, role, first_name, last_name, kanvise_user_id')
     .eq('supabase_auth_id', auth.user.id).eq('school_id', liveClass.school_id).maybeSingle()
+  if (error) throw new MemberLookupError('profile lookup failed')
   if (!data) return null
   if (liveClass.access_mode === 'enrolled_learners') {
     if (data.role !== 'student' || !liveClass.course_id) return null
-    const { data: enrolment } = await db.from('enrolments').select('id').eq('student_id', data.id).eq('course_id', liveClass.course_id).eq('school_id', liveClass.school_id).maybeSingle()
+    const { data: enrolment, error: enrolmentError } = await db.from('enrolments').select('id').eq('student_id', data.id).eq('course_id', liveClass.course_id).eq('school_id', liveClass.school_id).maybeSingle()
+    if (enrolmentError) throw new MemberLookupError('enrolment lookup failed')
     if (!enrolment) return null
   }
-  return data || null
+  return data
 }
 
 async function findClassById(classId: string) {
   if (!/^[0-9a-f-]{36}$/.test(classId) && !/^\d+$/.test(classId)) return null
   const { data, error } = await db.from('live_classes')
-    .select('id, school_id, course_id, title, status, scheduled_at, tutor_id, teaching_mode, access_mode, share_link_revoked_at, school:schools(name, logo_url)')
+    .select('id, school_id, course_id, title, status, scheduled_at, tutor_id, teaching_mode, access_mode, share_token_hash, share_link_revoked_at, school:schools(name, logo_url)')
     .eq('id', classId).maybeSingle()
   if (error) throw error
   return data
 }
 
-// GET /public/live-classes/by-id/:classId — used when unauthenticated visitor lands on /class/:id
+// GET /public/live-classes/by-id/:classId — used when a visitor lands on /class/:id.
+// A bare Session UUID is not a capability: the caller must present the active
+// opaque share token (?share_token=) or an authenticated, authorised session.
 publicLiveClassesRouter.get('/by-id/:classId', async c => {
   try {
     const liveClass = await findClassById(c.req.param('classId')!)
-    if (!liveClass) return c.json({ error: 'Class not found', code: 'CLASS_NOT_FOUND' }, 404)
-    return c.json({ data: publicClassData(liveClass) })
+    const unavailable = () => c.json({ error: 'This class link is unavailable', code: 'LINK_UNAVAILABLE' }, 404)
+    if (!liveClass) return unavailable()
+    const presented = c.req.query('share_token') || ''
+    const tokenOk = /^[A-Za-z0-9_-]{10,24}$/.test(presented) && !liveClass.share_link_revoked_at
+      && liveClass.access_mode === 'anyone_with_link' && tokenHash(presented) === liveClass.share_token_hash
+    const viewer = tokenOk ? null : await recognisedMember(c, liveClass)
+    if (!tokenOk && !viewer) return unavailable()
+    return c.json({ data: publicClassData(liveClass, viewer) })
   } catch (error) {
+    if (error instanceof MemberLookupError) return memberLookupUnavailable(c)
     console.error('[public-live-class] by-id lookup failed', error)
     return c.json({ error: 'Could not load this live class', code: 'LOOKUP_FAILED' }, 500)
   }
@@ -113,19 +128,29 @@ publicLiveClassesRouter.get('/recordings/:token', async c => {
   try {
     const token = c.req.param('token') || ''
     if (!/^[A-Za-z0-9_-]{40,}$/.test(token)) return c.json({ error: 'Recording link unavailable', code: 'LINK_UNAVAILABLE' }, 404)
-    const { data: link } = await db.from('live_class_recording_share_links')
+    const { data: link, error: linkError } = await db.from('live_class_recording_share_links')
       .select('live_class_id, school_id').eq('token_hash', tokenHash(token)).is('revoked_at', null).maybeSingle()
+    if (linkError) return c.json({ error: 'Could not open this recording. Please try again.', code: 'RECORDING_LOOKUP_UNAVAILABLE' }, 503)
     if (!link) return c.json({ error: 'Recording link unavailable', code: 'LINK_UNAVAILABLE' }, 404)
-    const [{ data: liveClass }, { data: recording }] = await Promise.all([
+    const [{ data: liveClass, error: classError }, { data: recordings, error: recordingError }] = await Promise.all([
       db.from('live_classes').select('id, title, scheduled_at, tutor:user_profiles!live_classes_tutor_id_fkey(first_name,last_name), course:courses!live_classes_course_id_fkey(name)').eq('id', link.live_class_id).eq('school_id', link.school_id).maybeSingle(),
-      db.from('live_class_recordings').select('id, r2_file_key, content_type, status').eq('live_class_id', link.live_class_id).eq('status', 'ready').maybeSingle(),
+      db.from('live_class_recordings').select('id, r2_file_key, content_type, status').eq('live_class_id', link.live_class_id).order('created_at', { ascending: false }).limit(10),
     ])
-    if (!liveClass || !recording?.r2_file_key) return c.json({ error: 'Recording is not ready', code: 'RECORDING_NOT_READY' }, 404)
+    if (classError || recordingError) return c.json({ error: 'Could not open this recording. Please try again.', code: 'RECORDING_LOOKUP_UNAVAILABLE' }, 503)
+    if (!liveClass) return c.json({ error: 'Recording link unavailable', code: 'LINK_UNAVAILABLE' }, 404)
+    // Lifecycle first, signed URL second: none, processing and failed are
+    // distinct outcomes and never reach URL signing.
+    const lifecycle = recordingLifecycle(recordings)
+    const recording = lifecycle.ready
+    if (!recording?.r2_file_key) {
+      const failure = recordingLifecycleFailure(lifecycle.status === 'ready' ? 'processing' : lifecycle.status)
+      return c.json({ error: failure.error, code: failure.code, recording_status: lifecycle.status === 'ready' ? 'processing' : lifecycle.status }, failure.status)
+    }
     if (!(await privateObjectExists(recording.r2_file_key, String(link.school_id)))) {
       return c.json({ error: 'This recording is not available yet' }, 404)
     }
     const playbackUrl = await createPresignedDownload(recording.r2_file_key, String(link.school_id), 600)
-    return c.json({ data: { recording_id: recording.id, playback_url: playbackUrl, playback_expires_at: new Date(Date.now() + 600_000).toISOString(), class: liveClass } })
+    return c.json({ data: { recording_id: recording.id, recording_status: 'ready', playback_url: playbackUrl, playback_expires_at: new Date(Date.now() + 600_000).toISOString(), class: liveClass } })
   } catch (error) {
     console.error('[public-recording] playback failed', error)
     return c.json({ error: 'Could not open this recording', code: 'PLAYBACK_FAILED' }, 500)
@@ -140,6 +165,7 @@ publicLiveClassesRouter.get('/:shareToken', async c => {
     const viewer = await recognisedMember(c, liveClass)
     return c.json({ data: publicClassData(liveClass, viewer) })
   } catch (error) {
+    if (error instanceof MemberLookupError) return memberLookupUnavailable(c)
     console.error('[public-live-class] lookup failed', error)
     return c.json({ error: 'Could not load this live class', code: 'LOOKUP_FAILED' }, 500)
   }
@@ -159,6 +185,7 @@ publicLiveClassesRouter.post('/:shareToken/enter', async c => {
     }
     return c.redirect(`/live-classes/${liveClass.id}/enter`, 307)
   } catch (error) {
+    if (error instanceof MemberLookupError) return memberLookupUnavailable(c)
     console.error('[public-live-class] host entry failed', error)
     return c.json({ error: 'Could not open this class. Please try again.', code: 'HOST_ENTRY_FAILED' }, 500)
   }
@@ -215,10 +242,27 @@ publicLiveClassesRouter.get('/:shareToken/presentations', async c => {
     if (!liveClass || liveClass.share_link_revoked_at || liveClass.status !== 'live') return c.json({ error: 'This class is unavailable', code: 'CLASS_UNAVAILABLE' }, 404)
     const [guest, member] = await Promise.all([currentGuest(liveClass.id, c), recognisedMember(c, liveClass)])
     if (!guest && !member) return c.json({ error: 'Join this class before viewing its materials', code: 'GUEST_SESSION_REQUIRED' }, 401)
-    const { data, error } = await db.from('live_class_presentations').select('*').eq('live_class_id', liveClass.id).order('sort_order', { ascending: true }).order('created_at', { ascending: true })
+    const pagination = parseOffsetPagination(c.req.query('page'), c.req.query('page_size') ?? '100')
+    if (!pagination) return c.json({ error: 'Invalid pagination parameters', code: 'INVALID_PAGINATION' }, 400)
+    const { data, error } = await db.from('live_class_presentations').select(PRESENTATION_LIST_COLUMNS).eq('live_class_id', liveClass.id)
+      .order('sort_order', { ascending: true }).order('created_at', { ascending: true })
+      .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
     if (error) throw error
-    return c.json({ data: { teaching_mode: liveClass.teaching_mode || 'whiteboard', tutor_identity: liveClass.tutor_id, presentations: (data || []).map(publicPresentation), legacy_slide_urls: [] } })
+    const rows: any[] = data || []
+    // Only the active material carries annotations; others are omitted.
+    const active = rows.find((row) => row.is_active)
+    if (active) {
+      const { data: withAnnotations, error: annotationError } = await db.from('live_class_presentations').select('annotations')
+        .eq('id', active.id).eq('live_class_id', liveClass.id).maybeSingle()
+      if (annotationError) throw annotationError
+      active.annotations = withAnnotations?.annotations || {}
+    }
+    return c.json({ data: {
+      teaching_mode: liveClass.teaching_mode || 'whiteboard',       presentations: rows.map((row) => publicPresentation(row, { includeAnnotations: Boolean(row.is_active) })), legacy_slide_urls: [],
+      pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: rows.length === pagination.pageSize },
+    } })
   } catch (error) {
+    if (error instanceof MemberLookupError) return memberLookupUnavailable(c)
     console.error('[public-live-class] presentations failed', error)
     return c.json({ error: 'Could not load presentation materials', code: 'PRESENTATIONS_FAILED' }, 500)
   }
@@ -234,6 +278,7 @@ publicLiveClassesRouter.get('/:shareToken/presentations/:presentationId/view', a
     if (error || !data || data.processing_status !== 'ready') return c.json({ error: 'Material is not ready', code: 'MATERIAL_NOT_READY' }, 409)
     return c.json({ data: { url: await createPresignedDownload(data.file_key, liveClass.school_id, 600), expires_in_seconds: 600 } })
   } catch (error) {
+    if (error instanceof MemberLookupError) return memberLookupUnavailable(c)
     console.error('[public-live-class] presentation view failed', error)
     return c.json({ error: 'Could not load this material', code: 'MATERIAL_VIEW_FAILED' }, 500)
   }
@@ -258,6 +303,7 @@ publicLiveClassesRouter.get('/:shareToken/presentations/:presentationId/pages/:p
       page, expires_in_seconds: 3600,
     } })
   } catch (error) {
+    if (error instanceof MemberLookupError) return memberLookupUnavailable(c)
     console.error('[public-live-class] presentation page view failed', error)
     return c.json({ error: 'Could not load this page', code: 'PAGE_VIEW_FAILED' }, 500)
   }

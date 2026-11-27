@@ -54,6 +54,7 @@ import {
   type ProductSubject,
   type ProductSubjectLink,
 } from '@/lib/product-terminology';
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 type Subject = ProductSubject;
 type TutorPerson = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string };
@@ -324,11 +325,10 @@ export function ClassWorkspaceClient({
   const assignmentsQuery = useQuery({
     queryKey: classQueryKeys.assignments(accountId, classId),
     queryFn: async () => {
-      const response = await authenticatedApiFetch(`${api}/assignments?page_size=100`);
-      const body = await response.json().catch(() => null);
-      if (!response.ok)
-        throw new Error(body?.error || "Could not load assignments");
-      return (body?.data || []) as Assignment[];
+      return fetchAllPages<Assignment>(
+        (page) => authenticatedApiFetch(`${api}/assignments?page=${page}&page_size=100`),
+        "Could not load assignments",
+      );
     },
     staleTime: 60_000,
   });
@@ -345,13 +345,12 @@ export function ClassWorkspaceClient({
     queryKey: classQueryKeys.materials(accountId, classId, activeSubject),
     queryFn: async () => {
       const responses = await Promise.all(
-        visibleMaterialSubjectIds.map(async (courseId) => {
-          const response = await authenticatedApiFetch(`${api}/notes/${courseId}`);
-          const body = await response.json().catch(() => null);
-          if (!response.ok)
-            throw new Error(body?.error || "Could not load materials");
-          return (body?.data || []) as Note[];
-        }),
+        visibleMaterialSubjectIds.map((courseId) =>
+          fetchAllPages<Note>(
+            (page) => authenticatedApiFetch(`${api}/notes/${courseId}?page=${page}&page_size=100`),
+            "Could not load materials",
+          ),
+        ),
       );
       return responses.flat();
     },

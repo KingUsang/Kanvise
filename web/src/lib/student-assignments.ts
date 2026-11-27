@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { getApiUrl } from "@/config/api";
 
 export type StudentAssignment = {
@@ -23,7 +24,9 @@ export type StudentAssignment = {
 };
 
 export const getStudentAssignments = cache(async (accessToken: string): Promise<StudentAssignment[]> => {
-  const response = await fetch(`${getApiUrl()}/assignments/me`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
-  if (!response.ok) throw new Error("Failed to load student assignments");
-  return (await response.json()).data;
+  return fetchAllPages<StudentAssignment>(
+    (page) => fetch(`${getApiUrl()}/assignments/me?page=${page}&page_size=100`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }),
+    "Failed to load student assignments",
+    () => "Failed to load student assignments",
+  );
 });

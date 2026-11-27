@@ -1,13 +1,18 @@
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createServerClient } from '@supabase/ssr'
 import PreparingClassroom from './PreparingClassroom'
 
 interface PageProps {
   params: Promise<{ id: string }>
+  searchParams?: Promise<{ share_token?: string | string[] }>
 }
 
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params, searchParams }: PageProps) {
   const resolvedParams = await params
+  const rawToken = (await searchParams)?.share_token
+  const shareToken = typeof rawToken === 'string' && /^[A-Za-z0-9_-]{10,24}$/.test(rawToken) ? rawToken : ''
   const classId = resolvedParams.id
 
   // ── 1. Verify the authenticated user's claims from the cookie ──────────────
@@ -28,59 +33,16 @@ export default async function Page({ params }: PageProps) {
 
   if (claimsError || !claims) {
     // ── No session: check if this class allows public access ──────────────────
-    const honoUrl = process.env.NEXT_PUBLIC_API_URL
-    let classInfo: { title: string; status: string; access_mode: string; centre_name: string; centre_logo_url: string | null } | null = null
-    try {
-      const res = await fetch(`${honoUrl}/public/live-classes/by-id/${classId}`, { cache: 'no-store' })
-      if (res.ok) classInfo = (await res.json()).data
-    } catch { /* classInfo stays null */ }
+    // A bare class id is not a capability. A visitor with the opaque link goes
+    // to the shared-link page; anyone else is asked to sign in or use the link.
+    if (shareToken) redirect(`/live/${shareToken}`)
 
-    // Class not found at all
-    if (!classInfo) {
-      return (
-        <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
-          <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-              <span className="text-2xl">!</span>
-            </div>
-            <h1 className="text-xl font-bold text-[#180d62]">Class not found</h1>
-            <p className="mt-3 text-sm leading-6 text-[#66616c]">This class link is invalid or has been removed.</p>
-          </section>
-        </main>
-      )
-    }
-
-    // Class is for enrolled learners only — show friendly message, no login redirect
-    if (classInfo.access_mode === 'enrolled_learners') {
-      return (
-        <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
-          <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm">
-            <div className="flex items-center gap-3">
-              {classInfo.centre_logo_url
-                ? <img src={classInfo.centre_logo_url} alt="" className="h-11 w-11 rounded-xl object-cover" />
-                : <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eeeaff] text-[#2e2877]"><span className="material-symbols-outlined">school</span></div>
-              }
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[.12em] text-[#994704]">{classInfo.centre_name}</p>
-                <h1 className="text-xl font-bold text-[#180d62]">{classInfo.title}</h1>
-              </div>
-            </div>
-            <div className="mt-6 rounded-xl bg-[#fff8f0] border border-[#f5d9b8] p-4">
-              <p className="text-sm font-semibold text-[#7f3a03]">This class is for enrolled learners only</p>
-              <p className="mt-1 text-sm leading-6 text-[#66616c]">You need to be a registered student at <strong>{classInfo.centre_name}</strong> to join this class. Ask your tutor to add you to their school on Kanvise.</p>
-            </div>
-          </section>
-        </main>
-      )
-    }
-
-    // Guest access requires the opaque link, never a guessable class id. This
-    // prevents a public route from becoming an alternate access control path.
     return (
       <main className="flex min-h-[100dvh] items-center justify-center bg-[#fbf9f8] px-5 font-sans">
         <section className="w-full max-w-md rounded-2xl border border-[#e5e1dd] bg-white p-7 shadow-sm text-center">
-          <h1 className="text-xl font-bold text-[#180d62]">Use the class link</h1>
-          <p className="mt-3 text-sm leading-6 text-[#66616c]">Ask your tutor for the shared class link to join this preview.</p>
+          <h1 className="text-xl font-bold text-[#180d62]">Use the class link or sign in</h1>
+          <p className="mt-3 text-sm leading-6 text-[#66616c]">Ask your tutor for the shared class link, or sign in to join a class you are enrolled in.</p>
+          <Link href="/auth/login" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white">Sign in</Link>
         </section>
       </main>
     )

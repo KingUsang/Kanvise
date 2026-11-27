@@ -7,7 +7,7 @@ import {
   profileResolutionMiddleware,
   requireMembershipRole,
 } from '../middleware/auth'
-import { uuidSchema } from '../lib/api-contract'
+import { parseOffsetPagination, uuidSchema } from '../lib/api-contract'
 import { programmesRouter } from './programmes'
 import type { AccountContext, TenantVariables } from '../types'
 
@@ -187,6 +187,8 @@ classesRouter.get('/timetable', ...classAccessMiddleware(), async (c) => {
   if (user.role !== 'admin') return c.json({ error: 'Only admins can view the centre timetable', code: 'FORBIDDEN' }, 403)
   const parsedFilters = timetableQuerySchema.safeParse(optionalQuery(c, ['course_id', 'tutor_id']))
   if (!parsedFilters.success) return c.json({ error: 'Invalid timetable filters', code: 'VALIDATION_ERROR' }, 400)
+  const pagination = parseOffsetPagination(c.req.query('page'), c.req.query('page_size') ?? '100')
+  if (!pagination) return c.json({ error: 'Invalid pagination parameters', code: 'INVALID_PAGINATION' }, 400)
   try {
     const { data: school, error: schoolError } = await supabase.from('schools')
       .select('account_type')
@@ -202,12 +204,14 @@ classesRouter.get('/timetable', ...classAccessMiddleware(), async (c) => {
       .is('deleted_at', null)
       .order('weekday', { ascending: true })
       .order('start_time', { ascending: true })
+      .order('id', { ascending: true })
     const { course_id: courseId, tutor_id: tutorId } = parsedFilters.data
     if (courseId) query = query.eq('course_id', courseId)
     if (tutorId) query = query.eq('tutor_id', tutorId)
-    const { data, error } = await query.limit(1000)
+    const { data, error } = await query.range(pagination.offset, pagination.offset + pagination.pageSize - 1)
     if (error) throw error
-    return c.json({ data: data || [] })
+    const rows = data || []
+    return c.json({ data: rows, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: rows.length === pagination.pageSize } })
   } catch (error: any) {
     console.error('[classes] timetable read failed:', error)
     return c.json({ error: 'Could not load centre timetable', code: 'TIMETABLE_READ_FAILED' }, 500)

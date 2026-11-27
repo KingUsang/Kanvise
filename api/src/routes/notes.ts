@@ -16,6 +16,8 @@ import {
 } from "../storage/r2";
 import { loadStudentCourseIds } from "../lib/student-course-access";
 import type { AccountContext } from "../types";
+import { z } from "zod";
+import { parseOffsetPagination } from "../lib/api-contract";
 
 type Variables = {
   user: any;
@@ -46,6 +48,15 @@ notesRouter.use("*", async (c, next) => {
   await next();
 });
 
+const createNoteSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(2000).nullish(),
+  file_key: z.string().min(1).max(512),
+  file_name: z.string().trim().min(1).max(255),
+  file_type: z.string().trim().min(1).max(127),
+  file_size_bytes: z.coerce.number().int().positive(),
+});
+
 const enforceAdminOrTutor = requireMembershipRole("admin", "tutor");
 const enforceLearner = requireMembershipRole("learner");
 const enforceAccountMember = requireMembershipRole("admin", "tutor", "learner");
@@ -61,12 +72,18 @@ notesRouter.get("/me", enforceLearner, async (c) => {
     const courseIds = await loadStudentCourseIds(profile.id, profile.school_id);
     if (!courseIds.length) return c.json({ data: [] });
 
+    const pagination = parseOffsetPagination(c.req.query("page"), c.req.query("page_size") ?? "100");
+    if (!pagination) return c.json({ error: "Invalid pagination parameters", code: "INVALID_PAGINATION" }, 400);
+
     const { data, error } = await supabase.from("notes")
       .select(studentMaterialsSelect)
       .eq("school_id", profile.school_id).in("course_id", courseIds)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(pagination.offset, pagination.offset + pagination.pageSize);
     if (error) throw error;
-    const notes = await Promise.all((data || []).map(async ({ file_key, ...note }) => {
+    const hasMore = (data || []).length > pagination.pageSize;
+    const notes = await Promise.all((data || []).slice(0, pagination.pageSize).map(async ({ file_key, ...note }) => {
       try {
         return {
           ...note,
@@ -84,7 +101,7 @@ notesRouter.get("/me", enforceLearner, async (c) => {
         return { ...note, download_url: null, download_available: false }
       }
     }))
-    return c.json({ data: notes });
+    return c.json({ data: notes, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: hasMore } });
   } catch (error: any) {
     console.error("GET /notes/me error:", error);
     return c.json({ error: "Could not load learning materials", code: "MATERIALS_LOAD_FAILED" }, 500);
@@ -101,12 +118,11 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
 
     const courseId = c.req.param("courseId");
     if (!courseId) return c.json({ error: "Course not found", code: "NOT_FOUND" }, 404);
-    const body = await c.req.json();
-    const { title, description, file_key, file_name, file_type, file_size_bytes } = body;
-
-    if (!title || !file_key || !file_name || !file_type || !file_size_bytes) {
-      return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
+    const parsed = createNoteSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ error: "Missing or invalid material fields", code: "BAD_REQUEST" }, 400);
     }
+    const { title, description, file_key, file_name, file_type, file_size_bytes } = parsed.data;
 
     assertPrivateFileKey(file_key, profile.school_id, "note", courseId);
 
@@ -116,9 +132,10 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       .select("id")
       .eq("id", courseId)
       .eq("school_id", profile.school_id)
-      .single();
+      .maybeSingle();
 
-    if (courseError || !course) {
+    if (courseError) throw courseError;
+    if (!course) {
       return c.json({ error: "Course not found", code: "NOT_FOUND" }, 404);
     }
 
@@ -130,9 +147,10 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
         .eq("tutor_id", profile.id)
         .eq("course_id", courseId)
         .eq("school_id", profile.school_id)
-        .single();
+        .maybeSingle();
 
-      if (assignmentError || !assignment) {
+      if (assignmentError) throw assignmentError;
+      if (!assignment) {
         return c.json({ error: "Not assigned to this course", code: "NOT_ASSIGNED_TO_COURSE" }, 403);
       }
     }
@@ -146,11 +164,12 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       fileSizeBytes: Number(file_size_bytes),
     });
 
-    const { data: reusedFile } = await supabase.from("notes")
+    const { data: reusedFile, error: reuseError } = await supabase.from("notes")
       .select("id")
       .eq("school_id", profile.school_id)
       .eq("file_key", file_key)
       .maybeSingle();
+    if (reuseError) throw reuseError;
     if (reusedFile) {
       return c.json({ error: "File has already been registered", code: "FILE_ALREADY_REGISTERED" }, 409);
     }
@@ -172,7 +191,13 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       .select()
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      // The unique (school_id, file_key) index closes the check-then-insert race.
+      if (insertError.code === "23505") {
+        return c.json({ error: "File has already been registered", code: "FILE_ALREADY_REGISTERED" }, 409);
+      }
+      throw insertError;
+    }
 
     return c.json({ data: note, message: "Note created successfully" }, 201);
   } catch (error: any) {
@@ -209,12 +234,16 @@ notesRouter.get("/:courseId", enforceAccountMember, async (c) => {
         .eq("tutor_id", profile.id)
         .eq("course_id", courseId)
         .eq("school_id", profile.school_id)
-        .single();
+        .maybeSingle();
 
-      if (assignmentError || !assignment) {
+      if (assignmentError) throw assignmentError;
+      if (!assignment) {
         return c.json({ error: "Not assigned to this course", code: "FORBIDDEN" }, 403);
       }
     }
+
+    const pagination = parseOffsetPagination(c.req.query("page"), c.req.query("page_size") ?? "100");
+    if (!pagination) return c.json({ error: "Invalid pagination parameters", code: "INVALID_PAGINATION" }, 400);
 
     // Fetch notes with tutor details
     const { data: notes, error } = await supabase
@@ -225,12 +254,15 @@ notesRouter.get("/:courseId", enforceAccountMember, async (c) => {
       `)
       .eq("course_id", courseId)
       .eq("school_id", profile.school_id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(pagination.offset, pagination.offset + pagination.pageSize);
 
     if (error) throw error;
+    const hasMore = (notes || []).length > pagination.pageSize;
 
-    // Generate download_url for each note to match API Spec
-    const enhancedNotes = await Promise.all((notes || []).map(async (note) => {
+    // Only the returned page is signed.
+    const enhancedNotes = await Promise.all((notes || []).slice(0, pagination.pageSize).map(async (note) => {
       const download_url = await createPresignedDownload(note.file_key, profile.school_id);
       return {
         ...withoutPrivateFileKey(note),
@@ -238,7 +270,7 @@ notesRouter.get("/:courseId", enforceAccountMember, async (c) => {
       };
     }));
 
-    return c.json({ data: enhancedNotes });
+    return c.json({ data: enhancedNotes, pagination: { page: pagination.page, page_size: pagination.pageSize, has_more: hasMore } });
   } catch (error: any) {
     console.error(`GET /notes/:courseId error:`, error);
     return c.json({ error: "Could not load learning materials", code: "MATERIALS_LOAD_FAILED" }, 500);

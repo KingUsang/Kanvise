@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
+  enqueueDeletion: vi.fn(),
   uploadPrivate: vi.fn(),
   deletePrivate: vi.fn(),
   createDownload: vi.fn(),
@@ -12,7 +14,8 @@ const mocks = vi.hoisted(() => ({
   user: { id: 'tutor-1', school_id: 'school-1', role: 'tutor' } as any,
 }))
 
-vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
+vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
+vi.mock('../jobs/storage-cleanup', () => ({ enqueueObjectDeletion: mocks.enqueueDeletion }))
 vi.mock('../lib/student-course-access', () => ({ loadStudentCourseIds: mocks.loadCourseIds }))
 vi.mock('../slides/pdf-metadata', () => ({ readPdfPageCount: mocks.readPageCount }))
 vi.mock('../storage/r2', async (importOriginal) => {
@@ -37,7 +40,7 @@ import { slidesRouter } from './slides'
 function builder(result: any) {
   const value: any = {
     select: () => value, insert: () => value, update: () => value, delete: () => value,
-    eq: () => value, order: () => value, limit: () => value,
+    eq: () => value, order: () => value, limit: () => value, range: () => value,
     maybeSingle: async () => result, single: async () => result,
     then: (resolve: (value: any) => unknown) => Promise.resolve(result).then(resolve),
   }
@@ -119,9 +122,8 @@ describe('private classroom presentations API', () => {
     queue(
       { data: liveClass(), error: null },
       { data: material(), error: null },
-      { data: null, error: null },
-      { data: material(), error: null },
     )
+    mocks.rpc.mockResolvedValue({ data: { status: 'ok', presentation: material() }, error: null })
     const response = await slidesRouter.request('/class-1/presentations/material-1/activate', { method: 'POST' })
     expect(response.status).toBe(200)
   })
@@ -131,13 +133,14 @@ describe('private classroom presentations API', () => {
       material({ id: 'a', filename: 'Algebra.pdf', current_page: 3, page_count: 5, annotations: { '3': [{ id: 's1', points: [{ x: .1, y: .2 }] }] } }),
       material({ id: 'b', filename: 'Geometry.pdf', is_active: false, sort_order: 1 }),
     ]
-    queue({ data: liveClass({ teaching_mode: 'presentation' }), error: null }, { data: rows, error: null })
+    queue({ data: liveClass({ teaching_mode: 'presentation' }), error: null }, { data: rows, error: null }, { data: { annotations: rows[0].annotations }, error: null })
     const response = await slidesRouter.request('/class-1/presentations')
     const body = await response.json() as any
     expect(response.status).toBe(200)
     expect(body.data.presentations).toHaveLength(2)
     expect(body.data.tutor_identity).toBe('tutor-1')
     expect(body.data.presentations[0]).toMatchObject({ current_page: 3, annotations: { '3': expect.any(Array) } })
+    expect(body.data.presentations[1].annotations).toEqual({})
     expect(body.data.legacy_slide_urls).toEqual([])
   })
 
@@ -205,5 +208,106 @@ describe('private classroom presentations API', () => {
     })
     expect(response.status).toBe(400)
     expect((await response.json() as any).code).toBe('INVALID_ANNOTATIONS')
+  })
+  it('omits raw processing errors and inactive annotations from the list', async () => {
+    const rows = [
+      material({ id: 'a', is_active: false, processing_status: 'failed', processing_error: 'R2 bucket secret-bucket timeout', annotations: { '1': [{ id: 'x' }] } }),
+    ]
+    queue({ data: liveClass(), error: null }, { data: rows, error: null })
+    const response = await slidesRouter.request('/class-1/presentations')
+    const text = await response.text()
+    const body = JSON.parse(text)
+    expect(response.status).toBe(200)
+    expect(text).not.toContain('secret-bucket')
+    expect(body.data.presentations[0]).toMatchObject({ processing_error_code: 'PROCESSING_FAILED', annotations: {} })
+    expect(body.data.pagination).toEqual({ page: 1, page_size: 100, has_more: false })
+  })
+
+  it('rejects out-of-range pagination on the list', async () => {
+    queue({ data: liveClass(), error: null })
+    const response = await slidesRouter.request('/class-1/presentations?page_size=1000')
+    expect(response.status).toBe(400)
+  })
+
+  it('returns 503, not 404, when the material lookup fails', async () => {
+    queue({ data: liveClass(), error: null }, { data: null, error: { message: 'db down' } })
+    const response = await slidesRouter.request('/class-1/presentations/material-1/activate', { method: 'POST' })
+    expect(response.status).toBe(503)
+    expect((await response.json() as any).code).toBe('SERVICE_UNAVAILABLE')
+  })
+
+  it('maps activation RPC failures to 503 and a missing material to 404', async () => {
+    queue({ data: liveClass(), error: null }, { data: material(), error: null })
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: 'boom' } })
+    expect((await slidesRouter.request('/class-1/presentations/material-1/activate', { method: 'POST' })).status).toBe(503)
+    queue({ data: liveClass(), error: null }, { data: material(), error: null })
+    mocks.rpc.mockResolvedValueOnce({ data: { status: 'not_found' }, error: null })
+    expect((await slidesRouter.request('/class-1/presentations/material-1/activate', { method: 'POST' })).status).toBe(404)
+  })
+
+  it('maps an invalid annotation payload rejected by the database function to 400', async () => {
+    queue({ data: liveClass(), error: null }, { data: material(), error: null })
+    mocks.rpc.mockResolvedValue({ data: { status: 'invalid' }, error: null })
+    const response = await slidesRouter.request('/class-1/presentations/material-1/annotations', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ page: 1, annotations: [] }),
+    })
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_ANNOTATIONS' })
+  })
+
+  it('returns 409 with the current revision when annotations are stale', async () => {
+    queue({ data: liveClass(), error: null }, { data: material(), error: null })
+    mocks.rpc.mockResolvedValue({ data: { status: 'revision_conflict', revision: 4 }, error: null })
+    const response = await slidesRouter.request('/class-1/presentations/material-1/annotations', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ page: 1, annotations: [], revision: 2 }),
+    })
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ code: 'REVISION_CONFLICT', revision: 4 })
+    expect(mocks.rpc).toHaveBeenCalledWith('save_presentation_annotations', expect.objectContaining({ p_expected_revision: 2, p_page: 1 }))
+  })
+
+  it('saves annotations through the revisioned RPC', async () => {
+    queue({ data: liveClass(), error: null }, { data: material(), error: null })
+    mocks.rpc.mockResolvedValue({ data: { status: 'ok', presentation: material({ annotations_revision: 3 }) }, error: null })
+    const response = await slidesRouter.request('/class-1/presentations/material-1/annotations', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ page: 1, annotations: [], revision: 2 }),
+    })
+    expect(response.status).toBe(200)
+    expect((await response.json() as any).data.annotations_revision).toBe(3)
+  })
+
+  it('reorders through the RPC and maps a mismatch to 409', async () => {
+    const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']
+    queue({ data: liveClass(), error: null })
+    mocks.rpc.mockResolvedValueOnce({ data: { status: 'ok' }, error: null })
+    const ok = await slidesRouter.request('/class-1/presentations/reorder', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ordered_ids: ids }) })
+    expect(ok.status).toBe(200)
+    queue({ data: liveClass(), error: null })
+    mocks.rpc.mockResolvedValueOnce({ data: { status: 'order_mismatch' }, error: null })
+    const bad = await slidesRouter.request('/class-1/presentations/reorder', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ordered_ids: ids }) })
+    expect(bad.status).toBe(409)
+    queue({ data: liveClass(), error: null })
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: 'x' } })
+    const down = await slidesRouter.request('/class-1/presentations/reorder', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ordered_ids: ids }) })
+    expect(down.status).toBe(503)
+  })
+
+  it('deletes the row first and queues object cleanup durably', async () => {
+    queue({ data: liveClass(), error: null }, { data: material({ is_active: false, page_image_keys: { '1': 'page-1.png' } }), error: null }, { data: null, error: null })
+    const response = await slidesRouter.request('/class-1/presentations/material-1', { method: 'DELETE' })
+    expect(response.status).toBe(204)
+    expect(mocks.deletePrivate).not.toHaveBeenCalled()
+    expect(mocks.enqueueDeletion).toHaveBeenCalledWith(expect.stringContaining('material-1.pdf'), 'school-1')
+    expect(mocks.enqueueDeletion).toHaveBeenCalledWith('page-1.png', 'school-1')
+  })
+
+  it('keeps the object when the row delete fails', async () => {
+    queue({ data: liveClass(), error: null }, { data: material(), error: null }, { data: null, error: { message: 'x' } })
+    const response = await slidesRouter.request('/class-1/presentations/material-1', { method: 'DELETE' })
+    expect(response.status).toBe(500)
+    expect(mocks.enqueueDeletion).not.toHaveBeenCalled()
   })
 })

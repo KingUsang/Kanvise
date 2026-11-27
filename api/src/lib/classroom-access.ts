@@ -25,6 +25,7 @@ export type ClassroomAccessFailure =
   | 'not_enrolled'
   | 'not_assigned_tutor'
   | 'lookup_failed'
+  | 'unsupported_role'
 
 export type ClassroomAccess =
   | { liveClass: ClassroomRecord; isHost: boolean }
@@ -37,6 +38,10 @@ export async function resolveClassroomAccess(
   user: ClassroomUser,
   level: ClassroomAccessLevel = 'view',
 ): Promise<ClassroomAccess> {
+  // Only the supported audiences may reach a Session. Other roles (including
+  // legacy super_admin) get no implicit access through an account match
+  // (DEV-LVC-033).
+  if (!['admin', 'tutor', 'student'].includes(user.role)) return { reason: 'unsupported_role' }
   // Scope the lookup to the selected active account. A class in another
   // account is indistinguishable from a missing one, so its existence is not
   // revealed (DEV-ACC-003). A database failure still surfaces as lookup_failed.
@@ -75,6 +80,8 @@ export function classroomAccessError(reason: ClassroomAccessFailure) {
       return { status: 403 as const, error: 'You are not enrolled in this class', code: 'NOT_ENROLLED' }
     case 'not_assigned_tutor':
       return { status: 403 as const, error: 'You are not the tutor assigned to this class', code: 'NOT_CLASS_TUTOR' }
+    case 'unsupported_role':
+      return { status: 403 as const, error: 'Your role cannot access live classes', code: 'INSUFFICIENT_ROLE' }
     case 'lookup_failed':
       return { status: 500 as const, error: 'Could not verify class access', code: 'CLASS_ACCESS_FAILED' }
   }

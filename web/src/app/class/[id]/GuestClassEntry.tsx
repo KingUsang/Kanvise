@@ -8,7 +8,7 @@ import PlugNmeetClassroom from './PlugNmeetClassroom'
 type ClassInfo = { title: string; status: string; access_mode: string; centre_name: string; centre_logo_url: string | null }
 type JoinData = { room_id: string; join_token: string; server_url: string; client_files: { css_files: string[]; js_files: string[] }; class_title: string }
 
-export function GuestClassEntry({ classId, classInfo }: { classId: string; classInfo: ClassInfo }) {
+export function GuestClassEntry({ classId, classInfo, shareToken }: { classId: string; classInfo: ClassInfo; shareToken?: string }) {
   const [name, setName] = useState('')
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +29,7 @@ export function GuestClassEntry({ classId, classInfo }: { classId: string; class
           'Content-Type': 'application/json',
           ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ display_name: name }),
+        body: JSON.stringify({ display_name: name, ...(shareToken ? { share_token: shareToken } : {}) }),
       })
       const rawText = await response.text()
       console.log('[GuestClassEntry] Join Response Status:', response.status)

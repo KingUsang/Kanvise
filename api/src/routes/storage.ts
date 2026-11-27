@@ -15,7 +15,9 @@ import {
   StorageError,
   verifyPublicUpload,
 } from '../storage/r2'
+import { z } from 'zod'
 import { loadStudentCourseIds } from '../lib/student-course-access'
+import { tutorCanManageCourse } from '../lib/course-management-access'
 import type { TablesUpdate } from '../lib/database.types'
 
 export const storageRouter = new Hono<{ Variables: AppVariables }>()
@@ -34,60 +36,82 @@ storageRouter.use('*', async (c, next) => {
   await next()
 })
 
-async function canUploadToCourse(user: AppVariables['user'], courseId: string) {
-  if (!user.school_id) return false
-  const { data: course } = await supabase.from('courses')
-    .select('id')
-    .eq('id', courseId)
-    .eq('school_id', user.school_id)
-    .maybeSingle()
-  if (!course) return false
-  if (user.role === 'admin') return true
-  if (user.role !== 'tutor') return false
+// Authorization lookups that fail must surface as a dependency failure (503),
+// never as a permission denial (DEV-UPL-018).
+class AuthorizationLookupError extends Error {}
 
-  const { data: assignment } = await supabase.from('tutor_course_assignments')
-    .select('id')
-    .eq('school_id', user.school_id)
-    .eq('course_id', courseId)
-    .eq('tutor_id', user.id)
-    .maybeSingle()
-  return Boolean(assignment)
+function lookupFailed(error: unknown): never {
+  console.error('storage.authorization_lookup_failed', error)
+  throw new AuthorizationLookupError('authorization lookup failed')
+}
+
+// Only these types are uploaded directly by clients. Presentation, recording,
+// transcript and feedback objects are created by their own authorized routes.
+const CLIENT_UPLOAD_TYPES = ['note', 'assignment_attachment', 'submission', 'question_media'] as const
+
+const presignUploadSchema = z.object({
+  file_name: z.string().trim().min(1).max(255),
+  content_type: z.string().trim().min(1).max(127),
+  file_size_bytes: z.coerce.number().int().positive(),
+  entity_type: z.string().min(1).max(64),
+  course_id: z.string().uuid().optional(),
+  assignment_id: z.string().uuid().optional(),
+  bank_id: z.string().uuid().optional(),
+})
+
+async function canUploadToCourse(user: AppVariables['user'], courseId: string) {
+  const access = await tutorCanManageCourse(user as any, courseId)
+  if (access.error) lookupFailed(access.error)
+  return access.allowed
 }
 
 async function canSubmitAssignment(user: AppVariables['user'], assignmentId: string) {
   if (!user.school_id || user.role !== 'student') return false
-  const { data: assignment } = await supabase.from('assignments')
+  const { data: assignment, error } = await supabase.from('assignments')
     .select('course_id')
     .eq('id', assignmentId)
     .eq('school_id', user.school_id)
     .eq('is_published', true)
     .maybeSingle()
+  if (error) lookupFailed(error)
   if (!assignment) return false
 
-  return (await loadStudentCourseIds(user.id, user.school_id)).includes(assignment.course_id)
+  try {
+    return (await loadStudentCourseIds(user.id, user.school_id)).includes(assignment.course_id)
+  } catch (lookupError) {
+    return lookupFailed(lookupError)
+  }
 }
 
 async function canUploadQuestionMedia(user: AppVariables['user'], bankId: string) {
   if (!user.school_id || !['admin', 'tutor'].includes(user.role)) return false
-  const { data: bank } = await supabase.from('question_banks')
+  const { data: bank, error } = await supabase.from('question_banks')
     .select('owner_id, visibility, archived_at')
     .eq('id', bankId).eq('school_id', user.school_id).maybeSingle()
+  if (error) lookupFailed(error)
   if (!bank || bank.archived_at) return false
   return user.role === 'admin' || bank.owner_id === user.id || bank.visibility === 'centre'
+}
+
+function serviceUnavailable(c: any) {
+  return c.json({ error: 'Storage authorization is temporarily unavailable. Please retry.', code: 'SERVICE_UNAVAILABLE' }, 503)
 }
 
 async function presignUpload(c: any) {
   try {
     const user = c.get('user') as AppVariables['user']
-    const body = await c.req.json()
-    const { file_name, content_type, file_size_bytes, entity_type, course_id } = body
-
     if (!user.school_id) return c.json({ error: 'User has no school setup', code: 'NO_SCHOOL' }, 400)
-    if (!file_name || !content_type || !file_size_bytes || !entity_type) {
-      return c.json({ error: 'Missing required fields', code: 'BAD_REQUEST' }, 400)
-    }
+    const rawBody = await c.req.json().catch(() => null)
+    const parsed = presignUploadSchema.safeParse(rawBody)
+    if (!parsed.success) return c.json({ error: 'Missing or invalid upload fields', code: 'BAD_REQUEST' }, 400)
+    const { file_name, content_type, file_size_bytes, entity_type, course_id } = parsed.data
+    const body = parsed.data
+
     if (!isPrivateUploadType(entity_type)) {
       return c.json({ error: 'Unsupported upload entity type', code: 'INVALID_ENTITY_TYPE' }, 400)
+    }
+    if (!(CLIENT_UPLOAD_TYPES as readonly string[]).includes(entity_type)) {
+      return c.json({ error: 'This upload type cannot be requested directly', code: 'FORBIDDEN' }, 403)
     }
 
     if (entity_type === 'note' || entity_type === 'assignment_attachment') {
@@ -110,12 +134,12 @@ async function presignUpload(c: any) {
     const result = await createPresignedUpload({
       schoolId: user.school_id,
       entityType: entity_type,
-      contextId: entity_type === 'submission' ? body.assignment_id
+      contextId: (entity_type === 'submission' ? body.assignment_id
         : entity_type === 'question_media' ? body.bank_id
-        : course_id,
+        : course_id) as string,
       fileName: file_name,
       contentType: content_type,
-      fileSizeBytes: Number(file_size_bytes),
+      fileSizeBytes: file_size_bytes,
     })
     return c.json({ data: {
       presigned_url: result.presignedUrl,
@@ -123,6 +147,7 @@ async function presignUpload(c: any) {
       expires_in_seconds: result.expiresInSeconds,
     } })
   } catch (error: any) {
+    if (error instanceof AuthorizationLookupError) return serviceUnavailable(c)
     if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
     console.error('POST /storage/presign/upload error:', error)
     return c.json({ error: 'Internal server error' }, 500)
@@ -145,6 +170,7 @@ async function presignDownload(c: any) {
     const downloadUrl = await createPresignedDownload(fileKey, user.school_id)
     return c.json({ data: { download_url: downloadUrl, expires_in_seconds: 900 } })
   } catch (error: any) {
+    if (error instanceof AuthorizationLookupError) return serviceUnavailable(c)
     if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
     console.error('GET /storage/presign/download error:', error)
     return c.json({ error: 'Internal server error' }, 500)
@@ -157,8 +183,9 @@ async function authorizePublicContext(user: AppVariables['user'], entityType: st
   if (user.role !== 'admin') return false
   if (['logo', 'banner', 'video_intro', 'promo'].includes(entityType)) return contextId === user.school_id
   if (entityType === 'programme_thumbnail') {
-    const { data } = await supabase.from('programmes').select('id')
+    const { data, error } = await supabase.from('programmes').select('id')
       .eq('id', contextId).eq('school_id', user.school_id).maybeSingle()
+    if (error) lookupFailed(error)
     return Boolean(data)
   }
   return false
@@ -194,6 +221,7 @@ async function presignPublicUpload(c: any) {
       expires_in_seconds: result.expiresInSeconds,
     } })
   } catch (error: any) {
+    if (error instanceof AuthorizationLookupError) return serviceUnavailable(c)
     if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
     console.error('POST /storage/presign/public error:', error)
     return c.json({ error: 'Internal server error' }, 500)
@@ -255,6 +283,7 @@ async function confirmPublicUpload(c: any) {
     }
     return c.json({ data, file_key, public_url: publicFileUrl(file_key) })
   } catch (error: any) {
+    if (error instanceof AuthorizationLookupError) return serviceUnavailable(c)
     if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)
     console.error('POST /storage/public/confirm error:', error)
     return c.json({ error: 'Internal server error' }, 500)

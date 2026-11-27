@@ -2,13 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
   verify: vi.fn(),
   presign: vi.fn(),
   user: { id: 'student-1', school_id: 'school-1', role: 'student', kanvise_user_id: 'KNV-STU-1', supabase_auth_id: 'auth-1' },
   account: { id: 'school-1', membershipId: 'membership-1', role: 'learner' } as any,
 }))
 
-vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
+vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
 vi.mock('../storage/r2', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../storage/r2')>()
   return { ...actual, verifyPrivateUpload: mocks.verify, createPresignedDownload: mocks.presign }
@@ -28,7 +29,7 @@ import { assignmentsRouter } from './assignments'
 function query(result: any, eqSpy = vi.fn()) {
   const builder: any = {
     select: () => builder, insert: () => builder, eq: (...args: any[]) => { eqSpy(...args); return builder },
-    or: () => builder, in: () => builder, order: () => builder,
+    or: () => builder, in: () => builder, order: () => builder, range: () => builder, not: () => builder,
     limit: async () => result, maybeSingle: async () => result, single: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
   }
@@ -122,12 +123,12 @@ describe('student submission authorization and races', () => {
       if (table === 'sub_programmes') return query({ data: [], error: null })
       if (table === 'submissions') {
         submissionCalls += 1
-        if (submissionCalls < 3) return query({ data: null, error: null })
-        return query({ data: null, error: { code: '23505' } })
+        return query({ data: null, error: null })
       }
       throw new Error(`Unexpected table ${table}`)
     })
     mocks.verify.mockResolvedValue(true)
+    mocks.rpc.mockResolvedValue({ data: { status: 'already_submitted' }, error: null })
     const response = await assignmentsRouter.request(`/${assignmentId}/submit`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requestBody),
     })
@@ -146,13 +147,13 @@ describe('student submission authorization and races', () => {
       if (table === 'sub_programmes') return query({ data: [], error: null })
       if (table === 'submissions') {
         submissionCalls += 1
-        if (submissionCalls < 3) return query({ data: null, error: null })
-        return query({ data: committed, error: null })
+        return query({ data: null, error: null })
       }
       throw new Error(`Unexpected table ${table}`)
     })
     mocks.verify.mockResolvedValue(true)
     mocks.presign.mockRejectedValue(new Error('R2 unavailable'))
+    mocks.rpc.mockResolvedValue({ data: { status: 'ok', submission: { ...committed, file_key: requestBody.file_key } }, error: null })
 
     const response = await assignmentsRouter.request(`/${assignmentId}/submit`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requestBody),
@@ -160,5 +161,86 @@ describe('student submission authorization and races', () => {
 
     expect(response.status).toBe(201)
     expect(await response.json()).toMatchObject({ data: { id: 'submission-1', download_url: null } })
+  })
+
+  function enrolledStudentTables() {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1', deadline_at: '2099-01-01', is_published: true }, error: null })
+      if (table === 'account_memberships') return query({ data: { id: 'membership-1' }, error: null })
+      if (table === 'courses') return query({ data: [{ id: 'course-1', programme_id: null, sub_programme_id: null }], error: null })
+      if (table === 'enrolments') return query({ data: [{ programme_id: null, sub_programme_id: null, course_id: 'course-1' }], error: null })
+      if (table === 'sub_programmes') return query({ data: [], error: null })
+      if (table === 'submissions') return query({ data: null, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    mocks.verify.mockResolvedValue(true)
+  }
+
+  it('commits through the locked submit function and returns the database lateness', async () => {
+    enrolledStudentTables()
+    mocks.presign.mockResolvedValue('https://signed.example/file')
+    mocks.rpc.mockResolvedValue({ data: { status: 'ok', submission: { id: 'submission-1', file_key: requestBody.file_key, is_late: true } }, error: null })
+    const response = await assignmentsRouter.request(`/${assignmentId}/submit`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requestBody),
+    })
+    expect(response.status).toBe(201)
+    expect(mocks.rpc).toHaveBeenCalledWith('submit_assignment', expect.objectContaining({ p_assignment_id: assignmentId, p_student_id: 'student-1' }))
+    const body = await response.json() as any
+    expect(body.data.is_late).toBe(true)
+    expect(body.data.file_key).toBeUndefined()
+  })
+
+  it('maps a submit function failure to a safe 503', async () => {
+    enrolledStudentTables()
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'secret provider detail' } })
+    const response = await assignmentsRouter.request(`/${assignmentId}/submit`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requestBody),
+    })
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: 'Could not load assignment data right now', code: 'SUBMISSION_CREATE_FAILED' })
+  })
+
+  it('rejects malformed submission metadata with VALIDATION_ERROR', async () => {
+    enrolledStudentTables()
+    const response = await assignmentsRouter.request(`/${assignmentId}/submit`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...requestBody, file_size_bytes: -1 }),
+    })
+    expect(response.status).toBe(400)
+    expect((await response.json() as any).code).toBe('VALIDATION_ERROR')
+    expect(mocks.verify).not.toHaveBeenCalled()
+  })
+})
+
+describe('submission list pagination', () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.user.role = 'tutor'; mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'tutor' } })
+
+  it('signs download URLs only for the returned page and reports pagination', async () => {
+    mocks.user.id = 'tutor-1'
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1' }, error: null })
+      if (table === 'courses') return query({ data: { id: 'course-1' }, error: null })
+      if (table === 'tutor_course_assignments') return query({ data: { id: 'tca-1' }, error: null })
+      if (table === 'submissions') return query({ data: [{ id: 's1', file_key: 'k1', reviewed_at: null }], error: null, count: 3 })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    mocks.presign.mockResolvedValue('https://signed.example/file')
+    const response = await assignmentsRouter.request(`/${assignmentId}/submissions?page=2&page_size=1`)
+    expect(response.status).toBe(200)
+    const body = await response.json() as any
+    expect(mocks.presign).toHaveBeenCalledTimes(1)
+    expect(body.pagination).toEqual({ page: 2, page_size: 1, total: 3, has_more: true })
+    expect(body.data[0].file_key).toBeUndefined()
+  })
+
+  it('rejects an oversized page before querying submissions', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'assignments') return query({ data: { id: assignmentId, course_id: 'course-1' }, error: null })
+      if (table === 'courses') return query({ data: { id: 'course-1' }, error: null })
+      if (table === 'tutor_course_assignments') return query({ data: { id: 'tca-1' }, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    const response = await assignmentsRouter.request(`/${assignmentId}/submissions?page_size=1000`)
+    expect(response.status).toBe(400)
+    expect((await response.json() as any).code).toBe('VALIDATION_ERROR')
   })
 })
