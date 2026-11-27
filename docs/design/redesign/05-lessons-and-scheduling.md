@@ -51,7 +51,7 @@ follow 01 SH-15.
 | Not held | Live | **Start anyway**, until midnight of that day in the lesson's timezone |
 | Not held | Cancelled | **Mark as cancelled** (nobody is told unless the tutor chooses to) |
 | Live | Awaiting summary | **End lesson**, or the automatic end after everyone leaves |
-| Awaiting summary | Live | **Restart lesson** after an automatic end (00 section 14e, 07) |
+| Awaiting summary | Live | **Restart this lesson**, within 60 minutes of an automatic end and before a summary is started (00 section 14e, 07 CR-06) |
 | Awaiting summary | Complete | Summary completed, or **No summary needed** (08) |
 | Awaiting summary | Missed | **Mark as missed**, offered only when no student joined (08 SM-06) |
 | Cancelled | Planned | **Undo** while the undo toast is showing (LP-04); afterwards use **Schedule a replacement** |
@@ -235,7 +235,7 @@ lesson, Duplicate).
 
 - **Join classroom** for tutors and admins is always enabled, as in Bobbin.
   Before the classroom opens for students it still goes in; the pre-entry
-  screen (07 CR-01) offers **Go in without starting** and says when students
+  screen (07 CR-01) offers **Enter without starting a lesson** and says when students
   can join.
 - Students are gated by the **Classroom opens** setting (12 CFG-L). Their
   pages show **Opens at 3:45 PM** until then (09, 07 CR-02). No spec hard-codes
@@ -273,7 +273,10 @@ part of a series).
   later **Lesson started**, **Casey joined**, **Casey left**, **Lesson ended**,
   **Rescheduled from Mon 1 Dec**. Long histories collapse with **Show 12 more**.
 - **Tutor** (admins can **Change**).
-- **Students:** each with avatar, name and their join link (LP-05).
+- **Students:** each with avatar, name and their join link (LP-05), plus
+  **Let Casey know** (**Running late**, **Starting now**, **Can't make it**)
+  and any message the student sent (**Casey: running late · 3:58 PM**), from
+  07 CR-12.
 
 ### Kavi
 
@@ -310,7 +313,9 @@ part of a series).
   students know** (unticked).
 - **Awaiting summary:** a banner at the top of the main column: **This lesson
   has ended. Write the summary so Casey knows what to work on.** Button **Write
-  summary** (spec 08). The tabs are **Summary** · **Session** · **Lesson plan**
+  summary** (spec 08) and a quiet **No summary needed** (08 SM-07). For 60
+  minutes after an automatic end the banner also offers **Restart this
+  lesson** (07 CR-06). The tabs are **Summary** · **Session** · **Lesson plan**
   · **Notes**, as in Bobbin. When no student joined, the banner is the one in 08
   SM-06.
 - **Session tab** (Awaiting summary, Missed and Complete): attendance per

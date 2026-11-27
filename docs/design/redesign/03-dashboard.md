@@ -80,11 +80,14 @@ the account's **Classroom opens** setting (12 CFG-L: 5, 10, 15 or 30 minutes;
 | Scheduled, classroom not open yet | **Planned** (blue dot) | **Prepare** → lesson page, Lesson plan tab |
 | Classroom open, lesson not started | **Starting soon** (amber dot) | **Join** (video camera icon, indigo) → classroom (spec 07) |
 | Running | **Live** (green pulsing dot) | **Join** |
-| Ended, summary not written | **Awaiting summary** (pen icon, neutral) | **Write summary** → lesson summary (spec 08) |
+| Ended, summary not written | **Awaiting summary** (pen icon, neutral) | **Write summary** → lesson summary (spec 08). For 60 minutes after an automatic end, **Restart this lesson** sits beside it (07 CR-06) |
 | Should have started, nobody joined | **Not held** (grey, crossed-circle icon; status defined in spec 05) | **Open** → lesson page, where the tutor says what happened |
 | Summary done, or **No summary needed** | **Complete** (neutral, tick icon) | none; the row opens the lesson |
 | Cancelled | **Cancelled** (grey, struck-through topic) | none |
 
+- Planned and Starting soon rows have a **Let Casey know** menu (**Running
+  late**, **Starting now**, **Can't make it**; 07 CR-12) in the row's **⋯**.
+  A student's message shows under the row: **Casey: running late · 3:58 PM**.
 - **Join** has the accessible name "Join classroom for {topic}". An admin
   pressing Join on a lesson they don't teach gets **Join as an admin?** first
   (07 CR-09).

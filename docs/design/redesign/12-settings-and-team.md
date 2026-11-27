@@ -93,17 +93,22 @@ The onboarding answers (spec 02), editable:
   students only: tutors and admins can always go in early to set up (05 LP-01).
   The amber **Starting soon** status starts at the same time.
 - **Remind students:** 30 min before (default), also 24 hours before (toggle).
-- **End lessons automatically:** 10 minutes after everyone leaves (toggle, on).
-- **Record lessons:** on by default. Line: **Recordings let Kavi draft your
-  lesson summary and let students watch the lesson again.** When on, everyone
-  sees **This lesson is being recorded** when they join.
+- **End lessons automatically:** after everyone leaves, wait 5 / 10 (default)
+  / 15 / 30 minutes (toggle, on). After an automatic end the tutor can restart
+  the lesson for 60 minutes (07 CR-06).
+- **Record lessons:** on by default, but a lesson is recorded only when every
+  student in it has recording consent (00 section 14d, 06 STU-05). Line:
+  **Lessons are recorded only when every student has consent. Recordings let
+  Kavi draft your lesson summary and let students watch the lesson again.**
+  Everyone sees that a lesson is being recorded when they join (07 CR-01,
+  CR-04).
 - **Students can watch recordings:** on by default.
 - **Keep recordings for:** 30 / 90 (default) / 365 days. Line: **Recordings are
   deleted after this. Summaries are kept.** Applying a shorter period to older
   recordings is a separate button: **Apply to existing recordings**, with a
   confirmation stating how many will be deleted.
-- **Students' cameras:** **Off when they join** (default) · **On when they
-  join**.
+- Cameras are off on entry for everyone, with no setting to change it (07,
+  Room settings).
 - **Test classroom:** button, opens the device check (spec 07, CR-10).
 
 ## CFG-K · Kavi
@@ -154,9 +159,9 @@ Two tabs: **Tutors** · **Admins**.
 
 - **Export your data:** all students, courses, lessons, summaries and homework
   as CSV files in a ZIP. **Request export** emails a download link when ready.
-- **Delete a student's data:** pick a student; explains what's deleted
-  (profile, work, recordings) and what's kept (anonymised lesson counts).
-  Confirmation requires typing the student's name.
+- **Delete a student's data:** pick a student; the dialog follows 06 STU-11
+  (what is deleted, what is kept, including group recordings with the
+  student's name removed). Confirmation requires typing the student's name.
 - **Close account:** later (owner deferred the account-closure policy).
 
 ## Search and Jump to
