@@ -165,4 +165,27 @@ describe('TutorsClient independent panel recovery', () => {
     const removeButton = await screen.findByRole('button', { name: 'Remove Ada from Mathematics' })
     expect(removeButton).toHaveClass('h-11', 'min-h-11', 'w-11', 'focus-visible:outline-2')
   })
+
+  it('follows invitation and people pages past the first 50 and 200 rows', async () => {
+    const invite = (id: string) => ({ id, email: `${id}@example.test`, status: 'pending', expires_at: '2099-12-01T00:00:00.000Z', created_at: '2026-11-01T00:00:00.000Z' })
+    const page = (url: string, rows: unknown[][], hasMore: boolean[]) => {
+      const offset = Number(new URL(url, 'https://x.test').searchParams.get('offset'))
+      const index = offset === 0 ? 0 : 1
+      return Promise.resolve(new Response(JSON.stringify({ data: rows[index], pagination: { has_more: hasMore[index] } }), { status: 200 }))
+    }
+    authenticatedApiFetch.mockImplementation((input: string) => {
+      if (input.includes('/schools/me/invites')) return page(input, [[invite('first')], [invite('second')]], [true, false])
+      if (input.includes('/users?roles=admin,tutor')) return page(input, [[], []], [true, false])
+      if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    renderTutors()
+
+    expect(await screen.findByText('second@example.test')).toBeInTheDocument()
+    expect(screen.getByText('first@example.test')).toBeInTheDocument()
+    const urls = authenticatedApiFetch.mock.calls.map(([url]) => String(url))
+    expect(urls.some((u) => u.includes('/schools/me/invites?limit=50&offset=50'))).toBe(true)
+    expect(urls.some((u) => u.includes('/users?roles=admin,tutor&limit=200&offset=200'))).toBe(true)
+  })
 })

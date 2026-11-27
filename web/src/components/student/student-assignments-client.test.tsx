@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { assignmentStatus, StudentAssignmentsClient } from "./student-assignments-client";
 import type { StudentAssignment } from "@/lib/student-assignments";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -66,5 +66,16 @@ describe("assignmentStatus", () => {
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Your session has ended"));
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("flips pending work to overdue when the deadline passes on an open page", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-07-23T11:59:50Z"));
+      renderAssignments([base]);
+      expect(screen.getByText("pending", { selector: "span" })).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(11_000); });
+      expect(screen.getByText("overdue", { selector: "span" })).toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
   });
 });

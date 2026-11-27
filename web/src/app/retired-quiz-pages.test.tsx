@@ -21,6 +21,20 @@ describe('retired Quiz pages', () => {
     expect(screen.getByRole('link', { name: 'Go to my dashboard' })).toHaveAttribute('href', '/dashboard')
   })
 
+  it.each([
+    ['/guest/attempt', GuestAttemptPage],
+    ['/guest/result', GuestResultPage],
+  ])('%s explains guest Quiz attempts are gone and guest live classes remain', (_name, Page) => {
+    render(<Page />)
+    expect(screen.getByText(/Guest Quiz attempts and results no longer exist/)).toBeInTheDocument()
+    expect(screen.getByText(/join a live class/)).toBeInTheDocument()
+  })
+
+  it('/mock/:slug keeps the generic message', () => {
+    render(<MockSlugPage />)
+    expect(screen.getByText(/Standalone and public Quiz links no longer work/)).toBeInTheDocument()
+  })
+
   it('/my-mocks redirects to the Class quiz list', async () => {
     await expect(MyMocksPage()).rejects.toThrow('REDIRECT:/dashboard/student/mocks')
   })

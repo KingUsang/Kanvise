@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { Loader2, AlertCircle, Download, UserPlus, X, Upload } from "lucide-react";
 import Papa from "papaparse";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { downloadStudentRosterCsv } from "@/lib/student-roster";
 import StudentsTable from "@/components/dashboard/students/students-table";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
@@ -27,12 +28,10 @@ export default function StudentsPage() {
       setError(null);
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        const res = await authenticatedApiFetch(`${API_URL}/users/students`);
-        const body = await res.json().catch(() => null) as { data?: any[]; error?: string } | null;
-        if (!res.ok) {
-          throw new Error(body?.error || "Could not load the student roster");
-        }
-        setStudents(body?.data || []);
+        setStudents(await fetchAllPages<any>(
+          (page) => authenticatedApiFetch(`${API_URL}/users/students?limit=200&offset=${(page - 1) * 200}`),
+          "Could not load the student roster",
+        ));
       } catch {
         setError('We could not load the student roster. Please try again.');
       } finally {

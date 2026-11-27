@@ -14,6 +14,7 @@ import { dashboardQueryKeys } from '@/lib/dashboard-session'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { useActiveAccountId } from '@/lib/account-preference'
 import { peopleQueryKeys } from '@/lib/people-query-keys'
+import { fetchAllPages } from '@/lib/fetch-all-pages'
 
 interface Tutor {
   id: string
@@ -78,6 +79,15 @@ async function readApiResponse<T = unknown>(url: string, init?: RequestInit) {
   const body = await response.json().catch(() => null) as ApiBody<T> | null
   if (!response.ok) throw new Error(body?.error || 'Could not load this panel')
   return body || {}
+}
+
+/** Follows limit/offset pages so invitation (50 per page) and people (200 per page) lists are never cut off. */
+function readAllApiData<T>(url: string, limit: number) {
+  const separator = url.includes('?') ? '&' : '?'
+  return fetchAllPages<T>(
+    (page) => authenticatedApiFetch(`${url}${separator}limit=${limit}&offset=${(page - 1) * limit}`),
+    'Could not load this panel',
+  )
 }
 
 async function readApiData<T>(url: string) {
@@ -193,9 +203,9 @@ export function TutorsClient() {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
   const keys = peopleQueryKeys(accountId)
   const enabled = Boolean(accountId)
-  const tutorsQuery = useQuery({ queryKey: keys.tutors, queryFn: () => readApiData<Tutor[]>(`${baseUrl}/users/tutors`), enabled, staleTime: 60_000 })
-  const invitesQuery = useQuery({ queryKey: keys.invites, queryFn: () => readApiData<Invite[]>(`${baseUrl}/schools/me/invites`), enabled, staleTime: 60_000 })
-  const peopleQuery = useQuery({ queryKey: keys.people, queryFn: () => readApiData<AssignmentPerson[]>(`${baseUrl}/users?roles=admin,tutor`), enabled, staleTime: 60_000 })
+  const tutorsQuery = useQuery({ queryKey: keys.tutors, queryFn: () => readAllApiData<Tutor>(`${baseUrl}/users/tutors`, 200), enabled, staleTime: 60_000 })
+  const invitesQuery = useQuery({ queryKey: keys.invites, queryFn: () => readAllApiData<Invite>(`${baseUrl}/schools/me/invites`, 50), enabled, staleTime: 60_000 })
+  const peopleQuery = useQuery({ queryKey: keys.people, queryFn: () => readAllApiData<AssignmentPerson>(`${baseUrl}/users?roles=admin,tutor`, 200), enabled, staleTime: 60_000 })
   const assignmentsQuery = useQuery({ queryKey: keys.assignments, queryFn: () => readApiData<CourseAssignmentOverview[]>(`${baseUrl}/courses/assignment-overview`), enabled, staleTime: 60_000 })
   const profileQuery = useQuery({ queryKey: keys.profile, queryFn: async () => (await readApiResponse(`${baseUrl}/auth/me`)).user?.id || null, enabled, staleTime: 60_000 })
 
