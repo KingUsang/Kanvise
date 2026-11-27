@@ -776,10 +776,13 @@ dashboardRouter.get("/stats", async (c) => {
     .eq("id", schoolId)
     .maybeSingle();
   if (schoolError)
+  {
+    console.error("[dashboard] organisation type lookup failed", { code: schoolError.code, message: schoolError.message });
     return c.json(
-      { error: schoolError.message || "Could not resolve organisation type" },
+      { error: "Could not resolve organisation type", code: "DATABASE_ERROR" },
       500,
     );
+  }
   responseData.organisation_type =
     school?.account_type === "independent" ? "independent" : "centre";
 

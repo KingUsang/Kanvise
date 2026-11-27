@@ -259,7 +259,8 @@ programmesRouter.get('/', enforceAdminOrTutor, async (c) => {
       ? enhanced.filter(programme => programme.courses.some(subject => subject.tutor_ids.includes(profile.id)))
       : enhanced })
   } catch (error: any) {
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('[programmes] request failed', { code: error?.code, message: error?.message })
+    return c.json({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, 500)
   }
 })
 
@@ -488,7 +489,8 @@ programmesRouter.patch('/:id', enforceAdmin, async (c) => {
     if (!data) return c.json({ error: 'Programme not found', code: 'NOT_FOUND' }, 404)
     return c.json({ data, message: 'Programme updated successfully' })
   } catch (error: any) {
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('[programmes] request failed', { code: error?.code, message: error?.message })
+    return c.json({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, 500)
   }
 })
 
@@ -537,7 +539,8 @@ programmesRouter.post('/:id/unpublish', enforceAdmin, async (c) => {
     if (error) throw error
     return c.json({ message: 'Programme unpublished', data })
   } catch (error: any) {
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('[programmes] request failed', { code: error?.code, message: error?.message })
+    return c.json({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, 500)
   }
 })
 

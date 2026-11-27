@@ -125,13 +125,28 @@ async function addSignedMediaUrls(rows: any[], schoolId: string) {
     .select('id, storage_key, alt_text, width, height')
     .eq('school_id', schoolId).eq('processing_status', 'ready').in('id', mediaIds)
   if (error) throw error
-  const resolved = new Map(await Promise.all((media || []).map(async item => [item.id, {
-    ...item,
-    url: await createPresignedDownload(item.storage_key, schoolId),
-  }] as const)))
-  const attach = (blocks: any[]) => (blocks || []).map(block => block?.type === 'image'
-    ? { ...block, ...resolved.get(block.media_id), storage_key: undefined } : block)
-  return rows.map(question => ({
+  // A media id only resolves for questions in the bank that owns the object,
+  // so an id copied from another private bank never yields a signed URL.
+  const mediaPrefix = (bankId: string) => `schools/${schoolId}/private/question_media/${bankId}/`
+  const signed = new Map<string, Promise<string>>()
+  const sign = (key: string) => {
+    if (!signed.has(key)) signed.set(key, createPresignedDownload(key, schoolId))
+    return signed.get(key)!
+  }
+  const resolvedByBank = new Map<string, Map<string, any>>()
+  for (const question of rows) {
+    const bankId = question.bank_id
+    if (typeof bankId !== 'string' || resolvedByBank.has(bankId)) continue
+    const entries = await Promise.all((media || [])
+      .filter(item => typeof item.storage_key === 'string' && item.storage_key.startsWith(mediaPrefix(bankId)))
+      .map(async item => [item.id, { ...item, url: await sign(item.storage_key) }] as const))
+    resolvedByBank.set(bankId, new Map(entries))
+  }
+  return rows.map(question => {
+    const resolved = resolvedByBank.get(question.bank_id) || new Map<string, any>()
+    const attach = (blocks: any[]) => (blocks || []).map(block => block?.type === 'image'
+      ? { ...block, ...resolved.get(block.media_id), storage_key: undefined } : block)
+    return {
     ...question,
     current_version: question.current_version ? {
       ...question.current_version,
@@ -142,7 +157,8 @@ async function addSignedMediaUrls(rows: any[], schoolId: string) {
         ...option, content_blocks: attach(option.content_blocks),
       })),
     } : question.current_version,
-  }))
+    }
+  })
 }
 
 async function tutorCanUseCourse(user: TenantUser, courseId: string | null) {
@@ -332,6 +348,24 @@ questionBanksRouter.post('/:bankId/questions', async c => {
     const courseId = body.course_id || null
     if (!(await tutorCanUseCourse(user, courseId))) {
       return c.json({ error: 'You are not assigned to this course', code: 'NOT_ASSIGNED_TO_COURSE' }, 403)
+    }
+
+    const mediaIds = [...new Set([
+      ...imageMediaIds(body.content_blocks),
+      ...imageMediaIds(body.explanation_blocks),
+      ...imageMediaIds(body.grading_rubric_blocks),
+      ...(Array.isArray(body.options) ? body.options : []).flatMap((option: any) => imageMediaIds(option?.content_blocks)),
+    ])]
+    if (mediaIds.length) {
+      if (!mediaIds.every(isUuid)) return invalidUuid(c, 'media_id')
+      const { data: bound, error: boundError } = await supabase.from('question_media')
+        .select('id, storage_key').eq('school_id', user.school_id!).in('id', mediaIds)
+      if (boundError) return databaseError(c, boundError, 'Could not create question')
+      const prefix = `schools/${user.school_id}/private/question_media/${bankId}/`
+      const owned = new Set((bound || []).filter(item => item.storage_key?.startsWith(prefix)).map(item => item.id))
+      if (!mediaIds.every(id => owned.has(id))) {
+        return c.json({ error: 'Images must belong to this question bank', code: 'VALIDATION_ERROR' }, 400)
+      }
     }
 
     const { data: created, error } = await supabase.rpc('create_bank_question_versioned', {
