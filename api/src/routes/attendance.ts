@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase'
+import { filterActiveLearnerIds } from '../lib/student-course-access'
 import {
   jwtVerificationMiddleware,
   profileResolutionMiddleware,
@@ -164,9 +165,18 @@ attendanceRouter.get('/metrics', async (c) => {
      enrolmentsQuery = enrolmentsQuery.eq('id', '00000000-0000-0000-0000-000000000000') // prevent fetching all
   }
 
-  const { data: enrolments, error: enrolmentsError } = await enrolmentsQuery
+  const { data: allEnrolments, error: enrolmentsError } = await enrolmentsQuery
     
   if (enrolmentsError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
+  // Revoked or inactive Learners are not part of the expected roster (DEV-ATD-006).
+  let enrolments = allEnrolments
+  try {
+    const activeIds = new Set(await filterActiveLearnerIds(schoolId, (allEnrolments || []).map(e => e.student_id)))
+    enrolments = (allEnrolments || []).filter(e => activeIds.has(e.student_id))
+  } catch (membershipError) {
+    console.error('attendance.membership_lookup_failed', membershipError instanceof Error ? membershipError.name : 'unknown')
+    return c.json(ATTENDANCE_UNAVAILABLE, 500)
+  }
 
   // 3. Fetch actual attendance records
   const { data: records, error: recordsError } = await supabase
@@ -305,9 +315,18 @@ attendanceRouter.get('/records', async (c) => {
      enrolmentsQuery = enrolmentsQuery.eq('id', '00000000-0000-0000-0000-000000000000') // prevent fetching all
   }
 
-  const { data: enrolments, error: enrolmentsError } = await enrolmentsQuery
+  const { data: allEnrolments, error: enrolmentsError } = await enrolmentsQuery
     
   if (enrolmentsError) return c.json(ATTENDANCE_UNAVAILABLE, 500)
+  // Revoked or inactive Learners are not part of the expected roster (DEV-ATD-006).
+  let enrolments = allEnrolments
+  try {
+    const activeIds = new Set(await filterActiveLearnerIds(schoolId, (allEnrolments || []).map(e => e.student_id)))
+    enrolments = (allEnrolments || []).filter(e => activeIds.has(e.student_id))
+  } catch (membershipError) {
+    console.error('attendance.membership_lookup_failed', membershipError instanceof Error ? membershipError.name : 'unknown')
+    return c.json(ATTENDANCE_UNAVAILABLE, 500)
+  }
     
   // 3. Fetch actual attendance
   const { data: records, error: recordsError } = await supabase

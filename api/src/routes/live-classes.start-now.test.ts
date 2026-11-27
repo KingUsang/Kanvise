@@ -13,7 +13,7 @@ vi.mock('../plugnmeet/classroom-lifecycle', () => ({ ensurePlugNmeetReady: mocks
 import { liveClassesRouter } from './live-classes'
 
 function chain(result: any) {
-  const value: any = { select: () => value, insert: () => value, update: () => value, delete: () => value, eq: () => value, maybeSingle: async () => result, single: async () => result, then: (resolve: any) => Promise.resolve(result).then(resolve) }
+  const value: any = { select: () => value, insert: () => value, update: () => value, delete: () => value, eq: () => value, in: () => value, limit: () => value, maybeSingle: async () => result, single: async () => result, then: (resolve: any) => Promise.resolve(result).then(resolve) }
   return value
 }
 
@@ -22,6 +22,7 @@ describe('POST /live-classes/start-now', () => {
 
   it('keeps the new class while the PlugNmeet classroom wakes', async () => {
     mocks.from.mockImplementation((table: string) => {
+      if (table === 'account_memberships') return chain({ data: { id: 'membership-1' }, error: null })
       if (table === 'tutor_course_assignments') return chain({ data: { course_id: 'course-1' }, error: null })
       if (table === 'courses') return chain({ data: { id: 'course-1', name: 'Mathematics' }, error: null })
       if (table === 'live_classes') return chain({ data: { id: 'class-1', title: 'Mathematics class', course_id: 'course-1', tutor_id: 'tutor-1', duration_minutes: 60 }, error: null })
@@ -30,5 +31,15 @@ describe('POST /live-classes/start-now', () => {
     const response = await liveClassesRouter.request('/start-now', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ course_id: 'course-1' }) })
     expect(response.status).toBe(202)
     expect(await response.json()).toMatchObject({ data: { id: 'class-1', state: 'preparing', class_title: 'Mathematics class' } })
+  })
+
+  it('refuses a host without an active Tutor membership (DEV-LVC-001)', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'account_memberships') return chain({ data: null, error: null })
+      throw new Error(`Unexpected table: ${table}`)
+    })
+    const response = await liveClassesRouter.request('/start-now', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ access_mode: 'anyone_with_link' }) })
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_TUTOR' })
   })
 })

@@ -37,8 +37,10 @@ function query(result: any, onUpdate?: (value: any) => void) {
   return builder
 }
 
-function post(path: string, body: unknown) {
-  return programmesRouter.request(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+const SETUP_KEY = 'c62ed60d-47cb-4d9a-9797-fbc390488f98'
+
+function post(path: string, body: unknown, headers: Record<string, string> = path === '/setup' ? { 'Idempotency-Key': SETUP_KEY } : {}) {
+  return programmesRouter.request(path, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) })
 }
 
 describe('programme setup', () => {
@@ -48,6 +50,7 @@ describe('programme setup', () => {
     mocks.rpc.mockResolvedValue({ data: { programme: { id: 'programme-1', is_published: false }, courses: [{ id: 'course-1', is_published: false }] }, error: null })
     mocks.from.mockImplementation((table: string) => {
       if (table === 'paystack_subaccounts') return query({ data: { subaccount_code: 'ACCT_TEST' }, error: null })
+      if (table === 'programmes') return query({ data: null, error: null })
       throw new Error(`Unexpected table ${table}`)
     })
   })
@@ -81,6 +84,21 @@ describe('programme setup', () => {
       p_subjects: [expect.objectContaining({ slug: 'jamb-chemistry-organic-chemistry', tutor_ids: ['11111111-1111-4111-8111-111111111111'] })],
     }))
     expect(JSON.stringify(mocks.rpc.mock.calls[0][1])).not.toContain('is_published')
+  })
+
+  it('requires a caller-owned Idempotency-Key (DEV-CLS-019)', async () => {
+    const response = await post('/setup', { name: 'JAMB', price: 0, subjects: [{ name: 'Chemistry' }] }, {})
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'IDEMPOTENCY_KEY_REQUIRED' })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects a key reused with different details (DEV-CLS-012)', async () => {
+    mocks.from.mockImplementation(() => query({ data: { id: 'programme-1', creation_fingerprint: 'some-other-fingerprint' }, error: null }))
+    const response = await post('/setup', { name: 'JAMB', price: 0, subjects: [{ name: 'Chemistry' }] })
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' })
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('returns a recovered class for a repeated idempotent setup', async () => {
@@ -200,8 +218,9 @@ describe('class insights authorization scope', () => {
       if (table === 'tutor_course_assignments') return query({ data: [{ course_id: 'subject-1' }], error: null })
       if (table === 'enrolments') {
         enrolmentCalls += 1
-        return query({ data: [{ student_id: enrolmentCalls === 1 ? 'programme-learner' : 'subject-learner' }], error: null })
+        return query({ data: [{ student_id: 'subject-learner' }], error: null })
       }
+      if (table === 'account_memberships') return query({ data: [{ person_id: 'subject-learner' }], error: null })
       if (table === 'mock_exams') return query({ data: [{ id: 'subject-assessment', title: 'Physics quiz', course_id: 'subject-1' }], error: null })
       if (table === 'live_classes') return query({ data: [{ id: 'session-1', course_id: 'subject-1' }], error: null })
       if (table === 'user_profiles') return query({ data: [{ id: 'subject-learner', first_name: 'Subject', last_name: 'Learner' }], error: null })
@@ -215,7 +234,51 @@ describe('class insights authorization scope', () => {
     expect(response.status).toBe(200)
     expect(body.data.learners).toEqual([expect.objectContaining({ id: 'subject-learner' })])
     expect(body.data.learners).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'programme-learner' })]))
-    expect(enrolmentCalls).toBe(2)
+    expect(enrolmentCalls).toBe(1)
+  })
+})
+
+describe('class insights roster and attendance (DEV-CLS-017, DEV-CLS-006)', () => {
+  function install(role: 'admin' | 'tutor', filters: string[]) {
+    mocks.user = { id: 'u-1', school_id: 'school-1', role }
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'programmes') return query({ data: { id: 'programme-1' }, error: null })
+      if (table === 'sub_programmes') return query({ data: [{ id: 'sub-1' }], error: null })
+      if (table === 'courses') return query({ data: [{ id: 'subject-1', name: 'Physics', programme_id: null, sub_programme_id: 'sub-1' }], error: null })
+      if (table === 'tutor_course_assignments') return query({ data: [{ course_id: 'subject-1' }], error: null })
+      if (table === 'enrolments') {
+        const q = query({ data: [{ student_id: 'l1' }], error: null })
+        q.or = vi.fn((filter: string) => { filters.push(filter); return q })
+        return q
+      }
+      if (table === 'account_memberships') return query({ data: [{ person_id: 'l1' }], error: null })
+      if (table === 'user_profiles') return query({ data: [{ id: 'l1', first_name: 'A', last_name: 'B' }], error: null })
+      if (table === 'live_classes') return query({ data: [{ id: 's1', course_id: 'subject-1' }], error: null })
+      if (table === 'attendance_records') return query({ data: [
+        { student_id: 'l1', live_class_id: 's1', joined_at: '2026-01-01T10:00:00Z' },
+        { student_id: 'l1', live_class_id: 's1', joined_at: '2026-01-01T10:20:00Z' },
+      ], error: null })
+      return query({ data: [], error: null })
+    })
+  }
+
+  it('includes Sub-programme enrolments and counts distinct attended Sessions once', async () => {
+    const filters: string[] = []
+    install('admin', filters)
+    const response = await programmesRouter.request('/programme-1/insights')
+    const body = await response.json() as any
+    expect(response.status).toBe(200)
+    expect(filters[0]).toContain('sub_programme_id.in.(sub-1)')
+    expect(filters[0]).toContain('programme_id.eq.programme-1')
+    expect(body.data.learners[0]).toMatchObject({ attended: 1, scheduled_sessions: 1, attendance_rate: 100 })
+  })
+
+  it('keeps Class-level enrolments out of the Tutor scope', async () => {
+    const filters: string[] = []
+    install('tutor', filters)
+    await programmesRouter.request('/programme-1/insights')
+    expect(filters[0]).toContain('sub_programme_id.in.(sub-1)')
+    expect(filters[0]).not.toContain('programme_id.eq')
   })
 })
 

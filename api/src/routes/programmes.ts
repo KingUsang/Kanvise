@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
-import { randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { supabase } from '../lib/supabase'
+import { filterActiveLearnerIds } from '../lib/student-course-access'
 import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware } from '../middleware/auth'
 import { strictBooleanQuerySchema, uuidSchema } from '../lib/api-contract'
 import type { AccountContext } from '../types'
@@ -87,12 +88,22 @@ async function requirePayoutAccount(c: any, schoolId: string) {
 async function loadProgrammeSubjects(schoolId: string, programmeId: string) {
   const [{ data: subProgrammes, error: subError }, { data: allCourses, error: courseError }] = await Promise.all([
     supabase.from('sub_programmes').select('id').eq('school_id', schoolId).eq('programme_id', programmeId),
-    supabase.from('courses').select('*').eq('school_id', schoolId),
+    // Only this Class's Subjects, not every Subject in the account (DEV-CLS-005).
+    supabase.from('courses').select('*').eq('school_id', schoolId).eq('programme_id', programmeId),
   ])
   if (subError) throw subError
   if (courseError) throw courseError
   const subIds = new Set((subProgrammes || []).map(item => item.id))
-  return (allCourses || [])
+  let nested: any[] = []
+  if (subIds.size) {
+    const { data: nestedCourses, error: nestedError } = await supabase.from('courses').select('*')
+      .eq('school_id', schoolId).in('sub_programme_id', [...subIds])
+    if (nestedError) throw nestedError
+    nested = nestedCourses || []
+  }
+  const merged = new Map<string, any>()
+  for (const course of [...(allCourses || []), ...nested]) merged.set(course.id, course)
+  return [...merged.values()]
     .filter(course => course.programme_id === programmeId || (course.sub_programme_id && subIds.has(course.sub_programme_id)))
     .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name))
 }
@@ -143,7 +154,11 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
     if (suppliedCreationKey && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(suppliedCreationKey)) {
       return c.json({ error: 'Invalid class creation key', code: 'INVALID_IDEMPOTENCY_KEY' }, 400)
     }
-    const creationKey = suppliedCreationKey || randomUUID()
+    // Retry-sensitive creation needs a caller-owned key; a server-minted one cannot replay (DEV-CLS-019).
+    if (!suppliedCreationKey) {
+      return c.json({ error: 'An Idempotency-Key header is required to create a class', code: 'IDEMPOTENCY_KEY_REQUIRED' }, 400)
+    }
+    const creationKey = suppliedCreationKey
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     const programmeSlug = slugify(name)
     requestedSlug = programmeSlug
@@ -172,6 +187,18 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
       if (payoutError) return payoutError
     }
 
+    // Bind the key to the request so a retry with edited input is rejected, not silently replayed (DEV-CLS-012).
+    const fingerprint = createHash('sha256').update(JSON.stringify({
+      name, description: typeof body.description === 'string' ? body.description.trim() : '', price,
+      currency: body.currency || 'NGN', teaching_mode: typeof body.teaching_mode === 'string' ? body.teaching_mode : null,
+      subjects: normalizedSubjects,
+    })).digest('hex')
+    const { data: prior, error: priorError } = await (supabase as any).from('programmes')
+      .select('id, creation_fingerprint').eq('school_id', profile.school_id).eq('creation_key', creationKey).maybeSingle()
+    if (priorError) throw priorError
+    if (prior?.creation_fingerprint && prior.creation_fingerprint !== fingerprint) {
+      return c.json({ error: 'This creation key was already used with different details', code: 'IDEMPOTENCY_KEY_REUSED' }, 409)
+    }
     const { data, error } = await (supabase as any).rpc('setup_programme', {
       p_school_id: profile.school_id,
       p_created_by: profile.id,
@@ -184,9 +211,13 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
       p_creation_key: creationKey,
     })
     if (error) throw error
-    if (data?.programme?.id && typeof body.teaching_mode === 'string' && !data.replayed) {
-      await supabase.from('programmes').update({ teaching_mode: body.teaching_mode })
+    if (data?.programme?.id) {
+      // Applied on replays too, so a failed follow-up write is recovered by retrying with the same key (DEV-CLS-004).
+      const followUp: Record<string, unknown> = { creation_fingerprint: fingerprint }
+      if (typeof body.teaching_mode === 'string') followUp.teaching_mode = body.teaching_mode
+      const { error: followUpError } = await (supabase as any).from('programmes').update(followUp)
         .eq('id', data.programme.id).eq('school_id', profile.school_id)
+      if (followUpError) throw followUpError
     }
     return c.json({ data, message: data?.replayed ? 'Existing class creation recovered' : 'Programme setup saved as a draft' }, data?.replayed ? 200 : 201)
   } catch (error: any) {
@@ -330,20 +361,24 @@ programmesRouter.get('/:id/insights', enforceAdminOrTutor, async (c) => {
     const courseIds = visibleSubjects.map(subject => subject.id)
     if (!courseIds.length) return c.json({ error: 'Class not found', code: 'NOT_FOUND' }, 404)
 
-    const [{ data: programmeEnrolments, error: programmeEnrolmentError }, { data: subjectEnrolments, error: subjectEnrolmentError }, { data: courseMocks, error: courseMockError }, { data: programmeMocks, error: programmeMockError }, { data: sessions, error: sessionError }] = await Promise.all([
-      profile.role === 'tutor'
-        ? supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).in('course_id', courseIds)
-        : supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).eq('programme_id', programmeId),
-      supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).in('course_id', courseIds),
+    // Learners reach a Subject by a direct, Sub-programme or (Admin view) Class enrolment (DEV-CLS-017).
+    const subProgrammeIds = [...new Set(visibleSubjects.flatMap(subject => subject.sub_programme_id ? [subject.sub_programme_id] : []))]
+    const enrolmentFilters = [`course_id.in.(${courseIds.join(',')})`]
+    if (subProgrammeIds.length) enrolmentFilters.push(`sub_programme_id.in.(${subProgrammeIds.join(',')})`)
+    if (profile.role !== 'tutor') enrolmentFilters.push(`programme_id.eq.${programmeId}`)
+    const [{ data: subjectEnrolments, error: subjectEnrolmentError }, { data: courseMocks, error: courseMockError }, { data: programmeMocks, error: programmeMockError }, { data: sessions, error: sessionError }] = await Promise.all([
+      supabase.from('enrolments').select('student_id').eq('school_id', profile.school_id).or(enrolmentFilters.join(',')),
       supabase.from('mock_exams').select('id, title, course_id').eq('school_id', profile.school_id).in('course_id', courseIds),
       profile.role === 'tutor'
         ? Promise.resolve({ data: [], error: null })
         : supabase.from('mock_exams').select('id, title, course_id').eq('school_id', profile.school_id).eq('programme_id', programmeId),
-      supabase.from('live_classes').select('id, course_id').eq('school_id', profile.school_id).in('course_id', courseIds),
+      // Only completed Sessions can have been attended, so they alone form the denominator (DEV-CLS-006).
+      supabase.from('live_classes').select('id, course_id').eq('school_id', profile.school_id).in('course_id', courseIds).eq('status', 'completed'),
     ])
-    if (programmeEnrolmentError || subjectEnrolmentError || courseMockError || programmeMockError || sessionError) throw programmeEnrolmentError || subjectEnrolmentError || courseMockError || programmeMockError || sessionError
+    if (subjectEnrolmentError || courseMockError || programmeMockError || sessionError) throw subjectEnrolmentError || courseMockError || programmeMockError || sessionError
 
-    const studentIds = [...new Set([...(programmeEnrolments || []), ...(subjectEnrolments || [])].map(item => item.student_id))]
+    // Revoked or inactive Learners are excluded (DEV-ATD-006).
+    const studentIds = await filterActiveLearnerIds(profile.school_id, (subjectEnrolments || []).map(item => item.student_id))
     const requestedLearnerId = c.req.query('learner_id')
     const scopedStudentIds = requestedLearnerId ? studentIds.filter(id => id === requestedLearnerId) : studentIds
     if (requestedLearnerId && !scopedStudentIds.length) return c.json({ error: 'Learner not found in this class', code: 'NOT_FOUND' }, 404)
@@ -365,8 +400,8 @@ programmesRouter.get('/:id/insights', enforceAdminOrTutor, async (c) => {
         .sort((a, b) => +new Date(b.submitted_at || 0) - +new Date(a.submitted_at || 0))
       const latest = attempts[0]
       const latestResult = latest?.total_marks ? Math.round((Number(latest.total_score || 0) / Number(latest.total_marks)) * 100) : null
-      const attended = (attendanceByStudent.get(learner.id) || []).length
-      const attendanceRate = sessionIds.length ? Math.round((attended / sessionIds.length) * 100) : null
+      const attended = new Set((attendanceByStudent.get(learner.id) || []).map(record => record.live_class_id)).size
+      const attendanceRate = sessionIds.length ? Math.min(100, Math.round((attended / sessionIds.length) * 100)) : null
       const lastActivity = [latest?.submitted_at, ...(attendanceByStudent.get(learner.id) || []).map(record => record.joined_at)].filter(Boolean).sort().at(-1) || null
       const attention = latestResult !== null && latestResult < 50 ? 'Needs attention'
         : attendanceRate !== null && attendanceRate < 60 ? 'Needs attention'

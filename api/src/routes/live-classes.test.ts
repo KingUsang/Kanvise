@@ -117,8 +117,7 @@ describe('live classes API - scheduling', () => {
 
   it('prevents a tutor from scheduling a class for another tutor', async () => {
     mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
-    // This test will fail until the API is hardened!
-    mocks.from.mockReturnValue(builder({ data: null, error: null }))
+    mocks.from.mockImplementation((table: string) => builder({ data: table === 'account_memberships' ? { id: 'm-1' } : null, error: null }))
     
     const req = new Request('http://localhost/', {
       method: 'POST',
@@ -540,5 +539,18 @@ describe('live classes API - recording lifecycle (DEV-LVC-019)', () => {
     const response = await liveClassesRouter.request('/class-1/recording')
     expect(response.status).toBe(200)
     expect((await response.json() as any).data.playback_url).toBe('https://signed.example/recording.mp4')
+  })
+})
+
+describe('shared and enrolled class host membership (DEV-LVC-001)', () => {
+  it('rejects a Tutor id that has no active membership in the account', async () => {
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin', kanvise_user_id: 'KNV-ADM-1' }
+    mocks.from.mockReturnValue(builder({ data: null, error: null }))
+    const response = await liveClassesRouter.request(new Request('http://localhost/', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tutor_id: 'outsider', title: 'Open day', access_mode: 'anyone_with_link', scheduled_at: new Date(Date.now() + 86400000).toISOString(), duration_minutes: 60 }),
+    }))
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'INVALID_TUTOR' })
   })
 })

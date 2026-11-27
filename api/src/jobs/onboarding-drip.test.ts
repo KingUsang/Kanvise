@@ -6,6 +6,8 @@ const state = {
   users: [] as Array<{ id: string, first_name: string | null, email: string | null, created_at: string, role: string }>,
   deliveries: new Map<string, DeliveryState>(),
   sentEvents: [] as string[],
+  scanFilter: null as null | { column: string, value: string },
+  scanLimit: 0,
 }
 
 vi.mock('../lib/supabase', () => ({
@@ -21,9 +23,13 @@ vi.mock('../lib/supabase', () => ({
       if (table === 'user_profiles') {
         return {
           select() {
-            return {
-              in: vi.fn(async () => ({ data: state.users, error: null })),
+            const chain: any = {
+              in: vi.fn(() => chain),
+              gte: vi.fn((column: string, value: string) => { state.scanFilter = { column, value }; return chain }),
+              order: vi.fn(() => chain),
+              limit: vi.fn(async (count: number) => { state.scanLimit = count; return { data: state.users, error: null } }),
             }
+            return chain
           },
         }
       }
@@ -89,6 +95,15 @@ describe('runOnboardingDripJob', () => {
     state.deliveries = new Map()
     state.sentEvents = []
     vi.restoreAllMocks()
+  })
+
+  it('scans a bounded window of recent accounts (DEV-JOB-002)', async () => {
+    await runOnboardingDripJob()
+    expect(state.scanLimit).toBe(500)
+    const cutoffAgeDays = (Date.now() - new Date(state.scanFilter!.value).getTime()) / 86_400_000
+    expect(state.scanFilter!.column).toBe('created_at')
+    expect(cutoffAgeDays).toBeGreaterThan(14)
+    expect(cutoffAgeDays).toBeLessThan(16)
   })
 
   it('sends only the first due drip step in a single run', async () => {
