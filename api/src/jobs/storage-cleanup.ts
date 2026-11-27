@@ -49,5 +49,11 @@ export async function runUploadOrphanSweep(client: Pick<typeof supabase, 'rpc'> 
   if (intents.error) throw intents.error
   const media = await client.rpc('sweep_orphan_question_media', { p_limit: 100 })
   if (media.error) throw media.error
-  return { expiredIntents: Number(intents.data ?? 0), orphanQuestionMedia: Number(media.data ?? 0) }
+  // Consumed intents whose registering row never appeared (DEV-UPL-003).
+  const unregistered = await client.rpc('sweep_unregistered_upload_intents', { p_limit: 100 })
+  if (unregistered.error) throw unregistered.error
+  return {
+    expiredIntents: Number(intents.data ?? 0), orphanQuestionMedia: Number(media.data ?? 0),
+    unregisteredIntents: Number(unregistered.data ?? 0),
+  }
 }

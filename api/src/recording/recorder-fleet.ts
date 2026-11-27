@@ -122,6 +122,36 @@ export async function reconcileRecorderFleet(now = new Date(), options: { force?
   return { ...summary, commandSent: true }
 }
 
+export const RECORDING_CAPACITY_EXCEEDED = 'RECORDING_CAPACITY_EXCEEDED'
+export type RecordingAdmission = { admitted: true } | { admitted: false; code: typeof RECORDING_CAPACITY_EXCEEDED; message: string }
+
+/**
+ * Admission control for recording (DEV-REC-002). The recorder has
+ * RECORDER_CAPTURE_SLOTS concurrent capture slots; if that many other classes
+ * already hold a room, a new class still runs but with recording disabled.
+ * Only classes whose rooms are open count: scheduled and cooling-down classes
+ * do not capture. Fails open so a lookup error never blocks a class.
+ */
+export async function recordingAdmission(classId: string): Promise<RecordingAdmission> {
+  if (!configured()) return { admitted: true }
+  try {
+    const { data, error } = await (supabase as any).from('live_classes')
+      .select('id')
+      .eq('classroom_provider', 'plugnmeet')
+      .in('status', ['starting', 'ready', 'live', 'ending'])
+      .neq('id', classId)
+      .limit(RECORDER_CAPTURE_SLOTS + 1)
+    if (error) throw error
+    if ((data || []).length >= RECORDER_CAPTURE_SLOTS) {
+      console.error('recorder_fleet.admission_denied', { classId, otherActiveClasses: (data || []).map((row: any) => row.id), captureSlots: RECORDER_CAPTURE_SLOTS })
+      return { admitted: false, code: RECORDING_CAPACITY_EXCEEDED, message: 'Recording is unavailable for this class because the recorder is at capacity. The class can continue without recording.' }
+    }
+  } catch (error) {
+    console.warn('recorder_fleet.admission_check_failed', error)
+  }
+  return { admitted: true }
+}
+
 export async function recorderFleetReadiness(now = new Date()) {
   if (!configured()) return { state: 'unavailable' as const, message: 'Recording is not configured.' }
   const { data, error } = await (supabase as any).from('recorder_fleet_readiness')

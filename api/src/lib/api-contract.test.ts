@@ -174,3 +174,21 @@ describe('API contract foundation', () => {
     expect(strictBooleanQuerySchema.safeParse('1').success).toBe(false)
   })
 })
+
+describe('response helpers', () => {
+  it('uuidParam rejects a malformed id with the VALIDATION_ERROR envelope', async () => {
+    const { Hono } = await import('hono')
+    const { uuidParam, ok, created } = await import('./api-contract')
+    const app = new Hono()
+    app.get('/:id', uuidParam('id'), (c) => ok(c, { fine: true }))
+    app.post('/:id', uuidParam('id'), (c) => created(c, { made: true }))
+    const bad = await app.request('/nope')
+    expect(bad.status).toBe(400)
+    expect(await bad.json()).toMatchObject({ code: 'VALIDATION_ERROR', details: { field: 'id' } })
+    const id = '11111111-1111-4111-8111-111111111111'
+    expect((await app.request(`/${id}`)).status).toBe(200)
+    const made = await app.request(`/${id}`, { method: 'POST' })
+    expect(made.status).toBe(201)
+    expect(await made.json()).toEqual({ made: true })
+  })
+})

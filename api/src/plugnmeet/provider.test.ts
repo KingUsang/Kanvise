@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { plugNmeet } from './client'
-import { getPlugNmeetClientConfig, providerForClass } from './provider'
+import { createPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass } from './provider'
 
 describe('classroom provider selection', () => {
   afterEach(() => {
@@ -54,5 +54,17 @@ describe('classroom provider selection', () => {
       }),
     }))
     expect(config.is_host).toBe(false)
+  })
+
+  it('disables recording on the room when admission is denied (DEV-REC-002)', async () => {
+    vi.stubEnv('PLUGNMEET_SERVER_URL', 'https://plugnmeet.example')
+    vi.stubEnv('PLUGNMEET_API_KEY', 'k')
+    vi.stubEnv('PLUGNMEET_API_SECRET', 's')
+    const createRoom = vi.spyOn(plugNmeet, 'createRoom').mockResolvedValue(undefined as any)
+    const input = { roomId: 'r1', title: 'T', schoolId: 's1', courseId: 'c1', accessMode: 'enrolled_learners' }
+    await createPlugNmeetRoom({ ...input, recordingAllowed: false })
+    await createPlugNmeetRoom(input)
+    expect((createRoom.mock.calls[0][0] as any).metadata.room_features.recording_features).toMatchObject({ is_allow: false, is_allow_cloud: false })
+    expect((createRoom.mock.calls[1][0] as any).metadata.room_features.recording_features.is_allow).toBe(true)
   })
 })

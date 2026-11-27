@@ -67,12 +67,30 @@ export const durableJobStore: DurableJobStore = {
 }
 
 /** List dead-lettered (failed) jobs, newest first, for operators. */
-export async function listDeadLetterJobs(limit = 50) {
-  const { data, error } = await db.from('durable_jobs')
+export async function listDeadLetterJobs(limit = 50, accountId?: string) {
+  let query = db.from('durable_jobs')
     .select('id, job_type, dedupe_key, attempts, max_attempts, last_error, updated_at')
-    .eq('status', 'failed').order('updated_at', { ascending: false }).limit(Math.max(1, Math.min(limit, 200)))
+    .eq('status', 'failed')
+  // Jobs carry no account column; the owning account is recorded in the payload.
+  if (accountId) query = query.or(`payload->>schoolId.eq.${accountId},payload->>school_id.eq.${accountId}`)
+  const { data, error } = await query.order('updated_at', { ascending: false }).limit(Math.max(1, Math.min(limit, 200)))
   if (error) throw error
   return (data || []) as Array<{ id: string; job_type: string; dedupe_key: string; attempts: number; max_attempts: number; last_error: string | null; updated_at: string }>
+}
+
+/** Account that owns a job, read from its payload. Null when the job is not attributable. */
+export function jobAccountId(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null
+  const record = payload as Record<string, unknown>
+  const value = record.schoolId ?? record.school_id
+  return typeof value === 'string' ? value : null
+}
+
+export async function getDurableJob(id: string) {
+  const { data, error } = await db.from('durable_jobs')
+    .select('id, job_type, status, payload').eq('id', id).maybeSingle()
+  if (error) throw error
+  return (data || null) as { id: string; job_type: string; status: string; payload: Record<string, unknown> } | null
 }
 
 export const workerId = `${process.env.HOSTNAME || 'api'}:${process.pid}:${randomUUID().slice(0, 8)}`

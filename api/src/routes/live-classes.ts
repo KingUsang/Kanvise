@@ -16,7 +16,7 @@ import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-a
 import { ensurePlugNmeetReady, isPlugNmeetHealthy } from '../plugnmeet/classroom-lifecycle'
 import { createPlugNmeetRoom, getPlugNmeetClientConfig, providerForClass, persistProvider } from '../plugnmeet/provider'
 import { publishClassRecap } from '../jobs/live-class-recording'
-import { reconcileRecorderFleet, recorderFleetReadiness } from '../recording/recorder-fleet'
+import { reconcileRecorderFleet, recorderFleetReadiness, recordingAdmission } from '../recording/recorder-fleet'
 import { classShareUrl, encryptClassLinkToken } from '../lib/class-links'
 import { parseOffsetPagination } from '../lib/api-contract'
 import { recordingLifecycle, recordingLifecycleFailure } from '../lib/recording-lifecycle'
@@ -84,6 +84,38 @@ async function requireClassroom(c: any, level: 'view' | 'host' | 'takeover' = 'v
     console.error('[live-classes] class access check failed:', error)
     return { response: c.json({ error: 'We could not confirm your access to this live class. Please try again.', code: 'CLASS_ACCESS_FAILED' }, 500) }
   }
+}
+
+// A 'starting' claim older than this with no provider confirmation is treated as
+// a crashed start attempt that the assigned host may resume (DEV-LVC-003).
+export const STARTING_CLAIM_STALE_MS = 60_000
+
+/** 'unknown' when the provider cannot be asked, so callers never assume absence. */
+async function providerRoomState(roomId: string): Promise<'active' | 'absent' | 'unknown'> {
+  try {
+    const { plugNmeet } = await import('../plugnmeet/client')
+    return (await plugNmeet.isRoomActive(roomId)) ? 'active' : 'absent'
+  } catch {
+    return 'unknown'
+  }
+}
+
+/**
+ * Create the room under its deterministic name. A retry after a crash may find
+ * the room already created; that is success, not a second room (DEV-LVC-003).
+ */
+async function createRoomIdempotent(input: Parameters<typeof createPlugNmeetRoom>[0]) {
+  try {
+    return await createPlugNmeetRoom(input)
+  } catch (error) {
+    if (await providerRoomState(input.roomId) === 'active') return { provider: 'plugnmeet' as const, providerRoomId: input.roomId }
+    throw error
+  }
+}
+
+/** Additive response flag; absent when recording was admitted. */
+function recordingFlag(admission: Awaited<ReturnType<typeof recordingAdmission>>) {
+  return admission.admitted ? {} : { recording_available: false, recording_code: admission.code, recording_message: admission.message }
 }
 
 function wakeRecorderWithoutBlockingClassroom() {
@@ -398,14 +430,32 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
       return c.json({ data: { ...insertedClass, state: 'preparing', class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, share_url: accessMode === 'anyone_with_link' ? `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/live/${shareToken}` : `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/class/${insertedClass.id}`, is_host: insertedClass.tutor_id === user.id } }, 202)
     }
     if (worker.state !== 'ready') throw new Error(worker.message || 'PLUGNMEET_UNAVAILABLE')
-    const room = await createPlugNmeetRoom({ roomId: initialRoomId, title: insertedClass.title, schoolId: user.school_id, courseId: insertedClass.course_id, accessMode })
+    // Persist the room-name intent before the provider call so a crash after the
+    // provider succeeds leaves a row the room reconciler can promote or reset.
+    const { data: intentClaimed, error: intentError } = await (supabase as any).from('live_classes')
+      .update({ status: 'starting', provider_room_id: initialRoomId, classroom_provider: 'plugnmeet', start_requested_at: startedAt, updated_at: startedAt })
+      .eq('id', insertedClass.id).eq('school_id', user.school_id).eq('status', 'scheduled').select('id').maybeSingle()
+    if (intentError || !intentClaimed) throw intentError || new Error('CLASS_INTENT_NOT_PERSISTED')
+    let room
+    const admission = await recordingAdmission(insertedClass.id)
+    try {
+      room = await createRoomIdempotent({ roomId: initialRoomId, title: insertedClass.title, schoolId: user.school_id, courseId: insertedClass.course_id, accessMode, recordingAllowed: admission.admitted })
+    } catch (providerError) {
+      // The call may have succeeded before failing. Only a confirmed absence lets
+      // the placeholder be removed; an unknown answer keeps the row.
+      providerRoomCreated = await providerRoomState(initialRoomId) !== 'absent'
+      throw providerError
+    }
     providerRoomCreated = true
     await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
-    const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
+    const { data: promoted, error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id).in('status', ['starting', 'ready']).select('id').maybeSingle()
     if (startUpdateError) throw startUpdateError
+    // A zero-row update means the claim was reset underneath us; do not report a live class.
+    if (!promoted) throw new Error('Class start claim was lost before the class could be promoted to live')
     const isHost = insertedClass.tutor_id === user.id
+    const startNowFlag = recordingFlag(admission)
     const config = await getPlugNmeetClientConfig({ roomId: initialRoomId, userId: user.id, name: await getParticipantDisplayName(user, isHost ? 'Tutor' : 'Administrator'), isHost, isModerator: isHost || user.role === 'admin', schoolId: user.school_id, accessMode })
-    return c.json({ data: { ...insertedClass, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, share_url: accessMode === 'anyone_with_link' ? `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/live/${shareToken}` : `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/class/${insertedClass.id}`, ...config } }, 201)
+    return c.json({ data: { ...insertedClass, ...startNowFlag, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, share_url: accessMode === 'anyone_with_link' ? `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/live/${shareToken}` : `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/class/${insertedClass.id}`, ...config } }, 201)
   } catch (error) {
     console.error('[live-classes] plugnmeet start-now failed:', error)
     if (providerRoomCreated) {
@@ -700,8 +750,11 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
         return c.json({ error: 'The classroom is taking a little longer to open. Please try again in a moment.', code: 'PLUGNMEET_UNAVAILABLE' }, 503)
       }
     }
-    if (liveClass.status === 'starting') return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
-    if (liveClass.status !== 'scheduled') return c.json({ error: 'This live class is not available to start. Refresh the page to see its latest status.', code: 'CLASS_NOT_SCHEDULED' }, 409)
+    const staleClaimAt = liveClass.status === 'starting' && access.isHost && liveClass.provider_room_id && liveClass.start_requested_at
+      && Date.now() - Date.parse(liveClass.start_requested_at) > STARTING_CLAIM_STALE_MS
+      ? String(liveClass.start_requested_at) : null
+    if (liveClass.status === 'starting' && !staleClaimAt) return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: access.isHost } }, 202)
+    if (liveClass.status !== 'scheduled' && !staleClaimAt) return c.json({ error: 'This live class is not available to start. Refresh the page to see its latest status.', code: 'CLASS_NOT_SCHEDULED' }, 409)
     if (!access.isHost) return c.json({ error: 'Only the assigned tutor can start this class', code: 'NOT_CLASS_TUTOR' }, 403)
     try {
       wakeRecorderWithoutBlockingClassroom()
@@ -712,18 +765,25 @@ liveClassesRouter.post('/:id/start', requireRole('tutor', 'admin'), async (c) =>
       // win this compare-and-set, so refreshes/double-clicks cannot create a
       // second provider session for the same scheduled class.
       const startRequestedAt = new Date().toISOString()
-      const { data: claimed, error: claimError } = await (supabase as any).from('live_classes').update({
-        status: 'starting', start_requested_at: startRequestedAt, provider_error_at: null, provider_error_message: null, updated_at: startRequestedAt,
-      }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'scheduled').select('id').maybeSingle()
+      // The claim also records the deterministic room name as the intent. If this
+      // process dies after the provider call, the room reconciler and a later
+      // retry both find the same name instead of orphaning a room.
+      const roomId = liveClass.provider_room_id || `${liveClass.id}-g${Number(liveClass.provider_generation || 1)}`
+      let claim = (supabase as any).from('live_classes').update({
+        status: 'starting', classroom_provider: 'plugnmeet', provider_room_id: roomId, start_requested_at: startRequestedAt, provider_error_at: null, provider_error_message: null, updated_at: startRequestedAt,
+      }).eq('id', liveClass.id).eq('school_id', user.school_id)
+      // A resumed claim is compare-and-set on the stale timestamp so only one retry wins.
+      claim = staleClaimAt ? claim.eq('status', 'starting').eq('start_requested_at', staleClaimAt) : claim.eq('status', 'scheduled')
+      const { data: claimed, error: claimError } = await claim.select('id').maybeSingle()
       if (claimError) throw claimError
       if (!claimed) return c.json({ data: { id, state: 'preparing', class_title: liveClass.title, course_name: (liveClass.courses as any)?.name || null, is_host: true } }, 202)
-      const roomId = `${liveClass.id}-g${Number(liveClass.provider_generation || 1)}`
-      await createPlugNmeetRoom({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode })
+      const admission = await recordingAdmission(liveClass.id)
+      await createRoomIdempotent({ roomId, title: liveClass.title, schoolId: user.school_id, courseId: liveClass.course_id, accessMode: liveClass.access_mode, recordingAllowed: admission.admitted })
       const readyAt = new Date().toISOString()
       const { data: updated, error } = await (supabase as any).from('live_classes').update({ status: 'ready', classroom_provider: 'plugnmeet', provider_room_id: roomId, room_ready_at: readyAt, provider_room_status: 'ready', provider_room_checked_at: readyAt, updated_at: readyAt }).eq('id', liveClass.id).eq('school_id', user.school_id).eq('status', 'starting').select('id, title, course_id, tutor_id, duration_minutes, status, scheduled_at, started_at, classroom_provider, provider_room_id, provider_room_status, provider_room_checked_at').single()
       if (error || !updated) throw error || new Error('CLASS_UPDATE_FAILED')
       const config = await getPlugNmeetClientConfig({ roomId, userId: user.id, name: await getParticipantDisplayName(user, 'Tutor'), isHost: true, schoolId: user.school_id, accessMode: liveClass.access_mode })
-      return c.json({ data: { ...updated, ...config, class_title: updated.title, course_name: (liveClass.courses as any)?.name || null, share_url: classShareUrl(liveClass) } })
+      return c.json({ data: { ...updated, ...config, ...recordingFlag(admission), class_title: updated.title, course_name: (liveClass.courses as any)?.name || null, share_url: classShareUrl(liveClass) } })
     } catch (error) {
       console.error('[live-classes] plugnmeet start failed:', error)
       return c.json({ error: 'We could not get your classroom ready just now. Please try again in a moment.', code: 'CLASS_START_FAILED' }, 503)

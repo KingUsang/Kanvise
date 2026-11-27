@@ -166,3 +166,41 @@ export function notFoundHandler(c: Context) {
     request_id: requestId,
   }, 404)
 }
+
+/** Throw a stable VALIDATION_ERROR response (400) with an optional field hint. */
+export function validationError(message: string, field?: string): ApiError {
+  return new ApiError(400, 'VALIDATION_ERROR', message, field ? { field } : undefined)
+}
+
+/**
+ * Route-level guard: every named path parameter must be a UUID. Fails with the
+ * shared VALIDATION_ERROR envelope before any database query runs. Place it in
+ * the handler chain of routes whose params are used as database ids.
+ */
+export function uuidParam(...names: string[]): MiddlewareHandler {
+  return async (c, next) => {
+    for (const name of names) {
+      if (!uuidSchema.safeParse(c.req.param(name)).success) {
+        return apiError(c, 400, 'VALIDATION_ERROR', `${name} must be a valid UUID.`, { field: name })
+      }
+    }
+    await next()
+  }
+}
+
+/**
+ * Success helpers. They send the payload as-is so existing callers keep their
+ * response shapes; only the status code differs between ok() and created().
+ */
+export function ok<T>(c: Context, body: T) {
+  return c.json(body, 200)
+}
+
+export function created<T>(c: Context, body: T) {
+  return c.json(body, 201)
+}
+
+/** Build an error response with the shared envelope without throwing. */
+export function apiError(c: Context, status: number, code: string, message: string, details?: unknown) {
+  return mapApiError(new ApiError(status, code, message, details), c)
+}
