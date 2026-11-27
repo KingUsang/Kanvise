@@ -187,6 +187,15 @@ is updated.
 - The payer gets a link to a simple invoice page and pays through Paystack.
 - Statuses: Draft, Sent, Paid, Overdue, Void.
 
+## 14a. Guests
+
+- No guest flows anywhere. Share-link assignments and "Anyone with the link"
+  lessons are retired. Everyone who joins a lesson, takes a diagnostic or hands
+  in work is a signed-in student (passwordless links make that easy).
+- For a trial or extra session, the tutor creates a **one-off lesson** (no
+  course) and adds the student by email. Afterwards, **Make this a course**
+  turns it into a course.
+
 ## 15. Out of scope for now
 
 - Safeguarding queues, unlinked sessions, API, webhooks and integrations.

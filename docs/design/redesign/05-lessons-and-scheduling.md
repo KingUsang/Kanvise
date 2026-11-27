@@ -7,8 +7,9 @@ and `04-courses-plan-and-diagnostic.md`.
 **Goal:** put a lesson on the calendar in under a minute, with the right
 students and a topic from the course plan, and make it easy to move or cancel.
 
-A lesson is one scheduled sitting of a course. Every lesson belongs to a
-course. All lessons are online, in the Kanvise classroom.
+A lesson is one scheduled sitting of a course, or a **one-off lesson** with no
+course (for example a trial lesson or an extra revision session). All lessons
+are online, in the Kanvise classroom.
 
 ## Lesson statuses
 
@@ -84,8 +85,14 @@ Dialog (SH-10), 520px, three steps.
 
 Title **Course and students** · subtitle **Pick a course and who's attending.**
 
-- **Course:** a dropdown with colour dots. If opened from a course page, it's
-  pre-selected and locked with a small **Change** link.
+- **What kind of lesson?** two choices at the top: **Part of a course** (default)
+  · **One-off lesson**.
+- **Part of a course:** a **Course** dropdown with colour dots. If opened from a
+  course page, it's pre-selected and locked with a small **Change** link.
+- **One-off lesson:** no course. A **Students** picker with search over all
+  students, plus **+ Add a student** (an email is required here, because a
+  student can only join if they can sign in). Line: **Good for a trial lesson or
+  an extra session. You can turn it into a course afterwards.**
 - **Students:** the course's students, all ticked by default, with
   **1 of 1 selected** and **Clear**. Students can be unticked for this lesson
   only (for example someone is away).
@@ -93,8 +100,11 @@ Title **Course and students** · subtitle **Pick a course and who's attending.**
 - No courses yet: the step shows **You need a course first.** with **Create a
   course**.
 
-**Continue** validates: a course and at least one student. Errors: **Choose a
-course.** · **Choose at least one student.**
+**Continue** validates: a course (for course lessons) and at least one student.
+Errors: **Choose a course.** · **Choose at least one student.** · **Casey needs
+an email to join a lesson.** (with **Add email**)
+
+For a one-off lesson, LW-2 has no course-plan chips; the topic is free text.
 
 ### LW-2 · Topic and time
 
@@ -177,6 +187,16 @@ course) · **Repeats** (if part of a series).
 - **Tutor** (admins can **Change**).
 - **Students:** each with avatar, name, **Remove from this lesson** (⋯). Line:
   **Students join from their Kanvise dashboard or the reminder email.**
+
+## LP-01a · One-off lessons
+
+- The facts strip shows **One-off lesson** instead of a course.
+- After the lesson, the lesson page shows a card: **Keep teaching Casey?**
+  "Turn this into a course to plan topics and schedule more lessons." Button
+  **Make this a course**, which opens the New course wizard (spec 04) with the
+  students and subject filled in, and moves this lesson into the new course.
+- One-off lessons appear in Lessons and the calendar like any other, in a
+  neutral grey.
 
 ## LP-02 · Lesson page in other statuses
 

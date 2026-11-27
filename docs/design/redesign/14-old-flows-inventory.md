@@ -23,7 +23,7 @@ the first redesign pass.
 | `/dashboard/students` | Roster, import CSV, export, enrolments | Keep as Students | 06 Students |
 | `/dashboard/tutors` | Tutors, invitations, subject assignments | Keep as Tutors (agencies) | 12 Settings / team |
 | `/dashboard/assignments`, `/assignments/[id]/submissions` | Assignments and marking | Keep as Homework | 10 Homework |
-| `/dashboard/direct-assignments`, `/direct-assignment/[token]` | Share-link assignments for guests | Owner deciding on guests. Default: Retire | 10 |
+| `/dashboard/direct-assignments`, `/direct-assignment/[token]` | Share-link assignments for guests | Retire (owner decision: no guest flows) | 10 |
 | `/dashboard/mocks`, `/mocks/builder`, `/mocks/[id]/results` | Quizzes, builder, results | Keep as Quizzes, rebuilt with Generate with Kavi | 11 Quizzes |
 | `/dashboard/mocks/[id]/offers` | Public and paid quiz offers | Retired already (DOM-009) | none |
 | `/dashboard/question-banks` | Question bank | Retire. Kavi generates questions; no bank | 11 |
@@ -44,7 +44,7 @@ the first redesign pass.
 | Today | What it does | Redesign | Where |
 |---|---|---|---|
 | `/class/[id]` | Join the PlugNMeet classroom; preparing state; admin takeover | Keep, rebuilt around Lesson tools | 07 Classroom |
-| `/live/[shareToken]` | "Anyone with the link" guest classroom | Owner deciding on guests. Default: Retire | 07 |
+| `/live/[shareToken]` | "Anyone with the link" guest classroom | Retire (owner decision: no guest flows) | 07 |
 | `/recording/[shareToken]` | Shared recording link | Keep for students and parents (signed link) | 08 Lesson report |
 | Recordings and recaps (API) | Recording processing and AI summaries | Keep: feeds Draft with Kavi | 08 |
 | Recorder fleet, provider wake (API) | Infrastructure for the classroom | No UI change | none |
