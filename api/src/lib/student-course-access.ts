@@ -79,3 +79,59 @@ export async function loadStudentCourseIds(studentId: string, schoolId: string) 
   }
   return resolveStudentCourses(enrolments || [], courses || [], subProgrammes || []).map((course) => course.id)
 }
+
+/** Keeps only people holding an active Learner membership in the account (DEV-NTF-001). */
+export async function filterActiveLearnerIds(schoolId: string, personIds: string[]) {
+  const unique = [...new Set(personIds)]
+  const active: string[] = []
+  for (let offset = 0; offset < unique.length; offset += 100) {
+    const { data, error } = await db.from('account_memberships')
+      .select('person_id')
+      .eq('school_id', schoolId).eq('role', 'learner').eq('status', 'active')
+      .in('person_id', unique.slice(offset, offset + 100))
+    if (error) throw new Error('Could not resolve Learner memberships')
+    active.push(...((data || []) as Array<{ person_id: string }>).map((row) => row.person_id))
+  }
+  return active
+}
+
+async function courseWithParent(schoolId: string, courseId: string) {
+  const { data: course, error } = await db.from('courses')
+    .select('id, programme_id, sub_programme_id').eq('id', courseId).eq('school_id', schoolId).maybeSingle()
+  if (error) throw new Error('Could not resolve course access')
+  if (!course) return null
+  let parent: { id: string; programme_id: string } | null = null
+  if (course.sub_programme_id) {
+    const { data, error: parentError } = await db.from('sub_programmes')
+      .select('id, programme_id').eq('id', course.sub_programme_id).eq('school_id', schoolId).maybeSingle()
+    if (parentError) throw new Error('Could not resolve course access')
+    parent = data
+  }
+  return { course: course as StudentCourse, parent }
+}
+
+/**
+ * Active Learners with access to a Course through a direct, Sub-programme or
+ * Programme enrolment (DEV-ATD-008, DEV-JOB-008). Same relationship as
+ * loadStudentCourseIds.
+ */
+export async function listCourseLearnerIds(schoolId: string, courseId: string) {
+  const resolved = await courseWithParent(schoolId, courseId)
+  if (!resolved) return []
+  const { data, error } = await db.from('enrolments').select('student_id')
+    .eq('school_id', schoolId).or(courseAccessEnrolmentFilter(resolved.course, resolved.parent))
+  if (error) throw new Error('Could not resolve course access')
+  const ids = [...new Set(((data || []) as Array<{ student_id: string }>).map((row) => row.student_id))]
+  return filterActiveLearnerIds(schoolId, ids)
+}
+
+export async function studentHasCourseAccess(studentId: string, schoolId: string, courseId: string) {
+  if (!await hasActiveLearnerMembership(studentId, schoolId)) return false
+  const resolved = await courseWithParent(schoolId, courseId)
+  if (!resolved) return false
+  const { data, error } = await db.from('enrolments').select('id')
+    .eq('school_id', schoolId).eq('student_id', studentId)
+    .or(courseAccessEnrolmentFilter(resolved.course, resolved.parent)).limit(1)
+  if (error) throw new Error('Could not resolve course access')
+  return (data || []).length > 0
+}

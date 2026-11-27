@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
 import { supabase } from '../lib/supabase'
+import { studentHasCourseAccess } from '../lib/student-course-access'
 import { createPresignedDownload, privateObjectExists } from '../storage/r2'
 import { getPlugNmeetClientConfig, providerForClass } from '../plugnmeet/provider'
 import { PRESENTATION_LIST_COLUMNS, publicPresentation } from '../slides/presentation-projection'
@@ -87,9 +88,13 @@ async function recognisedMember(c: any, liveClass: any) {
   if (!data) return null
   if (liveClass.access_mode === 'enrolled_learners') {
     if (data.role !== 'student' || !liveClass.course_id) return null
-    const { data: enrolment, error: enrolmentError } = await db.from('enrolments').select('id').eq('student_id', data.id).eq('course_id', liveClass.course_id).eq('school_id', liveClass.school_id).maybeSingle()
-    if (enrolmentError) throw new MemberLookupError('enrolment lookup failed')
-    if (!enrolment) return null
+    let hasAccess: boolean
+    try {
+      hasAccess = await studentHasCourseAccess(data.id, liveClass.school_id, liveClass.course_id)
+    } catch {
+      throw new MemberLookupError('enrolment lookup failed')
+    }
+    if (!hasAccess) return null
   }
   return data
 }

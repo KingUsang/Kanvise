@@ -80,4 +80,13 @@ describe('sendWebPushNotification', () => {
     await expect(sendWebPushNotification(input)).resolves.toMatchObject({ sent: 0, failures: [{ error: 'unavailable' }] })
     expect(mocks.markFailed).toHaveBeenCalledWith(expect.any(String), 'unavailable')
   })
+
+  it('removes a locally expired subscription without sending', async () => {
+    mocks.listSubscriptions.mockResolvedValue([
+      { id: 'sub-old', endpoint: 'https://push.test/old', p256dh: 'k', auth: 'a', expiration_time: new Date(Date.now() - 1000).toISOString() },
+    ])
+    await expect(sendWebPushNotification(input)).resolves.toMatchObject({ sent: 0, skipped: 1 })
+    expect(mocks.deleteSubscriptionById).toHaveBeenCalledWith('sub-old')
+    expect(mocks.sendNotification).not.toHaveBeenCalled()
+  })
 })

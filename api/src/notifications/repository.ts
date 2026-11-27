@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { courseAccessEnrolmentFilter, type StudentCourse } from '../lib/student-course-access'
+import { courseAccessEnrolmentFilter, filterActiveLearnerIds, type StudentCourse } from '../lib/student-course-access'
 import type { NotificationEvent, NotificationRecipient, RecipientSelector } from './types'
 
 export type DeliveryRecord = {
@@ -86,6 +86,8 @@ export const notificationRepository: NotificationRepository = {
       recipientIds = [...new Set((data || []).map((row) => row.student_id as string))]
     }
 
+    // Only people with an active Learner membership receive account content (DEV-NTF-001).
+    recipientIds = await filterActiveLearnerIds(schoolId, recipientIds)
     if (recipientIds.length === 0) return []
     const recipients: NotificationRecipient[] = []
     for (let offset = 0; offset < recipientIds.length; offset += 100) {
