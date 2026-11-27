@@ -9,6 +9,7 @@ import { safeRedirectPath } from '@/lib/safe-redirect'
 import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, PASSWORD_REQUIREMENTS } from '@/lib/password-policy'
 import { loginHref as buildLoginHref, postAuthDestination } from '@/lib/auth-continuation'
 import { getApiUrl } from '@/config/api'
+import posthog from 'posthog-js'
 
 function RegisterContent() {
   const router = useRouter();
@@ -153,6 +154,9 @@ function RegisterContent() {
       }
     }
 
+    posthog.capture('account_registered', {
+      account_type: flow,
+    })
     const destination = flow === "centre" || flow === 'independent' ? "/dashboard" : redirectParam || "/dashboard/student";
     window.location.assign(destination);
   };

@@ -29,6 +29,7 @@ import {
 import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 import { MockBuilderStepProgress } from "./mock-builder-step-progress";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
+import posthog from "posthog-js";
 
 type Course = {
   id: string;
@@ -1777,6 +1778,15 @@ export function MockBuilderClient({
         const body = await publishResponse.json().catch(() => null);
         publishMessage =
           typeof body?.message === "string" ? body.message : null;
+      }
+
+      if (shouldPublish) {
+        posthog.capture('mock_published', {
+          delivery_mode: deliveryMode,
+          is_edit: isEditMode,
+          publication_mode: publishMode,
+          question_count: questions.length + selectedBankQuestions.length,
+        })
       }
 
       // 4. Navigate away

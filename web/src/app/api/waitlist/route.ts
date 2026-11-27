@@ -1,4 +1,6 @@
+import { SeverityNumber } from "@opentelemetry/api-logs";
 import { NextRequest, NextResponse } from "next/server";
+import { flushPostHogLogs, posthogLog } from "@/lib/posthog-logs";
 
 type WaitlistPayload = {
   contact_name?: string;
@@ -76,8 +78,29 @@ export async function POST(req: NextRequest) {
     });
 
     const payload = await response.json();
+    posthogLog?.emit({
+      body: "waitlist submission completed",
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        event: "waitlist_submission_completed",
+        outcome: response.ok ? "accepted" : "rejected",
+        response_status: response.status,
+        has_estimated_student_count: estimatedStudentCount !== null,
+        wants_beta_testing: Boolean(body.wants_beta_testing),
+      },
+    });
+    await flushPostHogLogs();
     return NextResponse.json(payload, { status: response.status });
   } catch (error) {
+    posthogLog?.emit({
+      body: "waitlist submission upstream request failed",
+      severityNumber: SeverityNumber.ERROR,
+      attributes: {
+        event: "waitlist_submission_upstream_failed",
+        upstream: "application_api",
+      },
+    });
+    await flushPostHogLogs();
     console.error("[Waitlist Route] Failed to reach API:", error);
     return NextResponse.json(
       { error: "Failed to process waitlist request. Please try again later." },

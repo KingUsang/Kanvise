@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 
+const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+const posthogAssetsHost = posthogHost?.replace(".i.posthog.com", "-assets.i.posthog.com");
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost", "172.24.91.206"],
   experimental: {
@@ -20,6 +23,25 @@ const nextConfig: NextConfig = {
       ],
     }]
   },
+  async rewrites() {
+    if (!posthogHost || !posthogAssetsHost) return [];
+
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: `${posthogAssetsHost}/static/:path*`,
+      },
+      {
+        source: "/ingest/array/:path*",
+        destination: `${posthogAssetsHost}/array/:path*`,
+      },
+      {
+        source: "/ingest/:path*",
+        destination: `${posthogHost}/:path*`,
+      },
+    ];
+  },
+  skipTrailingSlashRedirect: true,
 };
 
 export default withSentryConfig(nextConfig, {

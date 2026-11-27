@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getApiUrl } from '@/config/api'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
+import posthog from 'posthog-js'
 
 type PaymentState = "loading" | "pending" | "success" | "failed" | "error";
 type PurchaseKind = 'enrolment' | 'mock'
@@ -15,6 +16,7 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
   const [purchaseKind, setPurchaseKind] = useState<PurchaseKind>('enrolment')
   const [mockOfferId, setMockOfferId] = useState<string | null>(null)
   const [startingMock, setStartingMock] = useState(false)
+  const paymentCaptured = useRef(false)
 
   useEffect(() => {
     if (!reference) return;
@@ -66,6 +68,10 @@ export default function PaymentReturnStatus({ reference }: { reference: string }
           await supabase.auth.refreshSession().catch(() => undefined);
           if (cancelled) return;
           setPurchaseKind(kind)
+          if (!paymentCaptured.current) {
+            paymentCaptured.current = true
+            posthog.capture('payment_confirmed', { purchase_kind: kind })
+          }
           if (kind === 'mock') setMockOfferId(body.data.offer_id || body.data.offer?.id || null)
           setState("success");
           setMessage(kind === 'mock' ? 'Payment confirmed. Your mock is ready when you are.' : 'Payment confirmed. Your programme access is ready.');
