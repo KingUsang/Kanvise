@@ -7,7 +7,7 @@ Status: draft for owner review. Builds on `00-decisions.md` and `01-app-shell.md
 it a course plan, and optionally find out what the students already know.
 
 A course pairs a student (or a small group) with a tutor over time. It holds
-the course plan, lessons, homework, quizzes and resources.
+the course plan, live classes, homework, quizzes and resources.
 
 ## Flow at a glance
 
@@ -16,7 +16,7 @@ the course plan, lessons, homework, quizzes and resources.
   → New course wizard
       CW-1 Details → CW-2 Students → CW-3 Course plan → CW-4 Diagnostic (optional) → CW-5 Review
   → Course page /courses/:id
-      Summary · Course plan · Lessons · Homework · Quizzes · Resources
+      Summary · Course plan · Live classes · Homework · Quizzes · Resources
   → Diagnostic: DIAG-S (student takes it) → DIAG-R (tutor reviews results)
 ```
 
@@ -36,9 +36,9 @@ Each card:
 - colour dot and course name, for example **Algebra 1 Small Group**;
 - subject and level, for example **Mathematics · High School**;
 - student avatars (up to 4, then **+2**) and the tutor's name for admins;
-- the plan line: **12 of 40 topics covered**, with a thin bar;
-- the next lesson: **Next: Mon 10:00 AM · Solving Systems of Linear
-  Equations**, or **No lesson scheduled** with a **Schedule** link.
+- the plan line: **12 of 40 topics taught**, with a thin bar;
+- the next live class: **Next: Mon 10:00 AM · Solving Systems of Linear
+  Equations**, or **No live class scheduled** with a **Schedule** link.
 
 Clicking the card opens the course page. There are no delete buttons on cards;
 archiving lives in the course page's Actions menu.
@@ -51,7 +51,7 @@ Kanvise works. It's kept out of this list.** with **Open the sample course ›**
 - Course icon in a purple circle.
 - **No courses yet**
 - "A course pairs a student with a tutor over time. It holds the course plan and
-  everything you schedule, so create one before booking lessons."
+  everything you schedule, so create one before booking live classes."
 - Button **Create a course**.
 
 ---
@@ -138,7 +138,7 @@ least one selected student has an email. Otherwise the wizard goes from CW-3 to
 CW-5, and the course page shows the diagnostic card later (CRS-06).
 
 Title **Find out what they know** · subtitle **A short check before the first
-lesson shows where to start.**
+live class shows where to start.**
 
 - Kavi line: **I'll write a short check from this course plan. It stops asking
   about a topic once a student clearly doesn't know it, so it stays short.**
@@ -194,12 +194,12 @@ created, but the diagnostic wasn't sent. Send it from the course page.**
 
 **Header:** colour dot, course name, status chip only when archived. Right:
 **Actions ▾** (Edit course, Archive course, Delete course) and primary **New
-lesson**.
+live class**.
 
-**Facts strip:** Subject · Level · Tutor · **Next lesson: Mon 10:00 AM**.
+**Facts strip:** Subject · Level · Tutor · **Next live class: Mon 10:00 AM**.
 
 **Tabs (underline, orange when active):** **Summary** · **Course plan** ·
-**Lessons (6)** · **Homework** · **Quizzes** · **Resources**.
+**Live classes (6)** · **Homework** · **Quizzes** · **Resources**.
 
 ### CRS-03 · Summary tab
 
@@ -207,13 +207,13 @@ Left column:
 - **About:** the goal and description, with an **Edit** pencil. Empty: **Add a
   short description so students and parents know what this course is for.**
 - **Course plan** card: **Mathematics · High School**, **8 modules · 32 topics
-  · 96 objectives**, a progress bar **12 of 32 topics covered**, and the link
+  · 96 objectives**, a progress bar **12 of 32 topics taught**, and the link
   **Open course plan ›**. Empty: the CW-3 choices in compact form.
-- **Latest lessons:** a small table (Lesson, Date, Status) with **View all**.
-  Empty: **No lessons yet.** with **New lesson**.
+- **Latest live classes:** a small table (Live class, Date, Status) with **View all**.
+  Empty: **No live classes yet.** with **New live class**.
 
 Right column:
-- **At a glance:** Total lessons, Students, Covered topics.
+- **At a glance:** Total live classes, Students, Topics taught.
 - **Tutor** (with **+ Add** for admins).
 - **Students:** each with an avatar, name, and a status line: **Diagnostic not
   sent** / **Diagnostic sent 2 days ago** / **Diagnostic done · 6 of 12** /
@@ -223,18 +223,18 @@ Right column:
 
 - **Viewing:** a selector at the top: **Everyone** (default for groups) or one
   student. For one-to-one courses it shows that student and is fixed.
-- Header line: **8 modules · 32 topics · 12 covered**, with buttons **Draft with
+- Header line: **8 modules · 32 topics · 12 taught**, with buttons **Draft with
   Kavi** (when empty), **+ Module**, and **⋯** (Regenerate plan, Export).
-- **Up next** strip at the top: the next 3 topics for the selected student,
+- **Next** strip at the top: the next 3 topics for the selected student,
   each removable, with **Reorder** (drag).
 - **Modules:** numbered rows (expandable): module name, one-line description, a
   status chip (**Not started**, **In progress**, **Complete**) and **3 of 6**
-  topics covered.
+  topics taught.
 - **Topics** inside a module: name, objectives (expandable list), and per
   student status chip:
-  - **Already knows** (green outline): from the diagnostic or set by the tutor;
-  - **Gap** (amber): from the diagnostic or set by the tutor;
-  - **Covered** (green, filled): taught in a lesson;
+  - **Knows it** (green outline): from the diagnostic or set by the tutor;
+  - **Needs work** (amber): from the diagnostic or set by the tutor;
+  - **Taught** (green, filled): taught in a live class;
   - nothing: not yet taught or checked.
   Clicking a chip lets the tutor change it, with a reason line saved as a note.
 - Drag to reorder modules and topics; the moved row slides and the others make
@@ -245,7 +245,7 @@ Right column:
 
 ### CRS-05 · Other tabs
 
-- **Lessons:** the lessons list (spec 05) filtered to this course.
+- **Live classes:** the live classes list (spec 05) filtered to this course.
 - **Homework**, **Quizzes:** lists filtered to this course with **Set
   homework** and **New quiz** (with **Generate with Kavi**). Specs 10 and 11.
 - **Resources:** files attached to this course, **Add resources** (Upload or
@@ -265,7 +265,7 @@ the course has a plan:
 
 ## DIAG-S · The student takes the diagnostic
 
-**Email:** subject **Alex has sent you a short check before your first lesson**.
+**Email:** subject **Alex has sent you a short check before your first live class**.
 Body: what it is, that it takes about 10 minutes, that it isn't a test they
 pass or fail, and one button **Start the check**.
 
@@ -282,7 +282,7 @@ expired.** with **Send me a new link** (to the same email).
   topic. The student sees nothing different; it just moves on.
 - **Save and finish later:** answers are kept and the same link resumes.
 
-**Done:** **All done, thanks Casey.** "Alex will use this to plan your lessons."
+**Done:** **All done, thanks Casey.** "Alex will use this to plan your live classes."
 No score is shown to the student.
 
 ## DIAG-R · The tutor reviews the results
@@ -297,11 +297,11 @@ notification email.
   checked**, and the answers as proof (expand to see each question, Casey's
   answer and the correct one).
 - **Kavi suggests** card:
-  **"Mark 6 topics as Already knows and put Factorising and Indices first. Start
-  the first lesson with Factorising?"**
+  **"Mark 6 topics as Knows it and put Factorising and Indices first. Start
+  the first live class with Factorising?"**
   Buttons **Apply to course plan** and **Not now**. **Apply** updates the
-  statuses and Up next for Casey, and shows a toast with **Undo**.
-- **Schedule the first lesson** button, pre-filled with the first gap topic.
+  statuses and Next for Casey, and shows a toast with **Undo**.
+- **Schedule the first live class** button, pre-filled with the first topic that needs work.
 - **Send again later** (in **⋯**): re-sends the same check, so progress can be
   compared. The results page then shows both attempts side by side.
 
@@ -318,6 +318,6 @@ notification email.
 
 - Course (maps onto today's programme and subject tables at first).
 - Course plan: modules, topics, objectives, order; Kavi draft flag.
-- Per-student topic status with source (diagnostic, tutor, lesson) and date.
+- Per-student topic status with source (diagnostic, tutor, live class) and date.
 - Diagnostic: questions with topic links, sends, attempts, answers.
 - Passwordless sign-in link for the diagnostic email.

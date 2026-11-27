@@ -56,7 +56,7 @@ Groups have a small-caps label. Items have an outline icon and a text label.
 | (none) | Setup | `/setup` | Until setup is finished |
 | (none) | Dashboard | `/dashboard` | Everyone |
 | (none) | Calendar | `/calendar` | Everyone |
-| (none) | Lessons | `/lessons` | Everyone |
+| (none) | Live classes | `/live-classes` | Everyone |
 | (none) | Courses | `/courses` | Everyone |
 | STUDENTS | Students | `/students` | Everyone |
 | WORK | Homework | `/homework` | Everyone |
@@ -102,7 +102,7 @@ Every page uses the same header:
    Secondary actions are outline buttons to its left. Anything else goes in a
    **⋯** menu.
 
-Detail pages (a course, a lesson, a student) add:
+Detail pages (a course, a live class, a student) add:
 - a colour dot or avatar before the title;
 - a status chip after it (for example **Planned**);
 - a facts strip under the header (for example Date · Time · Course);
@@ -145,15 +145,15 @@ Opens upward from the **?** in the user card.
 
 - Opens centred near the top of the screen, over a dimmed page. Focus goes to
   the field.
-- **Empty state:** **Browse by type**, listing Students, Courses, Lessons,
+- **Empty state:** **Browse by type**, listing Students, Courses, Live classes,
   Homework, Quizzes, Resources and Settings. Each has its entity icon in a
   tinted circle. Agency admins also see Tutors.
 - **Typing:** results grouped by type, up to five per group, each showing the
-  icon, the name and one detail (for example a lesson's date and course).
+  icon, the name and one detail (for example a live class's date and course).
 - **No results:** **No matches for "xyz".** and **Try a student's name, a
-  course or a lesson topic.**
+  course or a live class topic.**
 - Footer: **↑ ↓ Navigate · ↵ Open · esc Close**.
-- Results respect permissions: a tutor only finds their own courses, lessons
+- Results respect permissions: a tutor only finds their own courses, live classes
   and students.
 
 Entity icons and tints, used everywhere these things appear (lists, search,
@@ -164,7 +164,7 @@ headers, empty states):
 | Student | Mortarboard | Green |
 | Tutor | Two people | Blue |
 | Course | Bookmarked book | Purple |
-| Lesson | Open book | Indigo |
+| Live class | Open book | Indigo |
 | Homework | Clipboard with tick | Teal |
 | Quiz | Question mark in a square | Pink |
 | Resource | Folder | Amber |
