@@ -3149,6 +3149,9 @@ isOneToOne: false
 "create_school_for_admin":
 { Args: { "p_account_type": string,"p_admin_id": string,"p_contact_email"?: string,"p_contact_phone"?: string,"p_description"?: string,"p_name": string,"p_slug": string }; Returns: Json
                            },
+"delete_assignment_guarded":
+{ Args: { "p_assignment_id": string,"p_school_id": string }; Returns: Json
+                           },
 "delete_programme_checked":
 { Args: { "p_programme_id": string,"p_school_id": string }; Returns: string
                            },
@@ -3281,6 +3284,9 @@ isOneToOne: false
               "mcq_score": number,"status": string,"submitted_at": string,"total_marks": number,"total_score": number
             }[]
                            },
+"submit_assignment":
+{ Args: { "p_assignment_id": string,"p_file_key": string,"p_file_name": string,"p_school_id": string,"p_student_id": string }; Returns: Json
+                           },
 "submit_versioned_mock_attempt":
 { Args: { "p_attempt_id": string,"p_now": string,"p_reason": string,"p_school_id": string,"p_student_id": string }; Returns: {
               "mcq_score": number,"status": string,"submitted_at": string,"total_marks": number,"total_score": number
@@ -3290,6 +3296,9 @@ isOneToOne: false
 { Args: { "p_attempt_id": string,"p_guest_id": string,"p_now": string,"p_student_id": string }; Returns: {
               "already_transferred": boolean,"attempt_id": string,"entitlement_id": string
             }[]
+                           },
+"update_assignment_guarded":
+{ Args: { "p_assignment_id": string,"p_deadline_at": string,"p_description": string,"p_school_id": string,"p_title": string }; Returns: Json
                            },
 "unpublish_class_timetable":
 { Args: { "p_actor_id": string,"p_school_id": string,"p_timetable_id": string }; Returns: undefined

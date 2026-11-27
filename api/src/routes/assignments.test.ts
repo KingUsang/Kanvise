@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ from: vi.fn(), verify: vi.fn() }))
-vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }))
+const mocks = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn(), verify: vi.fn() }))
+vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
 vi.mock('../storage/r2', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../storage/r2')>()
   return { ...actual, verifyPrivateUpload: mocks.verify, createPresignedDownload: vi.fn() }
@@ -19,7 +19,7 @@ vi.mock('../middleware/auth', () => ({
   requireMembershipRole: () => async (_c: any, next: () => Promise<void>) => next(),
 }))
 
-import { courseAssignmentsRouter } from './assignments'
+import { assignmentsRouter, courseAssignmentsRouter } from './assignments'
 
 function builder(result: any) {
   const value: any = {
@@ -65,5 +65,79 @@ describe('assignment attachment registration', () => {
     expect(response.status).toBe(201)
     expect(mocks.verify).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-1', entityType: 'assignment_attachment', contextId: 'course-1' }))
     expect(mocks.from).toHaveBeenCalledWith('assignments')
+  })
+
+  it('rejects unknown and oversized create fields with VALIDATION_ERROR', async () => {
+    mocks.from.mockReturnValue(builder({ data: { id: 'course-1' }, error: null }))
+    const base = { title: 'Essay', description: 'Write it', deadline_at: new Date(Date.now() + 7_200_000).toISOString() }
+    for (const body of [{ ...base, tutor_id: 'x' }, { ...base, title: 'x'.repeat(201) }, { ...base, deadline_at: 'tomorrow' }, { ...base, description: '   ' }]) {
+      const response = await courseAssignmentsRouter.request('/course-1/assignments', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+      })
+      expect(response.status).toBe(400)
+      expect((await response.json() as any).code).toBe('VALIDATION_ERROR')
+    }
+  })
+})
+
+describe('assignment update and delete guards', () => {
+  const id = '11111111-1111-4111-8111-111111111111'
+  const future = () => new Date(Date.now() + 7_200_000).toISOString()
+  const patch = (body: unknown) => assignmentsRouter.request(`/${id}`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'assignments') return builder({ data: { id, course_id: 'course-1', attachment_file_key: null }, error: null })
+      if (table === 'courses') return builder({ data: { id: 'course-1' }, error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+  })
+
+  it.each([
+    [{}], [{ title: '   ' }], [{ title: 'ok', attachment_file_key: 'schools/x/file.pdf' }], [{ is_published: true }],
+    [{ deadline_at: 'soon' }], [{ description: 'x'.repeat(10_001) }],
+  ])('rejects update body %j so it cannot bypass create rules', async (body) => {
+    const response = await patch(body)
+    expect(response.status).toBe(400)
+    expect((await response.json() as any).code).toBe('VALIDATION_ERROR')
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('normalizes fields and applies the update through the guarded function', async () => {
+    mocks.rpc.mockResolvedValue({ data: { status: 'ok', assignment: { id, title: 'New' } }, error: null })
+    const deadline = new Date(Date.now() + 7_200_000)
+    const response = await patch({ title: '  New  ', deadline_at: deadline.toISOString() })
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('update_assignment_guarded', {
+      p_school_id: 'school-1', p_assignment_id: id, p_title: 'New', p_description: null, p_deadline_at: deadline.toISOString(),
+    })
+  })
+
+  it('maps a deadline shortening conflict to 409', async () => {
+    mocks.rpc.mockResolvedValue({ data: { status: 'has_submissions' }, error: null })
+    const response = await patch({ deadline_at: future() })
+    expect(response.status).toBe(409)
+    expect((await response.json() as any).code).toBe('CANNOT_SHORTEN_DEADLINE_WITH_SUBMISSIONS')
+  })
+
+  it('fails closed with 503 when the guarded update errors', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'detail' } })
+    const response = await patch({ title: 'New' })
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: 'Could not load assignment data right now', code: 'ASSIGNMENT_UPDATE_FAILED' })
+  })
+
+  it('maps a delete with submissions to 409 and a function error to 503', async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: { status: 'has_submissions' }, error: null })
+    const conflict = await assignmentsRouter.request(`/${id}`, { method: 'DELETE' })
+    expect(conflict.status).toBe(409)
+    expect((await conflict.json() as any).code).toBe('HAS_SUBMISSIONS')
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: 'XX000' } })
+    const failed = await assignmentsRouter.request(`/${id}`, { method: 'DELETE' })
+    expect(failed.status).toBe(503)
+    expect((await failed.json() as any).code).toBe('ASSIGNMENT_DELETE_FAILED')
   })
 })

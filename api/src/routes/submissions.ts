@@ -3,6 +3,17 @@ import { supabase } from '../lib/supabase'
 import { accountContextMiddleware, jwtVerificationMiddleware, profileResolutionMiddleware, requireMembershipRole } from '../middleware/auth'
 import { notifySubmissionGraded } from '../notifications/triggers'
 import type { AccountContext, TenantVariables } from '../types'
+import { tutorCanManageCourse } from '../lib/course-management-access'
+import { z } from 'zod'
+
+// Grading contract: score is a finite number from 0 to 100 inclusive (stored as
+// NUMERIC(5,2), so it is rounded to two decimals); feedback is at most 5000 characters.
+export const MAX_SCORE = 100
+export const MAX_FEEDBACK_LENGTH = 5000
+export const reviewSchema = z.object({
+  score: z.number().finite().min(0).max(MAX_SCORE),
+  feedback: z.string().trim().max(MAX_FEEDBACK_LENGTH).nullable().optional(),
+}).strict()
 
 export const submissionsRouter = new Hono<{ Variables: TenantVariables }>()
 
@@ -23,14 +34,12 @@ submissionsRouter.use('/*', jwtVerificationMiddleware, profileResolutionMiddlewa
 submissionsRouter.patch('/:id/review', requireMembershipRole('tutor', 'admin'), async (c) => {
   const user = c.get('user')
   const { id } = c.req.param()
-  const { score, feedback } = await c.req.json()
-
-  if (score === undefined || score === null || !Number.isFinite(Number(score))) {
-    return c.json({ error: 'A numeric score is required', code: 'INVALID_SCORE' }, 400)
-  }
+  const parsed = reviewSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Score must be a number from 0 to 100 and feedback at most 5000 characters', code: 'VALIDATION_ERROR' }, 400)
+  const { score, feedback } = parsed.data
 
   const { data: submission, error: fetchError } = await supabase.from('submissions')
-    .select('*, assignment:assignments(id, title, tutor_id)')
+    .select('*, assignment:assignments(id, title, tutor_id, course_id)')
     .eq('id', id)
     .eq('school_id', user.school_id)
     .single()
@@ -40,12 +49,18 @@ submissionsRouter.patch('/:id/review', requireMembershipRole('tutor', 'admin'), 
     return c.json({ error: 'Could not load this submission right now', code: 'SUBMISSION_LOOKUP_FAILED' }, 503)
   }
   if (!submission) return c.json({ error: 'Submission not found', code: 'NOT_FOUND' }, 404)
-  if (user.role === 'tutor' && (submission.assignment as any)?.tutor_id !== user.id) {
-    return c.json({ error: 'You are not the tutor for this assignment', code: 'FORBIDDEN' }, 403)
+  // Same rule as listing submissions: a Tutor assigned to the Course, or an Admin.
+  const courseId = (submission.assignment as any)?.course_id as string | undefined
+  if (!courseId) return c.json({ error: 'Submission not found', code: 'NOT_FOUND' }, 404)
+  const access = await tutorCanManageCourse(user, courseId)
+  if (access.error) {
+    console.error('submission.review_access_failed', access.error instanceof Error ? access.error.name : 'unknown')
+    return c.json({ error: 'Could not verify review access right now', code: 'SUBMISSION_ACCESS_FAILED' }, 503)
   }
+  if (!access.allowed) return c.json({ error: 'You cannot review this submission', code: 'FORBIDDEN' }, 403)
 
   const { data, error } = await supabase.from('submissions').update({
-    score: Number(score),
+    score: Math.round(score * 100) / 100,
     feedback: feedback || null,
     reviewed_at: new Date().toISOString(),
     reviewed_by: user.id,

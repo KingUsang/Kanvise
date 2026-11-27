@@ -6,6 +6,8 @@ import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../s
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { parseOffsetPagination, strictBooleanQuerySchema } from '../lib/api-contract'
 import { enqueueObjectDeletion } from '../jobs/storage-cleanup'
+import { tutorCanManageCourse, type CourseAccessResult } from '../lib/course-management-access'
+import { z } from 'zod'
 
 export const courseAssignmentsRouter = new Hono<{ Variables: TenantVariables }>()
 export const assignmentsRouter = new Hono<{ Variables: TenantVariables }>()
@@ -26,32 +28,63 @@ for (const router of [courseAssignmentsRouter, assignmentsRouter]) {
   router.use('/*', jwtVerificationMiddleware, profileResolutionMiddleware, accountContextMiddleware, accountUserProjection)
 }
 
-type AccessResult = { allowed: boolean; error?: unknown }
+type AccessResult = CourseAccessResult
 
-async function courseForAccount(courseId: string, schoolId: string) {
-  const { data, error } = await supabase.from('courses')
-    .select('id, programme_id')
-    .eq('id', courseId)
-    .eq('school_id', schoolId)
-    .maybeSingle()
-  return { data, error }
+
+const MIN_DEADLINE_LEAD_MS = 60 * 60 * 1000
+const LIST_DEFAULT_PAGE_SIZE = '100'
+
+const titleSchema = z.string().trim().min(1).max(200)
+const descriptionSchema = z.string().trim().min(1).max(10_000)
+const deadlineSchema = z.string().trim().max(64).datetime({ offset: true })
+  .transform((value) => new Date(value).toISOString())
+
+// Create and update share these field rules so PATCH cannot bypass creation.
+const assignmentFieldShape = {
+  title: titleSchema,
+  description: descriptionSchema,
+  deadline_at: deadlineSchema,
 }
 
-async function tutorCanManageCourse(user: TenantUser, courseId: string): Promise<AccessResult> {
-  if (!user.school_id) return { allowed: false }
-  const course = await courseForAccount(courseId, user.school_id)
-  if (course.error) return { allowed: false, error: course.error }
-  if (!course.data) return { allowed: false }
-  if (user.role === 'admin') return { allowed: true }
-  if (user.role !== 'tutor') return { allowed: false }
-  const { data, error } = await supabase.from('tutor_course_assignments')
-    .select('id')
-    .eq('school_id', user.school_id)
-    .eq('course_id', courseId)
-    .eq('tutor_id', user.id)
-    .maybeSingle()
-  if (error) return { allowed: false, error }
-  return { allowed: Boolean(data) }
+export const createAssignmentSchema = z.object({
+  ...assignmentFieldShape,
+  is_published: z.boolean().optional(),
+  attachment_file_key: z.string().trim().min(1).max(512).optional().nullable(),
+  attachment_file_name: z.string().trim().min(1).max(255).optional().nullable(),
+  attachment_file_type: z.string().trim().min(1).max(127).optional().nullable(),
+  attachment_file_size_bytes: z.number().int().positive().max(500 * 1024 * 1024).optional().nullable(),
+}).strict()
+
+export const updateAssignmentSchema = z.object(assignmentFieldShape).partial().strict()
+  .refine((value) => Object.keys(value).length > 0, { message: 'At least one field is required' })
+
+const submitAssignmentSchema = z.object({
+  file_key: z.string().trim().min(1).max(512),
+  file_name: z.string().trim().min(1).max(255),
+  file_type: z.string().trim().min(1).max(127),
+  file_size_bytes: z.number().int().positive().max(500 * 1024 * 1024),
+}).strict()
+
+function validationError(c: any) {
+  return c.json({ error: 'Invalid request body', code: 'VALIDATION_ERROR' }, 400)
+}
+
+function deadlineTooSoon(c: any) {
+  return c.json({ error: 'Deadline must be at least one hour in the future', code: 'DEADLINE_TOO_SOON' }, 400)
+}
+
+function isDeadlineTooSoon(isoDeadline: string) {
+  return new Date(isoDeadline).getTime() < Date.now() + MIN_DEADLINE_LEAD_MS
+}
+
+// Lists default to the maximum page so existing single-request callers keep
+// working while every response is bounded and carries pagination metadata.
+function listPagination(c: any) {
+  return parseOffsetPagination(c.req.query('page'), c.req.query('page_size') ?? LIST_DEFAULT_PAGE_SIZE)
+}
+
+function paginationMeta(pagination: { page: number; pageSize: number; offset: number }, returned: number, total: number) {
+  return { page: pagination.page, page_size: pagination.pageSize, total, has_more: pagination.offset + returned < total }
 }
 
 async function studentCanAccessCourse(user: TenantUser, courseId: string): Promise<AccessResult> {
@@ -105,19 +138,14 @@ courseAssignmentsRouter.post('/:courseId/assignments', requireMembershipRole('tu
     return c.json({ error: 'Not assigned to this course', code: 'NOT_ASSIGNED_TO_COURSE' }, 403)
   }
 
-  const body = await c.req.json()
-  const { title, description, deadline_at, attachment_file_key, attachment_file_name, attachment_file_type, attachment_file_size_bytes } = body
-  if (!title?.trim() || !description?.trim() || !deadline_at) {
-    return c.json({ error: 'title, description and deadline_at are required', code: 'BAD_REQUEST' }, 400)
-  }
-  const deadline = new Date(deadline_at)
-  if (!Number.isFinite(deadline.getTime()) || deadline.getTime() < Date.now() + 60 * 60 * 1000) {
-    return c.json({ error: 'Deadline must be at least one hour in the future', code: 'DEADLINE_TOO_SOON' }, 400)
-  }
+  const parsed = createAssignmentSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return validationError(c)
+  const { title, description, deadline_at, attachment_file_key, attachment_file_name, attachment_file_type, attachment_file_size_bytes } = parsed.data
+  if (isDeadlineTooSoon(deadline_at)) return deadlineTooSoon(c)
 
   if (attachment_file_key) {
     if (!attachment_file_name || !attachment_file_type || !attachment_file_size_bytes) {
-      return c.json({ error: 'Attachment metadata is required', code: 'BAD_REQUEST' }, 400)
+      return c.json({ error: 'Attachment metadata is required', code: 'VALIDATION_ERROR' }, 400)
     }
     try {
       await verifyPrivateUpload({
@@ -141,12 +169,12 @@ courseAssignmentsRouter.post('/:courseId/assignments', requireMembershipRole('tu
     school_id: user.school_id,
     course_id: courseId,
     tutor_id: user.id,
-    title: title.trim(),
-    description: description.trim(),
-    deadline_at: deadline.toISOString(),
+    title,
+    description,
+    deadline_at,
     attachment_file_key: attachment_file_key || null,
     attachment_file_name: attachment_file_name || null,
-    is_published: Boolean(body.is_published),
+    is_published: Boolean(parsed.data.is_published),
   }).select().single()
   if (error) return safeReadFailure(c, 'ASSIGNMENT_CREATE_FAILED', error)
   return c.json({ data }, 201)
@@ -161,12 +189,16 @@ courseAssignmentsRouter.get('/:courseId/assignments', async (c) => {
   if (access.error) return dependencyFailure(c, 'ASSIGNMENT_ACCESS_FAILED', access.error)
   if (!access.allowed) return c.json({ error: 'Cannot access this course', code: 'FORBIDDEN' }, 403)
 
-  let query = supabase.from('assignments').select('*')
+  const pagination = listPagination(c)
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
+
+  let query = supabase.from('assignments').select('*', { count: 'exact' })
     .eq('school_id', user.school_id)
     .eq('course_id', courseId)
     .order('deadline_at', { ascending: true })
+    .order('id', { ascending: true })
   if (user.role === 'student') query = query.eq('is_published', true)
-  const { data, error } = await query
+  const { data, error, count } = await query.range(pagination.offset, pagination.offset + pagination.pageSize - 1)
   if (error) return safeReadFailure(c, 'ASSIGNMENT_LIST_FAILED', error)
 
   const submissionByAssignment = new Map<string, any>()
@@ -184,7 +216,7 @@ courseAssignmentsRouter.get('/:courseId/assignments', async (c) => {
     attachment_download_url: await optionalDownloadUrl(assignment.attachment_file_key, user.school_id!),
     submission: submissionByAssignment.get(assignment.id) || null,
   })))
-  return c.json({ data: enhanced })
+  return c.json({ data: enhanced, pagination: paginationMeta(pagination, enhanced.length, count ?? enhanced.length) })
 })
 
 assignmentsRouter.get('/', requireMembershipRole('tutor', 'admin'), async (c) => {
@@ -288,25 +320,27 @@ assignmentsRouter.patch('/:id{[0-9a-fA-F-]{36}}', requireMembershipRole('tutor',
   const access = await tutorCanManageCourse(user, assignment.course_id)
   if (access.error) return dependencyFailure(c, 'ASSIGNMENT_ACCESS_FAILED', access.error)
   if (!access.allowed) return c.json({ error: 'Forbidden', code: 'FORBIDDEN' }, 403)
-  const body = await c.req.json()
-  const { count, error: submissionCountError } = await supabase.from('submissions').select('*', { count: 'exact', head: true })
-    .eq('school_id', user.school_id).eq('assignment_id', id)
-  if (submissionCountError) return safeReadFailure(c, 'SUBMISSION_LOOKUP_FAILED', submissionCountError)
-  if (body.deadline_at) {
-    const proposed = new Date(body.deadline_at)
-    if (!Number.isFinite(proposed.getTime()) || proposed.getTime() < Date.now() + 60 * 60 * 1000) {
-      return c.json({ error: 'Deadline must be at least one hour in the future', code: 'DEADLINE_TOO_SOON' }, 400)
-    }
-    if (count && proposed.getTime() < new Date(assignment.deadline_at).getTime()) {
-      return c.json({ error: 'Cannot shorten deadline after submissions', code: 'CANNOT_SHORTEN_DEADLINE_WITH_SUBMISSIONS' }, 400)
-    }
+  const parsed = updateAssignmentSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return validationError(c)
+  if (parsed.data.deadline_at && isDeadlineTooSoon(parsed.data.deadline_at)) return deadlineTooSoon(c)
+
+  // The submission/deadline invariant is enforced under a row lock in SQL.
+  const { data: result, error } = await supabase.rpc('update_assignment_guarded', {
+    p_school_id: user.school_id!,
+    p_assignment_id: id,
+    p_title: parsed.data.title ?? null,
+    p_description: parsed.data.description ?? null,
+    p_deadline_at: parsed.data.deadline_at ?? null,
+  } as any)
+  if (error || !result) return safeReadFailure(c, 'ASSIGNMENT_UPDATE_FAILED', error)
+  const outcome = result as { status: string; assignment?: unknown }
+  if (outcome.status === 'not_found') return c.json({ error: 'Assignment not found', code: 'NOT_FOUND' }, 404)
+  if (outcome.status === 'deadline_too_soon') return deadlineTooSoon(c)
+  if (outcome.status === 'has_submissions') {
+    return c.json({ error: 'Cannot shorten deadline after submissions', code: 'CANNOT_SHORTEN_DEADLINE_WITH_SUBMISSIONS' }, 409)
   }
-  const update: any = {}
-  for (const key of ['title', 'description', 'deadline_at']) if (body[key] !== undefined) update[key] = body[key]
-  const { data, error } = await supabase.from('assignments').update(update)
-    .eq('id', id).eq('school_id', user.school_id).select().single()
-  if (error) return safeReadFailure(c, 'ASSIGNMENT_UPDATE_FAILED', error)
-  return c.json({ data })
+  if (outcome.status !== 'ok') return safeReadFailure(c, 'ASSIGNMENT_UPDATE_FAILED', null)
+  return c.json({ data: outcome.assignment })
 })
 
 assignmentsRouter.delete('/:id{[0-9a-fA-F-]{36}}', requireMembershipRole('tutor', 'admin'), async (c) => {
@@ -319,31 +353,39 @@ assignmentsRouter.delete('/:id{[0-9a-fA-F-]{36}}', requireMembershipRole('tutor'
   const access = await tutorCanManageCourse(user, assignment.course_id)
   if (access.error) return dependencyFailure(c, 'ASSIGNMENT_ACCESS_FAILED', access.error)
   if (!access.allowed) return c.json({ error: 'Forbidden', code: 'FORBIDDEN' }, 403)
-  const { count, error: submissionCountError } = await supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('assignment_id', id)
-  if (submissionCountError) return safeReadFailure(c, 'SUBMISSION_LOOKUP_FAILED', submissionCountError)
-  if (count) return c.json({ error: 'Cannot delete an assignment with submissions', code: 'HAS_SUBMISSIONS' }, 409)
-  const { error } = await supabase.from('assignments').delete().eq('id', id).eq('school_id', user.school_id)
-  if (error) return safeReadFailure(c, 'ASSIGNMENT_DELETE_FAILED', error)
-  await enqueueObjectDeletion(assignment.attachment_file_key, user.school_id!)
+  const { data: result, error } = await supabase.rpc('delete_assignment_guarded', {
+    p_school_id: user.school_id!,
+    p_assignment_id: id,
+  } as any)
+  if (error || !result) return safeReadFailure(c, 'ASSIGNMENT_DELETE_FAILED', error)
+  const outcome = result as { status: string; attachment_file_key?: string | null }
+  if (outcome.status === 'not_found') return c.json({ error: 'Assignment not found', code: 'NOT_FOUND' }, 404)
+  if (outcome.status === 'has_submissions') return c.json({ error: 'Cannot delete an assignment with submissions', code: 'HAS_SUBMISSIONS' }, 409)
+  if (outcome.status !== 'ok') return safeReadFailure(c, 'ASSIGNMENT_DELETE_FAILED', null)
+  await enqueueObjectDeletion(outcome.attachment_file_key ?? assignment.attachment_file_key, user.school_id!)
   return c.json({ message: 'Assignment deleted' })
 })
 
 assignmentsRouter.get('/me', requireMembershipRole('learner'), async (c) => {
   const user = c.get('user')
+  const pagination = listPagination(c)
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
   let courseIds: string[]
   try {
     courseIds = await loadStudentCourseIds(user.id, user.school_id!)
-  } catch {
-    return c.json({ error: 'Failed to resolve assignment access', code: 'ASSIGNMENT_ACCESS_FAILED' }, 500)
+  } catch (error) {
+    return dependencyFailure(c, 'ASSIGNMENT_ACCESS_FAILED', error)
   }
-  if (!courseIds.length) return c.json({ data: [] })
+  if (!courseIds.length) return c.json({ data: [], pagination: paginationMeta(pagination, 0, 0) })
 
-  const { data, error } = await supabase.from('assignments')
-    .select('*, course:courses(id, name)')
+  const { data, error, count } = await supabase.from('assignments')
+    .select('*, course:courses(id, name)', { count: 'exact' })
     .eq('school_id', user.school_id)
     .eq('is_published', true)
     .in('course_id', courseIds)
     .order('deadline_at')
+    .order('id')
+    .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
   if (error) return safeReadFailure(c, 'ASSIGNMENT_LIST_FAILED', error)
   const { data: submissions, error: submissionsError } = await supabase.from('submissions').select('*')
     .eq('school_id', user.school_id).eq('student_id', user.id)
@@ -361,7 +403,7 @@ assignmentsRouter.get('/me', requireMembershipRole('learner'), async (c) => {
       } : null,
     }
   }))
-  return c.json({ data: enhanced })
+  return c.json({ data: enhanced, pagination: paginationMeta(pagination, enhanced.length, count ?? enhanced.length) })
 })
 
 assignmentsRouter.post('/:assignmentId/submit', requireMembershipRole('learner'), async (c) => {
@@ -380,9 +422,9 @@ assignmentsRouter.post('/:assignmentId/submit', requireMembershipRole('learner')
   if (existingError) return safeReadFailure(c, 'SUBMISSION_LOOKUP_FAILED', existingError)
   if (existing) return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
 
-  const body = await c.req.json()
-  const { file_key, file_name, file_type, file_size_bytes } = body
-  if (!file_key || !file_name || !file_type || !file_size_bytes) return c.json({ error: 'File metadata is required', code: 'BAD_REQUEST' }, 400)
+  const parsedBody = submitAssignmentSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsedBody.success) return validationError(c)
+  const { file_key, file_name, file_type, file_size_bytes } = parsedBody.data
   try {
     await verifyPrivateUpload({ fileKey: file_key, schoolId: user.school_id!, entityType: 'submission', contextId: assignmentId, contentType: file_type, fileSizeBytes: Number(file_size_bytes) })
   } catch (error) {
@@ -394,21 +436,24 @@ assignmentsRouter.post('/:assignmentId/submit', requireMembershipRole('learner')
   if (reusedError) return safeReadFailure(c, 'SUBMISSION_LOOKUP_FAILED', reusedError)
   if (reused) return c.json({ error: 'File has already been registered', code: 'FILE_ALREADY_REGISTERED' }, 409)
 
-  const isLate = Date.now() > new Date(assignment.deadline_at).getTime()
-  const { data, error } = await supabase.from('submissions').insert({
-    school_id: user.school_id,
-    assignment_id: assignmentId,
-    student_id: user.id,
-    file_key,
-    file_name,
-    is_late: isLate,
-  }).select().single()
+  // Lateness is computed from the database clock under a lock on the assignment row.
+  const { data: result, error } = await supabase.rpc('submit_assignment', {
+    p_school_id: user.school_id!,
+    p_assignment_id: assignmentId,
+    p_student_id: user.id,
+    p_file_key: file_key,
+    p_file_name: file_name,
+  } as any)
   if (error?.code === '23505') return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
-  if (error) return safeReadFailure(c, 'SUBMISSION_CREATE_FAILED', error)
+  if (error || !result) return safeReadFailure(c, 'SUBMISSION_CREATE_FAILED', error)
+  const outcome = result as { status: string; submission?: any }
+  if (outcome.status === 'not_found') return c.json({ error: 'Assignment not found', code: 'NOT_FOUND' }, 404)
+  if (outcome.status === 'already_submitted') return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
+  if (outcome.status === 'file_already_registered') return c.json({ error: 'File has already been registered', code: 'FILE_ALREADY_REGISTERED' }, 409)
+  if (outcome.status !== 'ok' || !outcome.submission) return safeReadFailure(c, 'SUBMISSION_CREATE_FAILED', null)
   const downloadUrl = await optionalDownloadUrl(file_key, user.school_id!)
   return c.json({ data: {
-    ...withoutPrivateFileKey(data),
-    is_late: isLate,
+    ...withoutPrivateFileKey(outcome.submission),
     download_url: downloadUrl,
   } }, 201)
 })
@@ -424,16 +469,29 @@ assignmentsRouter.get('/:assignmentId/submissions', requireMembershipRole('tutor
   if (access.error) return dependencyFailure(c, 'ASSIGNMENT_ACCESS_FAILED', access.error)
   if (!access.allowed) return c.json({ error: 'Forbidden', code: 'FORBIDDEN' }, 403)
 
-  const { data, error } = await supabase.from('submissions')
-    .select('*, student:user_profiles!submissions_student_id_fkey(id, first_name, last_name)')
-    .eq('school_id', user.school_id).eq('assignment_id', assignmentId).order('submitted_at')
+  const pagination = listPagination(c)
+  if (!pagination) return c.json({ error: 'Invalid pagination', code: 'VALIDATION_ERROR' }, 400)
+
+  const { data, error, count } = await supabase.from('submissions')
+    .select('*, student:user_profiles!submissions_student_id_fkey(id, first_name, last_name)', { count: 'exact' })
+    .eq('school_id', user.school_id).eq('assignment_id', assignmentId)
+    .order('submitted_at').order('id')
+    .range(pagination.offset, pagination.offset + pagination.pageSize - 1)
   if (error) return safeReadFailure(c, 'SUBMISSION_LIST_FAILED', error)
+  const { count: reviewedCount, error: reviewedError } = await supabase.from('submissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('school_id', user.school_id).eq('assignment_id', assignmentId).not('reviewed_at', 'is', null)
+  if (reviewedError) return safeReadFailure(c, 'SUBMISSION_LIST_FAILED', reviewedError)
+
+  // Download URLs are signed only for the rows in the returned page.
   const enhanced: Array<Record<string, any>> = await Promise.all((data || []).map(async (submission: any) => ({
     ...withoutPrivateFileKey(submission),
     download_url: await optionalDownloadUrl(submission.file_key, user.school_id!),
   })))
-  return c.json({ data: enhanced, summary: {
-    total_submitted: enhanced.length,
-    total_reviewed: enhanced.filter((item) => item.reviewed_at).length,
-  } })
+  const total = count ?? enhanced.length
+  return c.json({
+    data: enhanced,
+    summary: { total_submitted: total, total_reviewed: reviewedCount ?? 0 },
+    pagination: paginationMeta(pagination, enhanced.length, total),
+  })
 })

@@ -73,4 +73,11 @@ describe('assignment ledger', () => {
     await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' })
     expect(mocks.from).not.toHaveBeenCalled()
   })
+
+  it('bounds the Learner assignment list with pagination metadata', async () => {
+    mocks.user.role = 'student'; mocks.account.role = 'learner'
+    const response = await assignmentsRouter.request('/me?page_size=500')
+    expect(response.status).toBe(400)
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
 })
