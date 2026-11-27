@@ -210,20 +210,15 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
       p_currency: body.currency || 'NGN',
       p_subjects: normalizedSubjects,
       p_creation_key: creationKey,
+      p_creation_fingerprint: fingerprint,
+      p_teaching_mode: typeof body.teaching_mode === 'string' ? body.teaching_mode : null,
     })
     if (error) throw error
-    if (data?.programme?.id) {
-      // Applied on replays too, so a failed follow-up write is recovered by retrying with the same key (DEV-CLS-004).
-      const followUp: Record<string, unknown> = { creation_fingerprint: fingerprint }
-      if (typeof body.teaching_mode === 'string') followUp.teaching_mode = body.teaching_mode
-      const { error: followUpError } = await (supabase as any).from('programmes').update(followUp)
-        .eq('id', data.programme.id).eq('school_id', profile.school_id)
-      if (followUpError) throw followUpError
-    }
     return c.json({ data, message: data?.replayed ? 'Existing class creation recovered' : 'Programme setup saved as a draft' }, data?.replayed ? 200 : 201)
   } catch (error: any) {
     const code = error.message === 'TUTOR_SCHOOL_MISMATCH' ? 'INVALID_TUTOR'
       : error.message === 'DUPLICATE_SUBJECTS' ? 'DUPLICATE_SUBJECTS'
+      : error.message === 'IDEMPOTENCY_KEY_REUSED' ? 'IDEMPOTENCY_KEY_REUSED'
       : error.code === '23505' ? 'SLUG_TAKEN' : 'SETUP_FAILED'
     const status = ['INVALID_TUTOR', 'DUPLICATE_SUBJECTS'].includes(code) ? 400 : code === 'SLUG_TAKEN' ? 409 : 500
     if (code === 'SLUG_TAKEN') {
@@ -236,6 +231,7 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
         existing_class_id: existing?.id || null,
       }, 409)
     }
+    if (code === 'IDEMPOTENCY_KEY_REUSED') return c.json({ error: 'This creation key was already used with different details', code }, 409)
     if (status === 500) console.error('[programmes] setup failed', { code: error.code })
     return c.json({ error: code === 'INVALID_TUTOR' ? 'A selected tutor does not belong to this centre' : code === 'DUPLICATE_SUBJECTS' ? 'Subjects must be unique' : 'Programme setup failed', code }, status)
   }
