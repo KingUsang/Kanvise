@@ -85,6 +85,19 @@ describe('PlugNmeet webhook inbox', () => {
     expect(calls.filter((call) => call.table === 'attendance_records' && call.op === 'insert')).toHaveLength(0)
   })
 
+  it('treats a unique-violation on the open attendance row as already open', async () => {
+    const calls = install((call) => {
+      if (call.table === 'plugnmeet_webhook_inbox' && call.op === 'upsert') return { data: { id: 'i1', processed_at: null, attempts: 0 } }
+      if (call.table === 'live_classes' && call.op === 'select') return { data: liveClass }
+      if (call.table === 'enrolments') return { data: { student_id: 'u1' } }
+      if (call.table === 'attendance_records' && call.op === 'insert') return { error: { code: '23505', message: 'duplicate key' } }
+      return {}
+    })
+    expect((await post(event('participant_joined', { participant: { user_id: 'u1' } }))).status).toBe(200)
+    const done = calls.filter((call) => call.table === 'plugnmeet_webhook_inbox' && call.op === 'update')
+    expect(done[0].payload).toMatchObject({ outcome: 'processed', last_error: null })
+  })
+
   it('records an explicit ignored outcome for events without a known room', async () => {
     const calls = install((call) => {
       if (call.table === 'plugnmeet_webhook_inbox' && call.op === 'upsert') return { data: { id: 'i1', processed_at: null, attempts: 0 } }

@@ -46,6 +46,24 @@ const enforceAdminOrTutor = async (c: any, next: any) => {
   await next();
 };
 
+// Strict create contract (DEV-CRS-006): canonical numeric price, ISO currency,
+// slug shape and UUID parents. Unknown fields are rejected.
+const priceSchema = z.union([
+  z.number().finite(),
+  z.string().trim().regex(/^\d{1,12}(\.\d{1,2})?$/).transform(Number),
+]).pipe(z.number().min(0).max(100000000));
+const subjectCreateSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  slug: z.string().trim().min(1).max(200).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+  description: z.string().max(5000).nullable().optional(),
+  price: priceSchema.optional(),
+  currency: z.string().trim().regex(/^[A-Z]{3}$/).optional(),
+  programme_id: z.string().uuid().nullable().optional(),
+  sub_programme_id: z.string().uuid().nullable().optional(),
+  is_available_separately: z.boolean().optional(),
+  sort_order: z.number().int().min(0).max(100000).optional(),
+}).strict();
+
 // Create a new course
 coursesRouter.post("/", enforceAdmin, async (c) => {
   try {
@@ -54,40 +72,41 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
       return c.json({ error: "Admin has no school setup", code: "NO_SCHOOL" }, 400);
     }
 
-    const body = await c.req.json();
-    const { name, slug, description, price, currency, programme_id, sub_programme_id, is_available_separately, sort_order } = body;
-
-    if (!name || !slug) {
-      return c.json({ error: "Missing required fields", code: "BAD_REQUEST" }, 400);
+    const parsedBody = subjectCreateSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsedBody.success) {
+      return c.json({ error: "Invalid subject details", code: "VALIDATION_ERROR" }, 400);
     }
+    const { name, slug, description, price, currency, programme_id, sub_programme_id, is_available_separately, sort_order } = parsedBody.data;
 
     if (programme_id && sub_programme_id) {
       return c.json({ error: "Cannot specify both programme and sub-programme", code: "INVALID_PARENT" }, 400);
     }
     const isStandalone = !programme_id && !sub_programme_id;
     const availableSeparately = isStandalone || Boolean(is_available_separately);
-    if (availableSeparately && (price === '' || !Number.isFinite(parseFloat(price)) || parseFloat(price) < 0)) {
+    if (availableSeparately && (price === undefined || price < 0)) {
       return c.json({ error: "Choose a free option or enter a valid price", code: "PRICE_REQUIRED" }, 400);
     }
 
     // Verify parent belongs to school if provided
     if (programme_id) {
-      const { data: progCheck } = await supabase
+      const { data: progCheck, error: progError } = await supabase
         .from("programmes")
         .select("id")
         .eq("id", programme_id)
         .eq("school_id", profile.school_id)
-        .single();
+        .maybeSingle();
+      if (progError) throw progError;
       if (!progCheck) return c.json({ error: "Invalid programme", code: "INVALID_PARENT" }, 400);
     }
 
     if (sub_programme_id) {
-      const { data: subProgCheck } = await supabase
+      const { data: subProgCheck, error: subProgError } = await supabase
         .from("sub_programmes")
         .select("id")
         .eq("id", sub_programme_id)
         .eq("school_id", profile.school_id)
-        .single();
+        .maybeSingle();
+      if (subProgError) throw subProgError;
       if (!subProgCheck) return c.json({ error: "Invalid sub-programme", code: "INVALID_PARENT" }, 400);
     }
 
@@ -115,23 +134,29 @@ coursesRouter.post("/", enforceAdmin, async (c) => {
         name,
         slug,
         description: description || null,
-        price: availableSeparately ? parseFloat(price) : 0,
+        price: availableSeparately ? price! : 0,
         is_available_separately: availableSeparately,
         currency: currency || "NGN",
-        sort_order: Number.isInteger(sort_order) && sort_order >= 0 ? sort_order : 0,
+        sort_order: sort_order ?? 0,
         is_published: false,
         created_by: profile.id
       })
       .select()
       .single();
 
+    if (error?.code === "23505") return c.json({ error: "Slug already in use", code: "SLUG_TAKEN" }, 409);
     if (error) throw error;
 
     return c.json({ data, message: "Subject created successfully" }, 201);
   } catch (error: any) {
-    console.error("POST /courses error:", error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("POST /courses error:", error?.code || error?.name || "unknown");
+    return c.json({ error: "Could not create this subject", code: "SUBJECT_CREATE_FAILED" }, 500);
   }
+});
+
+const subjectListPageSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(500),
+  offset: z.coerce.number().int().min(0).max(100000).default(0),
 });
 
 // List all courses for the school
@@ -146,6 +171,10 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
     const sub_programme_id = c.req.query("sub_programme_id");
     const standalone = c.req.query("standalone");
     const is_published = c.req.query("is_published");
+    const parsedPage = subjectListPageSchema.safeParse({ limit: c.req.query("limit") || undefined, offset: c.req.query("offset") || undefined });
+    if (!parsedPage.success) return c.json({ error: "Invalid page request", code: "VALIDATION_ERROR" }, 400);
+    const { limit, offset } = parsedPage.data;
+    const pagination = { limit, offset, has_more: false };
     const parsedStandalone = strictBooleanQuerySchema.safeParse(standalone);
     const parsedIsPublished = strictBooleanQuerySchema.safeParse(is_published);
     if ((standalone !== undefined && !parsedStandalone.success)
@@ -181,17 +210,22 @@ coursesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
       const courseIds = assignments?.map(a => a.course_id) || [];
       if (courseIds.length === 0) {
-        return c.json({ data: [] });
+        return c.json({ data: [], pagination });
       }
 
       query = query.in("id", courseIds as string[]);
     }
 
-    const { data, error } = await query.order("created_at", { ascending: false });
+    // Bounded window (DEV-CRS-004); one extra row reports has_more without a count.
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + limit);
 
     if (error) throw error;
 
-    return c.json({ data });
+    const rows = data || [];
+    return c.json({ data: rows.slice(0, limit), pagination: { ...pagination, has_more: rows.length > limit } });
   } catch (error: any) {
     console.error("GET /courses error:", error?.name || "unknown");
     return c.json({ error: "Could not load subjects", code: "SUBJECT_LIST_FAILED" }, 500);
@@ -231,7 +265,7 @@ coursesRouter.get("/assignment-overview", enforceAdmin, async (c) => {
       })),
     });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not load subject assignments", code: "SUBJECT_ASSIGNMENTS_FAILED" }, 500);
   }
 });
 
@@ -388,7 +422,7 @@ coursesRouter.patch("/:id", enforceAdmin, async (c) => {
 
     return c.json({ data, message: "Subject updated" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not update this subject", code: "SUBJECT_UPDATE_FAILED" }, 500);
   }
 });
 
@@ -423,27 +457,33 @@ coursesRouter.post("/:id/publish", enforceAdmin, async (c) => {
 
     return c.json({ message: "Subject published" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not publish this subject", code: "SUBJECT_PUBLISH_FAILED" }, 500);
   }
 });
 
-// Soft-delete course
+// Delete course (physical delete; archival policy is still open, DEV-CRS-002)
 coursesRouter.delete("/:id", enforceAdmin, async (c) => {
   try {
     const profile = c.get("user");
     const id = c.req.param("id");
 
-    const { error } = await supabase
+    if (!z.string().uuid().safeParse(id).success) return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
+    const { data: deleted, error } = await supabase
       .from("courses")
       .delete()
       .eq("id", id)
-      .eq("school_id", profile.school_id);
+      .eq("school_id", profile.school_id)
+      .select("id");
 
+    if (error?.code === "23503") {
+      return c.json({ error: "This subject still has linked records", code: "SUBJECT_IN_USE" }, 409);
+    }
     if (error) throw error;
+    if (!deleted || deleted.length === 0) return c.json({ error: "Subject not found", code: "NOT_FOUND" }, 404);
 
     return c.json({ message: "Subject deleted" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not delete this subject", code: "SUBJECT_DELETE_FAILED" }, 500);
   }
 });
 
@@ -501,7 +541,7 @@ coursesRouter.post("/:id/tutors", enforceAdmin, async (c) => {
 
     return c.json({ message: "Tutor assigned to subject" }, 201);
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not assign this tutor", code: "SUBJECT_TUTOR_ASSIGN_FAILED" }, 500);
   }
 });
 
@@ -546,7 +586,7 @@ coursesRouter.delete("/:id/tutors/:tutorId", enforceAdmin, async (c) => {
 
     return c.json({ message: "Tutor removed from subject" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not remove this tutor", code: "SUBJECT_TUTOR_REMOVE_FAILED" }, 500);
   }
 });
 

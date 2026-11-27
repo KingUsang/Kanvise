@@ -132,7 +132,10 @@ webhooksRouter.post('/plugnmeet', async (c) => {
         const { data: openRecord } = check(await db.from('attendance_records').select('id')
           .eq('live_class_id', liveClass.id).eq('student_id', participantIdentity).is('left_at', null).limit(1).maybeSingle())
         if (!openRecord) {
-          check(await db.from('attendance_records').insert({ school_id: liveClass.school_id, live_class_id: liveClass.id, student_id: participantIdentity, joined_at: new Date().toISOString() }))
+          // A concurrent delivery may win the race; the partial unique index on open
+          // rows (DEV-ATT-003) rejects the loser with 23505, which means "already open".
+          const inserted = await db.from('attendance_records').insert({ school_id: liveClass.school_id, live_class_id: liveClass.id, student_id: participantIdentity, joined_at: new Date().toISOString() })
+          if (inserted.error && inserted.error.code !== '23505') throw inserted.error
         }
       }
     }

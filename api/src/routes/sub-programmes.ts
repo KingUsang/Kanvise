@@ -68,7 +68,9 @@ subProgrammesRouter.post("/", enforceAdmin, async (c) => {
       .eq("school_id", profile.school_id)
       .single();
       
-    if (!progCheck || progError) {
+    // A lookup failure is a service error, not a bad parent (DEV-SUB-005).
+    if (progError && progError.code !== "PGRST116") throw progError;
+    if (!progCheck) {
       return c.json({ error: "Invalid class", code: "INVALID_PARENT" }, 400);
     }
 
@@ -108,8 +110,8 @@ subProgrammesRouter.post("/", enforceAdmin, async (c) => {
 
     return c.json({ data, message: "Class section created successfully" }, 201);
   } catch (error: any) {
-    console.error("POST /sub-programmes error:", error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("POST /sub-programmes error:", error?.code || error?.name || "unknown");
+    return c.json({ error: "Could not create this class section", code: "SUB_PROGRAMME_CREATE_FAILED" }, 500);
   }
 });
 
@@ -133,22 +135,26 @@ subProgrammesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     // If tutor, filter by assigned courses
     if (profile.role === "tutor") {
-      const { data: assignments } = await supabase
+      // Lookup failures propagate instead of becoming an empty list (DEV-SUB-002).
+      const { data: assignments, error: assignmentError } = await supabase
         .from("tutor_course_assignments")
         .select("course_id")
         .eq("tutor_id", profile.id)
         .eq("school_id", profile.school_id);
-      
+      if (assignmentError) throw assignmentError;
+
       const courseIds = assignments?.map(a => a.course_id) || [];
       if (courseIds.length === 0) {
         return c.json({ data: [] });
       }
       
-      const { data: courses } = await supabase
+      const { data: courses, error: coursesError } = await supabase
         .from("courses")
         .select("sub_programme_id")
+        .eq("school_id", profile.school_id)
         .in("id", courseIds)
         .not("sub_programme_id", "is", null);
+      if (coursesError) throw coursesError;
         
       const subProgIds = [...new Set(courses?.map(c => c.sub_programme_id).filter(Boolean))];
       
@@ -165,8 +171,8 @@ subProgrammesRouter.get("/", enforceAdminOrTutor, async (c) => {
 
     return c.json({ data });
   } catch (error: any) {
-    console.error("GET /sub-programmes error:", error);
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    console.error("GET /sub-programmes error:", error?.code || error?.name || "unknown");
+    return c.json({ error: "Could not load class sections", code: "SUB_PROGRAMME_LIST_FAILED" }, 500);
   }
 });
 
@@ -210,7 +216,7 @@ subProgrammesRouter.patch("/:id", enforceAdmin, async (c) => {
 
     return c.json({ data, message: "Class section updated" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not update this class section", code: "SUB_PROGRAMME_UPDATE_FAILED" }, 500);
   }
 });
 
@@ -234,7 +240,7 @@ subProgrammesRouter.post("/:id/publish", enforceAdmin, async (c) => {
 
     return c.json({ message: "Class section published" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not publish this class section", code: "SUB_PROGRAMME_PUBLISH_FAILED" }, 500);
   }
 });
 
@@ -303,6 +309,6 @@ subProgrammesRouter.delete("/:id", enforceAdmin, async (c) => {
     
     return c.json({ message: "Class section deleted" });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Could not delete this class section", code: "SUB_PROGRAMME_DELETE_FAILED" }, 500);
   }
 });

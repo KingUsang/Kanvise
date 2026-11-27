@@ -250,3 +250,40 @@ describe('programme list filters', () => {
     expect(calls).toContainEqual(['eq', 'is_published', false])
   })
 })
+
+describe('class deletion', () => {
+  const CLASS_ID = '00000000-0000-4000-8000-0000000000c1'
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+  })
+  const del = (id = CLASS_ID) => programmesRouter.request(`/${id}`, { method: 'DELETE' })
+
+  it('deletes through the checked RPC scoped to the active account', async () => {
+    mocks.rpc.mockResolvedValue({ data: 'deleted', error: null })
+    const response = await del()
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('delete_programme_checked', { p_school_id: 'school-1', p_programme_id: CLASS_ID })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('refuses when any descendant enrolment exists', async () => {
+    mocks.rpc.mockResolvedValue({ data: 'has_enrolments', error: null })
+    const response = await del()
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ code: 'ACTIVE_ENROLMENTS_EXIST' })
+  })
+
+  it('reports a missing Class instead of success', async () => {
+    mocks.rpc.mockResolvedValue({ data: 'not_found', error: null })
+    expect((await del()).status).toBe(404)
+    expect((await del('not-a-uuid')).status).toBe(404)
+  })
+
+  it('does not leak database text on failure', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: '42P01', message: 'relation public.secret missing' } })
+    const response = await del()
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Could not delete this class', code: 'CLASS_DELETE_FAILED' })
+  })
+})

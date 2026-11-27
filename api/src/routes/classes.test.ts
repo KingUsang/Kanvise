@@ -26,7 +26,7 @@ import { classesRouter } from './classes'
 function query(result: any) {
   const value: any = {
     select: () => value, eq: () => value, in: () => value, is: () => value,
-    gte: () => value, lte: () => value, order: () => value,
+    gte: () => value, lte: () => value, order: () => value, or: () => value, limit: () => value,
     maybeSingle: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
   }
@@ -136,20 +136,20 @@ describe('class-first API aliases', () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'programmes') return query({ data: { id: 'class-1' }, error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
-      if (table === 'courses') return query({ data: [{ id: 'physics', name: 'Physics', programme_id: 'class-1' }], error: null })
-      if (table === 'live_classes') return query({ data: [{ id: 'session-1', course_id: 'physics' }], error: null })
-      if (table === 'class_timetable_slots') return query({ data: [{ id: 'slot-1', course_id: 'physics', weekday: 1 }], error: null })
+      if (table === 'courses') return query({ data: [{ id: '00000000-0000-4000-8000-000000000a01', name: 'Physics', programme_id: 'class-1' }], error: null })
+      if (table === 'live_classes') return query({ data: [{ id: 'session-1', course_id: '00000000-0000-4000-8000-000000000a01' }], error: null })
+      if (table === 'class_timetable_slots') return query({ data: [{ id: 'slot-1', course_id: '00000000-0000-4000-8000-000000000a01', weekday: 1 }], error: null })
       throw new Error(`Unexpected table ${table}`)
     })
 
-    const response = await classesRouter.request('/class-1/schedule?course_id=physics')
+    const response = await classesRouter.request('/00000000-0000-4000-8000-0000000000c1/schedule?course_id=00000000-0000-4000-8000-000000000a01')
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       data: {
-        subjects: [{ id: 'physics', name: 'Physics', programme_id: 'class-1' }],
-        sessions: [{ id: 'session-1', course_id: 'physics' }],
-        recurring_slots: [{ id: 'slot-1', course_id: 'physics', weekday: 1 }],
+        subjects: [{ id: '00000000-0000-4000-8000-000000000a01', name: 'Physics', programme_id: 'class-1' }],
+        sessions: [{ id: 'session-1', course_id: '00000000-0000-4000-8000-000000000a01' }],
+        recurring_slots: [{ id: 'slot-1', course_id: '00000000-0000-4000-8000-000000000a01', weekday: 1 }],
       },
     })
   })
@@ -161,19 +161,19 @@ describe('class-first API aliases', () => {
       if (table === 'programmes') return query({ data: { id: 'class-1' }, error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
       if (table === 'courses') return query({ data: [
-        { id: 'physics', name: 'Physics', programme_id: 'class-1' },
-        { id: 'chemistry', name: 'Chemistry', programme_id: 'class-1' },
+        { id: '00000000-0000-4000-8000-000000000a01', name: 'Physics', programme_id: 'class-1' },
+        { id: '00000000-0000-4000-8000-000000000a02', name: 'Chemistry', programme_id: 'class-1' },
       ], error: null })
-      if (table === 'tutor_course_assignments') return query({ data: [{ course_id: 'physics' }], error: null })
-      if (table === 'live_classes') return query({ data: [{ id: 'session-1', course_id: 'physics' }], error: null })
-      if (table === 'class_timetable_slots') return query({ data: [{ id: 'slot-1', course_id: 'physics', weekday: 1 }], error: null })
+      if (table === 'tutor_course_assignments') return query({ data: [{ course_id: '00000000-0000-4000-8000-000000000a01' }], error: null })
+      if (table === 'live_classes') return query({ data: [{ id: 'session-1', course_id: '00000000-0000-4000-8000-000000000a01' }], error: null })
+      if (table === 'class_timetable_slots') return query({ data: [{ id: 'slot-1', course_id: '00000000-0000-4000-8000-000000000a01', weekday: 1 }], error: null })
       throw new Error(`Unexpected table ${table}`)
     })
 
-    const response = await classesRouter.request('/class-1/schedule')
+    const response = await classesRouter.request('/00000000-0000-4000-8000-0000000000c1/schedule')
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toMatchObject({ data: { subjects: [{ id: 'physics' }] } })
+    expect(await response.json()).toMatchObject({ data: { subjects: [{ id: '00000000-0000-4000-8000-000000000a01' }] } })
     expect(mocks.from).toHaveBeenCalledWith('tutor_course_assignments')
   })
 
@@ -181,15 +181,51 @@ describe('class-first API aliases', () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'programmes') return query({ data: { id: 'class-1' }, error: null })
       if (table === 'sub_programmes') return query({ data: [], error: null })
-      if (table === 'courses') return query({ data: [{ id: 'physics', name: 'Physics', programme_id: 'class-1' }], error: null })
+      if (table === 'courses') return query({ data: [{ id: '00000000-0000-4000-8000-000000000a01', name: 'Physics', programme_id: 'class-1' }], error: null })
       throw new Error(`Unexpected table ${table}`)
     })
 
-    const response = await classesRouter.request('/class-1/schedule?course_id=chemistry')
+    const response = await classesRouter.request('/00000000-0000-4000-8000-0000000000c1/schedule?course_id=00000000-0000-4000-8000-000000000a02')
 
     expect(response.status).toBe(404)
     expect(await response.json()).toMatchObject({ code: 'SUBJECT_NOT_FOUND' })
     expect(mocks.from).not.toHaveBeenCalledWith('live_classes')
     expect(mocks.from).not.toHaveBeenCalledWith('class_timetable_slots')
+  })
+
+  it('returns an empty schedule for an existing class with no subjects', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'programmes') return query({ data: { id: '00000000-0000-4000-8000-0000000000c1' }, error: null })
+      if (table === 'sub_programmes') return query({ data: [], error: null })
+      if (table === 'courses') return query({ data: [], error: null })
+      throw new Error(`Unexpected table ${table}`)
+    })
+    const response = await classesRouter.request('/00000000-0000-4000-8000-0000000000c1/schedule')
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ data: { subjects: [], sessions: [], recurring_slots: [] } })
+  })
+
+  it('rejects malformed schedule filters before any query', async () => {
+    for (const qs of ['course_id=nope', 'from=yesterday', 'from=2026-02-01&to=2026-01-01', 'limit=0', 'limit=99999']) {
+      const response = await classesRouter.request(`/00000000-0000-4000-8000-0000000000c1/schedule?${qs}`)
+      expect(response.status).toBe(400)
+      expect(await response.json()).toMatchObject({ code: 'VALIDATION_ERROR' })
+    }
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('never returns database error text from a schedule or timetable failure', async () => {
+    mocks.from.mockImplementation(() => query({ data: null, error: { message: 'relation secret_table exploded' } }))
+    const schedule = await classesRouter.request('/00000000-0000-4000-8000-0000000000c1/schedule')
+    expect(schedule.status).toBe(500)
+    expect(JSON.stringify(await schedule.json())).not.toContain('secret_table')
+    const timetable = await classesRouter.request('/timetable')
+    expect(timetable.status).toBe(500)
+    expect(JSON.stringify(await timetable.json())).not.toContain('secret_table')
+  })
+
+  it('rejects malformed timetable filters', async () => {
+    const response = await classesRouter.request('/timetable?tutor_id=not-a-uuid')
+    expect(response.status).toBe(400)
   })
 })
