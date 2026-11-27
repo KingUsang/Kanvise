@@ -156,6 +156,7 @@ Right column:
   Homework handed in on time (**8 of 10**).
 - **Kavi suggests:** the student-level suggestions from DB-06, when there are
   any.
+- **Private notes** (ST-10): the most recent note, with **All notes ** and **+ Add a note**.
 
 ### Courses tab
 
@@ -185,6 +186,22 @@ after the start), **Left early**, or **Missed**, and the time in the lesson.
 Summary at the top: **Attended 11 of 12 lessons this term.**
 
 ---
+
+## ST-10 · Private notes about the student
+
+Notes about the student overall, not tied to one lesson (for example "Gets
+anxious before tests; start with an easy win" or "Mum prefers WhatsApp after 6
+pm").
+
+- Opened from the Summary card, as a side panel.
+- **+ Add a note:** a text box (up to 2,000 characters) and **Save**. Notes are
+  listed newest first with the author and date, e.g. **Alex . 27 Nov**.
+- Each note has **Edit** and **Delete** (author or admin). Edited notes show
+  **Edited**. **Pin** keeps one note at the top.
+- Line: **Only you and admins see these. Casey never does.** In an agency, tutors
+  who teach the student also see them.
+- Kavi can read these when drafting plans and suggestions, but never shows them
+  to the student.
 
 ## ST-06 · Edit
 

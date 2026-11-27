@@ -106,3 +106,28 @@ Each spec lists the emails its flow sends.
 
 7. Every student needs a personal join link on the lesson page (Copy, WhatsApp,
    Email), replacing the retired share links.
+
+## Feature-level check (components and API endpoints)
+
+A second pass through every old component and API endpoint on `staging`, looking
+for features inside pages, not only the pages themselves.
+
+| Old feature | Today | Redesign |
+|---|---|---|
+| Lesson recap: view, edit, publish | Session detail | Becomes the lesson summary (spec 08). Complete = publish |
+| Public recording share link (`/recording-share-link`, `/recording/[token]`) | Session detail | Retire. Students watch recordings in their app |
+| Regenerate a lesson link | Session detail | Keep as **Get a new link** on each student's join link (spec 05) |
+| Slides presenter with page sync and annotations (`/slides/*`) | Classroom | **Owner decision needed.** PlugNMeet already has a whiteboard that takes uploaded PDFs and slides. Spec 07 uses that and retires Kanvise's own presenter. Say if you want the old presenter kept |
+| Anti-cheat wrapper and exam calculator on quizzes | Student quiz attempt | Not in the first quiz version (diagnostics and checks, not exams). Later with exam modes |
+| Attempt answer queue (saves answers offline) | Student quiz attempt | Kept in spec 11 (answers save as chosen, offline-safe) |
+| Subject combination (JAMB-style) | Student settings | Retire with multi-subject exams |
+| Question bank import (PDF, document text) | Quiz builder | Retire. Kavi generates questions |
+| Mock "random pool" assembly | Quiz builder | Retire |
+| Class insights (`/programmes/:id/insights`) | Class workspace, Performance tab | Replaced by quiz results by topic (spec 11) and the student Summary tab. Course-level analytics later |
+| Assignment overview (`/courses/assignment-overview`) | Class workspace | Replaced by Homework list (spec 10) |
+| Student progress page | Student app | Replaced by the course plan view (spec 09, SA-08) |
+| Needs-grading card | Dashboard | Becomes Needs attention (spec 03, DB-05) |
+| Avatar builder, promos, payout editing | Settings and dashboard | Retired or later (see the table above) |
+| Install prompt, push prompt and settings | Whole app | Kept (spec 09 SA-09, spec 12 ST-N) |
+| Navigation progress bar, unsaved-changes guard | Whole app | Kept as app behaviour (spec 01) |
+| Class session composer, timetable | Class workspace | Replaced by the New lesson wizard with repeats (spec 05) |

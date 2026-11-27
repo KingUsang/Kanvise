@@ -180,7 +180,8 @@ course) · **Repeats** (if part of a series).
 - **Students:** each with avatar, name and their **Join link**, with **Copy**,
   **WhatsApp** and **Email** (Email only if they have one), and **Remove from
   this lesson** (⋯). Line: **Each link is for one student, so attendance stays
-  accurate.**
+  accurate.** In ⋯: **Get a new link** (the old one stops working at once; use it
+  if a link was shared by mistake).
 
 
 ## LP-02 · Lesson page in other statuses
