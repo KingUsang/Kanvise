@@ -44,7 +44,7 @@ export default function StudentLearnPage() {
   return <div className="mx-auto max-w-[1120px] px-4 py-7 pb-28 sm:px-6 lg:px-10 lg:py-10">
     <header>
       <p className="text-sm font-medium text-[#994704]">Your class</p>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight">Learn</h1>
+      <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Learn</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Live classes, assignments and study materials from your tutoring account are together here.</p>
     </header>
 
