@@ -4,8 +4,8 @@ Status: draft for owner review. Builds on `00-decisions.md`, `01-app-shell.md`
 and `04-courses-plan-and-diagnostic.md`.
 
 **Who:** tutors and agency admins.
-**Goal:** add students quickly (one at a time or a whole list), see everything
-about one student in one place, and keep parents in the loop.
+**Goal:** add students quickly (one at a time or a whole list) and see
+everything about one student in one place.
 
 ## Flow at a glance
 
@@ -68,7 +68,6 @@ Subtitle **Add a student and, if you like, put them on a course.**
 | Last name | Required | |
 | Student's email (optional) | Valid email | Line: **Leave blank if they don't have one. Without an email they can't sign in, but you can still send them their lesson links yourself.** |
 | Parent or guardian | Shown open by default if the account teaches children; collapsed under **+ Add a parent** if adults or both | Parent's name, parent's email, phone (optional, for WhatsApp). Line: **Parents get lesson summaries and invoices. They don't get a login.** |
-| Who pays? | Shown only when billing is on | **The parent** · **The student** |
 | Timezone | Pre-filled with the tutor's timezone, searchable | Line: **Lesson times are shown to them in this timezone.** Important for families abroad. |
 | Course (optional) | Dropdown of courses | **Put on a course now** |
 
@@ -227,8 +226,6 @@ template columns plus courses and status. Toast: **Export ready.**
 - **Invitation to the student:** from the tutor, in Kavi's voice, with
   **Accept invitation**, which lets them set a password and sign in.
 - **Reminder** after 3 days if not accepted (once).
-- **Parent welcome** (when a parent is added): who the tutor is, what they'll
-  receive (lesson summaries, later invoices), and that they don't need an account.
 
 ## Data needed (for the build)
 
