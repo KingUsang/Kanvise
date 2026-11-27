@@ -13,6 +13,19 @@ export function nextTrapIndex(count: number, activeIndex: number, shift: boolean
   return null;
 }
 
+/** Mounted dialogs, oldest first. Only the last one handles Escape and Tab. */
+const dialogStack: symbol[] = [];
+export function pushDialog(token: symbol) {
+  dialogStack.push(token);
+}
+export function removeDialog(token: symbol) {
+  const index = dialogStack.indexOf(token);
+  if (index >= 0) dialogStack.splice(index, 1);
+}
+export function isTopDialog(token: symbol) {
+  return dialogStack[dialogStack.length - 1] === token;
+}
+
 interface DialogProps {
   /** Accessible name. Use `labelledBy` instead when a visible heading exists. */
   label?: string;
@@ -37,12 +50,15 @@ export function Dialog({ label, labelledBy, describedBy, onClose, className, pan
   }, [onClose]);
 
   useEffect(() => {
+    const token = Symbol("dialog");
+    pushDialog(token);
     const previous = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     const first = panel?.querySelector<HTMLElement>("[data-autofocus]") ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!isTopDialog(token)) return;
       if (event.key === "Escape" && onCloseRef.current) {
         event.stopPropagation();
         onCloseRef.current();
@@ -58,6 +74,7 @@ export function Dialog({ label, labelledBy, describedBy, onClose, className, pan
     document.addEventListener("keydown", onKeyDown, true);
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
+      removeDialog(token);
       if (previous && document.contains(previous)) previous.focus();
     };
   }, []);

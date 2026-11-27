@@ -22,6 +22,30 @@ export function updateDirtySources(sources: ReadonlySet<string>, sourceId: strin
   return next;
 }
 
+const GUARD_KEY = "__kanviseUnsavedGuard";
+
+function hasGuardMarker(state: unknown): boolean {
+  return typeof state === "object" && state !== null && (state as Record<string, unknown>)[GUARD_KEY] === true;
+}
+
+/**
+ * Adds one marked duplicate history entry so Back/Forward stay on this page and we can ask first.
+ * The entry is reused when the current entry is already marked, so repeated dirty/clean cycles
+ * (for example after saving) never grow the history stack. `force` re-pushes after a Back pop.
+ * Returns true when an entry was pushed.
+ */
+export function pushGuardEntry(force = false, win: Window = window): boolean {
+  if (!force && hasGuardMarker(win.history.state)) return false;
+  const base = typeof win.history.state === "object" && win.history.state !== null ? win.history.state : {};
+  win.history.pushState({ ...base, [GUARD_KEY]: true }, "", win.location.href);
+  return true;
+}
+
+/** Steps for history.go when leaving by Back: the guard entry above the page, then the page entry. */
+export function historyLeaveSteps(): number {
+  return -2;
+}
+
 const UnsavedChangesContext = createContext<UnsavedChangesContextType>({
   setDirty: () => {},
   guardNavigation: (action) => action(),
@@ -36,16 +60,10 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
   const [pending, setPending] = useState<PendingLeave | null>(null);
   const router = useRouter();
   const dirtyRef = React.useRef(false);
-  const guardEntryRef = React.useRef(false);
   const { titleId, descriptionId } = useDialogIds();
   useEffect(() => {
     dirtyRef.current = isDirty;
-    // A duplicate history entry lets Back/Forward stay on this page so we can ask first.
-    if (isDirty && !guardEntryRef.current) {
-      window.history.pushState(window.history.state, "", window.location.href);
-      guardEntryRef.current = true;
-    }
-    if (!isDirty) guardEntryRef.current = false;
+    if (isDirty) pushGuardEntry();
   }, [isDirty]);
   const guardNavigation = React.useCallback((action: () => void) => {
     if (dirtyRef.current) setPending({ kind: "action", run: action });
@@ -61,9 +79,9 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
     };
 
     const handlePopState = () => {
-      if (!dirtyRef.current || !guardEntryRef.current) return;
+      if (!dirtyRef.current) return;
       // Put the guard entry back so the URL does not change, then ask.
-      window.history.pushState(window.history.state, "", window.location.href);
+      pushGuardEntry(true);
       setPending({ kind: "history" });
     };
 
@@ -98,13 +116,11 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
   const confirmLeave = () => {
     const leave = pending;
     dirtyRef.current = false;
-    guardEntryRef.current = false;
     setDirtySources(new Set());
     setPending(null);
     if (!leave) return;
     if (leave.kind === "history") {
-      // Skip the guard entry and the entry for this page.
-      window.history.go(-2);
+      window.history.go(historyLeaveSteps());
       return;
     }
     startNavigationProgress();

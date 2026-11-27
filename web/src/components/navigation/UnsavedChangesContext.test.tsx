@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { updateDirtySources } from './UnsavedChangesContext'
+import { historyLeaveSteps, pushGuardEntry, updateDirtySources } from './UnsavedChangesContext'
 
 describe('updateDirtySources', () => {
   it('keeps the guard active while another source stays dirty', () => {
@@ -17,5 +17,26 @@ describe('updateDirtySources', () => {
     const sources = new Set(['a'])
     expect(updateDirtySources(sources, 'a', true)).toBe(sources)
     expect(updateDirtySources(sources, 'z', false)).toBe(sources)
+  })
+})
+
+describe('pushGuardEntry', () => {
+  it('pushes one marked entry and reuses it on later dirty cycles', () => {
+    const before = window.history.length
+    expect(pushGuardEntry()).toBe(true)
+    expect(window.history.length).toBe(before + 1)
+    expect(pushGuardEntry()).toBe(false)
+    expect(pushGuardEntry()).toBe(false)
+    expect(window.history.length).toBe(before + 1)
+  })
+
+  it('re-pushes when forced after a Back pop', () => {
+    const before = window.history.length
+    expect(pushGuardEntry(true)).toBe(true)
+    expect(window.history.length).toBe(before + 1)
+  })
+
+  it('leaves by skipping the guard entry and the page entry', () => {
+    expect(historyLeaveSteps()).toBe(-2)
   })
 })
