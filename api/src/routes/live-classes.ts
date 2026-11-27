@@ -875,7 +875,8 @@ liveClassesRouter.post('/:id/recap/publish', requireRole('tutor', 'admin'), asyn
     return c.json({ data })
   } catch (error) {
     console.error('[recap] publish failed:', error)
-    return c.json({ error: error instanceof Error ? error.message : 'Could not publish class summary', code: 'RECAP_PUBLISH_FAILED' }, 500)
+    if (error instanceof Error && error.message === 'Summary body is required') return c.json({ error: 'Summary body is required', code: 'VALIDATION_ERROR' }, 400)
+    return c.json({ error: 'Could not publish class summary', code: 'RECAP_PUBLISH_FAILED' }, 500)
   }
 })
 

@@ -139,7 +139,8 @@ programmesRouter.post('/', enforceAdmin, async (c) => {
     return c.json({ data, message: 'Programme created successfully' }, 201)
   } catch (error: any) {
     const status = error.code === '23505' ? 409 : 500
-    return c.json({ error: status === 409 ? 'A programme with this name already exists' : error.message || 'Internal server error', code: status === 409 ? 'SLUG_TAKEN' : undefined }, status)
+    if (status === 500) console.error('[programmes] create failed', { code: error.code })
+    return c.json({ error: status === 409 ? 'A programme with this name already exists' : 'Internal server error', code: status === 409 ? 'SLUG_TAKEN' : undefined }, status)
   }
 })
 
@@ -235,7 +236,8 @@ programmesRouter.post('/setup', enforceAdmin, async (c) => {
         existing_class_id: existing?.id || null,
       }, 409)
     }
-    return c.json({ error: code === 'INVALID_TUTOR' ? 'A selected tutor does not belong to this centre' : error.message || 'Programme setup failed', code }, status)
+    if (status === 500) console.error('[programmes] setup failed', { code: error.code })
+    return c.json({ error: code === 'INVALID_TUTOR' ? 'A selected tutor does not belong to this centre' : code === 'DUPLICATE_SUBJECTS' ? 'Subjects must be unique' : 'Programme setup failed', code }, status)
   }
 })
 

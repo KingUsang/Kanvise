@@ -20,7 +20,11 @@ export function buildStudentProgress(input: {
 }) {
   const attended = new Set(input.attendance.map(item => item.live_class_id))
   const submitted = new Set(input.submissions.map(item => item.assignment_id))
-  const completedAttempts = input.attempts.filter(item => item.status !== 'in_progress')
+  // One authorized attempt set: attempts are de-duplicated by id (account and
+  // entitlement sources can overlap) and limited to Quizzes the Learner can see.
+  const visibleMockIds = new Set(input.mocks.map(item => item.id))
+  const completedAttempts = [...new Map(input.attempts.map(item => [item.id, item])).values()]
+    .filter(item => item.status !== 'in_progress' && visibleMockIds.has(item.mock_exam_id))
   const scored = completedAttempts.flatMap(attempt => {
     const score = Number(attempt.total_score)
     const marks = Number(attempt.total_marks)

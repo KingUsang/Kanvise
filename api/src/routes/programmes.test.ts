@@ -55,6 +55,15 @@ describe('programme setup', () => {
     })
   })
 
+  it('does not leak database text when setup fails unexpectedly', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: '42P01', message: 'relation public.secret missing' } })
+    const response = await post('/setup', { name: 'JAMB Chemistry', price: 0, subjects: [{ name: 'Chemistry' }] })
+    expect(response.status).toBe(500)
+    expect(JSON.stringify(await response.json())).not.toContain('secret')
+    log.mockRestore()
+  })
+
   it('is admin-only', async () => {
     mocks.user = { id: 'tutor-1', school_id: 'school-1', role: 'tutor' }
     const response = await post('/setup', { name: 'JAMB Chemistry', price: 0, subjects: [{ name: 'Chemistry' }] })
