@@ -636,6 +636,20 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"upload_intents": {
+                  Row: {
+                    "consumed_at": string | null,"content_type": string,"context_id": string,"created_at": string,"entity_type": string,"expires_at": string,"file_key": string,"file_size_bytes": number,"id": string,"requester_id": string,"school_id": string,"scope": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "consumed_at"?: string | null,"content_type": string,"context_id": string,"created_at"?: string,"entity_type": string,"expires_at": string,"file_key": string,"file_size_bytes": number,"id"?: string,"requester_id": string,"school_id": string,"scope": string,"status"?: string
+                  }
+                  Update: {
+                    "consumed_at"?: string | null,"content_type"?: string,"context_id"?: string,"created_at"?: string,"entity_type"?: string,"expires_at"?: string,"file_key"?: string,"file_size_bytes"?: number,"id"?: string,"requester_id"?: string,"school_id"?: string,"scope"?: string,"status"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"email_provider_daily_usage": {
                   Row: {
                     "attempted_recipient_count": number,"cooldown_until": string | null,"created_at": string,"failed_recipient_count": number,"last_error": string | null,"provider": string,"quota_failure_count": number,"sent_recipient_count": number,"updated_at": string,"usage_date": string
@@ -3192,6 +3206,18 @@ isOneToOne: false
                            },
 "record_notification_delivery":
 { Args: { "p_channel": string,"p_error"?: string,"p_event": string,"p_recipient_id": string,"p_related_entity_id": string,"p_school_id": string,"p_status": string }; Returns: undefined
+                           },
+"consume_upload_intent":
+{ Args: { "p_file_key": string,"p_requester_id": string,"p_school_id": string }; Returns: string
+                           },
+"release_upload_intent":
+{ Args: { "p_file_key": string,"p_requester_id": string,"p_school_id": string }; Returns: undefined
+                           },
+"sweep_upload_intents":
+{ Args: { "p_limit"?: number }; Returns: number
+                           },
+"sweep_orphan_question_media":
+{ Args: { "p_limit"?: number,"p_older_than"?: string }; Returns: number
                            },
 "replay_durable_job":
 { Args: { "p_id": string }; Returns: boolean

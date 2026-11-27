@@ -4,6 +4,7 @@ import { jwtVerificationMiddleware, profileResolutionMiddleware, requireRole, ac
 import { accountUserProjection } from '../middleware/account-projection'
 import type { TenantVariables, TenantUser } from '../types'
 import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../storage/r2'
+import { consumeUploadIntent, releaseUploadIntent } from '../storage/upload-intents'
 import type { TablesUpdate } from '../lib/database.types'
 import {
   BANK_VISIBILITIES,
@@ -430,6 +431,8 @@ questionBanksRouter.post('/media/confirm', async c => {
       .eq('school_id', user.school_id).eq('storage_key', body.file_key).maybeSingle()
     if (existingError) return databaseError(c, existingError, 'Could not check question image registration')
     if (existing) return c.json({ data: existing })
+    const intent = { schoolId: user.school_id!, requesterId: user.id, fileKey: body.file_key }
+    await consumeUploadIntent(intent)
     const { data, error } = await supabase.from('question_media').insert({
       school_id: user.school_id,
       owner_id: user.id,
@@ -443,7 +446,10 @@ questionBanksRouter.post('/media/confirm', async c => {
       alt_text: altText,
       processing_status: 'ready',
     }).select('id, original_filename, mime_type, byte_size, width, height, alt_text, processing_status').single()
-    if (error) return databaseError(c, error, 'Could not register question image')
+    if (error) {
+      await releaseUploadIntent(intent)
+      return databaseError(c, error, 'Could not register question image')
+    }
     return c.json({ data }, 201)
   } catch (error) {
     if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)

@@ -84,7 +84,7 @@ export class StorageError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly status: 400 | 403 | 404 | 409 | 500 = 400,
+    public readonly status: 400 | 403 | 404 | 409 | 500 | 503 = 400,
   ) {
     super(message)
     this.name = 'StorageError'

@@ -5,6 +5,7 @@ import { reconcileRecorderFleet } from '../recording/recorder-fleet'
 import { reconcileInactivePlugNmeetClasses } from '../plugnmeet/room-lifecycle'
 import { deallocateIdlePlugNmeet, warmPlugNmeetForUpcomingClasses } from '../plugnmeet/classroom-lifecycle'
 import { runGeneralDurableJobs } from './general-jobs'
+import { runUploadOrphanSweep } from './storage-cleanup'
 import { runOnboardingDripJob } from './onboarding-drip'
 import { createLeasedJob, databaseSchedulerLease } from './scheduler-lease'
 import { workerId } from './durable-jobs'
@@ -21,6 +22,7 @@ export function startScheduledJobs() {
     { expression: '* * * * *', guarded: createGuardedJob('mock_publication', () => runMockPublicationJob()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('live_class_reminder', () => runLiveClassReminderJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('durable_jobs', () => runGeneralDurableJobs()) },
+    { expression: '*/15 * * * *', guarded: createGuardedJob('upload_orphan_sweep', () => runUploadOrphanSweep()) },
     { expression: '*/30 * * * *', guarded: createGuardedJob('assignment_deadline', () => runAssignmentDeadlineJob()) },
     { expression: '17 */6 * * *', guarded: createGuardedJob('timetable_materialization', () => runTimetableMaterializationJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('plugnmeet_classroom_warmup', () => warmPlugNmeetForUpcomingClasses()) },
