@@ -19,6 +19,7 @@ Read in order. `00-decisions.md` wins if anything conflicts.
 | 12-settings-and-team.md | Profile, security, notifications, teaching, classroom, Kavi, team, data | Draft for review |
 | 13-billing.md | Proposal: payers, prices, invoices (built after the payments hold) | Proposal |
 | 14-old-flows-inventory.md | Every current page and what happens to it | Draft |
+| 16-responsive.md | Phone, tablet and desktop rules for every screen and role | Draft for review |
 | 15-resources.md | Library, upload, folders, sharing to courses, lesson materials | Draft for review |
 
 State IDs (for example `CW-3`, `LP-04`) are stable so build tickets and reviews

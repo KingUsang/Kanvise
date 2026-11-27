@@ -14,8 +14,8 @@ State IDs (`SH-xx`) are referenced by later specs.
 
 | Region | Desktop (≥ 1024px) | Tablet (768–1023px) | Phone (< 768px) |
 |---|---|---|---|
-| Sidebar | Fixed, 264px, full height, always visible | Collapsed to a 64px icon rail; expands over the page on hover or tap | Hidden; opened from a menu button in the top bar as a full-height drawer |
-| Top bar | None. The page header sits at the top of the content area | None | 56px bar: menu button, page title, search icon |
+| Sidebar | Fixed, 264px, full height, always visible | Collapsed to a 64px icon rail; expands over the page on hover or tap | Replaced by a bottom bar: Today, Calendar, Lessons, Students, More (spec 16, R-02) |
+| Top bar | None. The page header sits at the top of the content area | None | 56px bar: page title, search icon, avatar |
 | Content | Max width 1200px, 32px side padding | 24px padding | 16px padding |
 
 - The sidebar background runs the full height of the window on every page,
