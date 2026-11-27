@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { QueryFailure } from "@/components/common/query-error-state";
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, BookOpen, CalendarDays, ClipboardCheck, Clock3, FileText, Video } from "lucide-react";
 import type { StudentDashboardData } from "@/lib/student-dashboard";
@@ -26,8 +27,8 @@ export default function StudentDashboardPage() {
       return body.data;
     },
   });
-  if (dashboardQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your dashboard…</main>;
-  if (dashboardQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{dashboardQuery.error.message}</p><button type="button" onClick={() => void dashboardQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>;
+  if (dashboardQuery.isPending) return <div className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your dashboard…</div>;
+  if (dashboardQuery.isError && !dashboardQuery.data) return <div className="mx-auto max-w-[1440px] px-4 py-10"><QueryFailure query={dashboardQuery} fallback="We could not load your dashboard." /></div>;
   const data = dashboardQuery.data;
   if (!data) return null;
   const firstName = data.student.first_name || "there";
@@ -38,14 +39,14 @@ export default function StudentDashboardPage() {
     const inProgress = data.standalone_mocks?.attempts_in_progress || 0;
     const completed = data.standalone_mocks?.attempts_completed || 0;
     const latestResult = data.standalone_mocks?.latest_result || null;
-    return <main className="mx-auto min-w-0 max-w-[1120px] overflow-x-clip px-4 py-5 pb-24 sm:px-6 sm:py-7 lg:px-10 lg:py-10">
+    return <div className="mx-auto min-w-0 max-w-[1120px] overflow-x-clip px-4 py-5 pb-24 sm:px-6 sm:py-7 lg:px-10 lg:py-10"><QueryFailure query={dashboardQuery} />
       <section className="rounded-3xl bg-[#2e2877] px-6 py-8 text-white sm:px-9 sm:py-10"><p className="text-sm text-white/70">Kanvise</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Welcome, {firstName}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">Quizzes now live inside Classes. Join a Class to take its Quizzes; your earlier results stay in one place.</p><Link href="/dashboard/student/mocks" className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2877]">Open quizzes <ArrowRight className="ml-2" size={16}/></Link></section>
       <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"><article className="rounded-2xl border border-[#e3ded9] bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[#716c76]">Earlier quizzes</p><p className="mt-2 text-3xl font-semibold text-[#2e2877]">{owned}</p><p className="mt-2 text-sm text-[#716c76]">Quizzes you unlocked before standalone Quizzes were retired.</p><Link href="/dashboard/student/mocks" className="mt-4 inline-flex text-sm font-semibold text-[#2e2877]">Open quizzes</Link></article><article className="rounded-2xl border border-[#e3ded9] bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[#716c76]">Continue practising</p><p className="mt-2 text-3xl font-semibold text-[#2e2877]">{inProgress}</p><p className="mt-2 text-sm text-[#716c76]">Attempt{inProgress === 1 ? '' : 's'} currently in progress.</p><Link href="/dashboard/student/mocks" className="mt-4 inline-flex text-sm font-semibold text-[#2e2877]">{inProgress ? 'Continue a quiz' : 'Choose a quiz'}</Link></article><article className="rounded-2xl border border-[#e3ded9] bg-white p-5 sm:col-span-2 xl:col-span-1"><p className="text-xs font-semibold uppercase tracking-wide text-[#716c76]">Completed attempts</p><p className="mt-2 text-3xl font-semibold text-[#2e2877]">{completed}</p>{latestResult ? <><p className="mt-2 truncate text-sm text-[#716c76]">Latest: {latestResult.title} · {latestResult.percentage === null ? 'Marking in progress' : `${latestResult.percentage}%`}</p><Link href={`/result/${latestResult.id}`} className="mt-4 inline-flex text-sm font-semibold text-[#2e2877]">View latest result</Link></> : <p className="mt-2 text-sm text-[#716c76]">Your completed mock results will appear here.</p>}</article></section>
       <section className="mt-6 rounded-2xl border border-[#e3ded9] bg-white p-6"><h2 className="text-lg font-semibold">Joining a tutoring agency later?</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Your Kanvise account stays the same. When a Kanvise-powered agency enrols you, its classes and learning materials will appear here alongside your quiz history.</p></section>
-    </main>
+    </div>
   }
 
-  return <main className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-clip px-4 py-5 pb-24 sm:px-6 sm:py-6 lg:px-10 lg:py-9">
+  return <div className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-clip px-4 py-5 pb-24 sm:px-6 sm:py-6 lg:px-10 lg:py-9"><QueryFailure query={dashboardQuery} />
     <section className="min-w-0 rounded-2xl bg-[#2e2877] px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-9">
       <p className="text-sm text-white/70">{data.school?.name || "Kanvise"}</p>
       <div className="mt-2 flex flex-col justify-between gap-5 md:flex-row md:items-end">
@@ -75,5 +76,5 @@ export default function StudentDashboardPage() {
         {data.upcoming_classes.length > 1 && <section className="rounded-2xl border border-[#e5e1dd] bg-white p-5"><h2 className="font-semibold">Coming up</h2><div className="mt-3 space-y-3">{data.upcoming_classes.slice(1, 4).map((item) => <div key={item.id} className="border-b border-[#eeeae6] pb-3 last:border-0 last:pb-0"><p className="text-sm font-medium">{item.title}</p><p className="mt-1 text-xs text-[#716c76]">{formatDate(item.scheduled_at)} · {formatTime(item.scheduled_at)}</p></div>)}</div></section>}
       </aside>
     </div>}
-  </main>;
+  </div>;
 }

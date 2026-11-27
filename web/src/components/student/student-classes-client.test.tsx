@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterStudentClasses } from "./student-classes-client";
+import { filterStudentClasses, groupTutorLabel } from "./student-classes-client";
 import type { StudentClass } from "@/lib/student-classes";
 
 const now = new Date("2026-07-22T12:00:00Z").getTime();
@@ -21,5 +21,25 @@ describe("filterStudentClasses", () => {
 
   it("filters sessions by course", () => {
     expect(filterStudentClasses(classes, "all", "maths", now).map((item) => item.id)).toEqual(["live", "stale"]);
+  });
+});
+
+describe("ended sessions and tutors", () => {
+  it("treats an end timestamp as past even when the status is stale", () => {
+    const ended: StudentClass[] = [
+      { ...classes[0], id: "ended-live", ended_at: "2026-07-22T11:55:00Z" },
+      { ...classes[1], id: "ended-scheduled", ended_at: "2026-07-23T12:00:00Z" },
+    ];
+    expect(filterStudentClasses(ended, "upcoming", "all", now)).toEqual([]);
+    expect(filterStudentClasses(ended, "past", "all", now).map((item) => item.id)).toEqual(["ended-live", "ended-scheduled"]);
+  });
+
+  it("lists every distinct tutor in a subject group", () => {
+    const sessions: StudentClass[] = [
+      { ...classes[0], tutor: { id: "t1", first_name: "Ada", last_name: "Obi" } },
+      { ...classes[1], tutor: { id: "t2", first_name: "Tunde", last_name: "Bello" } },
+      { ...classes[2], tutor: { id: "t1", first_name: "Ada", last_name: "Obi" } },
+    ];
+    expect(groupTutorLabel(sessions)).toBe("Ada Obi, Tunde Bello");
   });
 });

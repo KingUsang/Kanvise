@@ -326,7 +326,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
           </ol>
         </aside>
 
-        <main className="col-span-12 lg:col-span-9">
+        <div className="col-span-12 lg:col-span-9">
           <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
             <header className="border-b border-[#e4e2e1] px-5 py-4 sm:px-7"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#994704]">Step {step + 1}</p><h2 className="mt-1 text-xl font-bold text-[#1b1c1c]">{steps[step].title}</h2></header>
             <div className="p-5 sm:p-7">
@@ -345,7 +345,7 @@ export function ProgrammeBuilder({ programmeId }: { programmeId?: string }) {
             </footer>
           </section>
           {savedProgramme && schoolSlug && <div className="mt-4 text-right"><a href={`/${schoolSlug}/${savedProgramme.slug}${savedProgramme.is_published ? '' : `?preview=${savedProgramme.id}`}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#2e2877] hover:underline">Preview class page</a></div>}
-        </main>
+        </div>
       </div>
     </div>
   )

@@ -236,7 +236,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
           </aside>
 
           {selectedAttempt && (
-            <main className="flex min-w-0 flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
+            <div className="flex min-w-0 flex-col overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
               <div className="flex flex-col gap-4 border-b border-outline-variant p-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white">{studentName(selectedAttempt).split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</div><div><h2 className="font-semibold text-on-surface">{studentName(selectedAttempt)}</h2>{studentEmail(selectedAttempt) && <div className="mt-0.5 flex items-center gap-2 text-xs text-on-surface-variant"><span>{studentEmail(selectedAttempt)}</span>{studentPhone(selectedAttempt) && <><span className="text-outline-variant">•</span><span>{studentPhone(selectedAttempt)}</span></>}</div>}<p className="mt-0.5 text-xs text-on-surface-variant">Submitted {selectedAttempt.submitted_at ? new Date(selectedAttempt.submitted_at).toLocaleString('en-NG') : '—'}</p></div></div>
                 <div className="flex flex-wrap items-center justify-end gap-4 text-right">
@@ -264,7 +264,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
               ) : (
                 <div className="flex flex-1 items-center justify-center p-10 text-center text-on-surface-variant">This submission has no theory answers to grade.</div>
               )}
-            </main>
+            </div>
           )}
         </div>
       )}

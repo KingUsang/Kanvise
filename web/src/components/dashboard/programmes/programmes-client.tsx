@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, PageLoadingState, RefreshNotice } from '@/compo
 import { CollectionToolbar } from '@/components/dashboard/collection-controls'
 import { School, SearchX } from 'lucide-react'
 import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
+import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
 type Programme = {
@@ -114,12 +115,8 @@ export function ProgrammesClient() {
   })
 
   const copyLink = async (programme: Programme) => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/${schoolSlug}/${programme.slug}`)
-      toast.success('Enrolment link copied')
-    } catch {
-      toast.error('Could not copy the enrolment link')
-    }
+    if (await copyToClipboard(`${window.location.origin}/${schoolSlug}/${programme.slug}`)) toast.success('Enrolment link copied')
+    else toast.error('Could not copy the enrolment link')
   }
 
   const publish = async (programme: Programme) => {

@@ -93,7 +93,7 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
   if (session.isPending || loading) return <div className="mx-auto max-w-2xl rounded-2xl border border-dashboard-outline bg-white p-10 text-center text-sm text-dashboard-muted">Preparing subject setup…</div>
   if (loadError) return <div className="mx-auto max-w-2xl rounded-2xl border border-[#f0c7c1] bg-[#fff8f7] p-8 text-center text-sm text-[#8d2f22]"><p>Subject setup could not load the class prerequisites.</p><button type="button" onClick={() => setRetryToken(value => value + 1)} className="mt-4 rounded-lg bg-[#312783] px-4 py-2.5 font-bold text-white">Try again</button></div>
 
-  return <main className="mx-auto w-full max-w-2xl">
+  return <div className="mx-auto w-full max-w-2xl">
     <Link href={`/dashboard/classes/${classId}`} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#514b5b]"><ArrowLeft size={17}/> Back to {className}</Link>
     <form onSubmit={submit} className="mt-5 overflow-hidden rounded-2xl border border-dashboard-outline bg-white shadow-dashboard-card">
       <header className="border-b border-dashboard-outline px-5 py-5 sm:px-7"><p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">{className}</p><h1 className="mt-2 text-2xl font-bold text-[#180d62]">Add subject</h1><p className="mt-2 text-sm text-dashboard-muted">Create one teaching subject inside this class.</p></header>
@@ -104,5 +104,5 @@ export function AddClassSubjectClient({ classId }: { classId: string }) {
       </div>
       <footer className="flex flex-col-reverse gap-2 border-t border-dashboard-outline bg-[#fbf9f8] p-5 sm:flex-row sm:justify-end"><Link href={`/dashboard/classes/${classId}`} className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-bold text-[#514b5b]">Cancel</Link><button disabled={saving || !name.trim()} className="min-h-11 rounded-lg bg-[#312783] px-5 text-sm font-bold text-white disabled:opacity-45">{saving ? 'Adding…' : 'Add subject'}</button></footer>
     </form>
-  </main>
+  </div>
 }

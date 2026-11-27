@@ -458,7 +458,7 @@ export function ClassWorkspaceClient({
 
   return (
     <>
-      <main className="w-full pb-20 sm:pb-0">
+      <div className="w-full pb-20 sm:pb-0">
         {classQuery.isError ? <WorkspaceQueryNotice label="Class workspace" cached onRetry={() => void classQuery.refetch()} /> : null}
         <WorkspaceHeader
           className="mt-4"
@@ -758,7 +758,7 @@ export function ClassWorkspaceClient({
               ))}
           </div>
         </div>
-      </main>
+      </div>
       {selectedLearnerId ? (
         <LearnerDetailSheet
           detail={learnerDetailQuery.data || null}

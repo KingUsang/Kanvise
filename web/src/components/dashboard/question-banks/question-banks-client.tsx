@@ -231,7 +231,7 @@ export function QuestionBanksClient() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1">
+    <div className="mx-auto w-full max-w-[1440px] flex-1">
       <DashboardPageHeader
         className="mb-7 border-b border-dashboard-outline pb-6"
         title="Question Banks"
@@ -352,7 +352,7 @@ export function QuestionBanksClient() {
       {showCreateBank && <BankDialog onClose={() => setShowCreateBank(false)} onSubmit={createBank} />}
       {showQuestionEditor && selectedBank && <QuestionDialog bank={selectedBank} courses={courses} apiUrl={apiUrl} onClose={() => setShowQuestionEditor(false)} onCreated={async () => { setShowQuestionEditor(false); await Promise.all([queryClient.invalidateQueries({ queryKey: ['question-banks'] }), queryClient.invalidateQueries({ queryKey: ['question-bank-questions', selectedBankId] })]) }} />}
       {bankToArchive && <ConfirmDialog title="Archive this question bank?" description={`${bankToArchive.name} will leave the active list. Questions already used in published mocks stay unchanged.`} confirmLabel="Archive bank" onCancel={() => setBankToArchive(null)} onConfirm={archiveBank} />}
-    </main>
+    </div>
   )
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { QueryErrorState, QueryFailure } from "@/components/common/query-error-state";
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -86,31 +87,20 @@ export function DashboardHomeClient() {
 
   if (sessionQuery.isPending || summaryQuery.isPending)
     return <DashboardSummarySkeleton />;
-  if (sessionQuery.isError || summaryQuery.isError) {
-    const error = summaryQuery.error || sessionQuery.error;
+  if (sessionQuery.isError || (summaryQuery.isError && !summaryQuery.data)) {
+    const retry = summaryQuery.isError ? summaryQuery : sessionQuery;
     return (
-      <div className="rounded-xl border border-[#ba1a1a]/20 bg-white p-6 text-center text-sm text-[#ba1a1a]">
-        <p>
-          {error instanceof Error
-            ? error.message
-            : "We could not load your dashboard."}
-        </p>
-        <button
-          type="button"
-          onClick={() =>
-            void (summaryQuery.isError
-              ? summaryQuery.refetch()
-              : sessionQuery.refetch())
-          }
-          className="mt-3 font-semibold underline"
-        >
-          Try again
-        </button>
-      </div>
+      <QueryErrorState
+        error={retry.error}
+        fallback="We could not load your dashboard."
+        retrying={retry.isFetching}
+        onRetry={() => void retry.refetch()}
+      />
     );
   }
 
   const data = summaryQuery.data;
+  if (!data) return null;
   const isAdmin = Boolean(data.admin_stats);
   const isTutor = Boolean(data.tutor_stats);
   const persona = resolveDashboardPersona({ isAdmin, isTutor });
@@ -138,6 +128,7 @@ export function DashboardHomeClient() {
 
   return (
     <div className="animate-in fade-in space-y-6 duration-500 sm:space-y-8">
+      <QueryFailure query={summaryQuery} />
       <DashboardPageHeader
         title={<DashboardGreeting name={firstName} />}
         description={description}

@@ -43,7 +43,7 @@ async function loadSchool({ signal }: { signal?: AbortSignal } = {}): Promise<Sc
 }
 
 function RouteLoading() {
-  return <main className="mx-auto flex min-h-[24rem] max-w-[1440px] items-center justify-center px-4 py-10 text-sm text-[#716c76]">Loading your centre details…</main>
+  return <div className="mx-auto flex min-h-[24rem] max-w-[1440px] items-center justify-center px-4 py-10 text-sm text-[#716c76]">Loading your centre details…</div>
 }
 
 export function SchoolSetupRouteClient({ mode }: SchoolSetupRouteClientProps) {
@@ -67,14 +67,14 @@ export function SchoolSetupRouteClient({ mode }: SchoolSetupRouteClientProps) {
   if (schoolQuery.isError) {
     const sessionEnded = schoolQuery.error instanceof SchoolLoadError && schoolQuery.error.code === 'SESSION_EXPIRED'
     return (
-      <main className="mx-auto max-w-xl px-4 py-10 text-center text-sm text-red-800">
+      <div className="mx-auto max-w-xl px-4 py-10 text-center text-sm text-red-800">
         <p>{sessionEnded ? SESSION_ENDED_MESSAGE : SAFE_LOAD_ERROR}</p>
         {sessionEnded ? (
           <button type="button" onClick={() => router.replace(loginPath)} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Sign in again</button>
         ) : (
           <button type="button" onClick={() => void schoolQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button>
         )}
-      </main>
+      </div>
     )
   }
 

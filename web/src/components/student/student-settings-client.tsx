@@ -9,13 +9,13 @@ import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getApiUrl } from '@/config/api'
+import { QueryErrorState } from '@/components/common/query-error-state'
 import type { StudentSettings } from '@/lib/student-settings'
 import { BrowserPushSettings } from '@/components/pwa/browser-push-settings'
 import { createClient } from '@/lib/supabase/client'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 export function StudentSettingsClient({ settings: seededSettings, token }: { settings?: StudentSettings; token?: string } = {}) {
-  const queryClient = useQueryClient()
   const settingsQuery = useQuery<StudentSettings>({
     queryKey: ['student-settings'],
     initialData: seededSettings,
@@ -26,12 +26,18 @@ export function StudentSettingsClient({ settings: seededSettings, token }: { set
       return body.data
     },
   })
-  const settings = settingsQuery.data
-  const emptyProfile: StudentSettings['profile'] = { id: '', kanvise_user_id: '', first_name: '', last_name: '', email: '', bio: null, profile_photo_url: null }
-  const [profile, setProfile] = useState<StudentSettings['profile']>(settings?.profile || emptyProfile)
-  const [firstName, setFirstName] = useState(settings?.profile.first_name || '')
-  const [lastName, setLastName] = useState(settings?.profile.last_name || '')
-  const [bio, setBio] = useState(settings?.profile.bio || '')
+  if (settingsQuery.data) return <StudentSettingsForm key={settingsQuery.data.profile.id} settings={settingsQuery.data} token={token} />
+  if (settingsQuery.isError) return <div className="mx-auto max-w-4xl px-4 py-10"><QueryErrorState error={settingsQuery.error} fallback="Could not load your settings." retrying={settingsQuery.isFetching} onRetry={() => void settingsQuery.refetch()} /></div>
+  return <div className="mx-auto max-w-4xl px-4 py-10 text-center text-sm text-[#716c76]">Loading settings…</div>
+}
+
+// The form mounts only after settings exist, so its editable state starts from the loaded profile.
+function StudentSettingsForm({ settings, token }: { settings: StudentSettings; token?: string }) {
+  const queryClient = useQueryClient()
+  const [profile, setProfile] = useState<StudentSettings['profile']>(settings.profile)
+  const [firstName, setFirstName] = useState(settings.profile.first_name || '')
+  const [lastName, setLastName] = useState(settings.profile.last_name || '')
+  const [bio, setBio] = useState(settings.profile.bio || '')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -75,8 +81,6 @@ export function StudentSettingsClient({ settings: seededSettings, token }: { set
     finally { setUploading(false); if (fileInput.current) fileInput.current.value = '' }
   }
 
-  if (settingsQuery.isPending || !profile) return <main className="mx-auto max-w-4xl px-4 py-10 text-center text-sm text-[#716c76]">Loading settings…</main>
-  if (settingsQuery.isError) return <main className="mx-auto max-w-4xl px-4 py-10 text-center text-sm text-red-800"><p>{settingsQuery.error.message}</p><button type="button" onClick={() => void settingsQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>
   return <main className="mx-auto max-w-4xl px-4 py-7 pb-24 sm:px-6 lg:px-10 lg:py-10">
     <header><p className="text-sm font-medium text-[#994704]">Your account</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Settings</h1><p className="mt-2 text-sm leading-6 text-[#716c76]">Update how your name and photo appear inside {settings?.school?.name || 'your school'}.</p></header>
     <section className="mt-6 rounded-2xl border border-[#e3ded9] bg-white p-5 sm:p-7"><div className="flex flex-col gap-5 border-b border-[#eeeae6] pb-6 sm:flex-row sm:items-center"><div className="relative"><div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#eeeafe] text-3xl font-semibold text-[#2e2877]">{profile.profile_photo_url ? <img src={profile.profile_photo_url} alt="Your profile" className="h-full w-full object-cover" /> : firstName.charAt(0).toUpperCase()}</div><button disabled={uploading} onClick={() => fileInput.current?.click()} aria-label="Change profile photo" className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#2e2877] text-white disabled:opacity-50">{uploading ? <Loader2 className="animate-spin" size={17} /> : <Camera size={17} />}</button><input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => void uploadPhoto(event.target.files?.[0])} /></div><div><h2 className="text-xl font-semibold">{firstName} {lastName}</h2><p className="mt-1 text-sm text-[#716c76]">{profile.email}</p><p className="mt-1 text-xs font-medium text-[#994704]">Student ID: {profile.kanvise_user_id}</p></div></div>

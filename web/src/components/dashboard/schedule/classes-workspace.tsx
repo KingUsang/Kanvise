@@ -20,6 +20,7 @@ import { useActiveAccountId } from "@/lib/account-preference";
 import { classQueryKeys } from "@/lib/class-query-keys";
 import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
 type Tutor = { id: string; first_name: string; last_name: string };
 type Subject = { id: string; name: string };
@@ -435,23 +436,8 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
     window.open(item.share_url || `/class/${item.id}`, "_blank", "noopener,noreferrer");
   }
   async function copyClassroomLink(value: string) {
-    try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
-      else {
-        const input = document.createElement('textarea');
-        input.value = value;
-        input.style.position = 'fixed';
-        input.style.opacity = '0';
-        document.body.appendChild(input);
-        input.select();
-        const copied = document.execCommand('copy');
-        input.remove();
-        if (!copied) throw new Error('Copy was blocked')
-      }
-      toast.success('Classroom link copied')
-    } catch {
-      toast.error('Could not copy the classroom link')
-    }
+    if (await copyToClipboard(value)) toast.success('Classroom link copied')
+    else toast.error('Could not copy the classroom link')
   }
   function selectMobileMonth(month: Date) {
     setMobileMonth(month);
@@ -467,7 +453,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   // DashboardShell owns the page gutter. Calendar must not add another layer
   // of horizontal padding or it visibly drifts from the other workspace pages.
   return (
-    <main className="w-full md:-mt-3">
+    <div className="w-full md:-mt-3">
       <header className="flex flex-col gap-4 border-b border-[#e5e1dd] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
@@ -1083,6 +1069,6 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           </form>
         </div>
       )}
-    </main>
+    </div>
   );
 }

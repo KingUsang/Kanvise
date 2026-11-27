@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
 type Session = {
   id: string;
@@ -100,15 +101,15 @@ export function SessionDetailClient({
   });
   if (sessionQuery.isPending)
     return (
-      <main className="w-full animate-pulse">
+      <div className="w-full animate-pulse">
         <div className="h-4 w-28 rounded bg-[#e9e6e3]" />
         <div className="mt-6 h-9 w-72 rounded bg-[#e9e6e3]" />
         <div className="mt-8 h-80 rounded-xl border border-dashboard-outline bg-white" />
-      </main>
+      </div>
     );
   if (!sessionQuery.data)
     return (
-      <main className="w-full">
+      <div className="w-full">
         <Link
           href={backHref}
           className="inline-flex items-center gap-2 text-sm font-bold text-[#312783]"
@@ -121,7 +122,7 @@ export function SessionDetailClient({
             ? sessionQuery.error.message
             : "This session could not be loaded."}
         </section>
-      </main>
+      </div>
     );
   const session = sessionQuery.data;
   const starts = new Date(session.scheduled_at);
@@ -133,7 +134,7 @@ export function SessionDetailClient({
   const attendance = attendanceQuery.data || [];
   const participants = attendance.filter((row) => row.status !== "Absent");
   return (
-    <main className="w-full pb-20 sm:pb-0">
+    <div className="w-full pb-20 sm:pb-0">
       <Link
         href={backHref}
         className="inline-flex items-center gap-2 text-sm font-bold text-[#625e69] hover:text-[#312783]"
@@ -155,9 +156,9 @@ export function SessionDetailClient({
             <button
               type="button"
               onClick={() =>
-                void navigator.clipboard
-                  .writeText(session.share_url || window.location.origin + "/class/" + session.id)
-                  .then(() => toast.success("Live class link copied"))
+                void copyClassroomLink(
+                  session.share_url || window.location.origin + "/class/" + session.id,
+                )
               }
               className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#312783] px-4 text-sm font-bold text-[#312783] hover:bg-[#f1efff]"
             >
@@ -240,7 +241,7 @@ export function SessionDetailClient({
           sessionId={sessionId}
         />
       ) : null}
-    </main>
+    </div>
   );
 }
 
@@ -340,24 +341,8 @@ function Details({
   );
 }
 async function copyClassroomLink(value: string) {
-  try {
-    if (navigator.clipboard?.writeText)
-      await navigator.clipboard.writeText(value);
-    else {
-      const input = document.createElement("textarea");
-      input.value = value;
-      input.style.position = "fixed";
-      input.style.opacity = "0";
-      document.body.appendChild(input);
-      input.select();
-      const copied = document.execCommand("copy");
-      input.remove();
-      if (!copied) throw new Error("Copy was blocked");
-    }
-    toast.success("Classroom link copied");
-  } catch {
-    toast.error("Could not copy the classroom link");
-  }
+  if (await copyToClipboard(value)) toast.success("Classroom link copied");
+  else toast.error("Could not copy the classroom link");
 }
 function DetailRow({
   icon,
@@ -553,8 +538,8 @@ function RecordingShareControls({ sessionId }: { sessionId: string }) {
       if (!response.ok) throw new Error(body?.error || "Could not create link");
       const url = String(body.data.url);
       setShareUrl(url);
-      await navigator.clipboard.writeText(url);
-      toast.success("Recording link copied");
+      if (await copyToClipboard(url)) toast.success("Recording link copied");
+      else toast.error("Link created but could not be copied. Use Copy a new link to try again.");
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Could not create link");
     } finally {

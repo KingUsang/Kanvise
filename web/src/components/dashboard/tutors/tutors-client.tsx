@@ -15,6 +15,7 @@ import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 import { useActiveAccountId } from '@/lib/account-preference'
 import { peopleQueryKeys } from '@/lib/people-query-keys'
 import { fetchAllPages } from '@/lib/fetch-all-pages'
+import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
 interface Tutor {
   id: string
@@ -278,18 +279,12 @@ export function TutorsClient() {
   }
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedLink)
-    } catch {
-      const element = document.createElement('textarea')
-      element.value = generatedLink
-      document.body.appendChild(element)
-      element.select()
-      document.execCommand('copy')
-      document.body.removeChild(element)
+    if (await copyToClipboard(generatedLink)) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } else {
+      toast.error('Could not copy the invitation link. Select it and copy manually.')
     }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2500)
   }
 
   const handleRevoke = async (inviteId: string) => {
@@ -303,6 +298,9 @@ export function TutorsClient() {
         await queryClient.invalidateQueries({ queryKey: keys.root })
         toast.success('Invitation revoked')
       }
+    } catch {
+      toast.error('Could not revoke the invitation', { description: 'The result could not be confirmed. The list has been refreshed, so check it before trying again.' })
+      await queryClient.invalidateQueries({ queryKey: keys.root }).catch(() => undefined)
     } finally {
       setRevokingId(null)
     }
@@ -319,6 +317,9 @@ export function TutorsClient() {
         await queryClient.invalidateQueries({ queryKey: keys.root })
         toast.success('Tutor removed')
       }
+    } catch {
+      toast.error('Could not remove the Tutor', { description: 'The result could not be confirmed. The list has been refreshed, so check it before trying again.' })
+      await queryClient.invalidateQueries({ queryKey: keys.root }).catch(() => undefined)
     } finally {
       setRemovingId(null)
     }
@@ -371,7 +372,7 @@ export function TutorsClient() {
       />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <main className="flex min-w-0 flex-col gap-6 xl:col-span-8">
+        <div className="flex min-w-0 flex-col gap-6 xl:col-span-8">
           <section className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card" aria-labelledby="tutor-list-heading">
             <header className="flex items-center gap-3 border-b border-dashboard-outline bg-dashboard-surface-subtle px-5 py-5 sm:px-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-dashboard-control bg-dashboard-primary/10 text-dashboard-primary"><Users aria-hidden="true" size={20} /></div>
@@ -406,7 +407,7 @@ export function TutorsClient() {
               </ul>
             )}
           </section>
-        </main>
+        </div>
 
         <aside className="flex min-w-0 flex-col gap-6 xl:col-span-4">
           <section className="rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-5 shadow-dashboard-card sm:p-6" aria-labelledby="invite-heading">
