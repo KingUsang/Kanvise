@@ -340,7 +340,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                     ))}
                   </select>
                   {courses.length === 0 && !loadError && (
-                    <p className="mt-2 text-sm text-dashboard-muted">Create a subject or ask your agency administrator to assign you to one first.</p>
+                    <p className="mt-2 text-sm text-dashboard-muted">Create a subject or ask your account administrator to assign you to one first.</p>
                   )}
                 </div>
                 

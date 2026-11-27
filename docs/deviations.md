@@ -777,3 +777,4 @@ Slice 1 folded the open items of `docs/14`, `docs/16`, `docs/26`, `docs/27` and 
 - Review follow-up: `web/src/app/auth/login/page.tsx` line endings restored to the original mixed CRLF/LF so the diff shows only the real change. `schools.ts` no longer registers account context twice on `/me`.
 - Migration-dependent rows (AUTH-004, CRS-001 invariants, DB-014 replay tests, AUTH-002 atomic consume, SEC-004/005 RLS residue) are pending owner approval; no migration for these rows is written yet.
 
+**Round 9c review notes:** Sign-up and setup surfaces (`register`, `complete-profile`, `oauth-complete`, `school-setup-form`, API strings) keep "tutoring agency" because it is the approved account-type label and tests assert it; only dashboard and learner-facing copy uses "tutoring account". `FeedbackDialog` keeps backdrop dismissal because a lost feedback draft is low cost.

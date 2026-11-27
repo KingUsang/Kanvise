@@ -51,15 +51,17 @@ export function historyLeaveSteps(): number {
  * When the page was the first entry (direct arrival, new tab) there is nothing to go back to,
  * so `go(-2)` is a no-op. In that case `fallback` runs after `waitMs` without a popstate.
  */
-export function leaveByHistory(fallback: () => void, win: Window = window, waitMs = 300): void {
+export function leaveByHistory(fallback: () => void, win: Window = window, waitMs = 1000): void {
   let moved = false;
   const onPop = () => {
     moved = true;
   };
   win.addEventListener("popstate", onPop, { once: true });
+  win.addEventListener("pagehide", onPop, { once: true });
   win.history.go(historyLeaveSteps());
   win.setTimeout(() => {
     win.removeEventListener("popstate", onPop);
+    win.removeEventListener("pagehide", onPop);
     if (!moved) fallback();
   }, waitMs);
 }

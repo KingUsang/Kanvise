@@ -23,6 +23,8 @@ export function inertSiblings(root: HTMLElement, body: HTMLElement = document.bo
   for (const child of Array.from(body.children)) {
     if (child === root || child.contains(root) || child.hasAttribute("inert")) continue;
     if (child.tagName === "SCRIPT" || child.tagName === "STYLE") continue;
+    // Keep toast regions live so errors raised from inside a dialog stay interactive and announced.
+    if (child.hasAttribute("data-keep-interactive") || child.matches('[aria-label^="Notifications"]') || child.querySelector('[aria-label^="Notifications"]')) continue;
     child.setAttribute("inert", "");
     changed.push(child);
   }
@@ -51,6 +53,8 @@ interface DialogProps {
   describedBy?: string;
   /** Called on Escape and on backdrop click. Omit to make the dialog non-dismissable. */
   onClose?: () => void;
+  /** Set false to ignore backdrop clicks (Escape still closes). Use where input would be lost. */
+  dismissOnBackdrop?: boolean;
   className?: string;
   panelClassName?: string;
   children: React.ReactNode;
@@ -60,7 +64,7 @@ interface DialogProps {
  * Shared modal dialog: role/aria-modal, focus moved in on open, Tab trapped,
  * Escape closes, focus restored to the previously focused element on close.
  */
-export function Dialog({ label, labelledBy, describedBy, onClose, className, panelClassName, children }: DialogProps) {
+export function Dialog({ label, labelledBy, describedBy, onClose, dismissOnBackdrop = true, className, panelClassName, children }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -109,7 +113,7 @@ export function Dialog({ label, labelledBy, describedBy, onClose, className, pan
       ref={rootRef}
       className={className ?? "fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose?.();
+        if (dismissOnBackdrop && event.target === event.currentTarget) onClose?.();
       }}
     >
       <div
