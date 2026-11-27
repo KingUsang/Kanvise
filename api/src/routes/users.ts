@@ -418,8 +418,13 @@ usersRouter.get("/", enforceAdmin, async (c) => {
       .eq("school_id", account.id)
       .eq('is_active', true);
 
+    // DEV-API-018: reject unknown roles instead of returning an empty roster.
+    const knownRoles = new Set(["admin", "tutor", "student"]);
+    const rolesArray = rolesParam ? rolesParam.split(",").map((value) => value.trim()) : [];
+    if (rolesArray.some((value) => !knownRoles.has(value)) || (role && !knownRoles.has(role))) {
+      return c.json({ error: 'Invalid role filter', code: 'VALIDATION_ERROR' }, 400);
+    }
     if (rolesParam) {
-      const rolesArray = rolesParam.split(",");
       query = query.in("role", rolesArray);
     } else if (role) {
       query = query.eq("role", role);

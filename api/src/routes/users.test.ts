@@ -280,6 +280,15 @@ describe('student import access and validation', () => {
     expect(builders[0].range).toHaveBeenCalledWith(0, 200)
   })
 
+  it('rejects unknown role filters instead of returning an empty roster (DEV-API-018)', async () => {
+    mocks.from.mockImplementation(() => query({ data: [], error: null }))
+    const bad = await usersRouter.request('/?roles=admin,tutr')
+    expect(bad.status).toBe(400)
+    expect(await bad.json()).toEqual({ error: 'Invalid role filter', code: 'VALIDATION_ERROR' })
+    const ok = await usersRouter.request('/?roles=admin,tutor')
+    expect(ok.status).toBe(200)
+  })
+
   it('reports has_more and trims the extra probe row', async () => {
     const people = Array.from({ length: 3 }, (_, i) => ({ id: `p${i}`, role: 'tutor' }))
     mocks.from.mockImplementation((table: string) => query({ data: table === 'user_profiles' ? people : [], error: null }))

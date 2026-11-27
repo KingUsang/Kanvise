@@ -443,7 +443,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses!live_classes_course_id_fkey(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses!live_classes_course_id_fkey(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id, timezone), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
     .order('id', { ascending: true })
@@ -488,6 +488,9 @@ liveClassesRouter.get('/', async (c) => {
     // PlugNmeet room becomes verified when it is created or joins report in.
     status: item.classroom_provider === 'plugnmeet' && item.status === 'live'
       && !['active'].includes(item.provider_room_status) ? 'scheduled' : presentationStatus(item.status),
+    // DEV-TZ-001: the governing IANA timezone of a recurring series; null for
+    // one-off Sessions, whose instant carries no timezone context.
+    timezone: (Array.isArray(item.series) ? item.series[0]?.timezone : item.series?.timezone) ?? null,
     recording_status: Array.isArray(item.recording) ? item.recording[0]?.status || null : item.recording?.status || null,
     recap_status: Array.isArray(item.recap) ? item.recap[0]?.status || null : item.recap?.status || null,
     share_url: ['tutor', 'admin'].includes(user.role) ? classShareUrl(item) : null,
@@ -507,7 +510,7 @@ liveClassesRouter.delete('/series/:seriesId', requireRole('admin', 'tutor'), asy
     p_school_id: user.school_id,
     p_actor_id: user.id,
   } as any)
-  if (error) return c.json({ error: error.message || 'Could not end recurring class', code: 'RECURRING_CLASS_CANCEL_FAILED' }, 400)
+  if (error) return c.json({ error: 'Could not end recurring class', code: 'RECURRING_CLASS_CANCEL_FAILED' }, 400)
   return c.json({ message: 'Recurring class ended', removed_classes: data })
 })
 
