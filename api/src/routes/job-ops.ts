@@ -20,7 +20,7 @@ jobOpsRouter.use('*', requireMembershipRole('admin'))
 jobOpsRouter.get('/dead-letter', async (c) => {
   const account = c.get('account')
   const jobs = await listDeadLetterJobs(50, account.id)
-  return c.json({ jobs: jobs.map(({ dedupe_key: _dedupeKey, ...job }) => job) })
+  return c.json({ jobs: jobs.map(({ dedupe_key: _dedupeKey, last_error: lastError, ...job }) => ({ ...job, last_error: lastError ? String(lastError).replace(/\s+/g, ' ').slice(0, 120) : null })) })
 })
 
 async function operate(c: any, action: 'cancel' | 'replay') {

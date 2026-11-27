@@ -34,6 +34,19 @@ describe('PlugNmeet room lifecycle reconciliation', () => {
     mocks.from.mockImplementation(() => updateSink(writes))
   })
 
+  it('leaves a fresh starting claim alone and resets a stale one', async () => {
+    mocks.isRoomActive.mockResolvedValue(false)
+    mocks.from.mockImplementationOnce(() => selection({
+      data: [
+        { id: 'fresh', provider_room_id: null, status: 'starting', scheduled_at: now.toISOString(), duration_minutes: 60, start_requested_at: new Date(now.getTime() - 5_000).toISOString() },
+        { id: 'stale', provider_room_id: null, status: 'starting', scheduled_at: now.toISOString(), duration_minutes: 60, start_requested_at: new Date(now.getTime() - 120_000).toISOString() },
+      ], error: null,
+    }))
+    await reconcileInactivePlugNmeetClasses(now)
+    expect(mocks.rpc).toHaveBeenCalledTimes(1)
+    expect(mocks.rpc).toHaveBeenCalledWith('prepare_live_class_provider_recovery', expect.objectContaining({ p_live_class_id: 'stale' }))
+  })
+
   it('keeps a provider-created empty room ready instead of falsely making it live', async () => {
     mocks.from.mockImplementationOnce(() => selection({
       data: [{ id: 'class-1', provider_room_id: 'room-1', status: 'ready', scheduled_at: now.toISOString(), duration_minutes: 60 }], error: null,

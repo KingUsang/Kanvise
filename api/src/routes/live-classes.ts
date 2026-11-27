@@ -448,8 +448,10 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
     }
     providerRoomCreated = true
     await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
-    const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id).in('status', ['starting', 'ready'])
+    const { data: promoted, error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id).in('status', ['starting', 'ready']).select('id').maybeSingle()
     if (startUpdateError) throw startUpdateError
+    // A zero-row update means the claim was reset underneath us; do not report a live class.
+    if (!promoted) throw new Error('Class start claim was lost before the class could be promoted to live')
     const isHost = insertedClass.tutor_id === user.id
     const startNowFlag = recordingFlag(admission)
     const config = await getPlugNmeetClientConfig({ roomId: initialRoomId, userId: user.id, name: await getParticipantDisplayName(user, isHost ? 'Tutor' : 'Administrator'), isHost, isModerator: isHost || user.role === 'admin', schoolId: user.school_id, accessMode })

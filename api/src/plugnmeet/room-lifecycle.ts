@@ -1,6 +1,9 @@
 import { supabase } from '../lib/supabase'
 import { plugNmeet } from './client'
 
+// A starting claim younger than this has not had time to create its room.
+const STARTING_CLAIM_GRACE_MS = 60_000
+
 // Webhooks are the immediate source of truth. This bounded sweep protects the
 // Kanvise state machine when a provider delivery is delayed or unavailable.
 export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit = 100) {
@@ -19,6 +22,8 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
   let checked = 0
   for (const liveClass of classes || []) {
     const roomId = String(liveClass.provider_room_id || liveClass.id)
+    if (liveClass.status === 'starting' && liveClass.start_requested_at
+      && now.getTime() - Date.parse(liveClass.start_requested_at) < STARTING_CLAIM_GRACE_MS) continue
     try {
       checked += 1
       const active = await plugNmeet.isRoomActive(roomId)
