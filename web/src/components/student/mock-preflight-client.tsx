@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { getApiUrl } from '@/config/api'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import posthog from 'posthog-js'
 
 type PreflightData = {
   mock: { id: string; title: string; description?: string | null; course?: { name: string } | null; time_limit_minutes: number; calculator_mode: string }
@@ -46,6 +47,11 @@ export function MockPreflightClient({ data, token, startPath, backHref = '/dashb
       const response = await authenticatedApiFetch(`${getApiUrl()}${startPath || `/mocks/${mock.id}/attempts`}`, { method: 'POST' })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not start this mock')
+      posthog.capture('mock_started', {
+        is_subject_combination: Boolean(data.subject_combination),
+        is_timed: mock.time_limit_minutes > 0,
+        question_count: data.version.total_questions,
+      })
       startNavigationProgress(); router.push(`/dashboard/student/mocks/attempt/${body.data.attempt_id}`)
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not start this mock') }
     finally { setStarting(false) }

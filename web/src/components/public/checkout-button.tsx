@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 
 interface CheckoutButtonProps {
   schoolSlug: string;
@@ -82,6 +83,11 @@ export function CheckoutButton({ schoolSlug, programmeSlug, programmeId, courseI
         if (data.code !== "PAYMENT_INITIALIZING") idempotencyKeyRef.current = null;
         throw new Error(data.error || "Checkout failed");
       }
+
+      posthog.capture('checkout_started', {
+        checkout_type: data.data?.free ? 'free' : 'paid',
+        item_type: programmeId ? 'programme' : 'course',
+      })
 
       if (data.data?.free) {
         // The enrolment adopts a standalone student into this centre. Refresh

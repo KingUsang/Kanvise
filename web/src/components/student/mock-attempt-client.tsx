@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { loginHref } from '@/lib/auth-continuation'
 import { AntiCheatWrapper } from "./anti-cheat-wrapper"
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import posthog from 'posthog-js'
 
 type SavedAnswer = {
   selected_option_version_id: string | null
@@ -147,6 +148,12 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
         : await authenticatedApiFetch(`${getApiUrl()}${submitPath}`, requestInit)
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not submit mock')
+      posthog.capture('mock_submitted', {
+        answered_count: answeredCount,
+        is_guest: guest,
+        question_count: questions.length,
+        submission_reason: timedOut ? 'time_expired' : 'learner_submitted',
+      })
       toast.success(timedOut ? 'Time is up. Your mock has been finalized.' : 'Your mock has been submitted.')
       startNavigationProgress(); router.replace(guest ? `/guest/result/${data.attempt.id}` : `/dashboard/student/mocks/result/${data.attempt.id}`)
       return true
@@ -155,7 +162,7 @@ export function MockAttemptClient({ data, token, guest = false }: { data: Attemp
       return false
     }
     finally { setSubmitting(false); setConfirming(false) }
-  }, [answers, data.attempt.id, guest, guestEmail, guestName, guestPhone, router, save, timedOut, token])
+  }, [answers, answeredCount, data.attempt.id, guest, guestEmail, guestName, guestPhone, questions.length, router, save, timedOut, token])
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000)

@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { startNavigationProgress } from '@/components/navigation/NavigationProgress'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import posthog from 'posthog-js'
 
 type Course = { id: string; name: string }
 type Programme = { id: string; name: string; courses: Course[] }
@@ -95,6 +96,10 @@ export function DashboardClassLauncher({
       })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not start the live class')
+      posthog.capture('live_class_started', {
+        access_mode: accessMode,
+        is_preparing: response.status === 202,
+      })
       if (body.data.share_token && accessMode === 'anyone_with_link') {
         setShareUrl(`${window.location.origin}/class/${body.data.id}`)
         setShareClassId(body.data.id)

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import { dashboardQueryKeys } from '@/lib/dashboard-session'
+import posthog from 'posthog-js'
 
 interface Tutor {
   id: string
@@ -123,6 +124,9 @@ export function TutorsClient() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to generate invite link')
       setGeneratedLink(json.data.invite_url)
+      posthog.capture('tutor_invited', {
+        delivery_method: json.data.email_sent ? 'email' : 'link',
+      })
       setInviteEmail('') // Clear input on success
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['tutors'] }),
