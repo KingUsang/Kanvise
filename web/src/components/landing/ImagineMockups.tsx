@@ -61,7 +61,7 @@ export const ScheduleMockup = () => (
         <h4 className="font-headline-sm text-[18px] mb-1">Calculus 101</h4>
         <p className="text-on-surface-variant text-[14px] flex items-center gap-1">
           <span className="material-symbols-outlined text-[16px]">group</span>
-          12 Students Enrolled
+          12 Learners Enrolled
         </p>
       </div>
     </div>
@@ -107,7 +107,7 @@ export const MockExamsMockup = () => (
 
     {/* Student Side */}
     <div className="w-full md:w-1/2 bg-primary p-4 flex flex-col items-center justify-center text-white">
-      <h3 className="font-label-md text-[12px] uppercase text-white/70 font-bold mb-4 tracking-wider w-full text-center">Student: Result</h3>
+      <h3 className="font-label-md text-[12px] uppercase text-white/70 font-bold mb-4 tracking-wider w-full text-center">Learner: Result</h3>
       <div className="relative w-24 h-24 mb-4">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
           <circle cx="18" cy="18" r="16" fill="none" className="stroke-white/20" strokeWidth="3"></circle>
@@ -166,7 +166,7 @@ export const LiveClassesMockup = () => (
             <div key={i} className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-surface-variant shrink-0"></div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-semibold truncate">Student {i}</p>
+                <p className="text-[10px] font-semibold truncate">Learner {i}</p>
                 <p className="text-[8px] text-on-surface-variant">Joined 10:0{i} AM</p>
               </div>
               <div className="w-2 h-2 rounded-full bg-primary"></div>

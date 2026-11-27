@@ -446,7 +446,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                     value={formData.contact_email}
                     onChange={handleChange}
                     className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-[#1b1c1c]"
-                    placeholder="school@domain.com"
+                    placeholder="contact@yourbusiness.com"
                   />
                 </div>
               </div>
