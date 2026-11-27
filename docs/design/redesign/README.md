@@ -13,9 +13,9 @@ Read in order. `00-decisions.md` wins if anything conflicts.
 | 06-students.md | Students list, add and import, student page, parents | Draft for review |
 | 07-classroom.md | PlugNMeet boundary, pre-entry, waiting, Lesson tools, ending, observer, device check, alerts | Draft for review |
 | 08-lesson-summary.md | What happens after a lesson, writing, Kavi drafts, completing, copy, missed lessons | Draft for review |
-| 09 Student app (planned) | What students see | Not started |
-| 10 Homework (planned) | Set, hand in, mark | Not started |
-| 11 Quizzes (planned) | Create, generate with Kavi, take, mark | Not started |
+| 09-student-app.md | Getting in, join links, Home, lessons, homework, courses, notifications | Draft for review |
+| 10-homework.md | Set, hand in, mark, Kavi drafts | Draft for review |
+| 11-quizzes.md | Generate with Kavi, builder, take, results, marking | Draft for review |
 | 12 Settings (planned) | Profile, teaching preferences, team | Not started |
 | 13 Billing (planned) | Who pays, rates, invoices | Not started |
 | 14-old-flows-inventory.md | Every current page and what happens to it | Draft |
