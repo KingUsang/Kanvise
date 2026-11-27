@@ -6,6 +6,7 @@ import { authenticatedApiFetch } from "@/lib/authenticated-fetch"
 import { toast } from "sonner"
 import { DashboardPageHeader } from "@/components/dashboard/page-header"
 import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { Dialog } from "@/components/ui/dialog";
 
 interface NotesClientProps {
   role: string | null | undefined
@@ -577,8 +578,8 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
         </div>
       </div>
       {noteToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-material-title">
-          <div className="w-full max-w-md rounded-dashboard-panel bg-dashboard-surface p-6 shadow-xl">
+        <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" panelClassName="w-full max-w-md rounded-dashboard-panel bg-dashboard-surface p-6 shadow-xl outline-none" labelledBy="delete-material-title" onClose={() => setNoteToDelete(null)}>
+          <div>
             <h3 id="delete-material-title" className="text-xl font-bold text-dashboard-foreground">Remove this material?</h3>
             <p className="mt-2 text-sm text-dashboard-muted">
               Students will no longer see “{noteToDelete.title}”. This cannot be undone.
@@ -588,7 +589,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
               <button type="button" onClick={() => void handleDelete(noteToDelete.id)} className="rounded-dashboard-control bg-dashboard-danger px-4 py-2 text-sm font-semibold text-white">Remove material</button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

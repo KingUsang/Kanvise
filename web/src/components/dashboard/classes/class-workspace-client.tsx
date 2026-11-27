@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useGuardedRouter } from "@/components/navigation/UnsavedChangesContext";
 import {
   ArrowLeft,
   BookOpen,
@@ -55,6 +56,7 @@ import {
   type ProductSubjectLink,
 } from '@/lib/product-terminology';
 import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { Dialog } from "@/components/ui/dialog";
 
 type Subject = ProductSubject;
 type TutorPerson = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; role: string };
@@ -203,7 +205,7 @@ export function ClassWorkspaceClient({
   const api = process.env.NEXT_PUBLIC_API_URL;
   const queryClient = useQueryClient();
   const accountId = useActiveAccountId();
-  const router = useRouter();
+  const router = useGuardedRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeSubject, setActiveSubject] = useState("all");
@@ -951,19 +953,7 @@ function LearnerDetailSheet({
   onRetry: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50">
-      <button
-        type="button"
-        aria-label="Close learner detail"
-        onClick={onClose}
-        className="absolute inset-0 bg-[#17141d]/35 backdrop-blur-[1px]"
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label="Learner evidence"
-        className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-[#fbfafb] shadow-2xl sm:inset-y-0 sm:left-auto sm:w-[min(680px,92vw)] sm:rounded-none"
-      >
+    <Dialog className="fixed inset-0 z-50 bg-[#17141d]/35 backdrop-blur-[1px]" panelClassName="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-[#fbfafb] shadow-2xl sm:inset-y-0 sm:left-auto sm:w-[min(680px,92vw)] sm:rounded-none outline-none" label="Learner evidence" onClose={onClose}>
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-dashboard-outline bg-white/95 px-5 py-4 backdrop-blur sm:px-7">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">
@@ -976,6 +966,7 @@ function LearnerDetailSheet({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close learner detail"
             className="rounded-lg p-2 text-[#625e69] hover:bg-[#f1efff] hover:text-[#180d62]"
           >
             <X size={20} />
@@ -1028,8 +1019,7 @@ function LearnerDetailSheet({
             </p>
           )}
         </div>
-      </aside>
-    </div>
+    </Dialog>
   );
 }
 

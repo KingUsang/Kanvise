@@ -22,6 +22,7 @@ import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type Produc
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { viewerTimeZoneLabel } from '@/lib/viewer-timezone';
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
+import { Dialog } from '@/components/ui/dialog'
 
 type Tutor = { id: string; first_name: string; last_name: string };
 type Subject = { id: string; name: string };
@@ -778,14 +779,13 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
         )}
       </section>
       {composer && (
-        <div className="fixed inset-0 z-50 bg-black/40">
-          <form
-            onSubmit={save}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Schedule a session"
-            className="absolute bottom-0 max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:inset-x-0 sm:bottom-auto sm:top-1/2 sm:mx-auto sm:max-w-lg sm:-translate-y-1/2 sm:rounded-2xl sm:p-7"
-          >
+        <Dialog
+          className="fixed inset-0 z-50 bg-black/40"
+          panelClassName="absolute bottom-0 max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl outline-none sm:inset-x-0 sm:bottom-auto sm:top-1/2 sm:mx-auto sm:max-w-lg sm:-translate-y-1/2 sm:rounded-2xl sm:p-7"
+          label="Schedule a session"
+          onClose={() => setComposer(null)}
+        >
+          <form onSubmit={save}>
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
@@ -1085,7 +1085,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
               )}
             </div>
           </form>
-        </div>
+        </Dialog>
       )}
     </div>
   );

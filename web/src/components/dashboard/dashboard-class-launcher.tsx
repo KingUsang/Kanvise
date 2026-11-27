@@ -1,5 +1,6 @@
 'use client'
 
+import { Dialog } from '@/components/ui/dialog'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -116,8 +117,7 @@ export function DashboardClassLauncher({
     <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#994704] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7a3903] sm:px-4">
       <span className="material-symbols-outlined text-xl" aria-hidden="true">videocam</span>Start live class
     </button>
-    {open ? <div className="fixed inset-0 z-[70] flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="start-class-title">
-      <button type="button" aria-label="Close" onClick={() => !starting && setOpen(false)} className="absolute inset-0 cursor-default" />
+    {open ? <Dialog className="fixed inset-0 z-[70] flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-5" panelClassName="contents" labelledBy="start-class-title" onClose={starting ? undefined : () => setOpen(false)}>
       <section className="relative w-full rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-md sm:rounded-2xl sm:p-7">
         <div className="mx-auto mb-5 h-1.5 w-10 rounded-full bg-[#ded8d3] sm:hidden" />
         <div className="flex items-start justify-between gap-4">
@@ -147,6 +147,6 @@ export function DashboardClassLauncher({
         </>}
         <p className="mt-4 text-center text-sm text-[#66616c]">Need a different time? <Link href="/dashboard/schedule?mode=later" className="font-semibold text-[#2e2877] underline">Schedule for later</Link></p>
       </section>
-    </div> : null}
+    </Dialog> : null}
   </>
 }

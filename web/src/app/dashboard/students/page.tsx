@@ -1,5 +1,6 @@
 "use client";
 
+import { Dialog } from "@/components/ui/dialog";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Loader2, AlertCircle, Download, UserPlus, X, Upload } from "lucide-react";
 import Papa from "papaparse";
@@ -186,7 +187,7 @@ export default function StudentsPage() {
       )}
 
       {addingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="add-student-title">
+        <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" panelClassName="contents" labelledBy="add-student-title" onClose={submittingStudent ? undefined : () => setAddingStudent(false)}>
           <form onSubmit={addStudent} className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div><h2 id="add-student-title" className="text-xl font-bold text-dashboard-foreground">Invite a learner</h2><p className="mt-1 text-sm leading-6 text-dashboard-muted">They enter their own name and password from the email. Add them to a class now or later.</p></div>
@@ -196,11 +197,11 @@ export default function StudentsPage() {
             <label className="mt-5 block text-sm font-semibold text-dashboard-foreground">Email address<input required type="email" value={studentEmail} onChange={(event) => setStudentEmail(event.target.value)} className="mt-1.5 w-full rounded-dashboard-control border border-dashboard-outline px-3 py-2.5 font-normal outline-none focus:border-dashboard-primary" /></label>
             <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button disabled={submittingStudent} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submittingStudent ? "Sending…" : "Add & invite"}</button></div>
           </form>
-        </div>
+        </Dialog>
       )}
 
       {(csvRows.length > 0 || csvError || importSummary) && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+        <Dialog className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4" panelClassName="contents" label="Review learner import" onClose={importingCsv ? undefined : () => { setCsvRows([]); setCsvError(null); setImportSummary(null); }}>
           <div className="mx-auto my-8 w-full max-w-4xl rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-dashboard-foreground">Review learner import</h2><p className="mt-1 text-sm text-dashboard-muted">Every learner needs an email for their activation link. Names and phone numbers are optional; learners can enter their own names during activation.</p></div><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded p-1 text-dashboard-muted hover:bg-dashboard-surface-subtle"><X size={20} /></button></div>
             <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={downloadTemplate} className="rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Download template</button><label className="cursor-pointer rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Choose another CSV<input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleCsvFile} /></label></div>
@@ -210,7 +211,7 @@ export default function StudentsPage() {
             {csvRows.length > 100 && <p className="mt-2 text-xs text-gray-500">Showing the first 100 of {csvRows.length} students.</p>}
             <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button type="button" onClick={() => void importCsv()} disabled={importingCsv || !csvRows.length || csvRows.some((row) => row.error)} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{importingCsv ? "Importing…" : `Import ${csvRows.length} learners`}</button></div>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );

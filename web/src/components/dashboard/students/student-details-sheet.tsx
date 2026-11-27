@@ -5,6 +5,7 @@ import { X, Loader2, BookOpen, Clock, AlertCircle, ReceiptText } from "lucide-re
 import { createClient } from "@/lib/supabase/client";
 import { accountScopedFetch, authenticatedApiFetch } from "@/lib/authenticated-fetch";
 import { accountContextHeaders } from "@/lib/account-preference";
+import { Dialog } from "@/components/ui/dialog";
 
 export default function StudentDetailsSheet({ student, onClose, onRemoved, onChanged }: { student: any, onClose: () => void, onRemoved: () => void, onChanged: () => void }) {
   const [enrolments, setEnrolments] = useState<any[]>([]);
@@ -89,12 +90,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
 
   return (
     <>
-      <div 
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity animate-fade-in"
-        onClick={onClose}
-      />
-      
-      <div className="fixed top-0 right-0 z-50 flex h-full w-[400px] max-w-[90vw] flex-col animate-slide-right border-l border-dashboard-outline bg-dashboard-surface shadow-2xl">
+      <Dialog className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity animate-fade-in" panelClassName="fixed top-0 right-0 z-50 flex h-full w-[400px] max-w-[90vw] flex-col animate-slide-right border-l border-dashboard-outline bg-dashboard-surface shadow-2xl outline-none" label="Learner details" onClose={onClose}>
         <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6">
           <h2 className="text-xl font-bold text-dashboard-foreground">Learner Details</h2>
           <button 
@@ -213,10 +209,10 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
             {removing ? 'Removing…' : 'Remove Learner'}
           </button>
         </div>
-      </div>
+      </Dialog>
       {confirmRemoval && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl">
+        <Dialog className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" panelClassName="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl outline-none" label="Remove this learner?" onClose={removing ? undefined : () => setConfirmRemoval(false)}>
+          <div>
             <h3 className="text-xl font-bold text-dashboard-foreground">Remove this learner?</h3>
             <p className="mt-2 text-sm leading-6 text-gray-600">{student.first_name} {student.last_name} will lose access to this tutoring agency. Their enrolment and payment history will be retained.</p>
             <div className="mt-6 flex justify-end gap-3">
@@ -224,9 +220,9 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
               <button type="button" onClick={() => { setConfirmRemoval(false); void removeStudent(); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Remove learner</button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
-      {confirmCancelInvitation && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl"><h3 className="text-xl font-bold text-dashboard-foreground">Cancel this invitation?</h3><p className="mt-2 text-sm leading-6 text-gray-600">The email link and all pending class assignments for this learner will be cancelled. Accepted enrolments are unaffected.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmCancelInvitation(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep invitation</button><button type="button" onClick={() => { setConfirmCancelInvitation(false); void manageInvitation('cancel'); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Cancel invitation</button></div></div></div>}
+      {confirmCancelInvitation && <Dialog className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" panelClassName="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl outline-none" label="Cancel this invitation?" onClose={() => setConfirmCancelInvitation(false)}><div><h3 className="text-xl font-bold text-dashboard-foreground">Cancel this invitation?</h3><p className="mt-2 text-sm leading-6 text-gray-600">The email link and all pending class assignments for this learner will be cancelled. Accepted enrolments are unaffected.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmCancelInvitation(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep invitation</button><button type="button" onClick={() => { setConfirmCancelInvitation(false); void manageInvitation('cancel'); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Cancel invitation</button></div></div></Dialog>}
     </>
   );
 }

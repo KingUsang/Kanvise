@@ -1,5 +1,6 @@
 'use client'
 
+import { Dialog } from '@/components/ui/dialog'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -188,7 +189,7 @@ export default function PlugNmeetClassroom({ roomId, joinToken, serverUrl, clien
         </main>
       ) : null}
       {issue ? <section className="fixed inset-x-4 top-24 z-20 mx-auto max-w-md rounded-xl bg-white p-6 text-center text-[#180d62] shadow-xl"><h1 className="text-lg font-bold">Couldn&apos;t load the classroom</h1><p className="mt-2 text-sm text-slate-600">{issue}</p><Link href={isHost ? '/dashboard' : '/dashboard/student/classes'} className="mt-5 inline-flex rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Back to classes</Link></section> : null}
-      {confirmLeave ? <section role="dialog" aria-modal="true" aria-labelledby="leave-class-title" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-5"><div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"><h1 id="leave-class-title" className="text-lg font-bold text-[#180d62]">Leave class?</h1><p className="mt-2 text-sm text-slate-600">You will leave the live classroom.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmLeave(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700">Stay</button><button type="button" onClick={leaveClass} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Leave class</button></div></div></section> : null}
+      {confirmLeave ? <Dialog labelledBy="leave-class-title" onClose={() => setConfirmLeave(false)} className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-5" panelClassName="w-full max-w-sm outline-none"><div className="w-full rounded-2xl bg-white p-6 shadow-2xl"><h1 id="leave-class-title" className="text-lg font-bold text-[#180d62]">Leave class?</h1><p className="mt-2 text-sm text-slate-600">You will leave the live classroom.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmLeave(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700">Stay</button><button type="button" onClick={leaveClass} className="rounded-lg bg-[#2e2877] px-4 py-2 text-sm font-semibold text-white">Leave class</button></div></div></Dialog> : null}
     </>
   )
 }

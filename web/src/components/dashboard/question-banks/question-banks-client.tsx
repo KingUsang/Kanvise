@@ -11,6 +11,7 @@ import { UploadTaskStatus } from '@/components/uploads/upload-task-status'
 import { uploadFileWithProgress } from '@/lib/upload-with-progress'
 import { DashboardPageHeader } from '@/components/dashboard/page-header'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
+import { Dialog } from '@/components/ui/dialog'
 
 type Bank = {
   id: string
@@ -395,14 +396,14 @@ export function QuestionBanksClient() {
 }
 
 function BankDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-labelledby="create-bank-title">
+  return <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" panelClassName="contents" labelledBy="create-bank-title" onClose={onClose}>
     <form onSubmit={onSubmit} className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
       <h2 id="create-bank-title" className="text-xl font-bold text-[#25222b]">Create a question bank</h2>
       <p className="mt-1 text-sm leading-6 text-[#696570]">Give this collection a name. It starts private and you can change its details later.</p>
       <label className="mt-5 block text-sm font-semibold text-[#3e3a45]">Bank name<input name="name" required maxLength={160} autoFocus placeholder="e.g. JAMB Physics — Mechanics" className="mt-2 h-11 w-full rounded-lg border border-[#cbc7c4] px-3 font-normal outline-none focus:border-[#2e2877]" /></label>
       <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={onClose} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69]">Cancel</button><button className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white">Create bank</button></div>
     </form>
-  </div>
+  </Dialog>
 }
 
 function QuestionDialog({ bank, courses, apiUrl, onClose, onCreated }: { bank: Bank; courses: Course[]; apiUrl: string; onClose: () => void; onCreated: () => void }) {
@@ -522,7 +523,7 @@ function QuestionDialog({ bank, courses, apiUrl, onClose, onCreated }: { bank: B
     }
   }
 
-  return <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4 md:p-8" role="dialog" aria-modal="true" aria-labelledby="question-editor-title">
+  return <Dialog className="fixed inset-0 z-50 overflow-y-auto bg-black/40" panelClassName="min-h-full p-4 outline-none md:p-8" labelledBy="question-editor-title" onClose={isSaving ? undefined : onClose}>
     <form onSubmit={submit} className="mx-auto w-full max-w-3xl rounded-xl bg-white shadow-2xl">
       <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[#e5e1de] bg-white px-5 py-4 md:px-7"><div><h2 id="question-editor-title" className="text-xl font-bold text-[#24212a]">Add to {bank.name}</h2><p className="mt-1 text-sm text-[#6e6974]">This creates version 1. Future edits create a new version.</p></div><button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-[#696570] hover:bg-[#f2efed]"><span className="material-symbols-outlined">close</span></button></div>
       <div className="space-y-5 p-5 md:p-7">
@@ -543,9 +544,9 @@ function QuestionDialog({ bank, courses, apiUrl, onClose, onCreated }: { bank: B
       </div>
       <div className="sticky bottom-0 flex flex-wrap justify-end gap-3 border-t border-[#e5e1de] bg-white px-5 py-4 md:px-7">{isSaving && <div className="basis-full"><UploadTaskStatus label={saveStage === 'uploading' ? 'Uploading question image' : 'Saving question'} progress={saveStage === 'uploading' ? uploadProgress : null} /></div>}<button type="button" onClick={onClose} disabled={isSaving} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69] disabled:opacity-50">Cancel</button><button disabled={isSaving} className="rounded-lg bg-[#994704] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{isSaving ? (saveStage === 'uploading' ? 'Uploading image…' : 'Saving question…') : 'Save question'}</button></div>
     </form>
-  </div>
+  </Dialog>
 }
 
 function ConfirmDialog({ title, description, confirmLabel, onCancel, onConfirm }: { title: string; description: string; confirmLabel: string; onCancel: () => void; onConfirm: () => void }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"><h2 className="text-lg font-bold text-[#29262f]">{title}</h2><p className="mt-2 text-sm leading-6 text-[#696570]">{description}</p><div className="mt-6 flex justify-end gap-3"><button onClick={onCancel} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69]">Cancel</button><button onClick={onConfirm} className="rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white">{confirmLabel}</button></div></div></div>
+  return <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" panelClassName="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl outline-none" label={title} onClose={onCancel}><div><h2 className="text-lg font-bold text-[#29262f]">{title}</h2><p className="mt-2 text-sm leading-6 text-[#696570]">{description}</p><div className="mt-6 flex justify-end gap-3"><button onClick={onCancel} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#625e69]">Cancel</button><button onClick={onConfirm} className="rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white">{confirmLabel}</button></div></div></Dialog>
 }

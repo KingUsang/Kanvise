@@ -9,6 +9,7 @@ import { startNavigationProgress } from "@/components/navigation/NavigationProgr
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { Dialog } from "@/components/ui/dialog";
 
 interface MockExam {
   id: string;
@@ -143,13 +144,13 @@ export function MocksManagementClient({
   return (
     <div className="w-full animate-in fade-in duration-500">
       {mockToArchive && (
-        <div
+        <Dialog
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="archive-mock-title"
+          panelClassName="w-full max-w-md rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-xl outline-none"
+          labelledBy="archive-mock-title"
+          onClose={isArchiving ? undefined : () => setMockToArchive(null)}
         >
-          <div className="w-full max-w-md rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-xl">
+          <div>
             <h2
               id="archive-mock-title"
               className="text-lg font-semibold text-[#1b1c1c]"
@@ -179,7 +180,7 @@ export function MocksManagementClient({
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
       {/* Header Section */}
       <DashboardPageHeader

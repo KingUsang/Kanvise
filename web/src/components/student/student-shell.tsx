@@ -5,7 +5,7 @@ import { clearActiveAccountId } from '@/lib/account-preference';
 import { usePathname } from "next/navigation";
 import { BookOpen, CalendarDays, ClipboardCheck, FileText, GraduationCap, Home, LogOut, Settings, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from '@tanstack/react-query';
 import { createBrowserClient } from "@supabase/ssr";
 import { detachBrowserPushOnLogout } from "@/lib/push-notifications";
@@ -58,6 +58,17 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
   const resolvedClassLearning = hasClassLearning ?? dashboard?.capabilities?.hasClassLearning !== false;
   const pathname = usePathname();
   const [accountOpen, setAccountOpen] = useState(false);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setAccountOpen(false);
+      accountTriggerRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [accountOpen]);
 
   function isActive(href: string) {
     return href === "/dashboard/student" ? pathname === href : pathname.startsWith(href);
@@ -105,8 +116,8 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
         <div className="relative ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           <div className="lg:hidden"><FeedbackDialog compact /></div>
           <AccountSwitcher compact />
-          <button type="button" aria-label="Open account menu" aria-expanded={accountOpen} onClick={() => setAccountOpen(value => !value)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eeeafe] text-sm font-semibold text-[#2e2877] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2e2877]">{resolvedName.charAt(0).toUpperCase() || "S"}</button>
-          {accountOpen && <><button aria-label="Close account menu" className="fixed inset-0 z-30" onClick={() => setAccountOpen(false)} /><div className="absolute right-0 top-12 z-40 w-60 overflow-hidden rounded-2xl border border-[#e3ded9] bg-white shadow-xl"><div className="border-b border-[#eeeae6] px-4 py-3"><p className="truncate text-sm font-semibold">{resolvedName}</p><p className="truncate text-xs text-[#77727e]">{resolvedAccount}</p></div><div className="p-2"><Link href="/dashboard/student/settings" onClick={() => setAccountOpen(false)} className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><Settings size={18} />Settings</Link><button onClick={signOut} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><LogOut size={18} />Log out</button></div></div></>}
+          <button ref={accountTriggerRef} type="button" aria-label="Open account menu" aria-expanded={accountOpen} onClick={() => setAccountOpen(value => !value)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eeeafe] text-sm font-semibold text-[#2e2877] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2e2877]">{resolvedName.charAt(0).toUpperCase() || "S"}</button>
+          {accountOpen && <><button type="button" tabIndex={-1} aria-label="Close account menu" className="fixed inset-0 z-30" onClick={() => setAccountOpen(false)} /><div className="absolute right-0 top-12 z-40 w-60 overflow-hidden rounded-2xl border border-[#e3ded9] bg-white shadow-xl"><div className="border-b border-[#eeeae6] px-4 py-3"><p className="truncate text-sm font-semibold">{resolvedName}</p><p className="truncate text-xs text-[#77727e]">{resolvedAccount}</p></div><div className="p-2"><Link href="/dashboard/student/settings" onClick={() => setAccountOpen(false)} className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><Settings size={18} />Settings</Link><button onClick={signOut} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><LogOut size={18} />Log out</button></div></div></>}
         </div>
       </header>
       <main className="min-w-0 max-w-full">{children}</main>
