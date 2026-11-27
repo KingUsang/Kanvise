@@ -16,10 +16,10 @@ Read in order. `00-decisions.md` wins if anything conflicts.
 | 09-student-app.md | Getting in, join links, Home, lessons, homework, courses, notifications | Draft for review |
 | 10-homework.md | Set, hand in, mark, Kavi drafts | Draft for review |
 | 11-quizzes.md | Generate with Kavi, builder, take, results, marking | Draft for review |
-| 12 Settings (planned) | Profile, teaching preferences, team | Not started |
-| 13 Billing (planned) | Who pays, rates, invoices | Not started |
+| 12-settings-and-team.md | Profile, security, notifications, teaching, classroom, Kavi, team, data | Draft for review |
+| 13-billing.md | Proposal: payers, prices, invoices (built after the payments hold) | Proposal |
 | 14-old-flows-inventory.md | Every current page and what happens to it | Draft |
-| 15 Resources (planned) | Files, folders, sharing, classroom slides | Not started |
+| 15-resources.md | Library, upload, folders, sharing to courses, lesson materials | Draft for review |
 
 State IDs (for example `CW-3`, `LP-04`) are stable so build tickets and reviews
 can refer to them.
