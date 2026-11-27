@@ -82,10 +82,9 @@ is updated.
 - **Results:** per topic, knew or didn't know, with the questions and answers as
   proof. Kavi proposes plan changes (mark known topics, put gaps first, suggest
   the first lesson's topic). The tutor accepts, edits or ignores them.
-- **Access:** no guest flow. The student already has an email, so the diagnostic
-  email carries a sign-in link (passwordless) that logs them in as themselves
-  and opens the test. A student without an email cannot be sent one; the button
-  explains why and offers **Add email**.
+- **Access:** each student gets their own diagnostic link. The tutor can copy
+  it, send it on WhatsApp, or email it. Opening it identifies the student, so no
+  sign-in is needed and no guest record is created.
 
 ## 6. Lesson report (observations)
 
@@ -187,14 +186,18 @@ is updated.
 - The payer gets a link to a simple invoice page and pays through Paystack.
 - Statuses: Draft, Sent, Paid, Overdue, Void.
 
-## 14a. Guests
+## 14a. Students, links and guests
 
-- No guest flows anywhere. Share-link assignments and "Anyone with the link"
-  lessons are retired. Everyone who joins a lesson, takes a diagnostic or hands
-  in work is a signed-in student (passwordless links make that easy).
-- For a trial or extra session, the tutor creates a **one-off lesson** (no
-  course) and adds the student by email. Afterwards, **Make this a course**
-  turns it into a course.
+- Every lesson belongs to a course (as in Bobbin). A trial is a short course.
+  There are no one-off lessons.
+- A student's email is optional. Students with an email get an invitation to
+  set a password and sign in to their account (homework, reports, quizzes).
+- Every student has their **own join link** for each lesson, shown on the
+  lesson page with **Copy**, **WhatsApp** and **Email**. Opening it puts that
+  student into the lesson as themselves, so attendance stays accurate. No
+  waiting room.
+- No guest flows: share-link assignments and "Anyone with the link" lessons are
+  retired.
 
 ## 15. Out of scope for now
 

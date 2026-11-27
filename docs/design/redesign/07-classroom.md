@@ -33,8 +33,8 @@ options must move to the new palette: indigo buttons, never orange (decisions
 **Room settings stay as they are today** (audio-first, cameras off on entry,
 students muted on entry, screen share for the tutor only, chat without file
 uploads, whiteboard on, polls on, PlugNMeet waiting room off, analytics on for
-attendance). PlugNMeet's waiting room stays off because only signed-in
-students on the lesson can get a join token; there is nobody to screen.
+attendance). PlugNMeet's waiting room stays off: students arrive through their own
+account or their own join link, so Kanvise already knows who each person is.
 
 **Spike needed before build:** PlugNMeet's CSS assumes it owns the full page
 height. Docking the Lesson tools panel beside it needs a short technical test.
@@ -48,7 +48,7 @@ Tutor:   Dashboard / lesson page › Join classroom
            → CR-01 pre-entry (too early / waking / ready)
            → CR-03 room with Lesson tools (not started → running)
            → CR-06 end lesson → CR-07 lesson ended → Lesson report (spec 08)
-Student: Dashboard › Join classroom
+Student: Dashboard › Join classroom, or their own join link
            → CR-02 waiting for the tutor (if not started)
            → room (no Lesson tools)
            → CR-08 lesson ended
@@ -130,8 +130,9 @@ the tutor a push and email, CR-11.)
    - **Notes:** private notes, saved as you type (**Saved** appears for a
      moment). Line: **Only you and admins see these.**
 5. **Students:** each student with avatar and status: **In the lesson** (green),
-   **Not here yet**, **Left at 4:32 PM**. For students not here: **Remind**
-   (sends a push and email: "Your lesson with Alex has started").
+   **Not here yet**, **Left at 4:32 PM**. For students not here: **Copy link**,
+   **WhatsApp**, and **Remind** (push and email, if they have one: "Your lesson
+   with Alex has started").
 6. **Materials:** files attached to this lesson or its course. **Present** next
    to PDFs and slide files puts them on the PlugNMeet whiteboard. **+ Add a
    file** uploads (10 MB max; larger files get **Compress it first for students

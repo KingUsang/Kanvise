@@ -66,15 +66,15 @@ Subtitle **Add a student and, if you like, put them on a course.**
 |---|---|---|
 | First name | Required | |
 | Last name | Required | |
-| Student's email (optional) | Valid email | Line: **Leave blank if they don't have one. Without an email they can't sign in, get invites, or take a diagnostic.** |
+| Student's email (optional) | Valid email | Line: **Leave blank if they don't have one. Without an email they can't sign in, but you can still send them their lesson links yourself.** |
 | Parent or guardian | Shown open by default if the account teaches children; collapsed under **+ Add a parent** if adults or both | Parent's name, parent's email, phone (optional, for WhatsApp). Line: **Parents get lesson reports and invoices. They don't get a login.** |
 | Who pays? | Shown only when billing is on | **The parent** · **The student** |
 | Timezone | Pre-filled with the tutor's timezone, searchable | Line: **Lesson times are shown to them in this timezone.** Important for families abroad. |
 | Course (optional) | Dropdown of courses | **Put on a course now** |
 
 **Invite line**, shown above the buttons when an email is given:
-**Casey will get an email invitation to Kanvise. Lesson emails start once they
-accept.**
+**We'll email Casey an invite to set a password and sign in. Lesson emails reach
+them once they accept.**
 
 **Buttons:** **Cancel**, primary **Add student**, and a secondary **Add and add
 another** (keeps the dialog open, clears the form, keeps the course choice).
@@ -225,7 +225,7 @@ template columns plus courses and status. Toast: **Export ready.**
 ## Emails this flow sends
 
 - **Invitation to the student:** from the tutor, in Kavi's voice, with
-  **Accept invitation** (passwordless sign-in link).
+  **Accept invitation**, which lets them set a password and sign in.
 - **Reminder** after 3 days if not accepted (once).
 - **Parent welcome** (when a parent is added): who the tutor is, what they'll
   receive (lesson reports, later invoices), and that they don't need an account.

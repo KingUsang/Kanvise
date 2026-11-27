@@ -103,3 +103,6 @@ Each spec lists the emails its flow sends.
    student page. Spec 06 must include the student Attendance tab.
 5. **CSV import and export of students** must be in spec 06.
 6. **Recording share links** for parents must be in spec 08.
+
+7. Every student needs a personal join link on the lesson page (Copy, WhatsApp,
+   Email), replacing the retired share links.

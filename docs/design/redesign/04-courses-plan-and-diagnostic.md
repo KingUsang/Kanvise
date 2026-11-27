@@ -86,7 +86,8 @@ Title **Students** · subtitle **Who's on this course?**
   teaches children). Saving adds and selects the student without leaving the
   wizard.
 - Students without an email show a small grey **No email** chip. Hover or tap:
-  **They can't get invites or the diagnostic until you add one.**
+  **They can't sign in, but you can send them their lesson and diagnostic links
+  yourself.**
 - **One-to-one default:** selecting a second student when the account's default
   is one-to-one is allowed, with a quiet line: **This will be a group course.**
 - **Agency admins** also see a **Tutor** section with one required choice (and
@@ -133,8 +134,8 @@ the note **You'll add topics on the Course plan tab.**
 
 ### CW-4 · Find out what they know (optional)
 
-**Shown only when** the course has a plan (Kavi or blank with topics) and at
-least one selected student has an email. Otherwise the wizard goes from CW-3 to
+**Shown only when** the course has a plan (Kavi or blank with topics).
+Otherwise the wizard goes from CW-3 to
 CW-5, and the course page shows the diagnostic card later (CRS-06).
 
 Title **Find out what they know** · subtitle **A short check before the first
@@ -145,8 +146,9 @@ lesson shows where to start.**
 - **Which modules?** checkboxes, all ticked by default.
 - **Length:** **Quick (about 10 questions, 10 minutes)** · **Thorough (about 20
   questions, 20 minutes)**.
-- **Send to:** the selected students with emails, ticked. Students without an
-  email are listed greyed out with **Add email**.
+- **Send to:** the selected students, all ticked. Students with an email get it
+  by email; for the others, Kanvise shows their personal link to copy or send on
+  WhatsApp after the course is created.
 - Buttons: **Preview questions** (opens DIAG-P), and the two decisions at the
   bottom: **Skip for now** (text button) and **Continue** (primary). The
   diagnostic is drafted on **Preview** or at creation, and sent only from
@@ -178,8 +180,9 @@ Buttons:
   **Create without sending** (secondary).
 - Otherwise: **Create course**.
 
-A line above the buttons when sending: **Casey and Alex will get an email with
-a link to the check. It takes about 10 minutes.**
+A line above the buttons when sending: **Casey will get an email with a link to
+the check. Alex has no email, so you'll get Alex's link to send yourself. It
+takes about 10 minutes.**
 
 **On success:** the dialog closes, the course page opens, and a toast says
 **Course created** (or **Course created. Diagnostic sent to 2 students.**).
@@ -269,9 +272,10 @@ the course has a plan:
 Body: what it is, that it takes about 10 minutes, that it isn't a test they
 pass or fail, and one button **Start the check**.
 
-**The link:** signs the student in as themselves (passwordless) and opens the
-check. If the link has expired or was used on another device: **This link has
-expired.** with **Send me a new link** (to the same email).
+**The link:** each student has their own link, sent by email or copied by the
+tutor (for example into WhatsApp). Opening it identifies the student and opens
+the check, with no sign-in. If the link has expired: **This link has expired.
+Ask Alex for a new one.**
 
 **Check screen (student app shell, distraction-free):**
 - Top: course name, a progress bar, and **Question 3**. No total, since it adapts.
@@ -320,4 +324,4 @@ notification email.
 - Course plan: modules, topics, objectives, order; Kavi draft flag.
 - Per-student topic status with source (diagnostic, tutor, lesson) and date.
 - Diagnostic: questions with topic links, sends, attempts, answers.
-- Passwordless sign-in link for the diagnostic email.
+- A personal diagnostic link per student (also usable without an email).
