@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { governingTimeZoneLabel } from "@/lib/viewer-timezone";
 import { adaptSubjectLink, type ProductSubjectLink } from "@/lib/product-terminology";
 
 type Tutor = { id: string; first_name: string; last_name: string };
@@ -22,6 +23,7 @@ type TimetableSlot = {
   tutor_id: string;
   starts_on?: string | null;
   ends_on?: string | null;
+  timezone?: string | null;
   course?: Subject | null;
   tutor?: Tutor | null;
 };
@@ -310,7 +312,7 @@ export function TimetableClient(_: Props) {
                       : new Date(nextTeachingSlot.scheduled_at).getDay() - 1
                   ]
                 }{" "}
-                {timeLabel(new Date(nextTeachingSlot.scheduled_at))} ·{" "}
+                {timeLabel(new Date(nextTeachingSlot.scheduled_at))} {governingTimeZoneLabel(nextTeachingSlot.timezone, new Date(nextTeachingSlot.scheduled_at))} ·{" "}
                 {nextTeachingSlot.subject?.name || nextTeachingSlot.title}
               </p>
             )}
@@ -399,7 +401,7 @@ export function TimetableClient(_: Props) {
                                     {item.subject?.name || item.title}
                                   </p>
                                   <p className="mt-0.5 truncate text-[11px] text-[#474551]">
-                                    {timeLabel(scheduled)} ·{" "}
+                                    {timeLabel(scheduled)} {governingTimeZoneLabel(item.timezone, scheduled)} ·{" "}
                                     {fullName(item.tutor)}
                                   </p>
                                 </article>
@@ -434,8 +436,9 @@ export function TimetableClient(_: Props) {
                   const hue = hueFor(item.subject?.name || item.title);
                   return (
                     <article key={item.id} className="flex gap-3 p-4">
-                      <div className="w-16 shrink-0 text-xs font-bold text-[#994704]">
+                      <div className="w-28 shrink-0 text-xs font-bold text-[#994704]">
                         <p>{timeLabel(new Date(item.scheduled_at))}</p>
+                        <p className="mt-0.5 font-normal text-[#8b8580]">{governingTimeZoneLabel(item.timezone, new Date(item.scheduled_at))}</p>
                         <p className="mt-1 font-normal text-[#8b8580]">
                           {durationLabel(item.duration_minutes)}
                         </p>
