@@ -2,7 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/shell";
-import { serverActiveAccountId } from "@/lib/server/server-account";
 
 export default async function DashboardLayout({
   children,
@@ -36,11 +35,11 @@ export default async function DashboardLayout({
     user.app_metadata?.kanvise_role ||
     user.app_metadata?.role ||
     "student";
-  // The selected account (kanvise_account cookie) decides whether this Admin
-  // already has a tutoring account. The app_metadata claim is only a fallback
-  // for the moment right after account creation, before a selection is stored;
-  // middleware still reads it for the setup redirect.
-  const hasAccount = Boolean(await serverActiveAccountId() || user.app_metadata?.school_id);
+  // The app_metadata claim decides this, as middleware does for the setup
+  // redirect. The kanvise_account cookie is only a UUID-shaped preference that
+  // cannot be checked against memberships here (dashboard Server Components may
+  // not call the API), so a stale cookie must never mark an Admin as set up.
+  const hasAccount = Boolean(user.app_metadata?.school_id);
 
   // Student pages provide their own navigation shell. Avoid loading the
   // admin/tutor dashboard endpoint for a role it was not designed to serve.

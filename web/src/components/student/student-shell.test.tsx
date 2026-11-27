@@ -39,4 +39,12 @@ describe('StudentShell navigation', () => {
     expect(mobileNavigation).not.toHaveTextContent('Learn')
     expect(mobileNavigation).not.toHaveTextContent('Progress')
   })
+
+  it('renders exactly one main landmark around the page content', () => {
+    renderShell(<StudentShell learnerName="Ada Learner" accountName="Kanvise"><p>Content</p></StudentShell>)
+
+    const main = screen.getAllByRole('main')
+    expect(main).toHaveLength(1)
+    expect(main[0]).toHaveTextContent('Content')
+  })
 })

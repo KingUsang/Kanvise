@@ -18,15 +18,15 @@ async function setupRequired() {
 describe('DashboardLayout account detection', () => {
   beforeEach(() => { vi.clearAllMocks(); activeAccountId.mockResolvedValue(null) })
 
-  it('treats an Admin with a selected account as set up even without the claim', async () => {
-    getUser.mockResolvedValue(admin())
-    activeAccountId.mockResolvedValue('11111111-1111-4111-8111-111111111111')
+  it('treats an Admin with the school claim as set up', async () => {
+    getUser.mockResolvedValue(admin({ school_id: 'school-1' }))
     expect(await setupRequired()).toBe(false)
   })
 
-  it('keeps the claim as a fallback right after account creation', async () => {
-    getUser.mockResolvedValue(admin({ school_id: 'school-1' }))
-    expect(await setupRequired()).toBe(false)
+  it('does not trust a selected-account cookie without the claim (it cannot be checked against memberships here)', async () => {
+    getUser.mockResolvedValue(admin())
+    activeAccountId.mockResolvedValue('11111111-1111-4111-8111-111111111111')
+    expect(await setupRequired()).toBe(true)
   })
 
   it('requires setup for an Admin with neither a selected account nor a claim', async () => {
