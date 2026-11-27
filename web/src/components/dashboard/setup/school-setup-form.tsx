@@ -234,7 +234,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
             autoComplete="organization"
             value={formData.name}
             onChange={handleChange}
-            className="mt-2 w-full rounded-lg border border-[#787582] bg-white px-4 py-3 text-base text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-2 focus:ring-[#ded8ff]"
+            className="mt-2 w-full rounded-lg border border-[#787582] bg-white px-4 py-3 text-base text-[#1b1c1c] outline-none transition focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877]"
             placeholder="e.g. Bright Future Tutorials"
           />
 
@@ -291,7 +291,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                     required
                     value={formData.name}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c]"
+                    className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-[#1b1c1c]"
                     placeholder="e.g. Bright Future Tutorials"
                   />
                 </div>
@@ -328,7 +328,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   maxLength={500}
                   value={formData.description}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c] resize-none"
+                  className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-[#1b1c1c] resize-none"
                   placeholder="Tell learners what you teach, the exams you prepare them for, and what makes your tutoring agency different."
                 />
                 <p className="text-[11px] text-[#787582] text-right mt-1">
@@ -445,8 +445,8 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                     type="email"
                     value={formData.contact_email}
                     onChange={handleChange}
-                    className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c]"
-                    placeholder="school@domain.com"
+                    className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-[#1b1c1c]"
+                    placeholder="contact@yourbusiness.com"
                   />
                 </div>
               </div>
@@ -460,7 +460,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                     type="tel"
                     value={formData.contact_phone}
                     onChange={handleChange}
-                    className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c]"
+                    className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-[#1b1c1c]"
                     placeholder="+234 ..."
                   />
                 </div>
@@ -490,7 +490,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   inputMode="url"
                   value={formData.website_url}
                   onChange={handleChange}
-                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-sm text-[#1b1c1c]"
+                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-sm text-[#1b1c1c]"
                   placeholder="kanvise.com"
                 />
               </div>
@@ -504,7 +504,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   inputMode="url"
                   value={formData.twitter_url}
                   onChange={handleChange}
-                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-sm text-[#1b1c1c]"
+                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-sm text-[#1b1c1c]"
                   placeholder="@username or x.com/username"
                 />
               </div>
@@ -518,7 +518,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   inputMode="url"
                   value={formData.facebook_url}
                   onChange={handleChange}
-                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-sm text-[#1b1c1c]"
+                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-sm text-[#1b1c1c]"
                   placeholder="Username or Facebook link"
                 />
               </div>
@@ -532,7 +532,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   inputMode="url"
                   value={formData.instagram_url}
                   onChange={handleChange}
-                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-sm text-[#1b1c1c]"
+                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-sm text-[#1b1c1c]"
                   placeholder="@username or Instagram link"
                 />
               </div>
@@ -545,7 +545,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   type="tel"
                   value={formData.whatsapp_number}
                   onChange={handleChange}
-                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-sm text-[#1b1c1c]"
+                  className="w-full pl-9 pr-3 py-2 bg-[#fbf9f8] border border-[#787582] rounded focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] outline-none transition-all text-sm text-[#1b1c1c]"
                   placeholder="+234 801 234 5678"
                 />
               </div>

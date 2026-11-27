@@ -85,10 +85,10 @@ export function DashboardHomeClient() {
     },
   });
 
-  if (sessionQuery.isPending || summaryQuery.isPending)
+  if (!sessionQuery.isError && (sessionQuery.isPending || summaryQuery.isPending))
     return <DashboardSummarySkeleton />;
   if (sessionQuery.isError || (summaryQuery.isError && !summaryQuery.data)) {
-    const retry = summaryQuery.isError ? summaryQuery : sessionQuery;
+    const retry = sessionQuery.isError ? sessionQuery : summaryQuery;
     return (
       <QueryErrorState
         error={retry.error}

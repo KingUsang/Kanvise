@@ -13,7 +13,7 @@ export default function StudentLearnPage() {
   if (dashboardQuery.isPending) return <div className="mx-auto max-w-[1120px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your class…</div>;
   if (dashboardQuery.isError) return <div className="mx-auto max-w-[1120px] px-4 py-10"><QueryErrorState error={dashboardQuery.error} onRetry={() => void dashboardQuery.refetch()} fallback="We could not load your class." retrying={dashboardQuery.isFetching} /></div>;
   const data = dashboardQuery.data;
-  if (!data || data.capabilities?.hasCentreLearning === false) return null;
+  if (!data || data.capabilities?.hasCentreLearning === false) return <div className="mx-auto max-w-[1120px] px-4 py-10 text-center"><h1 className="text-lg font-bold text-[#1b1c1c]">No class access yet</h1><p className="mt-2 text-sm text-[#716c76]">You are not enrolled in a tutoring account class. Ask your tutor for an invitation to see your classes here.</p><Link href="/dashboard/student" className="mt-4 inline-block text-sm font-semibold text-[#2e2877] underline">Back to your dashboard</Link></div>;
 
   const destinations = [
     {
