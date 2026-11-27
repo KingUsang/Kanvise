@@ -979,7 +979,7 @@ export default function ModernLanding() {
               independent tutors and tutoring agencies
             </p>
             <h1 className="mt-5 max-w-[640px] text-[2.1rem] font-medium leading-[1.05] tracking-[-.04em] sm:mt-6 sm:text-[2.75rem] lg:text-[3.25rem]">
-              Running one tutoring account shouldn&apos;t take{" "}
+              Running a tutoring agency shouldn&apos;t take{" "}
               <span className="text-[#C26627]">seven tools.</span>
             </h1>
             <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">

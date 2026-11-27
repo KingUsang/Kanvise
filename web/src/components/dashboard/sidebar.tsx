@@ -85,7 +85,7 @@ export function Sidebar({ capabilities }: SidebarProps) {
                   onClick={(event) => {
                     if (isLocked) {
                       event.preventDefault()
-                      toast.info('Create your tutoring account first', {
+                      toast.info('Create your tutoring agency first', {
                         description: `${item.label} will unlock as soon as you complete the required setup.`,
                       })
                       return
@@ -107,7 +107,7 @@ export function Sidebar({ capabilities }: SidebarProps) {
                   <span className="material-symbols-outlined mr-3 text-[22px]">{item.icon}</span>
                   <span className="flex-1">{item.label}</span>
                   {isLocked && (
-                    <span className="material-symbols-outlined text-[17px]" title="Complete tutoring account setup to unlock">lock</span>
+                    <span className="material-symbols-outlined text-[17px]" title="Complete tutoring agency setup to unlock">lock</span>
                   )}
                   {badge > 0 ? (
                     <span className="bg-[#ba1a1a] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ml-2">

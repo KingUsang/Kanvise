@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { authPrimaryButtonClass } from '@/components/auth/auth-ui'
 
-const INVALID_INVITATION = "This invitation link has expired or was already used. Ask your tutoring account to invite you again."
+const INVALID_INVITATION = "This invitation link has expired or was already used. Ask your tutor to invite you again."
 
 export default function InvitationPage() {
   const router = useRouter()

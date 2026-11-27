@@ -222,16 +222,16 @@ export function TutorsClient() {
     return matchesSearch && matchesFilter
   })
   const isLoading = enabled && tutorsQuery.isPending
-  const loadError = !accountId ? 'Select a tutoring account to view its people.' : tutorsQuery.isError && !tutorsQuery.data ? 'We could not load the Tutor list. Please try again.' : ''
+  const loadError = !accountId ? 'Select a tutoring agency to view its people.' : tutorsQuery.isError && !tutorsQuery.data ? 'We could not load the Tutor list. Please try again.' : ''
   const tutorsRefreshError = accountId && tutorsQuery.isError && tutorsQuery.data ? 'The Tutor list could not refresh. Showing the last saved list.' : ''
   const pendingInvites = invites.filter((invite) => invite.status === 'pending')
   const expiredInvites = invites.filter((invite) => invite.status === 'expired')
   const activeInvites = [...pendingInvites, ...expiredInvites].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   const invitesLoading = enabled && invitesQuery.isPending
-  const invitesError = !accountId ? 'Select a tutoring account to view invitations.' : invitesQuery.isError && !invitesQuery.data ? 'We could not load invitations. Please try again.' : ''
+  const invitesError = !accountId ? 'Select a tutoring agency to view invitations.' : invitesQuery.isError && !invitesQuery.data ? 'We could not load invitations. Please try again.' : ''
   const invitesRefreshError = accountId && invitesQuery.isError && invitesQuery.data ? 'Invitations could not refresh. Showing the last saved list.' : ''
   const assignmentsLoading = enabled && (assignmentsQuery.isPending || peopleQuery.isPending)
-  const assignmentsError = !accountId ? 'Select a tutoring account to view Subject assignments.' : (assignmentsQuery.isError && !assignmentsQuery.data) || (peopleQuery.isError && !peopleQuery.data) ? 'We could not load Subject assignments. Please try again.' : ''
+  const assignmentsError = !accountId ? 'Select a tutoring agency to view Subject assignments.' : (assignmentsQuery.isError && !assignmentsQuery.data) || (peopleQuery.isError && !peopleQuery.data) ? 'We could not load Subject assignments. Please try again.' : ''
   const assignmentsRefreshMessages = [
     assignmentsQuery.isError && assignmentsQuery.data ? 'Subject assignments could not refresh. Showing the last saved assignments.' : '',
     peopleQuery.isError && peopleQuery.data ? 'Tutor choices could not refresh. Showing the last saved people list.' : '',
@@ -253,7 +253,7 @@ export function TutorsClient() {
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.capabilities }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
       ])
-      toast.success(json.data.email_sent ? 'Invitation emailed to the Tutor' : 'Invitation link created', { description: json.data.email_sent ? 'They can use the email to join your tutoring account.' : 'The email could not be sent. Copy and share the link yourself.' })
+      toast.success(json.data.email_sent ? 'Invitation emailed to the Tutor' : 'Invitation link created', { description: json.data.email_sent ? 'They can use the email to join your tutoring agency.' : 'The email could not be sent. Copy and share the link yourself.' })
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : 'Could not send the invitation. Please try again.')
     } finally {
@@ -352,7 +352,7 @@ export function TutorsClient() {
 
   return (
     <div className="space-y-8">
-      <DashboardPageHeader title="Tutors" description="Invite Tutors to your tutoring account and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself." />
+      <DashboardPageHeader title="Tutors" description="Invite Tutors to your tutoring agency and see the Subjects assigned to each person. If you teach alone, you do not need to invite yourself." />
 
       <CollectionToolbar
         ariaLabel="Tutor collection controls"
@@ -377,13 +377,13 @@ export function TutorsClient() {
             <header className="flex items-center gap-3 border-b border-dashboard-outline bg-dashboard-surface-subtle px-5 py-5 sm:px-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-dashboard-control bg-dashboard-primary/10 text-dashboard-primary"><Users aria-hidden="true" size={20} /></div>
               <div>
-                <h2 id="tutor-list-heading" className="text-lg font-bold text-dashboard-foreground">Tutors in your tutoring account</h2>
+                <h2 id="tutor-list-heading" className="text-lg font-bold text-dashboard-foreground">Tutors in your tutoring agency</h2>
                 <p className="mt-1 text-sm text-dashboard-muted">Manage access and see assigned Subjects.</p>
               </div>
             </header>
             {tutorsRefreshError ? <RefreshNotice message={tutorsRefreshError} onRetry={() => void tutorsQuery.refetch()} /> : null}
             {isLoading ? <PageLoadingState label="Loading Tutors" /> : loadError ? <ErrorState message={loadError} onRetry={() => void tutorsQuery.refetch()} /> : tutors.length === 0 ? (
-              <EmptyState icon={<Users aria-hidden="true" size={22} />} title="No Tutors yet" body="You are currently teaching on your own. Invite someone when another Tutor needs access to teach Subjects in your tutoring account." />
+              <EmptyState icon={<Users aria-hidden="true" size={22} />} title="No Tutors yet" body="You are currently teaching on your own. Invite someone when another Tutor needs access to teach Subjects in your tutoring agency." />
             ) : filteredTutors.length === 0 ? (
               <EmptyState icon={<Users aria-hidden="true" size={22} />} title="No Tutors match" body="Try a different search or clear the filter to see every Tutor." action={<Button type="button" variant="quiet" onClick={() => { setTutorSearch(''); setTutorFilter('all') }}>Clear filters</Button>} />
             ) : (
@@ -414,7 +414,7 @@ export function TutorsClient() {
             <header className="mb-5">
               <p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">People management</p>
               <h2 id="invite-heading" className="mt-1 text-xl font-bold text-dashboard-foreground">Invite a Tutor</h2>
-              <p className="mt-1 text-sm leading-6 text-dashboard-muted">Enter an email address. We will email a link to join your tutoring account, and you can copy the link yourself.</p>
+              <p className="mt-1 text-sm leading-6 text-dashboard-muted">Enter an email address. We will email a link to join your tutoring agency, and you can copy the link yourself.</p>
             </header>
             <form onSubmit={(event) => void handleInvite(event)} className="flex flex-col gap-4" noValidate>
               <Field id="tutor-invite-email" label="Tutor email" required error={inviteError}>
@@ -456,7 +456,7 @@ export function TutorsClient() {
       </div>
 
       {confirmation ? (
-        <Dialog open onClose={() => { if (!confirmationBusy) setConfirmation(null) }} title={confirmation.type === 'remove' ? 'Remove this Tutor?' : 'Cancel this invitation?'} description={confirmation.type === 'remove' ? `${confirmation.name} will lose access to your tutoring account. Their previous teaching records will be kept.` : `The invitation sent to ${confirmation.email} will stop working.`} busy={confirmationBusy}>
+        <Dialog open onClose={() => { if (!confirmationBusy) setConfirmation(null) }} title={confirmation.type === 'remove' ? 'Remove this Tutor?' : 'Cancel this invitation?'} description={confirmation.type === 'remove' ? `${confirmation.name} will lose access to your tutoring agency. Their previous teaching records will be kept.` : `The invitation sent to ${confirmation.email} will stop working.`} busy={confirmationBusy}>
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="quiet" data-dialog-initial-focus onClick={() => setConfirmation(null)} disabled={confirmationBusy}>Keep it</Button>
             <Button type="button" variant="danger" pending={Boolean(confirmationBusy)} pendingLabel={confirmation.type === 'remove' ? 'Removing…' : 'Cancelling…'} onClick={() => { const action = confirmation; setConfirmation(null); if (action.type === 'remove') void handleRemoveTutor(action.id); else void handleRevoke(action.id) }}>{confirmation.type === 'remove' ? 'Remove Tutor' : 'Cancel invitation'}</Button>

@@ -5,10 +5,10 @@ import { NeedsGradingCard } from './needs-grading-card'
 
 describe('compact mobile dashboard summaries', () => {
   it('keeps secondary metric copy out of the initial phone layout', () => {
-    render(<StatCard title="Enrolled learners" value={42} icon="groups" subtitle="Across the tutoring account" />)
+    render(<StatCard title="Enrolled learners" value={42} icon="groups" subtitle="Across your classes" />)
 
     expect(screen.getByText('42')).toHaveClass('text-[24px]')
-    expect(screen.getByText('Across the tutoring account')).toHaveClass('hidden', 'sm:block')
+    expect(screen.getByText('Across your classes')).toHaveClass('hidden', 'sm:block')
   })
 
   it('uses a compact empty grading state', () => {

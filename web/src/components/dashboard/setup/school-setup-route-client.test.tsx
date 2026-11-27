@@ -27,7 +27,7 @@ describe('dashboard tutoring account data boundary', () => {
 
     renderRoute()
 
-    expect(screen.getByText('Loading your tutoring account details…')).toBeInTheDocument()
+    expect(screen.getByText('Loading your tutoring agency details…')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Tutoring agency profile' })).toBeInTheDocument())
     expect(mocks.authenticatedApiFetch).toHaveBeenCalledWith(expect.stringContaining('/schools/me'), expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }))
   })
@@ -46,7 +46,7 @@ describe('dashboard tutoring account data boundary', () => {
     renderRoute()
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument())
-    expect(screen.getByText('We could not load your tutoring account details. Please try again.')).toBeInTheDocument()
+    expect(screen.getByText('We could not load your tutoring agency details. Please try again.')).toBeInTheDocument()
     expect(screen.queryByText('internal transport details')).not.toBeInTheDocument()
   })
 

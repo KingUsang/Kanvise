@@ -9,7 +9,7 @@ async function getSchool(slug: string) {
   });
   if (!res.ok) {
     if (res.status === 404) return null;
-    throw new Error("Failed to fetch tutoring account");
+    throw new Error("We could not load this page right now. Please try again shortly.");
   }
   return res.json();
 }
@@ -70,7 +70,7 @@ export default async function SchoolStorefrontPage({ params }: { params: Promise
             <div className="text-white pb-2 flex-grow">
               <h1 className="font-display-lg text-headline-lg-mobile md:text-display-lg mb-2">{school.name}</h1>
               <p className="font-body-lg text-body-md md:text-body-lg opacity-90 max-w-2xl mb-4">
-                {school.description || "Explore the programmes currently available from this tutoring account."}
+                {school.description || `Explore the programmes currently available from ${school.name}.`}
               </p>
             </div>
           </div>
