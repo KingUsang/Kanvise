@@ -1,0 +1,346 @@
+{
+  "url": "https://app.withbobbin.com/safeguarding",
+  "title": "Safeguarding | Bobbin",
+  "headings": [
+    "Safeguarding",
+    "No safeguarding flags yet"
+  ],
+  "controls": [
+    {
+      "tag": "A",
+      "label": "Skip to content",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding#main-scroll"
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Collapse sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Expand sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Search…\nK",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Set up your account\n0/5 completed",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Setup",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Dashboard",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "A",
+      "label": "Calendar",
+      "type": null,
+      "href": "https://app.withbobbin.com/calendar"
+    },
+    {
+      "tag": "A",
+      "label": "Lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons"
+    },
+    {
+      "tag": "A",
+      "label": "Courses",
+      "type": null,
+      "href": "https://app.withbobbin.com/courses"
+    },
+    {
+      "tag": "A",
+      "label": "Students",
+      "type": null,
+      "href": "https://app.withbobbin.com/students"
+    },
+    {
+      "tag": "A",
+      "label": "Clients",
+      "type": null,
+      "href": "https://app.withbobbin.com/clients"
+    },
+    {
+      "tag": "A",
+      "label": "Tutors",
+      "type": null,
+      "href": "https://app.withbobbin.com/tutors"
+    },
+    {
+      "tag": "A",
+      "label": "Team",
+      "type": null,
+      "href": "https://app.withbobbin.com/team"
+    },
+    {
+      "tag": "A",
+      "label": "Recordings",
+      "type": null,
+      "href": "https://app.withbobbin.com/recordings"
+    },
+    {
+      "tag": "A",
+      "label": "Resources",
+      "type": null,
+      "href": "https://app.withbobbin.com/resources"
+    },
+    {
+      "tag": "A",
+      "label": "Report approvals",
+      "type": null,
+      "href": "https://app.withbobbin.com/report-approvals"
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "Unlinked sessions",
+      "type": null,
+      "href": "https://app.withbobbin.com/sessions/unlinked"
+    },
+    {
+      "tag": "A",
+      "label": "Settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Help and updates\nNew updates available",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Close menu",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Collapse sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Expand sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Search…K",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Set up your account0/5 completed",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Setup",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Dashboard",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "A",
+      "label": "Calendar",
+      "type": null,
+      "href": "https://app.withbobbin.com/calendar"
+    },
+    {
+      "tag": "A",
+      "label": "Lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons"
+    },
+    {
+      "tag": "A",
+      "label": "Courses",
+      "type": null,
+      "href": "https://app.withbobbin.com/courses"
+    },
+    {
+      "tag": "A",
+      "label": "Students",
+      "type": null,
+      "href": "https://app.withbobbin.com/students"
+    },
+    {
+      "tag": "A",
+      "label": "Clients",
+      "type": null,
+      "href": "https://app.withbobbin.com/clients"
+    },
+    {
+      "tag": "A",
+      "label": "Tutors",
+      "type": null,
+      "href": "https://app.withbobbin.com/tutors"
+    },
+    {
+      "tag": "A",
+      "label": "Team",
+      "type": null,
+      "href": "https://app.withbobbin.com/team"
+    },
+    {
+      "tag": "A",
+      "label": "Recordings",
+      "type": null,
+      "href": "https://app.withbobbin.com/recordings"
+    },
+    {
+      "tag": "A",
+      "label": "Resources",
+      "type": null,
+      "href": "https://app.withbobbin.com/resources"
+    },
+    {
+      "tag": "A",
+      "label": "Report approvals",
+      "type": null,
+      "href": "https://app.withbobbin.com/report-approvals"
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "Unlinked sessions",
+      "type": null,
+      "href": "https://app.withbobbin.com/sessions/unlinked"
+    },
+    {
+      "tag": "A",
+      "label": "Settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Help and updatesNew updates available",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Set up billing",
+      "type": null,
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Open navigation",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/safeguarding"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "All",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Open",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Resolved",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Not an issue",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Filter",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/safeguarding"
+    }
+  ]
+}

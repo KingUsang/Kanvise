@@ -1,0 +1,35 @@
+{
+  "fields": [
+    {
+      "type": "text",
+      "placeholder": "Search tutors…",
+      "label": "Search tutors…",
+      "checked": false
+    },
+    {
+      "type": "text",
+      "placeholder": null,
+      "label": null,
+      "checked": false
+    },
+    {
+      "type": "text",
+      "placeholder": null,
+      "label": null,
+      "checked": false
+    },
+    {
+      "type": "email",
+      "placeholder": "tutor@example.com",
+      "label": null,
+      "checked": false
+    },
+    {
+      "type": "text",
+      "placeholder": "Select a timezone (optional)",
+      "label": "Timezone",
+      "checked": false
+    }
+  ],
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nSet up your account\n2/5 completed\nSetup\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nTutors\nImport\nAdd tutor\n\nThe tutors running sessions in your organization\n\nA sample tutor shows how Bobbin works. It's kept out of this list.\n\nOpen the sample tutor\nNo tutors yet\n\nTutors run the sessions in your organization. Add one so you can pair them with a student on a course.\n\nAdd tutor\nImport from CSV\nAdd tutor\n\nAdd a tutor to your organization. They have no paying client.\n\nFirst name (optional)\nLast name\nEmail\n\nWe'll email the tutor an invite to set a password and sign in. Your organization's emails reach them once they accept. If they already use Bobbin, they'll sign in with their existing password instead.\n\nTimezone\nCancel\nAdd tutor"
+}

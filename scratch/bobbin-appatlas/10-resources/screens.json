@@ -1,0 +1,188 @@
+[
+  {
+    "id": "10-resources/folder-created--library",
+    "hierarchy": {
+      "section": "10-resources",
+      "page": "resources",
+      "state": "success"
+    },
+    "title": "folder created — library",
+    "screenshot": "screenshots/folder-created--library.png",
+    "pageType": "list",
+    "flows": [
+      "resource-library"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "10-resources/upload-files--dialog",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "10-resources/new-folder--dialog",
+    "hierarchy": {
+      "section": "10-resources",
+      "page": "resources",
+      "state": "modal"
+    },
+    "title": "new folder — dialog",
+    "screenshot": "screenshots/new-folder--dialog.png",
+    "pageType": "list",
+    "flows": [
+      "resource-library"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "modal"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "10-resources/new-folder--filled",
+        "type": "submits",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "10-resources/new-folder--filled",
+    "hierarchy": {
+      "section": "10-resources",
+      "page": "resources",
+      "state": "default"
+    },
+    "title": "new folder — filled",
+    "screenshot": "screenshots/new-folder--filled.png",
+    "pageType": "list",
+    "flows": [
+      "resource-library"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "10-resources/folder-created--library",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "10-resources/page--default",
+    "hierarchy": {
+      "section": "10-resources",
+      "page": "resources",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "resource-library"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "10-resources/upload-files--completed",
+    "hierarchy": {
+      "section": "10-resources",
+      "page": "resources",
+      "state": "success"
+    },
+    "title": "upload files — completed",
+    "screenshot": "screenshots/upload-files--completed.png",
+    "pageType": "list",
+    "flows": [
+      "resource-library"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "10-resources/upload-files--dialog",
+    "hierarchy": {
+      "section": "10-resources",
+      "page": "resources",
+      "state": "modal"
+    },
+    "title": "upload files — dialog",
+    "screenshot": "screenshots/upload-files--dialog.png",
+    "pageType": "list",
+    "flows": [
+      "resource-library"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "modal"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "10-resources/upload-files--selected",
+        "type": "submits",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "10-resources/upload-files--selected",
+    "hierarchy": {
+      "section": "10-resources",
+      "page": "resources",
+      "state": "success"
+    },
+    "title": "upload files — selected",
+    "screenshot": "screenshots/upload-files--selected.png",
+    "pageType": "list",
+    "flows": [
+      "resource-library"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "10-resources/upload-files--completed",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {"id":"10-resources/resources-filter-type","hierarchy":{"section":"10-resources","page":"resources","modal":"type filter","state":"open"},"title":"admin resources — type filter","screenshot":"screenshots/resources-filter-type.png","pageType":"overlay","flows":["resource-management"],"features":["file type filtering"],"elements":["images","PDFs","documents"],"states":["open"],"tags":["role:admin","resource library","filter"],"summary":"Resource type filtering separates images, PDFs, and documents."},
+  {"id":"10-resources/resources-filter-visibility","hierarchy":{"section":"10-resources","page":"resources","modal":"visibility filter","state":"open"},"title":"admin resources — visibility filter","screenshot":"screenshots/resources-filter-visibility.png","pageType":"overlay","flows":["resource-management"],"features":["sharing visibility filtering"],"elements":["shared with everyone","not shared with everyone"],"states":["open"],"tags":["role:admin","resource library","filter","sharing"],"summary":"Visibility filtering distinguishes organization-shared files from private resources."},
+  {"id":"10-resources/resources-filter-uploaded-from","hierarchy":{"section":"10-resources","page":"resources","modal":"uploaded from","state":"open"},"title":"admin resources — uploaded-from date","screenshot":"screenshots/resources-filter-uploaded-from.png","pageType":"date-picker","flows":["resource-management"],"features":["upload date filtering"],"elements":["calendar","apply"],"states":["open"],"tags":["role:admin","resource library","filter","date picker"],"summary":"Resource uploads can be filtered from a selected date."},
+  {"id":"10-resources/resources-filter-uploaded-to","hierarchy":{"section":"10-resources","page":"resources","modal":"uploaded to","state":"open"},"title":"admin resources — uploaded-to date","screenshot":"screenshots/resources-filter-uploaded-to.png","pageType":"date-picker","flows":["resource-management"],"features":["upload date filtering"],"elements":["calendar","apply"],"states":["open"],"tags":["role:admin","resource library","filter","date picker"],"summary":"Resource uploads can be filtered through a selected end date."}
+]

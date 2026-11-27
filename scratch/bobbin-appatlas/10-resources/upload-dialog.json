@@ -1,0 +1,35 @@
+{
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nResources\nNew folder\nUpload files\n\nYour file library. Upload worksheets and images, organize them into folders, and attach them to courses.\n\nFOLDERS\n\nAtlas research resources\n0 files\nNew folder\n\nFILES\n\nShow files in folders\nFilter\nNo files outside folders\n\nEverything you can see is filed in a folder. Show the files inside them here, or open a folder to browse it.\n\nShow files in folders\nUpload files\nClick to choose files or drag them here\nPNG, JPG, PDF, Word or PowerPoint\nAdd to folder\nShare with everyone\nEveryone in your organization can view these files. They appear in the Organization tab inside every LessonSpace.\nCancel\nUpload",
+  "inputs": [
+    {
+      "i": 0,
+      "type": "checkbox",
+      "placeholder": "",
+      "accept": ""
+    },
+    {
+      "i": 1,
+      "type": "text",
+      "placeholder": "Search files…",
+      "accept": ""
+    },
+    {
+      "i": 2,
+      "type": "file",
+      "placeholder": "",
+      "accept": ".png,.jpg,.jpeg,.pdf,.doc,.docx,.ppt,.pptx"
+    },
+    {
+      "i": 3,
+      "type": "text",
+      "placeholder": "No folder",
+      "accept": ""
+    },
+    {
+      "i": 4,
+      "type": "checkbox",
+      "placeholder": "",
+      "accept": ""
+    }
+  ]
+}

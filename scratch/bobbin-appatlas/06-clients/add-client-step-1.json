@@ -1,0 +1,55 @@
+{
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nSet up your account\n0/5 completed\nSetup\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nClients\nImport\nAdd client\n\nParents and payers, who receive the post-lesson reports\n\nA sample client shows how Bobbin works. It's kept out of this list.\n\nOpen the sample client\nNo clients yet\n\nClients are the parents or payers behind your students. They receive the post-lesson reports, so add a client before adding the students they pay for.\n\nAdd client\nImport from CSV\nAdd client\n\nAdd a client to your organization. They are the paying parent or payer.\n\nFirst name (optional)\nLast name\nEmail\n\nWe'll email the client an invite to set a password and sign in. Your organization's emails reach them once they accept. If they already use Bobbin, they'll sign in with their existing password instead.\n\nTimezone\nCancel\nAdd client",
+  "fields": [
+    {
+      "type": "text",
+      "name": null,
+      "label": "Search clients…",
+      "placeholder": "Search clients…",
+      "checked": false
+    },
+    {
+      "type": "text",
+      "name": null,
+      "label": null,
+      "placeholder": null,
+      "checked": false
+    },
+    {
+      "type": "text",
+      "name": null,
+      "label": null,
+      "placeholder": null,
+      "checked": false
+    },
+    {
+      "type": "email",
+      "name": null,
+      "label": null,
+      "placeholder": "client@example.com",
+      "checked": false
+    },
+    {
+      "type": "text",
+      "name": null,
+      "label": "Timezone",
+      "placeholder": "Select a timezone (optional)",
+      "checked": false
+    }
+  ],
+  "buttons": [
+    "Search…\nK",
+    "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+    "Help and updates\nNew updates available",
+    "Search…K",
+    "EUEmmanuel UsangAdmin · Science Students Academy",
+    "Help and updatesNew updates available",
+    "Set up billing",
+    "Import",
+    "Add client",
+    "Add client",
+    "Import from CSV",
+    "Cancel",
+    "Add client"
+  ]
+}

@@ -1,0 +1,447 @@
+{
+  "url": "https://app.withbobbin.com/setup",
+  "title": "Dashboard | Bobbin",
+  "headings": [
+    "Good morning, Emmanuel",
+    "Brief your tutors on letting students in",
+    "Today",
+    "This week",
+    "Needs attention",
+    "Get started with confidence",
+    "Find the right plan"
+  ],
+  "controls": [
+    {
+      "tag": "A",
+      "label": "Skip to content",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup#main-scroll"
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Collapse sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Expand sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Search…\nK",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Set up your account\n0/5 completed",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Setup",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Dashboard",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "A",
+      "label": "Calendar",
+      "type": null,
+      "href": "https://app.withbobbin.com/calendar"
+    },
+    {
+      "tag": "A",
+      "label": "Lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons"
+    },
+    {
+      "tag": "A",
+      "label": "Courses",
+      "type": null,
+      "href": "https://app.withbobbin.com/courses"
+    },
+    {
+      "tag": "A",
+      "label": "Students",
+      "type": null,
+      "href": "https://app.withbobbin.com/students"
+    },
+    {
+      "tag": "A",
+      "label": "Clients",
+      "type": null,
+      "href": "https://app.withbobbin.com/clients"
+    },
+    {
+      "tag": "A",
+      "label": "Tutors",
+      "type": null,
+      "href": "https://app.withbobbin.com/tutors"
+    },
+    {
+      "tag": "A",
+      "label": "Team",
+      "type": null,
+      "href": "https://app.withbobbin.com/team"
+    },
+    {
+      "tag": "A",
+      "label": "Recordings",
+      "type": null,
+      "href": "https://app.withbobbin.com/recordings"
+    },
+    {
+      "tag": "A",
+      "label": "Resources",
+      "type": null,
+      "href": "https://app.withbobbin.com/resources"
+    },
+    {
+      "tag": "A",
+      "label": "Report approvals",
+      "type": null,
+      "href": "https://app.withbobbin.com/report-approvals"
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "Unlinked sessions",
+      "type": null,
+      "href": "https://app.withbobbin.com/sessions/unlinked"
+    },
+    {
+      "tag": "A",
+      "label": "Settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Help and updates\nNew updates available",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Close menu",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Collapse sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Expand sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Search…K",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Set up your account0/5 completed",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Setup",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Dashboard",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "A",
+      "label": "Calendar",
+      "type": null,
+      "href": "https://app.withbobbin.com/calendar"
+    },
+    {
+      "tag": "A",
+      "label": "Lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons"
+    },
+    {
+      "tag": "A",
+      "label": "Courses",
+      "type": null,
+      "href": "https://app.withbobbin.com/courses"
+    },
+    {
+      "tag": "A",
+      "label": "Students",
+      "type": null,
+      "href": "https://app.withbobbin.com/students"
+    },
+    {
+      "tag": "A",
+      "label": "Clients",
+      "type": null,
+      "href": "https://app.withbobbin.com/clients"
+    },
+    {
+      "tag": "A",
+      "label": "Tutors",
+      "type": null,
+      "href": "https://app.withbobbin.com/tutors"
+    },
+    {
+      "tag": "A",
+      "label": "Team",
+      "type": null,
+      "href": "https://app.withbobbin.com/team"
+    },
+    {
+      "tag": "A",
+      "label": "Recordings",
+      "type": null,
+      "href": "https://app.withbobbin.com/recordings"
+    },
+    {
+      "tag": "A",
+      "label": "Resources",
+      "type": null,
+      "href": "https://app.withbobbin.com/resources"
+    },
+    {
+      "tag": "A",
+      "label": "Report approvals",
+      "type": null,
+      "href": "https://app.withbobbin.com/report-approvals"
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "Unlinked sessions",
+      "type": null,
+      "href": "https://app.withbobbin.com/sessions/unlinked"
+    },
+    {
+      "tag": "A",
+      "label": "Settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Help and updatesNew updates available",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Set up billing",
+      "type": null,
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Open navigation",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Open the sample course",
+      "type": null,
+      "href": "https://app.withbobbin.com/courses/9231"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Delete demo data",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Dismiss the classroom tip",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Read the classroom guide",
+      "type": null,
+      "href": "https://help.withbobbin.com/en/articles/17565149-the-tutor-led-classroom"
+    },
+    {
+      "tag": "A",
+      "label": "Live view",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons/live"
+    },
+    {
+      "tag": "A",
+      "label": "Open calendar",
+      "type": null,
+      "href": "https://app.withbobbin.com/calendar"
+    },
+    {
+      "tag": "A",
+      "label": "All lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "MON\n23",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "TUE\n24",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "WED\n25",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "THU\n26",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "FRI\n27",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "SAT\n28",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "SUN\n29",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "0 safeguarding flags\n\nno unresolved flags",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "0 lesson reports\n\nnothing to approve",
+      "type": null,
+      "href": "https://app.withbobbin.com/report-approvals"
+    },
+    {
+      "tag": "A",
+      "label": "0 reports outstanding\n\nall caught up",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons?status=awaiting-report"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Watch the Bobbin walkthrough video",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Visit the help centre",
+      "type": null,
+      "href": "https://help.withbobbin.com/en/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Chat to us",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Find the right plan\n\nBook a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your business\n\nBook a call",
+      "type": null,
+      "href": "https://calendly.com/gabe-tutorcruncher/30min?utm_source=bobbin-app&utm_medium=referral&utm_campaign=trial-upsell&utm_content=tile"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "NEW · MOBILE APP\n\nRecord lessons on the go\n\nCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.\n\nLearn more",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Dismiss",
+      "type": "button",
+      "href": null
+    }
+  ]
+}

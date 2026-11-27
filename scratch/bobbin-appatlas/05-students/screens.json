@@ -1,0 +1,168 @@
+[
+  {
+    "id": "05-students/add-student--client-picker-open",
+    "hierarchy": {
+      "section": "05-students",
+      "page": "students",
+      "state": "default"
+    },
+    "title": "add student — client picker open",
+    "screenshot": "screenshots/add-student--client-picker-open.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "05-students/add-student--client-selected",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "05-students/add-student--client-selected",
+    "hierarchy": {
+      "section": "05-students",
+      "page": "students",
+      "state": "success"
+    },
+    "title": "add student — client selected",
+    "screenshot": "screenshots/add-student--client-selected.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "05-students/student-created--detail",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "05-students/add-student--step-1",
+    "hierarchy": {
+      "section": "05-students",
+      "page": "students",
+      "state": "default"
+    },
+    "title": "add student — step 1",
+    "screenshot": "screenshots/add-student--step-1.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "05-students/add-student--client-picker-open",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "05-students/page--default",
+    "hierarchy": {
+      "section": "05-students",
+      "page": "students",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "05-students/student-created--detail",
+    "hierarchy": {
+      "section": "05-students",
+      "page": "students",
+      "state": "success"
+    },
+    "title": "student created — detail",
+    "screenshot": "screenshots/student-created--detail.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "05-students/student--edit-email",
+    "hierarchy": {"section": "05-students", "page": "student detail", "state": "modal"},
+    "title": "student — edit profile",
+    "screenshot": "screenshots/student--edit-email.png",
+    "pageType": "detail",
+    "flows": ["organization-setup", "student-invitation"],
+    "features": ["edit identity", "add student email"],
+    "elements": ["first name", "last name", "email", "client", "timezone", "save changes"],
+    "states": ["modal"],
+    "tags": ["profile edit", "invitation"],
+    "summary": "Student profile editor exposes an optional email field, allowing a roster-only student to become an invited user.",
+    "links": [{"to": "05-students/student--email-invited", "type": "submits", "via": "Save changes"}]
+  },
+  {
+    "id": "05-students/student--edit-email-filled",
+    "hierarchy": {"section": "05-students", "page": "student detail", "state": "form-filled"},
+    "title": "student — email entered",
+    "screenshot": "screenshots/student--edit-email-filled.png",
+    "pageType": "detail",
+    "flows": ["student-invitation"],
+    "features": ["add student email"],
+    "elements": ["email", "save changes"],
+    "states": ["form-filled"],
+    "tags": ["invitation"],
+    "summary": "Email is filled in the student profile editor before submission."
+  },
+  {
+    "id": "05-students/student--email-invited",
+    "hierarchy": {"section": "05-students", "page": "student detail", "state": "success"},
+    "title": "student — invitation sent",
+    "screenshot": "screenshots/student--email-invited.png",
+    "pageType": "detail",
+    "flows": ["student-invitation"],
+    "features": ["student invitation", "invite status"],
+    "elements": ["contact email", "invite not accepted", "success confirmation"],
+    "states": ["success", "pending-invite"],
+    "tags": ["invitation", "pending"],
+    "summary": "Bobbin confirms the invitation was sent; the student remains pending until they accept it."
+  }
+]

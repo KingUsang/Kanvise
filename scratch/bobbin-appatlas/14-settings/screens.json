@@ -1,0 +1,170 @@
+[
+  {
+    "id": "14-settings/billing--entry",
+    "hierarchy": {
+      "section": "14-settings",
+      "page": "settings",
+      "state": "default"
+    },
+    "title": "billing — entry",
+    "screenshot": "screenshots/billing--entry.png",
+    "pageType": "settings",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "14-settings/billing--loaded",
+    "hierarchy": {
+      "section": "14-settings",
+      "page": "settings",
+      "state": "default"
+    },
+    "title": "billing — loaded",
+    "screenshot": "screenshots/billing--loaded.png",
+    "pageType": "settings",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "14-settings/billing--starter-selected",
+    "hierarchy": {
+      "section": "14-settings",
+      "page": "settings",
+      "state": "success"
+    },
+    "title": "billing — starter selected",
+    "screenshot": "screenshots/billing--starter-selected.png",
+    "pageType": "settings",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "14-settings/page--default",
+    "hierarchy": {
+      "section": "14-settings",
+      "page": "settings",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "settings",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "14-settings/settings-ai-content-style",
+    "hierarchy": {
+      "section": "14-settings",
+      "page": "settings",
+      "state": "default"
+    },
+    "title": "settings ai content style",
+    "screenshot": "screenshots/settings-ai-content-style.png",
+    "pageType": "settings",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "14-settings/settings-emails",
+    "hierarchy": {
+      "section": "14-settings",
+      "page": "settings",
+      "state": "default"
+    },
+    "title": "settings emails",
+    "screenshot": "screenshots/settings-emails.png",
+    "pageType": "settings",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "14-settings/settings-safeguarding",
+    "hierarchy": {
+      "section": "14-settings",
+      "page": "settings",
+      "state": "default"
+    },
+    "title": "settings safeguarding",
+    "screenshot": "screenshots/settings-safeguarding.png",
+    "pageType": "settings",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {"id":"14-settings/settings-lessons--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"lessons","state":"loaded"},"title":"settings — lesson policies","screenshot":"screenshots/settings-lessons--full.png","pageType":"settings","flows":["organization-settings"],"features":["report approvals","recording policy","consent defaults","tutor visibility","lesson access","insight selection"],"elements":["policy toggles","recording retention","viewer roles","insight controls"],"states":["loaded"],"tags":["role:admin","settings","policy"],"summary":"Lesson settings centralize report, recording, consent, tutor-access, classroom-entry, and generated-insight policies."},
+  {"id":"14-settings/settings-lessons-reorder","hierarchy":{"section":"14-settings","page":"settings","subtab":"lessons","state":"reorder"},"title":"settings — reorder lesson insights","screenshot":"screenshots/settings-lessons-reorder.png","pageType":"settings","flows":["organization-settings"],"features":["insight ordering"],"elements":["done","student performance","tutor performance","subject and objective insights"],"states":["reorder"],"tags":["role:admin","settings","reorder"],"summary":"Reorder mode allows admins to control the sequence of generated student, tutor, subject, objective, and skill insights."},
+  {"id":"14-settings/settings-lessons-reset","hierarchy":{"section":"14-settings","page":"settings","subtab":"lessons","state":"reset"},"title":"settings — insight defaults reset","screenshot":"screenshots/settings-lessons-reset-confirmation.png","pageType":"settings","flows":["organization-settings"],"features":["reset insight defaults"],"elements":["reset to defaults","success toast"],"states":["success"],"tags":["role:admin","settings","insights"],"summary":"Reset to defaults completed successfully; the before and after enabled counts remained 3/4 student and 2/3 tutor insights."},
+  {"id":"14-settings/settings-emails--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"emails","state":"loaded"},"title":"settings — organization emails","screenshot":"screenshots/settings-emails--full.png","pageType":"settings","flows":["organization-settings"],"features":["attendance emails","schedule emails","reminders","change notifications","course emails","client report defaults"],"elements":["email policy toggles","apply to existing clients"],"states":["loaded"],"tags":["role:admin","settings","email"],"summary":"Admins configure organization-wide attendance, scheduling, reminder, cancellation, course, and client-email defaults."},
+  {"id":"14-settings/settings-safeguarding--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"safeguarding","state":"loaded"},"title":"settings — safeguarding detection","screenshot":"screenshots/settings-safeguarding--full.png","pageType":"settings","flows":["organization-settings","safeguarding"],"features":["detection master switch","category routing"],"elements":["profanity","self-harm","off-platform contact","personal information","inappropriate content","bullying"],"states":["loaded"],"tags":["role:admin","settings","safeguarding"],"summary":"Safeguarding policies independently route six concern categories to all-email, severe-only, record-only, or disabled handling."},
+  {"id":"14-settings/settings-ai-content-style--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"AI content style","state":"detailed-in-use"},"title":"settings — AI content style","screenshot":"screenshots/settings-ai-content-style--full.png","pageType":"settings","flows":["organization-settings"],"features":["detailed style","structured style","concise style"],"elements":["in use","compare styles"],"states":["detailed-in-use"],"tags":["role:admin","settings","ai-assisted"],"summary":"A single Detailed/Structured/Concise selection shapes lesson plans, summaries, and engagement write-ups generated from that point forward."},
+  {"id":"14-settings/settings-ai-style-compare","hierarchy":{"section":"14-settings","page":"settings","subtab":"AI content style","modal":"compare styles","state":"open"},"title":"settings — compare AI content styles","screenshot":"screenshots/settings-ai-style-compare.png","pageType":"comparison","flows":["organization-settings"],"features":["side-by-side comparison","one-at-a-time comparison","style selection"],"elements":["detailed","structured","concise","use structured","use concise"],"states":["open"],"tags":["role:admin","settings","ai-assisted","comparison"],"summary":"The comparison modal previews the same lesson as Detailed, Structured, and Concise content before any style change."},
+  {"id":"14-settings/settings-general--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"general","state":"loaded"},"title":"settings — general timezone","screenshot":"screenshots/settings-general--full.png","pageType":"settings","flows":["organization-settings"],"features":["organization timezone"],"elements":["timezone"],"states":["loaded"],"tags":["role:admin","settings","timezone"],"summary":"General settings currently contain the organization-wide display timezone."},
+  {"id":"14-settings/settings-general-timezone-options","hierarchy":{"section":"14-settings","page":"settings","subtab":"general","modal":"timezone options","state":"open"},"title":"settings — timezone options","screenshot":"screenshots/settings-general-timezone-options.png","pageType":"overlay","flows":["organization-settings"],"features":["timezone selection"],"elements":["timezone search","timezone options"],"states":["open"],"tags":["role:admin","settings","timezone","dropdown"],"summary":"The organization timezone opens a searchable option picker; no change was applied."},
+  {"id":"14-settings/settings-activity--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"activity log","state":"populated"},"title":"settings — activity log","screenshot":"screenshots/settings-activity--full.png","pageType":"audit-log","flows":["organization-settings"],"features":["audit history","pagination","date filtering","action filtering"],"elements":["date","user","action","entity","source","122 events","pagination"],"states":["populated"],"tags":["role:admin","settings","audit log"],"summary":"The organization audit log records login, lesson, session, and entity events with actor, source, date range, and pagination."},
+  {"id":"14-settings/settings-activity-filter","hierarchy":{"section":"14-settings","page":"settings","subtab":"activity log","modal":"filter","state":"open"},"title":"settings — activity filter","screenshot":"screenshots/settings-activity-filter.png","pageType":"overlay","flows":["organization-settings"],"features":["audit filtering"],"elements":["from","to","filter"],"states":["open"],"tags":["role:admin","settings","audit log","filter"],"summary":"Activity records can be constrained by date and filter criteria."},
+  {"id":"14-settings/settings-api--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"API","state":"empty"},"title":"settings — MCP and API","screenshot":"screenshots/settings-api--full.png","pageType":"settings","flows":["organization-settings","integration-setup"],"features":["MCP server","tutor assistant permissions","connected assistants","REST API keys"],"elements":["enable MCP server","allow tutor changes","server address","copy","create key"],"states":["empty"],"tags":["role:admin","settings","MCP","API"],"summary":"Admins can enable Bobbin's OAuth MCP server, govern tutor-assistant write access, inspect connected assistants, and create REST keys."},
+  {"id":"14-settings/settings-api-create-key","hierarchy":{"section":"14-settings","page":"settings","subtab":"API","modal":"create API key","state":"open"},"title":"settings — create API key","screenshot":"screenshots/settings-api-create-key.png","pageType":"form","flows":["organization-settings","integration-setup"],"features":["API key naming","immutable write scope"],"elements":["name","allow changes","cancel","create key"],"states":["open","not-submitted"],"tags":["role:admin","settings","API","credentials"],"summary":"API keys are named and optionally granted an immutable create/update/schedule/cancel scope; no key was created."},
+  {"id":"14-settings/settings-webhooks--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"webhooks","state":"empty"},"title":"settings — webhooks","screenshot":"screenshots/settings-webhooks--full.png","pageType":"settings","flows":["organization-settings","integration-setup"],"features":["event webhooks"],"elements":["add endpoint"],"states":["empty"],"tags":["role:admin","settings","webhook","empty state"],"summary":"Webhook endpoints receive Bobbin event POSTs; the organization has none configured."},
+  {"id":"14-settings/settings-webhook-add-endpoint","hierarchy":{"section":"14-settings","page":"settings","subtab":"webhooks","modal":"add endpoint","state":"open"},"title":"settings — add webhook endpoint","screenshot":"screenshots/settings-webhook-add-endpoint.png","pageType":"form","flows":["organization-settings","integration-setup"],"features":["webhook endpoint creation","event selection"],"elements":["endpoint URL","events","cancel","add endpoint"],"states":["open","not-submitted"],"tags":["role:admin","settings","webhook","form"],"summary":"The endpoint form collects destination and event subscriptions; no webhook was added."},
+  {"id":"14-settings/settings-studybugs--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"Studybugs","state":"disconnected"},"title":"settings — Studybugs integration","screenshot":"screenshots/settings-studybugs--full.png","pageType":"integration","flows":["organization-settings","integration-setup"],"features":["pupil roll sync","attendance sync","automatic student sync"],"elements":["school ID","session token","send roll and attendance","send new students","connect"],"states":["disconnected"],"tags":["role:admin","settings","integration"],"summary":"Studybugs connects through school ID and session token and can sync pupil roll, attendance, and newly added students."},
+  {"id":"14-settings/settings-data-export--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"data export","state":"default"},"title":"settings — personal data export","screenshot":"screenshots/settings-data-export--full.png","pageType":"form","flows":["organization-settings","data-export"],"features":["GDPR right-of-access export"],"elements":["student","tutor","client","user","request export"],"states":["default","not-submitted"],"tags":["role:admin","settings","privacy","export"],"summary":"Admins can request a GDPR personal-data export by user type and receive a time-limited download link by email; no export was requested."},
+  {"id":"14-settings/settings-beta--full","hierarchy":{"section":"14-settings","page":"settings","subtab":"beta","state":"loaded"},"title":"settings — beta features","screenshot":"screenshots/settings-beta--full.png","pageType":"settings","flows":["organization-settings"],"features":["in-person recording beta","learning profiles beta"],"elements":["enable in-person recording","enable learning profiles","share your thoughts"],"states":["loaded"],"tags":["role:admin","settings","beta"],"summary":"Beta controls currently cover mobile in-person recording and student learning profiles."},
+  {"id":"14-settings/settings-beta-feedback","hierarchy":{"section":"14-settings","page":"settings","subtab":"beta","modal":"feedback","state":"open"},"title":"settings — beta feedback","screenshot":"screenshots/settings-beta-feedback.png","pageType":"form","flows":["organization-settings"],"features":["beta feedback"],"elements":["message","cancel","send"],"states":["open","not-submitted"],"tags":["role:admin","settings","beta","feedback"],"summary":"Admins can send freeform feedback about beta features; no message was submitted."},
+  {"id":"14-settings/settings-jump-to","hierarchy":{"section":"14-settings","page":"settings","modal":"jump to","state":"open"},"title":"settings — jump-to menu","screenshot":"screenshots/settings-jump-to.png","pageType":"overlay","flows":["organization-settings"],"features":["settings navigation"],"elements":["organization settings","integrations","beta"],"states":["open"],"tags":["role:admin","settings","navigation"],"summary":"Jump to provides a compact route picker across organization, integration, and beta settings."},
+  {"id":"14-settings/settings-search-recording","hierarchy":{"section":"14-settings","page":"settings","state":"search-results"},"title":"settings — search recording","screenshot":"screenshots/settings-search-recording.png","pageType":"search","flows":["organization-settings"],"features":["settings search"],"elements":["11 matching settings","recording policies","consent policies","beta recording"],"states":["search-results"],"tags":["role:admin","settings","search"],"summary":"Searching “recording” finds 11 settings spanning recording policy, consent, tutor access, reports, and beta in-person recording."}
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "11-report-approvals/page--default",
+    "hierarchy": {
+      "section": "11-report-approvals",
+      "page": "report-approvals",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Report approvals is the administrative batch-release queue; the observed state has no reports awaiting approval."
+  },
+  {
+    "id": "11-report-approvals/report-approvals--recheck",
+    "hierarchy": {"section": "11-report-approvals", "page": "report-approvals", "state": "empty"},
+    "title": "report approvals — verified empty queue",
+    "screenshot": "screenshots/report-approvals--recheck.png",
+    "pageType": "list",
+    "flows": ["report-approval"],
+    "features": ["review held reports", "batch release"],
+    "elements": ["empty state"],
+    "states": ["empty"],
+    "tags": ["review queue", "report distribution"],
+    "summary": "Administrative report queue is empty; its purpose is to review/edit held reports, approve individually, and release them in a batch."
+  },
+  {"id":"11-report-approvals/report-approvals--populated","hierarchy":{"section":"11-report-approvals","page":"report approvals","state":"awaiting-approval"},"title":"report approvals — populated tutor report","screenshot":"screenshots/report-approvals--populated.png","pageType":"review-queue","flows":["report-approval"],"features":["held report review","lesson link","tutor notes editing","approval"],"elements":["student report","submitted by tutor","edit tutor notes","approve"],"states":["populated","awaiting-approval","no-summary"],"tags":["role:admin","report approval","review queue"],"summary":"Manual tutor completion populated the real admin queue with one held student report and its submitting tutor."},
+  {"id":"11-report-approvals/report-approvals--edit-notes","hierarchy":{"section":"11-report-approvals","page":"report approvals","modal":"edit tutor notes","state":"open"},"title":"report approvals — edit tutor notes","screenshot":"screenshots/report-approvals--edit-notes.png","pageType":"form","flows":["report-approval"],"features":["admin report editing"],"elements":["tutor notes","cancel","save"],"states":["open"],"tags":["role:admin","report approval","form"],"summary":"Admins can edit held tutor notes directly inside the review queue before approval."},
+  {"id":"11-report-approvals/report-approvals--notes-saved","hierarchy":{"section":"11-report-approvals","page":"report approvals","state":"notes-saved"},"title":"report approvals — tutor notes saved","screenshot":"screenshots/report-approvals--notes-saved.png","pageType":"review-queue","flows":["report-approval"],"features":["saved report edits"],"elements":["research tutor note","approve"],"states":["populated","edited"],"tags":["role:admin","report approval","edited"],"summary":"A clearly labeled research note was saved to verify the report-editing path."},
+  {"id":"11-report-approvals/report-approvals--approved","hierarchy":{"section":"11-report-approvals","page":"report approvals","state":"approved-staged"},"title":"report approvals — approved for batch","screenshot":"screenshots/report-approvals--approved.png","pageType":"review-queue","flows":["report-approval"],"features":["staged approval","undo approval","batch release"],"elements":["approved","undo approval","send approved 1"],"states":["approved","staged"],"tags":["role:admin","report approval","batch action"],"summary":"Approve stages the report in the current page and exposes Undo approval plus a one-report batch-send action."},
+  {"id":"11-report-approvals/report-approvals--send-confirmation","hierarchy":{"section":"11-report-approvals","page":"report approvals","modal":"send approved reports","state":"confirmation"},"title":"report approvals — send confirmation","screenshot":"screenshots/report-approvals--send-confirmation.png","pageType":"confirmation","flows":["report-approval"],"features":["batch release","client email warning"],"elements":["cancel","send to clients"],"states":["confirmation","irreversible"],"tags":["role:admin","report approval","email","confirmation"],"summary":"The final release warns that approved reports are emailed to clients immediately and cannot be recalled."},
+  {"id":"11-report-approvals/report-approvals--released","hierarchy":{"section":"11-report-approvals","page":"report approvals","state":"empty-after-release"},"title":"report approvals — released","screenshot":"screenshots/report-approvals--released.png","pageType":"review-queue","flows":["report-approval"],"features":["successful report release"],"elements":["no reports awaiting approval"],"states":["released","empty"],"tags":["role:admin","report approval","completed","empty state"],"summary":"Sending the controlled test report returned the queue to its all-caught-up state."}
+]

@@ -1,0 +1,5 @@
+{
+  "destination": "https://checkout.stripe.com/g/pay/[redacted-checkout-session]",
+  "title": "Stripe Checkout",
+  "outcome": "Plan selection redirects to external Stripe Checkout; no payment data entered."
+}

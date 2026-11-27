@@ -1,0 +1,28 @@
+[
+  {
+    "id": "12-safeguarding/page--default",
+    "hierarchy": {
+      "section": "12-safeguarding",
+      "page": "safeguarding",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {"id":"12-safeguarding/safeguarding-open","hierarchy":{"section":"12-safeguarding","page":"safeguarding","subtab":"open","state":"empty"},"title":"safeguarding — open","screenshot":"screenshots/safeguarding-open.png","pageType":"review-queue","flows":["safeguarding-review"],"features":["open concern queue"],"elements":["open tab"],"states":["empty"],"tags":["role:admin","safeguarding","empty state"],"summary":"No open safeguarding concerns exist in the test organization."},
+  {"id":"12-safeguarding/safeguarding-resolved","hierarchy":{"section":"12-safeguarding","page":"safeguarding","subtab":"resolved","state":"empty"},"title":"safeguarding — resolved","screenshot":"screenshots/safeguarding-resolved.png","pageType":"review-queue","flows":["safeguarding-review"],"features":["resolved concern history"],"elements":["resolved tab"],"states":["empty"],"tags":["role:admin","safeguarding","empty state"],"summary":"No resolved safeguarding concerns exist in the test organization."},
+  {"id":"12-safeguarding/safeguarding-not-an-issue","hierarchy":{"section":"12-safeguarding","page":"safeguarding","subtab":"not an issue","state":"empty"},"title":"safeguarding — not an issue","screenshot":"screenshots/safeguarding-not-an-issue.png","pageType":"review-queue","flows":["safeguarding-review"],"features":["dismissed concern history"],"elements":["not an issue tab"],"states":["empty"],"tags":["role:admin","safeguarding","empty state"],"summary":"No safeguarding items have been dismissed as not an issue."},
+  {"id":"12-safeguarding/safeguarding-all","hierarchy":{"section":"12-safeguarding","page":"safeguarding","subtab":"all","state":"empty"},"title":"safeguarding — all","screenshot":"screenshots/safeguarding-all.png","pageType":"review-queue","flows":["safeguarding-review"],"features":["all concern history"],"elements":["all tab","category explanation"],"states":["empty"],"tags":["role:admin","safeguarding","empty state"],"summary":"The all-concerns state is empty and documents all six detectable categories."},
+  {"id":"12-safeguarding/safeguarding-filter","hierarchy":{"section":"12-safeguarding","page":"safeguarding","modal":"filter","state":"open"},"title":"safeguarding — filter","screenshot":"screenshots/safeguarding-filter.png","pageType":"overlay","flows":["safeguarding-review"],"features":["concern filtering"],"elements":["filter"],"states":["open"],"tags":["role:admin","safeguarding","filter"],"summary":"The safeguarding queue exposes an additional filter panel alongside status segments."}
+]

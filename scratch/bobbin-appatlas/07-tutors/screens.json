@@ -1,0 +1,72 @@
+[
+  {
+    "id": "07-tutors/add-tutor--step-1",
+    "hierarchy": {
+      "section": "07-tutors",
+      "page": "tutors",
+      "state": "default"
+    },
+    "title": "add tutor — step 1",
+    "screenshot": "screenshots/add-tutor--step-1.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "07-tutors/tutor-created--detail",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "07-tutors/page--default",
+    "hierarchy": {
+      "section": "07-tutors",
+      "page": "tutors",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "07-tutors/tutor-created--detail",
+    "hierarchy": {
+      "section": "07-tutors",
+      "page": "tutors",
+      "state": "success"
+    },
+    "title": "tutor created — detail",
+    "screenshot": "screenshots/tutor-created--detail.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  }
+]

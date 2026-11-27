@@ -1,0 +1,62 @@
+{
+  "fields": [
+    {
+      "type": "text",
+      "placeholder": "Search students…",
+      "label": "Search students…",
+      "value": ""
+    },
+    {
+      "type": "text",
+      "placeholder": null,
+      "label": null,
+      "value": ""
+    },
+    {
+      "type": "text",
+      "placeholder": null,
+      "label": null,
+      "value": ""
+    },
+    {
+      "type": "email",
+      "placeholder": "student@example.com",
+      "label": null,
+      "value": ""
+    },
+    {
+      "type": "text",
+      "placeholder": "Select a client",
+      "label": "Client",
+      "value": ""
+    },
+    {
+      "type": "text",
+      "placeholder": "Select a timezone (optional)",
+      "label": "Timezone",
+      "value": "Africa/Lagos"
+    },
+    {
+      "type": "checkbox",
+      "placeholder": null,
+      "label": null,
+      "value": "on"
+    }
+  ],
+  "buttons": [
+    "Search…\nK",
+    "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+    "Help and updates\nNew updates available",
+    "Search…K",
+    "EUEmmanuel UsangAdmin · Science Students Academy",
+    "Help and updatesNew updates available",
+    "Set up billing",
+    "Import",
+    "Add student",
+    "Add student",
+    "Import from CSV",
+    "Cancel",
+    "Add student"
+  ],
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nSet up your account\n1/5 completed\nSetup\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nStudents\nImport\nAdd student\n\nLearners that insights are generated about\n\nA sample student shows how Bobbin works. It's kept out of this list.\n\nOpen the sample student\nNo students yet\n\nStudents are the learners you teach. Add one to start scheduling lessons and generating insights about their progress.\n\nAdd student\nImport from CSV\nAdd student\n\nAdd a student to your organization and link them to a paying client.\n\nFirst name (optional)\nLast name\nEmail (optional)\n\nLeave blank for a student with no email of their own. Their client is the point of contact, and without an address they get no invite and cannot sign in.\n\nClient\nTimezone\nRecording consent already given\n\nUntick if the family hasn't agreed to recording yet, and Bobbin will email their client to ask.\n\nCancel\nAdd student"
+}

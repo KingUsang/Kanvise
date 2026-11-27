@@ -1,0 +1,268 @@
+[
+  {
+    "id": "04-courses/course-created--detail",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "success"
+    },
+    "title": "course created — detail",
+    "screenshot": "screenshots/course-created--detail.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "04-courses/new-course--step-1-filled",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "new course — step 1 filled",
+    "screenshot": "screenshots/new-course--step-1-filled.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "04-courses/new-course--step-2-roster",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "04-courses/new-course--step-1",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "new course — step 1",
+    "screenshot": "screenshots/new-course--step-1.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "04-courses/new-course--step-1-filled",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "04-courses/new-course--step-2-roster",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "new course — step 2 roster",
+    "screenshot": "screenshots/new-course--step-2-roster.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "04-courses/new-course--step-2-selected",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "04-courses/new-course--step-2-selected",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "success"
+    },
+    "title": "new course — step 2 selected",
+    "screenshot": "screenshots/new-course--step-2-selected.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "04-courses/new-course--step-3-review",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "04-courses/new-course--step-3-review",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "new course — step 3 review",
+    "screenshot": "screenshots/new-course--step-3-review.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "04-courses/course-created--detail",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "04-courses/page--default",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "04-courses/sample-course--lessons",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "sample course — lessons",
+    "screenshot": "screenshots/sample-course--lessons.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "04-courses/sample-course--outline",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "sample course — outline",
+    "screenshot": "screenshots/sample-course--outline.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "04-courses/sample-course--summary-loaded",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "sample course — summary loaded",
+    "screenshot": "screenshots/sample-course--summary-loaded.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "04-courses/sample-course--summary",
+    "hierarchy": {
+      "section": "04-courses",
+      "page": "courses",
+      "state": "default"
+    },
+    "title": "sample course — summary",
+    "screenshot": "screenshots/sample-course--summary.png",
+    "pageType": "list",
+    "flows": [
+      "course-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  }
+]

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "01-dashboard/page--default",
+    "hierarchy": {
+      "section": "01-dashboard",
+      "page": "dashboard",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {"id":"01-dashboard/dashboard-global-search","hierarchy":{"section":"01-dashboard","page":"dashboard","modal":"global search","state":"results"},"title":"admin dashboard — global search","screenshot":"screenshots/dashboard-global-search.png","pageType":"search","flows":["admin-workspace"],"features":["cross-entity search","settings search","keyboard navigation"],"elements":["students","tutors","clients","courses","lessons","settings"],"states":["results"],"tags":["role:admin","search","command palette"],"summary":"Admin global search groups people, courses, lessons, and settings and supports keyboard navigation."},
+  {"id":"01-dashboard/dashboard-help-updates","hierarchy":{"section":"01-dashboard","page":"dashboard","modal":"help and updates","state":"open"},"title":"admin dashboard — help and updates","screenshot":"screenshots/dashboard-help-updates.png","pageType":"overlay","flows":["admin-workspace"],"features":["changelog","help","feedback","privacy"],"elements":["what's new","help guide","share feedback","privacy policy"],"states":["open"],"tags":["role:admin","help","menu"],"summary":"Admin help menu provides product updates, documentation, feedback, and privacy destinations."},
+  {"id":"01-dashboard/dashboard-account-menu","hierarchy":{"section":"01-dashboard","page":"dashboard","modal":"account menu","state":"open"},"title":"admin dashboard — account menu","screenshot":"screenshots/dashboard-account-menu.png","pageType":"overlay","flows":["admin-workspace"],"features":["account identity","sign out"],"elements":["admin identity","organization","sign out"],"states":["open"],"tags":["role:admin","account","menu"],"summary":"The admin account menu identifies the user and organization and exposes sign-out."},
+  {"id":"01-dashboard/dashboard-mobile-app","hierarchy":{"section":"01-dashboard","page":"dashboard","modal":"mobile app","state":"open"},"title":"admin dashboard — Bobbin mobile app","screenshot":"screenshots/dashboard-mobile-app.png","pageType":"marketing-modal","flows":["admin-workspace","mobile-recording"],"features":["offline recording","background recording","automatic reports","attendance"],"elements":["App Store","Google Play","close"],"states":["open","beta"],"tags":["role:admin","mobile","recording"],"summary":"The mobile-app beta supports offline/background in-person lesson capture, attendance, transcripts, and reports."}
+]

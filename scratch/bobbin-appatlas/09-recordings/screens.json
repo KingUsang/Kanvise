@@ -1,0 +1,44 @@
+[
+  {
+    "id": "09-recordings/page--default",
+    "hierarchy": {
+      "section": "09-recordings",
+      "page": "recordings",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "09-recordings/recording-session--detail-recheck",
+    "hierarchy": {"section": "09-recordings", "page": "recordings", "state": "expanded"},
+    "title": "recording session — expanded detail",
+    "screenshot": "screenshots/recording-session--detail-recheck.png",
+    "pageType": "detail",
+    "flows": ["lesson-lifecycle"],
+    "features": ["session attendance ledger", "open lesson"],
+    "elements": ["session row", "participant status", "joined/left times", "time in session"],
+    "states": ["expanded", "no-recording"],
+    "tags": ["attendance", "recording"],
+    "summary": "Expanded online-session row shows attendance and timing per participant, billing status, and the route back to the source lesson."
+  },
+  {"id":"09-recordings/recordings-online","hierarchy":{"section":"09-recordings","page":"recordings","subtab":"online","state":"populated"},"title":"admin recordings — online","screenshot":"screenshots/recordings-online.png","pageType":"list","flows":["recording-management"],"features":["online session history","billing status","playback"],"elements":["session","length","billed","people","recording"],"states":["populated"],"tags":["role:admin","recording"],"summary":"Admin online-session history includes billing status, participant context, and recording availability."},
+  {"id":"09-recordings/recordings-in-person","hierarchy":{"section":"09-recordings","page":"recordings","subtab":"in person","state":"empty"},"title":"admin recordings — in-person","screenshot":"screenshots/recordings-in-person.png","pageType":"list","flows":["recording-management"],"features":["mobile in-person recordings"],"elements":["in person tab"],"states":["empty"],"tags":["role:admin","recording","mobile","empty state"],"summary":"In-person mobile recordings have a dedicated processing/list surface; no test recordings exist."},
+  {"id":"09-recordings/recordings-filter-lesson","hierarchy":{"section":"09-recordings","page":"recordings","modal":"lesson filter","state":"open"},"title":"admin recordings — lesson filter","screenshot":"screenshots/recordings-filter-lesson.png","pageType":"overlay","flows":["recording-management"],"features":["lesson filtering"],"elements":["lesson picker"],"states":["open"],"tags":["role:admin","recording","filter"],"summary":"Recording sessions can be narrowed to a specific lesson."},
+  {"id":"09-recordings/recordings-filter-student","hierarchy":{"section":"09-recordings","page":"recordings","modal":"student filter","state":"open"},"title":"admin recordings — student filter","screenshot":"screenshots/recordings-filter-student.png","pageType":"overlay","flows":["recording-management"],"features":["student filtering"],"elements":["student picker"],"states":["open"],"tags":["role:admin","recording","filter"],"summary":"Recording sessions can be narrowed by student."},
+  {"id":"09-recordings/recordings-filter-tutor","hierarchy":{"section":"09-recordings","page":"recordings","modal":"tutor filter","state":"open"},"title":"admin recordings — tutor filter","screenshot":"screenshots/recordings-filter-tutor.png","pageType":"overlay","flows":["recording-management"],"features":["tutor filtering"],"elements":["tutor picker"],"states":["open"],"tags":["role:admin","recording","filter"],"summary":"Recording sessions can be narrowed by tutor."},
+  {"id":"09-recordings/recordings-filter-from-date","hierarchy":{"section":"09-recordings","page":"recordings","modal":"from date","state":"open"},"title":"admin recordings — from date","screenshot":"screenshots/recordings-filter-from-date.png","pageType":"date-picker","flows":["recording-management"],"features":["date range filtering"],"elements":["calendar","apply"],"states":["open"],"tags":["role:admin","recording","filter","date picker"],"summary":"Recording history supports a start boundary through an inline date picker."},
+  {"id":"09-recordings/recordings-filter-to-date","hierarchy":{"section":"09-recordings","page":"recordings","modal":"to date","state":"open"},"title":"admin recordings — to date","screenshot":"screenshots/recordings-filter-to-date.png","pageType":"date-picker","flows":["recording-management"],"features":["date range filtering"],"elements":["calendar","apply"],"states":["open"],"tags":["role:admin","recording","filter","date picker"],"summary":"Recording history supports an end boundary through an inline date picker."},
+  {"id":"09-recordings/recordings-player","hierarchy":{"section":"09-recordings","page":"recordings","modal":"player","state":"open"},"title":"admin recording — video player","screenshot":"screenshots/recordings-player.png","pageType":"media-viewer","flows":["recording-management"],"features":["recording playback"],"elements":["lesson title","video player","close"],"states":["open"],"tags":["role:admin","recording","modal"],"summary":"Watch opens a lesson recording in an in-page player modal."}
+]

@@ -1,0 +1,36 @@
+{
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nTeam\nAdd team member\n\nThe people who run your organization. Anyone on the team can be a client manager.\n\nNAME\tEMAIL\t\nACTIONS\n\n\nEU\nEmmanuel Usang\nYou\n\tkingusang09+6466@gmail.com\t\n\nAU\nAdmin User\nDemo\n\tadmin@science-students-academy-781.demobobbin.com\t\nRemove\nAdd team member\n\nTeam members can manage everything in your organization, and can be assigned as a client's manager.\n\nFirst name (optional)\nLast name\nEmail\n\nWe'll email the team member an invite to set a password and sign in. Your organization's emails reach them once they accept. If they already use Bobbin, they'll sign in with their existing password instead.\n\nCancel\nAdd team member",
+  "fields": [
+    {
+      "i": 0,
+      "type": "text",
+      "placeholder": "",
+      "value": ""
+    },
+    {
+      "i": 1,
+      "type": "text",
+      "placeholder": "",
+      "value": ""
+    },
+    {
+      "i": 2,
+      "type": "email",
+      "placeholder": "name@example.com",
+      "value": ""
+    }
+  ],
+  "buttons": [
+    "Search…\nK",
+    "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+    "Help and updates\nNew updates available",
+    "Search…K",
+    "EUEmmanuel UsangAdmin · Science Students Academy",
+    "Help and updatesNew updates available",
+    "Set up billing",
+    "Add team member",
+    "Remove",
+    "Cancel",
+    "Add team member"
+  ]
+}

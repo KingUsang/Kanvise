@@ -1,0 +1,100 @@
+[
+  {
+    "id": "06-clients/add-client--step-1",
+    "hierarchy": {
+      "section": "06-clients",
+      "page": "clients",
+      "state": "default"
+    },
+    "title": "add client — step 1",
+    "screenshot": "screenshots/add-client--step-1.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "06-clients/client-created--detail",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "06-clients/client-created--detail",
+    "hierarchy": {
+      "section": "06-clients",
+      "page": "clients",
+      "state": "success"
+    },
+    "title": "client created — detail",
+    "screenshot": "screenshots/client-created--detail.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "06-clients/client-created--populated-list",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "06-clients/client-created--populated-list",
+    "hierarchy": {
+      "section": "06-clients",
+      "page": "clients",
+      "state": "success"
+    },
+    "title": "client created — populated list",
+    "screenshot": "screenshots/client-created--populated-list.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "06-clients/page--default",
+    "hierarchy": {
+      "section": "06-clients",
+      "page": "clients",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  }
+]

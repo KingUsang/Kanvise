@@ -1,0 +1,5 @@
+# Local authenticated evidence; never publish these raw files.
+*.local.txt
+03-lessons/lesson-created.json
+15-tutor-role/screenshots/tutor-login--ready.png
+15-tutor-role/screenshots/tutor-login--after-click.png

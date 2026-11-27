@@ -1,0 +1,25 @@
+[
+  {
+    "id": "13-unlinked-sessions/page--default",
+    "hierarchy": {
+      "section": "13-unlinked-sessions",
+      "page": "unlinked-sessions",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {"id":"13-unlinked-sessions/unlinked-include-one-participant","hierarchy":{"section":"13-unlinked-sessions","page":"unlinked sessions","state":"include-one-participant"},"title":"unlinked sessions — include one participant","screenshot":"screenshots/unlinked-include-one-participant.png","pageType":"review-queue","flows":["session-linking"],"features":["single-participant session inclusion"],"elements":["include sessions with one participant"],"states":["empty","toggle-on"],"tags":["role:admin","unlinked sessions","toggle","empty state"],"summary":"Admins can include one-participant sessions in the unlinked-session queue; the reversible state remains empty."},
+  {"id":"13-unlinked-sessions/unlinked-filter","hierarchy":{"section":"13-unlinked-sessions","page":"unlinked sessions","modal":"filter","state":"open"},"title":"unlinked sessions — filter","screenshot":"screenshots/unlinked-filter.png","pageType":"overlay","flows":["session-linking"],"features":["unlinked session filtering"],"elements":["filter"],"states":["open"],"tags":["role:admin","unlinked sessions","filter"],"summary":"The queue provides filters for locating orphaned classroom sessions before linking them to lessons."}
+]

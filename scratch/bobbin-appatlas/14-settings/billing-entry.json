@@ -1,0 +1,179 @@
+{
+  "url": "https://app.withbobbin.com/settings/billing",
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nSettings\n\nConfigure your workspace\n\nORGANIZATION\nLessons\nEmails\nSafeguarding\nAI content style\nGeneral\nBilling\nActivity log\nINTEGRATIONS\nAPI\nWebhooks\nStudybugs\nData export\nBETA\nBeta",
+  "links": [
+    {
+      "text": "Skip to content",
+      "href": "#main-scroll"
+    },
+    {
+      "text": "Dashboard",
+      "href": "/"
+    },
+    {
+      "text": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "text": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "text": "Courses",
+      "href": "/courses"
+    },
+    {
+      "text": "Students",
+      "href": "/students"
+    },
+    {
+      "text": "Clients",
+      "href": "/clients"
+    },
+    {
+      "text": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "text": "Team",
+      "href": "/team"
+    },
+    {
+      "text": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "text": "Resources",
+      "href": "/resources"
+    },
+    {
+      "text": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "text": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "text": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "text": "Settings",
+      "href": "/settings"
+    },
+    {
+      "text": "Dashboard",
+      "href": "/"
+    },
+    {
+      "text": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "text": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "text": "Courses",
+      "href": "/courses"
+    },
+    {
+      "text": "Students",
+      "href": "/students"
+    },
+    {
+      "text": "Clients",
+      "href": "/clients"
+    },
+    {
+      "text": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "text": "Team",
+      "href": "/team"
+    },
+    {
+      "text": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "text": "Resources",
+      "href": "/resources"
+    },
+    {
+      "text": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "text": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "text": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "text": "Settings",
+      "href": "/settings"
+    },
+    {
+      "text": "Lessons",
+      "href": "/settings/lessons"
+    },
+    {
+      "text": "Emails",
+      "href": "/settings/emails"
+    },
+    {
+      "text": "Safeguarding",
+      "href": "/settings/safeguarding"
+    },
+    {
+      "text": "AI content style",
+      "href": "/settings/ai-content-style"
+    },
+    {
+      "text": "General",
+      "href": "/settings/general"
+    },
+    {
+      "text": "Billing",
+      "href": "/settings/billing"
+    },
+    {
+      "text": "Activity log",
+      "href": "/settings/activity"
+    },
+    {
+      "text": "API",
+      "href": "/settings/api"
+    },
+    {
+      "text": "Webhooks",
+      "href": "/settings/webhooks"
+    },
+    {
+      "text": "Studybugs",
+      "href": "/settings/studybugs"
+    },
+    {
+      "text": "Data export",
+      "href": "/settings/data-export"
+    },
+    {
+      "text": "Beta",
+      "href": "/settings/beta"
+    }
+  ],
+  "buttons": [
+    "Search…\nK",
+    "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+    "Help and updates\nNew updates available",
+    "Search…K",
+    "EUEmmanuel UsangAdmin · Science Students Academy",
+    "Help and updatesNew updates available",
+    "Set up billing"
+  ]
+}

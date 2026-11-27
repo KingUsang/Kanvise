@@ -1,0 +1,540 @@
+[
+  {
+    "id": "03-lessons/classroom--end-lesson-confirmation",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "modal"
+    },
+    "title": "classroom — end lesson confirmation",
+    "screenshot": "screenshots/classroom--end-lesson-confirmation.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "modal"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/classroom--lesson-ended",
+        "type": "submits",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/classroom--invite-open",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "classroom — invite open",
+    "screenshot": "screenshots/classroom--invite-open.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/classroom--end-lesson-confirmation",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/classroom--join-dialog",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "modal"
+    },
+    "title": "classroom — join dialog",
+    "screenshot": "screenshots/classroom--join-dialog.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "modal"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/classroom--joined",
+        "type": "submits",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/classroom--joined",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "classroom — joined",
+    "screenshot": "screenshots/classroom--joined.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/classroom--live",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/classroom--lesson-ended",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "classroom — lesson ended",
+    "screenshot": "screenshots/classroom--lesson-ended.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/lesson-ended--insights-status",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/classroom--live-onboarding-dismissed",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "classroom — live onboarding dismissed",
+    "screenshot": "screenshots/classroom--live-onboarding-dismissed.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/classroom--invite-open",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/classroom--live",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "classroom — live",
+    "screenshot": "screenshots/classroom--live.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/classroom--live-onboarding-dismissed",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/classroom--tutor-invite-emailed",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "classroom — tutor invite emailed",
+    "screenshot": "screenshots/classroom--tutor-invite-emailed.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "03-lessons/lesson-created--detail",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "success"
+    },
+    "title": "lesson created — detail",
+    "screenshot": "screenshots/lesson-created--detail.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/lesson-created--join-available",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/lesson-created--join-available",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "success"
+    },
+    "title": "lesson created — join available",
+    "screenshot": "screenshots/lesson-created--join-available.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/classroom--join-dialog",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/lesson-ended--insights-status",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "lesson ended — insights status",
+    "screenshot": "screenshots/lesson-ended--insights-status.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "03-lessons/new-lesson--step-1",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "new lesson — step 1",
+    "screenshot": "screenshots/new-lesson--step-1.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/new-lesson--step-2-schedule",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/new-lesson--step-2-filled",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "new lesson — step 2 filled",
+    "screenshot": "screenshots/new-lesson--step-2-filled.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/new-lesson--step-3-review",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/new-lesson--step-2-schedule",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "new lesson — step 2 schedule",
+    "screenshot": "screenshots/new-lesson--step-2-schedule.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/new-lesson--step-2-filled",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/new-lesson--step-3-review",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "new lesson — step 3 review",
+    "screenshot": "screenshots/new-lesson--step-3-review.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "03-lessons/lesson-created--detail",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "03-lessons/page--default",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "03-lessons/sample-lesson--loaded",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "sample lesson — loaded",
+    "screenshot": "screenshots/sample-lesson--loaded.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "03-lessons/sample-lesson--notes",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "sample lesson — notes",
+    "screenshot": "screenshots/sample-lesson--notes.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "03-lessons/sample-lesson--plan",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "sample lesson — plan",
+    "screenshot": "screenshots/sample-lesson--plan.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "03-lessons/sample-lesson--session",
+    "hierarchy": {
+      "section": "03-lessons",
+      "page": "lessons",
+      "state": "default"
+    },
+    "title": "sample lesson — session",
+    "screenshot": "screenshots/sample-lesson--session.png",
+    "pageType": "detail",
+    "flows": [
+      "lesson-lifecycle"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "03-lessons/sample-insights--recheck",
+    "hierarchy": {"section": "03-lessons", "page": "lesson insights", "state": "completed"},
+    "title": "sample lesson — generated AI insights",
+    "screenshot": "screenshots/sample-insights--recheck.png",
+    "pageType": "detail",
+    "flows": ["lesson-lifecycle", "report-approval"],
+    "features": ["AI lesson summary", "performance cards", "objectives covered", "distribution"],
+    "elements": ["lesson summary", "student performance", "tutor performance", "objectives", "share"],
+    "states": ["completed"],
+    "tags": ["AI insights", "post-lesson", "report"],
+    "summary": "Completed sample lesson shows the generated AI summary and learning/participation evidence used for reporting.",
+    "links": [{"to": "03-lessons/sample-insights--share-open", "type": "opens-modal", "via": "Share"}]
+  },
+  {
+    "id": "03-lessons/sample-insights--share-open",
+    "hierarchy": {"section": "03-lessons", "page": "lesson insights", "state": "menu"},
+    "title": "sample lesson — share options",
+    "screenshot": "screenshots/sample-insights--share-open.png",
+    "pageType": "detail",
+    "flows": ["report-approval"],
+    "features": ["PDF export", "client email"],
+    "elements": ["share menu", "export as PDF", "email to clients"],
+    "states": ["menu"],
+    "tags": ["report distribution"],
+    "summary": "Share surface exposes PDF export and sending the lesson report to clients."
+  }
+]

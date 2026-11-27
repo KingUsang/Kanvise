@@ -1,0 +1,43 @@
+{
+  "fields": [
+    {
+      "type": "text",
+      "placeholder": "Search courses…",
+      "label": "Search courses…",
+      "value": ""
+    },
+    {
+      "type": "text",
+      "placeholder": "e.g. Algebra 1",
+      "label": null,
+      "value": ""
+    },
+    {
+      "type": "textarea",
+      "placeholder": "What does this course cover?",
+      "label": null,
+      "value": ""
+    },
+    {
+      "type": "color",
+      "placeholder": null,
+      "label": "Custom colour",
+      "value": "#97316b"
+    }
+  ],
+  "buttons": [
+    "Search…\nK",
+    "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+    "Help and updates\nNew updates available",
+    "Search…K",
+    "EUEmmanuel UsangAdmin · Science Students Academy",
+    "Help and updatesNew updates available",
+    "Set up billing",
+    "Export join links",
+    "New course",
+    "Filter",
+    "Create a course",
+    "Continue"
+  ],
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nSet up your account\n3/5 completed\nSetup\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nCourses\nExport join links\nNew course\n\nA course pairs a student with a tutor over time\n\nFilter\n\nA sample course shows how Bobbin works. It's kept out of this list.\n\nOpen the sample course\nNo courses yet\n\nA course pairs a student with a tutor over time. It holds the course plan and everything you schedule, so create one before booking lessons.\n\nCreate a course\nNew course\n\nName, description, where it runs and colour.\n\nCourse name\nDescription (optional)\nColour\n\nUsed to identify this course at a glance on the calendar and in lists.\n\nContinue"
+}

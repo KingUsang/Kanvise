@@ -1,0 +1,605 @@
+{
+  "url": "https://app.withbobbin.com/settings/lessons",
+  "title": "Settings | Bobbin",
+  "headings": [
+    "Settings",
+    "Reports",
+    "Recordings",
+    "Consent",
+    "What tutors see",
+    "Lessons",
+    "Lesson insights",
+    "Student performance",
+    "Tutor performance"
+  ],
+  "controls": [
+    {
+      "tag": "A",
+      "label": "Skip to content",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/lessons#main-scroll"
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Collapse sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Expand sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Search…\nK",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Set up your account\n0/5 completed",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Setup",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Dashboard",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "A",
+      "label": "Calendar",
+      "type": null,
+      "href": "https://app.withbobbin.com/calendar"
+    },
+    {
+      "tag": "A",
+      "label": "Lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons"
+    },
+    {
+      "tag": "A",
+      "label": "Courses",
+      "type": null,
+      "href": "https://app.withbobbin.com/courses"
+    },
+    {
+      "tag": "A",
+      "label": "Students",
+      "type": null,
+      "href": "https://app.withbobbin.com/students"
+    },
+    {
+      "tag": "A",
+      "label": "Clients",
+      "type": null,
+      "href": "https://app.withbobbin.com/clients"
+    },
+    {
+      "tag": "A",
+      "label": "Tutors",
+      "type": null,
+      "href": "https://app.withbobbin.com/tutors"
+    },
+    {
+      "tag": "A",
+      "label": "Team",
+      "type": null,
+      "href": "https://app.withbobbin.com/team"
+    },
+    {
+      "tag": "A",
+      "label": "Recordings",
+      "type": null,
+      "href": "https://app.withbobbin.com/recordings"
+    },
+    {
+      "tag": "A",
+      "label": "Resources",
+      "type": null,
+      "href": "https://app.withbobbin.com/resources"
+    },
+    {
+      "tag": "A",
+      "label": "Report approvals",
+      "type": null,
+      "href": "https://app.withbobbin.com/report-approvals"
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "Unlinked sessions",
+      "type": null,
+      "href": "https://app.withbobbin.com/sessions/unlinked"
+    },
+    {
+      "tag": "A",
+      "label": "Settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Help and updates\nNew updates available",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Close menu",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Collapse sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Expand sidebar",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Search…K",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Set up your account0/5 completed",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Setup",
+      "type": null,
+      "href": "https://app.withbobbin.com/setup"
+    },
+    {
+      "tag": "A",
+      "label": "Dashboard",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "A",
+      "label": "Calendar",
+      "type": null,
+      "href": "https://app.withbobbin.com/calendar"
+    },
+    {
+      "tag": "A",
+      "label": "Lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/lessons"
+    },
+    {
+      "tag": "A",
+      "label": "Courses",
+      "type": null,
+      "href": "https://app.withbobbin.com/courses"
+    },
+    {
+      "tag": "A",
+      "label": "Students",
+      "type": null,
+      "href": "https://app.withbobbin.com/students"
+    },
+    {
+      "tag": "A",
+      "label": "Clients",
+      "type": null,
+      "href": "https://app.withbobbin.com/clients"
+    },
+    {
+      "tag": "A",
+      "label": "Tutors",
+      "type": null,
+      "href": "https://app.withbobbin.com/tutors"
+    },
+    {
+      "tag": "A",
+      "label": "Team",
+      "type": null,
+      "href": "https://app.withbobbin.com/team"
+    },
+    {
+      "tag": "A",
+      "label": "Recordings",
+      "type": null,
+      "href": "https://app.withbobbin.com/recordings"
+    },
+    {
+      "tag": "A",
+      "label": "Resources",
+      "type": null,
+      "href": "https://app.withbobbin.com/resources"
+    },
+    {
+      "tag": "A",
+      "label": "Report approvals",
+      "type": null,
+      "href": "https://app.withbobbin.com/report-approvals"
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding",
+      "type": null,
+      "href": "https://app.withbobbin.com/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "Unlinked sessions",
+      "type": null,
+      "href": "https://app.withbobbin.com/sessions/unlinked"
+    },
+    {
+      "tag": "A",
+      "label": "Settings",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Help and updatesNew updates available",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Set up billing",
+      "type": null,
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Home",
+      "type": null,
+      "href": "https://app.withbobbin.com/"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Open navigation",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Jump to",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "INPUT",
+      "label": "Find a setting",
+      "type": "text",
+      "href": null
+    },
+    {
+      "tag": "A",
+      "label": "Lessons",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/lessons"
+    },
+    {
+      "tag": "A",
+      "label": "Emails",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/emails"
+    },
+    {
+      "tag": "A",
+      "label": "Safeguarding",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/safeguarding"
+    },
+    {
+      "tag": "A",
+      "label": "AI content style",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/ai-content-style"
+    },
+    {
+      "tag": "A",
+      "label": "General",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/general"
+    },
+    {
+      "tag": "A",
+      "label": "Billing",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/billing"
+    },
+    {
+      "tag": "A",
+      "label": "Activity log",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/activity"
+    },
+    {
+      "tag": "A",
+      "label": "API",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/api"
+    },
+    {
+      "tag": "A",
+      "label": "Webhooks",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/webhooks"
+    },
+    {
+      "tag": "A",
+      "label": "Studybugs",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/studybugs"
+    },
+    {
+      "tag": "A",
+      "label": "Data export",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/data-export"
+    },
+    {
+      "tag": "A",
+      "label": "Beta",
+      "type": null,
+      "href": "https://app.withbobbin.com/settings/beta"
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show details",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Require tutor notes on lesson completion",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Require admin approval before sending reports",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Require admin approval before showing progress reports",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Attach report PDF to lesson report emails",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show details",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show a recording notice before online lessons",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "INPUT",
+      "label": "Link to show when a lesson ends",
+      "type": "text",
+      "href": null
+    },
+    {
+      "tag": "INPUT",
+      "label": "Button text",
+      "type": "text",
+      "href": null
+    },
+    {
+      "tag": "INPUT",
+      "label": "Days to keep recordings",
+      "type": "number",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Apply to existing recordings",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show details",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Honor recording consent opt-outs",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "We collect recording consent outside Bobbin",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "New students start with recording consent given",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Let tutors give and withdraw recording consent",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show details",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show tutor performance feedback to tutors",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show engagement score on lesson insights",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Show details",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Let tutors read completed lesson reports on their courses",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Start a lesson before students join their tutor",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Let tutors into the classroom during another tutor's lesson",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Reorder",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Reset to defaults",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Student engagement",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Student strengths",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Areas for improvement",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Next steps",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Tutor teaching",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Tutor strengths",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Areas for tutor improvement",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Main subjects covered",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Objectives covered",
+      "type": "button",
+      "href": null
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Skills practiced",
+      "type": "button",
+      "href": null
+    }
+  ]
+}

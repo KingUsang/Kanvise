@@ -1,0 +1,40 @@
+{
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nResources\nNew folder\nUpload files\n\nYour file library. Upload worksheets and images, organize them into folders, and attach them to courses.\n\nFILES\n\nShow files in folders\nFilter\nNo files yet\n\nUpload worksheets, past papers and images to build your library. Files here can be attached to courses and used inside classrooms.\n\nUpload files\nNew folder\nName\nShare with everyone\nEveryone in your organization can view this folder. It appears in the Organization tab inside every LessonSpace.\nCancel\nCreate folder",
+  "fields": [
+    {
+      "i": 0,
+      "placeholder": "",
+      "value": "on"
+    },
+    {
+      "i": 1,
+      "placeholder": "Search files…",
+      "value": ""
+    },
+    {
+      "i": 2,
+      "placeholder": "e.g. Algebra worksheets",
+      "value": ""
+    },
+    {
+      "i": 3,
+      "placeholder": "",
+      "value": "on"
+    }
+  ],
+  "buttons": [
+    "Search…\nK",
+    "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+    "Help and updates\nNew updates available",
+    "Search…K",
+    "EUEmmanuel UsangAdmin · Science Students Academy",
+    "Help and updatesNew updates available",
+    "Set up billing",
+    "New folder",
+    "Upload files",
+    "Filter",
+    "Upload files",
+    "Cancel",
+    "Create folder"
+  ]
+}

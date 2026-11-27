@@ -1,0 +1,185 @@
+{
+  "text": "Skip to content\nS\nORGANIZATION\nScience Students Academy\nSearch…\nK\nDashboard\nCalendar\nLessons\nCourses\n\nPEOPLE\n\nStudents\nClients\nTutors\nTeam\n\nLIBRARY\n\nRecordings\nResources\n\nTO REVIEW\n\nReport approvals\nSafeguarding\nUnlinked sessions\n\nORGANIZATION\n\nSettings\nEU\nEmmanuel Usang\nAdmin · Science Students Academy\nHelp and updates\nNew updates available\n\nYou're currently on a free trial. Set up billing to continue using Bobbin.\n\nSet up billing\nSettings\n\nConfigure your workspace\n\nORGANIZATION\nLessons\nEmails\nSafeguarding\nAI content style\nGeneral\nBilling\nActivity log\nINTEGRATIONS\nAPI\nWebhooks\nStudybugs\nData export\nBETA\nBeta\nSubscription\nReferrals\nSubscription status\nTrial\n\nFree trial active\n\nYou have 20 trial hours left. If nobody runs a lesson before 11 Dec 2026, your trial ends then. Set up billing to keep using Bobbin after your trial ends.\n\nChoose your plan\n\nSelect a plan to continue with billing setup. Plans are priced in USD for Nigeria. Wrong country? Contact support.\n\nPromotion code (optional)\n\nHave a code? Apply it before choosing a plan to get the discount.\n\nApply\nStarter\n$109.00\n/month\n80 hours included\n$1.50/hour after\nSelect plan\nPlus\n$259.00\n/month\n200 hours included\n$1.40/hour after\nSelect plan\nPro\n$389.00\n/month\n320 hours included\n$1.30/hour after\nSelect plan\nEnterprise\nCustom\nCustom hours included\nCustom rate/hour after\nGet in touch\nFree trial hours\n\nLessons on your free trial use these hours.\n\nTrial hours used\n0.0 / 20.0 hours\n\n20.0 hours left\n\n0.0\nHours used\n20.0\nHours included\n20.0\nHours left\n\nYour trial ends when these hours are used, or after two weeks with nobody joining a lesson. Hours used on your trial are never billed.",
+  "buttons": [
+    "Search…\nK",
+    "EU\nEmmanuel Usang\nAdmin · Science Students Academy",
+    "Help and updates\nNew updates available",
+    "Search…K",
+    "EUEmmanuel UsangAdmin · Science Students Academy",
+    "Help and updatesNew updates available",
+    "Set up billing",
+    "Subscription",
+    "Referrals",
+    "Apply",
+    "Select plan",
+    "Select plan",
+    "Select plan",
+    "Get in touch"
+  ],
+  "links": [
+    {
+      "text": "Skip to content",
+      "href": "#main-scroll"
+    },
+    {
+      "text": "Dashboard",
+      "href": "/"
+    },
+    {
+      "text": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "text": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "text": "Courses",
+      "href": "/courses"
+    },
+    {
+      "text": "Students",
+      "href": "/students"
+    },
+    {
+      "text": "Clients",
+      "href": "/clients"
+    },
+    {
+      "text": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "text": "Team",
+      "href": "/team"
+    },
+    {
+      "text": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "text": "Resources",
+      "href": "/resources"
+    },
+    {
+      "text": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "text": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "text": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "text": "Settings",
+      "href": "/settings"
+    },
+    {
+      "text": "Dashboard",
+      "href": "/"
+    },
+    {
+      "text": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "text": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "text": "Courses",
+      "href": "/courses"
+    },
+    {
+      "text": "Students",
+      "href": "/students"
+    },
+    {
+      "text": "Clients",
+      "href": "/clients"
+    },
+    {
+      "text": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "text": "Team",
+      "href": "/team"
+    },
+    {
+      "text": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "text": "Resources",
+      "href": "/resources"
+    },
+    {
+      "text": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "text": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "text": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "text": "Settings",
+      "href": "/settings"
+    },
+    {
+      "text": "Lessons",
+      "href": "/settings/lessons"
+    },
+    {
+      "text": "Emails",
+      "href": "/settings/emails"
+    },
+    {
+      "text": "Safeguarding",
+      "href": "/settings/safeguarding"
+    },
+    {
+      "text": "AI content style",
+      "href": "/settings/ai-content-style"
+    },
+    {
+      "text": "General",
+      "href": "/settings/general"
+    },
+    {
+      "text": "Billing",
+      "href": "/settings/billing"
+    },
+    {
+      "text": "Activity log",
+      "href": "/settings/activity"
+    },
+    {
+      "text": "API",
+      "href": "/settings/api"
+    },
+    {
+      "text": "Webhooks",
+      "href": "/settings/webhooks"
+    },
+    {
+      "text": "Studybugs",
+      "href": "/settings/studybugs"
+    },
+    {
+      "text": "Data export",
+      "href": "/settings/data-export"
+    },
+    {
+      "text": "Beta",
+      "href": "/settings/beta"
+    }
+  ]
+}

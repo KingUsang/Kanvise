@@ -1,0 +1,10 @@
+{
+  "route": "/lessons/:id/insights",
+  "state": "AI insights pending after session ended",
+  "observed": [
+    "lesson summary and takeaways placeholder",
+    "objectives/strengths/improvement/future-tips placeholders",
+    "activity log contains creation/start/end/join events"
+  ],
+  "joinLinkFile": "join-links.local.txt"
+}

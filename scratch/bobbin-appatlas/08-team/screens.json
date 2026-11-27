@@ -1,0 +1,101 @@
+[
+  {
+    "id": "08-team/add-team-member--dialog",
+    "hierarchy": {
+      "section": "08-team",
+      "page": "team",
+      "state": "modal"
+    },
+    "title": "add team member — dialog",
+    "screenshot": "screenshots/add-team-member--dialog.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "modal"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "08-team/add-team-member--filled",
+        "type": "submits",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "08-team/add-team-member--filled",
+    "hierarchy": {
+      "section": "08-team",
+      "page": "team",
+      "state": "default"
+    },
+    "title": "add team member — filled",
+    "screenshot": "screenshots/add-team-member--filled.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "default"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state.",
+    "links": [
+      {
+        "to": "08-team/team-member-created--list",
+        "type": "navigates",
+        "via": "observed sequential flow"
+      }
+    ]
+  },
+  {
+    "id": "08-team/page--default",
+    "hierarchy": {
+      "section": "08-team",
+      "page": "team",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {
+    "id": "08-team/team-member-created--list",
+    "hierarchy": {
+      "section": "08-team",
+      "page": "team",
+      "state": "success"
+    },
+    "title": "team member created — list",
+    "screenshot": "screenshots/team-member-created--list.png",
+    "pageType": "list",
+    "flows": [
+      "organization-setup"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "success"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {"id":"08-team/team-remove-confirmation","hierarchy":{"section":"08-team","page":"team","modal":"remove member","state":"confirmation"},"title":"team — remove member confirmation","screenshot":"screenshots/team-remove-confirmation.png","pageType":"confirmation","flows":["team-management"],"features":["member removal","pending invite revocation","account deletion warning"],"elements":["cancel","remove"],"states":["confirmation","destructive"],"tags":["role:admin","team","destructive action"],"summary":"Removing a team member also revokes an unaccepted invite and may remove their account/personal data if they belong to no other organization; removal was not confirmed."}
+]

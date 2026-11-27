@@ -1,0 +1,31 @@
+[
+  {
+    "id": "02-calendar/page--default",
+    "hierarchy": {
+      "section": "02-calendar",
+      "page": "calendar",
+      "state": "empty"
+    },
+    "title": "page — default",
+    "screenshot": "screenshots/page--default.png",
+    "pageType": "list",
+    "flows": [
+      "recon"
+    ],
+    "features": [],
+    "elements": [],
+    "states": [
+      "empty"
+    ],
+    "tags": [],
+    "summary": "Captured AppAtlas evidence state."
+  },
+  {"id":"02-calendar/calendar-day","hierarchy":{"section":"02-calendar","page":"calendar","subtab":"day","state":"default"},"title":"admin calendar — day view","screenshot":"screenshots/calendar-day.png","pageType":"calendar","flows":["admin-workspace","lesson-lifecycle"],"features":["daily schedule"],"elements":["today","date navigation","day","week","month"],"states":["default"],"tags":["role:admin","calendar","schedule"],"summary":"Admin day view presents a single-day lesson timeline."},
+  {"id":"02-calendar/calendar-week","hierarchy":{"section":"02-calendar","page":"calendar","subtab":"week","state":"default"},"title":"admin calendar — week view","screenshot":"screenshots/calendar-week.png","pageType":"calendar","flows":["admin-workspace","lesson-lifecycle"],"features":["weekly schedule"],"elements":["today","date navigation","day","week","month"],"states":["default"],"tags":["role:admin","calendar","schedule"],"summary":"Admin week view shows lessons across seven daily columns."},
+  {"id":"02-calendar/calendar-month","hierarchy":{"section":"02-calendar","page":"calendar","subtab":"month","state":"default"},"title":"admin calendar — month view","screenshot":"screenshots/calendar-month.png","pageType":"calendar","flows":["admin-workspace","lesson-lifecycle"],"features":["monthly schedule"],"elements":["month grid","lesson item"],"states":["default"],"tags":["role:admin","calendar","schedule"],"summary":"Admin month view shows the scheduled lesson in the monthly grid."},
+  {"id":"02-calendar/calendar-filter-student","hierarchy":{"section":"02-calendar","page":"calendar","modal":"student filter","state":"open"},"title":"admin calendar — student picker","screenshot":"screenshots/calendar-filter-student.png","pageType":"overlay","flows":["admin-workspace","lesson-lifecycle"],"features":["student filtering"],"elements":["Atlas Research Student"],"states":["open"],"tags":["role:admin","calendar","filter"],"summary":"Calendar student filter lists the organization's test learner."},
+  {"id":"02-calendar/calendar-filter-course","hierarchy":{"section":"02-calendar","page":"calendar","modal":"course filter","state":"open"},"title":"admin calendar — course picker","screenshot":"screenshots/calendar-filter-course.png","pageType":"overlay","flows":["admin-workspace","lesson-lifecycle"],"features":["course filtering"],"elements":["Atlas Research Course"],"states":["open"],"tags":["role:admin","calendar","filter"],"summary":"Calendar course filter lists the synthetic research course."},
+  {"id":"02-calendar/calendar-filter-client","hierarchy":{"section":"02-calendar","page":"calendar","modal":"client filter","state":"open"},"title":"admin calendar — client picker","screenshot":"screenshots/calendar-filter-client.png","pageType":"overlay","flows":["admin-workspace","lesson-lifecycle"],"features":["client filtering"],"elements":["Atlas Research Client"],"states":["open"],"tags":["role:admin","calendar","filter"],"summary":"Calendar client filter exposes payer/client-linked lesson filtering."},
+  {"id":"02-calendar/calendar-filter-tutor","hierarchy":{"section":"02-calendar","page":"calendar","modal":"tutor filter","state":"open"},"title":"admin calendar — tutor picker","screenshot":"screenshots/calendar-filter-tutor.png","pageType":"overlay","flows":["admin-workspace","lesson-lifecycle"],"features":["tutor filtering"],"elements":["Atlas Research Tutor"],"states":["open"],"tags":["role:admin","calendar","filter"],"summary":"Admin-only calendar filtering includes the tutor dimension."},
+  {"id":"02-calendar/calendar-filter-status","hierarchy":{"section":"02-calendar","page":"calendar","modal":"status filter","state":"open"},"title":"admin calendar — status picker","screenshot":"screenshots/calendar-filter-status.png","pageType":"overlay","flows":["admin-workspace","lesson-lifecycle"],"features":["status filtering"],"elements":["planned","complete","pending","canceled","canceled chargeable","awaiting report","awaiting approval"],"states":["open"],"tags":["role:admin","calendar","filter"],"summary":"Calendar status picker covers the full lesson lifecycle, including reporting and chargeable cancellation states."}
+]
