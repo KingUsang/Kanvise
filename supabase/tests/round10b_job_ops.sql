@@ -27,7 +27,7 @@ VALUES
    'Cancel me', now() + interval '1 day', 60, '00000000-0000-4000-8000-000000010b10'),
   ('00000000-0000-4000-8000-000000010b41', '00000000-0000-4000-8000-000000010b01',
    '00000000-0000-4000-8000-000000010b30', '00000000-0000-4000-8000-000000010b10',
-   'Wrong account', now() + interval '1 day', 60, '00000000-0000-4000-8000-000000010b10');
+   'Wrong account', now() + interval '2 days', 60, '00000000-0000-4000-8000-000000010b10');
 
 INSERT INTO public.durable_jobs (id, job_type, dedupe_key, status)
 VALUES
