@@ -16,7 +16,7 @@ own simpler shell. Words are plain and friendly, never childish.
 ```
 Invite email → SA-01 set password → SA-03 Home
 Join link (lesson) → SA-02 straight into the lesson (no sign-in)
-Diagnostic link → the check (spec 04, DIAG-S)
+Check link → the check (spec 04, DIAG-S)
 Home ─┬─ Lessons (SA-04) → lesson (SA-05) → classroom (spec 07)
       ├─ Homework (SA-06) → hand in (spec 10)
       ├─ Courses (SA-07) → course (SA-08): plan, resources, quizzes
@@ -79,10 +79,10 @@ marker as the tutor app.
 
 3. **To do:** homework due soon and quizzes to take, nearest first, each with a
    due label (**Due tomorrow**, **Due Fri**, **Overdue** in red). Tapping opens
-   it. Empty: **Nothing to do right now. Nice.**
+   it. Empty: **Nothing due right now.**
 4. **From your last lesson:** the latest lesson summary, collapsed to **What to
    work on** with **Read the full summary ›**. Empty until the first summary.
-5. **Your diagnostic** (only while one is waiting): **Alex sent you a short
+5. **Your check** (only while one is waiting): **Alex sent you a short
    check before your first lesson. About 10 minutes.** with **Start**.
 
 ## SA-04 · Lessons

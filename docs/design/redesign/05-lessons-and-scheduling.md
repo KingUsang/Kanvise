@@ -16,15 +16,15 @@ classroom.
 | Status | Meaning | Chip |
 |---|---|---|
 | Planned | In the future | Blue |
-| Live | Started in the classroom and not ended | Orange, pulsing dot |
-| Awaiting summary | Ended; the tutor hasn't completed the report | Amber |
-| Complete | Report done | Green |
+| Live | Started in the classroom and not ended | Green, pulsing dot |
+| Awaiting summary | Ended; the tutor hasn't completed the lesson summary | Amber |
+| Complete | Lesson summary done | Green |
 | Cancelled | Cancelled | Grey |
 
 ## Flow at a glance
 
 ```
-/lessons (LS-01)   /calendar (CAL-01)   Course page › New lesson   Dashboard › Schedule lesson
+/lessons (LL-01)   /calendar (CAL-01)   Course page › New lesson   Dashboard › Schedule lesson
   → New lesson wizard: LW-1 Course and students → LW-2 Topic and time → LW-3 Review
   → Lesson page /lessons/:id (LP-01 planned)
       ↳ Reschedule (LP-03) · Cancel (LP-04) · Join classroom (spec 07)
@@ -32,7 +32,7 @@ classroom.
 
 ---
 
-## LS-01 · Lessons list
+## LL-01 · Lessons list
 
 **Header:** **Lessons** · "Every lesson across all your courses." · primary
 **New lesson**.
@@ -58,7 +58,7 @@ newest first for the others.
 **Empty (no lessons at all):** lesson icon, **No lessons yet**, "Lessons belong
 to a course. Schedule one and your students get the link." and **New lesson**
 (or **Create a course** first if there are no courses).
-**Empty tab:** **Nothing awaiting a report.** · **All caught up.**
+**Empty tab:** **No summaries to write.** · **All caught up.**
 
 ## CAL-01 · Calendar (summary)
 
@@ -113,7 +113,8 @@ Title **Topic and time** · subtitle **What's this lesson about, and when is it?
 
 **Time:**
 - **Starts** and **Ends** (date-time pickers). Defaults: the next whole hour
-  after now (or the slot clicked on the calendar), one hour long. Changing
+  after now (or the slot clicked on the calendar), and the default lesson
+  length from Settings (CFG-L; 45 minutes or an hour, set from onboarding). Changing
   **Starts** moves **Ends** with it.
 - **Repeat:** **Doesn't repeat** · **Every week** · **Every 2 weeks** ·
   **Custom…**. Weekly shows day chips (Mon–Sun, the start day pre-selected) and
@@ -163,7 +164,7 @@ course) · **Repeats** (if part of a series).
   before this lesson.** with **All homework**.
 - **Tabs:** **Lesson plan** · **Notes**.
   - **Lesson plan:** **Learning objectives for this lesson** (from the linked
-    plan topic, editable, each with a tick-box used later in the report). Below
+    plan topic, editable, each with a tick-box used later in the lesson summary). Below
     it, an empty state with the Kavi mark: **Plan this lesson with Kavi.**
     "I'll draft a lesson plan from the topic, the course plan and the last
     lesson. You can edit everything." Button **Draft lesson plan** (Kavi
@@ -186,16 +187,19 @@ course) · **Repeats** (if part of a series).
 
 ## LP-02 · Lesson page in other statuses
 
-- **Live:** the chip pulses orange, the button reads **Rejoin classroom**, and
+- **Live:** the chip pulses green, the button reads **Rejoin classroom**, and
   the activity timeline updates as people join and leave.
 - **Awaiting summary:** a banner at the top of the main column: **This lesson has
-  ended. Write the report so Casey knows what to work on.** Button **Write
-  report** (spec 08). The tabs become **Report** · **Lesson plan** · **Notes** ·
-  **Recording**.
-- **Complete:** the tabs are **Report** · **Session** (attendance, times) ·
-  **Lesson plan** · **Notes** · **Recording**. The right column adds **Set after
-  this lesson: Homework**. The header adds **Share ▾** (Email to students and
-  parents, Export as PDF).
+  ended. Write the summary so Casey knows what to work on.** Button **Write
+  summary** (spec 08). The tabs are **Summary** · **Session** · **Lesson plan** ·
+  **Notes**, as in Bobbin.
+- **Session tab** (Awaiting summary and Complete): attendance per person
+  (status, joined, left, time in lesson), then the recording and its
+  transcript when the lesson was recorded, or **Not recorded**.
+- **Complete:** the same tabs, **Summary** · **Session** · **Lesson plan** ·
+  **Notes**, with Summary open. The right column adds **Set after this lesson:
+  Homework**. The header adds **Share ▾** (**Copy summary**, **Export as PDF**).
+  Nothing is emailed from here.
 - **Cancelled:** a grey banner: **This lesson was cancelled on 25 Nov.**, with **Schedule a
   replacement**.
 
@@ -225,7 +229,7 @@ cancelled.**
 |---|---|---|---|
 | Schedule, reschedule, cancel | Yes | Yes, any lesson | Their own lessons |
 | Join as the tutor | Yes | Only lessons where they are the tutor | Their own lessons |
-| Watch a lesson | n/a | Yes, as an observer (spec 07) | No |
+| Join a lesson they don't teach | n/a | Yes, as an admin (spec 07, CR-09) | No |
 
 ## Data needed (for the build)
 

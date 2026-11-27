@@ -28,15 +28,16 @@ the first redesign pass.
 | `/dashboard/mocks/[id]/offers` | Public and paid quiz offers | Retired already (DOM-009) | none |
 | `/dashboard/question-banks` | Question bank | Retire. Kavi generates questions; no bank | 11 |
 | `/dashboard/notes` | Materials (notes, files) | Keep as Resources | Resources (new spec, see below) |
-| Slides / presentations (API, used in the classroom) | Upload a deck and present it live, with annotations | Keep, inside the classroom and lesson resources | 07 Classroom |
+| Slides / presentations (API, used in the classroom) | Upload a deck and present it live, with annotations | Retire. Replaced by the PlugNMeet whiteboard, which takes uploaded PDFs and slides (owner decision) | 07 Classroom |
 | `/dashboard/payments` | Student payments and payout details | Later: replaced by Billing | 13 Billing |
 | `/dashboard/school-setup` | Account profile, logo, media, slug | Merge into onboarding (name) and Settings (profile, logo) | 02, 12 |
 | `/dashboard/settings`, `/dashboard/profile` | Account and personal settings | Keep as Settings and My profile | 12 Settings |
-| `/dashboard/more` | Duplicate of sidebar links | Retire | none |
-| Avatars (API `/avatars/me`) | Avatar builder | Retire from the main flow. Profile photo upload instead | 12 |
+| `/dashboard/more` | Duplicate of sidebar links | Retire. Old links redirect to `/dashboard`. On phones, **More** in the bottom bar opens the full sidebar as a sheet instead | 16 Responsive |
+| What's new (no page today) | Product updates | New: the What's new dialog in the help menu, with a **New** badge while unread | 01 Shell (SH-04a) |
+| Avatars (API `/avatars/me`) | Avatar builder | Retire. Profile photo upload instead | 12 |
 | Promos (API) | Promotional banners on public pages | Later, with public pages | none |
 | Push notifications (API, PWA) | Browser push for reminders | Keep: reminders and "student is waiting" alerts | 07, 12 |
-| Feedback (API) and "Report a problem" | Feedback reports | Keep as Share feedback | 01 Shell |
+| Feedback (API) and "Report a problem" | Feedback messages | Keep as Share feedback | 01 Shell |
 | Suggestions (API) | Feature suggestions | Merge into Share feedback | 01 |
 
 ## Classroom and lesson pages
@@ -45,7 +46,7 @@ the first redesign pass.
 |---|---|---|---|
 | `/class/[id]` | Join the PlugNMeet classroom; preparing state; admin takeover | Keep, rebuilt around Lesson tools | 07 Classroom |
 | `/live/[shareToken]` | "Anyone with the link" guest classroom | Retire (owner decision: no guest flows) | 07 |
-| `/recording/[shareToken]` | Shared recording link | Keep for students and parents (signed link) | 08 Lesson summary |
+| `/recording/[shareToken]` | Shared recording link | Retire. Students watch recordings in their app; there are no public share links | 09 Student app |
 | Recordings and recaps (API) | Recording processing and AI summaries | Keep: feeds Draft with Kavi | 08 |
 | Recorder fleet, provider wake (API) | Infrastructure for the classroom | No UI change | none |
 
@@ -53,7 +54,7 @@ the first redesign pass.
 
 | Today | What it does | Redesign | Where |
 |---|---|---|---|
-| `/dashboard/student` | Learner home | Keep, rebuilt | 09 Student app |
+| `/dashboard/student` | Student home | Keep, rebuilt | 09 Student app |
 | `/dashboard/student/classes`, `/classes/[id]/recording` | Sessions and recordings | Keep as Lessons | 09 |
 | `/dashboard/student/assignments` | Assignments | Keep as Homework | 09, 10 |
 | `/dashboard/student/mocks`, `/mocks/[id]`, `/attempt/[id]`, `/result/[id]` | Quizzes and attempts | Keep as Quizzes | 09, 11 |
@@ -89,23 +90,27 @@ the first redesign pass.
 
 Welcome and onboarding sequence, invitations, lesson scheduled, lesson
 reminder, lesson cancelled or moved, homework set and marked, quiz published,
-diagnostic sent and finished, recording ready, password and sign-in links.
+starting check sent and finished, recording ready, password and sign-in links.
 Each spec lists the emails its flow sends.
 
 ## Things this check added to the plan
 
-1. **Resources** needs its own spec (files, folders, sharing to a course, slides
-   for the classroom). Added as spec 15.
-2. **Slides in the classroom** must be in spec 07 (upload, present, annotate).
+1. **Resources** needs its own spec (files, folders, sharing to a course, files
+   for the classroom whiteboard). Added as spec 15.
+2. **Files on the PlugNMeet whiteboard** must be in spec 07 (upload a PDF or
+   slides, draw on them). Kanvise's own slides presenter is retired.
 3. **Push notifications** must be in spec 07 (student waiting) and spec 12
    (notification settings).
 4. **Attendance** is no longer a page; it lives on the lesson page and the
    student page. Spec 06 must include the student Attendance tab.
 5. **CSV import and export of students** must be in spec 06.
-6. **Recording share links** for parents must be in spec 08.
-
+6. **Recordings** are watched in the student app (spec 09). Public recording
+   share links are retired.
 7. Every student needs a personal join link on the lesson page (Copy, WhatsApp,
    Email), replacing the retired share links.
+8. **`/dashboard/more`** is retired; old links redirect to the dashboard, and
+   the phone **More** sheet shows the full sidebar (spec 16).
+9. **What's new** is a new dialog in the help menu (spec 01, SH-04a).
 
 ## Feature-level check (components and API endpoints)
 
@@ -117,8 +122,8 @@ for features inside pages, not only the pages themselves.
 | Lesson recap: view, edit, publish | Session detail | Becomes the lesson summary (spec 08). Complete = publish |
 | Public recording share link (`/recording-share-link`, `/recording/[token]`) | Session detail | Retire. Students watch recordings in their app |
 | Regenerate a lesson link | Session detail | Keep as **Get a new link** on each student's join link (spec 05) |
-| Slides presenter with page sync and annotations (`/slides/*`) | Classroom | **Owner decision needed.** PlugNMeet already has a whiteboard that takes uploaded PDFs and slides. Spec 07 uses that and retires Kanvise's own presenter. Say if you want the old presenter kept |
-| Anti-cheat wrapper and exam calculator on quizzes | Student quiz attempt | Not in the first quiz version (diagnostics and checks, not exams). Later with exam modes |
+| Slides presenter with page sync and annotations (`/slides/*`) | Classroom | Retire (owner decision). Replaced by the PlugNMeet whiteboard, which takes uploaded PDFs and slides and has its own drawing tools (spec 07) |
+| Anti-cheat wrapper and exam calculator on quizzes | Student quiz attempt | Not in the first quiz version (starting checks and quizzes, not exams). Later with exam modes |
 | Attempt answer queue (saves answers offline) | Student quiz attempt | Kept in spec 11 (answers save as chosen, offline-safe) |
 | Subject combination (JAMB-style) | Student settings | Retire with multi-subject exams |
 | Question bank import (PDF, document text) | Quiz builder | Retire. Kavi generates questions |
@@ -128,6 +133,6 @@ for features inside pages, not only the pages themselves.
 | Student progress page | Student app | Replaced by the course plan view (spec 09, SA-08) |
 | Needs-grading card | Dashboard | Becomes Needs attention (spec 03, DB-05) |
 | Avatar builder, promos, payout editing | Settings and dashboard | Retired or later (see the table above) |
-| Install prompt, push prompt and settings | Whole app | Kept (spec 09 SA-09, spec 12 ST-N) |
+| Install prompt, push prompt and settings | Whole app | Kept (spec 09 SA-09, spec 12 CFG-N) |
 | Navigation progress bar, unsaved-changes guard | Whole app | Kept as app behaviour (spec 01) |
 | Class session composer, timetable | Class workspace | Replaced by the New lesson wizard with repeats (spec 05) |

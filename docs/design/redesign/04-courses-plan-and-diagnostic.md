@@ -1,4 +1,4 @@
-# 04 · Courses, the course plan and the diagnostic
+# 04 · Courses, the course plan and the starting check
 
 Status: draft for owner review. Builds on `00-decisions.md` and `01-app-shell.md`.
 
@@ -14,10 +14,10 @@ the course plan, lessons, homework, quizzes and resources.
 ```
 /courses  (CRS-01 list, CRS-02 empty)
   → New course wizard
-      CW-1 Details → CW-2 Students → CW-3 Course plan → CW-4 Diagnostic (optional) → CW-5 Review
+      CW-1 Details → CW-2 Students → CW-3 Course plan → CW-4 Starting check (optional) → CW-5 Review
   → Course page /courses/:id
       Summary · Course plan · Lessons · Homework · Quizzes · Resources
-  → Diagnostic: DIAG-S (student takes it) → DIAG-R (tutor reviews results)
+  → Starting check: DIAG-S (student takes it) → DIAG-R (tutor reviews results)
 ```
 
 ---
@@ -70,7 +70,7 @@ Title **New course** · subtitle **Name it, say what it's for and pick a colour.
 | Course name | Required, 2–80 characters | Placeholder **e.g. Algebra 1 Small Group** |
 | Subject | Required. A dropdown of the subjects from onboarding, plus **Add a subject** | Feeds Kavi and the course plan |
 | Level (optional) | Free text with suggestions | Placeholder **e.g. High School** |
-| Goal (optional) | Free text, up to 140 characters | Placeholder **e.g. Ready for the end-of-year exam in June**. Line under it: **Kavi uses this when drafting the course plan and quizzes.** |
+| Goal (optional) | Free text, up to 140 characters | Placeholder **e.g. Ready for the end-of-term test**. Line under it: **Kavi uses this when drafting the course plan and quizzes.** |
 | Colour | 12 swatches, one preselected at random | Line: **Used to spot this course on the calendar and in lists.** |
 
 **Continue** validates. Errors: **Add a course name.** · **Choose a subject.**
@@ -82,11 +82,10 @@ Title **Students** · subtitle **Who's on this course?**
 - **Students** list with checkboxes, search at the top once there are more than
   8 students. Count on the right: **1 of 12 selected**, with **Clear**.
 - **+ Add a student** under the list opens a small inline form inside the step
-  (first name, last name, email optional, and parent details if the account
-  teaches children). Saving adds and selects the student without leaving the
+  (first name, last name, email optional). Saving adds and selects the student without leaving the
   wizard.
 - Students without an email show a small grey **No email** chip. Hover or tap:
-  **They can't sign in, but you can send them their lesson and diagnostic links
+  **They can't sign in, but you can send them their lesson and starting check links
   yourself.**
 - **One-to-one default:** selecting a second student when the account's default
   is one-to-one is allowed, with a quiet line: **This will be a group course.**
@@ -136,7 +135,7 @@ the note **You'll add topics on the Course plan tab.**
 
 **Shown only when** the course has a plan (Kavi or blank with topics).
 Otherwise the wizard goes from CW-3 to
-CW-5, and the course page shows the diagnostic card later (CRS-06).
+CW-5, and the course page shows the starting check card later (CRS-06).
 
 Title **Find out what they know** · subtitle **A short check before the first
 lesson shows where to start.**
@@ -151,10 +150,10 @@ lesson shows where to start.**
   WhatsApp after the course is created.
 - Buttons: **Preview questions** (opens DIAG-P), and the two decisions at the
   bottom: **Skip for now** (text button) and **Continue** (primary). The
-  diagnostic is drafted on **Preview** or at creation, and sent only from
+  starting check is drafted on **Preview** or at creation, and sent only from
   CW-5.
 
-### DIAG-P · Preview and edit the diagnostic
+### DIAG-P · Preview and edit the starting check
 
 A large dialog over the wizard.
 - Left: the question list grouped by module, each with its topic chip.
@@ -173,10 +172,10 @@ A summary list, each row with an **Edit** link back to its step:
 - Name, subject, level, goal, colour swatch;
 - Students (avatars and names), tutor for admins;
 - Course plan: **8 modules · 32 topics**, **Blank**, or **Not yet**;
-- Diagnostic: **12 questions to 2 students**, or **Not sending**.
+- Starting check: **12 questions to 2 students**, or **Not sending**.
 
 Buttons:
-- If a diagnostic is ready: **Create and send diagnostic** (primary) and
+- If a starting check is ready: **Create and send starting check** (primary) and
   **Create without sending** (secondary).
 - Otherwise: **Create course**.
 
@@ -185,11 +184,11 @@ the check. Alex has no email, so you'll get Alex's link to send yourself. It
 takes about 10 minutes.**
 
 **On success:** the dialog closes, the course page opens, and a toast says
-**Course created** (or **Course created. Diagnostic sent to 2 students.**).
+**Course created** (or **Course created. Starting check sent to 2 students.**).
 **On failure:** the dialog stays on CW-5 with everything kept and an inline
 error: **We couldn't create the course. Try again.** If the course was created
 but sending failed: the course page opens and a red toast says **Course
-created, but the diagnostic wasn't sent. Send it from the course page.**
+created, but the starting check wasn't sent. Send it from the course page.**
 
 ---
 
@@ -208,7 +207,7 @@ lesson**.
 
 Left column:
 - **About:** the goal and description, with an **Edit** pencil. Empty: **Add a
-  short description so students and parents know what this course is for.**
+  short description so students know what this course is for.**
 - **Course plan** card: **Mathematics · High School**, **8 modules · 32 topics
   · 96 objectives**, a progress bar **12 of 32 topics taught**, and the link
   **Open course plan ›**. Empty: the CW-3 choices in compact form.
@@ -218,8 +217,8 @@ Left column:
 Right column:
 - **At a glance:** Total lessons, Students, Topics taught.
 - **Tutor** (with **+ Add** for admins).
-- **Students:** each with an avatar, name, and a status line: **Diagnostic not
-  sent** / **Diagnostic sent 2 days ago** / **Diagnostic done · 6 of 12** /
+- **Students:** each with an avatar, name, and a status line: **Starting check not
+  sent** / **Starting check sent 2 days ago** / **Starting check done · 6 of 12** /
   **Invite not accepted**. **+ Add** opens the add-student form.
 
 ### CRS-04 · Course plan tab
@@ -235,8 +234,8 @@ Right column:
   topics taught.
 - **Topics** inside a module: name, objectives (expandable list), and per
   student status chip:
-  - **Knows it** (green outline): from the diagnostic or set by the tutor;
-  - **Needs work** (amber): from the diagnostic or set by the tutor;
+  - **Knows it** (green outline): from the starting check or set by the tutor;
+  - **Needs work** (amber): from the starting check or set by the tutor;
   - **Taught** (green, filled): taught in a lesson;
   - nothing: not yet taught or checked.
   Clicking a chip lets the tutor change it, with a reason line saved as a note.
@@ -254,19 +253,19 @@ Right column:
 - **Resources:** files attached to this course, **Add resources** (Upload or
   Choose from library). Line: **Students on this course can open these.**
 
-### CRS-06 · Diagnostic card on the course page
+### CRS-06 · Starting check card on the course page
 
-Shown on the Summary tab, above About, while no diagnostic has been sent and
+Shown on the Summary tab, above About, while no starting check has been sent and
 the course has a plan:
 - Kavi mark. **Find out what your students already know.**
 - "A 10-minute check shows which topics to start with, and gives you a starting
   point to show progress later."
-- **Send diagnostic** (opens CW-4 as a standalone dialog) and ✕ (hides it; it
+- **Send starting check** (opens CW-4 as a standalone dialog) and ✕ (hides it; it
   comes back when a new student joins the course).
 
 ---
 
-## DIAG-S · The student takes the diagnostic
+## DIAG-S · The student takes the starting check
 
 **Email:** subject **Alex has sent you a short check before your first lesson**.
 Body: what it is, that it takes about 10 minutes, that it isn't a test they
@@ -294,7 +293,7 @@ No score is shown to the student.
 Reached from Needs attention, the student's row on the course page, or the
 notification email.
 
-- Header: **Casey's diagnostic** · **Algebra 1 Small Group** · **Finished 26 Nov
+- Header: **Casey's starting check** · **Algebra 1 Small Group** · **Finished 26 Nov
   · 11 minutes**.
 - **Summary line:** **Knew 6 of 10 topics.**
 - **By topic:** each topic with **Knew it**, **Didn't know it** or **Not
@@ -313,15 +312,15 @@ notification email.
 
 | Action | Independent tutor | Agency admin | Agency tutor |
 |---|---|---|---|
-| Create course | Yes | Yes | Yes, as the tutor |
+| Create course | Yes | Yes | No (admins create courses) |
 | Edit course and plan | Yes | Yes | Their own courses |
 | Delete or archive course | Yes | Yes | No (Archive only, own courses) |
-| Send diagnostic | Yes | Yes | Their own courses |
+| Send starting check | Yes | Yes | Their own courses |
 
 ## Data needed (for the build)
 
 - Course (maps onto today's programme and subject tables at first).
 - Course plan: modules, topics, objectives, order; Kavi draft flag.
-- Per-student topic status with source (diagnostic, tutor, lesson) and date.
-- Diagnostic: questions with topic links, sends, attempts, answers.
-- A personal diagnostic link per student (also usable without an email).
+- Per-student topic status with source (starting check, tutor, lesson) and date.
+- Starting check: questions with topic links, sends, attempts, answers.
+- A personal starting check link per student (also usable without an email).

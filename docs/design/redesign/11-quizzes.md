@@ -9,7 +9,7 @@ a course plan topic, so results update the plan.
 
 Quizzes always belong to a course. There is no question bank: the tutor types
 questions or Kavi generates them. Standalone, public, paid and guest quizzes
-stay retired. The diagnostic (spec 04) is a special quiz and reuses this
+stay retired. The starting check (spec 04) is a special quiz and reuses this
 builder.
 
 Question types in this version: **multiple choice** (one correct answer) and

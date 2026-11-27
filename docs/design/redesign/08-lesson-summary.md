@@ -9,7 +9,7 @@ on, in plain words with real examples. This keeps the course plan up to date and
 tells the student what to practise.
 
 Nothing is emailed for now. Students see the summary, the recording and any
-homework in their own app (spec 09). Parents are out of scope.
+homework in their own app (spec 09).
 
 ## What happens after a lesson
 
@@ -21,32 +21,32 @@ homework in their own app (spec 09). Parents are out of scope.
    they stayed.
 4. If the lesson was recorded, the recording is processed and Kavi drafts the
    summary (about 5 minutes).
-5. The tutor opens the summary (LS-01), checks Kavi's draft, ticks what was
+5. The tutor opens the summary (SM-01), checks Kavi's draft, ticks what was
    covered (with **Got it** or **Needs more work**), and sets homework if any.
-6. The tutor presses **Complete** (LS-04):
+6. The tutor presses **Complete** (SM-04):
    - the lesson becomes **Complete**;
    - the course plan updates for each student;
    - the student gets a notification, and the summary, recording and homework
      appear in their app;
    - Kavi may suggest what to do next lesson (dashboard, DB-06);
    - the tutor can **Copy** the summary to share it anywhere.
-7. If nobody came: LS-06.
+7. If nobody came: SM-06.
 8. If it isn't completed after 24 hours, the tutor gets one reminder.
 
 ## Flow at a glance
 
 ```
 Lesson ends (CR-07) / Dashboard › Write summary / Lesson page › Write summary
-  → LS-01 summary editor (per student)
-       ↳ LS-02 Draft with Kavi
-       ↳ LS-03 Set homework (spec 10)
-  → LS-04 Complete → LS-05 Summary on the lesson page (Copy)
-  → LS-06 Nobody came
+  → SM-01 summary editor (per student)
+       ↳ SM-02 Draft with Kavi
+       ↳ SM-03 Set homework (spec 10)
+  → SM-04 Complete → SM-05 Summary on the lesson page (Copy)
+  → SM-06 Nobody came
 ```
 
 ---
 
-## LS-01 · Summary editor
+## SM-01 · Summary editor
 
 Route `/lessons/:id/summary`. Full page in the app shell. Autosaves as the tutor
 types (**Saved** appears for a moment in the header).
@@ -64,9 +64,9 @@ types (**Saved** appears for a moment in the header).
 
 **Kavi bar** (top of the form, Kavi mark):
 - With a recording: **Draft with Kavi** · "I'll write a first draft from the
-  recording. You check it before your student sees it." (LS-02)
+  recording. You check it before your student sees it." (SM-02)
 - Without a recording: **Draft with Kavi** · "Jot a few notes below and I'll turn
-  them into a summary." (LS-02)
+  them into a summary." (SM-02)
 
 **Sections:**
 
@@ -102,7 +102,7 @@ comment before completing.**
 **Phone:** one column, sections stacked; the header buttons move to a sticky bar
 at the bottom.
 
-## LS-02 · Draft with Kavi
+## SM-02 · Draft with Kavi
 
 | State | What the tutor sees |
 |---|---|
@@ -122,12 +122,12 @@ What Kavi fills:
   homework: **Kavi suggests homework: 5 elimination questions** with **Use
   this**, which opens the homework dialog filled in for the tutor to confirm.
 
-## LS-03 · Homework from the summary
+## SM-03 · Homework from the summary
 
 See spec 10. Homework set here is linked to this lesson: it shows as **Set after
 this lesson** on the lesson page and **Before this lesson** on the next one.
 
-## LS-04 · Preview and Complete
+## SM-04 · Preview and Complete
 
 **Preview** opens a dialog showing exactly what the student sees in their app
 (spec 09). Private notes never appear. Buttons **Back to editing** ·
@@ -157,7 +157,7 @@ PM**, and the student sees the latest version.
 the tutor gets one push and email: **Casey's lesson summary from yesterday is
 still waiting.** (switchable in Settings).
 
-## LS-05 · Summary on the lesson page
+## SM-05 · Summary on the lesson page
 
 The **Summary** tab (lesson status Complete):
 - The sections as written, per student (tabs for groups).
@@ -170,7 +170,7 @@ The **Summary** tab (lesson status Complete):
   email. Toast: **Summary copied.**
 - **Export as PDF** in **⋯**.
 
-## LS-06 · Nobody came
+## SM-06 · Nobody came
 
 When a lesson ends with no student attendance:
 - The lesson ended screen (CR-07) and the lesson page show: **Casey didn't join

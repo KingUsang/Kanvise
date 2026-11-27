@@ -106,7 +106,7 @@ turns into a list of cards on phones:
 | Courses list (04) | One card per row | Two per row |
 | Course page (04) | Tabs scroll sideways; right-column cards move below the main content | Right column below main if under 900px |
 | Course plan (04) | Modules collapsed by default; topic status chips wrap under the topic name; Viewing selector becomes a dropdown | As desktop |
-| Diagnostic preview (04) | Question list becomes a dropdown at the top; editor below | Two panes |
+| Starting check preview (04) | Question list becomes a dropdown at the top; editor below | Two panes |
 | Calendar (05) | **Agenda** view by default (a list grouped by day), with Day as the alternative; Week and Month hidden | Week view |
 | Lesson page (05) | Facts strip wraps into two rows; Join button fixed at the bottom when the lesson is open; right column below | Two columns |
 | Students (06) | Cards (R-04); import works, but shows **Easier on a computer** above the matching step | As desktop |

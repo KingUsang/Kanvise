@@ -24,14 +24,14 @@ be undone use a separate button with a confirmation, never a toggle.
 | YOUR TEACHING | Teaching preferences | Yes | Yes | No |
 | YOUR TEACHING | Lessons and classroom | Yes | Yes | No |
 | YOUR TEACHING | Kavi | Yes | Yes | No |
-| ACCOUNT | Tutoring account | Yes | Yes | No |
+| ACCOUNT | Business details | Yes | Yes | No |
 | ACCOUNT | Team | No | Yes | No |
 | ACCOUNT | Billing | Later | Later | No |
 | ACCOUNT | Data and privacy | Yes | Yes | No |
 
 ---
 
-## ST-P · My profile (`/profile`, also reachable from the account menu)
+## CFG-P · My profile (`/profile`, also reachable from the account menu)
 
 - **Photo:** upload, crop to a circle. Shown to students in their app.
 - **First name**, **Last name**.
@@ -43,7 +43,7 @@ be undone use a separate button with a confirmation, never a toggle.
 - **WhatsApp number (optional):** Line: **Used for the WhatsApp buttons you
   see. Never shown to students unless you share it.**
 
-## ST-S · Sign-in and security
+## CFG-S · Sign-in and security
 
 - **Email:** change it (sends a confirmation to the new address; the old one
   keeps working until confirmed).
@@ -52,7 +52,7 @@ be undone use a separate button with a confirmation, never a toggle.
   everywhere else**.
 - Two-step sign-in: later.
 
-## ST-N · Notifications
+## CFG-N · Notifications
 
 Rows with **Push** and **Email** toggles:
 
@@ -63,27 +63,30 @@ Rows with **Push** and **Email** toggles:
 | My lesson hasn't started on time | Push on, email on |
 | Homework handed in | Push on, email off |
 | Quiz finished | Push on, email off |
-| Diagnostic finished | Push on, email on |
+| Starting check finished | Push on, email on |
 | Summary still to write (after 24 h) | Push on, email on |
 | Weekly round-up (Monday morning) | Email on |
 
 A row at the top: **Browser notifications:** **On** / **Turn on** (asks the
 browser), with a note when the browser has blocked them and how to allow them.
 
-## ST-T · Teaching preferences
+## CFG-T · Teaching preferences
 
 The onboarding answers (spec 02), editable:
 - **On my own / With a team** (switching to a team shows **Set up your team**,
-  ST-TM; switching back is only possible with no other team members).
-- **Who you mostly teach:** Children and teens · Adults · Both.
+  CFG-TM; switching back is only possible with no other team members).
+- **Who you mostly teach:** Children and teens · Adults · Both. Sets the
+  default lesson length (45 minutes for children and teens, otherwise an hour)
+  and the reading level of what Kavi writes for students.
 - **How you usually teach:** One-to-one · Small groups · Both.
 - **Subjects.**
 - Line: **These change your defaults and what Kanvise suggests. They never
   delete anything.**
 
-## ST-L · Lessons and classroom
+## CFG-L · Lessons and classroom
 
-- **Default lesson length:** 30 / 45 / 60 / 90 min.
+- **Default lesson length:** 30 / 45 / 60 / 90 min. Starts at 45 if onboarding
+  said Children and teens, otherwise 60.
 - **Classroom opens:** 5 / 10 / 15 (default) / 30 minutes before.
 - **Remind students:** 30 min before (default), also 24 hours before (toggle).
 - **End lessons automatically:** 10 minutes after everyone leaves (toggle, on).
@@ -99,7 +102,7 @@ The onboarding answers (spec 02), editable:
   join**.
 - **Test classroom:** button, opens the device check (spec 07, CR-10).
 
-## ST-K · Kavi
+## CFG-K · Kavi
 
 - **Kavi drafts lesson summaries:** on by default.
 - **Kavi suggestions on the dashboard:** on by default.
@@ -111,7 +114,7 @@ The onboarding answers (spec 02), editable:
 - Line: **Kavi only drafts. Nothing reaches your students until you complete
   it.**
 
-## ST-A · Tutoring account
+## CFG-A · Business details
 
 - **Name:** the agency name, or the independent tutor's account name.
 - **Logo** (agencies) or photo (independent tutors): shown in the student app.
@@ -121,7 +124,7 @@ The onboarding answers (spec 02), editable:
 - **Country and currency:** used later for billing.
 - **Default timezone** for new students.
 
-## ST-TM · Team (agencies)
+## CFG-TM · Team (agencies)
 
 Two tabs: **Tutors** · **Admins**.
 
@@ -143,7 +146,7 @@ Two tabs: **Tutors** · **Admins**.
 - **Remove admin:** as above, without reassignment. The last admin can't be
   removed: **There must be at least one admin.**
 
-## ST-D · Data and privacy
+## CFG-D · Data and privacy
 
 - **Export your data:** all students, courses, lessons, summaries and homework
   as CSV files in a ZIP. **Request export** emails a download link when ready.

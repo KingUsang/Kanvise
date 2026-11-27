@@ -39,7 +39,8 @@ account or their own join link, so Kanvise already knows who each person is.
 **Spike needed before build:** PlugNMeet's CSS assumes it owns the full page
 height. Docking the Lesson tools panel beside it needs a short technical test.
 If it can't share the page cleanly, the panel becomes a slide-over drawer opened
-from a Kanvise button above the room (CR-07b).
+from a Kanvise button above the room. The panel's contents are the same either
+way (CR-03).
 
 ## Flow at a glance
 
@@ -52,7 +53,7 @@ Student: Dashboard › Join classroom, or their own join link
            → CR-02 waiting for the tutor (if not started)
            → room (no Lesson tools)
            → CR-08 lesson ended
-Admin:   Lesson page › Watch lesson → CR-09 observer confirmation → room as observer
+Admin:   Lesson page › Join classroom → CR-09 Join as an admin? → room as an admin
 Anyone:  Setup / Settings › Test classroom → CR-10 device check
 ```
 
@@ -125,7 +126,7 @@ the tutor a push and email, CR-11.)
 4. **Shortcuts** (each opens in the panel, with a back arrow):
    - **Lesson plan:** the plan, read-only here, with **Edit** opening the lesson
      page in a new tab.
-   - **Last lesson:** the previous lesson's report for these students (What
+   - **Last lesson:** the previous lesson's summary for these students (What
      went well, What to work on).
    - **Notes:** private notes, saved as you type (**Saved** appears for a
      moment). Line: **Only you and admins see these.**
@@ -187,27 +188,28 @@ Kanvise page, light again (back to the app's look). A centred card:
     the recording. This usually takes about 5 minutes.** A progress line.
   - If not: **Write your lesson summary so Casey knows what to work on.**
 - Primary **Write lesson summary** (spec 08; if Kavi's draft is still coming, the
-  report opens with your ticked objectives and notes, and the draft slots in
+  summary opens with your ticked objectives and notes, and the draft slots in
   when ready).
 - Secondary **Back to dashboard**.
 
 ## CR-08 · Lesson ended (student)
 
 - **That's the end of the lesson.**
-- "Alex will share a report with what to work on next."
+- "Alex will write a lesson summary with what to work on next. You'll find it
+  in your lessons."
 - If homework was set during the lesson: **New homework: Simultaneous equations
   worksheet, due Fri.** with **Open**.
 - **Back to my dashboard**.
 
-## CR-09 · Admin observer
+## CR-09 · Admin joins a lesson they don't teach
 
-From the lesson page, an admin who isn't the tutor sees **Watch lesson**
-instead of **Join classroom**. It opens a confirmation:
-- **Join as an observer?**
+From the lesson page, an admin who isn't the tutor presses **Join classroom**.
+It opens a confirmation (wording as in Bobbin):
+- **Join as an admin?**
 - "You're joining as an admin, not as this lesson's tutor, so your attendance
-  won't count as the tutor's. If you teach this lesson from another account,
-  join from that account instead."
-- **Cancel** · **Join as observer**.
+  won't count toward the tutor's. If you teach this lesson from another
+  account, join from that account instead."
+- **Cancel** · **Join as admin**.
 
 An admin who only watches enters with camera and microphone off and sees a
 read-only Lesson tools (plan, objectives, students).
@@ -256,9 +258,9 @@ alerts** / **Not now**.
 | Action | Tutor of the lesson | Agency admin | Student on the lesson |
 |---|---|---|---|
 | Start, end | Yes | Yes, after **Join as an admin?** (never counts as the tutor) | No |
-| Lesson tools | Full | Read-only (as observer) | No |
+| Lesson tools | Full | Read-only while only watching (CR-09) | No |
 | Present files, screen share | Yes | No | No |
-| Join | Yes | As observer | Yes, once started |
+| Join | Yes | As an admin, after **Join as an admin?** | Yes, once started |
 
 ## Data needed (for the build)
 

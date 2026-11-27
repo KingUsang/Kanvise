@@ -70,8 +70,8 @@ link top right. A single column, 560px wide, centred.
 
 | ID | Kavi asks | Chips | Kavi's reply after the answer |
 |---|---|---|---|
-| ONB-02 | Do you teach on your own or with a team? | **On my own** · **With a team** | On my own: "Got it, I'll keep things simple." With a team: "Nice, I'll set you up to invite your tutors." |
-| ONB-03 | Who do you mostly teach? | **Children and teens** · **Adults** · **Both** | Children and teens: "I'll ask for a parent's details when you add students." Adults: "Then your students are your main contact." Both: "I'll ask each time." |
+| ONB-02 | Do you teach on your own or with a team? | **On my own** · **With a team** | On my own: "Okay. I'll leave out the team features for now." With a team: "Okay. I'll add a step for inviting your tutors." |
+| ONB-03 | Who do you mostly teach? | **Children and teens** · **Adults** · **Both** | Children and teens: "I'll set lessons to 45 minutes and keep what I write short and simple for young readers." Adults: "I'll set lessons to an hour and write for adult readers." Both: "I'll set lessons to an hour and match each course's level." |
 | ONB-04 | How do you usually teach? | **One-to-one** · **Small groups** · **Both** | "Okay, I'll set that as your default." |
 | ONB-05 | What do you teach? | Free-text field with suggestions as chips under it: **Mathematics**, **English**, **Physics**, **Chemistry**, **Biology**, **Coding**, **Languages**, **Music**. Several allowed. **Continue** button. | "Great. I'll use that when I help you plan courses and quizzes." |
 | ONB-06 | Do you already have students? | **Yes, I have students** · **Not yet** | Yes: "Let's start by bringing them in." Not yet: "No problem. There's a sample course you can explore first." |
@@ -101,7 +101,7 @@ Kavi: **What's your agency called?**
 
 ## ONB-08 · Kavi builds the setup
 
-- Kavi: **Give me a second, I'm putting together your setup.**
+- Kavi: **Setting up your checklist.**
 - A short animation: the five checklist rows appear one by one, already in the
   order they'll have on `/setup`.
 - After about 1.5s, it moves to SET-01 automatically. No button needed.
@@ -146,9 +146,9 @@ deletes data.
 
 | # | Step | Time | Reason line | Button | Opens |
 |---|---|---|---|---|---|
-| 1 | Add your students | 2 mins | Students are the people you teach. Parents get lesson summaries and invoices later. | **Add students** | Add student dialog (spec 06). If they said "Yes, I have students", the dialog opens on the **Import a list** tab. |
+| 1 | Add your students | 2 mins | Students are the people you teach. They get their lessons, homework and summaries in Kanvise. | **Add students** | Add student dialog (spec 06). If they said "Yes, I have students", the dialog opens on the **Import a list** tab. |
 | 2 | Create a course | 2 mins | A course pairs a student with you over time and holds the course plan. | **Create course** | New course wizard (spec 04) |
-| 3 | Find out what they know | 1 min | Optional. A short check before the first lesson shows where to start. | **Send diagnostic** | Step 4 of the course wizard, for the course from step 2 |
+| 3 | Find out what they know | 1 min | Optional. A short check before the first lesson shows where to start. | **Send starting check** | Step 4 of the course wizard, for the course from step 2 |
 | 4 | Schedule your first lesson | 1 min | Put it on the calendar and your student gets the link. | **Schedule lesson** | New lesson wizard (spec 05) |
 | 5 | Check your classroom | 1 min | Test your camera, microphone and speakers before a student is waiting. | **Test classroom** | Device check (spec 07) |
 
@@ -171,7 +171,7 @@ they know" dropped, keeping five steps.
 - **Get started with confidence:** a short video (60–90s) of a tutor's first
   lesson on Kanvise, with a play overlay. Plays in place.
 - **Visit the help guide**, with an external-link icon.
-- **Explore the sample course:** **See a course with lessons, reports and a
+- **Explore the sample course:** **See a course with lessons, summaries and a
   course plan before you add your own.** Button **Open sample course** (spec
   04, sample state). Hidden once the user deletes sample data.
 
@@ -218,6 +218,6 @@ When the fifth step is ticked:
 
 - Onboarding answers stored per account (and per person for "how they teach").
 - Setup step completion worked out from real data where possible (has a
-  student, has a course, has a lesson, has a sent diagnostic, has a passed
+  student, has a course, has a lesson, has a sent starting check, has a passed
   device check), plus explicit "skipped" flags.
 - Sample course data, kept separate from real data and deletable in one action.

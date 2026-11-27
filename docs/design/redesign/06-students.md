@@ -10,16 +10,16 @@ everything about one student in one place.
 ## Flow at a glance
 
 ```
-/students (ST-01 list, ST-02 empty)
-  → Add student dialog: ST-03 one student · ST-04 import a list
-  → Student page /students/:id (ST-05)
-      Summary · Courses · Lessons · Homework and quizzes · Reports · Attendance
-  → Edit (ST-06) · Resend invite (ST-07) · Remove (ST-08) · Export (ST-09)
+/students (STU-01 list, STU-02 empty)
+  → Add student dialog: STU-03 one student · STU-04 import a list
+  → Student page /students/:id (STU-05)
+      Summary · Courses · Lessons · Homework and quizzes · Summaries · Attendance
+  → Edit (STU-07) · Resend invite (STU-08) · Remove (STU-09) · Export (STU-10)
 ```
 
 ---
 
-## ST-01 · Students list
+## STU-01 · Students list
 
 **Header:** **Students** · "The people you teach. Add them here, then put them
 on a course." · secondary **Import a list**, primary **Add student**.
@@ -35,7 +35,6 @@ admins), and **⋯** with **Export as CSV**.
 | Student | Avatar, name; email under it, or a grey **No email** chip |
 | Courses | Colour dots and course names, up to 2, then **+1** |
 | Next lesson | **Mon 10:00 AM** or **None scheduled** |
-| Parent | Parent's name (shown only if the account teaches children or the student has a parent contact) |
 | Status | **Joined** (green) · **Invited** (amber, with **3 days ago**) · **No email** (grey) |
 
 Clicking a row opens the student page. No action buttons in rows; actions live
@@ -44,7 +43,7 @@ on the student page.
 Pagination: 25 per page, with **Showing 1–25 of 61** and arrows. Search,
 filters and the page number stay in the URL.
 
-## ST-02 · Empty
+## STU-02 · Empty
 
 - Student icon in a green circle.
 - **No students yet**
@@ -58,7 +57,7 @@ filters and the page number stay in the URL.
 
 One dialog with two tabs at the top: **One student** · **Import a list**.
 
-### ST-03 · One student
+### STU-03 · One student
 
 Subtitle **Add a student and, if you like, put them on a course.**
 
@@ -67,7 +66,7 @@ Subtitle **Add a student and, if you like, put them on a course.**
 | First name | Required | |
 | Last name | Required | |
 | Student's email (optional) | Valid email | Line: **Leave blank if they don't have one. Without an email they can't sign in, but you can still send them their lesson links yourself.** |
-| Parent or guardian | Shown open by default if the account teaches children; collapsed under **+ Add a parent** if adults or both | Parent's name, parent's email, phone (optional, for WhatsApp). Line: **For your records and for messaging them. Parents don't get a login.** |
+| Student's phone (optional) | Phone number with country code, pre-filled with the tutor's country code | Line: **Used for the WhatsApp buttons you see, for example to send a join link. Kanvise never messages it on its own.** |
 | Timezone | Pre-filled with the tutor's timezone, searchable | Line: **Lesson times are shown to them in this timezone.** Important for families abroad. |
 | Course (optional) | Dropdown of courses | **Put on a course now** |
 
@@ -86,11 +85,11 @@ doesn't look right.** · **Casey Davis is already one of your students.**
 (or **Student added.**). The list updates with the new row highlighted for a
 moment. Setup step "Add your students" ticks.
 
-### ST-04 · Import a list
+### STU-04 · Import a list
 
 **Step 1 · Upload**
 - **Download the template** (CSV with headers: first name, last name, email,
-  parent name, parent email, parent phone, timezone).
+  phone, timezone).
 - A drop area: **Drop a CSV file here, or choose a file.** Accepts `.csv` up to
   2 MB and 500 rows.
 - Line: **You can also copy columns from Google Sheets or Excel and paste them
@@ -98,7 +97,7 @@ moment. Setup step "Add your students" ticks.
 
 **Step 2 · Match columns** (only if the headers don't match the template)
 - Each column in the file with a dropdown: **First name**, **Last name**,
-  **Email**, **Parent name**, **Parent email**, **Parent phone**, **Timezone**,
+  **Email**, **Phone**, **Timezone**,
   **Don't import**. Kanvise guesses first.
 
 **Step 3 · Check**
@@ -122,14 +121,14 @@ moment. Setup step "Add your students" ticks.
 
 ---
 
-## ST-05 · Student page `/students/:id`
+## STU-05 · Student page `/students/:id`
 
 **Header:** avatar, name, and a status chip if not joined (**Invite not
 accepted** or **No email**). Right: **⋯** (Resend invite, Remove student) and
 primary **Edit**.
 
 **Facts strip:** **Email** · **Timezone** with current local time ("Lagos ·
-3:12 PM" or "London · 2:12 PM") · **Parent**.
+3:12 PM" or "London · 2:12 PM") · **Phone** (when there is one).
 
 **Tabs (underline):** **Summary** · **Courses** · **Lessons** · **Homework and
 quizzes** · **Summaries** · **Attendance**.
@@ -137,7 +136,7 @@ quizzes** · **Summaries** · **Attendance**.
 ### Summary tab
 
 Left column:
-- **Goal:** for example "Ready for the end-of-year exam in June", with
+- **Goal:** for example "Ready for the end-of-term test", with
   **Edit**. Empty: **Add a goal so you and Kavi know what you're working
   towards.**
 - **Courses:** one card per course: colour dot, name, the plan progress
@@ -150,19 +149,20 @@ Left column:
 Right column:
 - **Next lesson:** date, time, topic, with **Open**. Empty: **No lesson
   scheduled.** with **Schedule lesson**.
-- **Parent or guardian:** name, email, phone, with **Message on WhatsApp**
-  (opens a `wa.me` link) and **Edit**. Empty: **+ Add a parent**.
+- **Contact:** the student's email and phone, with **Message on WhatsApp**
+  (opens a `wa.me` link, only when there is a phone) and **Edit**. Empty:
+  **+ Add a phone number**.
 - **At a glance:** Lessons taken, Attendance (for example **11 of 12**),
   Homework handed in on time (**8 of 10**).
 - **Kavi suggests:** the student-level suggestions from DB-06, when there are
   any.
-- **Private notes** (ST-10): the most recent note, with **All notes ** and **+ Add a note**.
+- **Private notes** (STU-06): the most recent note, with **All notes ** and **+ Add a note**.
 
 ### Courses tab
 
 All courses the student is on, with **+ Add to a course**. Removing from a
 course is in each card's **⋯** and asks to confirm: **Remove Casey from Algebra
-1 Small Group? Their past lessons and reports stay.**
+1 Small Group? Their past lessons and summaries stay.**
 
 ### Lessons tab
 
@@ -171,8 +171,8 @@ Past and upcoming lessons for this student (the lessons table, filtered).
 ### Homework and quizzes tab
 
 Everything set for this student, with status (**To do**, **Handed in**,
-**Marked**, **Late**) and score where marked. Diagnostic results appear here
-too, labelled **Diagnostic**.
+**Marked**, **Late**) and score where marked. Starting check results appear here
+too, labelled **Starting check**.
 
 ### Summaries tab
 
@@ -187,7 +187,7 @@ Summary at the top: **Attended 11 of 12 lessons this term.**
 
 ---
 
-## ST-10 · Private notes about the student
+## STU-06 · Private notes about the student
 
 Notes about the student overall, not tied to one lesson (for example "Gets
 anxious before tests; start with an easy win" or "Mum prefers WhatsApp after 6
@@ -203,29 +203,29 @@ pm").
 - Kavi can read these when drafting plans and suggestions, but never shows them
   to the student.
 
-## ST-06 · Edit
+## STU-07 · Edit
 
-A dialog with the ST-03 fields (except Course). Adding an email to a student who
+A dialog with the STU-03 fields (except Course). Adding an email to a student who
 had none shows: **Saving will send Casey an invitation.** Changing an email
 on a joined student shows: **Casey will need to confirm the new email.**
 
-## ST-07 · Resend invite
+## STU-08 · Resend invite
 
 From **⋯**. A toast: **Invitation sent again to casey@example.com.** Disabled for
 an hour after sending, with the tooltip **Sent less than an hour ago.**
 
-## ST-08 · Remove
+## STU-09 · Remove
 
 A dialog: **Remove Casey Davis?**
 - "Casey will lose access to your courses straight away. Their past lessons,
-  reports and work stay in your records."
+  summaries and work stay in your records."
 - Buttons **Cancel**, **Remove student** (red).
 - Toast: **Casey Davis removed.**
 
 (Deleting a student's data entirely is a separate privacy request, handled in
 Settings, not here.)
 
-## ST-09 · Export
+## STU-10 · Export
 
 **Export as CSV** downloads all students matching the current filters, with the
 template columns plus courses and status. Toast: **Export ready.**
@@ -235,7 +235,7 @@ template columns plus courses and status. Toast: **Export ready.**
 | Action | Independent tutor | Agency admin | Agency tutor |
 |---|---|---|---|
 | See students | All | All | Only students on their courses |
-| Add, import | Yes | Yes | Yes, added to one of their courses |
+| Add, import | Yes | Yes | No (admins add students) |
 | Edit, remove, export | Yes | Yes | No (view only) |
 
 ## Emails this flow sends
@@ -246,7 +246,7 @@ template columns plus courses and status. Toast: **Export ready.**
 
 ## Data needed (for the build)
 
-- Student profile: names, email, timezone, goal, status.
-- Parent contact (name, email, phone) and payer flag. A contact, not a user.
+- Student profile: names, email (optional), phone (optional), timezone, goal,
+  status.
 - Import job with row-level results (already partly built in Slice 6A).
 - Attendance per lesson (already recorded from the classroom).

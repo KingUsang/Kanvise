@@ -15,7 +15,7 @@ it entirely.
 Good afternoon, Alex                                    [Schedule lesson]
 Friday, 27 November 2026
 
-[Banner area: sample course / teaching tip / welcome — at most one at a time]
+[Banner area: sample course or welcome, at most one at a time]
 
 ┌ Today ─────────────────────────────┐  ┌ Needs attention ─────────┐
 │ lesson rows                         │  │ attention rows            │
@@ -43,9 +43,8 @@ Shows at most one banner, in this priority order:
 
 | Banner | When | Content | Actions |
 |---|---|---|---|
-| Sample course | Sample data exists and the user has no real course yet | **Explore a sample course.** "Algebra 1 Small Group is a ready-made course with lessons, reports and a course plan, so you can see Kanvise working before your own students arrive." | **Open the sample course**, **Delete sample data** (asks to confirm) |
+| Sample course | Sample data exists and the user has no real course yet | **Explore a sample course.** "Algebra 1 Small Group is a ready-made course with lessons, summaries and a course plan, so you can see Kanvise working before your own students arrive." | **Open the sample course**, **Delete sample data** (asks to confirm) |
 | Welcome (invited tutor) | A tutor's first visit to an agency | **Welcome to Science Students Academy.** "Your admin has given you access to your courses. Test your classroom before your first lesson." | **Test classroom**, ✕ |
-| Teaching tip | One-time tips, shown once each | For example **Students wait until you let them in.** "When you start a lesson, students join the waiting room. Let each one in from Lesson tools." | **Read the classroom guide**, ✕ (dismissed for good) |
 
 Dismissing a banner shrinks it away; the next one does not appear until the
 next visit.
@@ -64,9 +63,9 @@ next visit.
 | Lesson state | Chip | Action |
 |---|---|---|
 | Starts in more than 15 minutes | **Planned** (blue) | **Prepare** → lesson page, Lesson plan tab |
-| Starts within 15 minutes, or running | **Starting soon** / **Live** (orange pulse dot) | **Join** (video camera icon, indigo) → classroom (spec 07) |
-| Ended, report not written | **Awaiting summary** (amber) | **Write summary** → lesson summary (spec 08) |
-| Report done | **Complete** (green) | none; the row opens the lesson |
+| Starts within 15 minutes, or running | **Starting soon** (amber dot) / **Live** (green pulse dot) | **Join** (video camera icon, indigo) → classroom (spec 07) |
+| Ended, summary not written | **Awaiting summary** (amber) | **Write summary** → lesson summary (spec 08) |
+| Summary done | **Complete** (green) | none; the row opens the lesson |
 | Cancelled | **Cancelled** (grey, struck-through topic) | none |
 
 - Clicking anywhere else on the row opens the lesson page.
@@ -96,7 +95,7 @@ up".
 |---|---|---|
 | Lesson summaries to write | **2 lesson summaries to write** · "From lessons that have ended" | Lessons filtered to Awaiting summary |
 | Homework to mark | **3 submissions to mark** · "Handed in and waiting for you" | Homework filtered to To mark |
-| Diagnostics finished | **1 diagnostic to review** · "Casey finished the check you sent" | That diagnostic's results (spec 04, DIAG-R) |
+| Starting checks finished | **1 starting check to review** · "Casey finished the check you sent" | That check's results (spec 04, DIAG-R) |
 | Quiz answers to mark | **4 written answers to mark** · only if a quiz has written answers | Quizzes filtered to To mark |
 | Invitations not accepted | **1 student hasn't joined yet** · "Invited 3 days ago" | Students filtered to Invited |
 
@@ -109,7 +108,7 @@ Up to three suggestion cards, each with:
 - the Kavi mark;
 - one sentence saying what Kavi suggests and why, for example **"Casey missed
   most questions on factorising. Start the next lesson there?"**;
-- the evidence as a small link, for example **From the diagnostic, 26 Nov**;
+- the evidence as a small link, for example **From the starting check, 26 Nov**;
 - buttons **Use this** and **Not now**.
 
 **Use this** does the obvious thing (for example sets the next lesson's topic,
@@ -134,13 +133,13 @@ The same layout, plus:
 - An extra Needs attention row: **Lessons without a tutor**.
 - A **Live now** link beside Today when any lesson is running, opening a small
   panel listing live lessons with who has joined, refreshing every 15 seconds.
-  Admins can **Watch** a lesson; that follows the admin-observer rules in spec
-  07.
+  Admins can open a lesson from there; joining one they don't teach follows
+  **Join as an admin?** in spec 07 (CR-09).
 
 ## Data needed (for the build)
 
 - Lesson list for today and this week, with status as above.
 - Counts for each Needs attention row.
-- Kavi suggestions from stored evidence (diagnostic results, lesson summaries,
+- Kavi suggestions from stored evidence (starting check results, lesson summaries,
   marked work). Until Kavi's backend exists, simple rules produce them (for
-  example "lowest diagnostic topic"), shown the same way.
+  example "lowest topic in the starting check"), shown the same way.
