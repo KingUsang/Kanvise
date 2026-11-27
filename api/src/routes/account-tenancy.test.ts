@@ -27,7 +27,7 @@ import { slidesRouter } from './slides'
 
 function recordingBuilder(result: any) {
   const value: any = {
-    select: () => value, order: () => value, in: () => value, range: () => value,
+    select: () => value, order: () => value, in: () => value, range: () => value, gte: () => value, lte: () => value,
     eq: (column: string, expected: unknown) => { mocks.eqCalls.push([column, expected]); return value },
     maybeSingle: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),

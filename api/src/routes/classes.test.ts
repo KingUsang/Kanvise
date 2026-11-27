@@ -26,7 +26,7 @@ import { classesRouter } from './classes'
 function query(result: any) {
   const value: any = {
     select: () => value, eq: () => value, in: () => value, is: () => value,
-    gte: () => value, lte: () => value, order: () => value, or: () => value, limit: () => value,
+    gte: () => value, lte: () => value, order: () => value, or: () => value, limit: () => value, range: () => value,
     maybeSingle: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
   }
@@ -103,9 +103,29 @@ describe('class-first API aliases', () => {
     const response = await classesRouter.request('/timetable')
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ data: [{ id: 'slot-1', weekday: 1, course_id: 'physics' }] })
+    expect(await response.json()).toEqual({ data: [{ id: 'slot-1', weekday: 1, course_id: 'physics' }], pagination: { page: 1, page_size: 100, has_more: false } })
     expect(mocks.from).toHaveBeenCalledWith('class_timetable_slots')
     expect(mocks.from).not.toHaveBeenCalledWith('programmes')
+  })
+
+  it('bounds the timetable with validated pagination and reports more pages', async () => {
+    const range = vi.fn()
+    const q = query({ data: [{ id: 'a' }, { id: 'b' }], error: null })
+    q.range = (from: number, to: number) => { range(from, to); return q }
+    mocks.from.mockReturnValue(q)
+
+    const response = await classesRouter.request('/timetable?page=2&page_size=2')
+
+    expect(response.status).toBe(200)
+    expect(range).toHaveBeenCalledWith(2, 3)
+    expect((await response.json() as any).pagination).toEqual({ page: 2, page_size: 2, has_more: true })
+  })
+
+  it('rejects invalid timetable pagination and filters', async () => {
+    expect((await classesRouter.request('/timetable?page_size=1000')).status).toBe(400)
+    expect((await classesRouter.request('/timetable?page=0')).status).toBe(400)
+    expect((await classesRouter.request('/timetable?tutor_id=not-a-uuid')).status).toBe(400)
+    expect(mocks.from).not.toHaveBeenCalled()
   })
 
   it('does not expose centre-wide timetable to a tutor', async () => {
