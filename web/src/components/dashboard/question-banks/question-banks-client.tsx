@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getApiUrl } from '@/config/api'
 import katex from 'katex'
@@ -130,10 +131,11 @@ function imageDimensions(file: File) {
 export function QuestionBanksClient() {
   const apiUrl = getApiUrl()
   const queryClient = useQueryClient()
-  const [selectedBankId, setSelectedBankId] = useState('')
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [subjectFilter, setSubjectFilter] = useState('')
+  const searchParams = useSearchParams()
+  const [selectedBankId, setSelectedBankId] = useState(() => searchParams?.get('bank') || '')
+  const [search, setSearch] = useState(() => searchParams?.get('q') || '')
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams?.get('q') || '')
+  const [subjectFilter, setSubjectFilter] = useState(() => searchParams?.get('subject') || '')
   const [showCreateBank, setShowCreateBank] = useState(false)
   const [showQuestionEditor, setShowQuestionEditor] = useState(false)
   const [bankToArchive, setBankToArchive] = useState<Bank | null>(null)
@@ -179,8 +181,44 @@ export function QuestionBanksClient() {
   const courses = coursesQuery.data || []
 
   useEffect(() => {
-    setSelectedBankId(current => banks.some(bank => bank.id === current) ? current : banks[0]?.id || '')
-  }, [banks])
+    if (!banksQuery.data) return
+    if (!banks.some(bank => bank.id === selectedBankId)) setSelectedBankId(banks[0]?.id || '')
+  }, [banks, banksQuery.data, selectedBankId])
+  // Keep the selected bank, search and Subject filter in the URL so reloads, shared links and history work.
+  const writeUrl = (patch: { bank?: string; q?: string; subject?: string }, mode: 'push' | 'replace') => {
+    const url = new URL(window.location.href)
+    for (const [key, value] of Object.entries(patch)) {
+      if (value) url.searchParams.set(key, value)
+      else url.searchParams.delete(key)
+    }
+    const next = `${url.pathname}${url.search}${url.hash}`
+    if (next === `${window.location.pathname}${window.location.search}${window.location.hash}`) return
+    if (mode === 'push') window.history.pushState({}, '', next)
+    else window.history.replaceState({}, '', next)
+  }
+  const selectBank = (bankId: string) => {
+    setSelectedBankId(bankId)
+    writeUrl({ bank: bankId }, 'push')
+  }
+  const changeSearch = (value: string) => {
+    setSearch(value)
+    writeUrl({ q: value.trim() ? value : '' }, 'replace')
+  }
+  const changeSubject = (value: string) => {
+    setSubjectFilter(value)
+    writeUrl({ subject: value }, 'replace')
+  }
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search)
+      setSelectedBankId(params.get('bank') || '')
+      setSearch(params.get('q') || '')
+      setDebouncedSearch(params.get('q') || '')
+      setSubjectFilter(params.get('subject') || '')
+    }
+    window.addEventListener('popstate', syncFromUrl)
+    return () => window.removeEventListener('popstate', syncFromUrl)
+  }, [])
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search), 250)
     return () => window.clearTimeout(timeout)
@@ -261,7 +299,7 @@ export function QuestionBanksClient() {
                 <p className="mt-1 text-xs leading-5 text-[#6d6974]">Create a private bank for yourself or a shared bank your tutors can use.</p>
               </div>
             ) : banks.map(bank => (
-              <button key={bank.id} onClick={() => setSelectedBankId(bank.id)} className={`w-full rounded-lg border p-3 text-left transition ${selectedBankId === bank.id ? 'border-[#8f6b4b] bg-[#f8f3ed] shadow-sm' : 'border-transparent hover:border-[#e4e0dc] hover:bg-[#faf8f6]'}`}>
+              <button key={bank.id} onClick={() => selectBank(bank.id)} className={`w-full rounded-lg border p-3 text-left transition ${selectedBankId === bank.id ? 'border-[#8f6b4b] bg-[#f8f3ed] shadow-sm' : 'border-transparent hover:border-[#e4e0dc] hover:bg-[#faf8f6]'}`}>
                 <div className="flex items-start gap-3">
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${bank.visibility === 'centre' ? 'bg-[#e8e6ff] text-[#2e2877]' : 'bg-[#f3e8df] text-[#8a440e]'}`}>{initials(bank.name)}</span>
                   <span className="min-w-0 flex-1">
@@ -300,9 +338,9 @@ export function QuestionBanksClient() {
                 <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_190px]">
                   <label className="relative block">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-xl text-[#77727e]">search</span>
-                    <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search question wording…" className="h-11 w-full rounded-lg border border-[#cbc7c4] bg-white pl-10 pr-3 text-sm text-[#27252d] outline-none focus:border-[#2e2877] focus:ring-2 focus:ring-[#2e2877]/10" />
+                    <input value={search} onChange={event => changeSearch(event.target.value)} placeholder="Search question wording…" className="h-11 w-full rounded-lg border border-[#cbc7c4] bg-white pl-10 pr-3 text-sm text-[#27252d] outline-none focus:border-[#2e2877] focus:ring-2 focus:ring-[#2e2877]/10" />
                   </label>
-                  <select value={subjectFilter} onChange={event => setSubjectFilter(event.target.value)} className="h-11 rounded-lg border border-[#cbc7c4] bg-white px-3 text-sm text-[#38353f] outline-none focus:border-[#2e2877]">
+                  <select value={subjectFilter} onChange={event => changeSubject(event.target.value)} className="h-11 rounded-lg border border-[#cbc7c4] bg-white px-3 text-sm text-[#38353f] outline-none focus:border-[#2e2877]">
                     <option value="">All subjects</option>
                     {subjects.map(subject => <option key={subject} value={subject}>{subject}</option>)}
                   </select>

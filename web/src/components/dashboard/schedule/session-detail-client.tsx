@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { viewerTimeZoneLabel } from '@/lib/viewer-timezone'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
+import { QueryErrorState, RefreshWarning } from '@/components/common/query-error-state'
 
 type Session = {
   id: string;
@@ -117,11 +119,14 @@ export function SessionDetailClient({
           <ArrowLeft size={16} />
           Back to schedule
         </Link>
-        <section className="mt-5 rounded-xl border border-[#f0c7c1] bg-[#fff8f7] p-5 text-sm text-[#8d2f22]">
-          {sessionQuery.error instanceof Error
-            ? sessionQuery.error.message
-            : "This session could not be loaded."}
-        </section>
+        <div className="mt-5">
+          <QueryErrorState
+            error={sessionQuery.error}
+            onRetry={() => void sessionQuery.refetch()}
+            retrying={sessionQuery.isFetching}
+            fallback="This session could not be loaded."
+          />
+        </div>
       </div>
     );
   const session = sessionQuery.data;
@@ -142,6 +147,11 @@ export function SessionDetailClient({
         <ArrowLeft size={16} />
         Back to schedule
       </Link>
+      {sessionQuery.isError ? (
+        <div className="mt-4">
+          <RefreshWarning onRetry={() => void sessionQuery.refetch()} retrying={sessionQuery.isFetching} />
+        </div>
+      ) : null}
       <header className="mt-4 flex flex-col gap-4 border-b border-dashboard-outline pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-[#180d62] sm:text-2xl">
@@ -208,11 +218,9 @@ export function SessionDetailClient({
         <AttendanceList
           rows={attendance}
           loading={attendanceQuery.isPending}
-          error={
-            attendanceQuery.error instanceof Error
-              ? attendanceQuery.error.message
-              : null
-          }
+          error={attendanceQuery.isError ? attendanceQuery.error : null}
+          onRetry={() => void attendanceQuery.refetch()}
+          retrying={attendanceQuery.isFetching}
           empty="Attendance will appear when this session is completed."
         />
       ) : null}
@@ -220,11 +228,9 @@ export function SessionDetailClient({
         <AttendanceList
           rows={participants}
           loading={attendanceQuery.isPending}
-          error={
-            attendanceQuery.error instanceof Error
-              ? attendanceQuery.error.message
-              : null
-          }
+          error={attendanceQuery.isError ? attendanceQuery.error : null}
+          onRetry={() => void attendanceQuery.refetch()}
+          retrying={attendanceQuery.isFetching}
           empty="No learners have joined this session yet."
           participantsOnly
         />
@@ -232,11 +238,9 @@ export function SessionDetailClient({
       {tab === "recording" ? (
         <RecordingPanel
           loading={recordingQuery.isPending}
-          error={
-            recordingQuery.error instanceof Error
-              ? recordingQuery.error.message
-              : null
-          }
+          error={recordingQuery.isError ? recordingQuery.error : null}
+          onRetry={() => void recordingQuery.refetch()}
+          retrying={recordingQuery.isFetching}
           recording={recordingQuery.data || null}
           sessionId={sessionId}
         />
@@ -269,7 +273,7 @@ function Details({
         <DetailRow
           icon={<Clock3 size={18} />}
           label="Time"
-          value={`${time.format(starts)} – ${time.format(ends)}${session.duration_minutes ? ` (${session.duration_minutes} min)` : ""}`}
+          value={`${time.format(starts)} – ${time.format(ends)}${session.duration_minutes ? ` (${session.duration_minutes} min)` : ""} · ${viewerTimeZoneLabel(starts)}`}
         />
         <div className="mt-5 border-t border-dashboard-outline pt-4">
           <p className="text-xs font-bold uppercase tracking-[.12em] text-[#625e69]">
@@ -390,12 +394,16 @@ function AttendanceList({
   rows,
   loading,
   error,
+  onRetry,
+  retrying,
   empty,
   participantsOnly = false,
 }: {
   rows: AttendanceRow[];
   loading: boolean;
-  error: string | null;
+  error: unknown;
+  onRetry: () => void;
+  retrying: boolean;
   empty: string;
   participantsOnly?: boolean;
 }) {
@@ -405,10 +413,11 @@ function AttendanceList({
         Loading…
       </div>
     );
-  if (error)
+  const warning = error ? <div className="mt-5"><RefreshWarning onRetry={onRetry} retrying={retrying} /></div> : null;
+  if (error && !rows.length)
     return (
-      <div className="mt-5 rounded-xl border border-[#f0c7c1] bg-[#fff8f7] p-5 text-sm text-[#8d2f22]">
-        {error}
+      <div className="mt-5">
+        <QueryErrorState error={error} onRetry={onRetry} retrying={retrying} fallback="Could not load attendance." />
       </div>
     );
   if (!rows.length)
@@ -418,6 +427,8 @@ function AttendanceList({
       </div>
     );
   return (
+    <>
+    {warning}
     <section className="mt-5 max-w-4xl overflow-hidden rounded-xl border border-dashboard-outline bg-white shadow-dashboard-card">
       <header className="border-b border-dashboard-outline px-5 py-4">
         <h2 className="text-base font-bold text-[#180d62]">
@@ -454,16 +465,21 @@ function AttendanceList({
         ))}
       </div>
     </section>
+    </>
   );
 }
 function RecordingPanel({
   loading,
   error,
+  onRetry,
+  retrying,
   recording,
   sessionId,
 }: {
   loading: boolean;
-  error: string | null;
+  error: unknown;
+  onRetry: () => void;
+  retrying: boolean;
   recording: Recording | null;
   sessionId: string;
 }) {
@@ -473,10 +489,10 @@ function RecordingPanel({
         Checking recording…
       </div>
     );
-  if (error)
+  if (error && !recording)
     return (
-      <div className="mt-5 rounded-xl border border-[#f0c7c1] bg-[#fff8f7] p-5 text-sm text-[#8d2f22]">
-        {error}
+      <div className="mt-5">
+        <QueryErrorState error={error} onRetry={onRetry} retrying={retrying} fallback="Could not load the recording." />
       </div>
     );
   if (!recording)
@@ -486,6 +502,8 @@ function RecordingPanel({
       </div>
     );
   return (
+    <>
+    {error ? <div className="mt-5"><RefreshWarning onRetry={onRetry} retrying={retrying} /></div> : null}
     <section className="mt-5 max-w-4xl overflow-hidden rounded-xl border border-dashboard-outline bg-white shadow-dashboard-card">
       <header className="flex items-center gap-3 border-b border-dashboard-outline px-5 py-4">
         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef0ff] text-[#312783]">
@@ -521,6 +539,7 @@ function RecordingPanel({
         </div>
       )}
     </section>
+    </>
   );
 }
 

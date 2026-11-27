@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { BookOpen, Calculator, CheckCircle2, Clock3, PlayCircle, Search, SearchX } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { QueryErrorState, RefreshWarning } from '@/components/common/query-error-state'
 import { createClient } from '@/lib/supabase/client'
 import { getApiUrl } from '@/config/api'
 import type { StudentMockCard, StudentMockGroups } from '@/lib/student-mocks'
@@ -66,9 +67,10 @@ export function StudentMocksClient({ initialGroups, groups: legacyGroups }: { in
   }), [groups, search, tab])
 
   if (groupsQuery.isPending) return <div className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading quizzes…</div>
-  if (groupsQuery.isError) return <div className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{groupsQuery.error?.message}</p><button type="button" onClick={() => { void groupsQuery.refetch() }} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></div>
+  if (groupsQuery.isError && !seededGroups && !groupsQuery.data) return <div className="mx-auto max-w-[1440px] px-4 py-10"><QueryErrorState error={groupsQuery.error} onRetry={() => { void groupsQuery.refetch() }} retrying={groupsQuery.isFetching} fallback="Could not load your quizzes." /></div>
 
   return <div className="mx-auto min-w-0 max-w-[1440px] px-4 py-7 pb-28 sm:px-6 lg:px-10 lg:py-10">
+    {groupsQuery.isError ? <RefreshWarning onRetry={() => { void groupsQuery.refetch() }} retrying={groupsQuery.isFetching} /> : null}
     <header><p className="text-sm font-medium text-[#994704]">Practice and assessment</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Quizzes</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Quizzes from your Classes are kept together here.</p></header>
     <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div role="group" aria-label="Filter quizzes by status" className="grid grid-cols-2 gap-1 rounded-xl bg-[#eeeae6] p-1 sm:flex">{tabs.map(item => <button type="button" key={item.key} aria-pressed={tab === item.key} onClick={() => setTab(item.key)} className={`min-h-10 min-w-0 rounded-lg px-3 py-2 text-sm font-medium sm:px-4 ${tab === item.key ? 'bg-white text-[#2e2877] shadow-sm' : 'text-[#716c76]'}`}>{item.label}<span className="ml-2 rounded-full bg-black/5 px-1.5 py-0.5 text-[10px]">{groups[item.key].length}</span></button>)}</div>

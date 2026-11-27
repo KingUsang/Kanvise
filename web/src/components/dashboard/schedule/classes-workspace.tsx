@@ -20,6 +20,7 @@ import { useActiveAccountId } from "@/lib/account-preference";
 import { classQueryKeys } from "@/lib/class-query-keys";
 import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { viewerTimeZoneLabel } from '@/lib/viewer-timezone';
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
 type Tutor = { id: string; first_name: string; last_name: string };
@@ -391,21 +392,29 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
       setSaving(false);
     }
   }
-  async function cancel(item: LiveClass) {
-    if (!window.confirm(`Cancel “${item.title}”?`)) return;
-    const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}`, {
-      method: "DELETE",
-    });
-    const body = await response.json();
-    if (!response.ok)
-      return toast.error(body.error || "Could not cancel this session");
-    setComposer(null);
-    toast.success("Session cancelled");
+  async function refreshSchedule() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
     ]);
+  }
+  async function cancel(item: LiveClass) {
+    if (!window.confirm(`Cancel “${item.title}”?`)) return;
+    try {
+      const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}`, {
+        method: "DELETE",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok)
+        return toast.error(body?.error || "Could not cancel this session");
+      setComposer(null);
+      toast.success("Session cancelled");
+    } catch {
+      // The request may have reached the server, so reconcile the schedule.
+      toast.error("We could not confirm the cancellation. The schedule has been refreshed; check it before trying again.");
+    }
+    await refreshSchedule();
   }
   async function endSeries(item: LiveClass) {
     const seriesId = item.series?.recurrence_group_id || item.series?.id;
@@ -414,25 +423,30 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
       !window.confirm("End this recurring series and remove future sessions?")
     )
       return;
-    const response = await authenticatedApiFetch(`${api}/live-classes/series/${seriesId}`, {
-      method: "DELETE",
-    });
-    const body = await response.json();
-    if (!response.ok) return toast.error(body.error || "Could not end series");
-    setComposer(null);
-    toast.success("Recurring series ended");
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
-    ]);
+    try {
+      const response = await authenticatedApiFetch(`${api}/live-classes/series/${seriesId}`, {
+        method: "DELETE",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) return toast.error(body?.error || "Could not end series");
+      setComposer(null);
+      toast.success("Recurring series ended");
+    } catch {
+      toast.error("We could not confirm the series was ended. The schedule has been refreshed; check it before trying again.");
+    }
+    await refreshSchedule();
   }
   async function start(item: LiveClass) {
-    const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}/start`, {
-      method: "POST",
-    });
-    const body = await response.json();
-    if (!response.ok) return toast.error(body.error || "Could not start this session");
+    try {
+      const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}/start`, {
+        method: "POST",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) return toast.error(body?.error || "Could not start this session");
+    } catch {
+      toast.error("Could not start this session. Check your connection and try again.");
+      return;
+    }
     window.open(item.share_url || `/class/${item.id}`, "_blank", "noopener,noreferrer");
   }
   async function copyClassroomLink(value: string) {
@@ -463,6 +477,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           <p className="mt-2 text-sm text-[#66616c]">
             Every dated live teaching session across the teaching groups you can manage.
           </p>
+          <p suppressHydrationWarning className="mt-1 text-xs text-[#66616c]">Times are shown in your timezone ({viewerTimeZoneLabel()}).</p>
         </div>
         <button
           onClick={() => open(mobileDay)}

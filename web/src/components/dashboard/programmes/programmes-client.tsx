@@ -183,7 +183,7 @@ export function ProgrammesClient() {
       )}
 
       {schoolContextError && !loadError && (
-        <RefreshNotice message="Class links are temporarily unavailable because centre details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
+        <RefreshNotice message="Class links are temporarily unavailable because tutoring account details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
       )}
 
       {programmesQuery.isSuccess && programmes.length > 0 && (

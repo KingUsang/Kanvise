@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -187,5 +188,38 @@ describe('TutorsClient independent panel recovery', () => {
     const urls = authenticatedApiFetch.mock.calls.map(([url]) => String(url))
     expect(urls.some((u) => u.includes('/schools/me/invites?limit=50&offset=50'))).toBe(true)
     expect(urls.some((u) => u.includes('/users?roles=admin,tutor&limit=200&offset=200'))).toBe(true)
+  })
+
+  it('reports a transport failure when removing a Tutor and refetches the list (DEV-FE-044)', async () => {
+    authenticatedApiFetch.mockImplementation((input: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') return Promise.reject(new TypeError('network down'))
+      if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    renderTutors({ tutors: [{ id: 'tutor-1', first_name: 'Ada', last_name: 'Tutor', email: 'ada@example.test', courses: [] }] })
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Ada Tutor' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Tutor' }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not remove the Tutor', expect.objectContaining({ description: expect.stringContaining('could not be confirmed') })))
+    const getsAfter = authenticatedApiFetch.mock.calls.filter(([url, init]) => String(url).includes('/users/tutors') && init?.method !== 'DELETE').length
+    expect(getsAfter).toBeGreaterThan(0)
+  })
+
+  it('reports a transport failure when revoking an invitation (DEV-FE-044)', async () => {
+    const invite = { id: 'inv-1', email: 'new@example.test', status: 'pending', expires_at: '2099-12-01T00:00:00.000Z', created_at: '2026-11-01T00:00:00.000Z' }
+    authenticatedApiFetch.mockImplementation((input: string, init?: RequestInit) => {
+      if (init?.method === 'POST' && input.includes('/revoke')) return Promise.reject(new TypeError('network down'))
+      if (input.includes('/schools/me/invites')) return Promise.resolve(new Response(JSON.stringify({ data: [invite] }), { status: 200 }))
+      if (input.includes('/auth/me')) return Promise.resolve(new Response(JSON.stringify({ user: { id: 'admin-1' } }), { status: 200 }))
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    renderTutors()
+    await screen.findByText('new@example.test')
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel invitation' }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not revoke the invitation', expect.objectContaining({ description: expect.stringContaining('could not be confirmed') })))
   })
 })

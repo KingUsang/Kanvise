@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDeadline } from "@/lib/format-deadline";
 import { CalendarDays, CheckCircle2, Download, FileText, Search, Send, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +20,7 @@ export function assignmentStatus(item: StudentAssignment, now = Date.now()): Exc
   return new Date(item.deadline_at).getTime() < now ? "overdue" : "pending";
 }
 
-function dateTime(value: string) { return new Intl.DateTimeFormat("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)); }
+function dateTime(value: string) { return formatDeadline(value); }
 
 function responseErrorMessage(response: Response, body: any) {
   if (typeof body?.error === "string" && body.error) return body.error;

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDeadline } from '@/lib/format-deadline';
 import React, { useEffect, useState } from "react";
 import { ChevronDown, CloudUpload, FileText } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -419,7 +420,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
             ) : (
               assignments.map((assignment, index) => {
                 const isDraft = !assignment.is_published;
-                const dateString = new Date(assignment.deadline_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const dateString = formatDeadline(assignment.deadline_at);
                 
                 return (
                   <div 
