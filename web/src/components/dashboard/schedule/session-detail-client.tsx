@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
-import { viewerTimeZoneLabel } from '@/lib/viewer-timezone'
+import { instantTimeZoneLabel } from '@/lib/viewer-timezone'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 import { QueryErrorState, RefreshWarning } from '@/components/common/query-error-state'
 
@@ -23,6 +23,7 @@ type Session = {
   id: string;
   title: string;
   scheduled_at: string;
+  timezone?: string | null;
   duration_minutes?: number | null;
   status: "scheduled" | "live" | "completed" | "cancelled";
   access_mode?: "anyone_with_link" | "enrolled_learners";
@@ -273,7 +274,7 @@ function Details({
         <DetailRow
           icon={<Clock3 size={18} />}
           label="Time"
-          value={`${time.format(starts)} – ${time.format(ends)}${session.duration_minutes ? ` (${session.duration_minutes} min)` : ""} · ${viewerTimeZoneLabel(starts)}`}
+          value={`${time.format(starts)} – ${time.format(ends)}${session.duration_minutes ? ` (${session.duration_minutes} min)` : ""} · ${instantTimeZoneLabel(session.timezone, starts)}`}
         />
         <div className="mt-5 border-t border-dashboard-outline pt-4">
           <p className="text-xs font-bold uppercase tracking-[.12em] text-[#625e69]">

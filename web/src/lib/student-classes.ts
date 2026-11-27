@@ -6,6 +6,7 @@ export type StudentClass = {
   id: string;
   title: string;
   scheduled_at: string;
+  timezone?: string | null;
   duration_minutes: number;
   status: "scheduled" | "live" | "completed" | "cancelled";
   started_at: string | null;
