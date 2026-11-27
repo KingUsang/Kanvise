@@ -7,14 +7,15 @@ export const notificationEmailEvents = {
   submission_graded: 'submission_graded',
   mock_fully_graded: 'mock_fully_graded',
   class_cancelled: 'class_cancellation',
-  // Recap publication is currently in-app/push-only; the value keeps the
-  // notification event type compatible with the existing email router if a
-  // recap email is introduced later.
-  class_recap_ready: 'live_class_reminder',
+  // Recap publication is in-app and push only: it has no email template.
+  class_recap_ready: null,
 } as const
 
 export type NotificationEvent = keyof typeof notificationEmailEvents
-export type NotificationEmailEvent<K extends NotificationEvent> = typeof notificationEmailEvents[K]
+export type NotificationEmailEvent<K extends NotificationEvent> = NonNullable<typeof notificationEmailEvents[K]>
+type EmailInputFor<K extends NotificationEvent> = typeof notificationEmailEvents[K] extends null
+  ? { emailInput?: undefined }
+  : { emailInput: (recipient: NotificationRecipient) => EmailTemplateInputs[NotificationEmailEvent<K>] }
 
 export type NotificationRecipient = {
   id: string
@@ -28,7 +29,7 @@ export type RecipientSelector =
   | { school: true }
   | { enrolment: { type: 'programme' | 'sub_programme' | 'course'; id: string } }
 
-export type NotificationRequest<K extends NotificationEvent> = {
+export type NotificationRequest<K extends NotificationEvent> = EmailInputFor<K> & {
   schoolId: string
   event: K
   recipients: RecipientSelector
@@ -36,7 +37,6 @@ export type NotificationRequest<K extends NotificationEvent> = {
   body: string
   relatedEntityType: string
   relatedEntityId: string
-  emailInput: (recipient: NotificationRecipient) => EmailTemplateInputs[NotificationEmailEvent<K>]
   push: { body: string; url: string }
   batchSize?: number
 }

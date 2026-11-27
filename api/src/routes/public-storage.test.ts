@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const intents = vi.hoisted(() => ({
+  recordUploadIntent: vi.fn(async () => undefined),
+  consumeUploadIntent: vi.fn(async () => 'consumed'),
+  releaseUploadIntent: vi.fn(async () => undefined),
+  enqueuePublic: vi.fn(async () => undefined),
+}))
+vi.mock('../storage/upload-intents', () => intents)
+vi.mock('../jobs/storage-cleanup', () => ({ enqueuePublicObjectDeletion: intents.enqueuePublic }))
+
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   createPublic: vi.fn(),
@@ -106,5 +115,29 @@ describe('public media storage routes', () => {
 
     expect(response.status).toBe(200)
     expect(mocks.createPublic).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'account-1', contextId: 'account-1' }))
+  })
+
+  const logoKey = 'schools/school-1/public/logo/school-1/file.png'
+  const confirmLogo = () => storageRouter.request('/public/confirm', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ entity_type: 'logo', context_id: 'school-1', file_key: logoKey, content_type: 'image/png', file_size_bytes: 100 }),
+  })
+
+  it('queues deletion of the replaced public object through a durable job', async () => {
+    mocks.verifyPublic.mockResolvedValue(true)
+    mocks.from.mockReturnValueOnce(query({ data: { logo_url: 'https://cdn.example.com/schools/school-1/public/logo/school-1/old.png' }, error: null }))
+      .mockReturnValueOnce(query({ data: { id: 'school-1' }, error: null }))
+    expect((await confirmLogo()).status).toBe(200)
+    expect(intents.enqueuePublic).toHaveBeenCalledWith('schools/school-1/public/logo/school-1/old.png', 'school-1')
+  })
+
+  it('fails and releases the intent when the previous media key cannot be read', async () => {
+    mocks.verifyPublic.mockResolvedValue(true)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.from.mockReturnValueOnce(query({ data: null, error: { message: 'read failed' } }))
+    expect((await confirmLogo()).status).toBe(500)
+    expect(mocks.from).toHaveBeenCalledTimes(1)
+    expect(intents.releaseUploadIntent).toHaveBeenCalledTimes(1)
+    expect(intents.enqueuePublic).not.toHaveBeenCalled()
   })
 })

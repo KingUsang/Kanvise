@@ -49,7 +49,21 @@ dashboardRouter.use("*", async (c, next) => {
 });
 dashboardRouter.use("*", accountUserProjection);
 
-async function loadNeedsGrading(schoolId: string, tutorId?: string) {
+// DEV-DSH-002: records which dashboard sources failed so the response can say
+// "partial" instead of presenting a database error as zero metrics.
+class DashboardHealth {
+  readonly failed = new Set<string>();
+  check(source: string, error: { code?: string; message?: string } | null | undefined) {
+    if (!error) return;
+    this.failed.add(source);
+    console.error("dashboard.source_failed", { source, code: error.code });
+  }
+  status() {
+    return { partial: this.failed.size > 0, failed_sources: [...this.failed].sort() };
+  }
+}
+
+async function loadNeedsGrading(schoolId: string, tutorId?: string, health?: DashboardHealth) {
   let assignmentsQuery = supabase
     .from("assignments")
     .select("id, title, courses(name)")
@@ -58,12 +72,13 @@ async function loadNeedsGrading(schoolId: string, tutorId?: string) {
 
   if (tutorId) assignmentsQuery = assignmentsQuery.eq("tutor_id", tutorId);
 
-  const { data: recentAssignments } = await assignmentsQuery;
+  const { data: recentAssignments, error: recentAssignmentsError } = await assignmentsQuery;
+  health?.check("needs_grading", recentAssignmentsError);
   if (!recentAssignments) return [];
 
   const items = await Promise.all(
     recentAssignments.map(async (assignment) => {
-      const [{ count: total }, { count: graded }] = await Promise.all([
+      const [{ count: total, error: totalError }, { count: graded, error: gradedError }] = await Promise.all([
         supabase
           .from("submissions")
           .select("*", { count: "exact", head: true })
@@ -77,6 +92,7 @@ async function loadNeedsGrading(schoolId: string, tutorId?: string) {
           .not("score", "is", null),
       ]);
 
+      health?.check("needs_grading", totalError ?? gradedError);
       return {
         id: assignment.id,
         kind: "assignment",
@@ -95,7 +111,7 @@ async function loadNeedsGrading(schoolId: string, tutorId?: string) {
     .slice(0, 3);
 }
 
-async function loadMockOverview(schoolId: string, tutorId?: string) {
+async function loadMockOverview(schoolId: string, tutorId?: string, health?: DashboardHealth) {
   let mocksQuery = supabase
     .from("mock_exams")
     .select("id, title, course_id, courses(name)")
@@ -103,11 +119,12 @@ async function loadMockOverview(schoolId: string, tutorId?: string) {
     .eq("status", "published");
 
   if (tutorId) {
-    const { data: assignments } = await supabase
+    const { data: assignments, error: mockAssignmentsError } = await supabase
       .from("tutor_course_assignments")
       .select("course_id")
       .eq("school_id", schoolId)
       .eq("tutor_id", tutorId);
+    health?.check("mock_overview", mockAssignmentsError);
     const courseIds = (assignments || []).map(
       (assignment) => assignment.course_id,
     );
@@ -117,25 +134,28 @@ async function loadMockOverview(schoolId: string, tutorId?: string) {
     mocksQuery = mocksQuery.in("course_id", courseIds).eq("tutor_id", tutorId);
   }
 
-  const { data: mocks } = await mocksQuery;
+  const { data: mocks, error: mocksQueryError } = await mocksQuery;
+  health?.check("mock_overview", mocksQueryError);
   if (!mocks?.length) return { pending_count: 0, active_count: 0, items: [] };
 
   const mockIds = mocks.map((mock) => mock.id);
-  const { data: attempts } = await supabase
+  const { data: attempts, error: pendingAttemptsError } = await supabase
     .from("mock_attempts")
     .select("id, mock_exam_id, status")
     .eq("school_id", schoolId)
     .in("mock_exam_id", mockIds)
     .in("status", ["submitted", "timed_out"]);
+  health?.check("mock_overview", pendingAttemptsError);
   const attemptIds = (attempts || []).map((attempt) => attempt.id);
-  const { data: ungradedAnswers } = attemptIds.length
+  const { data: ungradedAnswers, error: ungradedAnswersError } = attemptIds.length
     ? await supabase
         .from("mock_answers")
         .select("attempt_id, question:mock_questions(question_type)")
         .eq("school_id", schoolId)
         .in("attempt_id", attemptIds)
         .is("tutor_score", null)
-    : { data: [] };
+    : { data: [], error: null };
+  health?.check("mock_overview", ungradedAnswersError);
   const pendingAttemptIds = new Set(
     (ungradedAnswers || [])
       .filter((answer) => (answer.question as any)?.question_type === "theory")
@@ -408,7 +428,9 @@ dashboardRouter.get("/student", async (c) => {
       .eq("school_id", schoolId)
       .eq("status", "published")
       .order("created_at", { ascending: false })
-      .limit(6),
+      // DEV-DSH-001: audience filtering happens after this fetch, so read a
+      // wider window and apply the stable limit only to authorized rows.
+      .limit(100),
     supabase
       .from("mock_attempts")
       .select("mock_exam_id, status, submitted_at, mcq_score")
@@ -447,9 +469,9 @@ dashboardRouter.get("/student", async (c) => {
   const attemptedMockIds = new Set(
     (attempts || []).map((item) => item.mock_exam_id),
   );
-  const visibleMocks = (mocks || []).filter((item) =>
-    studentCanAccessCentreMock(item, mockAudience),
-  );
+  const visibleMocks = (mocks || [])
+    .filter((item) => studentCanAccessCentreMock(item, mockAudience))
+    .slice(0, 6);
   const endOfPeriod = new Date();
   endOfPeriod.setDate(endOfPeriod.getDate() + 7);
   endOfPeriod.setHours(23, 59, 59, 999);
@@ -770,6 +792,7 @@ dashboardRouter.get("/stats", async (c) => {
   }
 
   const responseData: any = {};
+  const health = new DashboardHealth();
   const { data: school, error: schoolError } = await supabase
     .from("schools")
     .select("account_type")
@@ -797,12 +820,12 @@ dashboardRouter.get("/stats", async (c) => {
     endOfToday.setHours(23, 59, 59, 999);
 
     const [
-      { count: totalStudents },
-      { data: tutorProfiles },
-      { data: teachingAssignments },
-      { count: upcomingClasses },
-      { data: payments },
-      { count: successfulPayments },
+      { count: totalStudents, error: totalStudentsError },
+      { data: tutorProfiles, error: tutorProfilesError },
+      { data: teachingAssignments, error: teachingAssignmentsError },
+      { count: upcomingClasses, error: upcomingClassesError },
+      { data: payments, error: paymentsError },
+      { count: successfulPayments, error: successfulPaymentsError },
     ] = await Promise.all([
       supabase
         .from("user_profiles")
@@ -839,6 +862,11 @@ dashboardRouter.get("/stats", async (c) => {
         .gte("paid_at", startOfMonth.toISOString()),
     ]);
 
+    health.check("total_students", totalStudentsError);
+    health.check("tutors_count", tutorProfilesError ?? teachingAssignmentsError);
+    health.check("upcoming_classes", upcomingClassesError);
+    health.check("mtd_revenue", paymentsError);
+    health.check("successful_payments", successfulPaymentsError);
     const mtdRevenue = payments
       ? payments.reduce((sum, p) => sum + Number(p.centre_amount), 0)
       : 0;
@@ -848,8 +876,8 @@ dashboardRouter.get("/stats", async (c) => {
     ]);
 
     const [needsGrading, mockOverview] = await Promise.all([
-      loadNeedsGrading(schoolId),
-      loadMockOverview(schoolId),
+      loadNeedsGrading(schoolId, undefined, health),
+      loadMockOverview(schoolId, undefined, health),
     ]);
 
     responseData.admin_stats = {
@@ -872,15 +900,17 @@ dashboardRouter.get("/stats", async (c) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     const [
-      { count: classesToday },
-      { count: myCourses },
-      { data: assignments },
+      { count: classesToday, error: classesTodayError },
+      { count: myCourses, error: myCoursesError },
+      { data: assignments, error: tutorAssignmentsError },
     ] = await Promise.all([
       supabase
         .from("live_classes")
         .select("*", { count: "exact", head: true })
         .eq("tutor_id", user.id)
         .eq("school_id", schoolId)
+        // DEV-DSH-007: same eligible statuses as the today_schedule projection.
+        .in("status", ["scheduled", "live"])
         .gte("scheduled_at", startOfDay.toISOString())
         .lte("scheduled_at", endOfDay.toISOString()),
 
@@ -897,27 +927,31 @@ dashboardRouter.get("/stats", async (c) => {
         .eq("school_id", schoolId),
     ]);
 
+    health.check("classes_today", classesTodayError);
+    health.check("my_courses", myCoursesError);
+    health.check("pending_submissions", tutorAssignmentsError);
     let pendingSubmissions = 0;
     if (assignments && assignments.length > 0) {
       const assignmentIds = assignments.map((a) => a.id);
-      const { count } = await supabase
+      const { count, error: pendingError } = await supabase
         .from("submissions")
         .select("*", { count: "exact", head: true })
         .in("assignment_id", assignmentIds)
         .eq("school_id", schoolId)
         .is("score", null);
 
+      health.check("pending_submissions", pendingError);
       pendingSubmissions = count || 0;
     }
 
-    const mockOverview = await loadMockOverview(schoolId, user.id);
+    const mockOverview = await loadMockOverview(schoolId, user.id, health);
     responseData.tutor_stats = {
       classes_today: classesToday || 0,
       pending_submissions: pendingSubmissions,
       my_courses: myCourses || 0,
       needs_grading: [
         ...mockOverview.items,
-        ...(await loadNeedsGrading(schoolId, user.id)),
+        ...(await loadNeedsGrading(schoolId, user.id, health)),
       ].slice(0, 4),
       mocks: mockOverview,
     };
@@ -960,5 +994,6 @@ dashboardRouter.get("/stats", async (c) => {
     responseData.my_today_schedule = myTodaySchedule || [];
   }
 
+  responseData.data_status = health.status();
   return c.json({ data: responseData });
 });

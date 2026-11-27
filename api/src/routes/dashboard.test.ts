@@ -93,3 +93,43 @@ describe('dashboard account policy', () => {
     expect(schoolQuery.eq).not.toHaveBeenCalledWith('id', 'legacy-school')
   })
 })
+
+describe('dashboard /stats data_status', () => {
+  function chain(result: any) {
+    const b: any = new Proxy({}, {
+      get: (_t, prop) => {
+        if (prop === 'then') return (resolve: (v: any) => void) => Promise.resolve(result).then(resolve)
+        if (prop === 'maybeSingle' || prop === 'single') return async () => result
+        return () => b
+      },
+    })
+    return b
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+    mocks.account = { id: 'school-1', membershipId: 'membership-1', role: 'admin' }
+  })
+
+  it('reports failed sources instead of presenting zeros as real data', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'schools') return chain({ data: { account_type: 'centre' }, error: null, count: 0 })
+      if (table === 'payments') return chain({ data: null, error: { code: 'XX000' }, count: null })
+      return chain({ data: [], error: null, count: 0 })
+    })
+    const response = await dashboardRouter.request('/stats')
+    const body = await response.json() as any
+    expect(response.status).toBe(200)
+    expect(body.data.data_status).toEqual({ partial: true, failed_sources: ['mtd_revenue', 'successful_payments'] })
+  })
+
+  it('reports a complete response when every source succeeds', async () => {
+    mocks.from.mockImplementation((table: string) => chain(
+      table === 'schools' ? { data: { account_type: 'centre' }, error: null, count: 0 } : { data: [], error: null, count: 0 }))
+    const response = await dashboardRouter.request('/stats')
+    const body = await response.json() as any
+    expect(response.status).toBe(200)
+    expect(body.data.data_status).toEqual({ partial: false, failed_sources: [] })
+  })
+})

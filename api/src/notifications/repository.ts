@@ -24,6 +24,13 @@ export type NotificationRepository = {
   claimDelivery(key: string): Promise<boolean>
   markDeliverySent(key: string, providerMessageId: string | null): Promise<void>
   markDeliveryFailed(key: string, error: string): Promise<void>
+  /** Per-channel delivery state (DEV-NTF-004). Optional so older doubles keep working. */
+  channelAlreadySent?(key: ChannelKey): Promise<boolean>
+  recordChannel?(key: ChannelKey, status: 'sent' | 'failed' | 'skipped', error?: string): Promise<void>
+}
+
+export type ChannelKey = {
+  schoolId: string; event: NotificationEvent; relatedEntityId: string; recipientId: string; channel: 'in_app' | 'push' | 'email'
 }
 
 function uniqueRecipients(rows: NotificationRecipient[]): NotificationRecipient[] {
@@ -160,6 +167,21 @@ export const notificationRepository: NotificationRepository = {
     const { error } = await supabase.from('email_deliveries').update({
       status: 'failed', last_error: message.slice(0, 500), claimed_until: null, updated_at: new Date().toISOString(),
     }).eq('idempotency_key', key)
+    if (error) throw error
+  },
+  async channelAlreadySent(key) {
+    const { data, error } = await (supabase as any).from('notification_deliveries').select('status')
+      .eq('school_id', key.schoolId).eq('event', key.event).eq('related_entity_id', key.relatedEntityId)
+      .eq('recipient_id', key.recipientId).eq('channel', key.channel).maybeSingle()
+    if (error) throw error
+    return data?.status === 'sent'
+  },
+
+  async recordChannel(key, status, message) {
+    const { error } = await (supabase as any).rpc('record_notification_delivery', {
+      p_school_id: key.schoolId, p_event: key.event, p_related_entity_id: key.relatedEntityId,
+      p_recipient_id: key.recipientId, p_channel: key.channel, p_status: status, p_error: message ?? null,
+    })
     if (error) throw error
   },
 }

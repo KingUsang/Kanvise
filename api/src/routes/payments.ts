@@ -415,7 +415,7 @@ paymentsRouter.get("/", enforceAdmin, async (c) => {
 
     return c.json({ data: payments });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Internal server error", code: "PAYMENT_PROVIDER_ERROR" }, 500);
   }
 });
 
@@ -436,7 +436,7 @@ paymentsRouter.get("/banks", enforceAdmin, async (c) => {
     const data = await response.json();
     return c.json({ data: data.data });
   } catch (error: any) {
-    return c.json({ error: error.message || "Failed to fetch banks" }, 500);
+    return c.json({ error: "Failed to fetch banks", code: "PAYMENT_PROVIDER_ERROR" }, 500);
   }
 });
 
@@ -465,7 +465,7 @@ paymentsRouter.post("/subaccount/resolve", enforceAdmin, async (c) => {
 
     return c.json({ data: data.data }); // { account_name, account_number }
   } catch (error: any) {
-    return c.json({ error: error.message || "Failed to resolve account" }, 500);
+    return c.json({ error: "Failed to resolve account", code: "PAYMENT_PROVIDER_ERROR" }, 500);
   }
 });
 
@@ -535,6 +535,6 @@ paymentsRouter.post("/subaccount", enforceAdmin, async (c) => {
 
     return c.json({ data });
   } catch (error: any) {
-    return c.json({ error: error.message || "Internal server error" }, 500);
+    return c.json({ error: "Internal server error", code: "PAYMENT_PROVIDER_ERROR" }, 500);
   }
 });

@@ -432,21 +432,27 @@ describe('live classes API - lifecycle races (DEV-LVC-032, DEV-TEST-020)', () =>
   })
 
   it('maps a lost cancel race to 409 instead of 500', async () => {
-    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(builder({ data: null, error: null }))
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null }))
+    mocks.rpc.mockResolvedValueOnce({ data: [], error: null })
     const response = await liveClassesRouter.request('/class-1', { method: 'DELETE' })
     expect(response.status).toBe(409)
     expect((await response.json() as any).code).toBe('CLASS_STATE_CHANGED')
   })
 
-  it('cancels a scheduled class and notifies enrolled learners', async () => {
-    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(builder({ data: { ...scheduledClass, status: 'cancelled' }, error: null }))
+  it('cancels a scheduled class and queues the notification in the same RPC (DEV-LVC-004)', async () => {
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null }))
+    mocks.rpc.mockResolvedValueOnce({ data: [{ ...scheduledClass, status: 'cancelled' }], error: null })
     const response = await liveClassesRouter.request('/class-1?reason=Illness', { method: 'DELETE' })
     expect(response.status).toBe(200)
-    expect((await response.json() as any).data.status).toBe('cancelled')
+    const body = await response.json() as any
+    expect(body.data.status).toBe('cancelled')
+    expect(body.notification).toEqual({ queued: true })
+    expect(mocks.rpc).toHaveBeenCalledWith('cancel_live_class_with_outbox', expect.objectContaining({ p_class_id: 'class-1', p_reason: 'Illness' }))
   })
 
   it('reports a database failure while cancelling as 500', async () => {
-    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null })).mockReturnValueOnce(builder({ data: null, error: { message: 'down' } }))
+    mocks.from.mockReturnValueOnce(builder({ data: scheduledClass, error: null }))
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: 'down' } })
     const response = await liveClassesRouter.request('/class-1', { method: 'DELETE' })
     expect(response.status).toBe(500)
   })

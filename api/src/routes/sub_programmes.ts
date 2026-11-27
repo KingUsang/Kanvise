@@ -30,7 +30,10 @@ subProgrammesRouter.patch('/:id', requireRole('admin'), async (c) => {
     .select()
     .single()
 
-  if (error) return c.json({ error: error.message }, 500)
+  if (error) {
+    console.error('[sub-programmes] database error', { code: error.code })
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500)
+  }
   if (!subProgramme) return c.json({ error: 'SUB_PROGRAMME_NOT_FOUND' }, 404)
 
   return c.json({ sub_programme: subProgramme })
@@ -49,7 +52,10 @@ subProgrammesRouter.post('/:id/publish', requireRole('admin'), async (c) => {
     .eq('id', id)
     .eq('school_id', user.school_id)
 
-  if (error) return c.json({ error: error.message }, 500)
+  if (error) {
+    console.error('[sub-programmes] database error', { code: error.code })
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500)
+  }
   return c.json({ message: 'Sub-programme published' })
 })
 
@@ -63,7 +69,10 @@ subProgrammesRouter.post('/:id/unpublish', requireRole('admin'), async (c) => {
     .eq('id', id)
     .eq('school_id', user.school_id)
 
-  if (error) return c.json({ error: error.message }, 500)
+  if (error) {
+    console.error('[sub-programmes] database error', { code: error.code })
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500)
+  }
   return c.json({ message: 'Sub-programme unpublished' })
 })
 
@@ -91,6 +100,9 @@ subProgrammesRouter.delete('/:id', requireRole('admin'), async (c) => {
     .eq('id', id)
     .eq('school_id', user.school_id)
 
-  if (error) return c.json({ error: error.message }, 500)
+  if (error) {
+    console.error('[sub-programmes] database error', { code: error.code })
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500)
+  }
   return c.json({ message: 'Sub-programme deleted successfully' })
 })

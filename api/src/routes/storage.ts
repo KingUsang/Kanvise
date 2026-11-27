@@ -7,7 +7,6 @@ import {
   createPresignedDownload,
   createPresignedPublicUpload,
   createPresignedUpload,
-  deleteStoredObject,
   isPrivateUploadType,
   isPublicUploadType,
   publicFileKeyFromUrl,
@@ -19,6 +18,8 @@ import { z } from 'zod'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { tutorCanManageCourse } from '../lib/course-management-access'
 import type { TablesUpdate } from '../lib/database.types'
+import { consumeUploadIntent, recordUploadIntent, releaseUploadIntent } from '../storage/upload-intents'
+import { enqueuePublicObjectDeletion } from '../jobs/storage-cleanup'
 
 export const storageRouter = new Hono<{ Variables: AppVariables }>()
 
@@ -140,6 +141,14 @@ async function presignUpload(c: any) {
       fileName: file_name,
       contentType: content_type,
       fileSizeBytes: file_size_bytes,
+    })
+    await recordUploadIntent({
+      schoolId: user.school_id, requesterId: user.id, fileKey: result.fileKey, scope: 'private',
+      entityType: entity_type,
+      contextId: (entity_type === 'submission' ? body.assignment_id
+        : entity_type === 'question_media' ? body.bank_id
+        : course_id) as string,
+      contentType: content_type, fileSizeBytes: file_size_bytes,
     })
     return c.json({ data: {
       presigned_url: result.presignedUrl,
@@ -271,6 +280,10 @@ async function presignPublicUpload(c: any) {
       contentType: content_type,
       fileSizeBytes: Number(file_size_bytes),
     })
+    await recordUploadIntent({
+      schoolId: user.school_id, requesterId: user.id, fileKey: result.fileKey, scope: 'public',
+      entityType: entity_type, contextId: context_id, contentType: content_type, fileSizeBytes: Number(file_size_bytes),
+    })
     return c.json({ data: {
       presigned_url: result.presignedUrl,
       file_key: result.fileKey,
@@ -309,36 +322,44 @@ async function confirmPublicUpload(c: any) {
       fileSizeBytes: Number(file_size_bytes),
     })
 
-    let data: any
-    let oldKey: string | null = null
-    if (entity_type === 'profile_photo') {
-      const { data: old } = await supabase.from('user_profiles').select('profile_photo_key').eq('id', user.id).single()
-      oldKey = old?.profile_photo_key || null
-      const result = await supabase.from('user_profiles').update({ profile_photo_key: file_key }).eq('id', user.id).select().single()
-      if (result.error) throw result.error
-      data = result.data
-    } else if (entity_type === 'programme_thumbnail') {
-      const { data: old } = await supabase.from('programmes').select('thumbnail_url').eq('id', context_id).eq('school_id', user.school_id).single()
-      oldKey = publicFileKeyFromUrl(old?.thumbnail_url)
-      const result = await supabase.from('programmes').update({ thumbnail_url: publicFileUrl(file_key) })
-        .eq('id', context_id).eq('school_id', user.school_id).select().single()
-      if (result.error) throw result.error
-      data = result.data
-    } else {
-      const column = entity_type === 'logo' ? 'logo_url' : entity_type === 'banner' ? 'banner_url' : 'video_intro_url'
-      const { data: old } = await supabase.from('schools').select(column).eq('id', user.school_id).single()
-      const oldMedia = old as Partial<Record<typeof column, string | null>> | null
-      oldKey = publicFileKeyFromUrl(oldMedia?.[column])
-      const result = await supabase.from('schools').update({ [column]: publicFileUrl(file_key) } as TablesUpdate<'schools'>)
-        .eq('id', user.school_id).select().single()
-      if (result.error) throw result.error
-      data = result.data
-    }
+    const intent = { schoolId: user.school_id, requesterId: user.id, fileKey: file_key }
+    await consumeUploadIntent(intent)
+    try {
+      let data: any
+      let oldKey: string | null = null
+      if (entity_type === 'profile_photo') {
+        const { data: old, error: oldError } = await supabase.from('user_profiles').select('profile_photo_key').eq('id', user.id).single()
+        if (oldError) throw oldError
+        oldKey = old?.profile_photo_key || null
+        const result = await supabase.from('user_profiles').update({ profile_photo_key: file_key }).eq('id', user.id).select().single()
+        if (result.error) throw result.error
+        data = result.data
+      } else if (entity_type === 'programme_thumbnail') {
+        const { data: old, error: oldError } = await supabase.from('programmes').select('thumbnail_url').eq('id', context_id).eq('school_id', user.school_id).single()
+        if (oldError) throw oldError
+        oldKey = publicFileKeyFromUrl(old?.thumbnail_url)
+        const result = await supabase.from('programmes').update({ thumbnail_url: publicFileUrl(file_key) })
+          .eq('id', context_id).eq('school_id', user.school_id).select().single()
+        if (result.error) throw result.error
+        data = result.data
+      } else {
+        const column = entity_type === 'logo' ? 'logo_url' : entity_type === 'banner' ? 'banner_url' : 'video_intro_url'
+        const { data: old, error: oldError } = await supabase.from('schools').select(column).eq('id', user.school_id).single()
+        if (oldError) throw oldError
+        const oldMedia = old as Partial<Record<typeof column, string | null>> | null
+        oldKey = publicFileKeyFromUrl(oldMedia?.[column])
+        const result = await supabase.from('schools').update({ [column]: publicFileUrl(file_key) } as TablesUpdate<'schools'>)
+          .eq('id', user.school_id).select().single()
+        if (result.error) throw result.error
+        data = result.data
+      }
 
-    if (oldKey && oldKey !== file_key) {
-      deleteStoredObject(oldKey).catch(error => console.error('storage.old_public_media_cleanup_failed', { oldKey, error }))
+      if (oldKey && oldKey !== file_key) await enqueuePublicObjectDeletion(oldKey, user.school_id)
+      return c.json({ data, file_key, public_url: publicFileUrl(file_key) })
+    } catch (registrationError) {
+      await releaseUploadIntent(intent)
+      throw registrationError
     }
-    return c.json({ data, file_key, public_url: publicFileUrl(file_key) })
   } catch (error: any) {
     if (error instanceof AuthorizationLookupError) return serviceUnavailable(c)
     if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status)

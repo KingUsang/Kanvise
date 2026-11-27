@@ -122,4 +122,25 @@ describe('POST /schools', () => {
     expect(await response.json()).toMatchObject({ code })
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
+
+  it('accepts independent_tutor and labels the account', async () => {
+    mocks.rpc.mockReset()
+    mocks.rpc.mockResolvedValue({ data: { already_configured: false, school: { id: 'school-1', name: 'Ada', slug: 'ada', account_type: 'independent' } }, error: null })
+
+    const response = await post({ name: 'Ada', account_type: 'independent_tutor' })
+    const body = await response.json() as any
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('create_school_for_admin', expect.objectContaining({ p_account_type: 'independent' }))
+    expect(body.school.account_type_label).toBe('independent_tutor')
+  })
+
+  it('labels a centre as a tutoring agency', async () => {
+    mocks.rpc.mockReset()
+    mocks.rpc.mockResolvedValue({ data: { already_configured: false, school: { id: 'school-1', name: 'C', slug: 'c', account_type: 'centre' } }, error: null })
+
+    const body = await (await post({ name: 'C' })).json() as any
+
+    expect(body.school.account_type_label).toBe('tutoring_agency')
+  })
 })

@@ -1,4 +1,5 @@
 import { enqueueObjectDeletion } from "../jobs/storage-cleanup";
+import { consumeUploadIntent, releaseUploadIntent } from "../storage/upload-intents";
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase";
 import {
@@ -174,6 +175,9 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       return c.json({ error: "File has already been registered", code: "FILE_ALREADY_REGISTERED" }, 409);
     }
 
+    const intent = { schoolId: profile.school_id, requesterId: profile.id, fileKey: file_key };
+    await consumeUploadIntent(intent);
+
     // Insert note
     const { data: note, error: insertError } = await supabase
       .from("notes")
@@ -192,6 +196,7 @@ notesRouter.post("/:courseId", enforceAdminOrTutor, async (c) => {
       .single();
 
     if (insertError) {
+      await releaseUploadIntent(intent);
       // The unique (school_id, file_key) index closes the check-then-insert race.
       if (insertError.code === "23505") {
         return c.json({ error: "File has already been registered", code: "FILE_ALREADY_REGISTERED" }, 409);

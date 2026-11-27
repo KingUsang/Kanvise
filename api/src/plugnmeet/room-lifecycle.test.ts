@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn(), isRoomActive: vi.fn() }))
+const mocks = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn(), isRoomActive: vi.fn(), endRoom: vi.fn() }))
 
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
-vi.mock('./client', () => ({ plugNmeet: { isRoomActive: mocks.isRoomActive } }))
+vi.mock('./client', () => ({ plugNmeet: { isRoomActive: mocks.isRoomActive, endRoom: mocks.endRoom } }))
 
 import { reconcileInactivePlugNmeetClasses } from './room-lifecycle'
 
@@ -46,6 +46,32 @@ describe('PlugNmeet room lifecycle reconciliation', () => {
     expect(writes.some((payload) => payload.status === 'live')).toBe(false)
   })
 
+  it('retries the provider end for an ending class whose room is still active (DEV-LVC-005)', async () => {
+    mocks.from.mockImplementationOnce(() => selection({
+      data: [{ id: 'class-1', provider_room_id: 'room-1', status: 'ending', scheduled_at: now.toISOString(), duration_minutes: 60 }], error: null,
+    }))
+    mocks.isRoomActive.mockResolvedValue(true)
+    mocks.endRoom.mockResolvedValue({})
+
+    const result = await reconcileInactivePlugNmeetClasses(now)
+
+    expect(mocks.endRoom).toHaveBeenCalledWith('room-1')
+    expect(result.endRetried).toBe(1)
+    expect(writes.some((payload) => payload.status === 'completed')).toBe(false)
+  })
+
+  it('completes an ending class only once the provider room is gone', async () => {
+    mocks.from.mockImplementationOnce(() => selection({
+      data: [{ id: 'class-1', provider_room_id: 'room-1', status: 'ending', scheduled_at: now.toISOString(), duration_minutes: 60 }], error: null,
+    }))
+    mocks.isRoomActive.mockResolvedValue(false)
+
+    await reconcileInactivePlugNmeetClasses(now)
+
+    expect(mocks.endRoom).not.toHaveBeenCalled()
+    expect(writes).toContainEqual(expect.objectContaining({ status: 'completed' }))
+  })
+
   it('prepares a new provider generation when a live room disappears mid-class', async () => {
     mocks.from.mockImplementationOnce(() => selection({
       data: [{ id: 'class-1', provider_room_id: 'room-1', status: 'live', scheduled_at: now.toISOString(), duration_minutes: 60 }], error: null,
@@ -69,5 +95,18 @@ describe('PlugNmeet room lifecycle reconciliation', () => {
     await reconcileInactivePlugNmeetClasses(now)
 
     expect(writes).toContainEqual(expect.objectContaining({ status: 'interrupted', provider_room_status: 'unavailable' }))
+  })
+
+  it('stops retrying the end request and marks the class interrupted after its deadline', async () => {
+    mocks.from.mockImplementationOnce(() => selection({
+      data: [{ id: 'class-1', provider_room_id: 'room-1', status: 'ending', scheduled_at: new Date(now.getTime() - 6 * 3600_000).toISOString(), duration_minutes: 60 }], error: null,
+    }))
+    mocks.isRoomActive.mockResolvedValue(true)
+
+    const result = await reconcileInactivePlugNmeetClasses(now)
+
+    expect(mocks.endRoom).not.toHaveBeenCalled()
+    expect(result.interrupted).toBe(1)
+    expect(writes).toContainEqual(expect.objectContaining({ status: 'interrupted' }))
   })
 })
