@@ -2419,6 +2419,20 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"recorder_fleet_desired_state": {
+                  Row: {
+                    "acknowledged_at": string | null,"acknowledged_command_id": string | null,"acknowledged_version": number,"capacity_exceeded_at": string | null,"command_id": string | null,"demand": number,"desired_capacity": number,"desired_version": number,"last_alert_at": string | null,"reason": string | null,"singleton": boolean,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "acknowledged_at"?: string | null,"acknowledged_command_id"?: string | null,"acknowledged_version"?: number,"capacity_exceeded_at"?: string | null,"command_id"?: string | null,"demand"?: number,"desired_capacity"?: number,"desired_version"?: number,"last_alert_at"?: string | null,"reason"?: string | null,"singleton"?: boolean,"updated_at"?: string
+                  }
+                  Update: {
+                    "acknowledged_at"?: string | null,"acknowledged_command_id"?: string | null,"acknowledged_version"?: number,"capacity_exceeded_at"?: string | null,"command_id"?: string | null,"demand"?: number,"desired_capacity"?: number,"desired_version"?: number,"last_alert_at"?: string | null,"reason"?: string | null,"singleton"?: boolean,"updated_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"registration_intents": {
                   Row: {
                     "consumed_at": string | null,"consumed_by": string | null,"created_at": string,"expires_at": string,"id": string,"kind": string,"return_to": string,"token_hash": string
@@ -3218,6 +3232,12 @@ isOneToOne: false
                            },
 "sweep_orphan_question_media":
 { Args: { "p_limit"?: number,"p_older_than"?: string }; Returns: number
+                           },
+"acknowledge_recorder_command":
+{ Args: { "p_command_id": string,"p_version": number }; Returns: boolean
+                           },
+"plan_recorder_command":
+{ Args: { "p_alert_interval_seconds"?: number,"p_capture_slots"?: number,"p_demand": number,"p_desired": number,"p_force"?: boolean,"p_reason": string,"p_refresh_seconds"?: number }; Returns: { out_command_id: string,out_version: number,out_send: boolean,out_capacity_alert: boolean }[]
                            },
 "replay_durable_job":
 { Args: { "p_id": string }; Returns: boolean

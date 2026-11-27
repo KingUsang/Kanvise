@@ -87,7 +87,7 @@ async function requireClassroom(c: any, level: 'view' | 'host' | 'takeover' = 'v
 }
 
 function wakeRecorderWithoutBlockingClassroom() {
-  void reconcileRecorderFleet().catch((error) => {
+  void reconcileRecorderFleet(new Date(), { force: true }).catch((error) => {
     console.warn('[recording] recorder wake-up did not block classroom entry:', error)
   })
 }
