@@ -3236,6 +3236,12 @@ isOneToOne: false
 "sweep_orphan_question_media":
 { Args: { "p_limit"?: number,"p_older_than"?: string }; Returns: number
                            },
+"dashboard_needs_grading":
+{ Args: { "p_limit"?: number,"p_school_id": string,"p_tutor_id"?: string }; Returns: { out_assignment_id: string,out_title: string,out_course_name: string,out_pending_count: number,out_total_count: number }[]
+                           },
+"dashboard_pending_submissions":
+{ Args: { "p_school_id": string,"p_tutor_id"?: string }; Returns: number
+                           },
 "acknowledge_recorder_command":
 { Args: { "p_command_id": string,"p_version": number }; Returns: boolean
                            },

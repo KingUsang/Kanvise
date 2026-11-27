@@ -15,6 +15,7 @@ import {
   type StudentMockAudience,
 } from "../lib/student-mock-audience";
 import { buildStudentProgress } from "../domain/student-progress";
+import { reportingPeriods, resolveReportingTimezone } from "../lib/reporting-period";
 
 export const dashboardRouter = new Hono<{ Variables: Variables }>();
 
@@ -63,52 +64,29 @@ class DashboardHealth {
   }
 }
 
+// DEV-DSH-003: one grouped query ranks every eligible assignment (no per-assignment counts).
 async function loadNeedsGrading(schoolId: string, tutorId?: string, health?: DashboardHealth) {
-  let assignmentsQuery = supabase
-    .from("assignments")
-    .select("id, title, courses(name)")
-    .eq("school_id", schoolId)
-    .limit(20);
+  const { data, error } = await (supabase as any).rpc("dashboard_needs_grading", {
+    p_school_id: schoolId,
+    p_tutor_id: tutorId ?? null,
+    p_limit: 3,
+  });
+  health?.check("needs_grading", error);
+  if (error || !Array.isArray(data)) return [];
 
-  if (tutorId) assignmentsQuery = assignmentsQuery.eq("tutor_id", tutorId);
-
-  const { data: recentAssignments, error: recentAssignmentsError } = await assignmentsQuery;
-  health?.check("needs_grading", recentAssignmentsError);
-  if (!recentAssignments) return [];
-
-  const items = await Promise.all(
-    recentAssignments.map(async (assignment) => {
-      const [{ count: total, error: totalError }, { count: graded, error: gradedError }] = await Promise.all([
-        supabase
-          .from("submissions")
-          .select("*", { count: "exact", head: true })
-          .eq("assignment_id", assignment.id)
-          .eq("school_id", schoolId),
-        supabase
-          .from("submissions")
-          .select("*", { count: "exact", head: true })
-          .eq("assignment_id", assignment.id)
-          .eq("school_id", schoolId)
-          .not("score", "is", null),
-      ]);
-
-      health?.check("needs_grading", totalError ?? gradedError);
-      return {
-        id: assignment.id,
-        kind: "assignment",
-        href: `/dashboard/assignments/${assignment.id}/submissions`,
-        title: assignment.title,
-        context: `${(assignment.courses as any)?.name || "General"} • ${(total || 0) - (graded || 0)} waiting`,
-        pending_count: (total || 0) - (graded || 0),
-        progress: total ? Math.round(((graded || 0) / total) * 100) : 0,
-      };
-    }),
-  );
-
-  return items
-    .filter((item) => item.pending_count > 0)
-    .sort((a, b) => b.pending_count - a.pending_count)
-    .slice(0, 3);
+  return data.map((row: any) => {
+    const pending = Number(row.out_pending_count) || 0;
+    const total = Number(row.out_total_count) || 0;
+    return {
+      id: row.out_assignment_id,
+      kind: "assignment",
+      href: `/dashboard/assignments/${row.out_assignment_id}/submissions`,
+      title: row.out_title,
+      context: `${row.out_course_name || "General"} • ${pending} waiting`,
+      pending_count: pending,
+      progress: total ? Math.round(((total - pending) / total) * 100) : 0,
+    };
+  });
 }
 
 async function loadMockOverview(schoolId: string, tutorId?: string, health?: DashboardHealth) {
@@ -472,10 +450,11 @@ dashboardRouter.get("/student", async (c) => {
   const visibleMocks = (mocks || [])
     .filter((item) => studentCanAccessCentreMock(item, mockAudience))
     .slice(0, 6);
-  const endOfPeriod = new Date();
-  endOfPeriod.setDate(endOfPeriod.getDate() + 7);
-  endOfPeriod.setHours(23, 59, 59, 999);
-  
+  const endOfPeriod = reportingPeriods(
+    new Date(),
+    resolveReportingTimezone(c.req.query("tz")),
+  ).sevenDayEnd;
+
   const upcomingClasses = (classes || [])
     .filter((item) => item.status === "live" || (item.scheduled_at >= now && new Date(item.scheduled_at) <= endOfPeriod))
     .slice(0, 6)
@@ -773,26 +752,28 @@ dashboardRouter.get("/stats", async (c) => {
   }
 
   const role = user.role;
+  const periods = reportingPeriods(new Date(), resolveReportingTimezone(c.req.query("tz")));
 
   // Determine capabilities
   let isAdmin = role === "admin";
   let isTutor = role === "tutor";
+  const responseData: any = {};
+  const health = new DashboardHealth();
 
   // If admin, check if they are also assigned as a tutor
   if (isAdmin) {
-    const { count } = await supabase
+    const { count, error: capabilityError } = await supabase
       .from("tutor_course_assignments")
       .select("*", { count: "exact", head: true })
       .eq("tutor_id", user.id)
       .eq("school_id", schoolId);
+    health.check("tutor_capability", capabilityError);
 
     if (count && count > 0) {
       isTutor = true;
     }
   }
 
-  const responseData: any = {};
-  const health = new DashboardHealth();
   const { data: school, error: schoolError } = await supabase
     .from("schools")
     .select("account_type")
@@ -808,34 +789,39 @@ dashboardRouter.get("/stats", async (c) => {
   }
   responseData.organisation_type =
     school?.account_type === "independent" ? "independent" : "centre";
+  responseData.reporting = {
+    timezone: periods.timezone,
+    today_start: periods.todayStart.toISOString(),
+    today_end: periods.todayEnd.toISOString(),
+    month_start: periods.monthStart.toISOString(),
+  };
 
   // Fetch admin stats if they have admin capability
   if (isAdmin) {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
+    const startOfMonth = periods.monthStart;
+    const startOfToday = periods.todayStart;
+    const endOfToday = periods.todayEnd;
 
     const [
       { count: totalStudents, error: totalStudentsError },
-      { data: tutorProfiles, error: tutorProfilesError },
+      { data: tutorMembers, error: tutorProfilesError },
       { data: teachingAssignments, error: teachingAssignmentsError },
       { count: upcomingClasses, error: upcomingClassesError },
       { data: payments, error: paymentsError },
       { count: successfulPayments, error: successfulPaymentsError },
     ] = await Promise.all([
+      // DEV-DSH-005: canonical active memberships, not mutable profile hints.
       supabase
-        .from("user_profiles")
+        .from("account_memberships")
         .select("*", { count: "exact", head: true })
-        .eq("role", "student")
+        .eq("role", "learner")
+        .eq("status", "active")
         .eq("school_id", schoolId),
       supabase
-        .from("user_profiles")
-        .select("id")
-        .eq("role", "tutor")
+        .from("account_memberships")
+        .select("person_id, role")
+        .in("role", ["tutor", "admin"])
+        .eq("status", "active")
         .eq("school_id", schoolId),
       supabase
         .from("tutor_course_assignments")
@@ -870,9 +856,14 @@ dashboardRouter.get("/stats", async (c) => {
     const mtdRevenue = payments
       ? payments.reduce((sum, p) => sum + Number(p.centre_amount), 0)
       : 0;
-    const tutorIds = new Set([
-      ...(tutorProfiles || []).map((profile) => profile.id),
-      ...(teachingAssignments || []).map((assignment) => assignment.tutor_id),
+    // Tutors are active Tutor members plus active members (an Admin who also
+    // teaches) holding a course assignment; revoked members never count.
+    const activeStaff = new Map((tutorMembers || []).map((member: any) => [member.person_id, member.role]));
+    const tutorIds = new Set<string>([
+      ...(tutorMembers || []).filter((member: any) => member.role === "tutor").map((member: any) => member.person_id),
+      ...(teachingAssignments || [])
+        .map((assignment) => assignment.tutor_id)
+        .filter((tutorId) => activeStaff.has(tutorId)),
     ]);
 
     const [needsGrading, mockOverview] = await Promise.all([
@@ -893,16 +884,13 @@ dashboardRouter.get("/stats", async (c) => {
 
   // Fetch tutor stats if they have tutor capability
   if (isTutor) {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = periods.todayStart;
+    const endOfDay = periods.todayEnd;
 
     const [
       { count: classesToday, error: classesTodayError },
       { count: myCourses, error: myCoursesError },
-      { data: assignments, error: tutorAssignmentsError },
+      { data: pendingSubmissionCount, error: tutorAssignmentsError },
     ] = await Promise.all([
       supabase
         .from("live_classes")
@@ -920,29 +908,14 @@ dashboardRouter.get("/stats", async (c) => {
         .eq("tutor_id", user.id)
         .eq("school_id", schoolId),
 
-      supabase
-        .from("assignments")
-        .select("id")
-        .eq("tutor_id", user.id)
-        .eq("school_id", schoolId),
+      // DEV-DSH-003: one aggregate instead of loading every assignment id.
+      (supabase as any).rpc("dashboard_pending_submissions", { p_school_id: schoolId, p_tutor_id: user.id }),
     ]);
 
     health.check("classes_today", classesTodayError);
     health.check("my_courses", myCoursesError);
     health.check("pending_submissions", tutorAssignmentsError);
-    let pendingSubmissions = 0;
-    if (assignments && assignments.length > 0) {
-      const assignmentIds = assignments.map((a) => a.id);
-      const { count, error: pendingError } = await supabase
-        .from("submissions")
-        .select("*", { count: "exact", head: true })
-        .in("assignment_id", assignmentIds)
-        .eq("school_id", schoolId)
-        .is("score", null);
-
-      health.check("pending_submissions", pendingError);
-      pendingSubmissions = count || 0;
-    }
+    const pendingSubmissions = Number(pendingSubmissionCount) || 0;
 
     const mockOverview = await loadMockOverview(schoolId, user.id, health);
     responseData.tutor_stats = {
@@ -957,10 +930,8 @@ dashboardRouter.get("/stats", async (c) => {
     };
   }
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
+  const startOfToday = periods.todayStart;
+  const endOfToday = periods.todayEnd;
   let scheduleQuery = supabase
     .from("live_classes")
     .select("id, title, scheduled_at, duration_minutes, status, courses!live_classes_course_id_fkey(name)")
