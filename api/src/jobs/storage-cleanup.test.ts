@@ -36,10 +36,16 @@ describe('storage cleanup jobs', () => {
   })
 
   it('sweeps expired upload intents and unattached question media', async () => {
-    const rpc = vi.fn(async (name: string) => ({ data: name === 'sweep_upload_intents' ? 3 : 2, error: null }))
-    await expect(runUploadOrphanSweep({ rpc } as any)).resolves.toEqual({ expiredIntents: 3, orphanQuestionMedia: 2 })
+    const rpc = vi.fn(async (name: string) => ({ data: name === 'sweep_upload_intents' ? 3 : name === 'sweep_orphan_question_media' ? 2 : 1, error: null }))
+    await expect(runUploadOrphanSweep({ rpc } as any)).resolves.toEqual({ expiredIntents: 3, orphanQuestionMedia: 2, unregisteredIntents: 1 })
+    expect(rpc).toHaveBeenCalledWith('sweep_unregistered_upload_intents', { p_limit: 100 })
     expect(rpc).toHaveBeenCalledWith('sweep_upload_intents', { p_limit: 200 })
     expect(rpc).toHaveBeenCalledWith('sweep_orphan_question_media', { p_limit: 100 })
+  })
+
+  it('surfaces a failure of the unregistered-intent sweep', async () => {
+    const rpc = vi.fn(async (name: string) => name === 'sweep_unregistered_upload_intents' ? { data: null, error: new Error('sweep failed') } : { data: 0, error: null })
+    await expect(runUploadOrphanSweep({ rpc } as any)).rejects.toThrow('sweep failed')
   })
 
   it('surfaces a sweep failure so the scheduler records it', async () => {

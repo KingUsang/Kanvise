@@ -3230,6 +3230,9 @@ isOneToOne: false
 "sweep_upload_intents":
 { Args: { "p_limit"?: number }; Returns: number
                            },
+"sweep_unregistered_upload_intents":
+{ Args: { "p_older_than"?: string; "p_limit"?: number }; Returns: number
+                           },
 "sweep_orphan_question_media":
 { Args: { "p_limit"?: number,"p_older_than"?: string }; Returns: number
                            },

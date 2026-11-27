@@ -10,8 +10,16 @@ export function providerForClass(input: { accessMode?: string | null; schoolId: 
   return 'plugnmeet'
 }
 
-export async function createPlugNmeetRoom(input: { roomId: string; title: string; schoolId: string; courseId: string | null; accessMode: string }) {
-  await plugNmeet.createRoom(input.accessMode === 'anyone_with_link' ? createGuestRoomRequest(input) : createEnrolledRoomRequest(input))
+export async function createPlugNmeetRoom(input: { roomId: string; title: string; schoolId: string; courseId: string | null; accessMode: string; recordingAllowed?: boolean }) {
+  const request = input.accessMode === 'anyone_with_link' ? createGuestRoomRequest(input) : createEnrolledRoomRequest(input)
+  if (input.recordingAllowed === false) {
+    // Recorder capacity admission (DEV-REC-002): the class runs without recording.
+    request.metadata.room_features.recording_features = {
+      is_allow: false, is_allow_cloud: false, is_allow_local: false,
+      enable_auto_cloud_recording: false, only_record_admin_webcams: false,
+    }
+  }
+  await plugNmeet.createRoom(request)
   return { provider: 'plugnmeet' as const, providerRoomId: input.roomId, serverUrl: plugNmeetClientUrl() }
 }
 
