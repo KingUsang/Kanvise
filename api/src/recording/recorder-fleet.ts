@@ -39,6 +39,7 @@ export async function reconcileRecorderFleet(now = new Date()) {
   const body = JSON.stringify(payload)
   const response = await fetch(process.env.RECORDER_FLEET_CONTROLLER_URL!, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kanvise-Recorder-Fleet-Signature': sign(body) }, body,
+    signal: AbortSignal.timeout(15_000),
   })
   if (!response.ok) throw new Error(`Recorder fleet controller failed (${response.status})`)
   const controller = await response.json().catch(() => ({})) as FleetControllerResult

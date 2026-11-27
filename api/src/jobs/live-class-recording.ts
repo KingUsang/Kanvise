@@ -29,6 +29,7 @@ async function transcribeDeepgram(stream: NodeJS.ReadableStream, contentType = '
     headers: { Authorization: `Token ${apiKey}`, 'Content-Type': contentType },
     body: stream as any,
     duplex: 'half',
+    signal: AbortSignal.timeout(15 * 60_000),
   } as any)
   const body = await response.json().catch(() => null) as any
   if (!response.ok) throw new Error(`Deepgram transcription failed (${response.status}): ${body?.err_msg || body?.message || 'unknown error'}`)
@@ -53,6 +54,7 @@ ${input.transcript.slice(0, 120_000)}`
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } }),
+    signal: AbortSignal.timeout(2 * 60_000),
   })
   const body = await response.json().catch(() => null) as any
   if (!response.ok) throw new Error(`Gemini summary failed (${response.status}): ${body?.error?.message || 'unknown error'}`)
@@ -94,7 +96,7 @@ async function processRecording(job: RecordingJob) {
   // Recorders upload to R2 themselves. Reading a short-lived signed URL keeps
   // the summary worker independent from PlugNmeet and avoids buffering video.
   const downloadUrl = await createPresignedDownload(recording.r2_file_key, liveClass.school_id, 60 * 30)
-  const downloadResponse = await fetch(downloadUrl)
+  const downloadResponse = await fetch(downloadUrl, { signal: AbortSignal.timeout(30 * 60_000) })
   if (!downloadResponse.ok || !downloadResponse.body) throw new Error(`R2 recording download failed (${downloadResponse.status})`)
   const transcription = await transcribeDeepgram(downloadResponse.body as any, recording.content_type || 'video/mp4')
   const transcriptFileKey = transcriptKey(liveClass.school_id, liveClass.id)
