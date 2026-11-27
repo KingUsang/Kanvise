@@ -14,7 +14,6 @@ import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import { getApiUrl } from '@/config/api';
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog';
 import { BrowserPushPrompt } from '@/components/pwa/browser-push-prompt';
-import { BrowserPushEngagementTracker } from '@/components/pwa/browser-push-engagement-tracker';
 import type { StudentDashboardData } from '@/lib/student-dashboard';
 import { adaptLearnerDashboard, productTerms } from '@/lib/product-terminology';
 import { AccountSwitcher } from '@/components/account/account-switcher';
@@ -98,7 +97,6 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
   const mobileNavigation = resolvedClassLearning ? mobileClassNavigation : mobileStandaloneNavigation;
 
   return <div className="min-h-screen overflow-x-clip bg-[#f8f7f5] text-[#25232d]">
-    <BrowserPushEngagementTracker />
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-[#2e2877] lg:flex">{nav}</aside>
     <div className="min-w-0 lg:pl-64">
       <header className="sticky top-0 z-30 flex h-16 min-w-0 items-center gap-2 border-b border-[#e7e3df] bg-white/95 px-3 backdrop-blur sm:gap-3 sm:px-6 lg:px-10">
@@ -111,7 +109,7 @@ export function StudentShell({ children, learnerName = productTerms.learner, acc
           {accountOpen && <><button aria-label="Close account menu" className="fixed inset-0 z-30" onClick={() => setAccountOpen(false)} /><div className="absolute right-0 top-12 z-40 w-60 overflow-hidden rounded-2xl border border-[#e3ded9] bg-white shadow-xl"><div className="border-b border-[#eeeae6] px-4 py-3"><p className="truncate text-sm font-semibold">{resolvedName}</p><p className="truncate text-xs text-[#77727e]">{resolvedAccount}</p></div><div className="p-2"><Link href="/dashboard/student/settings" onClick={() => setAccountOpen(false)} className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><Settings size={18} />Settings</Link><button onClick={signOut} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-[#4f4a54] hover:bg-[#f5f2ef]"><LogOut size={18} />Log out</button></div></div></>}
         </div>
       </header>
-      <div className="min-w-0 max-w-full">{children}</div>
+      <main className="min-w-0 max-w-full">{children}</main>
     </div>
     <nav aria-label="Learner navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#ded9d4] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(35,31,38,0.06)] backdrop-blur lg:hidden">
       <div className={`mx-auto grid h-14 max-w-lg ${resolvedClassLearning ? "grid-cols-4" : "grid-cols-2"}`}>

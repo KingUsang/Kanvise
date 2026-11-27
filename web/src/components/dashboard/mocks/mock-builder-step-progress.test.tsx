@@ -14,7 +14,7 @@ describe('MockBuilderStepProgress', () => {
     render(<MockBuilderStepProgress steps={steps} currentStepId="questions" visitedStepIds={new Set(['setup', 'questions'])} onStepSelect={() => undefined} />)
 
     expect(screen.getByText('Step 2 of 4')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar', { name: 'Mock creation progress' })).toHaveAttribute('aria-valuenow', '2')
+    expect(screen.getByRole('progressbar', { name: 'Quiz creation progress' })).toHaveAttribute('aria-valuenow', '2')
   })
 
   it('keeps a previously visited step available after going back', () => {

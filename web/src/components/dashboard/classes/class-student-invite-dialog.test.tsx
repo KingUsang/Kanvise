@@ -40,7 +40,7 @@ describe('ClassStudentInviteDialog', () => {
 
   it('exposes labelled fields and inline validation before submission', async () => {
     renderInvite()
-    const dialog = await screen.findByRole('dialog', { name: 'Add student' })
+    const dialog = await screen.findByRole('dialog', { name: 'Add learner' })
     expect(dialog).toHaveAccessibleDescription('They will receive an email to set up their account.')
     expect(screen.getByRole('textbox', { name: 'Email address' })).toHaveAttribute('type', 'email')
     expect(screen.getByRole('button', { name: 'Send invitation' })).toHaveClass('min-h-11')
@@ -73,7 +73,7 @@ describe('ClassStudentInviteDialog', () => {
         }),
       }),
     )
-    expect(mocks.toast.success).toHaveBeenCalledWith('Invitation sent. The student will join this class after accepting it.')
+    expect(mocks.toast.success).toHaveBeenCalledWith('Invitation sent. The learner will join this class after accepting it.')
   })
 
   it('keeps the dialog open while the invitation is pending', async () => {

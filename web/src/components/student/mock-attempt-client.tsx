@@ -227,12 +227,12 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
     return () => window.removeEventListener('keydown', keyboard)
   }, [active, changeAnswer, confirming, questions.length, timedOut])
 
-  if (!active) return <main className="p-8 text-center">This quiz has no questions.</main>
+  if (!active) return <div className="p-8 text-center">This quiz has no questions.</div>
   const answer = answers.get(active.id) || { selected_option_version_id: null, theory_answer_text: null, is_flagged: false }
   const saveState = saveStates.get(active.id) || 'idle'
 
   return <AntiCheatWrapper onAutoSubmit={() => void submit()}>
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f8f7f5] pb-28 lg:pb-8">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#f8f7f5] pb-28 lg:pb-8">
     <header className="sticky top-0 z-20 border-b border-[#dfdad5] bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{data.mock.title}</p><p className="truncate text-xs text-[#716c76]">{active.section_title}</p></div><div className="flex items-center gap-2">{data.mock.calculator_mode !== 'none' && <button onClick={() => setCalculatorOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm font-medium text-[#2e2877]"><Calculator size={16} /><span className="hidden sm:inline">Calculator</span></button>}<button onClick={() => setShortcutsOpen(true)} className="hidden min-h-10 items-center gap-2 rounded-lg border border-[#d9d3cf] px-3 text-sm text-[#716c76] sm:inline-flex"><Keyboard size={16} />Shortcuts</button>{remaining !== null && <span className={`min-w-[78px] rounded-lg px-3 py-2 text-center font-mono text-sm font-semibold ${remaining < 300 ? 'bg-[#fde8e4] text-[#a43522]' : 'bg-[#eeeafe] text-[#2e2877]'}`}>{formatRemaining(remaining)}</span>}</div></div></header>
     {timedOut ? <div role="alert" className="border-b border-[#efb5aa] bg-[#fde8e4] px-4 py-3 text-sm text-[#87351f] sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-start gap-2"><AlertTriangle className="mt-0.5 shrink-0" size={17} /><p><strong>Time is up.</strong> Answers are now locked. {!isOnline ? 'Reconnect to finalize the quiz; answers that were not received before the deadline cannot be counted.' : 'The quiz is being finalized.'}</p></div></div>
       : !isOnline && <div role="status" className="border-b border-[#f0c8bb] bg-[#fff4ee] px-4 py-3 text-sm text-[#87351f] sm:px-6 lg:px-10"><div className="mx-auto flex max-w-[1440px] items-start gap-2"><CloudOff className="mt-0.5 shrink-0" size={17} /><p><strong>Connection lost.</strong> Keep working—your answers are stored on this device and will retry when you reconnect. The quiz timer continues and answers received after time runs out cannot be accepted.</p></div></div>}
@@ -250,9 +250,9 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
     </div>
     {!timedOut && <button onClick={() => setConfirming(true)} className="fixed inset-x-4 bottom-4 z-20 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#994704] text-sm font-semibold text-white shadow-lg lg:hidden"><Send size={17} />Review and submit</button>}
     {calculatorOpen && <ExamCalculator mode={data.mock.calculator_mode === 'scientific' ? 'scientific' : 'basic'} onClose={() => setCalculatorOpen(false)} />}
-    {shortcutsOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Close shortcuts" onClick={() => setShortcutsOpen(false)} className="absolute inset-0 bg-black/35" /><section className="relative w-full max-w-md rounded-2xl bg-white p-6"><h2 className="text-lg font-semibold">Keyboard shortcuts</h2><dl className="mt-4 grid grid-cols-[90px_1fr] gap-3 text-sm"><dt className="font-semibold">A–F</dt><dd>Choose an MCQ option</dd><dt className="font-semibold">N / →</dt><dd>Next question</dd><dt className="font-semibold">P / ←</dt><dd>Previous question</dd><dt className="font-semibold">?</dt><dd>Open this guide</dd></dl><p className="mt-4 text-xs leading-5 text-[#716c76]">Shortcuts pause while you type a theory answer.</p><button onClick={() => setShortcutsOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#2e2877] text-sm font-semibold text-white">Got it</button></section></div>}
+    {shortcutsOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Close shortcuts" onClick={() => setShortcutsOpen(false)} className="absolute inset-0 bg-black/35" /><section role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="relative w-full max-w-md rounded-2xl bg-white p-6"><h2 className="text-lg font-semibold">Keyboard shortcuts</h2><dl className="mt-4 grid grid-cols-[90px_1fr] gap-3 text-sm"><dt className="font-semibold">A–F</dt><dd>Choose an MCQ option</dd><dt className="font-semibold">N / →</dt><dd>Next question</dd><dt className="font-semibold">P / ←</dt><dd>Previous question</dd><dt className="font-semibold">?</dt><dd>Open this guide</dd></dl><p className="mt-4 text-xs leading-5 text-[#716c76]">Shortcuts pause while you type a theory answer.</p><button onClick={() => setShortcutsOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#2e2877] text-sm font-semibold text-white">Got it</button></section></div>}
     {confirming && !timedOut && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Return to quiz" onClick={() => !submitting && setConfirming(false)} className="absolute inset-0 bg-black/40" />
-      <section className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+      <section role="dialog" aria-modal="true" aria-label="Submit your quiz" className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold">Submit your quiz?</h2>
         <p className="mt-2 text-sm leading-6 text-[#716c76]">You answered {answeredCount} of {questions.length} questions.{unanswered ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : ' Every question has an answer.'}</p>
         {unanswered > 0 && <button onClick={() => setConfirming(false)} className="mt-4 text-sm font-semibold text-[#2e2877]">Return and review unanswered questions</button>}
@@ -263,6 +263,6 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
         </div>
       </section>
     </div>}
-  </main>
+  </div>
   </AntiCheatWrapper>
 }

@@ -1,11 +1,20 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { startNavigationProgress } from "./NavigationProgress";
 
 interface UnsavedChangesContextType {
-  setDirty: (isDirty: boolean) => void;
+  setDirty: (sourceId: string, isDirty: boolean) => void;
+}
+
+/** Pure helper: returns a new set with the source added or removed. */
+export function updateDirtySources(sources: ReadonlySet<string>, sourceId: string, isDirty: boolean): ReadonlySet<string> {
+  if (sources.has(sourceId) === isDirty) return sources;
+  const next = new Set(sources);
+  if (isDirty) next.add(sourceId);
+  else next.delete(sourceId);
+  return next;
 }
 
 const UnsavedChangesContext = createContext<UnsavedChangesContextType>({
@@ -13,7 +22,11 @@ const UnsavedChangesContext = createContext<UnsavedChangesContextType>({
 });
 
 export function UnsavedChangesProvider({ children }: { children: React.ReactNode }) {
-  const [isDirty, setIsDirty] = useState(false);
+  const [dirtySources, setDirtySources] = useState<ReadonlySet<string>>(() => new Set());
+  const isDirty = dirtySources.size > 0;
+  const setDirty = React.useCallback((sourceId: string, dirty: boolean) => {
+    setDirtySources(current => updateDirtySources(current, sourceId, dirty));
+  }, []);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const router = useRouter();
 
@@ -52,7 +65,7 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
   }, [isDirty]);
 
   const confirmLeave = () => {
-    setIsDirty(false);
+    setDirtySources(new Set());
     if (pendingUrl) {
       startNavigationProgress();
       router.push(pendingUrl);
@@ -65,7 +78,7 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
   };
 
   return (
-    <UnsavedChangesContext.Provider value={{ setDirty: setIsDirty }}>
+    <UnsavedChangesContext.Provider value={{ setDirty }}>
       {children}
       {pendingUrl && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
@@ -91,9 +104,10 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
 
 export function useUnsavedChanges(isDirty: boolean) {
   const { setDirty } = useContext(UnsavedChangesContext);
-  
+  const sourceId = useId();
+
   useEffect(() => {
-    setDirty(isDirty);
-    return () => setDirty(false);
-  }, [isDirty, setDirty]);
+    setDirty(sourceId, isDirty);
+    return () => setDirty(sourceId, false);
+  }, [isDirty, setDirty, sourceId]);
 }

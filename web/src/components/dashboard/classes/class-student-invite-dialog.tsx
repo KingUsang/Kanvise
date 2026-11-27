@@ -41,7 +41,7 @@ export function ClassStudentInviteDialog({
 
   const validate = () => {
     const nextErrors: InviteErrors = {}
-    if (!email.trim()) nextErrors.email = 'Enter the student’s email address.'
+    if (!email.trim()) nextErrors.email = 'Enter the learner’s email address.'
     setErrors(nextErrors)
     const firstError = (['email'] as const).find((field) => nextErrors[field])
     if (firstError) window.requestAnimationFrame(() => document.getElementById(`student-${firstError}`)?.focus())
@@ -51,7 +51,7 @@ export function ClassStudentInviteDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!validate()) return
-    if (!api) return toast.error('Student service is unavailable. Refresh and try again.')
+    if (!api) return toast.error('Learner service is unavailable. Refresh and try again.')
     try {
       setSending(true)
       const response = await authenticatedApiFetch(`${api}/users/students/import`, {
@@ -66,13 +66,13 @@ export function ClassStudentInviteDialog({
         }),
       })
       const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.errors?.[0]?.errors?.[0] || body?.error || 'Could not add this student')
-      if (body?.data?.errors?.length) throw new Error(body.data.errors[0]?.errors?.[0] || 'Could not add this student')
+      if (!response.ok) throw new Error(body?.errors?.[0]?.errors?.[0] || body?.error || 'Could not add this learner')
+      if (body?.data?.errors?.length) throw new Error(body.data.errors[0]?.errors?.[0] || 'Could not add this learner')
       await onInvited()
-      toast.success('Invitation sent. The student will join this class after accepting it.')
+      toast.success('Invitation sent. The learner will join this class after accepting it.')
       onClose()
     } catch (error) {
-      toast.error('Could not add student', { description: error instanceof Error ? error.message : 'Try again.' })
+      toast.error('Could not add learner', { description: error instanceof Error ? error.message : 'Try again.' })
     } finally {
       setSending(false)
     }
@@ -82,8 +82,8 @@ export function ClassStudentInviteDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      eyebrow="Class students"
-      title="Add student"
+      eyebrow="Class learners"
+      title="Add learner"
       description="They will receive an email to set up their account."
       busy={sending}
       titleId="add-student-title"

@@ -11,7 +11,7 @@ const descriptions: Record<BrowserPushState, string> = {
   loading: 'Checking this device…',
   unsupported: 'This browser does not support Web Push. On iPhone and iPad, install Kanvise to the Home Screen first.',
   blocked: 'Notifications are blocked. Allow them in your browser or device settings, then return here.',
-  disabled: 'Get class reminders, deadlines, new mocks, cancellations, and grading updates on this device.',
+  disabled: 'Get class reminders, deadlines, new quizzes, cancellations, and grading updates on this device.',
   enabled: 'This device will receive Kanvise updates even when the app is closed.',
   unavailable: 'Browser notifications are temporarily unavailable.',
 }

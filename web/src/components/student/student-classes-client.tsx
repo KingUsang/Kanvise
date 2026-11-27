@@ -1,4 +1,5 @@
 "use client";
+import { QueryFailure } from '@/components/common/query-error-state'
 
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, Clock3, Radio, UserRound, Video } from "lucide-react";
@@ -13,9 +14,20 @@ import { fetchAllPages } from "@/lib/fetch-all-pages";
 type View = "all" | "upcoming" | "past";
 type ClassResources = { summary?: string | null; loading?: boolean; error?: string };
 
+/** One predicate for filters, counts and cards. An end timestamp is authoritative over a stale status. */
+export function isPastClass(item: StudentClass, now: number) {
+  return item.status === "completed" || item.status === "cancelled" || Boolean(item.ended_at) || (item.status === "scheduled" && new Date(item.scheduled_at).getTime() < now);
+}
+
+/** Distinct Tutor names for a Subject group; Tutors can rotate between Sessions. */
+export function groupTutorLabel(sessions: StudentClass[]) {
+  const names = Array.from(new Set(sessions.map(tutorName)));
+  return names.join(", ");
+}
+
 export function filterStudentClasses(classes: StudentClass[], view: View, courseId: string, now: number) {
   return classes.filter((item) => {
-    const isPast = item.status === "completed" || item.status === "cancelled" || (item.status === "scheduled" && new Date(item.scheduled_at).getTime() < now);
+    const isPast = isPastClass(item, now);
     if (courseId !== "all" && item.course_id !== courseId) return false;
     if (view === "upcoming" && (isPast || item.status === "cancelled")) return false;
     if (view === "past" && !isPast) return false;
@@ -64,7 +76,7 @@ export function StudentClassesClient() {
   }, new Map<string, StudentClass[]>()).entries()).map(([id, sessions]) => ({
     id,
     subject: sessions[0]?.course?.name || "Class",
-    tutor: tutorName(sessions[0]),
+    tutor: groupTutorLabel(sessions),
     sessions,
   })), [visibleClasses]);
 
@@ -109,8 +121,9 @@ export function StudentClassesClient() {
   }
 
   if (classesQuery.isPending) return <div className="rounded-2xl border border-[#e5e1dd] bg-white p-10 text-center text-sm text-[#716c76]">Loading live classes…</div>;
-  if (classesQuery.isError) return <div className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-sm text-red-800"><p>{classesQuery.error.message}</p><button type="button" onClick={() => void classesQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></div>;
+  if (classesQuery.isError && !classesQuery.data) return <QueryFailure query={classesQuery} fallback="We could not load your live classes." />;
   return <>
+    <QueryFailure query={classesQuery} />
     <section className="grid gap-3 sm:grid-cols-3">
       <div className="rounded-2xl border border-[#e5e1dd] bg-white p-4"><div className="flex items-center gap-2 text-[#994704]"><Radio size={18} /><span className="text-xs font-semibold uppercase tracking-wide">Live now</span></div><p className="mt-2 text-2xl font-semibold">{liveCount}</p></div>
       <div className="rounded-2xl border border-[#e5e1dd] bg-white p-4"><div className="flex items-center gap-2 text-[#2e2877]"><CalendarDays size={18} /><span className="text-xs font-semibold uppercase tracking-wide">Coming up</span></div><p className="mt-2 text-2xl font-semibold">{upcomingCount}</p></div>
@@ -133,7 +146,7 @@ export function StudentClassesClient() {
           </header>
           <div className="space-y-3 p-3 sm:p-4">{group.sessions.map((item) => {
           const scheduledTime = new Date(item.scheduled_at).getTime();
-          const isPast = item.status === "completed" || item.status === "cancelled" || Boolean(item.ended_at) || (item.status === "scheduled" && scheduledTime < now);
+          const isPast = isPastClass(item, now);
           const liveNow = isVerifiedLive(item);
           return <article key={item.id} className={`rounded-xl border p-4 sm:flex sm:flex-wrap sm:items-center sm:gap-5 ${liveNow ? "border-[#c26627] bg-[#fffaf5]" : "border-[#e5e1dd] bg-white"}`}>
             <div className="flex items-start gap-4 sm:min-w-48"><div className="rounded-xl bg-[#eeeafe] px-3 py-2 text-center text-[#2e2877]"><p className="text-lg font-semibold leading-5">{new Date(item.scheduled_at).getDate()}</p><p className="text-[11px] uppercase">{new Intl.DateTimeFormat("en-NG", { month: "short" }).format(new Date(item.scheduled_at))}</p></div><div><p className="text-sm font-semibold">{timeLabel(item.scheduled_at)}</p><p className="mt-1 text-xs text-[#77727e]">{dateLabel(item.scheduled_at)}</p><p className="mt-1 flex items-center gap-1 text-xs text-[#77727e]"><Clock3 size={12} />{item.duration_minutes} mins</p></div></div>
@@ -142,6 +155,7 @@ export function StudentClassesClient() {
               {item.recording_status === "ready" && <><Link href={`/dashboard/student/classes/${item.id}/recording`} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Watch recording</Link><button type="button" onClick={() => void downloadRecording(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]">Download</button></>}
               {item.recap_status === "published" && <button type="button" onClick={() => void loadResources(item.id)} className="inline-flex items-center gap-2 rounded-xl border border-[#994704] px-3 py-2 text-sm font-semibold text-[#994704]">Read summary</button>}
               {item.recording_status === "pending" || item.recording_status === "transferring" ? <span className="self-center text-xs text-[#77727e]">Recording processing</span> : null}
+              {item.recording_status === "failed" ? <span role="status" className="self-center text-xs text-[#a43522]">Recording could not be prepared</span> : null}
               {item.recap_status === "draft" || item.recap_status === "generating" ? <span className="self-center text-xs text-[#77727e]">Summary pending review</span> : null}
             </div> : <p className={`text-sm font-medium ${isPast ? "text-[#77727e]" : "text-[#2e2877]"}`}>{item.status === "cancelled" ? "Live class cancelled" : isPast ? "Awaiting an update" : "Scheduled"}</p>}</div>
             {resources[item.id] && (resources[item.id].loading || resources[item.id].error || resources[item.id].summary) && <div className="mt-4 border-t border-[#eeeae6] pt-4 sm:basis-full sm:flex-none">

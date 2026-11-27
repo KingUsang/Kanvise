@@ -50,10 +50,10 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
         method: 'DELETE',
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || 'Could not remove student');
+      if (!response.ok) throw new Error(body.error || 'Could not remove learner');
       onRemoved();
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not remove student');
+      setError(error instanceof Error ? error.message : 'Could not remove learner');
       setRemoving(false);
     }
   };
@@ -71,7 +71,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
           accountScopedFetch(`${API_URL}/payments?student_id=${encodeURIComponent(student.id)}`, { headers }),
         ]);
         
-        if (!res.ok || !paymentsRes.ok) throw new Error("Failed to fetch student details");
+        if (!res.ok || !paymentsRes.ok) throw new Error("Failed to fetch learner details");
         
         const json = await res.json();
         const paymentsJson = await paymentsRes.json();
@@ -96,7 +96,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
       
       <div className="fixed top-0 right-0 z-50 flex h-full w-[400px] max-w-[90vw] flex-col animate-slide-right border-l border-dashboard-outline bg-dashboard-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-6">
-          <h2 className="text-xl font-bold text-dashboard-foreground">Student Details</h2>
+          <h2 className="text-xl font-bold text-dashboard-foreground">Learner Details</h2>
           <button 
             onClick={onClose}
             className="rounded-full p-2 text-dashboard-muted transition-colors hover:bg-dashboard-surface hover:text-dashboard-foreground"
@@ -138,7 +138,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
               </div>
             ) : enrolments.length === 0 ? (
               <div className="rounded-dashboard-panel border border-dashed border-dashboard-outline p-6 text-center text-sm text-dashboard-muted">
-                This student is not currently enrolled in any programmes or subjects.
+                This learner is not currently enrolled in any programmes or subjects.
               </div>
             ) : (
               <div className="space-y-3">
@@ -164,7 +164,7 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
 
           {student.onboarding_status !== 'active' && <div className="mb-6 rounded-dashboard-panel border border-amber-200 bg-amber-50 p-4">
             <h4 className="font-bold text-amber-900">Invitation pending</h4>
-            <p className="mt-1 text-sm leading-5 text-amber-800">This student will gain class access only after accepting the invitation.</p>
+            <p className="mt-1 text-sm leading-5 text-amber-800">This learner will gain class access only after accepting the invitation.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button type="button" onClick={() => void manageInvitation('resend')} disabled={invitationAction !== null} className="rounded border border-amber-700 bg-white px-3 py-2 text-sm font-semibold text-amber-900 disabled:opacity-50">{invitationAction === 'resend' ? 'Sending…' : 'Resend invitation'}</button>
               <button type="button" onClick={() => setConfirmCancelInvitation(true)} disabled={invitationAction !== null} className="rounded border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel invitation</button>
@@ -210,23 +210,23 @@ export default function StudentDetailsSheet({ student, onClose, onRemoved, onCha
             disabled={removing}
             className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
           >
-            {removing ? 'Removing…' : 'Remove Student'}
+            {removing ? 'Removing…' : 'Remove Learner'}
           </button>
         </div>
       </div>
       {confirmRemoval && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-dashboard-foreground">Remove this student?</h3>
+            <h3 className="text-xl font-bold text-dashboard-foreground">Remove this learner?</h3>
             <p className="mt-2 text-sm leading-6 text-gray-600">{student.first_name} {student.last_name} will lose access to this tutoring agency. Their enrolment and payment history will be retained.</p>
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={() => setConfirmRemoval(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep student</button>
-              <button type="button" onClick={() => { setConfirmRemoval(false); void removeStudent(); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Remove student</button>
+              <button type="button" onClick={() => setConfirmRemoval(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep learner</button>
+              <button type="button" onClick={() => { setConfirmRemoval(false); void removeStudent(); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Remove learner</button>
             </div>
           </div>
         </div>
       )}
-      {confirmCancelInvitation && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl"><h3 className="text-xl font-bold text-dashboard-foreground">Cancel this invitation?</h3><p className="mt-2 text-sm leading-6 text-gray-600">The email link and all pending class assignments for this student will be cancelled. Accepted enrolments are unaffected.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmCancelInvitation(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep invitation</button><button type="button" onClick={() => { setConfirmCancelInvitation(false); void manageInvitation('cancel'); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Cancel invitation</button></div></div></div>}
+      {confirmCancelInvitation && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-md rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-6 shadow-2xl"><h3 className="text-xl font-bold text-dashboard-foreground">Cancel this invitation?</h3><p className="mt-2 text-sm leading-6 text-gray-600">The email link and all pending class assignments for this learner will be cancelled. Accepted enrolments are unaffected.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmCancelInvitation(false)} className="rounded px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep invitation</button><button type="button" onClick={() => { setConfirmCancelInvitation(false); void manageInvitation('cancel'); }} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Cancel invitation</button></div></div></div>}
     </>
   );
 }

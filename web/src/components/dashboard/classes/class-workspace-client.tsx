@@ -277,10 +277,10 @@ export function ClassWorkspaceClient({
   const tutorsQuery = useQuery({
     queryKey: classQueryKeys.tutors(accountId, classId),
     queryFn: async () => {
-      const response = await authenticatedApiFetch(`${api}/users?roles=admin,tutor`);
-      const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error || 'Could not load tutors');
-      return (body?.data || []) as TutorPerson[];
+      return fetchAllPages<TutorPerson>(
+        (page) => authenticatedApiFetch(`${api}/users?roles=admin,tutor&limit=200&offset=${(page - 1) * 200}`),
+        'Could not load tutors',
+      );
     },
     enabled: activeTab === 'tutors' && canManageTutors,
     staleTime: 60_000,
@@ -288,10 +288,10 @@ export function ClassWorkspaceClient({
   const studentRosterQuery = useQuery({
     queryKey: ['class-student-roster', classId],
     queryFn: async () => {
-      const response = await authenticatedApiFetch(`${api}/users/students`);
-      const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error || 'Could not load invited students');
-      return (body?.data || []) as StudentRosterEntry[];
+      return fetchAllPages<StudentRosterEntry>(
+        (page) => authenticatedApiFetch(`${api}/users/students?limit=200&offset=${(page - 1) * 200}`),
+        'Could not load invited learners',
+      );
     },
     enabled: activeTab === 'learners' && canManageStudents,
     staleTime: 30_000,
@@ -458,7 +458,7 @@ export function ClassWorkspaceClient({
 
   return (
     <>
-      <main className="w-full pb-20 sm:pb-0">
+      <div className="w-full pb-20 sm:pb-0">
         {classQuery.isError ? <WorkspaceQueryNotice label="Class workspace" cached onRetry={() => void classQuery.refetch()} /> : null}
         <WorkspaceHeader
           className="mt-4"
@@ -758,7 +758,7 @@ export function ClassWorkspaceClient({
               ))}
           </div>
         </div>
-      </main>
+      </div>
       {selectedLearnerId ? (
         <LearnerDetailSheet
           detail={learnerDetailQuery.data || null}
@@ -1189,7 +1189,7 @@ function mergeLearnersWithPendingInvitations(learners: LearnerSignal[], students
     .filter((student) => !activeIds.has(student.id) && student.pending_enrolments?.some((item) => item.programme_id === classId))
     .map((student): LearnerRow => ({
       id: student.id,
-      name: [student.first_name, student.last_name].filter(Boolean).join(' ') || student.email || 'Invited student',
+      name: [student.first_name, student.last_name].filter(Boolean).join(' ') || student.email || 'Invited learner',
       attention: 'no_signal',
       invitationPending: true,
     }));
@@ -1510,7 +1510,7 @@ function Overview({
             <WorkspaceAction
               icon={<FilePlus2 size={17} />}
               title="Create assessment"
-              description="Create a mock or assignment for this class"
+              description="Create a quiz or assignment for this class"
               onClick={onCreateAssessment}
             />
             <WorkspaceAction

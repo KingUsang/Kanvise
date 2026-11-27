@@ -26,7 +26,7 @@ export const getStudentClasses = cache(async (accessToken: string): Promise<Stud
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     }),
-    "Failed to load student classes",
-    () => "Failed to load student classes",
+    "Failed to load learner classes",
+    () => "Failed to load learner classes",
   );
 });

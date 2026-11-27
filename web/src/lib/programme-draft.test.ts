@@ -21,7 +21,7 @@ const data = {
 }
 
 describe('programme drafts', () => {
-  it('isolates and restores a versioned draft per centre, profile, and programme', () => {
+  it('isolates and restores a versioned draft per tutoring account, profile, and programme', () => {
     const storage = new MemoryStorage()
     saveProgrammeDraft('school-1', 'admin-1', data, 'new', storage as any, 1000)
     expect(loadProgrammeDraft('school-1', 'admin-1', 'new', storage as any, 2000)).toMatchObject({ savedAt: 1000, data })

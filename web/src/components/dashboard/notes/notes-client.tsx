@@ -200,7 +200,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
   const handleUpload = async () => {
     if (!selectedCourse) return toast.error("Choose the subject that should receive this material.")
     if (!file) return toast.error("Choose a file to upload.")
-    if (!title.trim()) return toast.error("Enter a title students will recognise.")
+    if (!title.trim()) return toast.error("Enter a title learners will recognise.")
 
     setIsUploading(true)
     setUploadProgress(0)
@@ -252,7 +252,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
         throw new Error(await responseErrorMessage(recordRes, "Failed to record note"))
       }
 
-      toast.success("Material shared with students.")
+      toast.success("Material shared with learners.")
       
       // Reset form
       setTitle("")
@@ -312,7 +312,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
         <DashboardPageHeader
           className="mb-8"
           title="Learning materials"
-          description="Share notes, slides, and helpful documents with students in a subject."
+          description="Share notes, slides, and helpful documents with learners in a subject."
         />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -394,7 +394,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Note for students</label>
+                      <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Note for learners</label>
                       <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
@@ -457,7 +457,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
               <div className="flex items-center justify-between border-b border-dashboard-outline bg-dashboard-surface-subtle p-5 sm:p-6">
                 <div>
                   <h3 className="text-lg font-semibold text-dashboard-foreground">Shared materials</h3>
-                  <p className="mt-1 text-sm text-dashboard-muted">Open, download, or remove materials already shared with students.</p>
+                  <p className="mt-1 text-sm text-dashboard-muted">Open, download, or remove materials already shared with learners.</p>
                 </div>
                 <div className="flex gap-2">
                   <select 
@@ -477,7 +477,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                 <div className="divide-y divide-dashboard-outline sm:hidden">
                   {isLoadingNotes ? <p className="p-6 text-center text-sm text-dashboard-muted">Loading materials…</p>
                     : loadError ? <div className="p-6 text-center text-sm text-dashboard-muted"><p>{loadError}</p><button type="button" onClick={() => void fetchAllNotes()} className="mt-3 rounded-dashboard-control bg-dashboard-primary px-3 py-2 font-semibold text-white">Try again</button></div>
-                    : filteredNotes.length === 0 ? <div className="p-8 text-center text-dashboard-muted"><span className="material-symbols-outlined mb-2 text-4xl text-dashboard-outline">menu_book</span><p className="font-semibold text-dashboard-foreground">{filterCourse ? 'No materials in this subject yet' : 'Share your first learning material'}</p><p className="mt-1 text-sm">{filterCourse ? 'Choose another subject or use the form to add one.' : 'Choose a subject and upload notes, slides, or a document for your students.'}</p></div>
+                    : filteredNotes.length === 0 ? <div className="p-8 text-center text-dashboard-muted"><span className="material-symbols-outlined mb-2 text-4xl text-dashboard-outline">menu_book</span><p className="font-semibold text-dashboard-foreground">{filterCourse ? 'No materials in this subject yet' : 'Share your first learning material'}</p><p className="mt-1 text-sm">{filterCourse ? 'Choose another subject or use the form to add one.' : 'Choose a subject and upload notes, slides, or a document for your learners.'}</p></div>
                     : filteredNotes.map(note => { const style = getFileIcon(note.file_type); const course = courses.find(c => c.id === note.course_id); return <article key={note.id} className="p-4"><div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded ${style.bg} ${style.color}`}><span className="material-symbols-outlined">{style.icon}</span></div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{note.title}</h2><p className="mt-1 truncate text-xs text-dashboard-muted">{course?.name || 'Unknown subject'} · {formatFileSize(note.file_size_bytes)} · {new Date(note.created_at).toLocaleDateString()}</p></div><button onClick={() => handleDownload(note.download_url, note.file_name)} className="shrink-0 rounded border border-dashboard-outline px-3 py-1.5 text-xs font-semibold text-dashboard-primary">Open</button></div>{(role === 'admin' || currentProfileId === note.tutor_id) && <button onClick={() => setNoteToDelete(note)} className="mt-3 text-xs font-semibold text-dashboard-danger">Remove material</button>}</article> })}
                 </div>
                 <table className="hidden w-full text-left border-collapse sm:table">
@@ -512,7 +512,7 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                          <td colSpan={5} className="px-6 py-14 text-center text-dashboard-muted">
                             <span className="material-symbols-outlined mb-2 text-4xl text-dashboard-outline">menu_book</span>
                             <p className="font-semibold text-dashboard-foreground">{filterCourse ? "No materials in this subject yet" : "Share your first learning material"}</p>
-                            <p className="mt-1 text-sm">{filterCourse ? "Choose another subject or use the form to add one." : "Choose a subject and upload notes, slides, or a document for your students."}</p>
+                            <p className="mt-1 text-sm">{filterCourse ? "Choose another subject or use the form to add one." : "Choose a subject and upload notes, slides, or a document for your learners."}</p>
                          </td>
                        </tr>
                     ) : (

@@ -20,6 +20,8 @@ import { useActiveAccountId } from "@/lib/account-preference";
 import { classQueryKeys } from "@/lib/class-query-keys";
 import { adaptClassRecord, adaptSubjectLink, type LegacyClassRecord, type ProductClassRecord, type ProductSubjectLink } from "@/lib/product-terminology";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { viewerTimeZoneLabel } from '@/lib/viewer-timezone';
+import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
 type Tutor = { id: string; first_name: string; last_name: string };
 type Subject = { id: string; name: string };
@@ -390,21 +392,29 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
       setSaving(false);
     }
   }
-  async function cancel(item: LiveClass) {
-    if (!window.confirm(`Cancel “${item.title}”?`)) return;
-    const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}`, {
-      method: "DELETE",
-    });
-    const body = await response.json();
-    if (!response.ok)
-      return toast.error(body.error || "Could not cancel this session");
-    setComposer(null);
-    toast.success("Session cancelled");
+  async function refreshSchedule() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
     ]);
+  }
+  async function cancel(item: LiveClass) {
+    if (!window.confirm(`Cancel “${item.title}”?`)) return;
+    try {
+      const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}`, {
+        method: "DELETE",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok)
+        return toast.error(body?.error || "Could not cancel this session");
+      setComposer(null);
+      toast.success("Session cancelled");
+    } catch {
+      // The request may have reached the server, so reconcile the schedule.
+      toast.error("We could not confirm the cancellation. The schedule has been refreshed; check it before trying again.");
+    }
+    await refreshSchedule();
   }
   async function endSeries(item: LiveClass) {
     const seriesId = item.series?.recurrence_group_id || item.series?.id;
@@ -413,45 +423,35 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
       !window.confirm("End this recurring series and remove future sessions?")
     )
       return;
-    const response = await authenticatedApiFetch(`${api}/live-classes/series/${seriesId}`, {
-      method: "DELETE",
-    });
-    const body = await response.json();
-    if (!response.ok) return toast.error(body.error || "Could not end series");
-    setComposer(null);
-    toast.success("Recurring series ended");
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: classQueryKeys.dashboardSchedule(accountId) }),
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.timetable }),
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary }),
-    ]);
+    try {
+      const response = await authenticatedApiFetch(`${api}/live-classes/series/${seriesId}`, {
+        method: "DELETE",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) return toast.error(body?.error || "Could not end series");
+      setComposer(null);
+      toast.success("Recurring series ended");
+    } catch {
+      toast.error("We could not confirm the series was ended. The schedule has been refreshed; check it before trying again.");
+    }
+    await refreshSchedule();
   }
   async function start(item: LiveClass) {
-    const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}/start`, {
-      method: "POST",
-    });
-    const body = await response.json();
-    if (!response.ok) return toast.error(body.error || "Could not start this session");
+    try {
+      const response = await authenticatedApiFetch(`${api}/live-classes/${item.id}/start`, {
+        method: "POST",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) return toast.error(body?.error || "Could not start this session");
+    } catch {
+      toast.error("Could not start this session. Check your connection and try again.");
+      return;
+    }
     window.open(item.share_url || `/class/${item.id}`, "_blank", "noopener,noreferrer");
   }
   async function copyClassroomLink(value: string) {
-    try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
-      else {
-        const input = document.createElement('textarea');
-        input.value = value;
-        input.style.position = 'fixed';
-        input.style.opacity = '0';
-        document.body.appendChild(input);
-        input.select();
-        const copied = document.execCommand('copy');
-        input.remove();
-        if (!copied) throw new Error('Copy was blocked')
-      }
-      toast.success('Classroom link copied')
-    } catch {
-      toast.error('Could not copy the classroom link')
-    }
+    if (await copyToClipboard(value)) toast.success('Classroom link copied')
+    else toast.error('Could not copy the classroom link')
   }
   function selectMobileMonth(month: Date) {
     setMobileMonth(month);
@@ -467,7 +467,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
   // DashboardShell owns the page gutter. Calendar must not add another layer
   // of horizontal padding or it visibly drifts from the other workspace pages.
   return (
-    <main className="w-full md:-mt-3">
+    <div className="w-full md:-mt-3">
       <header className="flex flex-col gap-4 border-b border-[#e5e1dd] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
@@ -477,6 +477,7 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           <p className="mt-2 text-sm text-[#66616c]">
             Every dated live teaching session across the teaching groups you can manage.
           </p>
+          <p suppressHydrationWarning className="mt-1 text-xs text-[#66616c]">Times are shown in your timezone ({viewerTimeZoneLabel()}).</p>
         </div>
         <button
           onClick={() => open(mobileDay)}
@@ -780,6 +781,9 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
         <div className="fixed inset-0 z-50 bg-black/40">
           <form
             onSubmit={save}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Schedule a session"
             className="absolute bottom-0 max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:inset-x-0 sm:bottom-auto sm:top-1/2 sm:mx-auto sm:max-w-lg sm:-translate-y-1/2 sm:rounded-2xl sm:p-7"
           >
             <div className="flex items-start justify-between">
@@ -1083,6 +1087,6 @@ export function ClassesWorkspace({ capabilities, user }: Props) {
           </form>
         </div>
       )}
-    </main>
+    </div>
   );
 }

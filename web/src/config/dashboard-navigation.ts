@@ -29,7 +29,7 @@ export type DashboardWorkspace = {
 export const dashboardWorkspaces: DashboardWorkspace[] = [
   { label: 'Home', href: '/dashboard', icon: 'space_dashboard', area: 'home', access: 'all' },
   { label: 'Classes', href: '/dashboard/classes', icon: 'library_books', area: 'classes', access: 'shared' },
-  { label: 'Mocks', href: '/dashboard/mocks', icon: 'quiz', area: 'mocks', access: 'shared' },
+  { label: 'Quizzes', href: '/dashboard/mocks', icon: 'quiz', area: 'mocks', access: 'shared' },
   { label: 'Calendar', href: '/dashboard/schedule', icon: 'calendar_month', area: 'calendar', access: 'shared' },
   { label: 'More', href: '/dashboard/more', icon: 'more_horiz', area: 'centre', access: 'admin' },
 ]
@@ -39,14 +39,14 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { label: 'More', href: '/dashboard/more', icon: 'more_horiz', area: 'centre', access: 'admin', keywords: ['more', 'centre', 'management'] },
   { label: 'Profile', href: '/dashboard/profile', icon: 'account_circle', area: 'home', access: 'shared', keywords: ['profile', 'account', 'name', 'photo', 'bio'] },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings', area: 'centre', access: 'admin', keywords: ['settings', 'centre', 'school', 'branding', 'profile'] },
-  { label: 'School Setup', href: '/dashboard/school-setup', icon: 'settings_applications', area: 'centre', access: 'admin', keywords: ['school', 'identity', 'branding', 'setup'] },
+  { label: 'Tutoring account setup', href: '/dashboard/school-setup', icon: 'settings_applications', area: 'centre', access: 'admin', keywords: ['school', 'identity', 'branding', 'setup'] },
   { label: 'Tutors', href: '/dashboard/tutors', icon: 'groups_3', area: 'centre', access: 'admin', keywords: ['tutors', 'teachers', 'invites', 'directory'] },
-  { label: 'Students', href: '/dashboard/students', icon: 'face', area: 'centre', access: 'admin', keywords: ['students', 'learners', 'roster', 'enrolments'] },
+  { label: 'Learners', href: '/dashboard/students', icon: 'face', area: 'centre', access: 'admin', keywords: ['students', 'learners', 'roster', 'enrolments'] },
   { label: 'Payments', href: '/dashboard/payments', icon: 'payments', area: 'centre', access: 'admin', keywords: ['payments', 'revenue', 'payouts', 'financials'] },
   { label: 'Classes', href: '/dashboard/classes', icon: 'library_books', area: 'classes', access: 'shared', keywords: ['classes', 'subjects', 'curriculum'] },
   { label: 'Calendar', href: '/dashboard/schedule', icon: 'calendar_month', area: 'calendar', access: 'shared', keywords: ['schedule', 'calendar', 'sessions'] },
   { label: 'Timetable', href: '/dashboard/timetable', icon: 'calendar_view_week', area: 'centre', access: 'admin', keywords: ['timetable', 'recurring', 'weekly', 'sessions'] },
-  { label: 'Mocks', href: '/dashboard/mocks', icon: 'quiz', area: 'mocks', access: 'shared', keywords: ['assessments', 'mocks', 'exams', 'tests', 'grading'], badge: 'ungradedMocks' },
+  { label: 'Quizzes', href: '/dashboard/mocks', icon: 'quiz', area: 'mocks', access: 'shared', keywords: ['assessments', 'mocks', 'exams', 'tests', 'grading'], badge: 'ungradedMocks' },
   { label: 'Question Banks', href: '/dashboard/question-banks', icon: 'inventory_2', area: 'mocks', access: 'shared', keywords: ['questions', 'banks', 'mocks', 'reuse', 'import'] },
   { label: 'Materials', href: '/dashboard/notes', icon: 'description', area: 'classes', access: 'tutor', keywords: ['notes', 'materials', 'teaching'] },
   { label: 'Assignments', href: '/dashboard/assignments', icon: 'assignment', area: 'mocks', access: 'tutor', keywords: ['assignments', 'tasks', 'submissions', 'grading'] },
@@ -72,7 +72,7 @@ export function getDashboardWorkspaces(capabilities: DashboardCapabilities) {
   // only to redirect every tap back here makes the mobile navigation feel
   // broken, so represent setup as its own truthful destination.
   if (capabilities.setupRequired) {
-    return [{ label: 'Set up centre', href: '/dashboard/school-setup', icon: 'storefront', area: 'centre' as const, access: 'admin' as const }]
+    return [{ label: 'Set up tutoring account', href: '/dashboard/school-setup', icon: 'storefront', area: 'centre' as const, access: 'admin' as const }]
   }
   return dashboardWorkspaces.filter((workspace) => canAccessDashboardItem(workspace, capabilities))
 }

@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { StudentMocksClient } from './student-mocks-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { StudentMockGroups } from '@/lib/student-mocks'
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: vi.fn() }))
+vi.mock('@/lib/authenticated-fetch', () => ({ authenticatedFetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'down' }), { status: 503 })) }))
 vi.mock('@/config/api', () => ({ getApiUrl: () => 'https://api.example.test' }))
 
 const emptyGroups: StudentMockGroups = { available: [], in_progress: [], upcoming: [], completed: [] }
@@ -53,5 +54,13 @@ describe('StudentMocksClient', () => {
     for (const label of ['Available', 'Continue', 'Upcoming', 'Completed']) {
       expect(screen.getByRole('button', { name: new RegExp(label) })).toBeVisible()
     }
+  })
+
+  it('keeps seeded quizzes on screen with a retry notice when a refresh fails (DEV-FE-047)', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={queryClient}><StudentMocksClient initialGroups={{ ...emptyGroups, available: [{ ...card, attempt: undefined }] }} /></QueryClientProvider>)
+    await queryClient.refetchQueries({ queryKey: ['student-mocks'] })
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('could not refresh'))
+    expect(screen.getByText('Mathematics practice')).toBeInTheDocument()
   })
 })

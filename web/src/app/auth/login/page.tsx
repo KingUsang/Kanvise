@@ -98,7 +98,7 @@ function LoginContent() {
     if (flow !== 'student' || registrationIntent) return
     event.preventDefault(); setLoading(true); setError(null)
     try {
-      if (!redirectParams) throw new Error('Open the class or mock you want to join, then continue with Google.')
+      if (!redirectParams) throw new Error('Open the class or quiz you want to join, then continue with Google.')
       const intent = await createStudentRegistrationIntent(redirectParams)
       window.location.assign(`/api/auth/google?intent=student&return_to=${encodeURIComponent(redirectParams)}&registration_intent=${encodeURIComponent(intent)}`)
     } catch { setError("We couldn't start Google sign-in right now. Try again."); setLoading(false) }

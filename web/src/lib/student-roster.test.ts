@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { clampRosterPage, downloadStudentRosterCsv, neutralizeSpreadsheetFormula, serializeStudentRosterCsv } from './student-roster'
 
-describe('student roster export', () => {
+describe('learner roster export', () => {
   it('clamps a removed final page to the new valid range', () => {
     expect(clampRosterPage(10, 9)).toBe(9)
     expect(clampRosterPage(1, 0)).toBe(1)

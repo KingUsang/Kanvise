@@ -6,11 +6,12 @@ import type { StudentDashboardData } from '@/lib/student-dashboard';
 import { createClient } from '@/lib/supabase/client';
 import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import { getApiUrl } from '@/config/api';
+import { QueryErrorState } from '@/components/common/query-error-state';
 
 export default function StudentLearnPage() {
   const dashboardQuery = useQuery<StudentDashboardData>({ queryKey: ['student-dashboard'], queryFn: async () => { const response = await authenticatedFetch(createClient(), `${getApiUrl()}/dashboard/student`, { cache: 'no-store' }); const body = await response.json().catch(() => null); if (!response.ok) throw new Error(body?.error || 'Could not load your class'); return body.data; } });
-  if (dashboardQuery.isPending) return <main className="mx-auto max-w-[1120px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your class…</main>;
-  if (dashboardQuery.isError) return <main className="mx-auto max-w-[1120px] px-4 py-10 text-center text-sm text-red-800"><p>{dashboardQuery.error.message}</p><button type="button" onClick={() => void dashboardQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>;
+  if (dashboardQuery.isPending) return <div className="mx-auto max-w-[1120px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your class…</div>;
+  if (dashboardQuery.isError) return <div className="mx-auto max-w-[1120px] px-4 py-10"><QueryErrorState error={dashboardQuery.error} onRetry={() => void dashboardQuery.refetch()} fallback="We could not load your class." retrying={dashboardQuery.isFetching} /></div>;
   const data = dashboardQuery.data;
   if (!data || data.capabilities?.hasCentreLearning === false) return null;
 
@@ -40,7 +41,7 @@ export default function StudentLearnPage() {
     },
   ];
 
-  return <main className="mx-auto max-w-[1120px] px-4 py-7 pb-28 sm:px-6 lg:px-10 lg:py-10">
+  return <div className="mx-auto max-w-[1120px] px-4 py-7 pb-28 sm:px-6 lg:px-10 lg:py-10">
     <header>
       <p className="text-sm font-medium text-[#994704]">Your class</p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">Learn</h1>
@@ -59,5 +60,5 @@ export default function StudentLearnPage() {
       <h2 className="mt-4 text-lg font-semibold">No class subjects yet</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Your tutoring agency has enrolled your account, but no published subjects are available yet. Check back later or contact the tutoring agency.</p>
     </section>}
-  </main>;
+  </div>;
 }

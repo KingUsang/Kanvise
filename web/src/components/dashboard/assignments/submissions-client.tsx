@@ -168,7 +168,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input 
                 className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md text-sm focus:border-[#2e2877] focus:outline-none" 
-                placeholder="Search students..." 
+                placeholder="Search learners..." 
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -179,8 +179,8 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
               {filteredSubmissions.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <FileText className="mx-auto mb-3 h-8 w-8 text-gray-300" />
-                  <p className="font-semibold text-gray-700">{search ? "No matching students" : "No submissions yet"}</p>
-                  <p className="mt-1 text-xs">{search ? "Try another name." : "Student work will appear here after it is submitted."}</p>
+                  <p className="font-semibold text-gray-700">{search ? "No matching learners" : "No submissions yet"}</p>
+                  <p className="mt-1 text-xs">{search ? "Try another name." : "Learner work will appear here after it is submitted."}</p>
                 </div>
               ) : (
                 filteredSubmissions.map((sub) => {
@@ -251,7 +251,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
                   <div className="absolute inset-0 bg-opacity-5" style={{ backgroundImage: 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMWgxOHYxOEgxem0xIDF2MTZoMTZWNHoiIGZpbGw9IiNlNGEyZTEiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvc3ZnPg==")'}}></div>
                   <FileText className="w-16 h-16 text-gray-400 mb-4" />
                   <p className="text-gray-600 font-medium">Submission Document</p>
-                  <p className="text-gray-400 text-sm mt-1">{selectedSubmission.file_name || "Student submission"}</p>
+                  <p className="text-gray-400 text-sm mt-1">{selectedSubmission.file_name || "Learner submission"}</p>
                   <button 
                     onClick={() => handleDownload(selectedSubmission.download_url, selectedSubmission.file_name || "submission")}
                     className="mt-6 px-4 py-2 bg-white text-[#180d62] border border-[#180d62] rounded font-semibold text-sm shadow-sm hover:bg-gray-50 transition-colors opacity-0 group-hover:opacity-100"
@@ -288,10 +288,10 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
 
                   {/* Written Feedback */}
                   <div className="md:col-span-8 flex flex-col">
-                    <label className="block text-sm font-semibold text-[#180d62] mb-2">Feedback for the student</label>
+                    <label className="block text-sm font-semibold text-[#180d62] mb-2">Feedback for the learner</label>
                     <textarea 
                       className="w-full flex-1 min-h-[120px] p-4 border border-gray-200 rounded-md resize-none text-sm focus:border-[#2e2877] focus:ring-1 focus:ring-[#2e2877] focus:outline-none" 
-                      placeholder="Explain what the student did well and what they should improve."
+                      placeholder="Explain what the learner did well and what they should improve."
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                     />
@@ -310,7 +310,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
             </>
           ) : (
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex items-center justify-center h-full text-gray-500">
-              Choose a student submission to begin reviewing.
+              Choose a learner submission to begin reviewing.
             </div>
           )}
         </div>

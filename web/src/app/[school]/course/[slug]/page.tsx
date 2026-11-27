@@ -155,7 +155,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
                 <div className="w-14 h-14 bg-primary-container/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-secondary/10 transition-colors">
                   <span className="material-symbols-outlined text-primary group-hover:text-secondary text-3xl">quiz</span>
                 </div>
-                <h3 className="font-headline-sm text-headline-sm text-primary mb-4">Weekly Mock Exams</h3>
+                <h3 className="font-headline-sm text-headline-sm text-primary mb-4">Weekly Quizzes</h3>
                 <p className="text-on-surface-variant leading-relaxed">Simulated CBT environment to build your speed and accuracy. Get detailed performance reports every weekend.</p>
               </div>
             </div>
@@ -284,7 +284,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
             <div className="col-span-1 md:col-span-2 space-y-6">
               <span className="font-headline-md text-headline-md font-bold">Kanvise</span>
               <p className="text-primary-fixed/80 max-w-sm text-body-md">
-                Elite tutoring platform designed for the modern student. Authority, precision, and high-energy productivity.
+                Elite tutoring platform designed for the modern learner. Authority, precision, and high-energy productivity.
               </p>
             </div>
             
@@ -292,7 +292,7 @@ export default async function CourseMarketingPage({ params }: { params: Promise<
               <h4 className="font-bold text-white tracking-widest uppercase text-sm">Quick Links</h4>
               <ul className="space-y-3 text-primary-fixed/80">
                 <li><a className="hover:text-secondary transition-colors" href={`/${resolvedParams.school}`}>All classes</a></li>
-                <li><Link className="hover:text-secondary transition-colors" href="/auth/login">Student Login</Link></li>
+                <li><Link className="hover:text-secondary transition-colors" href="/auth/login">Learner Login</Link></li>
               </ul>
             </div>
           </div>

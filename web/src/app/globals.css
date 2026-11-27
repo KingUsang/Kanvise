@@ -551,6 +551,28 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-slide-right,
+  .animate-float,
+  .animate-float-delayed,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-slide-right {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   .landing-tool-float,
   .landing-pulse-glow,
   .landing-tutor-visual,

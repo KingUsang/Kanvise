@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { QueryErrorState, RefreshWarning } from "@/components/common/query-error-state";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "@/lib/dashboard-session";
@@ -213,7 +214,7 @@ export function TimetableClient(_: Props) {
   }
 
   return (
-    <main className="mx-auto max-w-[1680px] px-4 py-6 lg:px-8">
+    <div className="mx-auto max-w-[1680px] px-4 py-6 lg:px-8">
       <header className="flex flex-col gap-4 border-b border-[#e5e1dd] pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
@@ -327,23 +328,17 @@ export function TimetableClient(_: Props) {
             <Loader2 className="mr-2 animate-spin" size={18} />
             Loading timetable…
           </div>
-        ) : timetableQuery.isError ? (
-          <div className="flex h-96 flex-col items-center justify-center gap-3 text-sm text-[#66616c]">
-            <p>
-              {timetableQuery.error instanceof Error
-                ? timetableQuery.error.message
-                : "Could not load timetable."}
-            </p>
-            <button
-              type="button"
-              onClick={() => void timetableQuery.refetch()}
-              className="font-semibold text-[#2e2877] underline"
-            >
-              Try again
-            </button>
-          </div>
+        ) : timetableQuery.isError && !timetableQuery.data ? (
+          <QueryErrorState
+            className="flex h-96 flex-col items-center justify-center gap-3 px-6 text-center text-sm text-[#66616c]"
+            error={timetableQuery.error}
+            fallback="Could not load timetable."
+            retrying={timetableQuery.isFetching}
+            onRetry={() => void timetableQuery.refetch()}
+          />
         ) : (
           <>
+            {timetableQuery.isError ? <div className="mx-4 mt-4"><RefreshWarning retrying={timetableQuery.isFetching} onRetry={() => void timetableQuery.refetch()} /></div> : null}
             <div
               ref={timetableGridRef}
               className="hidden max-h-[calc(100vh-300px)] overflow-auto lg:block"
@@ -476,6 +471,6 @@ export function TimetableClient(_: Props) {
         This view reflects recurring teaching slots across the tutoring account. Scroll to
         see evening sessions; manage a dated session from Calendar.
       </p>
-    </main>
+    </div>
   );
 }

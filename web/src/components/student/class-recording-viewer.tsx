@@ -14,10 +14,18 @@ type Session = {
 };
 type Recording = { id: string; playback_url: string | null; playback_expires_at?: string | null; status: string };
 
+/** Carries the API's recording lifecycle so the panel can tell "processing" and "failed" from a plain error. */
+export class RecordingLifecycleError extends Error {
+  constructor(message: string, readonly recordingStatus: "processing" | "failed") { super(message); }
+}
+
 async function apiJson(path: string) {
   const response = await authenticatedFetch(createClient(), `${getApiUrl()}${path}`, { cache: "no-store" });
   const body = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error || "Could not load this recording.");
+  if (!response.ok) {
+    if (body?.recording_status === "processing" || body?.recording_status === "failed") throw new RecordingLifecycleError(body?.error || "This recording is not ready.", body.recording_status);
+    throw new Error(body?.error || "Could not load this recording.");
+  }
   return body.data;
 }
 
@@ -26,7 +34,12 @@ export function ClassRecordingViewer({ sessionId }: { sessionId: string }) {
   const resumeAt = useRef(0);
   const [speed, setSpeed] = useState(1);
   const sessionQuery = useQuery<Session>({ queryKey: ["recording-session", sessionId], queryFn: () => apiJson(`/live-classes/${sessionId}`) });
-  const recordingQuery = useQuery<Recording>({ queryKey: ["recording-playback", sessionId], queryFn: () => apiJson(`/live-classes/${sessionId}/recording`), retry: 1 });
+  const recordingQuery = useQuery<Recording>({ queryKey: ["recording-playback", sessionId], queryFn: () => apiJson(`/live-classes/${sessionId}/recording`),
+    retry: (count, error) => !(error instanceof RecordingLifecycleError) && count < 1,
+    // A recording that is still being prepared is checked again until it is ready or fails.
+    refetchInterval: (query) => query.state.error instanceof RecordingLifecycleError && query.state.error.recordingStatus === "processing" ? 15000 : false,
+  });
+  const lifecycle = recordingQuery.error instanceof RecordingLifecycleError ? recordingQuery.error.recordingStatus : null;
   const recapQuery = useQuery<{ published_body?: string | null }>({
     queryKey: ["recording-recap", sessionId],
     queryFn: async () => {
@@ -57,16 +70,16 @@ export function ClassRecordingViewer({ sessionId }: { sessionId: string }) {
   };
 
   if (sessionQuery.isPending || recordingQuery.isPending) {
-    return <main className="animate-pulse"><div className="h-5 w-36 rounded bg-[#e8e4e0]" /><div className="mt-7 aspect-video max-w-5xl rounded-2xl bg-[#ddd8d4]" /></main>;
+    return <div className="animate-pulse"><div className="h-5 w-36 rounded bg-[#e8e4e0]" /><div className="mt-7 aspect-video max-w-5xl rounded-2xl bg-[#ddd8d4]" /></div>;
   }
   if (!sessionQuery.data || !recordingQuery.data?.playback_url) {
-    return <main><Link href="/dashboard/student/classes" className="inline-flex items-center gap-2 text-sm font-semibold text-[#312783]"><ArrowLeft size={16}/>Back to classes</Link><section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white p-8 text-center"><Video className="mx-auto text-[#8b8490]"/><h1 className="mt-4 text-lg font-semibold text-[#180d62]">Recording unavailable</h1><p className="mt-2 text-sm text-[#716c76]">{recordingQuery.error instanceof Error ? recordingQuery.error.message : "This recording is not ready to watch."}</p><button onClick={() => void recordingQuery.refetch()} className="mt-5 rounded-lg bg-[#312783] px-4 py-2.5 text-sm font-semibold text-white">Try again</button></section></main>;
+    return <div><Link href="/dashboard/student/classes" className="inline-flex items-center gap-2 text-sm font-semibold text-[#312783]"><ArrowLeft size={16}/>Back to classes</Link><section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white p-8 text-center"><Video className="mx-auto text-[#8b8490]"/><h1 className="mt-4 text-lg font-semibold text-[#180d62]">{lifecycle === "processing" ? "Recording is being prepared" : lifecycle === "failed" ? "Recording could not be prepared" : "Recording unavailable"}</h1><p role={lifecycle === "failed" ? "alert" : "status"} className="mt-2 text-sm text-[#716c76]">{recordingQuery.error instanceof Error ? recordingQuery.error.message : "This recording is not ready to watch."}</p><button onClick={() => void recordingQuery.refetch()} className="mt-5 rounded-lg bg-[#312783] px-4 py-2.5 text-sm font-semibold text-white">{lifecycle === "processing" ? "Check again" : "Try again"}</button></section></div>;
   }
 
   const session = sessionQuery.data;
   const subject = session.course?.name || session.courses?.name || "Class recording";
   const tutor = [session.tutor?.first_name, session.tutor?.last_name].filter(Boolean).join(" ");
-  return <main className="w-full pb-20">
+  return <div className="w-full pb-20">
     <Link href="/dashboard/student/classes" className="inline-flex items-center gap-2 text-sm font-semibold text-[#625e69] hover:text-[#312783]"><ArrowLeft size={16}/>Back to classes</Link>
     <header className="mt-5">
       <p className="text-sm font-semibold text-[#994704]">{subject}</p>
@@ -88,5 +101,5 @@ export function ClassRecordingViewer({ sessionId }: { sessionId: string }) {
         {recapQuery.isPending ? <p className="mt-4 text-sm text-[#716c76]">Loading summary…</p> : recapQuery.data?.published_body ? <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-[#474551]">{recapQuery.data.published_body}</div> : <p className="mt-4 text-sm leading-6 text-[#716c76]">No published summary is available for this class.</p>}
       </aside>
     </div>
-  </main>;
+  </div>;
 }

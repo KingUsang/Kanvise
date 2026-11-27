@@ -10,7 +10,7 @@ function request(headers: Record<string, string>) {
   return new Request("http://localhost/api/suggestions", {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
-    body: JSON.stringify({ suggestion: "More mocks" }),
+    body: JSON.stringify({ suggestion: "More quizzes" }),
   }) as unknown as Parameters<typeof POST>[0];
 }
 

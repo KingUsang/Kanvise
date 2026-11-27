@@ -5,7 +5,7 @@ import { MockBuilderClient } from "@/components/dashboard/mocks/mock-builder-cli
 import { Suspense } from "react";
 
 export const metadata = {
-  title: "Mock Builder | Kanvise",
+  title: "Quiz Builder | Kanvise",
 };
 
 export default async function MockBuilderPage() {

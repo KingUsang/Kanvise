@@ -7,7 +7,7 @@ vi.mock('@tanstack/react-query', () => ({
     isPending: false,
     isError: false,
     data: {
-      student: { first_name: 'Ada', last_name: 'Student' },
+      student: { first_name: 'Ada', last_name: 'Learner' },
       school: { name: 'Bright Minds' },
       capabilities: { hasCentreLearning: true },
       course_count: 1,

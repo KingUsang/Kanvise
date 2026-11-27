@@ -65,7 +65,7 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
         <div className="flex flex-1 flex-col gap-3 md:flex-row">
           <div className="relative min-w-[240px] flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-            <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} placeholder="Search name, email or student ID" className="w-full rounded-dashboard-control border border-dashboard-outline bg-transparent py-2 pl-10 pr-3 text-sm outline-none focus:border-dashboard-primary" />
+            <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} placeholder="Search name, email or learner ID" className="w-full rounded-dashboard-control border border-dashboard-outline bg-transparent py-2 pl-10 pr-3 text-sm outline-none focus:border-dashboard-primary" />
           </div>
           <div className="relative min-w-[200px]">
             <select 
@@ -106,7 +106,7 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
       {/* Data Table */}
       <div className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
         <div className="divide-y divide-dashboard-outline/50 sm:hidden">
-          {paginatedStudents.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">No students found matching filters.</p> : paginatedStudents.map((student) => <article key={student.id} onClick={() => setSelectedStudent(student)} className="cursor-pointer p-4 active:bg-dashboard-primary/5">
+          {paginatedStudents.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">No learners found matching filters.</p> : paginatedStudents.map((student) => <article key={student.id} onClick={() => setSelectedStudent(student)} className="cursor-pointer p-4 active:bg-dashboard-primary/5">
             <div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-dashboard-primary text-xs font-bold text-white`}>{student.profile_photo_url ? <img src={student.profile_photo_url} alt="" className="h-full w-full object-cover" /> : <>{student.first_name?.[0] || ''}{student.last_name?.[0] || ''}</>}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{student.first_name} {student.last_name}</h2><p className="truncate text-xs text-gray-500">{student.email || student.kanvise_user_id || 'No contact detail'}</p>{student.onboarding_status !== 'active' ? <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">Invitation pending</span> : null}</div><button onClick={(event) => { event.stopPropagation(); setSelectedStudent(student) }} className="shrink-0 rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877]">Details</button></div>
             <div className="mt-3 flex flex-wrap gap-1">{student.enrolments?.length ? student.enrolments.map((enr: any) => <span key={enr.id} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-600">{enr.programmes?.name || enr.courses?.name || (enr.sub_programmes ? 'Class' : null) || 'Unknown'}</span>) : null}{student.pending_enrolments?.map((enr: any) => <span key={enr.id} className="rounded bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase text-amber-800">Pending · {enr.programmes?.name || 'Class'}</span>)}{!student.enrolments?.length && !student.pending_enrolments?.length ? <span className="text-xs text-gray-400">No class access</span> : null}</div>
           </article>)}
@@ -114,8 +114,8 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
         <div className="hidden overflow-x-auto sm:block"><table className="w-full min-w-[900px] text-left border-collapse">
           <thead>
             <tr className="border-b border-dashboard-outline bg-dashboard-surface-subtle">
-              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student Info</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Student ID</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Learner Info</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Learner ID</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest">Enrolments</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-600 uppercase tracking-widest text-right">Actions</th>
             </tr>
@@ -124,7 +124,7 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
             {paginatedStudents.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-8 px-6 text-center text-gray-500">
-                  No students found matching filters.
+                  No learners found matching filters.
                 </td>
               </tr>
             ) : (

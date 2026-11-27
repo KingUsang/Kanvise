@@ -28,7 +28,7 @@ export function MockImportProgressCard({ progress }: { progress: MockImportProgr
           <p className="font-semibold text-[#1b1c1c]">{isComplete ? 'Questions ready to review' : isError ? 'Import stopped' : status?.title}</p>
           <p className="mt-0.5 truncate text-xs text-[#716c76]">{progress.fileName}</p>
           {isError
-            ? <p className="mt-3 text-sm leading-5 text-red-700">{progress.message || 'Kanvise could not read this document. Your mock has not changed.'}</p>
+            ? <p className="mt-3 text-sm leading-5 text-red-700">{progress.message || 'Kanvise could not read this document. Your quiz has not changed.'}</p>
             : isComplete
               ? <p className="mt-2 text-sm leading-5 text-[#166534]">Kanvise found editable questions. Review them before publishing.</p>
               : <p className="mt-2 text-sm leading-5 text-[#474551]">{progress.message || status?.detail}</p>}

@@ -222,7 +222,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
           </div>
           <DashboardPageHeader
             title="Name your tutoring agency"
-            description="This is the name students will recognise. You can add your logo, contact details and other information later."
+            description="This is the name learners will recognise. You can add your logo, contact details and other information later."
           />
 
           <label htmlFor="name" className="mt-7 block text-sm font-semibold text-[#1b1c1c]">Tutoring agency name</label>
@@ -239,7 +239,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
           />
 
           <div className="mt-4 rounded-lg bg-[#f7f5f3] px-4 py-3">
-            <p className="text-xs font-medium text-[#716c76]">Your student page</p>
+            <p className="text-xs font-medium text-[#716c76]">Your learner page</p>
             <p className="mt-1 break-all text-sm font-semibold text-[#2e2877]">{PUBLIC_APP_HOST}/{generatedSlug}</p>
             <p className="mt-1 text-xs leading-5 text-[#716c76]">We generate this automatically. You can customise it later.</p>
           </div>
@@ -259,7 +259,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
       <DashboardPageHeader
         className="mb-6"
         title="Tutoring agency profile"
-        description="Manage what students see on your public tutoring agency page."
+        description="Manage what learners see on your public tutoring agency page."
       />
 
       {/* Bento Grid Layout */}
@@ -275,7 +275,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                 <span className="material-symbols-outlined text-[#994704]">info</span>
                 About your tutoring agency
               </h3>
-              <p className="mt-1 text-sm text-[#474551]">The tutoring agency name and student page link are required. The introduction is optional.</p>
+              <p className="mt-1 text-sm text-[#474551]">The tutoring agency name and learner page link are required. The introduction is optional.</p>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -298,7 +298,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
 
                 {/* Slug */}
                 <div className="flex flex-col gap-2">
-                  <span className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">Student page</span>
+                  <span className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider">Learner page</span>
                   {!isEditingSlug ? (
                     <div className="rounded-lg border border-[#d8d2cd] bg-[#f7f5f3] px-3 py-3">
                       <p className="break-all text-sm font-semibold text-[#2e2877]">{PUBLIC_APP_HOST}/{formData.slug}</p>
@@ -329,7 +329,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                   value={formData.description}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#fbf9f8] border border-[#787582] rounded focus:border-2 focus:border-[#180d62] focus:ring-0 transition-all text-[#1b1c1c] resize-none"
-                  placeholder="Tell students what you teach, the exams you prepare them for, and what makes your tutoring agency different."
+                  placeholder="Tell learners what you teach, the exams you prepare them for, and what makes your tutoring agency different."
                 />
                 <p className="text-[11px] text-[#787582] text-right mt-1">
                   {formData.description.length} / 500 characters
@@ -354,14 +354,14 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
                 <span className="material-symbols-outlined text-[#994704]">perm_media</span>
                 Photos and Welcome Video <span className="text-sm font-normal text-[#787582]">(optional)</span>
               </h3>
-              <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so students know they are enrolling with the right tutoring agency.</p>
+              <p className="mt-1 text-sm text-[#474551]">Add familiar visuals so learners know they are enrolling with the right tutoring agency.</p>
               {!canUploadMedia && <p className="mt-2 text-xs font-medium text-[#994704]">Save your tutoring agency details first, then you can add photos and a welcome video.</p>}
               </div>
 
             <div className="flex flex-col gap-8">
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Tutoring agency logo <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
-                <p className="mb-3 text-xs leading-5 text-[#787582]">Shown beside your tutoring agency name on the student enrolment page.</p>
+                <p className="mb-3 text-xs leading-5 text-[#787582]">Shown beside your tutoring agency name on the learner enrolment page.</p>
                 <label className={`relative flex min-h-36 w-full overflow-hidden rounded-lg border-2 border-dashed border-[#c8c5d2] bg-[#f5f3f2] p-5 transition-colors ${canUploadMedia ? 'cursor-pointer hover:border-[#2e2877]' : 'cursor-not-allowed opacity-60'}`}>
                   <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('logo', event.target.files?.[0])} />
                   {mediaUrls.logo ? <img src={mediaUrls.logo} alt="Tutoring agency logo preview" className="absolute inset-0 h-full w-full object-contain p-4" /> : <div className="absolute inset-0 flex items-center justify-center bg-[#180d62] text-3xl font-bold text-white">{initials}</div>}
@@ -373,7 +373,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
 
               <div>
                 <label className="font-semibold text-xs text-[#1b1c1c] uppercase tracking-wider mb-1 block">Cover Image <span className="normal-case tracking-normal text-[#787582]">(optional)</span></label>
-                <p className="mb-3 text-xs leading-5 text-[#787582]">A wide image at the top of your student enrolment page. A classroom or teaching photo works well.</p>
+                <p className="mb-3 text-xs leading-5 text-[#787582]">A wide image at the top of your learner enrolment page. A classroom or teaching photo works well.</p>
                 <label className={`relative flex min-h-40 w-full overflow-hidden rounded-lg border-2 border-dashed border-[#c8c5d2] bg-[#f5f3f2] p-5 transition-colors ${canUploadMedia ? 'cursor-pointer hover:border-[#2e2877]' : 'cursor-not-allowed opacity-60'}`}>
                   <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!canUploadMedia || uploadingMedia !== null} onChange={(event) => void uploadMedia('banner', event.target.files?.[0])} />
                   {mediaUrls.banner ? <img src={mediaUrls.banner} alt="Tutoring agency cover preview" className="absolute inset-0 h-full w-full object-cover" /> : (
@@ -406,7 +406,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
           {/* Visibility Status Card */}
           <div className="bg-white border border-[#c8c5d2] rounded-lg p-6 shadow-[0px_4px_20px_rgba(61,61,61,0.04)]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-[#180d62]">Student Page</h3>
+              <h3 className="text-xl font-semibold text-[#180d62]">Learner Page</h3>
               {/* Toggle Switch */}
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -420,7 +420,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
               </label>
             </div>
             <p className="text-sm text-[#474551] bg-[#f5f3f2] p-3 rounded border border-[#c8c5d2]">
-              {formData.is_active ? 'Your student enrolment page is available to anyone with the link.' : 'Your student enrolment page is hidden. Students cannot browse or enrol until you turn it back on.'} Your dashboard and staff access are not affected.
+              {formData.is_active ? 'Your learner enrolment page is available to anyone with the link.' : 'Your learner enrolment page is hidden. Learners cannot browse or enrol until you turn it back on.'} Your dashboard and staff access are not affected.
             </p>
           </div>
 
@@ -433,7 +433,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
             </summary>
             <div className="border-t border-[#e4e2e1] p-5">
               <div className="mb-5">
-              <p className="mt-1 text-sm text-[#474551]">Where students and parents can ask questions before enrolling.</p>
+              <p className="mt-1 text-sm text-[#474551]">Where learners and parents can ask questions before enrolling.</p>
               </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
@@ -478,7 +478,7 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
             </summary>
             <div className="border-t border-[#e4e2e1] p-5">
               <div className="mb-5">
-              <p className="mt-1 text-sm text-[#474551]">Optional links that help students learn more about your tutoring agency.</p>
+              <p className="mt-1 text-sm text-[#474551]">Optional links that help learners learn more about your tutoring agency.</p>
               </div>
             <div className="flex flex-col gap-4">
               <div className="relative">

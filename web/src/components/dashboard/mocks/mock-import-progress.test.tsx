@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MockImportProgressCard, newMockImportProgress } from './mock-import-progress'
 
-describe('mock import progress', () => {
+describe('quiz import progress', () => {
   it('starts an import job for a selected file', () => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('9147c666-0000-4000-8000-000000000000')
     expect(newMockImportProgress('questions.pdf')).toEqual({

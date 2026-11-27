@@ -23,7 +23,7 @@ describe("POST /api/waitlist", () => {
     const input = {
       contact_name: "  Ada Lovelace  ",
       contact_email: " ADA@EXAMPLE.COM ",
-      centre_name: "  Bright Centre  ",
+      centre_name: "  Bright Tutoring account  ",
       contact_phone: " +234 800 000 0000 ",
       estimated_student_count: "12",
       wants_beta_testing: false,

@@ -98,7 +98,7 @@ export default async function ProgrammePage({
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 lg:grid-cols-[1fr_360px] lg:px-8 lg:py-16">
             <div className="max-w-3xl">
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-[#994704]">Class</p>
-              {isDraftPreview && <p className="mb-4 inline-flex rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-[#2e2877]">Private draft preview — students cannot see this yet</p>}
+              {isDraftPreview && <p className="mb-4 inline-flex rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-[#2e2877]">Private draft preview — learners cannot see this yet</p>}
               <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-[-0.03em] text-[#2e2877] md:text-5xl">
                 {programme.name}
               </h1>
@@ -138,7 +138,7 @@ export default async function ProgrammePage({
                 price={price}
                 programmeSlug={programmeSlug}
               /><p className="mt-3 text-center text-xs leading-5 text-[#6a6874]">
-                {isFree ? "Create a student account or sign in to join." : "You’ll be asked to sign in or create a student account before payment."}
+                {isFree ? "Create a learner account or sign in to join." : "You’ll be asked to sign in or create a learner account before payment."}
               </p></>}
             </aside>
           </div>

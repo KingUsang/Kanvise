@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, PageLoadingState, RefreshNotice } from '@/compo
 import { CollectionToolbar } from '@/components/dashboard/collection-controls'
 import { School, SearchX } from 'lucide-react'
 import { readApiBody, responseErrorMessage, safeApiErrorMessage } from '@/lib/safe-api-error'
+import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
 type Subject = { id: string; name: string; tutor_ids: string[] }
 type Programme = {
@@ -39,7 +40,7 @@ const STATUS_FILTERS = [
   { value: 'draft', label: 'Draft' },
 ] as const
 
-const ACTIVE_ENROLMENT_MESSAGE = 'This class has enrolled students, so it cannot be deleted. Unpublish it instead to remove it from the student page.'
+const ACTIVE_ENROLMENT_MESSAGE = 'This class has enrolled learners, so it cannot be deleted. Unpublish it instead to remove it from the learner page.'
 
 export function ProgrammesClient() {
   const queryClient = useQueryClient()
@@ -114,12 +115,8 @@ export function ProgrammesClient() {
   })
 
   const copyLink = async (programme: Programme) => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/${schoolSlug}/${programme.slug}`)
-      toast.success('Enrolment link copied')
-    } catch {
-      toast.error('Could not copy the enrolment link')
-    }
+    if (await copyToClipboard(`${window.location.origin}/${schoolSlug}/${programme.slug}`)) toast.success('Enrolment link copied')
+    else toast.error('Could not copy the enrolment link')
   }
 
   const publish = async (programme: Programme) => {
@@ -186,7 +183,7 @@ export function ProgrammesClient() {
       )}
 
       {schoolContextError && !loadError && (
-        <RefreshNotice message="Class links are temporarily unavailable because centre details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
+        <RefreshNotice message="Class links are temporarily unavailable because tutoring account details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
       )}
 
       {programmesQuery.isSuccess && programmes.length > 0 && (

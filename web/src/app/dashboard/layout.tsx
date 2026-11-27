@@ -35,7 +35,11 @@ export default async function DashboardLayout({
     user.app_metadata?.kanvise_role ||
     user.app_metadata?.role ||
     "student";
-  const schoolId = user.app_metadata?.school_id;
+  // The app_metadata claim decides this, as middleware does for the setup
+  // redirect. The kanvise_account cookie is only a UUID-shaped preference that
+  // cannot be checked against memberships here (dashboard Server Components may
+  // not call the API), so a stale cookie must never mark an Admin as set up.
+  const hasAccount = Boolean(user.app_metadata?.school_id);
 
   // Student pages provide their own navigation shell. Avoid loading the
   // admin/tutor dashboard endpoint for a role it was not designed to serve.
@@ -51,7 +55,7 @@ export default async function DashboardLayout({
 
   // A new Admin must be able to render the setup screen before a school exists.
   // Middleware confines that session to /dashboard/school-setup.
-  if (role === "admin" && !schoolId) {
+  if (role === "admin" && !hasAccount) {
     return (
       <div className="font-sans">
         <DashboardShell user={userInfo} setupRequired>

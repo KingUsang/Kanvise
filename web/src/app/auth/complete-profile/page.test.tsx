@@ -24,7 +24,7 @@ describe('CompleteProfilePage', () => {
     expect(screen.getByLabelText('Tutoring agency name')).toHaveValue('Bright Future Tutorials')
   })
 
-  it('preserves student context without presenting educator setup choices', async () => {
+  it('preserves learner context without presenting educator setup choices', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: {
       intent: 'student', email: 'student@example.com', first_name: 'Sam', last_name: 'Learner',
     } }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
