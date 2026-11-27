@@ -61,8 +61,10 @@ Anyone:  Setup / Settings › Test classroom → CR-10 device check
 
 ## CR-01 · Pre-entry (tutor)
 
-Route: `/lessons/:id/classroom`. Opens in a new tab so the dashboard stays
-open.
+Route: `/lessons/:id/classroom`. On desktop it opens in a new tab so the
+dashboard stays open. On phones it opens in the same tab, so the installed app
+keeps its shell, and **Back to lesson** returns to the lesson page (spec 01,
+SH-16).
 
 A dark, calm full-page screen (matching the room), Kanvise logo top left,
 **Back to lesson** top right. A centred card:

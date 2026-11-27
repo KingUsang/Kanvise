@@ -431,10 +431,10 @@ the matching build ticket starts.
 | Standard 03 "Dashboard page access" | `Account-wide pages are Admin-only: ... Programmes and Courses, Tutors, Learners`; `Assigned Tutors get a read-only Learner roster.` | Kept: agency tutors cannot create courses or add students; admins do | Change spec (done in 04 and 06) |
 | Standard 03 "Dashboard page access" | `Notes and Assignments are Tutor capabilities. An Admin gets them only when assigned to a Course.` | Admins see homework and quizzes for every course in their agency, and private notes under the private notes rule | Amend standard |
 | Standard 03 "Membership-scoped tenancy" | `not a global role or school_id stored on the person or JWT` | Remove the remaining `school_id` claim | No change to the standard; build ticket removes the claim |
-| Standard 07 "Semantic visual language"; ledger UI-003 | `Brand indigo is for primary actions, selected navigation, links` | Selected navigation and active tabs use orange "you are here"; indigo stays for primary actions and links | Amend standard: add a named "location" orange token |
-| Standard 07 radius tiers | `8px controls, 12px normal cards/panels, and 16px for large dialogs` | Use the standard's tiers (specs said 16px cards, 20px dialogs) | Change spec (01) |
-| Standard 07 gutters; ledger UI-007 | `16px on narrow screens and 40px at desktop`; `The dashboard shell owns page gutters` | Use the standard's gutters; the shell owns them (specs said 32px, 24px, 16px) | Change spec (01) |
-| Standard 07 page title | `24px mobile / 30px desktop page title` | Use the standard's sizes (specs said 24px everywhere) | Change spec (01) |
+| Standard 07 "Semantic visual language"; ledger UI-003 | `Brand indigo is for primary actions, selected navigation, links` | Selected navigation and active tabs use orange "you are here"; indigo stays for primary actions and links | Amend standard: add a named "location" orange token (01 SH-15 lists where it is used) |
+| Standard 07 radius tiers | `8px controls, 12px normal cards/panels, and 16px for large dialogs` | Use the standard's tiers (specs said 16px cards, 20px dialogs) | Change spec (done in 01 SH-01, SH-10) |
+| Standard 07 gutters; ledger UI-007 | `16px on narrow screens and 40px at desktop`; `The dashboard shell owns page gutters` | Use the standard's gutters; the shell owns them (specs said 32px, 24px, 16px) | Change spec (done in 01 SH-01) |
+| Standard 07 page title | `24px mobile / 30px desktop page title` | Use the standard's sizes (specs said 24px everywhere) | Change spec (done in 01 SH-03) |
 | Ledger INT-006 | `risk-based quarantine` for uploads | No virus scan for now; upload limits instead (section 19) | Amend ledger: record the deferral |
 
 ## 19. Smaller defaults accepted by the owner

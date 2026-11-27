@@ -78,8 +78,10 @@ The onboarding answers (spec 02), editable:
 - **Who you mostly teach:** Children and teens · Adults · Both. Sets the
   default lesson length (45 minutes for children and teens, otherwise an hour)
   and the reading level of what Kavi writes for students.
-- **How you usually teach:** One-to-one · Small groups · Both.
-- **Subjects.**
+- **How you usually teach:** One-to-one · Small groups · Both. Sets how the
+  **People** step of the New course wizard starts (spec 02, "What each answer
+  changes").
+- **Subjects.** Suggested first in the New course wizard's Subject field.
 - Line: **These change your defaults and what Kanvise suggests. They never
   delete anything.**
 
