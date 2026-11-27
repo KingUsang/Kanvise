@@ -14,9 +14,7 @@ For continuing this work in a new chat. Read this first, then `00-decisions.md`.
 - `research/bobbin-appatlas`: the owner's Bobbin competitor atlas
   (`scratch/bobbin-appatlas/`: spec.md per section, screens.json, ~250
   screenshots). Branched from an old commit; never merge it, only read it.
-- Open PR **#77** (`fix/agency-copy`): wording fix ("tutoring agency", "your
-  tutor"). Was stuck waiting for GitHub Actions to start; check and merge once
-  CI is green.
+- PR **#77** (`fix/agency-copy`, wording fix) is merged into `staging`.
 - Open PR #68 (`posthog/wizard-…`): opened by the PostHog wizard, not by us.
   Untouched.
 
