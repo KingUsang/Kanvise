@@ -140,7 +140,7 @@ Left column:
   **Edit**. Empty: **Add a goal so you and Kavi know what you're working
   towards.**
 - **Courses:** one card per course: colour dot, name, the plan progress
-  (**12 of 32 topics taught**), counts of **Knows it** and **Needs work**, and
+  (**12 of 32 topics covered**, 04 Topic status model), counts of **Knows it** and **Needs work**, and
   the next topic (**Next: Factorising**). Opens the course plan filtered to this
   student.
 - **Latest summary:** the most recent lesson summary (What went well, What to work

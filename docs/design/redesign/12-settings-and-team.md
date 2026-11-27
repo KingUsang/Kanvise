@@ -89,7 +89,9 @@ The onboarding answers (spec 02), editable:
 
 - **Default lesson length:** 30 / 45 / 60 / 90 min. Starts at 45 if onboarding
   said Children and teens, otherwise 60.
-- **Classroom opens:** 5 / 10 / 15 (default) / 30 minutes before.
+- **Classroom opens:** 5 / 10 / 15 (default) / 30 minutes before. This gates
+  students only: tutors and admins can always go in early to set up (05 LP-01).
+  The amber **Starting soon** status starts at the same time.
 - **Remind students:** 30 min before (default), also 24 hours before (toggle).
 - **End lessons automatically:** 10 minutes after everyone leaves (toggle, on).
 - **Record lessons:** on by default. Line: **Recordings let Kavi draft your

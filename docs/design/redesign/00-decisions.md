@@ -68,14 +68,17 @@ below.
 - The course plan and the starting check are not wizard steps. After the course
   is created, its page shows two cards: **Build the course plan** (Draft with
   Kavi, Start blank, or **Copy plan from another course**) and, once the plan
-  has at least one topic, **Send a starting check**.
+  has at least one topic, **Find out what they know** (with **Send a starting
+  check**). A trial is a short course made with the same wizard and its
+  **This is a trial** switch (spec 04).
 - Only independent tutors and agency admins create courses (section 14c).
 
 ## 4. Personal plan
 
 - There is no separate "learning plan" page or module.
-- Each student sees the course plan with their own status on each topic:
-  **Knows it**, **Needs work**, **Taught**, **Next**.
+- Each student on a course has their own status on each topic: **Knows it**,
+  **Needs work**, **Taught**, **Next**. Students see their own Taught, Knows it
+  and Next; Needs work is tutor-only (spec 04).
 - For a one-to-one course the course plan and the personal plan are the same
   screen. For a group the topics are shared and the statuses are per student.
 - Progress is tracked separately for each course. Students see their own
@@ -104,9 +107,10 @@ below.
   answers a topic needs before it counts are written in spec 04. The results
   always say which topics were checked and which were not.
 - **Results:** per topic, with the questions and answers as proof. They become
-  per-student topic statuses only after the tutor reviews them. Kavi may propose
-  plan changes (mark known topics, put gaps first, suggest the first lesson's
-  topic); the tutor accepts, edits or ignores each one.
+  per-student topic statuses only after the tutor reviews them, one row at a
+  time, in the course plan's **Review changes** sheet (spec 04). Kavi may
+  suggest an order (put gaps first, the first lesson's topic); the tutor
+  accepts or ignores it.
 - It can be re-sent later to show progress.
 - **Access:** a student with an account takes it signed in. Each student also
   gets a personal check link that the tutor can copy, send on WhatsApp, or

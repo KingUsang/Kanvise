@@ -72,8 +72,8 @@ marker as the tutor app.
 
 | State | Button |
 |---|---|
-| More than 15 min away | **Add to calendar** (secondary) |
-| Within 15 min, not started | **Join** (disabled look, label **Opens at 3:45 PM**) |
+| Before the classroom opens (12 CFG-L **Classroom opens**) | **Add to calendar** (secondary), and the line **Opens at 3:45 PM** |
+| Classroom open, not started | **Join** (opens the screen that waits for the tutor, 07 CR-02) |
 | Tutor has started | **Join now** (indigo, with a soft pulse) |
 | No lesson scheduled | Card reads **No lesson booked yet.** "Alex will add your next one." |
 
@@ -135,12 +135,13 @@ name.
 **Resources**.
 
 **Plan** (what they're learning):
-- The course plan's modules and topics, read-only, with simple marks per topic:
-  **Taught** (tick), **Next** (highlighted), and nothing for not yet.
-- **Knows it** and **Needs work** are shown to the student as **You know this**
-  and **Practise this** (gentler words for the same statuses). *(Pending owner
-  decision on whether students see these; default: yes.)*
-- A line at the top: **12 of 32 topics so far.**
+- The course plan's modules and topics, read-only, with the same words and
+  icons the tutor sees: **Taught**, **Knows it** and **Next**, and nothing for
+  not yet.
+- **Needs work** is tutor-only: the student sees that topic as **Taught** if it
+  was taught in a lesson, otherwise unmarked (decided in 04, Topic status
+  model). What to practise reaches the student through the lesson summary.
+- A line at the top: **12 of 32 topics covered.**
 
 **Quizzes:** quizzes set on this course: **To take**, **Done** (with score if
 the tutor shows scores). Taking a quiz: spec 11.

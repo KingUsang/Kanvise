@@ -71,7 +71,7 @@ A dark, calm full-page screen (matching the room), Kanvise logo top left,
 
 | State | Card |
 |---|---|
-| Too early (more than 15 min before) | **Your lesson starts at 4:00 PM.** "The classroom opens 15 minutes before." **Back to lesson**. Opening this page early isn't an error. |
+| Before the classroom opens for students (12 CFG-L **Classroom opens**) | Tutors and admins can always go in, so this is the Ready card below with one extra line: **Students can join from 3:45 PM, or as soon as you start.** |
 | Waking the classroom server | **Getting your classroom ready…** "This can take up to a minute." A progress line. It checks every few seconds and moves on by itself. |
 | Ready, lesson not started | **Start your 4:00 PM lesson** · lesson card (**Today, 4:00–5:00 PM**, topic, course) · primary **Start lesson** · secondary **Go in without starting**. Line: **Students can join once you start.** |
 | Ready, lesson already running (rejoin) | Goes straight into the room. Toast: **Back in your lesson.** |
@@ -98,8 +98,10 @@ Same dark full page. Card:
 When the tutor starts, a short sound plays (if allowed), the tab title changes
 to **Your lesson has started**, and the student goes into the room.
 
-If the student opens the page more than 15 minutes early: **Your lesson starts
-at 4:00 PM. Come back 15 minutes before.** with **Add to calendar**.
+If the student opens the page before the classroom opens for students (12
+CFG-L **Classroom opens**) and the tutor hasn't started: **Your lesson starts
+at 4:00 PM. The classroom opens at 3:45 PM.** with **Add to calendar**. If
+the tutor has already started, the student goes straight in.
 
 If the tutor hasn't started 10 minutes after the start time, the card adds:
 **Alex is running late. We've let them know you're waiting.** (Kanvise sends
