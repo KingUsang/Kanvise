@@ -90,7 +90,7 @@ export default function ResetPasswordPage() {
         }
       }
     } catch (activationError) {
-      console.error('Could not mark student profile active:', activationError);
+      console.error('Could not mark Learner profile active:', activationError);
       setActivationWarning('Your password was changed, but we could not finish activating your profile. Sign in and complete your details if asked.');
     }
 

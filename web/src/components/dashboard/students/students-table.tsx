@@ -4,11 +4,21 @@ import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
 import { clampRosterPage } from "@/lib/student-roster";
+import { parsePageParam, readUrlParam, writeUrlParams } from "@/lib/use-url-state";
 
 export default function StudentsTable({ students, onStudentRemoved, onStudentsChanged }: { students: any[], onStudentRemoved: (studentId: string) => void, onStudentsChanged: () => void }) {
-  const [programmeFilter, setProgrammeFilter] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  // Search, enrolment filter and page live in the URL (DEV-FE-031) so reload
+  // and shared links restore the same roster view.
+  const [programmeFilter, setProgrammeFilterState] = useState(() => readUrlParam("enrolment") ?? "");
+  const [searchQuery, setSearchQueryState] = useState(() => readUrlParam("q") ?? "");
+  const [currentPage, setCurrentPageState] = useState(() => parsePageParam(readUrlParam("page")));
+  const setProgrammeFilter = (value: string) => { setProgrammeFilterState(value); writeUrlParams({ enrolment: value }); };
+  const setSearchQuery = (value: string) => { setSearchQueryState(value); writeUrlParams({ q: value }); };
+  const setCurrentPage = (update: number | ((page: number) => number)) => {
+    const next = typeof update === "function" ? update(currentPage) : update;
+    setCurrentPageState(next);
+    writeUrlParams({ page: next }, { page: "1" });
+  };
   const itemsPerPage = 10;
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);

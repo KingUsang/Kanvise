@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorState } from "@/components/dashboard/async-states";
 import { formatDeadline } from '@/lib/format-deadline';
 import React, { useEffect, useState } from "react";
 import { ChevronDown, CloudUpload, FileText } from "lucide-react";
@@ -300,7 +301,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
                 id="description" 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Paste or write the question(s) students must answer. For example: A ₦140,000 is shared between Abu, Kayode and Uche..."
+                placeholder="Paste or write the question(s) Learners must answer. For example: A ₦140,000 is shared between Abu, Kayode and Uche..."
                 className="h-full w-full resize-none rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-base text-dashboard-foreground outline-none placeholder:text-dashboard-muted focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"
               />
             </div>
@@ -407,10 +408,7 @@ export function AssignmentsClient({ embedded = false }: { embedded?: boolean }) 
             {isFetching ? (
               <div className="p-8 text-center text-sm text-dashboard-muted">Loading assignments…</div>
             ) : assignmentQuery.isError && !assignmentQuery.data ? (
-              <div className="p-8 text-center text-sm text-red-800" role="alert">
-                <p>{safeQueryErrorMessage(assignmentQuery.error, "Could not load assignments. Please try again.")}</p>
-                <button type="button" onClick={() => void assignmentQuery.refetch()} className="mt-4 rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-xs font-semibold text-white">Try again</button>
-              </div>
+              <ErrorState message={safeQueryErrorMessage(assignmentQuery.error, "Could not load assignments. Please try again.")} onRetry={() => void assignmentQuery.refetch()} />
             ) : assignments.length === 0 ? (
               <div className="p-8 text-center text-sm text-dashboard-muted">
                 <FileText className="mx-auto mb-3 h-8 w-8 text-dashboard-outline" />

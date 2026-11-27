@@ -35,7 +35,7 @@ export function MockPreflightClient({ data, startPath, backHref = '/dashboard/st
     setStarting(true)
     try {
       if (data.subject_combination) {
-        if (subjectCourseIds.length !== data.subject_combination.required_count) throw new Error(`Choose exactly ${data.subject_combination.required_count} subjects for this JAMB mock.`)
+        if (subjectCourseIds.length !== data.subject_combination.required_count) throw new Error(`Choose exactly ${data.subject_combination.required_count} subjects for this JAMB Quiz.`)
         const selection = await authenticatedApiFetch(`${getApiUrl()}/students/me/subject-combination`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ programme_id: data.subject_combination.programme_id, course_ids: subjectCourseIds }),

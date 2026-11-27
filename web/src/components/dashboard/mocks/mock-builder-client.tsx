@@ -136,7 +136,7 @@ function importErrorMessage(body: any, fileLabel: "PDF" | "Word document") {
     return "Kanvise is processing too many document imports right now. Your quiz has not changed—try this file again in a few minutes.";
   if (body?.code === "IMPORT_TEMPORARILY_UNAVAILABLE")
     return "The document reader is temporarily unavailable. Your quiz has not changed—try again shortly.";
-  return `Kanvise could not import this ${fileLabel.toLowerCase()}. Your mock has not changed. Try another file or add questions manually.`;
+  return `Kanvise could not import this ${fileLabel.toLowerCase()}. Your Quiz has not changed. Try another file or add questions manually.`;
 }
 
 export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) {
@@ -549,7 +549,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           router.push("/dashboard/mocks");
         }
       } catch (err) {
-        console.error("Failed to fetch mock data", err);
+        console.error("Failed to fetch Quiz data", err);
         toast.error("Could not open this quiz", {
           description: "Check your connection and try again.",
         });
@@ -1478,7 +1478,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       toast.error(
         classContext
           ? "Add a quiz title before continuing"
-          : "Add a quiz title and choose a valid tutoring agency target",
+          : "Add a quiz title and choose a valid tutoring account target",
       );
       return;
     }
@@ -3107,7 +3107,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               <p className="mt-2 text-xs leading-5 text-[#716c76]">
                 {centreAccessEnabled
                   ? "Only learners enrolled in every selected programme subject will receive this quiz."
-                  : "Add the subjects in this exam yourself. They are not connected to your tutoring agency."}
+                  : "Add the subjects in this exam yourself. They are not connected to your tutoring account."}
               </p>
             </div>
             {selectedSubjectCourses.length === 0 ? (

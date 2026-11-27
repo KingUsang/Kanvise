@@ -156,7 +156,7 @@ export function DashboardHomeClient() {
               id="centre-summary"
               className="mb-4 text-lg font-semibold text-[#1b1c1c]"
             >
-              Tutoring agency overview
+              Tutoring account overview
             </h2>
           )}
           <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
@@ -164,13 +164,13 @@ export function DashboardHomeClient() {
               title="Enrolled Learners"
               value={admin.total_students}
               icon="groups"
-              subtitle="Across the tutoring agency"
+              subtitle="Across the tutoring account"
             />
             <StatCard
               title="Live Classes Today"
               value={admin.upcoming_classes}
               icon="event"
-              subtitle="Scheduled across your tutoring agency"
+              subtitle="Scheduled across your tutoring account"
             />
             <StatCard
               title="Earnings This Month"
@@ -190,7 +190,7 @@ export function DashboardHomeClient() {
               subtitle={
                 isAdminTutor
                   ? "Including you"
-                  : `${admin.mocks?.active_count || 0} active mocks`
+                  : `${admin.mocks?.active_count || 0} active Quizzes`
               }
             />
           </div>
@@ -223,7 +223,7 @@ export function DashboardHomeClient() {
               title="Quiz Answers to Grade"
               value={tutor.mocks?.pending_count || 0}
               icon="quiz"
-              subtitle={`${tutor.mocks?.active_count || 0} active mocks`}
+              subtitle={`${tutor.mocks?.active_count || 0} active Quizzes`}
             />
             <StatCard
               title="My Subjects"
@@ -239,7 +239,7 @@ export function DashboardHomeClient() {
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-[#1b1c1c]">
-                {isTutor ? "My Schedule Today" : "Today's Tutoring Agency Schedule"}
+                {isTutor ? "My Schedule Today" : "Today's Tutoring Account Schedule"}
               </h2>
               <p className="mt-1 text-sm text-[#474551]">
                 {schedule.length}{" "}

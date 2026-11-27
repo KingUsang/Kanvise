@@ -1,10 +1,12 @@
 "use client";
 
 import { Dialog } from "@/components/ui/dialog";
+import { Alert } from "@/components/ui/alert";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Loader2, AlertCircle, Download, UserPlus, X, Upload } from "lucide-react";
 import Papa from "papaparse";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
+import { apiRequest } from "@/lib/api-request";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { downloadStudentRosterCsv } from "@/lib/student-roster";
 import StudentsTable from "@/components/dashboard/students/students-table";
@@ -46,10 +48,12 @@ export default function StudentsPage() {
 
   useEffect(() => {
     async function fetchProgrammes() {
-      const response = await authenticatedApiFetch(`${process.env.NEXT_PUBLIC_API_URL}/programmes`);
-      if (!response.ok) return;
-      const body = await response.json();
-      setProgrammes((body.data || []).map((programme: any) => ({ id: programme.id, name: programme.name })));
+      try {
+        const body = await apiRequest<{ data?: Array<{ id: string; name: string }> }>(`${process.env.NEXT_PUBLIC_API_URL}/programmes`, "Could not load Classes");
+        setProgrammes((body.data || []).map((programme) => ({ id: programme.id, name: programme.name })));
+      } catch {
+        // The import form simply offers no Class list when this read fails.
+      }
     }
     void fetchProgrammes();
   }, []);
@@ -143,7 +147,7 @@ export default function StudentsPage() {
       {/* Header */}
       <DashboardPageHeader
         title="Learners"
-        description="Add learners to your tutoring agency, see what they can access, and review their successful payment history."
+        description="Add learners to your tutoring account, see what they can access, and review their successful payment history."
         actions={<>
           <button
             type="button"
@@ -193,7 +197,7 @@ export default function StudentsPage() {
               <div><h2 id="add-student-title" className="text-xl font-bold text-dashboard-foreground">Invite a learner</h2><p className="mt-1 text-sm leading-6 text-dashboard-muted">They enter their own name and password from the email. Add them to a class now or later.</p></div>
               <button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} aria-label="Close" className="rounded p-1 text-gray-500 hover:bg-gray-100"><X size={20} /></button>
             </div>
-            {addStudentError && <div className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{addStudentError}</div>}
+            {addStudentError && <Alert className="mt-5">{addStudentError}</Alert>}
             <label className="mt-5 block text-sm font-semibold text-dashboard-foreground">Email address<input required type="email" value={studentEmail} onChange={(event) => setStudentEmail(event.target.value)} className="mt-1.5 w-full rounded-dashboard-control border border-dashboard-outline px-3 py-2.5 font-normal outline-none focus:border-dashboard-primary" /></label>
             <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setAddingStudent(false)} disabled={submittingStudent} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button disabled={submittingStudent} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submittingStudent ? "Sending…" : "Add & invite"}</button></div>
           </form>
@@ -205,8 +209,8 @@ export default function StudentsPage() {
           <div className="mx-auto my-8 w-full max-w-4xl rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-dashboard-foreground">Review learner import</h2><p className="mt-1 text-sm text-dashboard-muted">Every learner needs an email for their activation link. Names and phone numbers are optional; learners can enter their own names during activation.</p></div><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded p-1 text-dashboard-muted hover:bg-dashboard-surface-subtle"><X size={20} /></button></div>
             <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={downloadTemplate} className="rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Download template</button><label className="cursor-pointer rounded-dashboard-control border border-dashboard-outline px-3 py-2 text-sm font-semibold text-dashboard-primary">Choose another CSV<input type="file" accept=".csv,text/csv" className="sr-only" onChange={handleCsvFile} /></label></div>
-            {csvError && <div className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">{csvError}</div>}
-            {importSummary && <div className="mt-4 rounded bg-green-50 p-3 text-sm text-green-800">{importSummary}</div>}
+            {csvError && <Alert className="mt-4">{csvError}</Alert>}
+            {importSummary && <Alert tone="success" className="mt-4">{importSummary}</Alert>}
             {csvRows.length > 0 && <div className="mt-5 overflow-x-auto rounded-dashboard-control border border-dashboard-outline"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-dashboard-surface-subtle"><tr><th className="p-3">Row</th><th className="p-3">Learner</th><th className="p-3">Contact</th><th className="p-3">Class</th><th className="p-3">Status</th></tr></thead><tbody>{csvRows.slice(0, 100).map((row) => <tr key={row.row} className="border-t border-dashboard-outline/50"><td className="p-3">{row.row}</td><td className="p-3">{row.first_name} {row.last_name}</td><td className="p-3">{row.email || row.phone || "—"}</td><td className="p-3">{programmes.find((programme) => programme.id === row.programme_id)?.name || "—"}</td><td className={`p-3 ${row.error ? "text-red-700" : "text-green-700"}`}>{row.error || "Ready"}</td></tr>)}</tbody></table></div>}
             {csvRows.length > 100 && <p className="mt-2 text-xs text-gray-500">Showing the first 100 of {csvRows.length} students.</p>}
             <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => { setCsvRows([]); setCsvError(null); setImportSummary(null); }} className="rounded-dashboard-control px-4 py-2 text-sm font-semibold text-dashboard-muted hover:bg-dashboard-surface-subtle">Cancel</button><button type="button" onClick={() => void importCsv()} disabled={importingCsv || !csvRows.length || csvRows.some((row) => row.error)} className="rounded-dashboard-control bg-dashboard-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{importingCsv ? "Importing…" : `Import ${csvRows.length} learners`}</button></div>

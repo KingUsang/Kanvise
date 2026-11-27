@@ -181,7 +181,7 @@ export function MockResultsClient({ mockId, embedded = false }: { mockId: string
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Could not allow another attempt')
-      toast.success(`${studentName(attempt)} can try this mock one more time`)
+      toast.success(`${studentName(attempt)} can try this Quiz one more time`)
     } catch (error) {
       toast.error('Could not allow another attempt', { description: error instanceof Error ? error.message : 'Please try again.' })
     } finally {
