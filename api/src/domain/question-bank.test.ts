@@ -73,6 +73,41 @@ describe('question authoring validation', () => {
       options: [{ plain_text: 'Not allowed', content_blocks: [], is_correct: false }],
     })).toContain('Theory questions cannot have options')
   })
+
+  describe('payload bounds (DEV-QUIZ-009, DEV-QUIZ-010)', () => {
+    const base = { question_type: 'theory' as const, plain_text: 'Explain', marks: 1, options: [] }
+
+    it('accepts a well formed table', () => {
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'table', rows: [['a', 'b'], ['1', 2]] }] })).toEqual([])
+    })
+
+    it('rejects ragged, oversized and non-scalar tables', () => {
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'table', rows: [['a', 'b'], ['c']] }] }))
+        .toContain('content_blocks block 1 table rows must all have the same number of cells')
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'table', rows: [[{ nested: true }]] }] }))
+        .toContain('content_blocks block 1 table cells must be text or numbers')
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'table', rows: Array.from({ length: 51 }, () => ['x']) }] }))
+        .toContain('content_blocks block 1 cannot have more than 50 table rows')
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'table', rows: [Array.from({ length: 21 }, () => 'x')] }] }))
+        .toContain('content_blocks block 1 cannot have more than 20 table columns')
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'table', rows: [['x'.repeat(501)]] }] }))
+        .toContain('content_blocks block 1 table cell is too long')
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'table', rows: [[]] }] }))
+        .toContain('content_blocks block 1 table row 1 needs cells')
+    })
+
+    it('rejects oversized text, option text, labels and marks', () => {
+      expect(validateQuestionInput({ ...base, plain_text: 'x'.repeat(20_001) })).toContain('Question text cannot exceed 20000 characters')
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'text', text: 'x'.repeat(20_001) }] })).toContain('content_blocks block 1 text is too long')
+      expect(validateQuestionInput({ ...base, content_blocks: [{ type: 'equation', latex: 'x'.repeat(5_001) }] })).toContain('content_blocks block 1 LaTeX content is too long')
+      expect(validateQuestionInput({ ...base, topic: 't'.repeat(161) })).toContain('topic must be text up to 160 characters')
+      expect(validateQuestionInput({ ...base, marks: 10_001 })).toContain('marks must be between 0 and 10000')
+      expect(validateQuestionInput({
+        question_type: 'mcq', plain_text: 'Q', marks: 1,
+        options: [{ plain_text: 'x'.repeat(5_001), is_correct: true }, { plain_text: 'B', is_correct: false }],
+      })).toContain('Option 1 text cannot exceed 5000 characters')
+    })
+  })
 })
 
 describe('student response sanitation', () => {

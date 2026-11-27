@@ -216,14 +216,18 @@ mocksRouter.get("/ungraded-count", requireTutorOrAdmin, async (c) => {
   if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
   let query = supabase.from("mock_exams").select("id, course_id").eq("school_id", user.school_id);
   if (user.role === "tutor") {
-    const { data: assignments } = await supabase.from("tutor_course_assignments")
+    // Tutors see grading work only for Quizzes they own, in Subjects they are
+    // assigned to. A failed lookup must not look like "no work" (DEV-QUIZ-034).
+    query = query.eq("tutor_id", user.id);
+    const { data: assignments, error: assignmentError } = await supabase.from("tutor_course_assignments")
       .select("course_id").eq("school_id", user.school_id).eq("tutor_id", user.id);
+    if (assignmentError) return c.json({ error: "Failed to load grading count", code: "GRADING_COUNT_UNAVAILABLE" }, 500);
     const courseIds = (assignments || []).map((assignment: any) => assignment.course_id);
     if (courseIds.length === 0) return c.json({ data: { count: 0 } });
     query = query.in("course_id", courseIds);
   }
   const { data: mocks, error } = await query;
-  if (error) return c.json({ error: "Failed to load grading count" }, 500);
+  if (error) return c.json({ error: "Failed to load grading count", code: "GRADING_COUNT_UNAVAILABLE" }, 500);
   const metrics = await loadMockMetrics((mocks || []).map((mock: any) => mock.id), user.school_id);
   const count = [...metrics.values()].reduce((sum, item) => sum + item.pending_grading, 0);
   return c.json({ data: { count } });
@@ -727,11 +731,11 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
         programme_id: programmeId,
         audience_scope: audience.scope,
         delivery_mode: deliveryMode,
-        direct_link_enabled: body.direct_link_enabled === true,
+        direct_link_enabled: false,
         subject_name: typeof body.subject_name === "string" ? body.subject_name.trim() || null : null,
-        direct_link_access_mode: body.direct_link_access_mode === "paid" ? "paid" : "free_claim",
-        direct_link_price_kobo: body.direct_link_access_mode === "paid" ? Math.max(0, Math.floor(Number(body.direct_link_price_kobo) || 0)) : 0,
-        direct_link_slug: typeof body.direct_link_slug === "string" ? body.direct_link_slug.trim().toLowerCase() || null : null,
+        direct_link_access_mode: "free_claim",
+        direct_link_price_kobo: 0,
+        direct_link_slug: null,
         title,
         description,
         status: "draft",
@@ -822,11 +826,11 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
       programme_id: audience.programmeId,
       audience_scope: audience.scope,
       delivery_mode: deliveryMode,
-      direct_link_enabled: body.direct_link_enabled === true,
+      direct_link_enabled: false,
       subject_name: typeof body.subject_name === "string" ? body.subject_name.trim() || null : null,
-      direct_link_access_mode: body.direct_link_access_mode === "paid" ? "paid" : "free_claim",
-      direct_link_price_kobo: body.direct_link_access_mode === "paid" ? Math.max(0, Math.floor(Number(body.direct_link_price_kobo) || 0)) : 0,
-      direct_link_slug: typeof body.direct_link_slug === "string" ? body.direct_link_slug.trim().toLowerCase() || null : null,
+      direct_link_access_mode: "free_claim",
+      direct_link_price_kobo: 0,
+      direct_link_slug: null,
       publish_at,
       time_limit_minutes: duration,
       ...settings.updates,
@@ -841,89 +845,15 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
   return c.json({ data });
 });
 
-// POST /mocks/:id/questions (Add questions to a mock)
-mocksRouter.post("/:id/questions", requireTutorOrAdmin, async (c) => {
-  const user = c.get("user");
-  if (!user.school_id) return c.json({ error: "No school assigned" }, 403);
-
-  const mockId = c.req.param("id")!;
-  const body = await c.req.json();
-  const { question_type, question_text, marks, order_index, options, grading_rubric } = body;
-
-  if (!question_type || !question_text) {
-    return c.json({ error: "Missing required fields" }, 400);
-  }
-
-  const { data: mock } = await supabase.from("mock_exams").select("status, course_id, tutor_id")
-    .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
-  if (!mock) return c.json({ error: "Mock not found" }, 404);
-  if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be edited" }, 409);
-  if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot edit this mock" }, 403);
-
-  if (question_type === "mcq" && (!options || options.length === 0)) {
-    return c.json({ error: "MCQ_REQUIRES_OPTIONS" }, 400);
-  }
-
-  if (question_type === "mcq") {
-    const hasCorrectOption = options.some((opt: any) => opt.is_correct);
-    if (!hasCorrectOption) {
-      return c.json({ error: "MCQ_MUST_HAVE_ONE_CORRECT_OPTION" }, 400);
-    }
-  }
-
-  // Insert the question
-  const { data: question, error: questionError } = await supabase
-    .from("mock_questions")
-    .insert([
-      {
-        school_id: user.school_id,
-        mock_exam_id: mockId,
-        question_type,
-        question_text,
-        marks: marks || 1,
-        order_index: order_index || 1,
-        grading_rubric: grading_rubric || null, // Newly added column
-      },
-    ])
-    .select()
-    .single();
-
-  if (questionError) return c.json({ error: questionError.message }, 500);
-
-  // If MCQ, insert options
-  if (question_type === "mcq" && options && options.length > 0) {
-    const optionsToInsert = options.map((opt: any, idx: number) => ({
-      school_id: user.school_id,
-      question_id: question.id,
-      option_text: opt.option_text,
-      is_correct: opt.is_correct,
-      order_index: opt.order_index || idx + 1,
-    }));
-
-    const { error: optionsError } = await supabase
-      .from("mock_question_options")
-      .insert(optionsToInsert);
-
-    if (optionsError) {
-      return c.json({ error: optionsError.message }, 500);
-    }
-  }
-
-  // Update counts on the mock_exam
-  if (question_type === "mcq") {
-    const { data: currentMock } = await supabase.from("mock_exams").select("total_mcq_questions").eq("id", mockId).single();
-    if (currentMock) {
-      await supabase.from("mock_exams").update({ total_mcq_questions: currentMock.total_mcq_questions + 1 }).eq("id", mockId);
-    }
-  } else {
-    const { data: currentMock } = await supabase.from("mock_exams").select("total_theory_questions").eq("id", mockId).single();
-    if (currentMock) {
-      await supabase.from("mock_exams").update({ total_theory_questions: currentMock.total_theory_questions + 1 }).eq("id", mockId);
-    }
-  }
-
-  return c.json({ data: question }, 201);
-});
+// POST /mocks/:id/questions used to insert into the legacy mock_questions and
+// mock_question_options tables in separate unchecked writes, with read-modify-write
+// counters (DEV-QUIZ-022, DEV-QUIZ-023). The versioned model owns authoring now:
+// PUT /mocks/:id/questions saves a whole draft atomically through
+// replace_authored_mock_questions, and PUT /mocks/:id/assembly composes sections.
+mocksRouter.post("/:id/questions", requireTutorOrAdmin, (c) => c.json({
+  error: "Adding a single question directly is no longer supported. Save the draft's questions with PUT /mocks/:id/questions.",
+  code: "LEGACY_QUESTION_WRITE_DISABLED",
+}, 410));
 
 // PUT /mocks/:id/questions (Bulk overwrite questions for a mock)
 mocksRouter.put("/:id/questions", requireTutorOrAdmin, async (c) => {
@@ -976,11 +906,14 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   const mockId = c.req.param("id")!;
 
   const { data: mock, error: mockError } = await supabase.from("mock_exams")
-    .select("id, status, course_id, tutor_id, time_limit_minutes, direct_link_enabled, direct_link_access_mode, direct_link_price_kobo, direct_link_slug")
+    .select("id, status, course_id, programme_id, audience_scope, tutor_id, time_limit_minutes")
     .eq("id", mockId).eq("school_id", user.school_id).maybeSingle();
   if (mockError || !mock) return c.json({ error: "Mock not found" }, 404);
   if (mock.status !== "draft") return c.json({ error: "Only draft mocks can be published" }, 409);
   if (!(await canManageMock(user, mock))) return c.json({ error: "You cannot publish this mock" }, 403);
+  if (mock.audience_scope === "direct_link") {
+    return c.json({ error: "Standalone Quizzes have been retired and can no longer be published", code: "QUIZ_AUDIENCE_RETIRED" }, 409);
+  }
   if (mock.time_limit_minutes !== null && Number(mock.time_limit_minutes) < 0) {
     return c.json({ error: "Time limit cannot be negative" }, 400);
   }
@@ -1010,40 +943,68 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
   }
 
   const publishedAt = new Date().toISOString();
-  const directSlug = mock.direct_link_slug || `mock-${mock.id.slice(0, 8)}`;
   const { data: versionResult, error: publishError } = await (supabase as any).rpc("publish_versioned_mock_with_offer", {
     p_school_id: user.school_id,
     p_mock_exam_id: mockId,
     p_published_by: user.id,
     p_published_at: publishedAt,
-    p_create_direct_offer: mock.direct_link_enabled === true,
-    p_direct_slug: directSlug,
-    p_direct_access_mode: mock.direct_link_access_mode || "free_claim",
-    p_direct_price_kobo: mock.direct_link_access_mode === "paid" ? mock.direct_link_price_kobo || 0 : 0,
+    // Public offers are retired: publication never creates a direct offer.
+    p_create_direct_offer: false,
+    p_direct_slug: `mock-${mock.id.slice(0, 8)}`,
+    p_direct_access_mode: "free_claim",
+    p_direct_price_kobo: 0,
   });
   if (publishError) return mockDatabaseError(c, publishError, "Could not publish the mock");
   const publication = Array.isArray(versionResult) ? versionResult[0] : versionResult;
-  const { data, error } = await supabase.from("mock_exams")
+  // Publication is already committed. Nothing below may turn that into a failure
+  // response (DEV-QUIZ-024): a reload or notification problem is logged and
+  // reported as a warning, and the committed identity is always returned.
+  const { data: reloaded, error: reloadError } = await supabase.from("mock_exams")
     .select("*, course:courses(name), programme:programmes(name)").eq("id", mockId).eq("school_id", user.school_id).single();
-  if (error) return mockDatabaseError(c, error, "Mock was published but could not be reloaded");
+  if (reloadError || !reloaded) {
+    console.error("mocks.publish_reload_failed", { mockId, message: reloadError?.message });
+    return c.json({
+      message: "Mock published successfully",
+      data: { id: mockId, status: "published", published_at: publishedAt },
+      version: publication,
+      direct_offer: null,
+      notification: { failures: [], skipped: "reload_failed" },
+      warnings: ["PUBLISHED_BUT_RELOAD_FAILED"],
+    });
+  }
+  const data = reloaded;
 
   const directOffer = publication?.direct_offer_id
     ? { id: publication.direct_offer_id, slug: publication.direct_offer_slug }
     : null;
 
+  const warnings: string[] = [];
   const publishedAudience = parseMockAudienceScope(data.audience_scope ?? "course") || "course";
-  const notification = ['course', 'programme', 'school'].includes(publishedAudience) ? await notifyMockPublished({
-      id: data.id,
-      schoolId: data.school_id,
-      courseId: data.course_id,
-      programmeId: data.programme_id,
-      audienceScope: publishedAudience as 'course' | 'programme' | 'school',
-      title: data.title,
-      courseName: (publishedAudience === "programme" ? (data.programme as any)?.name : (data.course as any)?.name) || "Your tutoring agency",
-      closesAt: data.closes_at,
-    }) : { failures: [] };
+  let notification: { failures: unknown[] } = { failures: [] };
+  if (['course', 'programme', 'school'].includes(publishedAudience)) {
+    try {
+      notification = await notifyMockPublished({
+        id: data.id,
+        schoolId: data.school_id,
+        courseId: data.course_id,
+        programmeId: data.programme_id,
+        audienceScope: publishedAudience as 'course' | 'programme' | 'school',
+        title: data.title,
+        courseName: (publishedAudience === "programme" ? (data.programme as any)?.name : (data.course as any)?.name) || "Your tutoring agency",
+        closesAt: data.closes_at,
+      });
+    } catch (notifyError) {
+      console.error("mocks.publish_notification_failed", { mockId, message: (notifyError as Error)?.message });
+      notification = { failures: [{ error: "NOTIFICATION_FAILED" }] };
+      warnings.push("NOTIFICATION_FAILED");
+    }
+  }
   if (notification.failures.length === 0) {
-    await supabase.from("mock_exams").update({ notification_sent: true }).eq("id", data.id);
+    const { error: sentError } = await supabase.from("mock_exams").update({ notification_sent: true }).eq("id", data.id);
+    if (sentError) {
+      console.error("mocks.publish_notification_flag_failed", { mockId, message: sentError.message });
+      warnings.push("NOTIFICATION_FLAG_NOT_SAVED");
+    }
   }
 
   return c.json({
@@ -1052,5 +1013,6 @@ mocksRouter.post("/:id/publish", requireTutorOrAdmin, async (c) => {
     version: publication,
     direct_offer: directOffer,
     notification,
+    ...(warnings.length ? { warnings } : {}),
   });
 });

@@ -1,6 +1,5 @@
-import { GuestResultPageClient } from '@/components/mock-access/guest-result-page-client'
+import { RetiredQuizPage } from '@/components/retired-quiz-page'
 
-export default async function GuestResultPage({ params }: { params: Promise<{ attemptId: string }> }) {
-  const { attemptId } = await params
-  return <GuestResultPageClient attemptId={attemptId} />
+export default function RetiredPage() {
+  return <RetiredQuizPage />
 }

@@ -53,7 +53,7 @@ describe('MockAttemptClient timeout', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Time is up')
     expect(screen.getByRole('button', { name: 'Flag' })).toBeDisabled()
     for (const option of screen.getAllByRole('radio')) expect(option).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'End of mock' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'End of quiz' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /review and submit/i })).not.toBeInTheDocument()
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
@@ -74,21 +74,73 @@ describe('MockAttemptClient timeout', () => {
       ],
     }} />)
 
-    expect(screen.getByRole('navigation', { name: 'Mock subjects' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Quiz subjects' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Physics/ }))
     expect(screen.getByText('Physics · Question 1 of 2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Physics question 1' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Physics question 2' })).toBeInTheDocument()
   })
 
-  it('lets the attempt header reach the top after the guest notice scrolls away', () => {
+  it('keeps the attempt header pinned to the top and shows no guest notice', () => {
     const { container } = render(<MockAttemptClient data={{
       ...data,
-      attempt: { id: 'guest-attempt', deadline_at: null },
-    }} guest />)
+      attempt: { id: 'attempt-1', deadline_at: null },
+    }} />)
 
-    expect(screen.getByText('Guest attempt.')).toBeInTheDocument()
+    expect(screen.queryByText('Guest attempt.')).not.toBeInTheDocument()
     expect(container.querySelector('header')).toHaveClass('sticky', 'top-0')
-    expect(container.querySelector('header')).not.toHaveClass('top-16')
+  })
+})
+
+describe('MockAttemptClient answer saving', () => {
+  const live = {
+    ...data,
+    server_now: '2026-08-10T09:00:00.000Z',
+    attempt: { id: 'attempt-9', deadline_at: null, student_id: 'learner-9' },
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ data: {} }) }))
+  })
+
+  it('sends the newest answer and flag together, one request at a time', async () => {
+    let inFlight = 0
+    let maxInFlight = 0
+    const bodies: Array<Record<string, unknown>> = []
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      inFlight += 1; maxInFlight = Math.max(maxInFlight, inFlight)
+      bodies.push(JSON.parse(String(init.body)))
+      await new Promise(resolve => setTimeout(resolve, 5))
+      inFlight -= 1
+      return { ok: true, json: async () => ({ data: {} }) }
+    }))
+    render(<MockAttemptClient data={live} />)
+
+    fireEvent.click(screen.getByLabelText(/4/))
+    fireEvent.click(screen.getByRole('button', { name: /Flag/ }))
+
+    await waitFor(() => expect(bodies.at(-1)).toMatchObject({ selected_option_version_id: 'option-2', is_flagged: true }))
+    expect(maxInFlight).toBe(1)
+  })
+
+  it('stores unsaved work under a key bound to the learner and clears it after saving', async () => {
+    render(<MockAttemptClient data={live} />)
+    fireEvent.click(screen.getByLabelText(/4/))
+    await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument())
+    expect(Object.keys(localStorage).filter(key => key.includes('learner-9'))).toEqual([])
+  })
+
+  it('keeps queued work, bound to the learner, when the save fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'boom' }) }))
+    render(<MockAttemptClient data={live} />)
+    fireEvent.click(screen.getByLabelText(/4/))
+    await waitFor(() => expect(Object.keys(localStorage).some(key => key.startsWith('kanvise-attempt:v2:learner-9:attempt-9:'))).toBe(true))
+  })
+
+  it('removes legacy unbound entries when an attempt opens', () => {
+    localStorage.setItem('kanvise-attempt-attempt-1-question-1', '{"selected_option_version_id":"option-1"}')
+    render(<MockAttemptClient data={live} />)
+    expect(localStorage.getItem('kanvise-attempt-attempt-1-question-1')).toBeNull()
   })
 })

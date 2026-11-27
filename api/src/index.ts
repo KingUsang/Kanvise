@@ -78,11 +78,9 @@ import { promosRouter } from "./routes/promos";
 import { questionBanksRouter } from "./routes/question-banks";
 import { studentMocksRouter } from "./routes/student-mocks";
 import { studentSettingsRouter } from "./routes/student-settings";
-import { mockAccessRouter, mockOfferAdminRouter } from "./routes/mock-access";
+import { retiredQuizRouter } from "./routes/retired-quiz";
 import { studentMembershipsRouter } from "./routes/student-memberships";
-import { guestMocksRouter } from './routes/guest-mocks';
 import { pushRouter } from './routes/push';
-import { demoAnalysisRouter } from './routes/demo-analysis';
 import { feedbackResolutionRouter, feedbackRouter } from './routes/feedback';
 import { waitlistRouter } from './routes/waitlist';
 import { clientAddress } from './lib/ip-rate-limit';
@@ -106,13 +104,14 @@ app.route("/assignments", assignmentsRouter);
 app.route('/direct-assignments', directAssignmentsRouter);
 app.route('/public/direct-assignments', publicDirectAssignmentsRouter);
 app.route("/users", usersRouter);
+// Retired public Quiz URLs answer 410 before any auth middleware can challenge them.
+app.route("/", retiredQuizRouter);
 // mocksRouter has router-wide strict account context on /mocks/*. The student
 // preflight and attempt routes carry their own standalone-aware context, so
 // they must be registered first or the strict middleware rejects header-less
 // students before they are reached.
 app.route("/", studentMocksRouter);
 app.route("/mocks", mocksRouter);
-app.route("/mocks", mockOfferAdminRouter);
 app.route("/question-banks", questionBanksRouter);
 app.route("/enrolments", enrolmentsRouter);
 app.route("/payments", paymentsRouter);
@@ -127,16 +126,13 @@ app.route("/health", healthRouter);
 app.route('/feedback', feedbackRouter);
 app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
-app.route("/demo/analyze", demoAnalysisRouter);
 app.route('/', waitlistRouter);
 app.route('/', suggestionsRouter);
 // Promo routes are intentionally confined to this prefix. Mounting this router at
 // `/` caused its router-wide admin middleware to run for unrelated routes such as
 // `/students/me/settings`.
 app.route("/schools/me/promos", promosRouter);
-app.route("/", mockAccessRouter);
 app.route("/students/me", studentMembershipsRouter);
-app.route('/', guestMocksRouter);
 
 const landingEventNames = new Set([
   'landing_view',

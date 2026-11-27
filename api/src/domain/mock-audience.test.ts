@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { canCreateMockForAudience, validateCentreMockAudience } from './mock-audience'
 
 describe('mock audiences', () => {
-  it('accepts a subject, matching combination, direct link, or legacy centre audience', () => {
+  it('accepts a subject, matching combination, or legacy centre audience', () => {
     expect(validateCentreMockAudience({ audience_scope: 'course', course_id: 'course-1', programme_id: null }))
       .toMatchObject({ scope: 'course', courseId: 'course-1' })
     expect(validateCentreMockAudience({ audience_scope: 'programme', course_id: null, programme_id: 'programme-1' }))
@@ -11,8 +11,11 @@ describe('mock audiences', () => {
       .toMatchObject({ scope: 'school' })
     expect(validateCentreMockAudience({ audience_scope: 'combination', course_id: null, programme_id: null }))
       .toMatchObject({ scope: 'combination' })
+  })
+
+  it('rejects the retired direct-link audience for new and edited Quizzes', () => {
     expect(validateCentreMockAudience({ audience_scope: 'direct_link', course_id: null, programme_id: null }))
-      .toMatchObject({ scope: 'direct_link' })
+      .toMatchObject({ error: expect.stringMatching(/retired/i) })
   })
 
   it('rejects ambiguous audience targets', () => {

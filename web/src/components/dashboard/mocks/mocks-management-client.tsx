@@ -20,8 +20,6 @@ interface MockExam {
   publish_at: string | null;
   updated_at: string;
   created_at: string;
-  direct_link_enabled?: boolean;
-  direct_link_slug?: string | null;
   audience_scope?:
     "course" | "programme" | "school" | "combination" | "direct_link";
   metrics: {
@@ -123,23 +121,12 @@ export function MocksManagementClient({
     }
   };
 
-  const copyStudentLink = async (slug: string) => {
-    try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/mock/${slug}`,
-      );
-      toast.success("Student link copied");
-    } catch {
-      toast.error("Could not copy the student link");
-    }
-  };
-
   const uniqueCourses = Array.from(
     new Set(mocks.map((m) => m.course?.name).filter(Boolean)),
   ) as string[];
   const audienceLabel = (mock: MockExam) => {
     if (mock.course?.name) return mock.course.name;
-    if (mock.audience_scope === "direct_link") return "Standalone mock";
+    if (mock.audience_scope === "direct_link") return "Retired standalone quiz";
     if (mock.audience_scope === "combination") return "Subject combination";
     if (mock.audience_scope === "programme") return "Class assessment";
     if (mock.audience_scope === "school") return "Tutoring agency-wide";
@@ -198,16 +185,7 @@ export function MocksManagementClient({
       <DashboardPageHeader
         className="mb-8 border-b border-dashboard-outline pb-6"
         title="Assessments"
-        description="Create, share and review standalone mocks. Create class assessments from Classes."
-        actions={
-          <Link
-            href="/dashboard/mocks/builder"
-            className="flex items-center gap-2 rounded-dashboard-control bg-dashboard-accent px-6 py-3 text-sm font-semibold text-white shadow-dashboard-card transition-colors hover:bg-dashboard-accent/90"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Create assessment
-          </Link>
-        }
+        description="Review your Quizzes. Create a Quiz from inside a Class."
       />
 
       {/* Filters & Controls */}
@@ -286,17 +264,17 @@ export function MocksManagementClient({
                   </span>
                 </div>
                 <h2 className="text-lg font-semibold text-[#1b1c1c]">
-                  No mocks yet
+                  No quizzes yet
                 </h2>
                 <p className="mt-2 max-w-[280px] text-sm leading-6 text-[#474551]">
-                  Create your first mock exam to start assessing your
-                  students&apos; progress.
+                  Open a Class and add a Quiz to start assessing your
+                  learners&apos; progress.
                 </p>
                 <Link
-                  href="/dashboard/mocks/builder"
+                  href="/dashboard/classes"
                   className="mt-5 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white"
                 >
-                  Create first mock
+                  Go to my Classes
                 </Link>
               </div>
             ) : (
@@ -342,18 +320,6 @@ export function MocksManagementClient({
                       )}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
-                    {mock.status === "published" &&
-                      mock.direct_link_enabled &&
-                      mock.direct_link_slug && (
-                        <button
-                          onClick={() =>
-                            void copyStudentLink(mock.direct_link_slug!)
-                          }
-                          className="text-[#2e2877]"
-                        >
-                          Copy link
-                        </button>
-                      )}
                     {mock.status === "draft" ? (
                       <button
                         onClick={() => {
@@ -448,15 +414,15 @@ export function MocksManagementClient({
                           </span>
                         </div>
                         <h4 className="text-[20px] font-semibold text-[#1b1c1c] mb-2">
-                          No mocks yet
+                          No quizzes yet
                         </h4>
                         <p className="text-[14px] text-[#474551] max-w-[280px] mb-8">
-                          Create your first mock exam to start assessing your
-                          students' progress.
+                          Open a Class and add a Quiz to start assessing your
+                          learners' progress.
                         </p>
-                        <Link href="/dashboard/mocks/builder">
+                        <Link href="/dashboard/classes">
                           <button className="bg-[#994704] text-white text-[14px] font-semibold px-6 py-3 rounded-lg hover:bg-[#7a3903] transition-colors">
-                            Create First Mock
+                            Go to my Classes
                           </button>
                         </Link>
                       </div>
@@ -570,17 +536,6 @@ export function MocksManagementClient({
                       <td className="py-5 px-6 text-right align-top pt-6">
                         {mock.status === "published" && (
                           <div className="flex items-center justify-end gap-3">
-                            {mock.direct_link_enabled &&
-                              mock.direct_link_slug && (
-                                <button
-                                  onClick={() =>
-                                    void copyStudentLink(mock.direct_link_slug!)
-                                  }
-                                  className="text-[#2e2877] text-[12px] font-semibold hover:underline"
-                                >
-                                  Copy student link
-                                </button>
-                              )}
                             <button
                               onClick={() => setMockToArchive(mock)}
                               className="text-[#787582] text-[12px] font-semibold hover:text-[#994704]"

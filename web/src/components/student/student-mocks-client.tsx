@@ -4,15 +4,12 @@ import Link from 'next/link'
 import { BookOpen, Calculator, CheckCircle2, Clock3, PlayCircle, Search, SearchX } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { getApiUrl } from '@/config/api'
-import type { StudentMockCard, StudentMockGroups, UnlockedMock } from '@/lib/student-mocks'
+import type { StudentMockCard, StudentMockGroups } from '@/lib/student-mocks'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 type Tab = keyof StudentMockGroups
-type SubjectPicker = { item: UnlockedMock; subjects: string[]; selected: string[] }
 
 const tabs: Array<{ key: Tab; label: string }> = [
   { key: 'available', label: 'Available' },
@@ -28,7 +25,7 @@ function dateTime(value: string | null) {
 function Card({ item, state }: { item: StudentMockCard; state: Tab }) {
   const href = state === 'in_progress' && item.attempt ? `/dashboard/student/mocks/attempt/${item.attempt.id}`
     : state === 'completed' && item.attempt ? `/dashboard/student/mocks/result/${item.attempt.id}` : `/dashboard/student/mocks/${item.id}`
-  const action = state === 'available' ? 'View instructions' : state === 'in_progress' ? 'Continue mock'
+  const action = state === 'available' ? 'View instructions' : state === 'in_progress' ? 'Continue quiz'
     : state === 'completed' ? 'View result' : 'View details'
   return <article className="flex h-full flex-col rounded-2xl border border-[#e4dfda] bg-white p-5 shadow-[0_1px_2px_rgba(35,31,38,0.04)]">
     <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-[#f0edff] px-3 py-1 text-[11px] font-semibold text-[#2e2877]">{item.course?.name || 'Subject'}</span>{state === 'completed' && <CheckCircle2 size={19} className="text-[#29724b]" />}</div>
@@ -47,104 +44,37 @@ function Card({ item, state }: { item: StudentMockCard; state: Tab }) {
   </article>
 }
 
-export function StudentMocksClient({ initialView, initialGroups, initialUnlocked, groups: legacyGroups, unlocked: legacyUnlocked }: { initialView: 'programme' | 'unlocked'; initialGroups?: StudentMockGroups; initialUnlocked?: UnlockedMock[]; groups?: StudentMockGroups; unlocked?: UnlockedMock[] }) {
+export function StudentMocksClient({ initialGroups, groups: legacyGroups }: { initialGroups?: StudentMockGroups; groups?: StudentMockGroups }) {
   const seededGroups = initialGroups || legacyGroups
-  const seededUnlocked = initialUnlocked || legacyUnlocked
   const groupsQuery = useQuery<StudentMockGroups>({
     queryKey: ['student-mocks'],
     initialData: seededGroups,
     queryFn: async () => {
       const response = await authenticatedFetch(createClient(), `${getApiUrl()}/students/me/mocks`, { cache: 'no-store' })
       const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.error || 'Could not load your mocks')
+      if (!response.ok) throw new Error(body?.error || 'Could not load your quizzes')
       return body.data
     },
   })
-  const unlockedQuery = useQuery<UnlockedMock[]>({
-    queryKey: ['student-unlocked-mocks'],
-    initialData: seededUnlocked,
-    queryFn: async () => {
-      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/my-mocks`, { cache: 'no-store' })
-      const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.error || 'Could not load your unlocked mocks')
-      return body.data || []
-    },
-  })
-  const router = useRouter()
   const groups = groupsQuery.data || { available: [], in_progress: [], upcoming: [], completed: [] }
-  const unlocked = unlockedQuery.data || []
-  const programmeCount = Object.values(groups).reduce((total, group) => total + group.length, 0)
-  const [view, setView] = useState<'programme' | 'unlocked'>(initialView === 'programme' && !programmeCount && unlocked.length ? 'unlocked' : initialView)
   const initial = groups.in_progress.length ? 'in_progress' : groups.available.length ? 'available' : 'completed'
   const [tab, setTab] = useState<Tab>(initial)
   const [search, setSearch] = useState('')
-  const [startingOfferId, setStartingOfferId] = useState<string | null>(null)
-  const [subjectPicker, setSubjectPicker] = useState<SubjectPicker | null>(null)
   const items = useMemo(() => groups[tab].filter(item => {
     const value = search.trim().toLowerCase()
     return !value || item.title.toLowerCase().includes(value) || item.course?.name?.toLowerCase().includes(value)
   }), [groups, search, tab])
 
-  const unlockedItems = useMemo(() => unlocked.filter(item => {
-    const value = search.trim().toLowerCase()
-    const mock = item.offer?.mock
-    return mock && (!value || mock.title.toLowerCase().includes(value) || mock.school?.name?.toLowerCase().includes(value))
-  }), [search, unlocked])
-
-  if (groupsQuery.isPending || unlockedQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading mocks…</main>
-  if (groupsQuery.isError || unlockedQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{(groupsQuery.error || unlockedQuery.error)?.message}</p><button type="button" onClick={() => { void groupsQuery.refetch(); void unlockedQuery.refetch() }} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>
-
-  function changeView(next: 'programme' | 'unlocked') {
-    setView(next)
-    router.replace(`/dashboard/student/mocks${next === 'unlocked' ? '?view=unlocked' : ''}`, { scroll: false })
-  }
-
-  async function startUnlocked(item: UnlockedMock, selectedSubjectNames?: string[]) {
-    if (!item.offer) return
-    setStartingOfferId(item.offer.id)
-    try {
-      const { data: { session } } = await createClient().auth.getSession()
-      if (!session) return router.push('/auth/login?redirect=%2Fdashboard%2Fstudent%2Fmocks%3Fview%3Dunlocked')
-      const preflight = await authenticatedFetch(createClient(), `${getApiUrl()}/mock/${item.offer.id}/preflight`, { cache: 'no-store' })
-      const preflightBody = await preflight.json().catch(() => null)
-      if (!preflight.ok) throw new Error(preflightBody?.error || 'Could not prepare this mock')
-      if (preflightBody?.data?.resumable_attempt?.id) {
-        router.push(`/dashboard/student/mocks/attempt/${preflightBody.data.resumable_attempt.id}`)
-        return
-      }
-      const subjects = preflightBody?.data?.subject_combination?.subjects
-      if (Array.isArray(subjects) && subjects.length && !selectedSubjectNames) {
-        setSubjectPicker({ item, subjects, selected: [] })
-        return
-      }
-      const response = await authenticatedFetch(createClient(), `${getApiUrl()}/mock/${item.offer.id}/attempts`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selected_subject_names: selectedSubjectNames || [] }),
-      })
-      const body = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(body?.error || 'Could not start this mock')
-      router.push(`/dashboard/student/mocks/attempt/${body.data.attempt_id}`)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not start this mock')
-    } finally {
-      setStartingOfferId(null)
-    }
-  }
+  if (groupsQuery.isPending) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-[#716c76]">Loading quizzes…</main>
+  if (groupsQuery.isError) return <main className="mx-auto max-w-[1440px] px-4 py-10 text-center text-sm text-red-800"><p>{groupsQuery.error?.message}</p><button type="button" onClick={() => { void groupsQuery.refetch() }} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button></main>
 
   return <main className="mx-auto min-w-0 max-w-[1440px] px-4 py-7 pb-28 sm:px-6 lg:px-10 lg:py-10">
-    <header><p className="text-sm font-medium text-[#994704]">Practice and assessment</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Mocks</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Class assessments and mocks you unlocked are kept together here.</p></header>
-    {subjectPicker && <div role="dialog" aria-modal="true" aria-labelledby="subject-picker-title" className="fixed inset-0 z-50 grid place-items-end bg-black/40 p-0 sm:place-items-center sm:p-6"><section className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl"><p className="text-sm font-medium text-[#994704]">Choose your paper</p><h2 id="subject-picker-title" className="mt-1 text-2xl font-semibold text-[#29262f]">Which subjects are you sitting?</h2><p className="mt-2 text-sm leading-6 text-[#716c76]">Choose one or more subjects. Only those questions will be included when your one-hour attempt starts.</p><div className="mt-5 grid gap-2 sm:grid-cols-2">{subjectPicker.subjects.map(subject => { const checked = subjectPicker.selected.includes(subject); return <label key={subject} className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#e4dfda] px-3 py-3 text-sm font-medium text-[#29262f]"><input type="checkbox" checked={checked} onChange={() => setSubjectPicker(current => current ? { ...current, selected: checked ? current.selected.filter(value => value !== subject) : [...current.selected, subject] } : null)} className="h-4 w-4 accent-[#2e2877]" />{subject}</label> })}</div><p className="mt-4 text-xs font-medium text-[#716c76]">{subjectPicker.selected.length} subject{subjectPicker.selected.length === 1 ? '' : 's'} selected</p><div className="mt-6 flex gap-3"><button type="button" onClick={() => setSubjectPicker(null)} className="min-h-11 flex-1 rounded-xl border border-[#d9d3cf] px-4 text-sm font-semibold text-[#474551]">Cancel</button><button type="button" disabled={!subjectPicker.selected.length || startingOfferId === subjectPicker.item.offer?.id} onClick={() => { const current = subjectPicker; setSubjectPicker(null); void startUnlocked(current.item, current.selected) }} className="min-h-11 flex-1 rounded-xl bg-[#994704] px-4 text-sm font-semibold text-white disabled:opacity-45">Start selected subjects</button></div></section></div>}
-    <div className="mt-6 grid w-full grid-cols-2 rounded-xl border border-[#ddd7d2] bg-white p-1 sm:inline-grid sm:w-auto" aria-label="Mock access source">
-      <button type="button" onClick={() => changeView('programme')} className={`min-w-0 rounded-lg px-3 py-2 text-sm font-medium sm:px-4 ${view === 'programme' ? 'bg-[#2e2877] text-white' : 'text-[#716c76]'}`}>Class <span className="ml-1 text-xs opacity-75">{programmeCount}</span></button>
-      <button type="button" onClick={() => changeView('unlocked')} className={`rounded-lg px-4 py-2 text-sm font-medium ${view === 'unlocked' ? 'bg-[#2e2877] text-white' : 'text-[#716c76]'}`}>Unlocked <span className="ml-1 text-xs opacity-75">{unlocked.length}</span></button>
-    </div>
+    <header><p className="text-sm font-medium text-[#994704]">Practice and assessment</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Quizzes</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Quizzes from your Classes are kept together here.</p></header>
     <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      {view === 'programme' ? <div role="group" aria-label="Filter mock exams by status" className="grid grid-cols-2 gap-1 rounded-xl bg-[#eeeae6] p-1 sm:flex">{tabs.map(item => <button type="button" key={item.key} aria-pressed={tab === item.key} onClick={() => setTab(item.key)} className={`min-h-10 min-w-0 rounded-lg px-3 py-2 text-sm font-medium sm:px-4 ${tab === item.key ? 'bg-white text-[#2e2877] shadow-sm' : 'text-[#716c76]'}`}>{item.label}<span className="ml-2 rounded-full bg-black/5 px-1.5 py-0.5 text-[10px]">{groups[item.key].length}</span></button>)}</div> : <p className="text-sm text-[#716c76]">Free and purchased mocks that belong to your account.</p>}
-      <label className="relative block lg:w-80"><Search className="absolute left-3 top-3 text-[#8b858f]" size={17} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search mocks or subjects" className="w-full rounded-xl border border-[#ddd7d2] bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#2e2877]" /></label>
+      <div role="group" aria-label="Filter quizzes by status" className="grid grid-cols-2 gap-1 rounded-xl bg-[#eeeae6] p-1 sm:flex">{tabs.map(item => <button type="button" key={item.key} aria-pressed={tab === item.key} onClick={() => setTab(item.key)} className={`min-h-10 min-w-0 rounded-lg px-3 py-2 text-sm font-medium sm:px-4 ${tab === item.key ? 'bg-white text-[#2e2877] shadow-sm' : 'text-[#716c76]'}`}>{item.label}<span className="ml-2 rounded-full bg-black/5 px-1.5 py-0.5 text-[10px]">{groups[item.key].length}</span></button>)}</div>
+      <label className="relative block lg:w-80"><Search className="absolute left-3 top-3 text-[#8b858f]" size={17} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search quizzes or subjects" className="w-full rounded-xl border border-[#ddd7d2] bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#2e2877]" /></label>
     </div>
-    {view === 'programme' ? (items.length ? <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map(item => <Card key={`${tab}-${item.id}`} item={item} state={tab} />)}</section>
-      : <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white px-5 py-14 text-center">{search ? <SearchX className="mx-auto text-[#aaa4ad]" /> : <BookOpen className="mx-auto text-[#aaa4ad]" />}<h2 className="mt-4 text-lg font-semibold">{search ? 'No class mocks match your search' : `No ${tabs.find(item => item.key === tab)?.label.toLowerCase()} class mocks`}</h2><p className="mt-1 text-sm text-[#716c76]">{search ? 'Try a different mock title or subject.' : 'Mocks from your tutorial will appear here when they match this stage.'}</p></section>)
-      : (unlockedItems.length ? <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{unlockedItems.map(item => { const offer = item.offer!; const mock = offer.mock; const exhausted = item.attempts_consumed >= item.attempts_granted; const expired = Boolean(item.expires_at && new Date(item.expires_at) <= new Date()); const currentAttempt = item.current_attempt; return <article key={item.id} className="flex h-full min-w-0 flex-col rounded-2xl border border-[#e4dfda] bg-white p-5 shadow-[0_1px_2px_rgba(35,31,38,0.04)]"><div className="flex min-w-0 items-start justify-between gap-3"><span className="shrink-0 rounded-full bg-[#fff4e8] px-3 py-1 text-[11px] font-semibold text-[#994704]">{offer.access_mode === 'paid' ? 'Purchased' : 'Free'}</span>{mock.school?.name && <span className="min-w-0 truncate text-xs text-[#716c76]">{mock.school.name}</span>}</div><h2 className="mt-4 break-words text-lg font-semibold leading-6 text-[#29262f]">{mock.title}</h2>{mock.description && <p className="mt-2 line-clamp-2 break-words text-sm leading-6 text-[#716c76]">{mock.description}</p>}<div className="mt-5 grid grid-cols-1 gap-3 text-xs text-[#716c76] min-[360px]:grid-cols-2"><span className="flex items-center gap-1.5"><BookOpen size={14} />{offer.version.total_questions} questions</span><span className="flex items-center gap-1.5"><Clock3 size={14} />{mock.time_limit_minutes ? `${mock.time_limit_minutes} mins` : 'Untimed'}</span>{mock.calculator_mode !== 'none' && <span className="flex items-center gap-1.5 capitalize"><Calculator size={14} />{mock.calculator_mode}</span>}<span>{item.attempts_consumed}/{item.attempts_granted} attempts used</span></div>{currentAttempt ? <Link href={`/attempt/${currentAttempt.id}`} className="mt-auto inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2e2877] px-4 py-2.5 text-sm font-semibold text-white">{currentAttempt.deadline_at && new Date(currentAttempt.deadline_at) <= new Date() ? 'Finish expired attempt' : 'Continue mock'}</Link> : <button type="button" disabled={expired || exhausted || startingOfferId === offer.id} onClick={() => void startUnlocked(item)} className="mt-auto min-h-11 rounded-xl bg-[#2e2877] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{startingOfferId === offer.id ? 'Opening…' : expired ? 'Access expired' : exhausted ? 'Attempts used' : 'Start mock'}</button>}</article>})}</section>
-        : <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white px-5 py-14 text-center">{search ? <SearchX className="mx-auto text-[#aaa4ad]" /> : <BookOpen className="mx-auto text-[#aaa4ad]" />}<h2 className="mt-4 text-lg font-semibold">{search ? 'No unlocked mocks match your search' : 'No unlocked mocks yet'}</h2><p className="mt-1 text-sm text-[#716c76]">{search ? 'Try a different mock or tutorial name.' : 'Open a free mock link or complete a purchase and it will appear here.'}</p></section>)}
+    {items.length ? <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map(item => <Card key={`${tab}-${item.id}`} item={item} state={tab} />)}</section>
+      : <section className="mt-6 rounded-2xl border border-[#e5e1dd] bg-white px-5 py-14 text-center">{search ? <SearchX className="mx-auto text-[#aaa4ad]" /> : <BookOpen className="mx-auto text-[#aaa4ad]" />}<h2 className="mt-4 text-lg font-semibold">{search ? 'No quizzes match your search' : `No ${tabs.find(item => item.key === tab)?.label.toLowerCase()} quizzes`}</h2><p className="mt-1 text-sm text-[#716c76]">{search ? 'Try a different quiz title or subject.' : 'Quizzes from your Classes will appear here when they match this stage.'}</p></section>}
   </main>
 }

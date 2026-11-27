@@ -30,6 +30,9 @@ export type MockAssemblySection = {
   rules?: unknown
 }
 
+// Assembly bounds (DEV-QUIZ-009): a Quiz is a bounded document, not an unbounded JSON store.
+export const ASSEMBLY_LIMITS = { sections: 20, questionsPerSection: 500, totalQuestions: 1000, rulesPerSection: 50, marks: 10_000 } as const
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function optionalText(value: unknown, maxLength: number) {
@@ -39,6 +42,7 @@ function optionalText(value: unknown, maxLength: number) {
 export function validateMockAssembly(value: unknown) {
   if (!Array.isArray(value)) return ['Sections must be an array']
   if (!value.length) return ['Add at least one section']
+  if (value.length > ASSEMBLY_LIMITS.sections) return [`A Quiz can have at most ${ASSEMBLY_LIMITS.sections} sections`]
 
   const errors: string[] = []
   const questionIds = new Set<string>()
@@ -60,7 +64,9 @@ export function validateMockAssembly(value: unknown) {
 
     const questions = section.questions ?? []
     if (!Array.isArray(questions)) errors.push(`${label} questions must be an array`)
-    else questions.forEach((question: AssemblyQuestion, questionIndex) => {
+    else if (questions.length > ASSEMBLY_LIMITS.questionsPerSection) {
+      errors.push(`${label} can have at most ${ASSEMBLY_LIMITS.questionsPerSection} questions`)
+    } else questions.forEach((question: AssemblyQuestion, questionIndex) => {
       const questionLabel = `${label}, question ${questionIndex + 1}`
       if (!question || typeof question.question_id !== 'string' || !UUID_PATTERN.test(question.question_id)) {
         errors.push(`${questionLabel} has an invalid question`)
@@ -72,14 +78,16 @@ export function validateMockAssembly(value: unknown) {
         errors.push(`${questionLabel} has an invalid version`)
       }
       if (question.marks_override != null && question.marks_override !== ''
-        && (!Number.isFinite(Number(question.marks_override)) || Number(question.marks_override) <= 0)) {
-        errors.push(`${questionLabel} needs positive marks`)
+        && (!Number.isFinite(Number(question.marks_override)) || Number(question.marks_override) <= 0 || Number(question.marks_override) > ASSEMBLY_LIMITS.marks)) {
+        errors.push(`${questionLabel} needs marks between 0 and ${ASSEMBLY_LIMITS.marks}`)
       }
     })
 
     const rules = section.rules ?? []
     if (!Array.isArray(rules)) errors.push(`${label} random rules must be an array`)
-    else rules.forEach((rule: AssemblyRule, ruleIndex) => {
+    else if (rules.length > ASSEMBLY_LIMITS.rulesPerSection) {
+      errors.push(`${label} can have at most ${ASSEMBLY_LIMITS.rulesPerSection} random rules`)
+    } else rules.forEach((rule: AssemblyRule, ruleIndex) => {
       const ruleLabel = `${label}, random rule ${ruleIndex + 1}`
       if (!rule || typeof rule.bank_id !== 'string' || !UUID_PATTERN.test(rule.bank_id)) {
         errors.push(`${ruleLabel} has an invalid question bank`)
@@ -99,6 +107,7 @@ export function validateMockAssembly(value: unknown) {
       errors.push(`${label} needs at least one question or random rule`)
     }
   })
+  if (questionIds.size > ASSEMBLY_LIMITS.totalQuestions) errors.push(`A Quiz can have at most ${ASSEMBLY_LIMITS.totalQuestions} fixed questions`)
   return errors
 }
 

@@ -7,6 +7,21 @@ export type BankVisibility = typeof BANK_VISIBILITIES[number]
 
 type UnknownRecord = Record<string, unknown>
 
+// Authoring payload bounds (DEV-QUIZ-009, DEV-QUIZ-010). Generous for real
+// papers, small enough to stop nested JSON from exhausting API or database work.
+export const QUESTION_LIMITS = {
+  plainText: 20_000,
+  optionText: 5_000,
+  blockText: 20_000,
+  latex: 5_000,
+  altText: 500,
+  label: 160,
+  tableRows: 50,
+  tableColumns: 20,
+  tableCellText: 500,
+  marks: 10_000,
+} as const
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export type QuestionOptionInput = {
@@ -38,6 +53,31 @@ function nonBlank(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0
 }
 
+function validateTableRows(rows: unknown, blockLabel: string) {
+  if (!Array.isArray(rows) || rows.length === 0) return [`${blockLabel} needs table rows`]
+  if (rows.length > QUESTION_LIMITS.tableRows) return [`${blockLabel} cannot have more than ${QUESTION_LIMITS.tableRows} table rows`]
+  const errors: string[] = []
+  let width = -1
+  for (const [rowIndex, row] of rows.entries()) {
+    if (!Array.isArray(row) || row.length === 0) {
+      errors.push(`${blockLabel} table row ${rowIndex + 1} needs cells`)
+      continue
+    }
+    if (row.length > QUESTION_LIMITS.tableColumns) {
+      errors.push(`${blockLabel} cannot have more than ${QUESTION_LIMITS.tableColumns} table columns`)
+      continue
+    }
+    if (width === -1) width = row.length
+    else if (row.length !== width) errors.push(`${blockLabel} table rows must all have the same number of cells`)
+    for (const cell of row) {
+      const scalar = typeof cell === 'string' || (typeof cell === 'number' && Number.isFinite(cell))
+      if (!scalar) errors.push(`${blockLabel} table cells must be text or numbers`)
+      else if (String(cell).length > QUESTION_LIMITS.tableCellText) errors.push(`${blockLabel} table cell is too long`)
+    }
+  }
+  return [...new Set(errors)]
+}
+
 export function validateContentBlocks(value: unknown, label: string) {
   if (!Array.isArray(value)) return [`${label} must be an array`]
   if (value.length > 100) return [`${label} cannot contain more than 100 blocks`]
@@ -50,18 +90,23 @@ export function validateContentBlocks(value: unknown, label: string) {
       return
     }
     if (block.type === 'text' && !nonBlank(block.text)) errors.push(`${blockLabel} needs text`)
+    if (block.type === 'text' && nonBlank(block.text) && String(block.text).length > QUESTION_LIMITS.blockText) {
+      errors.push(`${blockLabel} text is too long`)
+    }
     if ((block.type === 'equation' || block.type === 'chemistry') && !nonBlank(block.latex)) {
       errors.push(`${blockLabel} needs LaTeX content`)
+    }
+    if ((block.type === 'equation' || block.type === 'chemistry') && nonBlank(block.latex) && String(block.latex).length > QUESTION_LIMITS.latex) {
+      errors.push(`${blockLabel} LaTeX content is too long`)
     }
     if (block.type === 'image') {
       if (!nonBlank(block.media_id) || !UUID_PATTERN.test(String(block.media_id))) {
         errors.push(`${blockLabel} needs a valid media ID`)
       }
       if (!nonBlank(block.alt_text)) errors.push(`${blockLabel} needs alternative text`)
+      else if (String(block.alt_text).length > QUESTION_LIMITS.altText) errors.push(`${blockLabel} alternative text is too long`)
     }
-    if (block.type === 'table' && (!Array.isArray(block.rows) || block.rows.length === 0)) {
-      errors.push(`${blockLabel} needs table rows`)
-    }
+    if (block.type === 'table') errors.push(...validateTableRows(block.rows, blockLabel))
   })
   return errors
 }
@@ -78,9 +123,18 @@ export function validateQuestionInput(input: QuestionInput, existingType?: Quest
   if (!nonBlank(input.plain_text) && Array.isArray(contentBlocks) && contentBlocks.length === 0) {
     errors.push('Question content is required')
   }
+  if (typeof input.plain_text === 'string' && input.plain_text.length > QUESTION_LIMITS.plainText) {
+    errors.push(`Question text cannot exceed ${QUESTION_LIMITS.plainText} characters`)
+  }
+  for (const field of ['subject_name', 'topic', 'subtopic'] as const) {
+    const value = input[field]
+    if (value != null && (typeof value !== 'string' || value.trim().length > QUESTION_LIMITS.label)) {
+      errors.push(`${field.replace('_', ' ')} must be text up to ${QUESTION_LIMITS.label} characters`)
+    }
+  }
 
   const marks = Number(input.marks)
-  if (!Number.isFinite(marks) || marks <= 0 || marks > 10000) errors.push('marks must be between 0 and 10000')
+  if (!Number.isFinite(marks) || marks <= 0 || marks > QUESTION_LIMITS.marks) errors.push('marks must be between 0 and 10000')
 
   for (const [field, value] of [['course_id', input.course_id], ['stimulus_id', input.stimulus_id]] as const) {
     if (value != null && value !== '' && (typeof value !== 'string' || !UUID_PATTERN.test(value))) {
@@ -100,6 +154,9 @@ export function validateQuestionInput(input: QuestionInput, existingType?: Quest
       errors.push(...validateContentBlocks(blocks, `Option ${index + 1} content_blocks`))
       if (!nonBlank(option.plain_text) && Array.isArray(blocks) && blocks.length === 0) {
         errors.push(`Option ${index + 1} needs content`)
+      }
+      if (typeof option.plain_text === 'string' && option.plain_text.length > QUESTION_LIMITS.optionText) {
+        errors.push(`Option ${index + 1} text cannot exceed ${QUESTION_LIMITS.optionText} characters`)
       }
       if (option.is_correct === true) correct += 1
       else if (option.is_correct !== false) errors.push(`Option ${index + 1} needs is_correct`)

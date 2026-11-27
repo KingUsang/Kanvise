@@ -19,6 +19,7 @@ type Bank = {
   visibility: 'private' | 'centre'
   question_count: number
   can_edit: boolean
+  can_contribute?: boolean
   updated_at: string
 }
 
@@ -148,6 +149,8 @@ export function QuestionBanksClient() {
   })
   const banks = banksQuery.data || []
   const selectedBank = banks.find(bank => bank.id === selectedBankId) || null
+  // The API says which banks accept new questions; fall back to edit rights for older responses.
+  const canAddQuestions = Boolean(selectedBank && (selectedBank.can_contribute ?? selectedBank.can_edit))
 
   const questionsQuery = useQuery({
     queryKey: ['question-bank-questions', selectedBankId, debouncedSearch, subjectFilter],
@@ -245,7 +248,13 @@ export function QuestionBanksClient() {
             <span className="rounded-full bg-[#f3eee9] px-2 py-1 text-xs font-semibold text-[#744018]">{banks.length}</span>
           </div>
           <div className="space-y-2" aria-live="polite">
-            {banksQuery.isLoading ? [0, 1, 2].map(item => <div key={item} className="h-20 animate-pulse rounded-lg bg-[#f4f1ef]" />) : banks.length === 0 ? (
+            {banksQuery.isLoading ? [0, 1, 2].map(item => <div key={item} className="h-20 animate-pulse rounded-lg bg-[#f4f1ef]" />) : banksQuery.isError ? (
+              <div role="alert" className="rounded-lg border border-[#efb5aa] bg-[#fff4f2] px-4 py-6 text-center">
+                <p className="text-sm font-semibold text-[#87351f]">Could not load your question banks</p>
+                <p className="mt-1 text-xs leading-5 text-[#87351f]">{banksQuery.error instanceof Error ? banksQuery.error.message : 'Please try again.'}</p>
+                <button type="button" onClick={() => void banksQuery.refetch()} className="mt-3 min-h-10 rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white">Try again</button>
+              </div>
+            ) : banks.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[#c8c5d2] px-4 py-8 text-center">
                 <span className="material-symbols-outlined text-3xl text-[#8b8792]">inventory_2</span>
                 <p className="mt-2 text-sm font-semibold text-[#33313a]">No question banks yet</p>
@@ -285,7 +294,7 @@ export function QuestionBanksClient() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedBank.can_edit && <button onClick={() => setBankToArchive(selectedBank)} className="min-h-10 rounded-lg border border-[#d5d1ce] px-3.5 text-sm font-semibold text-[#625e69] hover:bg-[#f7f4f2]">Archive</button>}
-                    <button onClick={() => setShowQuestionEditor(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white hover:bg-[#211c60]"><span className="material-symbols-outlined text-lg">add</span>Add question</button>
+                    {canAddQuestions && <button onClick={() => setShowQuestionEditor(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white hover:bg-[#211c60]"><span className="material-symbols-outlined text-lg">add</span>Add question</button>}
                   </div>
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_190px]">
@@ -301,12 +310,19 @@ export function QuestionBanksClient() {
               </div>
 
               <div className="divide-y divide-[#ebe7e4]">
-                {questionsQuery.isLoading ? [0, 1, 2].map(item => <div key={item} className="m-5 h-24 animate-pulse rounded-lg bg-[#f5f2f0]" />) : questions.length === 0 ? (
+                {questionsQuery.isLoading ? [0, 1, 2].map(item => <div key={item} className="m-5 h-24 animate-pulse rounded-lg bg-[#f5f2f0]" />) : questionsQuery.isError ? (
+                  <div role="alert" className="flex min-h-[340px] flex-col items-center justify-center px-6 text-center">
+                    <span className="material-symbols-outlined text-4xl text-[#a43522]">error</span>
+                    <h3 className="mt-3 text-lg font-semibold text-[#2b2931]">Could not load the questions</h3>
+                    <p className="mt-1 max-w-sm text-sm leading-6 text-[#706c76]">{questionsQuery.error instanceof Error ? questionsQuery.error.message : 'Please try again.'}</p>
+                    <button type="button" onClick={() => void questionsQuery.refetch()} className="mt-5 min-h-10 rounded-lg bg-[#2e2877] px-4 text-sm font-semibold text-white">Try again</button>
+                  </div>
+                ) : questions.length === 0 ? (
                   <div className="flex min-h-[340px] flex-col items-center justify-center px-6 text-center">
                     <span className="material-symbols-outlined text-4xl text-[#8a8590]">quiz</span>
                     <h3 className="mt-3 text-lg font-semibold text-[#2b2931]">{search || subjectFilter ? 'No matching questions' : 'This bank is ready for questions'}</h3>
                     <p className="mt-1 max-w-sm text-sm leading-6 text-[#706c76]">{search || subjectFilter ? 'Try a different word or clear the subject filter.' : 'Add a question once, then reuse it across as many mocks as you need.'}</p>
-                    {!search && !subjectFilter && <button onClick={() => setShowQuestionEditor(true)} className="mt-5 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white">Add the first question</button>}
+                    {!search && !subjectFilter && canAddQuestions && <button onClick={() => setShowQuestionEditor(true)} className="mt-5 rounded-lg bg-[#994704] px-4 py-2.5 text-sm font-semibold text-white">Add the first question</button>}
                   </div>
                 ) : questions.map((question, index) => (
                   <article key={question.id} className="p-5 transition hover:bg-[#fcfaf8] md:p-6">

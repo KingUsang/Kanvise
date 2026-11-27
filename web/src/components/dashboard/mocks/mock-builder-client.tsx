@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { authenticatedApiFetch } from "@/lib/authenticated-fetch";
@@ -28,6 +29,7 @@ import {
 } from "./mock-import-progress";
 import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 import { MockBuilderStepProgress } from "./mock-builder-step-progress";
+import { toLocalDateInput, toLocalDateTimeInput, toLocalTimeInput } from "./mock-builder-schedule";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
 type Course = {
@@ -174,12 +176,6 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
   );
   const [newSubjectName, setNewSubjectName] = useState("");
   const [singleSubjectName, setSingleSubjectName] = useState("");
-  const [linkAccessMode, setLinkAccessMode] = useState<"free_claim" | "paid">(
-    "free_claim",
-  );
-  const [linkPrice, setLinkPrice] = useState("");
-  const [linkSlug, setLinkSlug] = useState("");
-  const [linkSlugEdited, setLinkSlugEdited] = useState(false);
 
   const [publishMode, setPublishMode] = useState<"immediate" | "scheduled">(
     "immediate",
@@ -249,18 +245,6 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
   const importedQuestionsRef = useRef<HTMLDivElement>(null);
   const referenceImportInputRef = useRef<HTMLInputElement>(null);
   const importGenerationRef = useRef(0);
-
-  const slugify = (value: string) =>
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48);
-
-  useEffect(() => {
-    if (!linkSlugEdited) setLinkSlug(slugify(title) || "mock");
-  }, [title, linkSlugEdited]);
 
   const applyBulkMarks = () => {
     const value = Number(bulkMarks);
@@ -437,14 +421,6 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           setTitle(mockData.title || "");
           setDescription(mockData.description || "");
           setSingleSubjectName(mockData.subject_name || "");
-          setLinkAccessMode(mockData.direct_link_access_mode || "free_claim");
-          setLinkPrice(
-            mockData.direct_link_price_kobo
-              ? String(mockData.direct_link_price_kobo / 100)
-              : "",
-          );
-          setLinkSlug(mockData.direct_link_slug || "");
-          setLinkSlugEdited(Boolean(mockData.direct_link_slug));
           setCourseId(mockData.course_id || "");
           setAudienceScope(mockData.audience_scope || "course");
           setDeliveryMode(mockData.delivery_mode || "fixed");
@@ -466,12 +442,12 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           setResultReleaseMode(mockData.result_release_mode || "score_only");
           setAvailableFrom(
             mockData.available_from
-              ? new Date(mockData.available_from).toISOString().slice(0, 16)
+              ? toLocalDateTimeInput(mockData.available_from)
               : "",
           );
           setClosesAt(
             mockData.closes_at
-              ? new Date(mockData.closes_at).toISOString().slice(0, 16)
+              ? toLocalDateTimeInput(mockData.closes_at)
               : "",
           );
 
@@ -484,9 +460,8 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
 
           if (mockData.publish_at) {
             setPublishMode("scheduled");
-            const d = new Date(mockData.publish_at);
-            setPublishDate(d.toISOString().split("T")[0]);
-            setPublishTime(d.toTimeString().substring(0, 5));
+            setPublishDate(toLocalDateInput(mockData.publish_at));
+            setPublishTime(toLocalTimeInput(mockData.publish_at));
           }
 
           const assembledQuestions = (assemblyData.sections || []).flatMap(
@@ -756,7 +731,6 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
   useUnsavedChanges(hasChanges && !isReadOnly && !isSaving);
 
   const centreAccessEnabled = accessMode === "centre" || accessMode === "both";
-  const shareLinkEnabled = accessMode === "direct" || accessMode === "both";
   const selectedSubjectSections = subjectSections;
   const scopedClassCourses = contextualCourseId
     ? (classContext?.courses || []).filter((subject) => subject.id === contextualCourseId)
@@ -1431,12 +1405,9 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
     const lowerName = file.name.toLowerCase();
     if (file.type === "text/csv" || lowerName.endsWith(".csv")) {
       processCSV(file);
-    } else if (lowerName.endsWith(".docx")) {
-      void processDocx(file);
-    } else if (file.type === "application/pdf" || lowerName.endsWith(".pdf")) {
-      void processPDF(file);
     } else {
-      toast.error("Choose a PDF, CSV or DOCX file");
+      // PDF and Word imports are hidden for now; only CSV imports are offered.
+      toast.error("Choose a CSV file");
     }
   };
 
@@ -1557,11 +1528,6 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
             : null,
         audience_scope: effectiveAudienceScope,
         delivery_mode: deliveryMode,
-        direct_link_enabled: accessMode === "direct" || accessMode === "both",
-        direct_link_access_mode: linkAccessMode,
-        direct_link_price_kobo:
-          linkAccessMode === "paid" ? Math.round(Number(linkPrice) * 100) : 0,
-        direct_link_slug: linkSlug || null,
         publish_at: finalPublishAt,
         time_limit_minutes: isUntimed ? 0 : timeLimit,
         calculator_mode: calculatorMode,
@@ -1884,6 +1850,27 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
   if (isLoading) {
     return (
       <div className="p-8 text-center text-[#474551]">Loading builder...</div>
+    );
+  }
+
+  // Standalone, shareable Quizzes were retired. A Quiz is created from inside a Class.
+  if (!classContext && audienceScope === "direct_link") {
+    return (
+      <div className="mx-auto max-w-xl p-8 text-center">
+        <h1 className="text-xl font-semibold text-[#1b1c1c]">
+          Quizzes are created inside a Class
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[#474551]">
+          Standalone and shareable Quizzes have been retired. Open a Class and
+          add the Quiz there.
+        </p>
+        <Link
+          href="/dashboard/classes"
+          className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[#2e2877] px-5 text-sm font-semibold text-white"
+        >
+          Go to my Classes
+        </Link>
+      </div>
     );
   }
 
@@ -2367,7 +2354,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                     Write questions for this subject, reuse questions you
                     already trust, or import a complete paper.
                   </p>
-                  <div className="mx-auto mt-6 grid max-w-4xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mx-auto mt-6 grid max-w-4xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-3">
                     <button
                       type="button"
                       onClick={handleAddMCQ}
@@ -2383,19 +2370,6 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                     </button>
                     <button
                       type="button"
-                      onClick={handleAddTheory}
-                      className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 hover:border-[#2e2877]"
-                    >
-                      <span className="material-symbols-outlined text-[#2e2877]">
-                        edit_note
-                      </span>
-                      <strong className="mt-2 block text-sm">Add theory</strong>
-                      <span className="mt-1 block text-xs text-[#716c76]">
-                        Written answer question.
-                      </span>
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setShowImportPanel(true)}
                       className="rounded-xl border border-[#e4e2e1] p-4 hover:border-[#2e2877]"
                     >
@@ -2406,7 +2380,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                         Import a paper
                       </strong>
                       <span className="mt-1 block text-xs text-[#716c76]">
-                        One PDF or Word file, including multiple subjects.
+                        Upload a CSV file of questions.
                       </span>
                     </button>
                     <button
@@ -2442,13 +2416,6 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                     className="rounded-lg bg-[#2e2877] px-3 py-2 text-sm font-semibold text-white"
                   >
                     + MCQ
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAddTheory}
-                    className="rounded-lg border border-[#2e2877] px-3 py-2 text-sm font-semibold text-[#2e2877]"
-                  >
-                    + Theory
                   </button>
                   <button
                     type="button"
@@ -2885,7 +2852,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                     >
                       <input
                         type="file"
-                        accept=".pdf,.csv,.docx,application/pdf"
+                        accept=".csv,text/csv"
                         className="hidden"
                         onChange={handleFileInput}
                       />
@@ -2910,13 +2877,10 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                             Click to upload or drag and drop
                           </span>
                           <span className="text-[13px] font-normal text-[#474551]">
-                            PDF, CSV or Word (.docx) file
+                            CSV file
                           </span>
                           <span className="mt-2 max-w-lg text-center text-[12px] leading-5 text-[#787582]">
-                            PDFs and Word files are read with AI and returned as
-                            an editable draft. Review every imported question
-                            before publishing. CSV remains available for
-                            spreadsheet imports.
+                            Review every imported question before publishing.
                           </span>
                         </>
                       )}
@@ -3352,15 +3316,14 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                   <p className="text-xs font-bold uppercase tracking-[.14em] text-[#994704]">
                     {classContext
                       ? `Quiz for ${classContext.name}`
-                      : "Create mock exam"}
+                      : "Create quiz"}
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-[#180d62]">
-                    {classContext ? "Create quiz" : "Upload your mock paper"}
+                    {classContext ? "Create quiz" : "Add your quiz questions"}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-[#716c76]">
-                    Upload one PDF or DOCX and Kanvise will extract the
-                    questions, detect subjects and prepare an editable draft.
-                    No file? You can continue and build it manually.
+                    Upload a CSV file to prepare an editable draft, or
+                    continue and build it manually.
                   </p>
                 </div>
                 <span className="material-symbols-outlined hidden text-4xl text-[#5146c7] sm:block">
@@ -3370,7 +3333,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               <input
                 ref={referenceImportInputRef}
                 type="file"
-                accept=".pdf,.docx,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv"
+                accept=".csv,text/csv"
                 className="hidden"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
@@ -3391,7 +3354,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                   Choose file
                 </span>
                 <span className="mt-1 text-sm text-[#716c76]">
-                  or drag and drop · PDF or DOCX up to 20 MB
+                  or drag and drop · CSV file
                 </span>
               </button>
               {importProgress && (
@@ -3492,65 +3455,16 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                 {builderStep === "setup"
                   ? classContext
                     ? "Quiz details"
-                    : "Mock setup"
-                  : "Share & publish"}
+                    : "Quiz setup"
+                  : "Publish"}
               </h3>
 
               <div className="space-y-6">
                 {builderStep === "setup" && (
                   <>
-                    {!classContext && (
-                      <section>
-                        <p className="text-sm font-semibold text-[#1b1c1c]">
-                          What are you building?
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-[#787582]">
-                          Choose the structure first. It determines how
-                          questions are organised for you and for students.
-                        </p>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <button
-                            type="button"
-                            disabled={isReadOnly}
-                            onClick={() => changeDeliveryMode("fixed")}
-                            className={`rounded-xl border p-4 text-left transition ${deliveryMode === "fixed" ? "border-[#2e2877] bg-[#f4f1ff] ring-1 ring-[#2e2877]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}
-                          >
-                            <span className="material-symbols-outlined text-2xl text-[#2e2877]">
-                              description
-                            </span>
-                            <strong className="mt-2 block text-sm text-[#1b1c1c]">
-                              Single-subject mock
-                            </strong>
-                            <span className="mt-1 block text-xs leading-5 text-[#716c76]">
-                              One continuous question set for a class or
-                              subject.
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isReadOnly}
-                            onClick={() =>
-                              changeDeliveryMode("subject_combination")
-                            }
-                            className={`rounded-xl border p-4 text-left transition ${deliveryMode === "subject_combination" ? "border-[#994704] bg-[#fff7ef] ring-1 ring-[#994704]" : "border-[#d8d2cd] hover:border-[#9d96a3]"}`}
-                          >
-                            <span className="material-symbols-outlined text-2xl text-[#994704]">
-                              view_column
-                            </span>
-                            <strong className="mt-2 block text-sm text-[#1b1c1c]">
-                              Multi-subject / JAMB mock
-                            </strong>
-                            <span className="mt-1 block text-xs leading-5 text-[#716c76]">
-                              Separate subject sections with their own questions
-                              and progress.
-                            </span>
-                          </button>
-                        </div>
-                      </section>
-                    )}
                     <div>
                       <label className="block text-[13px] text-[#474551] mb-1.5 font-medium">
-                        {classContext ? "Quiz title" : "Mock Title"}
+                        {classContext ? "Quiz title" : "Quiz title"}
                       </label>
                       <input
                         type="text"
@@ -3594,78 +3508,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
                           questions under the appropriate subject.
                         </p>
                       </section>
-                    ) : (
-                      <section className="rounded-xl border border-[#d9d3ef] bg-[#faf9ff] p-4 sm:p-5">
-                        <p className="text-sm font-bold text-[#1b1c1c]">
-                          Standalone mock
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-[#716c76]">
-                          This builder creates a shareable mock. To assess a
-                          specific class or programme, create the assessment from
-                          that class instead.
-                        </p>
-                        <div className="mt-4 rounded-xl border border-[#ded8d3] bg-white p-4">
-                            <p className="text-sm font-semibold text-[#1b1c1c]">
-                              Share link
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                              <label className="flex items-center gap-2 text-sm">
-                                <input
-                                  type="radio"
-                                  checked={linkAccessMode === "free_claim"}
-                                  disabled={isReadOnly}
-                                  onChange={() =>
-                                    setLinkAccessMode("free_claim")
-                                  }
-                                />
-                                Free
-                              </label>
-                              <label className="flex items-center gap-2 text-sm">
-                                <input
-                                  type="radio"
-                                  checked={linkAccessMode === "paid"}
-                                  disabled={isReadOnly}
-                                  onChange={() => setLinkAccessMode("paid")}
-                                />
-                                Paid
-                              </label>
-                            </div>
-                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                              {linkAccessMode === "paid" && (
-                                <label className="text-xs font-semibold text-[#474551]">
-                                  Price (₦)
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={linkPrice}
-                                    disabled={isReadOnly}
-                                    onChange={(event) =>
-                                      setLinkPrice(event.target.value)
-                                    }
-                                    className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm"
-                                    placeholder="e.g. 1500"
-                                  />
-                                </label>
-                              )}
-                              <label className="min-w-0 text-xs font-semibold text-[#474551]">
-                                Link address
-                                <input
-                                  value={linkSlug}
-                                  disabled={isReadOnly}
-                                  onChange={(event) => {
-                                    setLinkSlugEdited(true);
-                                    setLinkSlug(slugify(event.target.value));
-                                  }}
-                                  className="mt-1 block w-full rounded-lg border border-[#c8c5d2] px-3 py-2.5 text-sm"
-                                />
-                                <span className="mt-1 block font-normal leading-5 text-[#787582]">
-                                  Generated from the title. Edit only if needed.
-                                </span>
-                              </label>
-                            </div>
-                        </div>
-                      </section>
-                    )}
+                    ) : null}
 
                     {deliveryMode === "fixed" && !classContext && (
                       <div>

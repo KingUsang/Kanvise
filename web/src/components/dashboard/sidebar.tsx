@@ -17,6 +17,7 @@ interface SidebarProps {
 export function Sidebar({ capabilities }: SidebarProps) {
   const pathname = usePathname()
   const [ungradedMocksCount, setUngradedMocksCount] = useState(0)
+  const [ungradedCountFailed, setUngradedCountFailed] = useState(false)
 
   useEffect(() => {
     if (capabilities.setupRequired) return
@@ -34,9 +35,14 @@ export function Sidebar({ capabilities }: SidebarProps) {
         if (res.ok) {
           const json = await res.json()
           setUngradedMocksCount(json.data?.count || 0)
+          setUngradedCountFailed(false)
+        } else {
+          // A failed lookup is not "no grading work": show an unavailable marker.
+          setUngradedCountFailed(true)
         }
       } catch (err) {
         console.error('Failed to fetch badge count', err)
+        setUngradedCountFailed(true)
       }
     }
     fetchBadgeCount()
@@ -106,6 +112,14 @@ export function Sidebar({ capabilities }: SidebarProps) {
                   {badge > 0 ? (
                     <span className="bg-[#ba1a1a] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ml-2">
                       {badge}
+                    </span>
+                  ) : item.badge === 'ungradedMocks' && ungradedCountFailed ? (
+                    <span
+                      className="bg-white/15 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ml-2"
+                      title="Could not load the grading count. Refresh to try again."
+                      aria-label="Grading count unavailable"
+                    >
+                      ?
                     </span>
                   ) : null}
                 </Link>

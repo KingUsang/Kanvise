@@ -147,9 +147,11 @@ async function addSignedMediaUrls(rows: any[], schoolId: string) {
 
 async function tutorCanUseCourse(user: TenantUser, courseId: string | null) {
   if (!courseId || user.role === 'admin') return true
-  const { data } = await supabase.from('tutor_course_assignments').select('id')
+  const { data, error } = await supabase.from('tutor_course_assignments').select('id')
     .eq('school_id', user.school_id).eq('tutor_id', user.id).eq('course_id', courseId)
     .maybeSingle()
+  // A failed lookup is an outage, not a "not assigned" decision (DEV-QBK-001).
+  if (error) throw error
   return Boolean(data)
 }
 
@@ -193,6 +195,9 @@ questionBanksRouter.get('/', async c => {
   const banks = (data || []).map(({ questions, ...bank }: any) => mapBank(bank, {
     question_count: questions?.[0]?.count || 0,
     can_edit: canEditQuestionBank(user, bank),
+    // Same rule the add-question route enforces, so the UI never offers an action
+    // the API will refuse (DEV-QBK-005).
+    can_contribute: canContributeToBank(user, bank),
   }))
   return c.json({
     data: banks,
@@ -223,7 +228,7 @@ questionBanksRouter.post('/', async c => {
     visibility,
   }).select(bankSelect).single()
   if (error) return databaseError(c, error, 'Could not create question bank')
-  return c.json({ data: mapBank(data, { question_count: 0, can_edit: true }) }, 201)
+  return c.json({ data: mapBank(data, { question_count: 0, can_edit: true, can_contribute: true }) }, 201)
 })
 
 questionBanksRouter.get('/:bankId', async c => {
@@ -235,7 +240,7 @@ questionBanksRouter.get('/:bankId', async c => {
     if (!bank || !canReadQuestionBank(user, bank)) {
       return c.json({ error: 'Question bank not found', code: 'NOT_FOUND' }, 404)
     }
-    return c.json({ data: mapBank(bank, { can_edit: canEditQuestionBank(user, bank) }) })
+    return c.json({ data: mapBank(bank, { can_edit: canEditQuestionBank(user, bank), can_contribute: canContributeToBank(user, bank) }) })
   } catch (error) {
     return databaseError(c, error, 'Could not load question bank')
   }
@@ -268,7 +273,7 @@ questionBanksRouter.patch('/:bankId', async c => {
     const { data, error } = await supabase.from('question_banks').update(updates as TablesUpdate<'question_banks'>)
       .eq('id', bankId).eq('school_id', user.school_id).select(bankSelect).single()
     if (error) return databaseError(c, error, 'Could not update question bank')
-    return c.json({ data: mapBank(data, { can_edit: !data.archived_at }) })
+    return c.json({ data: mapBank(data, { can_edit: !data.archived_at, can_contribute: !data.archived_at }) })
   } catch (error) {
     return databaseError(c, error, 'Could not update question bank')
   }
@@ -460,8 +465,12 @@ questionBanksRouter.patch('/questions/:questionId', async c => {
   const errors = validateQuestionInput(body, question.question_type as 'mcq' | 'theory')
   if (errors.length) return c.json({ error: 'Check the question details', code: 'VALIDATION_ERROR', details: errors }, 400)
   const courseId = body.course_id || null
-  if (!(await tutorCanUseCourse(user, courseId))) {
-    return c.json({ error: 'You are not assigned to this course', code: 'NOT_ASSIGNED_TO_COURSE' }, 403)
+  try {
+    if (!(await tutorCanUseCourse(user, courseId))) {
+      return c.json({ error: 'You are not assigned to this course', code: 'NOT_ASSIGNED_TO_COURSE' }, 403)
+    }
+  } catch (assignmentError) {
+    return databaseError(c, assignmentError, 'Could not verify your course assignment')
   }
 
   const { data: revised, error } = await supabase.rpc('revise_bank_question_versioned', {
@@ -488,8 +497,10 @@ questionBanksRouter.get('/questions/:questionId/versions', async c => {
   const user = c.get('user')
   const questionId = c.req.param('questionId')!
   if (!isUuid(questionId)) return invalidUuid(c, 'question_id')
-  const { data: question } = await supabase.from('bank_questions')
+  const { data: question, error: questionLookupError } = await supabase.from('bank_questions')
     .select('id, bank_id, school_id').eq('id', questionId).eq('school_id', user.school_id).maybeSingle()
+  // A failed lookup is not "not found" (DEV-QBK-008).
+  if (questionLookupError) return databaseError(c, questionLookupError, 'Could not load question history')
   if (!question) return c.json({ error: 'Question not found', code: 'NOT_FOUND' }, 404)
   try {
     const bank = await loadBank(question.bank_id, user.school_id!)

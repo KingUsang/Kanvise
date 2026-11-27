@@ -2,51 +2,52 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { StudentMocksClient } from './student-mocks-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { StudentMockGroups, UnlockedMock } from '@/lib/student-mocks'
+import type { StudentMockGroups } from '@/lib/student-mocks'
 
-const mocks = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }))
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: mocks.replace, push: mocks.push }) }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: vi.fn() }))
 vi.mock('@/config/api', () => ({ getApiUrl: () => 'https://api.example.test' }))
 
 const emptyGroups: StudentMockGroups = { available: [], in_progress: [], upcoming: [], completed: [] }
-const unlocked: UnlockedMock = {
-  id: 'entitlement-1', attempts_granted: 1, attempts_consumed: 1, expires_at: null,
-  current_attempt: { id: 'attempt-1', status: 'in_progress', started_at: '2026-09-09T10:00:00Z', deadline_at: '2099-09-09T11:00:00Z' },
-  offer: {
-    id: 'offer-1', access_mode: 'free_claim',
-    mock: { id: 'mock-1', title: 'Mathematics practice', description: null, time_limit_minutes: 60, calculator_mode: 'none', school: { name: 'Bright Minds' } },
-    version: { id: 'version-1', total_questions: 40, total_marks: 40 },
-  },
+const card = {
+  id: 'mock-1', title: 'Mathematics practice', description: null, course_id: 'course-1', course: { name: 'Maths' },
+  available_from: null, closes_at: null, time_limit_minutes: 60, calculator_mode: 'none' as const,
+  attempts_used: 1, attempts_allowed: 2, version: { id: 'version-1', total_questions: 40, total_marks: 40 },
+  attempt: { id: 'attempt-1', status: 'in_progress', deadline_at: '2099-09-09T11:00:00Z', submitted_at: null, total_score: null, total_marks: null },
 }
 
 describe('StudentMocksClient', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  function renderMocks(groups: StudentMockGroups, unlocked: UnlockedMock[], initialView: 'programme' | 'unlocked') {
+  function renderMocks(groups: StudentMockGroups) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    return render(<QueryClientProvider client={queryClient}><StudentMocksClient groups={groups} unlocked={unlocked} initialView={initialView} /></QueryClientProvider>)
+    return render(<QueryClientProvider client={queryClient}><StudentMocksClient groups={groups} /></QueryClientProvider>)
   }
 
-  it('lets a student continue an active attempt even when its allowance is consumed', () => {
-    renderMocks(emptyGroups, [unlocked], 'unlocked')
+  it('lets a learner continue an active Class quiz attempt', () => {
+    renderMocks({ ...emptyGroups, in_progress: [card] })
 
-    expect(screen.getByRole('link', { name: 'Continue mock' })).toHaveAttribute('href', '/attempt/attempt-1')
-    expect(screen.queryByRole('button', { name: 'Attempts used' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Continue quiz/ })).toHaveAttribute('href', '/dashboard/student/mocks/attempt/attempt-1')
   })
 
-  it('distinguishes an empty library from a search with no matches', () => {
-    renderMocks(emptyGroups, [unlocked], 'unlocked')
-    fireEvent.change(screen.getByPlaceholderText('Search mocks or subjects'), { target: { value: 'Physics' } })
+  it('has no unlocked or purchased library, only Class quizzes', () => {
+    renderMocks({ ...emptyGroups, available: [{ ...card, attempt: undefined }] })
 
-    expect(screen.getByText('No unlocked mocks match your search')).toBeInTheDocument()
-    expect(screen.getByText('Try a different mock or tutorial name.')).toBeInTheDocument()
+    expect(screen.queryByText(/unlocked/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/purchased/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Mathematics practice')).toBeInTheDocument()
   })
 
-  it('shows every programme status without a horizontally scrolling tab strip', () => {
-    renderMocks(emptyGroups, [], 'programme')
+  it('distinguishes an empty list from a search with no matches', () => {
+    renderMocks({ ...emptyGroups, available: [{ ...card, attempt: undefined }] })
+    fireEvent.change(screen.getByPlaceholderText('Search quizzes or subjects'), { target: { value: 'Physics' } })
 
-    const filters = screen.getByRole('group', { name: 'Filter mock exams by status' })
+    expect(screen.getByText('No quizzes match your search')).toBeInTheDocument()
+  })
+
+  it('shows every status without a horizontally scrolling tab strip', () => {
+    renderMocks(emptyGroups)
+
+    const filters = screen.getByRole('group', { name: 'Filter quizzes by status' })
     expect(filters).toHaveClass('grid', 'grid-cols-2')
     expect(filters).not.toHaveClass('overflow-x-auto')
     for (const label of ['Available', 'Continue', 'Upcoming', 'Completed']) {
