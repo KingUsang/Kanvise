@@ -69,8 +69,9 @@ export async function reconcileRecorderFleet(now = new Date(), options: { force?
   const reason = desiredCapacity ? 'scheduled_or_active_enrolled_recordings' : 'no_recording_windows'
 
   // Persist the desired state and demand first (DEV-REC-002, DEV-REC-003). The
-  // database decides whether a command is needed, so two API processes cannot
-  // both send the same unchanged command.
+  // database decides whether a command is needed. Until one caller acknowledges,
+  // concurrent API processes may each send the same command; the controller's
+  // version check makes that harmless.
   const { data: plans, error: planError } = await (supabase as any).rpc('plan_recorder_command', {
     p_desired: desiredCapacity, p_demand: activeWindows.length, p_reason: reason,
     p_capture_slots: RECORDER_CAPTURE_SLOTS, p_refresh_seconds: RECORDER_REFRESH_SECONDS, p_force: Boolean(options.force),

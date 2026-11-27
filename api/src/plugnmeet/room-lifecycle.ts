@@ -28,10 +28,23 @@ export async function reconcileInactivePlugNmeetClasses(now = new Date(), limit 
         class_status: liveClass.status,
         provider_active: active,
       })
+      const endDeadline = new Date(new Date(liveClass.scheduled_at).getTime() + (Number(liveClass.duration_minutes || 240) + 60) * 60_000)
+      if (active && liveClass.status === 'ending' && now >= endDeadline) {
+        // The provider kept accepting end requests but never closed the room.
+        // Stop retrying and surface the class as interrupted.
+        const { error: interruptError } = await (supabase as any).from('live_classes').update({
+          status: 'interrupted', provider_room_status: 'unavailable', provider_room_checked_at: now.toISOString(),
+          provider_error_at: now.toISOString(), provider_error_message: 'Provider room stayed active after end requests',
+        }).eq('id', liveClass.id).eq('status', 'ending')
+        if (interruptError) throw interruptError
+        interrupted += 1
+        continue
+      }
       if (active && liveClass.status === 'ending') {
         // The end request did not reach the provider (or its webhook was lost).
-        // Retry it here until the room closes; the class is only completed once
-        // the provider confirms the room is gone (DEV-LVC-005).
+        // Retry it here until the room closes or the class deadline passes; the
+        // class is only completed once the provider confirms the room is gone
+        // (DEV-LVC-005).
         await plugNmeet.endRoom(roomId)
         await (supabase as any).from('live_classes').update({ provider_room_checked_at: now.toISOString() })
           .eq('id', liveClass.id).eq('status', 'ending')

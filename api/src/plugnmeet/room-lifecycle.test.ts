@@ -96,4 +96,17 @@ describe('PlugNmeet room lifecycle reconciliation', () => {
 
     expect(writes).toContainEqual(expect.objectContaining({ status: 'interrupted', provider_room_status: 'unavailable' }))
   })
+
+  it('stops retrying the end request and marks the class interrupted after its deadline', async () => {
+    mocks.from.mockImplementationOnce(() => selection({
+      data: [{ id: 'class-1', provider_room_id: 'room-1', status: 'ending', scheduled_at: new Date(now.getTime() - 6 * 3600_000).toISOString(), duration_minutes: 60 }], error: null,
+    }))
+    mocks.isRoomActive.mockResolvedValue(true)
+
+    const result = await reconcileInactivePlugNmeetClasses(now)
+
+    expect(mocks.endRoom).not.toHaveBeenCalled()
+    expect(result.interrupted).toBe(1)
+    expect(writes).toContainEqual(expect.objectContaining({ status: 'interrupted' }))
+  })
 })

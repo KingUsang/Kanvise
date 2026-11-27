@@ -107,6 +107,17 @@ AS $$
     FROM expired
     ON CONFLICT (dedupe_key) DO NOTHING
     RETURNING 1
+  ), purged AS (
+    -- Retention: settled intents older than 30 days no longer guard anything
+    -- (their presigned URL and intent window are long gone).
+    DELETE FROM public.upload_intents
+    WHERE id IN (
+      SELECT id FROM public.upload_intents
+      WHERE status IN ('consumed', 'expired') AND created_at < now() - interval '30 days'
+      LIMIT p_limit
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING 1
   )
   SELECT count(*)::integer FROM expired;
 $$;
@@ -114,7 +125,7 @@ $$;
 -- Delete question images never attached to a question or stimulus and queue
 -- deletion of their objects (the editor registers an image before the question).
 CREATE OR REPLACE FUNCTION public.sweep_orphan_question_media(
-  p_older_than interval DEFAULT interval '24 hours', p_limit integer DEFAULT 100
+  p_older_than interval DEFAULT interval '7 days', p_limit integer DEFAULT 100
 ) RETURNS integer
 LANGUAGE sql
 SECURITY INVOKER

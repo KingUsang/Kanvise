@@ -190,7 +190,10 @@ mocksRouter.get("/", requireTutorOrAdmin, async (c) => {
       .select("course_id")
       .eq("tutor_id", user.id)
       .eq("school_id", user.school_id);
-    if (assignError) return c.json({ error: assignError.message }, 500);
+    if (assignError) {
+      console.error("mocks.assignment_lookup_failed", { code: assignError.code });
+      return c.json({ error: "Something went wrong. Please try again.", code: "DATABASE_ERROR" }, 500);
+    }
 
     const assignedCourseIds = new Set((assignments || []).map((assignment: any) => assignment.course_id));
     visibleMocks = visibleMocks.filter((mock: any) => {
