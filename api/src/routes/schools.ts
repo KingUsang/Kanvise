@@ -199,7 +199,8 @@ schoolsRouter.patch('/me', requireRole('admin'), async (c) => {
         code: 'SLUG_TAKEN',
       }, 409)
     }
-    return c.json({ error: error.message }, 500)
+    console.error('[schools] update failed', { code: error.code, message: error.message })
+    return c.json({ error: 'Could not save the page settings', code: 'DATABASE_ERROR' }, 500)
   }
 
   return c.json({ data: school })

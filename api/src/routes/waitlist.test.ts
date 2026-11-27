@@ -193,7 +193,19 @@ describe('POST /waitlist abuse limits and count errors', () => {
     })
     const response = await post(store, validBody)
     expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({ position: null, already_joined: true })
     expect(error).toHaveBeenCalledWith('Error calculating waitlist position:', expect.objectContaining({ message: 'count failed' }))
+    error.mockRestore()
+  })
+
+  it('reports an unknown position instead of a fabricated one when the new-signup count fails', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = makeStore({
+      countThrough: vi.fn().mockResolvedValue({ count: null, error: { message: 'count failed' } }),
+    })
+    const response = await post(store, validBody)
+    expect(response.status).toBe(201)
+    await expect(response.json()).resolves.toMatchObject({ position: null, already_joined: false })
     error.mockRestore()
   })
 })

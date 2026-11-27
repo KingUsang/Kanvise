@@ -1,7 +1,7 @@
 import { Webhook } from 'standardwebhooks'
 import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseSendEmailHookPayload } from '../emails/supabase-auth'
-import { handleSupabaseEmailHook } from './supabase-email-hook'
+import { handleSupabaseEmailHook, MAX_EMAIL_HOOK_BODY_BYTES } from './supabase-email-hook'
 
 const secretBody = Buffer.alloc(32, 7).toString('base64')
 const storedSecret = `v1,whsec_${secretBody}`
@@ -60,5 +60,23 @@ describe('Supabase Send Email HTTP Hook', () => {
     await expect(response.json()).resolves.toEqual({
       error: { http_code: 503, message: 'Email delivery temporarily failed' },
     })
+  })
+
+  it('rejects an oversized body before verifying or delivering (DEV-WHK-005)', async () => {
+    const deliver = vi.fn()
+    const env = { SEND_EMAIL_HOOK_SECRET: storedSecret } as NodeJS.ProcessEnv
+    const big = 'x'.repeat(MAX_EMAIL_HOOK_BODY_BYTES + 1)
+    const declared = await handleSupabaseEmailHook(signedRequest(big), { env, deliver })
+    expect(declared.status).toBe(413)
+    // Streamed body without a trustworthy content-length is cut off too.
+    const streamed = new Request('https://api.kanvise.com/webhooks/supabase/send-email', {
+      method: 'POST',
+      body: new ReadableStream({
+        start(controller) { controller.enqueue(new TextEncoder().encode(big)); controller.close() },
+      }),
+      duplex: 'half',
+    } as RequestInit)
+    expect((await handleSupabaseEmailHook(streamed, { env, deliver })).status).toBe(413)
+    expect(deliver).not.toHaveBeenCalled()
   })
 })

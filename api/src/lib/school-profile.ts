@@ -7,8 +7,9 @@ export class SchoolProfileValidationError extends Error {
 
 const MAX_SCHOOL_SLUG_LENGTH = 64
 const RESERVED_SCHOOL_SLUGS = new Set([
-  'account', 'api', 'attempt', 'auth', 'class', 'dashboard', 'join', 'mock',
-  'mocks', 'my-mocks', 'payment', 'result',
+  'account', 'api', 'attempt', 'auth', 'class', 'dashboard', 'direct-assignment',
+  'guest', 'invite', 'join', 'live', 'mock', 'mocks',
+  'my-mocks', 'payment', 'privacy', 'recording', 'result', 'terms',
 ])
 
 export function isReservedSchoolSlug(value: unknown) {

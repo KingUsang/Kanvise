@@ -170,3 +170,32 @@ describe('GET /public/live-classes/recordings/:token (DEV-LVC-019)', () => {
     expect((await publicLiveClassesRouter.request(`/recordings/${token}`)).status).toBe(404)
   })
 })
+
+describe('POST /public/live-classes/:shareToken/join admission (DEV-LVC-010)', () => {
+  const liveRow = { ...liveClass, status: 'live', provider_room_id: 'room-1', classroom_provider: 'plugnmeet' }
+  const join = () => publicLiveClassesRouter.request(`/${shareToken}/join`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ display_name: 'Guest One' }),
+  })
+
+  it('refuses a new guest when the class is at capacity, before any provider call', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'live_classes') return builder({ data: liveRow, error: null })
+      if (table === 'live_class_guests') return builder({ data: null, error: null, count: 300 })
+      return builder({ data: null, error: null })
+    })
+    const response = await join()
+    expect(response.status).toBe(429)
+    expect(await response.json()).toMatchObject({ code: 'GUEST_CAPACITY_REACHED' })
+  })
+
+  it('rate limits repeated new-guest attempts from one address', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'live_classes') return builder({ data: liveRow, error: null })
+      return builder({ data: null, error: null, count: 300 })
+    })
+    let last: Response | undefined
+    for (let i = 0; i < 25; i += 1) last = await join()
+    expect(last!.status).toBe(429)
+    expect(await last!.json()).toMatchObject({ code: 'RATE_LIMITED' })
+  })
+})

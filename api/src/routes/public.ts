@@ -249,9 +249,10 @@ publicRouter.get('/courses/:slug', async (c) => {
 
     if (schoolError || !school) return c.json({ error: 'Course not found' }, 404)
 
+    const { school_id: _tenantId, ...publicCourse } = course
     return c.json({
       data: {
-        course,
+        course: publicCourse,
         school
       }
     })

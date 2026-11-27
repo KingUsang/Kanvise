@@ -141,7 +141,7 @@ function retryDelayMs(response: Response, attempt: number) {
 
 async function requestGemini(url: string, init: RequestInit) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const response = await fetch(url, init);
+    const response = await fetch(url, { signal: AbortSignal.timeout(2 * 60_000), ...init });
     const body: any = await response.json().catch(() => null);
     if (response.ok) return body;
 

@@ -1,3 +1,5 @@
+import { vapidKeysMatch } from '../push/vapid'
+
 export const CORE_PRODUCTION_VARIABLES = [
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
@@ -66,6 +68,9 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv = process.e
   requireHttpsUrl('PLUGNMEET_SERVER_URL', env.PLUGNMEET_SERVER_URL)
   if (isWebPushEnabled(env) && !/^(mailto:|https:\/\/)/.test(env.WEB_PUSH_SUBJECT || '')) {
     throw new Error('WEB_PUSH_SUBJECT must be a mailto: or https: URI')
+  }
+  if (isWebPushEnabled(env) && !vapidKeysMatch(env.WEB_PUSH_VAPID_PUBLIC_KEY, env.WEB_PUSH_VAPID_PRIVATE_KEY)) {
+    throw new Error('WEB_PUSH_VAPID_PRIVATE_KEY must be the P-256 private key matching WEB_PUSH_VAPID_PUBLIC_KEY')
   }
   for (const origin of (env.CORS_ALLOWED_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean)) {
     requireHttpsUrl('CORS_ALLOWED_ORIGINS', origin)

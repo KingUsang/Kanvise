@@ -154,19 +154,76 @@ async function presignUpload(c: any) {
   }
 }
 
+type DownloadDecision = 'allowed' | 'denied' | 'not_found'
+
+/**
+ * Resource-scoped download authorization (DEV-UPL-001). A key is only
+ * downloadable through this route when it is registered on a Note, Assignment
+ * or Submission, or is Question media, and the caller may see that resource.
+ * Presentation, recording, transcript and feedback objects are served only by
+ * their owning routes.
+ */
+async function authorizePrivateDownload(user: AppVariables['user'], fileKey: string): Promise<DownloadDecision> {
+  const schoolId = user.school_id!
+  const parts = fileKey.split('/')
+  if (parts.length !== 6 || parts[0] !== 'schools' || parts[1] !== schoolId || parts[2] !== 'private') return 'denied'
+  const [, , , entityType, contextId] = parts
+
+  const enrolled = async (courseId: string) => {
+    if (user.role !== 'student') return false
+    try {
+      return (await loadStudentCourseIds(user.id, schoolId)).includes(courseId)
+    } catch (lookupError) {
+      return lookupFailed(lookupError)
+    }
+  }
+  const manages = async (courseId: string) => {
+    const access = await tutorCanManageCourse(user as any, courseId)
+    if (access.error) lookupFailed(access.error)
+    return access.allowed
+  }
+
+  if (entityType === 'question_media') {
+    return (await canUploadQuestionMedia(user, contextId)) ? 'allowed' : 'denied'
+  }
+  if (entityType === 'note') {
+    const { data, error } = await supabase.from('notes').select('course_id')
+      .eq('school_id', schoolId).eq('file_key', fileKey).maybeSingle()
+    if (error) lookupFailed(error)
+    if (!data) return 'not_found'
+    return (await manages(data.course_id) || await enrolled(data.course_id)) ? 'allowed' : 'denied'
+  }
+  if (entityType === 'assignment_attachment') {
+    const { data, error } = await supabase.from('assignments').select('course_id, is_published')
+      .eq('school_id', schoolId).eq('attachment_file_key', fileKey).maybeSingle()
+    if (error) lookupFailed(error)
+    if (!data) return 'not_found'
+    if (await manages(data.course_id)) return 'allowed'
+    return data.is_published && await enrolled(data.course_id) ? 'allowed' : 'denied'
+  }
+  if (entityType === 'submission') {
+    const { data, error } = await supabase.from('submissions').select('student_id, assignment_id')
+      .eq('school_id', schoolId).eq('file_key', fileKey).maybeSingle()
+    if (error) lookupFailed(error)
+    if (!data) return 'not_found'
+    if (data.student_id === user.id) return 'allowed'
+    const { data: assignment, error: assignmentError } = await supabase.from('assignments').select('course_id')
+      .eq('school_id', schoolId).eq('id', data.assignment_id).maybeSingle()
+    if (assignmentError) lookupFailed(assignmentError)
+    return assignment && await manages(assignment.course_id) ? 'allowed' : 'denied'
+  }
+  return 'denied'
+}
+
 async function presignDownload(c: any) {
   try {
     const user = c.get('user') as AppVariables['user']
     const fileKey = c.req.query('file_key')
     if (!user.school_id) return c.json({ error: 'User has no school setup', code: 'NO_SCHOOL' }, 400)
     if (!fileKey) return c.json({ error: 'Missing file_key', code: 'BAD_REQUEST' }, 400)
-    const questionMediaMarker = '/private/question_media/'
-    if (fileKey.includes(questionMediaMarker)) {
-      const bankId = fileKey.split(questionMediaMarker)[1]?.split('/')[0]
-      if (!bankId || !(await canUploadQuestionMedia(user, bankId))) {
-        return c.json({ error: 'Not permitted to access this question image', code: 'FORBIDDEN' }, 403)
-      }
-    }
+    const decision = await authorizePrivateDownload(user, fileKey)
+    if (decision === 'not_found') return c.json({ error: 'File not found', code: 'NOT_FOUND' }, 404)
+    if (decision !== 'allowed') return c.json({ error: 'Not permitted to access this file', code: 'FORBIDDEN' }, 403)
     const downloadUrl = await createPresignedDownload(fileKey, user.school_id)
     return c.json({ data: { download_url: downloadUrl, expires_in_seconds: 900 } })
   } catch (error: any) {

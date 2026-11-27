@@ -98,6 +98,7 @@ describe('attendance reports', () => {
       courses: { data: [{ id: 'c1', sub_programme_id: SUB, programme_id: null }] },
       sub_programmes: { data: [{ id: SUB, programme_id: PROGRAMME }] },
       enrolments: { data: [{ student_id: 'u1', course_id: null, sub_programme_id: null, programme_id: PROGRAMME, user_profiles: { first_name: 'Ada', last_name: 'L' } }] },
+      account_memberships: { data: [{ person_id: 'u1' }] },
       attendance_records: { data: [] },
     })
     const response = await attendanceRouter.request('/records')
@@ -107,6 +108,19 @@ describe('attendance reports', () => {
     expect(body.data[0]).toMatchObject({ student_id: 'u1', status: 'Absent' })
     const enrolmentCall = calls.find((call) => call.table === 'enrolments')!
     expect(JSON.stringify(enrolmentCall.filters)).toContain(`programme_id.in.(${PROGRAMME})`)
+  })
+
+  it('omits revoked Learners from the expected roster (DEV-ATD-006)', async () => {
+    install({
+      live_classes: { data: [{ id: 'lc1', course_id: 'c1', scheduled_at: '2026-01-01T09:00:00Z', title: 'T' }] },
+      courses: { data: [{ id: 'c1', sub_programme_id: null, programme_id: null }] },
+      enrolments: { data: [{ student_id: 'gone', course_id: 'c1', sub_programme_id: null, programme_id: null, user_profiles: { first_name: 'X', last_name: 'Y' } }] },
+      account_memberships: { data: [] },
+      attendance_records: { data: [] },
+    })
+    const response = await attendanceRouter.request('/records')
+    expect(response.status).toBe(200)
+    expect((await response.json()).data).toHaveLength(0)
   })
 
   it('rejects a Programme with too many Subjects instead of building an oversized filter', async () => {

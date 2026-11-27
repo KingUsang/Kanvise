@@ -168,4 +168,15 @@ describe('auth route hardening', () => {
       expect(console.error).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ message: 'smtp relay 10.0.0.5 rejected' }))
     })
   })
+
+  describe('safe database errors (DEV-AUTH-017)', () => {
+    it('GET /me does not return the raw database message', async () => {
+      mocks.from.mockReturnValue(chain({ data: null, error: { message: 'relation "user_profiles" column x missing', code: '42703' } }))
+      const response = await authRouter.request('/me')
+      const text = JSON.stringify(await response.json())
+      expect(response.status).toBe(500)
+      expect(text).toContain('DATABASE_ERROR')
+      expect(text).not.toContain('user_profiles')
+    })
+  })
 })

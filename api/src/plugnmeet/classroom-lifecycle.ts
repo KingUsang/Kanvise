@@ -67,7 +67,12 @@ async function classroomVmAction(action: 'start' | 'deallocate', fetcher: Fetche
 export async function ensurePlugNmeetReady(fetcher: Fetcher = fetch, env = process.env): Promise<ClassroomReadiness> {
   const workerControlEnabled = enabled(env)
   const healthy = await isPlugNmeetHealthy(fetcher, env)
-  if (!workerControlEnabled || healthy) return { state: 'ready' }
+  if (healthy) return { state: 'ready' }
+  // Without worker control the VM cannot be started, but an unhealthy provider is still not ready (DEV-PNM-002).
+  if (!workerControlEnabled) {
+    console.warn('live_class.plugnmeet_unhealthy_without_worker_control')
+    return { state: 'unavailable', message: 'The classroom is not available right now. Please try again in a moment.' }
+  }
   console.warn('live_class.plugnmeet_health_check_failed', { worker_control_enabled: workerControlEnabled })
   if (!startInFlight) startInFlight = classroomVmAction('start', fetcher, env).finally(() => { startInFlight = null })
   try {

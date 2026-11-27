@@ -22,9 +22,17 @@ describe('CORS origin configuration', () => {
     expect(resolveCorsOrigin('http://127.0.0.1:3100', env)).toBe('http://127.0.0.1:3100')
   })
 
-  it('allows HTTPS Vercel preview origins', () => {
-    expect(resolveCorsOrigin('https://kanvise-git-feature-team.vercel.app', env))
-      .toBe('https://kanvise-git-feature-team.vercel.app')
+  it('allows HTTPS Vercel previews only for the configured team suffix', () => {
+    const withSuffix = { ...env, CORS_VERCEL_PREVIEW_SUFFIX: '-kanvise-team.vercel.app' } as NodeJS.ProcessEnv
+    expect(resolveCorsOrigin('https://kanvise-git-feature-kanvise-team.vercel.app', withSuffix))
+      .toBe('https://kanvise-git-feature-kanvise-team.vercel.app')
+    expect(resolveCorsOrigin('https://evil-other-team.vercel.app', withSuffix)).toBeUndefined()
+    expect(resolveCorsOrigin('https://x.evil.com/-kanvise-team.vercel.app', withSuffix)).toBeUndefined()
+    expect(resolveCorsOrigin('http://a-kanvise-team.vercel.app', withSuffix)).toBeUndefined()
+  })
+
+  it('allows no Vercel preview origin when the suffix is not configured (DEV-CFG-003)', () => {
+    expect(resolveCorsOrigin('https://kanvise-git-feature-team.vercel.app', env)).toBeUndefined()
   })
 
   it('rejects unconfigured origins instead of returning a different origin', () => {

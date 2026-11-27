@@ -1,3 +1,6 @@
+import webpush from 'web-push'
+import { getPushConfig } from '../push/config'
+import { vapidKeysMatch } from '../push/vapid'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
@@ -75,12 +78,30 @@ describe('web push production configuration', () => {
   it('requires VAPID settings only when enabled', () => {
     expect(() => validateProductionEnvironment({ ...validProductionEnv, WEB_PUSH_ENABLED: 'true' }))
       .toThrow('WEB_PUSH_SUBJECT')
-    expect(() => validateProductionEnvironment({
+    const keys = webpush.generateVAPIDKeys()
+    const enabled = {
       ...validProductionEnv,
       WEB_PUSH_ENABLED: 'true',
-      WEB_PUSH_VAPID_PUBLIC_KEY: 'public',
-      WEB_PUSH_VAPID_PRIVATE_KEY: 'private',
+      WEB_PUSH_VAPID_PUBLIC_KEY: keys.publicKey,
+      WEB_PUSH_VAPID_PRIVATE_KEY: keys.privateKey,
       WEB_PUSH_SUBJECT: 'mailto:notifications@kanvise.com',
-    })).not.toThrow()
+    }
+    expect(() => validateProductionEnvironment(enabled)).not.toThrow()
+    expect(getPushConfig(enabled).enabled).toBe(true)
+  })
+
+  it('rejects a mismatched or malformed VAPID pair (DEV-PSH-004)', () => {
+    const a = webpush.generateVAPIDKeys()
+    const b = webpush.generateVAPIDKeys()
+    const mismatched = {
+      ...validProductionEnv,
+      WEB_PUSH_ENABLED: 'true',
+      WEB_PUSH_VAPID_PUBLIC_KEY: a.publicKey,
+      WEB_PUSH_VAPID_PRIVATE_KEY: b.privateKey,
+      WEB_PUSH_SUBJECT: 'mailto:notifications@kanvise.com',
+    }
+    expect(() => validateProductionEnvironment(mismatched)).toThrow('VAPID')
+    expect(getPushConfig(mismatched).enabled).toBe(false)
+    expect(vapidKeysMatch('public', 'private')).toBe(false)
   })
 })

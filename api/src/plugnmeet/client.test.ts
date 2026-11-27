@@ -1,6 +1,6 @@
 import { createHash, createHmac } from 'node:crypto'
-import { describe, expect, it } from 'vitest'
-import { createEnrolledRoomRequest, createGuestRoomRequest, enrolledRoomFeatures, verifyPlugNmeetWebhook } from './client'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createEnrolledRoomRequest, createGuestRoomRequest, enrolledRoomFeatures, plugNmeet, verifyPlugNmeetWebhook } from './client'
 
 describe('PlugNmeet provider contract', () => {
   it('creates an uncapped enrolled room with data-saving features', () => {
@@ -43,5 +43,19 @@ describe('PlugNmeet provider contract', () => {
     expect(request.metadata.room_features.enable_analytics).toBe(false)
     expect(request.metadata.room_features.insights_features.is_allow).toBe(false)
     expect(request.metadata.extra_data.course_id).toBe('')
+  })
+})
+
+describe('PlugNmeet request deadline (DEV-INT-005)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
+
+  it('sends every control-plane call with an abort signal', async () => {
+    vi.stubEnv('PLUGNMEET_SERVER_URL', 'https://pnm.example')
+    vi.stubEnv('PLUGNMEET_API_KEY', 'key')
+    vi.stubEnv('PLUGNMEET_API_SECRET', 'secret')
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: true, token: 't' }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await plugNmeet.getJoinToken({ room_id: 'r', user_info: { name: 'n', user_id: 'u', is_admin: false } } as any)
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
   })
 })

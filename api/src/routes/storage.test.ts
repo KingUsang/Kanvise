@@ -99,3 +99,46 @@ describe('generic private upload presign', () => {
     expect(mocks.createUpload).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'note', contextId: COURSE }))
   })
 })
+
+describe('private download authorization (DEV-UPL-001)', () => {
+  const key = (type: string, ctx = COURSE) => `schools/school-1/private/${type}/${ctx}/f.pdf`
+  const get = (file_key: string) => storageRouter.request(`/presign/download?file_key=${encodeURIComponent(file_key)}`)
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.user = { id: 'student-1', school_id: 'school-1', role: 'student' }
+    mocks.loadCourseIds.mockResolvedValue([])
+  })
+
+  it.each(['live_class_presentation', 'live_class_recording', 'live_class_transcript', 'feedback_screenshot'])(
+    'refuses generic download of %s keys', async (type) => {
+      const response = await get(key(type))
+      expect(response.status).toBe(403)
+      expect(mocks.from).not.toHaveBeenCalled()
+    })
+
+  it('refuses a key from another school and malformed keys', async () => {
+    expect((await get('schools/other/private/note/c/f.pdf')).status).toBe(403)
+    expect((await get('schools/school-1/private/note/f.pdf')).status).toBe(403)
+  })
+
+  it('returns 404 for an unregistered note key', async () => {
+    queue({ data: null, error: null })
+    expect((await get(key('note'))).status).toBe(404)
+  })
+
+  it('refuses another learner submission', async () => {
+    queue({ data: { student_id: 'student-2', assignment_id: ASSIGNMENT }, error: null }, { data: { course_id: COURSE }, error: null })
+    expect((await get(key('submission', ASSIGNMENT))).status).toBe(403)
+  })
+
+  it('refuses a note for a course the learner is not enrolled in', async () => {
+    queue({ data: { course_id: COURSE }, error: null })
+    expect((await get(key('note'))).status).toBe(403)
+  })
+
+  it('answers 503 when the registration lookup fails', async () => {
+    queue({ data: null, error: { message: 'down' } })
+    expect((await get(key('note'))).status).toBe(503)
+  })
+})

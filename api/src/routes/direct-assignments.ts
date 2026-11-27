@@ -6,9 +6,15 @@ import { accountUserProjection } from '../middleware/account-projection'
 import type { TenantVariables } from '../types'
 import { parseOffsetPagination } from '../lib/api-contract'
 import { z } from 'zod'
+import { clientAddress, createIpRateLimiter } from '../lib/ip-rate-limit'
 
 export const directAssignmentsRouter = new Hono<{ Variables: TenantVariables }>()
 export const publicDirectAssignmentsRouter = new Hono()
+
+// Layered abuse controls for anonymous submissions (DEV-ASG-002): a per-address
+// window (per process), a per-link cap and exact-duplicate replay.
+const submitLimiter = createIpRateLimiter({ limit: 10, windowMs: 10 * 60_000 })
+const MAX_SUBMISSIONS_PER_LINK = 500
 
 const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex')
 const validToken = (value: string) => /^[A-Za-z0-9_-]{24,128}$/.test(value)
@@ -126,7 +132,7 @@ directAssignmentsRouter.get('/:id/submissions', requireRole('admin', 'tutor'), a
 // A share link stops accepting work at its deadline (DEV-ASG-010: expires_at equals deadline_at by design).
 async function publicAssignment(token: string): Promise<{ row: any; error?: unknown }> {
   if (!validToken(token)) return { row: null }
-  const { data, error } = await (supabase as any).from('direct_assignments').select('id, school_id, title, description, deadline_at, expires_at, revoked_at, school:schools(name, logo_url)')
+  const { data, error } = await (supabase as any).from('direct_assignments').select('id, school_id, tutor_id, title, description, deadline_at, expires_at, revoked_at, school:schools(name, logo_url)')
     .eq('share_token_hash', tokenHash(token)).maybeSingle()
   if (error) return { row: null, error }
   if (!data || (data as any).revoked_at || new Date((data as any).expires_at).getTime() < Date.now()) return { row: null }
@@ -139,10 +145,23 @@ publicDirectAssignmentsRouter.get('/:token', async (c) => {
   const assignment = found.row
   if (!assignment) return c.json({ error: 'This assignment link is unavailable', code: 'NOT_FOUND' }, 404)
   const school = Array.isArray(assignment.school) ? assignment.school[0] : assignment.school
-  return c.json({ data: { id: assignment.id, title: assignment.title, description: assignment.description, deadline_at: assignment.deadline_at, tutor_name: school?.name || 'Your tutor', logo_url: school?.logo_url || null } })
+  // The assigning Tutor and the account are distinct identities (DEV-ASG-006).
+  const { data: tutor, error: tutorError } = await (supabase as any).from('user_profiles')
+    .select('first_name, last_name').eq('id', assignment.tutor_id).maybeSingle()
+  if (tutorError) return lookupUnavailable(c, tutorError)
+  const tutorName = [tutor?.first_name, tutor?.last_name].filter(Boolean).join(' ').trim()
+  return c.json({ data: {
+    id: assignment.id, title: assignment.title, description: assignment.description, deadline_at: assignment.deadline_at,
+    tutor_name: tutorName || 'Your tutor', account_name: school?.name || null, logo_url: school?.logo_url || null,
+  } })
 })
 
 publicDirectAssignmentsRouter.post('/:token/submit', async (c) => {
+  const retryAfter = submitLimiter.hit(clientAddress(c))
+  if (retryAfter !== null) {
+    c.header('Retry-After', String(retryAfter))
+    return c.json({ error: 'Too many submissions. Please try again later.', code: 'RATE_LIMITED' }, 429)
+  }
   const found = await publicAssignment(c.req.param('token')!)
   if (found.error) return lookupUnavailable(c, found.error)
   const assignment = found.row
@@ -150,6 +169,19 @@ publicDirectAssignmentsRouter.post('/:token/submit', async (c) => {
   const parsed = publicSubmitSchema.safeParse(await c.req.json().catch(() => null))
   if (!parsed.success) return c.json({ error: 'Enter your name, a valid email address if provided, and your response', code: 'VALIDATION_ERROR' }, 400)
   const { guest_name: guestName, guest_email: guestEmail, response_text: responseText } = parsed.data
+  const submissions = (supabase as any).from('direct_assignment_submissions')
+  const { count, error: countError } = await submissions.select('id', { count: 'exact', head: true })
+    .eq('direct_assignment_id', assignment.id)
+  if (countError) return lookupUnavailable(c, countError)
+  if ((count ?? 0) >= MAX_SUBMISSIONS_PER_LINK) {
+    return c.json({ error: 'This assignment is no longer accepting responses', code: 'SUBMISSION_LIMIT_REACHED' }, 409)
+  }
+  // An exact repeat of the same response replays the stored result.
+  const { data: existing, error: existingError } = await (supabase as any).from('direct_assignment_submissions')
+    .select('id, submitted_at').eq('direct_assignment_id', assignment.id)
+    .eq('guest_name', guestName).eq('response_text', responseText).limit(1).maybeSingle()
+  if (existingError) return lookupUnavailable(c, existingError)
+  if (existing) return c.json({ data: existing }, 200)
   const { data, error } = await (supabase as any).from('direct_assignment_submissions').insert({
     direct_assignment_id: assignment.id,
     school_id: (assignment as any).school_id,

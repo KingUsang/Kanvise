@@ -45,7 +45,7 @@ function parseStudentCount(value: unknown): number | null {
 }
 
 function duplicateResponse(position: number | null) {
-  return { message: "You're already on the list!", position: position || 1, already_joined: true }
+  return { message: "You're already on the list!", position: position && position > 0 ? position : null, already_joined: true }
 }
 
 // Public endpoint behind the web proxy, so keep the per-address limit generous.
@@ -100,7 +100,7 @@ export function createWaitlistRouter(store: WaitlistStore, limiter: IpRateLimite
       if (existingUser) {
         const { count, error: countError } = await store.countThrough(existingUser.created_at)
         if (countError) console.error('Error calculating waitlist position:', countError)
-        return c.json(duplicateResponse(count), 409)
+        return c.json(duplicateResponse(countError ? null : count), 409)
       }
       if (checkError) {
         console.error('Error checking duplicate:', checkError)
@@ -123,7 +123,7 @@ export function createWaitlistRouter(store: WaitlistStore, limiter: IpRateLimite
           if (duplicate) {
             const { count, error: countError } = await store.countThrough(duplicate.created_at)
             if (countError) console.error('Error calculating waitlist position:', countError)
-            return c.json(duplicateResponse(count), 409)
+            return c.json(duplicateResponse(countError ? null : count), 409)
           }
         }
         console.error('Error inserting waitlist signup:', insertError)
@@ -133,7 +133,7 @@ export function createWaitlistRouter(store: WaitlistStore, limiter: IpRateLimite
 
       const { count, error: countError } = await store.countThrough(signup.created_at)
       if (countError) console.error('Error calculating waitlist position:', countError)
-      return c.json({ message: 'Successfully joined the waitlist!', position: count || 1, already_joined: false }, 201)
+      return c.json({ message: 'Successfully joined the waitlist!', position: !countError && count && count > 0 ? count : null, already_joined: false }, 201)
     } catch (error) {
       console.error('Waitlist endpoint error:', error)
       return c.json({ error: 'Internal server error' }, 500)

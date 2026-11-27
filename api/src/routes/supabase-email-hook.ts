@@ -25,10 +25,40 @@ function verifyPayload(rawBody: string, headers: Record<string, string>, secretV
   throw lastError || new Error('Webhook signature verification failed')
 }
 
+// Auth hook payloads are small JSON documents. Bound the read before the
+// signature is checked so an unauthenticated caller cannot force large buffers.
+export const MAX_EMAIL_HOOK_BODY_BYTES = 64 * 1024
+
+async function readBoundedBody(request: Request, maxBytes: number): Promise<string | null> {
+  const declared = Number(request.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > maxBytes) return null
+  if (!request.body) return ''
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined)
+      return null
+    }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+}
+
 export async function handleSupabaseEmailHook(request: Request, dependencies: Dependencies = {}) {
   const env = dependencies.env || process.env
   const deliver = dependencies.deliver || deliverSupabaseAuthEmail
-  const rawBody = await request.text()
+  const rawBody = await readBoundedBody(request, MAX_EMAIL_HOOK_BODY_BYTES)
+  if (rawBody === null) {
+    console.warn('supabase.email_hook_rejected', { reason: 'body_too_large' })
+    return Response.json({
+      error: { http_code: 413, message: 'Request body too large' },
+    }, { status: 413 })
+  }
   const headers = Object.fromEntries(request.headers.entries())
   let payload: SupabaseSendEmailHookPayload
 

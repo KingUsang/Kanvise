@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import 'dotenv/config'
@@ -49,6 +50,9 @@ function readInputFromCli(args: Record<string, string | number | boolean>) {
   return { kind: 'text', value: DEFAULT_TEXT }
 }
 
+const MAX_RUNS = 5
+const MAX_INPUT_BYTES = 200_000
+
 async function measureOne(label: string, fn: () => Promise<any>) {
   const startedAt = Date.now()
   const result = await fn()
@@ -61,8 +65,15 @@ async function main() {
   const runs = Number(args.runs ?? 1)
   const input = readInputFromCli(args)
 
-  if (!Number.isFinite(runs) || runs <= 0) {
-    throw new Error('The --runs flag must be a positive integer.')
+  if (!Number.isInteger(runs) || runs <= 0 || runs > MAX_RUNS) {
+    throw new Error(`The --runs flag must be an integer from 1 to ${MAX_RUNS}.`)
+  }
+  if (process.env.ALLOW_PARSE_BENCHMARK !== '1') {
+    throw new Error('Set ALLOW_PARSE_BENCHMARK=1 to run this benchmark against the external AI importer (it incurs provider cost).')
+  }
+  const inputBytes = input.kind === 'text' ? Buffer.byteLength(input.value as string) : fs.statSync(input.value as string).size
+  if (inputBytes > MAX_INPUT_BYTES) {
+    throw new Error(`The benchmark input is ${inputBytes} bytes; the limit is ${MAX_INPUT_BYTES}.`)
   }
 
   const tasks: Array<() => Promise<unknown>> = []
@@ -84,7 +95,8 @@ async function main() {
   console.log(JSON.stringify({
     inputKind: input.kind,
     runs,
-    source: typeof input.value === 'string' ? input.value : (input.value as string),
+    sourceHash: createHash('sha256').update(input.value as string).digest('hex').slice(0, 16),
+    inputBytes,
     geminiModel: process.env.GEMINI_MOCK_IMPORT_MODEL || 'gemini-2.5-flash',
   }, null, 2))
 

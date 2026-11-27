@@ -2,16 +2,23 @@ import { createHash, randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
 import { supabase } from '../lib/supabase'
+import { studentHasCourseAccess } from '../lib/student-course-access'
 import { createPresignedDownload, privateObjectExists } from '../storage/r2'
 import { getPlugNmeetClientConfig, providerForClass } from '../plugnmeet/provider'
 import { PRESENTATION_LIST_COLUMNS, publicPresentation } from '../slides/presentation-projection'
 import { parseOffsetPagination } from '../lib/api-contract'
+import { clientAddress, createIpRateLimiter } from '../lib/ip-rate-limit'
 import { recordingLifecycle, recordingLifecycleFailure } from '../lib/recording-lifecycle'
 
 export const publicLiveClassesRouter = new Hono()
 const db = supabase as any
 const cookieName = 'kanvise_live_guest'
 const guestLifetimeSeconds = 12 * 60 * 60
+
+// Admission budget for new guest sessions (DEV-LVC-010): per address (per
+// process) and per class, checked before any provider token is created.
+const guestAdmissionLimiter = createIpRateLimiter({ limit: 20, windowMs: 10 * 60_000 })
+const MAX_ACTIVE_GUESTS_PER_CLASS = 300
 
 const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex')
 
@@ -87,9 +94,13 @@ async function recognisedMember(c: any, liveClass: any) {
   if (!data) return null
   if (liveClass.access_mode === 'enrolled_learners') {
     if (data.role !== 'student' || !liveClass.course_id) return null
-    const { data: enrolment, error: enrolmentError } = await db.from('enrolments').select('id').eq('student_id', data.id).eq('course_id', liveClass.course_id).eq('school_id', liveClass.school_id).maybeSingle()
-    if (enrolmentError) throw new MemberLookupError('enrolment lookup failed')
-    if (!enrolment) return null
+    let hasAccess: boolean
+    try {
+      hasAccess = await studentHasCourseAccess(data.id, liveClass.school_id, liveClass.course_id)
+    } catch {
+      throw new MemberLookupError('enrolment lookup failed')
+    }
+    if (!hasAccess) return null
   }
   return data
 }
@@ -208,6 +219,18 @@ publicLiveClassesRouter.post('/:shareToken/join', async c => {
     let guest = await currentGuest(liveClass.id, c)
     if (!guest) {
       if (requestedName.length < 2 || requestedName.length > 60) return c.json({ error: 'Enter a name between 2 and 60 characters', code: 'INVALID_DISPLAY_NAME' }, 400)
+      const retryAfter = guestAdmissionLimiter.hit(clientAddress(c))
+      if (retryAfter !== null) {
+        c.header('Retry-After', String(retryAfter))
+        return c.json({ error: 'Too many join attempts. Please try again shortly.', code: 'RATE_LIMITED' }, 429)
+      }
+      const { count: activeGuests, error: guestCountError } = await db.from('live_class_guests')
+        .select('id', { count: 'exact', head: true })
+        .eq('live_class_id', liveClass.id).is('revoked_at', null).gt('expires_at', new Date().toISOString())
+      if (guestCountError) throw guestCountError
+      if ((activeGuests ?? 0) >= MAX_ACTIVE_GUESTS_PER_CLASS) {
+        return c.json({ error: 'This class has reached its guest capacity', code: 'GUEST_CAPACITY_REACHED' }, 429)
+      }
       const sessionToken = randomBytes(32).toString('base64url')
       const { data, error } = await db.from('live_class_guests').insert({
         school_id: liveClass.school_id, live_class_id: liveClass.id, display_name: requestedName,

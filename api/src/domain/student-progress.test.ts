@@ -25,3 +25,17 @@ describe('student progress summaries', () => {
     expect(result.recent_mock_results[0].percentage).toBe(75)
   })
 })
+
+describe('buildStudentProgress attempt set', () => {
+  it('counts duplicated attempts once and ignores attempts on Quizzes the Learner cannot see', () => {
+    const attempt = { id: 'a1', mock_exam_id: 'm1', status: 'completed', total_score: 5, total_marks: 10, submitted_at: '2026-01-01T00:00:00Z' }
+    const hidden = { id: 'a2', mock_exam_id: 'hidden', status: 'completed', total_score: 0, total_marks: 10, submitted_at: '2026-01-02T00:00:00Z' }
+    const result = buildStudentProgress({
+      courses: [{ id: 'c1', name: 'Maths' }], classes: [], attendance: [], assignments: [], submissions: [],
+      mocks: [{ id: 'm1', course_id: 'c1', title: 'Quiz' }], attempts: [attempt, { ...attempt }, hidden],
+    })
+    expect(result.overall.mocks_completed).toBe(1)
+    expect(result.overall.mock_average_percentage).toBe(50)
+    expect(result.recent_mock_results).toHaveLength(1)
+  })
+})

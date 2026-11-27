@@ -208,6 +208,21 @@ liveClassesRouter.get('/:id/readiness', async (c) => {
 
 // ── POST /live-classes — Schedule a class (Admin, Tutor) ───────────────────
 
+// The Tutor of any Class, including a shared (anyone_with_link) one, must hold an
+// active Tutor or Admin membership in this account (DEV-LVC-001).
+async function resolveHostMembership(schoolId: string, tutorId: string): Promise<'ok' | 'invalid' | 'error'> {
+  const { data, error } = await (supabase as any).from('account_memberships')
+    .select('id').eq('school_id', schoolId).eq('person_id', tutorId).eq('status', 'active').in('role', ['tutor', 'admin']).limit(1).maybeSingle()
+  if (error) return 'error'
+  return data ? 'ok' : 'invalid'
+}
+
+function hostMembershipFailure(c: any, result: 'invalid' | 'error') {
+  return result === 'error'
+    ? c.json({ error: 'Could not verify the Tutor right now. Please try again.', code: 'SERVICE_UNAVAILABLE' }, 503)
+    : c.json({ error: 'Choose an active Tutor from this account', code: 'INVALID_TUTOR' }, 400)
+}
+
 liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   const user = c.get('user')
   const rawBody = await c.req.json().catch(() => null)
@@ -234,6 +249,9 @@ liveClassesRouter.post('/', requireRole('admin', 'tutor'), async (c) => {
   if ((!course_id && accessMode === 'enrolled_learners') || !tutor_id) {
     return c.json({ error: 'Missing required fields', code: 'MISSING_FIELDS' }, 400)
   }
+
+  const hostMembership = await resolveHostMembership(user.school_id, tutor_id)
+  if (hostMembership !== 'ok') return hostMembershipFailure(c, hostMembership)
 
   if (accessMode === 'anyone_with_link' && isRecurring) {
     return c.json({ error: 'Schedule each shared class separately so every session has its own private link', code: 'SHARED_RECURRING_UNSUPPORTED' }, 400)
@@ -324,6 +342,9 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
   if (user.role === 'tutor' && tutorId !== user.id) {
     return c.json({ error: 'Tutors can only start their own classes', code: 'FORBIDDEN' }, 403)
   }
+
+  const hostMembership = await resolveHostMembership(user.school_id, tutorId)
+  if (hostMembership !== 'ok') return hostMembershipFailure(c, hostMembership)
 
   const [{ data: assignment, error: assignmentError }, { data: course, error: courseError }] = accessMode === 'enrolled_learners' ? await Promise.all([
     supabase.from('tutor_course_assignments')
@@ -795,8 +816,9 @@ liveClassesRouter.post('/:id/recording-share-link', requireRole('tutor', 'admin'
   if (!recording) return c.json({ error: 'The recording is not ready to share', code: 'RECORDING_NOT_READY' }, 409)
   const token = randomBytes(32).toString('base64url')
   const now = new Date().toISOString()
-  await (supabase as any).from('live_class_recording_share_links').update({ revoked_at: now })
+  const { error: revokeError } = await (supabase as any).from('live_class_recording_share_links').update({ revoked_at: now })
     .eq('live_class_id', access.liveClass.id).is('revoked_at', null)
+  if (revokeError) return c.json({ error: 'Could not create the recording link', code: 'RECORDING_LINK_FAILED' }, 500)
   const { error } = await (supabase as any).from('live_class_recording_share_links').insert({
     school_id: user.school_id, live_class_id: access.liveClass.id,
     token_hash: createHash('sha256').update(token).digest('hex'),
@@ -853,7 +875,8 @@ liveClassesRouter.post('/:id/recap/publish', requireRole('tutor', 'admin'), asyn
     return c.json({ data })
   } catch (error) {
     console.error('[recap] publish failed:', error)
-    return c.json({ error: error instanceof Error ? error.message : 'Could not publish class summary', code: 'RECAP_PUBLISH_FAILED' }, 500)
+    if (error instanceof Error && error.message === 'Summary body is required') return c.json({ error: 'Summary body is required', code: 'VALIDATION_ERROR' }, 400)
+    return c.json({ error: 'Could not publish class summary', code: 'RECAP_PUBLISH_FAILED' }, 500)
   }
 })
 
@@ -890,11 +913,16 @@ liveClassesRouter.post('/:id/regenerate-link', requireRole('tutor', 'admin'), as
   if (liveClass.access_mode !== 'anyone_with_link') return c.json({ error: 'Only shared classes have a link to regenerate', code: 'NOT_SHARED_CLASS' }, 400)
   const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
   const now = new Date().toISOString()
+  // Revoke existing guest sessions first and only reveal the new secret after the
+  // rotation commits, so a partial failure never leaves old guests admitted
+  // beside a replaced link (DEV-LVC-006).
+  const { error: revokeError } = await (supabase as any).from('live_class_guests').update({ revoked_at: now })
+    .eq('live_class_id', liveClass.id).is('revoked_at', null)
+  if (revokeError) return c.json({ error: 'Could not create a new class link', code: 'LINK_REGENERATE_FAILED' }, 500)
   const { error } = await (supabase.from('live_classes') as any).update({
     share_token_hash: createHash('sha256').update(shareToken).digest('hex'),
     share_token_encrypted: encryptClassLinkToken(shareToken), share_link_revoked_at: null,
   }).eq('id', liveClass.id).eq('school_id', user.school_id)
   if (error) return c.json({ error: 'Could not create a new class link', code: 'LINK_REGENERATE_FAILED' }, 500)
-  await (supabase as any).from('live_class_guests').update({ revoked_at: now }).eq('live_class_id', liveClass.id).is('revoked_at', null)
   return c.json({ data: { share_token: shareToken } })
 })

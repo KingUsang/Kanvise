@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { handleSupabaseEmailHook } from './supabase-email-hook'
 import { supabase } from '../lib/supabase'
+import { studentHasCourseAccess } from '../lib/student-course-access'
 import { verifyPlugNmeetWebhook } from '../plugnmeet/client'
 import { createPresignedUpload, verifyPrivateUpload } from '../storage/r2'
 
@@ -125,7 +126,10 @@ webhooksRouter.post('/plugnmeet', async (c) => {
             .eq('live_class_id', liveClass.id).eq('guest_id', guestId))
         }
       }
-      const { data: enrolled } = check(await db.from('enrolments').select('student_id').eq('course_id', liveClass.course_id).eq('student_id', participantIdentity).eq('school_id', liveClass.school_id).maybeSingle())
+      // Canonical access: direct, Sub-programme and Programme enrolments of an active Learner (DEV-ATD-008).
+      const enrolled = liveClass.course_id
+        ? await studentHasCourseAccess(participantIdentity, liveClass.school_id, liveClass.course_id)
+        : false
       // attendance_records is deliberately learner-only.
       if (enrolled) {
         // A retried delivery must not add a second open attendance row (DEV-WHK-002).
