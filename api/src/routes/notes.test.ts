@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const intents = vi.hoisted(() => ({
+  recordUploadIntent: vi.fn(async () => undefined),
+  consumeUploadIntent: vi.fn(async () => 'consumed'),
+  releaseUploadIntent: vi.fn(async () => undefined),
+}))
+vi.mock('../storage/upload-intents', () => intents)
+
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   download: vi.fn(async () => 'signed-download'),
@@ -32,7 +39,7 @@ const COURSE = '11111111-1111-4111-8111-111111111111'
 
 function query(result: any, rangeSpy = vi.fn()) {
   const value: any = {
-    select: () => value, eq: () => value, in: () => value, order: () => value, insert: () => value,
+    select: () => value, eq: () => value, in: () => value, order: () => value, insert: () => value, delete: () => value,
     range: (...args: any[]) => { rangeSpy(...args); return value },
     maybeSingle: async () => result, single: async () => result,
     then: (resolve: (value: any) => void) => Promise.resolve(result).then(resolve),
@@ -63,6 +70,30 @@ describe('notes routes', () => {
     expect((await create({ ...validBody, description: 'x'.repeat(2001) })).status).toBe(400)
     expect((await create({ ...validBody, file_size_bytes: 'big' })).status).toBe(400)
     expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('consumes the upload intent before inserting and releases it when the insert fails', async () => {
+    queue({ data: { id: COURSE }, error: null }, { data: null, error: null }, { data: null, error: { code: '23505', message: 'dup' } })
+    await create(validBody)
+    expect(intents.consumeUploadIntent).toHaveBeenCalledWith({ schoolId: 'school-1', requesterId: 'tutor-1', fileKey })
+    expect(intents.releaseUploadIntent).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not insert when the upload intent was already used', async () => {
+    const { StorageError } = await import('../storage/r2')
+    intents.consumeUploadIntent.mockRejectedValueOnce(new StorageError('used', 'UPLOAD_INTENT_USED', 409))
+    queue({ data: { id: COURSE }, error: null }, { data: null, error: null })
+    const response = await create(validBody)
+    expect(response.status).toBe(409)
+    expect((await response.json() as any).code).toBe('UPLOAD_INTENT_USED')
+    expect(mocks.from).toHaveBeenCalledTimes(2)
+  })
+
+  it('enqueues deletion of the stored object when a note is deleted', async () => {
+    queue({ data: { tutor_id: 'tutor-1', course_id: COURSE, file_key: fileKey }, error: null }, { data: null, error: null })
+    const response = await notesRouter.request('/note-1', { method: 'DELETE' })
+    expect(response.status).toBe(200)
+    expect(mocks.enqueue).toHaveBeenCalledWith(fileKey, 'school-1')
   })
 
   it('maps a unique violation on file_key to 409 FILE_ALREADY_REGISTERED', async () => {

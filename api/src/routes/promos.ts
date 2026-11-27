@@ -5,6 +5,7 @@ import { accountUserProjection } from '../middleware/account-projection';
 import { supabase } from "../lib/supabase";
 import { uuidSchema } from "../lib/api-contract";
 import { deleteStoredObject, StorageError, verifyPublicUpload } from "../storage/r2";
+import { consumeUploadIntent, releaseUploadIntent } from "../storage/upload-intents";
 import type { TablesUpdate } from '../lib/database.types'
 
 export const promosRouter = new Hono<{ Variables: { user: any; jwt_payload?: any } }>();
@@ -108,6 +109,14 @@ promosRouter.post("/", async (c) => {
     return dbFailure(c, "link_lookup", error);
   }
 
+  const intent = { schoolId: user.school_id, requesterId: user.id, fileKey: body.image_key };
+  try {
+    await consumeUploadIntent(intent);
+  } catch (error: any) {
+    if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status);
+    return dbFailure(c, "upload_intent", error);
+  }
+
   const { data: promo, error } = await supabase
     .from("school_promos")
     .insert({
@@ -122,7 +131,10 @@ promosRouter.post("/", async (c) => {
     .select()
     .single();
 
-  if (error) return dbFailure(c, "create", error);
+  if (error) {
+    await releaseUploadIntent(intent);
+    return dbFailure(c, "create", error);
+  }
   return c.json({ data: promo }, 201);
 });
 
@@ -236,6 +248,18 @@ promosRouter.patch("/:id", async (c) => {
     }
   }
 
+  const intent = body.image_key !== undefined
+    ? { schoolId: user.school_id, requesterId: user.id, fileKey: body.image_key }
+    : null;
+  if (intent && existing.image_key !== body.image_key) {
+    try {
+      await consumeUploadIntent(intent);
+    } catch (error: any) {
+      if (error instanceof StorageError) return c.json({ error: error.message, code: error.code }, error.status);
+      return dbFailure(c, "upload_intent", error);
+    }
+  }
+
   const { content_type: _contentType, file_size_bytes: _fileSize, ...fields } = body;
   if (Object.keys(fields).length === 0) {
     return c.json({ error: "No promo fields to update", code: "VALIDATION_ERROR" }, 400);
@@ -248,8 +272,15 @@ promosRouter.patch("/:id", async (c) => {
     .select()
     .maybeSingle();
 
-  if (error) return dbFailure(c, "update", error);
-  if (!updated) return c.json({ error: "Promo banner not found in this tutoring agency", code: "NOT_FOUND" }, 404);
+  const consumed = intent !== null && existing.image_key !== body.image_key;
+  if (error) {
+    if (consumed) await releaseUploadIntent(intent);
+    return dbFailure(c, "update", error);
+  }
+  if (!updated) {
+    if (consumed) await releaseUploadIntent(intent);
+    return c.json({ error: "Promo banner not found in this tutoring agency", code: "NOT_FOUND" }, 404);
+  }
   if (body.image_key && existing.image_key !== body.image_key) {
     deleteStoredObject(existing.image_key).catch(error => console.error("promo.old_image_cleanup_failed", { id, error }));
   }

@@ -622,6 +622,34 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"notification_deliveries": {
+                  Row: {
+                    "attempts": number,"channel": string,"created_at": string,"event": string,"id": string,"last_error": string | null,"recipient_id": string,"related_entity_id": string,"school_id": string,"sent_at": string | null,"status": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"channel": string,"created_at"?: string,"event": string,"id"?: string,"last_error"?: string | null,"recipient_id": string,"related_entity_id": string,"school_id": string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"channel"?: string,"created_at"?: string,"event"?: string,"id"?: string,"last_error"?: string | null,"recipient_id"?: string,"related_entity_id"?: string,"school_id"?: string,"sent_at"?: string | null,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"upload_intents": {
+                  Row: {
+                    "consumed_at": string | null,"content_type": string,"context_id": string,"created_at": string,"entity_type": string,"expires_at": string,"file_key": string,"file_size_bytes": number,"id": string,"requester_id": string,"school_id": string,"scope": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "consumed_at"?: string | null,"content_type": string,"context_id": string,"created_at"?: string,"entity_type": string,"expires_at": string,"file_key": string,"file_size_bytes": number,"id"?: string,"requester_id": string,"school_id": string,"scope": string,"status"?: string
+                  }
+                  Update: {
+                    "consumed_at"?: string | null,"content_type"?: string,"context_id"?: string,"created_at"?: string,"entity_type"?: string,"expires_at"?: string,"file_key"?: string,"file_size_bytes"?: number,"id"?: string,"requester_id"?: string,"school_id"?: string,"scope"?: string,"status"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"email_provider_daily_usage": {
                   Row: {
                     "attempted_recipient_count": number,"cooldown_until": string | null,"created_at": string,"failed_recipient_count": number,"last_error": string | null,"provider": string,"quota_failure_count": number,"sent_recipient_count": number,"updated_at": string,"usage_date": string
@@ -2391,6 +2419,20 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"recorder_fleet_desired_state": {
+                  Row: {
+                    "acknowledged_at": string | null,"acknowledged_command_id": string | null,"acknowledged_version": number,"capacity_exceeded_at": string | null,"command_id": string | null,"demand": number,"desired_capacity": number,"desired_version": number,"last_alert_at": string | null,"reason": string | null,"singleton": boolean,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "acknowledged_at"?: string | null,"acknowledged_command_id"?: string | null,"acknowledged_version"?: number,"capacity_exceeded_at"?: string | null,"command_id"?: string | null,"demand"?: number,"desired_capacity"?: number,"desired_version"?: number,"last_alert_at"?: string | null,"reason"?: string | null,"singleton"?: boolean,"updated_at"?: string
+                  }
+                  Update: {
+                    "acknowledged_at"?: string | null,"acknowledged_command_id"?: string | null,"acknowledged_version"?: number,"capacity_exceeded_at"?: string | null,"command_id"?: string | null,"demand"?: number,"desired_capacity"?: number,"desired_version"?: number,"last_alert_at"?: string | null,"reason"?: string | null,"singleton"?: boolean,"updated_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"registration_intents": {
                   Row: {
                     "consumed_at": string | null,"consumed_by": string | null,"created_at": string,"expires_at": string,"id": string,"kind": string,"return_to": string,"token_hash": string
@@ -3158,6 +3200,12 @@ isOneToOne: false
 "delete_programme_checked":
 { Args: { "p_programme_id": string,"p_school_id": string }; Returns: string
                            },
+"cancel_durable_job":
+{ Args: { "p_id": string }; Returns: boolean
+                           },
+"cancel_live_class_with_outbox":
+{ Args: { "p_class_id": string,"p_reason"?: string,"p_school_id": string,"p_school_name"?: string }; Returns: Record<string, unknown>[]
+                           },
 "current_user_school_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -3169,6 +3217,30 @@ isOneToOne: false
                            },
 "fail_durable_job":
 { Args: { "p_error": string,"p_id": string,"p_retry_seconds"?: number,"p_worker": string }; Returns: boolean
+                           },
+"record_notification_delivery":
+{ Args: { "p_channel": string,"p_error"?: string,"p_event": string,"p_recipient_id": string,"p_related_entity_id": string,"p_school_id": string,"p_status": string }; Returns: undefined
+                           },
+"consume_upload_intent":
+{ Args: { "p_file_key": string,"p_requester_id": string,"p_school_id": string }; Returns: string
+                           },
+"release_upload_intent":
+{ Args: { "p_file_key": string,"p_requester_id": string,"p_school_id": string }; Returns: undefined
+                           },
+"sweep_upload_intents":
+{ Args: { "p_limit"?: number }; Returns: number
+                           },
+"sweep_orphan_question_media":
+{ Args: { "p_limit"?: number,"p_older_than"?: string }; Returns: number
+                           },
+"acknowledge_recorder_command":
+{ Args: { "p_command_id": string,"p_version": number }; Returns: boolean
+                           },
+"plan_recorder_command":
+{ Args: { "p_alert_interval_seconds"?: number,"p_capture_slots"?: number,"p_demand": number,"p_desired": number,"p_force"?: boolean,"p_reason": string,"p_refresh_seconds"?: number }; Returns: { out_command_id: string,out_version: number,out_send: boolean,out_capacity_alert: boolean }[]
+                           },
+"replay_durable_job":
+{ Args: { "p_id": string }; Returns: boolean
                            },
 "import_roster_students":
 { Args: { "p_invited_by": string,"p_rows": Json,"p_school_id": string }; Returns: Json

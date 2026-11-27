@@ -1,8 +1,17 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { supabase } from '../lib/supabase'
 
-type FleetAction = { action: 'set_capacity'; desired_capacity: number; reason: string; requested_at: string }
+type FleetAction = {
+  action: 'set_capacity'; desired_capacity: number; reason: string; requested_at: string
+  command_id: string; version: number
+}
 type FleetControllerResult = { state_before?: string }
+
+// The recorder instance has two concurrent capture slots (DEV-REC-002).
+export const RECORDER_CAPTURE_SLOTS = 2
+// An unchanged desired state is re-sent this often so a crashed or stopped
+// instance is still recovered, and acknowledgements stay fresh.
+export const RECORDER_REFRESH_SECONDS = 600
 
 function configured() {
   return process.env.RECORDER_FLEET_ENABLED === 'true'
@@ -13,13 +22,38 @@ function sign(body: string) {
   return createHmac('sha256', process.env.RECORDER_FLEET_CONTROLLER_SECRET || '').update(body).digest('hex')
 }
 
+/** Freshness-bound signature: covers a timestamp and single-use nonce as well as the body (DEV-REC-005). */
+export function signFresh(body: string, timestamp: string, nonce: string, secret = process.env.RECORDER_FLEET_CONTROLLER_SECRET || '') {
+  return createHmac('sha256', secret).update(`v2.${timestamp}.${nonce}.${body}`).digest('hex')
+}
+
+// Rollout: the API sends the legacy body-only signature as well, so a controller
+// that has not been upgraded keeps working. Set to 'false' once the controller
+// requires freshness (RECORDER_FLEET_REQUIRE_FRESHNESS=true).
+function sendLegacySignature() {
+  return process.env.RECORDER_FLEET_SEND_LEGACY_SIGNATURE !== 'false'
+}
+
+function requestHeaders(body: string, now: Date) {
+  const timestamp = String(Math.floor(now.getTime() / 1000))
+  const nonce = randomUUID()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Kanvise-Recorder-Fleet-Timestamp': timestamp,
+    'X-Kanvise-Recorder-Fleet-Nonce': nonce,
+    'X-Kanvise-Recorder-Fleet-Signature-V2': signFresh(body, timestamp, nonce),
+  }
+  if (sendLegacySignature()) headers['X-Kanvise-Recorder-Fleet-Signature'] = sign(body)
+  return headers
+}
+
 /**
  * Keep the single recorder instance warm from T-10 until 45 minutes after a
  * class has completed. Its capture service accepts two concurrent rooms; its
  * transcode service is intentionally serial. The controller receives 0 or 1
  * because this deployment is a direct EC2 instance, not an Auto Scaling Group.
  */
-export async function reconcileRecorderFleet(now = new Date()) {
+export async function reconcileRecorderFleet(now = new Date(), options: { force?: boolean } = {}) {
   if (!configured()) return { name: 'recorder_fleet', skipped: true, desiredCapacity: 0 }
   const warmFrom = now.toISOString()
   const warmTo = new Date(now.getTime() + 10 * 60_000).toISOString()
@@ -32,13 +66,37 @@ export async function reconcileRecorderFleet(now = new Date()) {
   if (error) throw error
   const activeWindows = data || []
   const desiredCapacity = activeWindows.length ? 1 : 0
+  const reason = desiredCapacity ? 'scheduled_or_active_enrolled_recordings' : 'no_recording_windows'
+
+  // Persist the desired state and demand first (DEV-REC-002, DEV-REC-003). The
+  // database decides whether a command is needed. Until one caller acknowledges,
+  // concurrent API processes may each send the same command; the controller's
+  // version check makes that harmless.
+  const { data: plans, error: planError } = await (supabase as any).rpc('plan_recorder_command', {
+    p_desired: desiredCapacity, p_demand: activeWindows.length, p_reason: reason,
+    p_capture_slots: RECORDER_CAPTURE_SLOTS, p_refresh_seconds: RECORDER_REFRESH_SECONDS, p_force: Boolean(options.force),
+  })
+  if (planError) throw planError
+  const plan = (Array.isArray(plans) ? plans[0] : plans) as { out_command_id: string; out_version: number; out_send: boolean; out_capacity_alert: boolean } | undefined
+  if (!plan) throw new Error('Recorder desired state could not be persisted')
+  const capacityWarning = activeWindows.length > RECORDER_CAPTURE_SLOTS
+    ? 'More than two overlapping recording windows require another recorder instance.' : undefined
+  if (plan.out_capacity_alert) {
+    console.error('recorder_fleet.capacity_exceeded', {
+      demand: activeWindows.length, captureSlots: RECORDER_CAPTURE_SLOTS, classIds: activeWindows.map((row: any) => row.id),
+    })
+  }
+  const summary = { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id),
+    captureCapacity: RECORDER_CAPTURE_SLOTS, capacityWarning, version: plan.out_version }
+  if (!plan.out_send) return { ...summary, commandSent: false }
+
   const payload: FleetAction = {
-    action: 'set_capacity', desired_capacity: desiredCapacity,
-    reason: desiredCapacity ? 'scheduled_or_active_enrolled_recordings' : 'no_recording_windows', requested_at: now.toISOString(),
+    action: 'set_capacity', desired_capacity: desiredCapacity, reason, requested_at: now.toISOString(),
+    command_id: plan.out_command_id, version: Number(plan.out_version),
   }
   const body = JSON.stringify(payload)
   const response = await fetch(process.env.RECORDER_FLEET_CONTROLLER_URL!, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kanvise-Recorder-Fleet-Signature': sign(body) }, body,
+    method: 'POST', headers: requestHeaders(body, now), body,
     signal: AbortSignal.timeout(15_000),
   })
   if (!response.ok) throw new Error(`Recorder fleet controller failed (${response.status})`)
@@ -56,8 +114,12 @@ export async function reconcileRecorderFleet(now = new Date()) {
     const { error: stoppedError } = await (supabase as any).from('recorder_fleet_readiness').upsert({ singleton: true, vm_state: 'stopped', service_state: 'unknown', updated_at: now.toISOString() }, { onConflict: 'singleton' })
     if (stoppedError) throw stoppedError
   }
-  return { name: 'recorder_fleet', desiredCapacity, activeWindows: activeWindows.map((row: any) => row.id), captureCapacity: 2,
-    capacityWarning: activeWindows.length > 2 ? 'More than two overlapping recording windows require another recorder instance.' : undefined }
+  // Acknowledge last: a failure above leaves the command unacknowledged so the next tick resends it.
+  const { error: ackError } = await (supabase as any).rpc('acknowledge_recorder_command', {
+    p_command_id: plan.out_command_id, p_version: Number(plan.out_version),
+  })
+  if (ackError) throw ackError
+  return { ...summary, commandSent: true }
 }
 
 export async function recorderFleetReadiness(now = new Date()) {

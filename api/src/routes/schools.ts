@@ -17,6 +17,13 @@ schoolsRouter.use('*', profileResolutionMiddleware)
 // active account (DEV-SEC-004).
 schoolsRouter.use('/me/*', accountContextMiddleware, accountUserProjection)
 
+// DEV-SCH-002 (additive): the persisted value stays 'centre' until the owner
+// approves the canonical vocabulary migration. Responses also carry the
+// approved vocabulary so clients can stop using the retired word.
+function accountTypeLabel(accountType: unknown): 'independent_tutor' | 'tutoring_agency' {
+  return accountType === 'independent' ? 'independent_tutor' : 'tutoring_agency'
+}
+
 const createSchoolSchema = z.object({
   name: z.string().trim().max(120).default(''),
   account_type: z.string().max(32).nullish(),
@@ -37,7 +44,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
   }
   const body = parsed.data
   const name = body.name
-  const accountType = body.account_type === 'independent' ? 'independent' : 'centre'
+  const accountType = body.account_type === 'independent' || body.account_type === 'independent_tutor' ? 'independent' : 'centre'
 
   // A browser can still hold its pre-setup token right after the first
   // account is created. The database function re-checks the canonical profile
@@ -137,7 +144,7 @@ schoolsRouter.post('/', requireRole('admin'), async (c) => {
     return sessionUpdateRequired()
   }
 
-  return c.json({ school })
+  return c.json({ school: { ...school, account_type_label: accountTypeLabel(school?.account_type) } })
 })
 
 schoolsRouter.get('/me', requireRole('admin'), async (c) => {
@@ -158,7 +165,7 @@ schoolsRouter.get('/me', requireRole('admin'), async (c) => {
     return c.json({ error: 'School not found' }, 404)
   }
 
-  return c.json({ data: school })
+  return c.json({ data: { ...school, account_type_label: accountTypeLabel(school.account_type) } })
 })
 
 schoolsRouter.patch('/me', requireRole('admin'), async (c) => {

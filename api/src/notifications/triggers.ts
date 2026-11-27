@@ -1,6 +1,6 @@
 import { deliverNotification } from './service'
 import type { NotificationRecipient, NotificationResult } from './types'
-import { notificationRepository } from './repository'
+import { notificationPath } from './routes'
 
 type Deliver = typeof deliverNotification
 
@@ -33,9 +33,9 @@ export function notifyMockPublished(input: {
       mockTitle: input.title,
       courseName: input.courseName,
       closesAt: input.closesAt || undefined,
-      mockUrl: `${frontendUrl()}/dashboard/mocks/${input.id}`,
+      mockUrl: `${frontendUrl()}${notificationPath('learnerMock', input.id)}`,
     }),
-    push: { body: `${input.title} is now available.`, url: `/dashboard/student/mocks/${input.id}` },
+    push: { body: `${input.title} is now available.`, url: notificationPath('learnerMock', input.id) },
   })
 }
 
@@ -56,9 +56,9 @@ export function notifySubmissionGraded(input: {
       assignmentTitle: input.assignmentTitle,
       score: input.score,
       feedback: input.feedback || undefined,
-      submissionUrl: `${frontendUrl()}/dashboard/submissions/${input.id}`,
+      submissionUrl: `${frontendUrl()}${notificationPath('learnerAssignments')}`,
     }),
-    push: { body: 'Your assignment has been graded. Open Kanvise to view your result.', url: '/dashboard/student/assignments' },
+    push: { body: 'Your assignment has been graded. Open Kanvise to view your result.', url: notificationPath('learnerAssignments') },
   })
 }
 
@@ -77,9 +77,9 @@ export function notifyMockFullyGraded(input: {
       firstName: recipient.firstName,
       mockTitle: input.mockTitle,
       score: input.score,
-      resultsUrl: `${frontendUrl()}/dashboard/mocks/${input.mockId}/results/${input.attemptId}`,
+      resultsUrl: `${frontendUrl()}${notificationPath('learnerMockResult', input.attemptId)}`,
     }),
-    push: { body: 'Your mock result is ready. Open Kanvise to view it.', url: `/dashboard/student/mocks/result/${input.attemptId}` },
+    push: { body: 'Your mock result is ready. Open Kanvise to view it.', url: notificationPath('learnerMockResult', input.attemptId) },
   })
 }
 
@@ -99,10 +99,10 @@ export function notifyClassCancelled(input: {
       classTitle: input.title,
       scheduledAt: input.scheduledAt,
       schoolName: input.schoolName,
-      dashboardUrl: `${frontendUrl()}/dashboard/schedule`,
+      dashboardUrl: `${frontendUrl()}${notificationPath('learnerClasses')}`,
       reason: input.reason,
     }),
-    push: { body: `${input.title} has been cancelled.`, url: '/dashboard/student/classes' },
+    push: { body: `${input.title} has been cancelled.`, url: notificationPath('learnerClasses') },
   })
 }
 
@@ -122,9 +122,9 @@ export async function notifyLiveClassReminder(input: {
       classTitle: input.title,
       courseName: input.courseName,
       startsAt: input.startsAt,
-      joinUrl: `${frontendUrl()}/class/${input.id}`,
+      joinUrl: `${frontendUrl()}${notificationPath('classroom', input.id)}`,
     }),
-    push: { body: `${input.title} starts soon.`, url: `/class/${input.id}` },
+    push: { body: `${input.title} starts soon.`, url: notificationPath('classroom', input.id) },
   })
   return result
 }
@@ -145,27 +145,27 @@ export function notifyAssignmentDeadline(input: {
       assignmentTitle: input.title,
       courseName: input.courseName,
       deadlineAt: input.deadlineAt,
-      assignmentUrl: `${frontendUrl()}/dashboard/assignments/${input.id}`,
+      assignmentUrl: `${frontendUrl()}${notificationPath('learnerAssignments')}`,
     }),
-    push: { body: `${input.title} is due in less than 24 hours.`, url: '/dashboard/student/assignments' },
+    push: { body: `${input.title} is due in less than 24 hours.`, url: notificationPath('learnerAssignments') },
   })
 }
 
-/** Recaps are intentionally in-app/push-only in the pilot. Recipient lookup
- * is by course enrolment, so a guest or unenrolled link holder can never be
- * notified even if they know the class UUID. */
-export async function notifyClassRecapPublished(input: {
+/** Recaps are in-app and push only: the event has no email template, so the
+ * shared orchestrator skips that channel. Recipient lookup is by course
+ * enrolment, so a guest or unenrolled link holder can never be notified even if
+ * they know the class UUID. */
+export function notifyClassRecapPublished(input: {
   id: string; schoolId: string; courseId: string; title: string
-}) {
-  const recipients = await notificationRepository.resolveRecipients(input.schoolId, { enrolment: { type: 'course', id: input.courseId } })
-  await Promise.all(recipients.map((recipient) => notificationRepository.createInApp({
+}, deliver: Deliver = deliverNotification): Promise<NotificationResult> {
+  return deliver({
     schoolId: input.schoolId,
-    recipientId: recipient.id,
     event: 'class_recap_ready',
+    recipients: { enrolment: { type: 'course', id: input.courseId } },
     title: 'Class recap ready',
     body: `${input.title} summary and recording are ready to view.`,
     relatedEntityType: 'live_class_recap',
     relatedEntityId: input.id,
-  })))
-  return { recipients: recipients.length }
+    push: { body: `${input.title} summary and recording are ready to view.`, url: notificationPath('learnerRecap', input.id) },
+  })
 }

@@ -6,6 +6,7 @@ import { createPresignedDownload, StorageError, verifyPrivateUpload } from '../s
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { parseOffsetPagination, strictBooleanQuerySchema } from '../lib/api-contract'
 import { enqueueObjectDeletion } from '../jobs/storage-cleanup'
+import { consumeUploadIntent, releaseUploadIntent } from '../storage/upload-intents'
 import { tutorCanManageCourse, type CourseAccessResult } from '../lib/course-management-access'
 import { z } from 'zod'
 
@@ -143,6 +144,7 @@ courseAssignmentsRouter.post('/:courseId/assignments', requireMembershipRole('tu
   const { title, description, deadline_at, attachment_file_key, attachment_file_name, attachment_file_type, attachment_file_size_bytes } = parsed.data
   if (isDeadlineTooSoon(deadline_at)) return deadlineTooSoon(c)
 
+  const attachmentIntent = { schoolId: user.school_id!, requesterId: user.id, fileKey: attachment_file_key || '' }
   if (attachment_file_key) {
     if (!attachment_file_name || !attachment_file_type || !attachment_file_size_bytes) {
       return c.json({ error: 'Attachment metadata is required', code: 'VALIDATION_ERROR' }, 400)
@@ -163,6 +165,11 @@ courseAssignmentsRouter.post('/:courseId/assignments', requireMembershipRole('tu
       .eq('school_id', user.school_id).eq('attachment_file_key', attachment_file_key).maybeSingle()
     if (reusedError) return safeReadFailure(c, 'ASSIGNMENT_LOOKUP_FAILED', reusedError)
     if (reused) return c.json({ error: 'Attachment has already been registered', code: 'FILE_ALREADY_REGISTERED' }, 409)
+    try {
+      await consumeUploadIntent(attachmentIntent)
+    } catch (error) {
+      return storageFailure(c, error)
+    }
   }
 
   const { data, error } = await supabase.from('assignments').insert({
@@ -176,7 +183,10 @@ courseAssignmentsRouter.post('/:courseId/assignments', requireMembershipRole('tu
     attachment_file_name: attachment_file_name || null,
     is_published: Boolean(parsed.data.is_published),
   }).select().single()
-  if (error) return safeReadFailure(c, 'ASSIGNMENT_CREATE_FAILED', error)
+  if (error) {
+    if (attachment_file_key) await releaseUploadIntent(attachmentIntent)
+    return safeReadFailure(c, 'ASSIGNMENT_CREATE_FAILED', error)
+  }
   return c.json({ data }, 201)
 })
 
@@ -436,6 +446,13 @@ assignmentsRouter.post('/:assignmentId/submit', requireMembershipRole('learner')
   if (reusedError) return safeReadFailure(c, 'SUBMISSION_LOOKUP_FAILED', reusedError)
   if (reused) return c.json({ error: 'File has already been registered', code: 'FILE_ALREADY_REGISTERED' }, 409)
 
+  const submissionIntent = { schoolId: user.school_id!, requesterId: user.id, fileKey: file_key }
+  try {
+    await consumeUploadIntent(submissionIntent)
+  } catch (error) {
+    return storageFailure(c, error)
+  }
+
   // Lateness is computed from the database clock under a lock on the assignment row.
   const { data: result, error } = await supabase.rpc('submit_assignment', {
     p_school_id: user.school_id!,
@@ -444,9 +461,13 @@ assignmentsRouter.post('/:assignmentId/submit', requireMembershipRole('learner')
     p_file_key: file_key,
     p_file_name: file_name,
   } as any)
-  if (error?.code === '23505') return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
-  if (error || !result) return safeReadFailure(c, 'SUBMISSION_CREATE_FAILED', error)
+  if (error || !result) {
+    await releaseUploadIntent(submissionIntent)
+    if (error?.code === '23505') return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
+    return safeReadFailure(c, 'SUBMISSION_CREATE_FAILED', error)
+  }
   const outcome = result as { status: string; submission?: any }
+  if (outcome.status !== 'ok') await releaseUploadIntent(submissionIntent)
   if (outcome.status === 'not_found') return c.json({ error: 'Assignment not found', code: 'NOT_FOUND' }, 404)
   if (outcome.status === 'already_submitted') return c.json({ error: 'Assignment already submitted', code: 'ALREADY_SUBMITTED' }, 409)
   if (outcome.status === 'file_already_registered') return c.json({ error: 'File has already been registered', code: 'FILE_ALREADY_REGISTERED' }, 409)

@@ -4,6 +4,7 @@ import {
   LIVE_CLASS_REMINDER_JOB,
   MOCK_NOTIFY_JOB,
   createGuardedJob,
+  CLASS_CANCELLED_NOTIFY_JOB,
   createNotificationJobHandlers,
   runAssignmentDeadlineJob,
   runLiveClassReminderJob,
@@ -27,6 +28,7 @@ function dependencies(overrides: Partial<JobsRepository> = {}): JobsDependencies
     notifyMock: vi.fn(async () => ({ failures: [] })) as any,
     notifyClass: vi.fn(async () => ({ failures: [] })) as any,
     notifyAssignment: vi.fn(async () => ({ failures: [] })) as any,
+    notifyCancelled: vi.fn(async () => ({ failures: [] })) as any,
     enqueue: vi.fn(async () => 'job') as any,
     logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
   }
@@ -96,6 +98,16 @@ describe('scheduled notification jobs', () => {
     expect(mark).not.toHaveBeenCalled()
     await handler(job)
     expect(mark).toHaveBeenCalledWith('class-delayed')
+  })
+
+  it('retries the queued cancellation notification until every channel succeeds (DEV-LVC-004)', async () => {
+    const deps = dependencies()
+    const handler = createNotificationJobHandlers(deps)[CLASS_CANCELLED_NOTIFY_JOB]
+    const job = { id: 'j', job_type: CLASS_CANCELLED_NOTIFY_JOB, payload: { id: 'class-1' }, attempts: 1, max_attempts: 5 }
+    ;(deps.notifyCancelled as any).mockResolvedValueOnce({ failures: [{ recipientId: 'student-1', channel: 'push' }] })
+    await expect(handler(job)).rejects.toThrow(/class_cancelled delivery failure/)
+    await expect(handler(job)).resolves.toBeUndefined()
+    expect(deps.notifyCancelled).toHaveBeenCalledTimes(2)
   })
 
   it('keeps published weekly timetables materialized 12 weeks ahead', async () => {

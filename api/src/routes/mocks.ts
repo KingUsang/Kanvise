@@ -178,7 +178,10 @@ mocksRouter.get("/", requireTutorOrAdmin, async (c) => {
     .order("created_at", { ascending: false });
 
   const { data, error } = await query;
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error('[mocks] database error', { code: error.code });
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500);
+  }
 
   let visibleMocks = data || [];
   if (user.role === "tutor") {
@@ -187,7 +190,10 @@ mocksRouter.get("/", requireTutorOrAdmin, async (c) => {
       .select("course_id")
       .eq("tutor_id", user.id)
       .eq("school_id", user.school_id);
-    if (assignError) return c.json({ error: assignError.message }, 500);
+    if (assignError) {
+      console.error("mocks.assignment_lookup_failed", { code: assignError.code });
+      return c.json({ error: "Something went wrong. Please try again.", code: "DATABASE_ERROR" }, 500);
+    }
 
     const assignedCourseIds = new Set((assignments || []).map((assignment: any) => assignment.course_id));
     visibleMocks = visibleMocks.filter((mock: any) => {
@@ -472,7 +478,10 @@ mocksRouter.get("/:id", requireTutorOrAdmin, async (c) => {
     .eq("school_id", user.school_id)
     .single();
 
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error('[mocks] database error', { code: error.code });
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500);
+  }
   if (!data) return c.json({ error: "Mock not found" }, 404);
   if (!(await canManageMock(user, data))) return c.json({ error: "You cannot access this mock" }, 403);
   return c.json({ data });
@@ -530,7 +539,10 @@ mocksRouter.get("/:id/questions", requireTutorOrAdmin, async (c) => {
     .select("*, options:mock_question_options(*)")
     .eq("mock_exam_id", mockId).eq("school_id", user.school_id)
     .order("order_index", { ascending: true });
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error('[mocks] database error', { code: error.code });
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500);
+  }
   return c.json({ data: data || [] });
 });
 
@@ -749,7 +761,10 @@ mocksRouter.post("/", requireTutorOrAdmin, async (c) => {
     .select()
     .single();
 
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error('[mocks] database error', { code: error.code });
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500);
+  }
 
   return c.json({ data }, 201);
 });
@@ -840,7 +855,10 @@ mocksRouter.put("/:id", requireTutorOrAdmin, async (c) => {
     .select()
     .single();
 
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error('[mocks] database error', { code: error.code });
+    return c.json({ error: 'Something went wrong. Please try again.', code: 'DATABASE_ERROR' }, 500);
+  }
 
   return c.json({ data });
 });

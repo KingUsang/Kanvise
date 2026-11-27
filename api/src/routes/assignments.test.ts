@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('../storage/upload-intents', () => ({
+  recordUploadIntent: vi.fn(async () => undefined),
+  consumeUploadIntent: vi.fn(async () => 'consumed'),
+  releaseUploadIntent: vi.fn(async () => undefined),
+}))
+
 const mocks = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn(), verify: vi.fn() }))
 vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from, rpc: mocks.rpc } }))
 vi.mock('../storage/r2', async (importOriginal) => {

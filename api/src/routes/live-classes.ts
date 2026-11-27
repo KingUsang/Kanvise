@@ -10,7 +10,6 @@ import {
 } from '../middleware/auth'
 import { accountUserProjection } from '../middleware/account-projection'
 import type { TenantVariables } from '../types'
-import { notifyClassCancelled } from '../notifications/triggers'
 import { createPresignedDownload, privateObjectExists } from '../storage/r2'
 import { loadStudentCourseIds } from '../lib/student-course-access'
 import { classroomAccessError, resolveClassroomAccess } from '../lib/classroom-access'
@@ -88,7 +87,7 @@ async function requireClassroom(c: any, level: 'view' | 'host' | 'takeover' = 'v
 }
 
 function wakeRecorderWithoutBlockingClassroom() {
-  void reconcileRecorderFleet().catch((error) => {
+  void reconcileRecorderFleet(new Date(), { force: true }).catch((error) => {
     console.warn('[recording] recorder wake-up did not block classroom entry:', error)
   })
 }
@@ -390,6 +389,8 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
     return c.json({ error: 'Could not prepare the class', code: 'CLASS_CREATE_FAILED' }, 500)
   }
 
+  let providerRoomCreated = false
+  const initialRoomId = `${insertedClass.id}-g1`
   try {
     wakeRecorderWithoutBlockingClassroom()
     const worker = await ensurePlugNmeetReady()
@@ -397,8 +398,8 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
       return c.json({ data: { ...insertedClass, state: 'preparing', class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, share_url: accessMode === 'anyone_with_link' ? `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/live/${shareToken}` : `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/class/${insertedClass.id}`, is_host: insertedClass.tutor_id === user.id } }, 202)
     }
     if (worker.state !== 'ready') throw new Error(worker.message || 'PLUGNMEET_UNAVAILABLE')
-    const initialRoomId = `${insertedClass.id}-g1`
     const room = await createPlugNmeetRoom({ roomId: initialRoomId, title: insertedClass.title, schoolId: user.school_id, courseId: insertedClass.course_id, accessMode })
+    providerRoomCreated = true
     await persistProvider({ classId: insertedClass.id, provider: 'plugnmeet', providerRoomId: room.providerRoomId, schoolId: user.school_id })
     const { error: startUpdateError } = await (supabase as any).from('live_classes').update({ status: 'live', started_at: startedAt, provider_room_status: 'ready', provider_room_checked_at: startedAt }).eq('id', insertedClass.id).eq('school_id', user.school_id)
     if (startUpdateError) throw startUpdateError
@@ -407,6 +408,16 @@ liveClassesRouter.post('/start-now', requireRole('admin', 'tutor'), async (c) =>
     return c.json({ data: { ...insertedClass, status: 'live', started_at: startedAt, class_title: insertedClass.title, course_name: course?.name || null, share_token: shareToken, share_url: accessMode === 'anyone_with_link' ? `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/live/${shareToken}` : `${(process.env.FRONTEND_URL || '').replace(/\/$/, '')}/class/${insertedClass.id}`, ...config } }, 201)
   } catch (error) {
     console.error('[live-classes] plugnmeet start-now failed:', error)
+    if (providerRoomCreated) {
+      // The provider room exists, so deleting the only Class row would orphan it
+      // (DEV-LVC-003). Keep the row as 'starting' with its room id; the room
+      // reconciler promotes it when the room is active or resets it when not.
+      const { error: keepError } = await (supabase as any).from('live_classes')
+        .update({ status: 'starting', provider_room_id: initialRoomId, classroom_provider: 'plugnmeet', start_requested_at: startedAt, updated_at: new Date().toISOString() })
+        .eq('id', insertedClass.id).eq('school_id', user.school_id).in('status', ['scheduled', 'starting'])
+      if (keepError) console.error('[live-classes] could not preserve class after provider room creation', { classId: insertedClass.id, error: keepError })
+      return c.json({ error: 'The classroom was created but could not be opened. Try starting the class again from your schedule.', code: 'CLASS_START_FAILED', data: { id: insertedClass.id } }, 500)
+    }
     await supabase.from('live_classes')
       .delete()
       .eq('id', insertedClass.id)
@@ -432,7 +443,7 @@ liveClassesRouter.get('/', async (c) => {
 
   let query = supabase
     .from('live_classes')
-    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses!live_classes_course_id_fkey(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id), recording:live_class_recordings(status), recap:live_class_recaps(status)')
+    .select('id, title, scheduled_at, duration_minutes, status, started_at, ended_at, course_id, tutor_id, timetable_slot_id, access_mode, share_token_encrypted, classroom_provider, provider_room_status, provider_room_checked_at, course:courses!live_classes_course_id_fkey(id, name), tutor:user_profiles!live_classes_tutor_id_fkey(id, first_name, last_name), series:class_timetable_slots!live_classes_timetable_slot_id_fkey(id, source, recurrence_group_id, timezone), recording:live_class_recordings(status), recap:live_class_recaps(status)')
     .eq('school_id', user.school_id)
     .order('scheduled_at', { ascending: true })
     .order('id', { ascending: true })
@@ -477,6 +488,9 @@ liveClassesRouter.get('/', async (c) => {
     // PlugNmeet room becomes verified when it is created or joins report in.
     status: item.classroom_provider === 'plugnmeet' && item.status === 'live'
       && !['active'].includes(item.provider_room_status) ? 'scheduled' : presentationStatus(item.status),
+    // DEV-TZ-001: the governing IANA timezone of a recurring series; null for
+    // one-off Sessions, whose instant carries no timezone context.
+    timezone: (Array.isArray(item.series) ? item.series[0]?.timezone : item.series?.timezone) ?? null,
     recording_status: Array.isArray(item.recording) ? item.recording[0]?.status || null : item.recording?.status || null,
     recap_status: Array.isArray(item.recap) ? item.recap[0]?.status || null : item.recap?.status || null,
     share_url: ['tutor', 'admin'].includes(user.role) ? classShareUrl(item) : null,
@@ -496,7 +510,7 @@ liveClassesRouter.delete('/series/:seriesId', requireRole('admin', 'tutor'), asy
     p_school_id: user.school_id,
     p_actor_id: user.id,
   } as any)
-  if (error) return c.json({ error: error.message || 'Could not end recurring class', code: 'RECURRING_CLASS_CANCEL_FAILED' }, 400)
+  if (error) return c.json({ error: 'Could not end recurring class', code: 'RECURRING_CLASS_CANCEL_FAILED' }, 400)
   return c.json({ message: 'Recurring class ended', removed_classes: data })
 })
 
@@ -583,27 +597,18 @@ liveClassesRouter.delete('/:id', requireRole('admin', 'tutor'), async (c) => {
     return c.json({ error: 'You can only cancel classes assigned to you', code: 'NOT_CLASS_TUTOR' }, 403)
   }
 
-  const { data, error } = await supabase.from('live_classes')
-    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('school_id', user.school_id)
-    .eq('status', 'scheduled')
-    .select()
-    .maybeSingle()
+  // The status change and the notification intent commit in one transaction
+  // (DEV-LVC-004). Delivery runs later as a durable job, so a delivery failure
+  // can no longer fail or undo the cancellation.
+  const { data: cancelledRows, error } = await (supabase as any).rpc('cancel_live_class_with_outbox', {
+    p_class_id: id, p_school_id: user.school_id, p_school_name: (liveClass.school as any)?.name || null, p_reason: reason ?? null,
+  })
+  const data = Array.isArray(cancelledRows) ? cancelledRows[0] : cancelledRows
 
   if (error) return c.json({ error: 'Failed to cancel class' }, 500)
   if (!data) return c.json({ error: 'This live class changed before it could be cancelled. Refresh to see its latest status.', code: 'CLASS_STATE_CHANGED' }, 409)
 
-  // Recipients are resolved through course enrolments, so a class without a course has nobody to notify.
-  const notification = data.course_id ? await notifyClassCancelled({
-    id: data.id,
-    schoolId: data.school_id,
-    schoolName: (liveClass.school as any)?.name || 'Your school',
-    courseId: data.course_id,
-    title: data.title,
-    scheduledAt: data.scheduled_at,
-    reason,
-  }) : null
+  const notification = data.course_id ? { queued: true } : null
 
   return c.json({ message: 'Live class cancelled', data, notification })
 })

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   notifyClassCancelled,
   notifyAssignmentDeadline,
+  notifyClassRecapPublished,
   notifyLiveClassReminder,
   notifyMockFullyGraded,
   notifyMockPublished,
@@ -66,5 +67,25 @@ describe('route notification triggers', () => {
     expect(deliver).toHaveBeenCalledWith(expect.objectContaining({
       event: 'class_cancelled', recipients: { enrolment: { type: 'course', id: 'course-1' } }, relatedEntityId: 'class-1',
     }))
+  })
+
+  it('routes the recap through the shared orchestrator with its own push link and no email (DEV-NTF-003)', async () => {
+    const deliver = vi.fn(async () => result)
+    await notifyClassRecapPublished({ id: 'class-1', schoolId: 'school-1', courseId: 'course-1', title: 'Physics' }, deliver as any)
+    const request = (deliver.mock.calls as any)[0][0]
+    expect(request).toMatchObject({ event: 'class_recap_ready', push: { url: '/dashboard/student/classes/class-1/recording' } })
+    expect(request.emailInput).toBeUndefined()
+  })
+
+  it('links emails only to routes in the registry (DEV-NTF-002)', async () => {
+    const deliver = vi.fn(async () => result)
+    await notifySubmissionGraded({ id: 's1', schoolId: 'school-1', studentId: 'u1', assignmentId: 'a1', assignmentTitle: 'HW', score: '9/10' }, deliver as any)
+    await notifyMockFullyGraded({ attemptId: 'att1', schoolId: 'school-1', studentId: 'u1', mockId: 'm1', mockTitle: 'M', score: '80' }, deliver as any)
+    await notifyAssignmentDeadline({ id: 'a1', schoolId: 'school-1', courseName: 'P', title: 'HW', deadlineAt: 'x', recipientIds: ['u1'] }, deliver as any)
+    const recipient = { id: 'u1', schoolId: 'school-1', email: 'a@b.c', firstName: 'A' }
+    const [graded, mock, deadline] = (deliver.mock.calls as any).map((call: any[]) => call[0].emailInput(recipient))
+    expect(graded.submissionUrl).toBe('https://kanvise.test/dashboard/student/assignments')
+    expect(mock.resultsUrl).toBe('https://kanvise.test/dashboard/student/mocks/result/att1')
+    expect(deadline.assignmentUrl).toBe('https://kanvise.test/dashboard/student/assignments')
   })
 })
