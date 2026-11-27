@@ -29,8 +29,12 @@ hidden drawer. Five items:
 | Calendar | Calendar (agenda view) |
 | Lessons | Lessons list |
 | Students | Students list |
-| More | A sheet listing Courses, Homework, Quizzes, Recordings, Resources, Team (agencies), Settings, Help |
+| More | A sheet showing the full sidebar: the same groups and icons as desktop (Courses, Homework, Quizzes, Recordings, Resources, Team for agencies, Settings, Help), so nothing is in a new place |
 
+- The bar keeps only the four daily items plus More. There is no hamburger menu:
+  hidden navigation gets used less, and two menus for the same links would
+  confuse. Courses live in More because tutors reach them mostly from a lesson
+  or a student.
 - The active tab has the orange marker (above the icon) and a bolder label.
 - A top bar shows the page title, search (magnifier) and the avatar (account
   menu, help).
