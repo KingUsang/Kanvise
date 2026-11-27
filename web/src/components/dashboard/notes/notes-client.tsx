@@ -324,8 +324,9 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
               
               <div className="space-y-5">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Subject *</label>
+                  <label htmlFor="material-subject" className="mb-2 block text-sm font-semibold text-dashboard-foreground">Subject *</label>
                   <select 
+                    id="material-subject"
                     value={selectedCourse}
                     onChange={(e) => setSelectedCourse(e.target.value)}
                     className="w-full rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-sm text-dashboard-foreground outline-none focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"
@@ -346,7 +347,16 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Upload file *</label>
                   <div 
+                    role="button"
+                    tabIndex={0}
+                    aria-label={file ? `Selected file ${file.name}. Press Enter to choose a different file` : 'Upload file. Press Enter to choose a file'}
                     onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        fileInputRef.current?.click()
+                      }
+                    }}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -369,6 +379,8 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                       ref={fileInputRef}
                       onChange={handleFileChange}
                       className="hidden" 
+                      aria-label="Choose material file"
+                      tabIndex={-1}
                       type="file" 
                       accept=".pdf,.docx,.pptx,.jpg,.jpeg,.png"
                     />
@@ -381,8 +393,9 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                   </summary>
                   <div className="space-y-4 border-t border-dashboard-outline px-4 py-4">
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Title</label>
+                      <label htmlFor="material-title" className="mb-2 block text-sm font-semibold text-dashboard-foreground">Title</label>
                       <input
+                        id="material-title"
                         type="text"
                         value={title}
                         onChange={(e) => {
@@ -394,8 +407,9 @@ export function NotesClient({ role, profileId: currentProfileId }: NotesClientPr
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-dashboard-foreground">Note for learners</label>
+                      <label htmlFor="material-note" className="mb-2 block text-sm font-semibold text-dashboard-foreground">Note for learners</label>
                       <textarea
+                        id="material-note"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         className="w-full resize-none rounded-dashboard-control border border-dashboard-outline bg-dashboard-surface px-3 py-2.5 text-sm text-dashboard-foreground outline-none focus:border-dashboard-primary focus:ring-1 focus:ring-dashboard-primary"

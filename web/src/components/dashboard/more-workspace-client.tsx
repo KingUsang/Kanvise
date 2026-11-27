@@ -20,7 +20,7 @@ export function MoreWorkspaceClient() {
   const items = accountItems.filter(item => !item.accountOnly || !independent)
 
   return <div className="mx-auto w-full max-w-4xl">
-    <header><p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">Administration</p><h1 className="mt-2 text-2xl font-bold text-[#180d62]">More</h1><p className="mt-2 text-sm text-dashboard-muted">Manage the people, money and settings behind your teaching.</p></header>
+    <header><p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">Administration</p><h1 className="mt-2 break-words text-dashboard-page-title font-bold text-dashboard-foreground sm:text-dashboard-page-title-desktop">More</h1><p className="mt-2 text-sm text-dashboard-muted">Manage the people, money and settings behind your teaching.</p></header>
     <div className="mt-6 grid gap-3 sm:grid-cols-2">
       {items.map(item => <Link key={item.href} href={item.href} className="flex min-h-24 items-start gap-4 rounded-2xl border border-dashboard-outline bg-white p-5 shadow-dashboard-card transition hover:border-[#8e87bd] hover:bg-[#faf9ff]">
         <span className="material-symbols-outlined rounded-xl bg-[#eeecfa] p-2 text-[#2e2877]">{item.icon}</span>
