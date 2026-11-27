@@ -139,6 +139,9 @@ BEGIN
     FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'STUDENT_NOT_FOUND'; END IF;
     IF v_student.onboarding_status = 'active' THEN RAISE EXCEPTION 'STUDENT_ACTIVE'; END IF;
+    IF v_student.email IS NULL OR pg_catalog.lower(pg_catalog.btrim(v_student.email)) <> v_email THEN
+      RAISE EXCEPTION 'INVITATION_EMAIL_MISMATCH';
+    END IF;
   ELSE
     UPDATE public.tutor_invites
     SET status = CASE WHEN expires_at > pg_catalog.now() THEN 'revoked' ELSE 'expired' END,

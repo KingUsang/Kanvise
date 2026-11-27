@@ -115,10 +115,29 @@ describe('feedback account policy', () => {
   it('rejects an oversized screenshot before decoding or writing a report', async () => {
     const response = await feedbackRouter.request('/', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ kind: 'feature', description: 'x', screenshot: { name: 'a.png', content_type: 'image/png', data: 'A'.repeat(7 * 1024 * 1024) } }),
+      body: JSON.stringify({ kind: 'feature', description: 'x', screenshot: { name: 'a.png', content_type: 'image/png', data: 'A'.repeat(7_000_000) } }),
     })
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({ code: 'SCREENSHOT_FAILED' })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects an oversized body with 413 even without a Content-Length header', async () => {
+    const encoder = new TextEncoder()
+    const chunk = encoder.encode('x'.repeat(1024 * 1024))
+    let sent = 0
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent++ < 9) controller.enqueue(chunk)
+        else controller.close()
+      },
+    })
+    const response = await feedbackRouter.request('/', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: stream, duplex: 'half',
+    } as RequestInit)
+    expect(response.status).toBe(413)
+    expect(await response.json()).toMatchObject({ code: 'PAYLOAD_TOO_LARGE' })
     expect(mocks.from).not.toHaveBeenCalled()
   })
 

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import * as Sentry from '@sentry/node'
 import { supabase } from '../lib/supabase'
 import {
@@ -62,7 +63,7 @@ feedbackRouter.use('/*', async (c, next) => {
   await next()
 })
 
-feedbackRouter.post('/', requireMembershipRole('admin', 'tutor', 'learner'), async c => {
+feedbackRouter.post('/', requireMembershipRole('admin', 'tutor', 'learner'), bodyLimit({ maxSize: MAX_REQUEST_BYTES, onError: c => c.json({ error: 'That report is too large.', code: 'PAYLOAD_TOO_LARGE' }, 413) }), async c => {
   const user = c.get('user') as any
   const declaredLength = Number(c.req.header('content-length') || 0)
   if (declaredLength > MAX_REQUEST_BYTES) return c.json({ error: 'That report is too large.', code: 'PAYLOAD_TOO_LARGE' }, 413)

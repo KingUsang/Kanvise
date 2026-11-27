@@ -109,6 +109,16 @@ describe('attendance reports', () => {
     expect(JSON.stringify(enrolmentCall.filters)).toContain(`programme_id.in.(${PROGRAMME})`)
   })
 
+  it('rejects a Programme with too many Subjects instead of building an oversized filter', async () => {
+    install({
+      sub_programmes: { data: [] },
+      courses: { data: Array.from({ length: 151 }, (_, i) => ({ id: `c${i}` })) },
+    })
+    const response = await attendanceRouter.request(`/metrics?programme_id=${PROGRAMME}`)
+    expect(response.status).toBe(500)
+    expect(await response.json()).toMatchObject({ code: 'ATTENDANCE_UNAVAILABLE' })
+  })
+
   it('resolves a Programme filter through its Sub-programmes', async () => {
     const calls = install({
       sub_programmes: { data: [{ id: SUB }] },

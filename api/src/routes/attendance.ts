@@ -45,6 +45,10 @@ function parseAttendanceQuery(c: { req: { query: () => Record<string, string> } 
 
 // A Programme filter covers Subjects attached directly and through its
 // Sub-programmes (DEV-ATD-009). Returns null when a lookup fails.
+// The IDs go into a query-string IN filter, so the list is capped well below
+// proxy URL limits; a larger Programme is rejected rather than truncated.
+const MAX_PROGRAMME_FILTER_COURSES = 150
+
 async function courseIdsForProgramme(schoolId: string, programmeId: string): Promise<string[] | null> {
   const { data: subs, error: subsError } = await supabase
     .from('sub_programmes').select('id').eq('school_id', schoolId).eq('programme_id', programmeId).limit(1000)
@@ -54,8 +58,9 @@ async function courseIdsForProgramme(schoolId: string, programmeId: string): Pro
   query = subIds.length > 0
     ? query.or(`programme_id.eq.${programmeId},sub_programme_id.in.(${subIds.join(',')})`)
     : query.eq('programme_id', programmeId)
-  const { data, error } = await query.limit(5000)
+  const { data, error } = await query.limit(MAX_PROGRAMME_FILTER_COURSES + 1)
   if (error) return null
+  if ((data || []).length > MAX_PROGRAMME_FILTER_COURSES) return null
   return (data || []).map((row) => row.id)
 }
 
