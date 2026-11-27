@@ -183,7 +183,7 @@ export function ProgrammesClient() {
       )}
 
       {schoolContextError && !loadError && (
-        <RefreshNotice message="Class links are temporarily unavailable because tutoring account details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
+        <RefreshNotice message="Class links are temporarily unavailable because class details could not be loaded." onRetry={() => void programmesQuery.refetch()} />
       )}
 
       {programmesQuery.isSuccess && programmes.length > 0 && (
@@ -213,7 +213,7 @@ export function ProgrammesClient() {
         <EmptyState
           icon={<School aria-hidden="true" size={24} />}
           title={canCreate ? 'Create your first class' : 'No classes assigned yet'}
-          body={canCreate ? 'Add the subjects, learners and sessions you will teach together.' : 'Your tutoring account Admin creates classes and assigns you the subjects you teach.'}
+          body={canCreate ? 'Add the subjects, learners and sessions you will teach together.' : 'Your tutoring agency Admin creates classes and assigns you the subjects you teach.'}
           action={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>Create class</LinkButton> : undefined}
         />
       ) : visibleProgrammes.length ? (

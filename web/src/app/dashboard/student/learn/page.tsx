@@ -13,7 +13,7 @@ export default function StudentLearnPage() {
   if (dashboardQuery.isPending) return <div className="mx-auto max-w-[1120px] px-4 py-10 text-center text-sm text-[#716c76]">Loading your class…</div>;
   if (dashboardQuery.isError) return <div className="mx-auto max-w-[1120px] px-4 py-10"><QueryErrorState error={dashboardQuery.error} onRetry={() => void dashboardQuery.refetch()} fallback="We could not load your class." retrying={dashboardQuery.isFetching} /></div>;
   const data = dashboardQuery.data;
-  if (!data || data.capabilities?.hasCentreLearning === false) return <div className="mx-auto max-w-[1120px] px-4 py-10 text-center"><h1 className="text-lg font-bold text-[#1b1c1c]">No class access yet</h1><p className="mt-2 text-sm text-[#716c76]">You are not enrolled in a tutoring account class. Ask your tutor for an invitation to see your classes here.</p><Link href="/dashboard/student" className="mt-4 inline-block text-sm font-semibold text-[#2e2877] underline">Back to your dashboard</Link></div>;
+  if (!data || data.capabilities?.hasCentreLearning === false) return <div className="mx-auto max-w-[1120px] px-4 py-10 text-center"><h1 className="text-lg font-bold text-[#1b1c1c]">No class access yet</h1><p className="mt-2 text-sm text-[#716c76]">You are not enrolled in a class. Ask your tutor for an invitation to see your classes here.</p><Link href="/dashboard/student" className="mt-4 inline-block text-sm font-semibold text-[#2e2877] underline">Back to your dashboard</Link></div>;
 
   const destinations = [
     {
@@ -45,7 +45,7 @@ export default function StudentLearnPage() {
     <header>
       <p className="text-sm font-medium text-[#994704]">Your class</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Learn</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Live classes, assignments and study materials from your tutoring account are together here.</p>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Live classes, assignments and study materials from your tutor are together here.</p>
     </header>
 
     {data.course_count > 0 ? <section className="mt-7 grid gap-4 md:grid-cols-3">
@@ -58,7 +58,7 @@ export default function StudentLearnPage() {
     </section> : <section className="mt-7 rounded-2xl border border-[#e3ded9] bg-white px-5 py-14 text-center">
       <BookOpen className="mx-auto text-[#aaa4ad]" />
       <h2 className="mt-4 text-lg font-semibold">No class subjects yet</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Your tutoring account has enrolled your account, but no published subjects are available yet. Check back later or contact the tutoring account.</p>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Your tutor has enrolled you, but no published subjects are available yet. Check back later or contact your tutor.</p>
     </section>}
   </div>;
 }

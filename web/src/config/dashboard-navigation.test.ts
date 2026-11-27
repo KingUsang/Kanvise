@@ -16,7 +16,7 @@ describe('dashboard workspaces', () => {
 
   it('shows only the truthful setup destination until a new tutoring account exists', () => {
     expect(getDashboardWorkspaces({ isAdmin: true, isTutor: false, setupRequired: true }))
-      .toEqual([expect.objectContaining({ label: 'Set up tutoring account', href: '/dashboard/school-setup', area: 'centre' })])
+      .toEqual([expect.objectContaining({ label: 'Set up tutoring agency', href: '/dashboard/school-setup', area: 'centre' })])
   })
 
   it('keeps secondary pages inside their parent workspace', () => {

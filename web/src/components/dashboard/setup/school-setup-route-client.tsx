@@ -20,7 +20,7 @@ type SchoolResponse = {
 }
 
 const SESSION_ENDED_MESSAGE = 'Your session has ended. Please sign in again.'
-const SAFE_LOAD_ERROR = 'We could not load your tutoring account details. Please try again.'
+const SAFE_LOAD_ERROR = 'We could not load your tutoring agency details. Please try again.'
 
 class SchoolLoadError extends Error {
   constructor(readonly code: 'SESSION_EXPIRED' | 'INVALID_RESPONSE' | 'UNAVAILABLE') {
@@ -43,7 +43,7 @@ async function loadSchool({ signal }: { signal?: AbortSignal } = {}): Promise<Sc
 }
 
 function RouteLoading() {
-  return <div className="mx-auto flex min-h-[24rem] max-w-[1440px] items-center justify-center px-4 py-10 text-sm text-[#716c76]">Loading your tutoring account details…</div>
+  return <div className="mx-auto flex min-h-[24rem] max-w-[1440px] items-center justify-center px-4 py-10 text-sm text-[#716c76]">Loading your tutoring agency details…</div>
 }
 
 export function SchoolSetupRouteClient({ mode }: SchoolSetupRouteClientProps) {

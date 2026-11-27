@@ -1478,7 +1478,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       toast.error(
         classContext
           ? "Add a quiz title before continuing"
-          : "Add a quiz title and choose a valid tutoring account target",
+          : "Add a quiz title and choose a valid class target",
       );
       return;
     }
@@ -3107,7 +3107,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               <p className="mt-2 text-xs leading-5 text-[#716c76]">
                 {centreAccessEnabled
                   ? "Only learners enrolled in every selected programme subject will receive this quiz."
-                  : "Add the subjects in this exam yourself. They are not connected to your tutoring account."}
+                  : "Add the subjects in this exam yourself. They are not connected to your classes."}
               </p>
             </div>
             {selectedSubjectCourses.length === 0 ? (

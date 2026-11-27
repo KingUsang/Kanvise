@@ -20,6 +20,22 @@ required. Use **tenant** only when discussing data isolation and security. Do
 not introduce `tutorial centre`, `tutoring centre`, `school`, `organisation`,
 or `tutoring business` into new customer-facing language.
 
+### User-facing copy
+
+Keep "tutoring account" out of customer-facing text. Choose wording by context:
+
+1. Use the real name when the code has it (`school.name`, account name, tutor name).
+2. Use "tutoring agency" in agency-only or agency-general contexts: sign-up,
+   setup, invitations from an agency, agency-only admin pages.
+3. Use "your tutor" in learner-facing text.
+4. Use neutral wording ("your learners", "your classes") on owner pages that
+   both Independent Tutors and agency Admins see.
+
+"Tutoring account" stays only in the account picker and switcher, the
+`/account/select` title, API account-context errors (`ACCOUNT_CONTEXT_REQUIRED`,
+`ACCOUNT_ACCESS_DENIED`, `ACCOUNT_SELECTION_REQUIRED` and similar), the PWA
+manifest, code comments, and engineering docs.
+
 Existing persistence names such as `schools`, `school_id`, and `centre` are
 legacy implementation details. They remain until a separately approved,
 migration-safe change replaces them.

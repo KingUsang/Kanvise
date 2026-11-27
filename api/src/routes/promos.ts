@@ -103,7 +103,7 @@ promosRouter.post("/", async (c) => {
 
   try {
     if (!(await linkTargetExists(user.school_id, body.link_type, body.link_id))) {
-      return c.json({ error: "Promo link target was not found in this tutoring account", code: "INVALID_LINK_TARGET" }, 400);
+      return c.json({ error: "Promo link target was not found", code: "INVALID_LINK_TARGET" }, 400);
     }
   } catch (error) {
     return dbFailure(c, "link_lookup", error);
@@ -241,7 +241,7 @@ promosRouter.patch("/:id", async (c) => {
     const linkId = body.link_id ?? existing.link_id;
     try {
       if (!(await linkTargetExists(user.school_id, linkType, linkId))) {
-        return c.json({ error: "Promo link target was not found in this tutoring account", code: "INVALID_LINK_TARGET" }, 400);
+        return c.json({ error: "Promo link target was not found", code: "INVALID_LINK_TARGET" }, 400);
       }
     } catch (error) {
       return dbFailure(c, "link_lookup", error);

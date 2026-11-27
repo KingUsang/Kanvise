@@ -147,7 +147,7 @@ export default function StudentsPage() {
       {/* Header */}
       <DashboardPageHeader
         title="Learners"
-        description="Add learners to your tutoring account, see what they can access, and review their successful payment history."
+        description="Add learners, see what they can access, and review their successful payment history."
         actions={<>
           <button
             type="button"
