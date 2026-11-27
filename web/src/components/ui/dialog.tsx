@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -11,6 +12,25 @@ export function nextTrapIndex(count: number, activeIndex: number, shift: boolean
   if (shift && activeIndex <= 0) return count - 1;
   if (!shift && activeIndex === count - 1) return 0;
   return null;
+}
+
+/**
+ * Marks every other direct child of <body> inert so focus, clicks and assistive tech stay inside the dialog.
+ * Returns a restore function that only clears the attributes it set.
+ */
+export function inertSiblings(root: HTMLElement, body: HTMLElement = document.body): () => void {
+  const changed: Element[] = [];
+  for (const child of Array.from(body.children)) {
+    if (child === root || child.contains(root) || child.hasAttribute("inert")) continue;
+    if (child.tagName === "SCRIPT" || child.tagName === "STYLE") continue;
+    // Keep toast regions live so errors raised from inside a dialog stay interactive and announced.
+    if (child.hasAttribute("data-keep-interactive") || child.matches('[aria-label^="Notifications"]') || child.querySelector('[aria-label^="Notifications"]')) continue;
+    child.setAttribute("inert", "");
+    changed.push(child);
+  }
+  return () => {
+    for (const child of changed) child.removeAttribute("inert");
+  };
 }
 
 /** Mounted dialogs, oldest first. Only the last one handles Escape and Tab. */
@@ -33,6 +53,8 @@ interface DialogProps {
   describedBy?: string;
   /** Called on Escape and on backdrop click. Omit to make the dialog non-dismissable. */
   onClose?: () => void;
+  /** Set false to ignore backdrop clicks (Escape still closes). Use where input would be lost. */
+  dismissOnBackdrop?: boolean;
   className?: string;
   panelClassName?: string;
   children: React.ReactNode;
@@ -42,8 +64,9 @@ interface DialogProps {
  * Shared modal dialog: role/aria-modal, focus moved in on open, Tab trapped,
  * Escape closes, focus restored to the previously focused element on close.
  */
-export function Dialog({ label, labelledBy, describedBy, onClose, className, panelClassName, children }: DialogProps) {
+export function Dialog({ label, labelledBy, describedBy, onClose, dismissOnBackdrop = true, className, panelClassName, children }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -54,7 +77,10 @@ export function Dialog({ label, labelledBy, describedBy, onClose, className, pan
     pushDialog(token);
     const previous = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>("[data-autofocus]") ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const restoreInert = rootRef.current ? inertSiblings(rootRef.current) : () => {};
+    const first = panel?.querySelector<HTMLElement>("[data-autofocus], [data-dialog-initial-focus]") ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -75,15 +101,19 @@ export function Dialog({ label, labelledBy, describedBy, onClose, className, pan
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
       removeDialog(token);
+      restoreInert();
+      document.body.style.overflow = previousOverflow;
       if (previous && document.contains(previous)) previous.focus();
     };
   }, []);
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
+      ref={rootRef}
       className={className ?? "fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose?.();
+        if (dismissOnBackdrop && event.target === event.currentTarget) onClose?.();
       }}
     >
       <div
@@ -98,7 +128,8 @@ export function Dialog({ label, labelledBy, describedBy, onClose, className, pan
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

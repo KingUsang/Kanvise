@@ -31,6 +31,7 @@ import { mockCourseLabel, unusedMockCourses } from "./mock-builder-options";
 import { MockBuilderStepProgress } from "./mock-builder-step-progress";
 import { toLocalDateInput, toLocalDateTimeInput, toLocalTimeInput } from "./mock-builder-schedule";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
+import { Dialog } from "@/components/ui/dialog";
 
 type Course = {
   id: string;
@@ -135,7 +136,7 @@ function importErrorMessage(body: any, fileLabel: "PDF" | "Word document") {
     return "Kanvise is processing too many document imports right now. Your quiz has not changed—try this file again in a few minutes.";
   if (body?.code === "IMPORT_TEMPORARILY_UNAVAILABLE")
     return "The document reader is temporarily unavailable. Your quiz has not changed—try again shortly.";
-  return `Kanvise could not import this ${fileLabel.toLowerCase()}. Your mock has not changed. Try another file or add questions manually.`;
+  return `Kanvise could not import this ${fileLabel.toLowerCase()}. Your Quiz has not changed. Try another file or add questions manually.`;
 }
 
 export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) {
@@ -548,7 +549,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
           router.push("/dashboard/mocks");
         }
       } catch (err) {
-        console.error("Failed to fetch mock data", err);
+        console.error("Failed to fetch Quiz data", err);
         toast.error("Could not open this quiz", {
           description: "Check your connection and try again.",
         });
@@ -1477,7 +1478,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       toast.error(
         classContext
           ? "Add a quiz title before continuing"
-          : "Add a quiz title and choose a valid tutoring agency target",
+          : "Add a quiz title and choose a valid tutoring account target",
       );
       return;
     }
@@ -1890,8 +1891,8 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
       )}
 
       {subjectToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-label="Confirm deleting Subject" className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+        <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" panelClassName="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1] outline-none" label="Confirm deleting Subject" onClose={() => setSubjectToDelete(null)}>
+          <div>
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-[#ba1a1a]">
                 warning
@@ -1917,11 +1918,11 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
       {setupChangeToConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-label="Confirm changing setup" className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+        <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" panelClassName="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1] outline-none" label="Confirm changing setup" onClose={() => setSetupChangeToConfirm(null)}>
+          <div>
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-[#ba1a1a]">
                 warning
@@ -1948,12 +1949,12 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
       {/* Delete Confirmation Modal */}
       {questionToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-label="Confirm deleting question" className="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1]">
+        <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" panelClassName="bg-white rounded-lg p-6 w-[400px] shadow-xl border border-[#e4e2e1] outline-none" label="Confirm deleting question" onClose={() => setQuestionToDelete(null)}>
+          <div>
             <h3 className="text-[18px] font-semibold text-[#1b1c1c] mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-[#ba1a1a]">
                 warning
@@ -1979,12 +1980,12 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {isReviewOpen && publishReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-label="Before you publish" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-2xl">
+        <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm" panelClassName="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-[#e4e2e1] bg-white p-6 shadow-2xl outline-none" label="Before you publish" onClose={() => setIsReviewOpen(false)}>
+          <div>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C26627]">
@@ -2090,7 +2091,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
       {isPreviewOpen && (
         <MockDraftPreview
@@ -3106,7 +3107,7 @@ export function MockBuilderClient({ embedded = false }: { embedded?: boolean }) 
               <p className="mt-2 text-xs leading-5 text-[#716c76]">
                 {centreAccessEnabled
                   ? "Only learners enrolled in every selected programme subject will receive this quiz."
-                  : "Add the subjects in this exam yourself. They are not connected to your tutoring agency."}
+                  : "Add the subjects in this exam yourself. They are not connected to your tutoring account."}
               </p>
             </div>
             {selectedSubjectCourses.length === 0 ? (

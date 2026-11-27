@@ -39,4 +39,15 @@ describe('dialog stack', () => {
     expect(opener).toHaveFocus()
     opener.remove()
   })
+
+  it('makes the rest of the page inert while open and restores it on close', () => {
+    const page = document.createElement('main')
+    document.body.appendChild(page)
+    const { unmount } = render(<Dialog label="Modal"><button>inside</button></Dialog>)
+    expect(page).toHaveAttribute('inert')
+    expect(screen.getByRole('dialog').closest('[inert]')).toBeNull()
+    unmount()
+    expect(page).not.toHaveAttribute('inert')
+    page.remove()
+  })
 })

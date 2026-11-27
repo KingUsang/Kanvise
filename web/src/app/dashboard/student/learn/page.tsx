@@ -44,8 +44,8 @@ export default function StudentLearnPage() {
   return <div className="mx-auto max-w-[1120px] px-4 py-7 pb-28 sm:px-6 lg:px-10 lg:py-10">
     <header>
       <p className="text-sm font-medium text-[#994704]">Your class</p>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight">Learn</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Live classes, assignments and study materials from your tutoring agency are together here.</p>
+      <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Learn</h1>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#716c76]">Live classes, assignments and study materials from your tutoring account are together here.</p>
     </header>
 
     {data.course_count > 0 ? <section className="mt-7 grid gap-4 md:grid-cols-3">
@@ -58,7 +58,7 @@ export default function StudentLearnPage() {
     </section> : <section className="mt-7 rounded-2xl border border-[#e3ded9] bg-white px-5 py-14 text-center">
       <BookOpen className="mx-auto text-[#aaa4ad]" />
       <h2 className="mt-4 text-lg font-semibold">No class subjects yet</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Your tutoring agency has enrolled your account, but no published subjects are available yet. Check back later or contact the tutoring agency.</p>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716c76]">Your tutoring account has enrolled your account, but no published subjects are available yet. Check back later or contact the tutoring account.</p>
     </section>}
   </div>;
 }

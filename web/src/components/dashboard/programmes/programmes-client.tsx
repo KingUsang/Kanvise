@@ -213,7 +213,7 @@ export function ProgrammesClient() {
         <EmptyState
           icon={<School aria-hidden="true" size={24} />}
           title={canCreate ? 'Create your first class' : 'No classes assigned yet'}
-          body={canCreate ? 'Add the subjects, learners and sessions you will teach together.' : 'Your tutoring agency administrator creates classes and assigns you the subjects you teach.'}
+          body={canCreate ? 'Add the subjects, learners and sessions you will teach together.' : 'Your tutoring account Admin creates classes and assigns you the subjects you teach.'}
           action={canCreate ? <LinkButton href="/dashboard/classes/new" variant="primary" fullWidthMobile>Create class</LinkButton> : undefined}
         />
       ) : visibleProgrammes.length ? (

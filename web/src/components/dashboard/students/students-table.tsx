@@ -4,11 +4,21 @@ import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import StudentDetailsSheet from "./student-details-sheet";
 import { clampRosterPage } from "@/lib/student-roster";
+import { parsePageParam, readUrlParam, writeUrlParams } from "@/lib/use-url-state";
 
 export default function StudentsTable({ students, onStudentRemoved, onStudentsChanged }: { students: any[], onStudentRemoved: (studentId: string) => void, onStudentsChanged: () => void }) {
-  const [programmeFilter, setProgrammeFilter] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  // Search, enrolment filter and page live in the URL (DEV-FE-031) so reload
+  // and shared links restore the same roster view.
+  const [programmeFilter, setProgrammeFilterState] = useState(() => readUrlParam("enrolment") ?? "");
+  const [searchQuery, setSearchQueryState] = useState(() => readUrlParam("q") ?? "");
+  const [currentPage, setCurrentPageState] = useState(() => parsePageParam(readUrlParam("page")));
+  const setProgrammeFilter = (value: string) => { setProgrammeFilterState(value); writeUrlParams({ enrolment: value }); };
+  const setSearchQuery = (value: string) => { setSearchQueryState(value); writeUrlParams({ q: value }); };
+  const setCurrentPage = (update: number | ((page: number) => number)) => {
+    const next = typeof update === "function" ? update(currentPage) : update;
+    setCurrentPageState(next);
+    writeUrlParams({ page: next }, { page: "1" });
+  };
   const itemsPerPage = 10;
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
@@ -107,7 +117,7 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
       <div className="overflow-hidden rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface shadow-dashboard-card">
         <div className="divide-y divide-dashboard-outline/50 sm:hidden">
           {paginatedStudents.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">No learners found matching filters.</p> : paginatedStudents.map((student) => <article key={student.id} onClick={() => setSelectedStudent(student)} className="cursor-pointer p-4 active:bg-dashboard-primary/5">
-            <div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-dashboard-primary text-xs font-bold text-white`}>{student.profile_photo_url ? <img src={student.profile_photo_url} alt="" className="h-full w-full object-cover" /> : <>{student.first_name?.[0] || ''}{student.last_name?.[0] || ''}</>}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{student.first_name} {student.last_name}</h2><p className="truncate text-xs text-gray-500">{student.email || student.kanvise_user_id || 'No contact detail'}</p>{student.onboarding_status !== 'active' ? <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">Invitation pending</span> : null}</div><button onClick={(event) => { event.stopPropagation(); setSelectedStudent(student) }} className="shrink-0 rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877]">Details</button></div>
+            <div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-dashboard-primary text-xs font-bold text-white`}>{student.profile_photo_url ? <img src={student.profile_photo_url} alt="" className="h-full w-full object-cover" /> : <>{student.first_name?.[0] || ''}{student.last_name?.[0] || ''}</>}</div><div className="min-w-0 flex-1"><h2 className="truncate font-semibold text-dashboard-foreground">{student.first_name} {student.last_name}</h2><p className="truncate text-xs text-gray-500">{student.email || student.kanvise_user_id || 'No contact detail'}</p>{student.onboarding_status !== 'active' ? <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">Invitation pending</span> : null}</div><button type="button" aria-label={`Details for ${student.first_name} ${student.last_name}`} onClick={(event) => { event.stopPropagation(); setSelectedStudent(student) }} className="shrink-0 rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877]">Details</button></div>
             <div className="mt-3 flex flex-wrap gap-1">{student.enrolments?.length ? student.enrolments.map((enr: any) => <span key={enr.id} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-600">{enr.programmes?.name || enr.courses?.name || (enr.sub_programmes ? 'Class' : null) || 'Unknown'}</span>) : null}{student.pending_enrolments?.map((enr: any) => <span key={enr.id} className="rounded bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase text-amber-800">Pending · {enr.programmes?.name || 'Class'}</span>)}{!student.enrolments?.length && !student.pending_enrolments?.length ? <span className="text-xs text-gray-400">No class access</span> : null}</div>
           </article>)}
         </div>
@@ -175,6 +185,8 @@ export default function StudentsTable({ students, onStudentRemoved, onStudentsCh
                     </td>
                     <td className="py-4 px-6 text-right">
                       <button 
+                        type="button"
+                        aria-label={`View details for ${student.first_name} ${student.last_name}`}
                         onClick={(e) => { e.stopPropagation(); setSelectedStudent(student); }}
                         className="rounded border border-[#c8c5d2] px-3 py-1.5 text-xs font-semibold text-[#2e2877] hover:bg-[#2e2877]/5"
                       >

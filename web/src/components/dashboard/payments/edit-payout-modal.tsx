@@ -1,5 +1,6 @@
 "use client";
 
+import { Dialog } from "@/components/ui/dialog";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Loader2, X, AlertCircle, CheckCircle2, ChevronDown, Search } from "lucide-react";
 import { accountScopedFetch, authenticatedApiFetch } from "@/lib/authenticated-fetch";
@@ -145,11 +146,11 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1b1c1c]/50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+    <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-[#1b1c1c]/50 p-4" panelClassName="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden outline-none" labelledBy="payout-modal-title" onClose={submitting ? undefined : onClose}>
+      <div>
         <div className="flex justify-between items-center p-6 border-b border-[#C2B59B] bg-[#fbf9f8]">
-          <h2 className="text-[20px] font-semibold text-[#1b1c1c]">Configure Payout Account</h2>
-          <button onClick={onClose} className="text-[#474551] hover:text-[#1b1c1c]">
+          <h2 id="payout-modal-title" className="text-[20px] font-semibold text-[#1b1c1c]">Configure Payout Account</h2>
+          <button type="button" aria-label="Close" onClick={onClose} className="text-[#474551] hover:text-[#1b1c1c]">
             <X size={24} />
           </button>
         </div>
@@ -291,6 +292,6 @@ export default function EditPayoutModal({ isOpen, onClose, onSuccess, token }: E
           </div>
         </form>
       </div>
-    </div>
+    </Dialog>
   );
 }

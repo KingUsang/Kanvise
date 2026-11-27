@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { FileText, UploadCloud, Video, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { Dialog } from '@/components/ui/dialog'
 import { titleFromFileName, uploadFileWithProgress } from '@/lib/upload-with-progress'
 import { authenticatedApiFetch } from '@/lib/authenticated-fetch'
 
@@ -118,7 +119,7 @@ export function ClassMaterialUploadDialog({
 
   const uploading = stage !== 'idle'
   const isVideo = Boolean(file && videoTypes.has(file.type))
-  return <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-[#180d62]/25 p-3 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="add-material-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !uploading) onClose() }}>
+  return <Dialog className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-[#180d62]/25 p-3 sm:items-center sm:p-4" panelClassName="contents" labelledBy="add-material-title" onClose={uploading ? undefined : onClose}>
     <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-h-[calc(100dvh-2rem)] sm:p-6 sm:pb-6">
       <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-dashboard-accent">Class material</p><h2 id="add-material-title" className="mt-1 text-xl font-bold text-[#180d62]">Upload material</h2><p className="mt-1 text-sm leading-6 text-dashboard-muted">Attach it to one subject in this class.</p></div><button type="button" onClick={onClose} disabled={uploading} aria-label="Close" className="rounded-lg p-2 text-[#625e69] hover:bg-[#f1efff] disabled:opacity-50"><X size={20}/></button></div>
       <div className="mt-5 space-y-4">
@@ -131,5 +132,5 @@ export function ClassMaterialUploadDialog({
       </div>
       <div className="mt-6 flex justify-end gap-3 border-t border-dashboard-outline pt-5"><button type="button" onClick={onClose} disabled={uploading} className="rounded-lg px-4 py-2.5 text-sm font-bold text-[#625e69] hover:bg-[#f5f3f2]">Cancel</button><button type="button" onClick={() => void submit()} disabled={uploading || !file || !subjectId || !title.trim()} className="inline-flex items-center gap-2 rounded-lg bg-[#312783] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#241c70] disabled:opacity-50"><FileText size={17}/>{uploading ? 'Uploading…' : 'Add material'}</button></div>
     </div>
-  </div>
+  </Dialog>
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { clearActiveAccountId } from '@/lib/account-preference'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { detachBrowserPushOnLogout } from '@/lib/push-notifications'
 import { AccountSwitcher } from '@/components/account/account-switcher'
+import { nextMenuIndex } from '@/lib/menu-navigation'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 
 interface TopBarProps {
@@ -28,6 +29,12 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+  const userMenuTriggerRef = useRef<HTMLButtonElement>(null)
+  const menuItems = () => Array.from(userMenuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? [])
+  useEffect(() => {
+    if (isUserMenuOpen) menuItems()[0]?.focus()
+  }, [isUserMenuOpen])
   const searchableItems = useMemo(() => getDashboardNavItems(capabilities), [capabilities])
   const results = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -40,7 +47,7 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
   const navigateTo = (href: string) => {
     if (capabilities.setupRequired && href !== '/dashboard/school-setup') {
       setIsSearchOpen(false)
-      toast.info('Create your tutoring agency first', {
+      toast.info('Create your tutoring account first', {
         description: 'This page will unlock as soon as you complete the required setup.',
       })
       return
@@ -78,6 +85,8 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
           <span>Kanvise</span>
         </Link>
         {onMenuClick && <button
+          type="button"
+          aria-label="Open navigation menu"
           className="md:hidden text-[#474551] flex items-center"
           onClick={onMenuClick}
         >
@@ -130,14 +139,41 @@ export function TopBar({ user, capabilities, onMenuClick }: TopBarProps) {
         <div className="md:hidden">
           <FeedbackDialog compact />
         </div>
-        <div className="relative">
+        <div
+          ref={userMenuRef}
+          className="relative"
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsUserMenuOpen(false)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && isUserMenuOpen) {
+              event.preventDefault()
+              setIsUserMenuOpen(false)
+              userMenuTriggerRef.current?.focus()
+              return
+            }
+            if (!isUserMenuOpen) {
+              if (event.key === 'ArrowDown' && event.target === userMenuTriggerRef.current) {
+                event.preventDefault()
+                setIsUserMenuOpen(true)
+              }
+              return
+            }
+            if (event.key === 'Tab') {
+              setIsUserMenuOpen(false)
+              return
+            }
+            const items = menuItems()
+            const target = nextMenuIndex(items.length, items.indexOf(document.activeElement as HTMLElement), event.key)
+            if (target === null) return
+            event.preventDefault()
+            items[target]?.focus()
+          }}
+        >
           <button
+            ref={userMenuTriggerRef}
             type="button"
             onClick={() => setIsUserMenuOpen((open) => !open)}
-            onBlur={() => window.setTimeout(() => setIsUserMenuOpen(false), 120)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setIsUserMenuOpen(false)
-            }}
             aria-haspopup="menu"
             aria-expanded={isUserMenuOpen}
             aria-controls="dashboard-user-menu"

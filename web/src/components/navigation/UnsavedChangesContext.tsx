@@ -46,6 +46,29 @@ export function historyLeaveSteps(): number {
   return -2;
 }
 
+/**
+ * Leaves the page through history: back over the guard entry and the page entry.
+ * When the page was the first entry (direct arrival, new tab) there is nothing to go back to,
+ * so `go(-2)` is a no-op. In that case `fallback` runs after `waitMs` without a popstate.
+ */
+export function leaveByHistory(fallback: () => void, win: Window = window, waitMs = 1000): void {
+  let moved = false;
+  const onPop = () => {
+    moved = true;
+  };
+  win.addEventListener("popstate", onPop, { once: true });
+  win.addEventListener("pagehide", onPop, { once: true });
+  win.history.go(historyLeaveSteps());
+  win.setTimeout(() => {
+    win.removeEventListener("popstate", onPop);
+    win.removeEventListener("pagehide", onPop);
+    if (!moved) fallback();
+  }, waitMs);
+}
+
+/** Where to send someone who arrived directly on an editor and chose to leave without history to return to. */
+export const DIRECT_ARRIVAL_FALLBACK = "/dashboard";
+
 const UnsavedChangesContext = createContext<UnsavedChangesContextType>({
   setDirty: () => {},
   guardNavigation: (action) => action(),
@@ -120,7 +143,10 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
     setPending(null);
     if (!leave) return;
     if (leave.kind === "history") {
-      window.history.go(historyLeaveSteps());
+      leaveByHistory(() => {
+        startNavigationProgress();
+        router.push(DIRECT_ARRIVAL_FALLBACK);
+      });
       return;
     }
     startNavigationProgress();

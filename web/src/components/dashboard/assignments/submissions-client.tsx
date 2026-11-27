@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorState } from "@/components/dashboard/async-states";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Edit, Search, FileText, CheckCircle, AlertTriangle, Clock } from "lucide-react";
@@ -131,10 +132,7 @@ export function SubmissionsClient({ assignmentId, embedded = false }: { assignme
   }
 
   if (submissionsQuery.isError && !submissionsQuery.data) {
-    return <div className="rounded-lg border border-red-200 bg-red-50 p-10 text-center text-sm text-red-800" role="alert">
-      <p>{errorMessage(submissionsQuery.error, "Could not load submissions. Please try again.")}</p>
-      <button type="button" onClick={() => void submissionsQuery.refetch()} className="mt-4 rounded-lg bg-[#2e2877] px-4 py-2 font-semibold text-white">Try again</button>
-    </div>;
+    return <ErrorState message={errorMessage(submissionsQuery.error, "Could not load submissions. Please try again.")} onRetry={() => void submissionsQuery.refetch()} />;
   }
 
   return (

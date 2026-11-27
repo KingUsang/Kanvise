@@ -1,5 +1,6 @@
 'use client'
 
+import { Dialog } from '@/components/ui/dialog'
 import { AlertTriangle, Calculator, Check, ChevronLeft, ChevronRight, CloudOff, Flag, Keyboard, Send } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -250,9 +251,9 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
     </div>
     {!timedOut && <button onClick={() => setConfirming(true)} className="fixed inset-x-4 bottom-4 z-20 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#994704] text-sm font-semibold text-white shadow-lg lg:hidden"><Send size={17} />Review and submit</button>}
     {calculatorOpen && <ExamCalculator mode={data.mock.calculator_mode === 'scientific' ? 'scientific' : 'basic'} onClose={() => setCalculatorOpen(false)} />}
-    {shortcutsOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Close shortcuts" onClick={() => setShortcutsOpen(false)} className="absolute inset-0 bg-black/35" /><section role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="relative w-full max-w-md rounded-2xl bg-white p-6"><h2 className="text-lg font-semibold">Keyboard shortcuts</h2><dl className="mt-4 grid grid-cols-[90px_1fr] gap-3 text-sm"><dt className="font-semibold">A–F</dt><dd>Choose an MCQ option</dd><dt className="font-semibold">N / →</dt><dd>Next question</dd><dt className="font-semibold">P / ←</dt><dd>Previous question</dd><dt className="font-semibold">?</dt><dd>Open this guide</dd></dl><p className="mt-4 text-xs leading-5 text-[#716c76]">Shortcuts pause while you type a theory answer.</p><button onClick={() => setShortcutsOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#2e2877] text-sm font-semibold text-white">Got it</button></section></div>}
-    {confirming && !timedOut && <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><button aria-label="Return to quiz" onClick={() => !submitting && setConfirming(false)} className="absolute inset-0 bg-black/40" />
-      <section role="dialog" aria-modal="true" aria-label="Submit your quiz" className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+    {shortcutsOpen && <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" panelClassName="w-full max-w-md outline-none" label="Keyboard shortcuts" onClose={() => setShortcutsOpen(false)}><section className="w-full rounded-2xl bg-white p-6"><h2 className="text-lg font-semibold">Keyboard shortcuts</h2><dl className="mt-4 grid grid-cols-[90px_1fr] gap-3 text-sm"><dt className="font-semibold">A–F</dt><dd>Choose an MCQ option</dd><dt className="font-semibold">N / →</dt><dd>Next question</dd><dt className="font-semibold">P / ←</dt><dd>Previous question</dd><dt className="font-semibold">?</dt><dd>Open this guide</dd></dl><p className="mt-4 text-xs leading-5 text-[#716c76]">Shortcuts pause while you type a theory answer.</p><button onClick={() => setShortcutsOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#2e2877] text-sm font-semibold text-white">Got it</button></section></Dialog>}
+    {confirming && !timedOut && <Dialog className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" panelClassName="w-full max-w-lg outline-none" label="Submit your quiz" onClose={submitting ? undefined : () => setConfirming(false)}>
+      <section className="relative w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 sm:p-7">
         <h2 className="text-xl font-semibold">Submit your quiz?</h2>
         <p className="mt-2 text-sm leading-6 text-[#716c76]">You answered {answeredCount} of {questions.length} questions.{unanswered ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : ' Every question has an answer.'}</p>
         {unanswered > 0 && <button onClick={() => setConfirming(false)} className="mt-4 text-sm font-semibold text-[#2e2877]">Return and review unanswered questions</button>}
@@ -262,7 +263,7 @@ export function MockAttemptClient({ data }: { data: AttemptData }) {
           <button disabled={submitting} onClick={() => void submit()} className="min-h-11 rounded-xl bg-[#994704] px-5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? 'Submitting…' : 'Submit final answers'}</button>
         </div>
       </section>
-    </div>}
+    </Dialog>}
   </div>
   </AntiCheatWrapper>
 }
