@@ -2179,14 +2179,14 @@ isOneToOne: true
         ]
       },"programmes": {
                   Row: {
-                    "created_at": string,"created_by": string,"creation_key": string | null,"currency": string,"description": string | null,"id": string,"is_published": boolean,"name": string,"price": number,"school_id": string,"slug": string,"teaching_mode": string,"thumbnail_url": string | null,"updated_at": string
+                    "created_at": string,"created_by": string,"creation_fingerprint": string | null,"creation_key": string | null,"currency": string,"description": string | null,"id": string,"is_published": boolean,"name": string,"price": number,"school_id": string,"slug": string,"teaching_mode": string,"thumbnail_url": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by": string,"creation_key"?: string | null,"currency"?: string,"description"?: string | null,"id"?: string,"is_published"?: boolean,"name": string,"price"?: number,"school_id": string,"slug": string,"teaching_mode"?: string,"thumbnail_url"?: string | null,"updated_at"?: string
+                    "created_at"?: string,"created_by": string,"creation_fingerprint"?: string | null,"creation_key"?: string | null,"currency"?: string,"description"?: string | null,"id"?: string,"is_published"?: boolean,"name": string,"price"?: number,"school_id": string,"slug": string,"teaching_mode"?: string,"thumbnail_url"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string,"creation_key"?: string | null,"currency"?: string,"description"?: string | null,"id"?: string,"is_published"?: boolean,"name"?: string,"price"?: number,"school_id"?: string,"slug"?: string,"teaching_mode"?: string,"thumbnail_url"?: string | null,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string,"creation_fingerprint"?: string | null,"creation_key"?: string | null,"currency"?: string,"description"?: string | null,"id"?: string,"is_published"?: boolean,"name"?: string,"price"?: number,"school_id"?: string,"slug"?: string,"teaching_mode"?: string,"thumbnail_url"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {

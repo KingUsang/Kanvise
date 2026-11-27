@@ -816,8 +816,9 @@ liveClassesRouter.post('/:id/recording-share-link', requireRole('tutor', 'admin'
   if (!recording) return c.json({ error: 'The recording is not ready to share', code: 'RECORDING_NOT_READY' }, 409)
   const token = randomBytes(32).toString('base64url')
   const now = new Date().toISOString()
-  await (supabase as any).from('live_class_recording_share_links').update({ revoked_at: now })
+  const { error: revokeError } = await (supabase as any).from('live_class_recording_share_links').update({ revoked_at: now })
     .eq('live_class_id', access.liveClass.id).is('revoked_at', null)
+  if (revokeError) return c.json({ error: 'Could not create the recording link', code: 'RECORDING_LINK_FAILED' }, 500)
   const { error } = await (supabase as any).from('live_class_recording_share_links').insert({
     school_id: user.school_id, live_class_id: access.liveClass.id,
     token_hash: createHash('sha256').update(token).digest('hex'),
@@ -911,11 +912,16 @@ liveClassesRouter.post('/:id/regenerate-link', requireRole('tutor', 'admin'), as
   if (liveClass.access_mode !== 'anyone_with_link') return c.json({ error: 'Only shared classes have a link to regenerate', code: 'NOT_SHARED_CLASS' }, 400)
   const shareToken = randomBytes(9).toString('base64url').slice(0, 12)
   const now = new Date().toISOString()
+  // Revoke existing guest sessions first and only reveal the new secret after the
+  // rotation commits, so a partial failure never leaves old guests admitted
+  // beside a replaced link (DEV-LVC-006).
+  const { error: revokeError } = await (supabase as any).from('live_class_guests').update({ revoked_at: now })
+    .eq('live_class_id', liveClass.id).is('revoked_at', null)
+  if (revokeError) return c.json({ error: 'Could not create a new class link', code: 'LINK_REGENERATE_FAILED' }, 500)
   const { error } = await (supabase.from('live_classes') as any).update({
     share_token_hash: createHash('sha256').update(shareToken).digest('hex'),
     share_token_encrypted: encryptClassLinkToken(shareToken), share_link_revoked_at: null,
   }).eq('id', liveClass.id).eq('school_id', user.school_id)
   if (error) return c.json({ error: 'Could not create a new class link', code: 'LINK_REGENERATE_FAILED' }, 500)
-  await (supabase as any).from('live_class_guests').update({ revoked_at: now }).eq('live_class_id', liveClass.id).is('revoked_at', null)
   return c.json({ data: { share_token: shareToken } })
 })

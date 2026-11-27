@@ -23,6 +23,7 @@ vi.mock('../middleware/auth', () => ({
   requireRole: () => async (_c: any, next: () => Promise<void>) => next(),
 }))
 
+vi.mock('../plugnmeet/classroom-lifecycle', () => ({ ensurePlugNmeetReady: vi.fn().mockResolvedValue({ state: 'ready' }), isPlugNmeetHealthy: vi.fn().mockResolvedValue(true) }))
 vi.mock('../notifications/triggers', () => ({ notifyClassCancelled: vi.fn().mockResolvedValue({ sent: 0 }), notifyClassRecapPublished: vi.fn() }))
 vi.mock('../storage/r2', () => ({
   createPresignedDownload: vi.fn().mockResolvedValue('https://signed.example/recording.mp4'),
@@ -552,5 +553,24 @@ describe('shared and enrolled class host membership (DEV-LVC-001)', () => {
     }))
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({ code: 'INVALID_TUTOR' })
+  })
+})
+
+describe('regenerate-link rotation order (DEV-LVC-006)', () => {
+  const sharedClass = { id: 'class-1', school_id: 'school-1', course_id: null, tutor_id: 'admin-1', status: 'scheduled', access_mode: 'anyone_with_link' }
+
+  it('does not reveal a new token when guest revocation fails', async () => {
+    mocks.user = { id: 'admin-1', school_id: 'school-1', role: 'admin' }
+    const updates: string[] = []
+    mocks.from.mockImplementation((table: string) => {
+      const b = builder(table === 'live_class_guests' ? { data: null, error: { message: 'down' } } : { data: sharedClass, error: null })
+      const update = b.update
+      b.update = (...args: any[]) => { updates.push(table); return update(...args) }
+      return b
+    })
+    const response = await liveClassesRouter.request('/class-1/regenerate-link', { method: 'POST' })
+    expect(response.status).toBe(500)
+    expect(await response.json()).toMatchObject({ code: 'LINK_REGENERATE_FAILED' })
+    expect(updates).toEqual(['live_class_guests'])
   })
 })
