@@ -85,6 +85,7 @@ import { feedbackResolutionRouter, feedbackRouter } from './routes/feedback';
 import { waitlistRouter } from './routes/waitlist';
 import { clientAddress } from './lib/ip-rate-limit';
 import { suggestionsRouter } from './routes/suggestions';
+import { jobOpsRouter } from './routes/job-ops';
 
 app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
@@ -133,6 +134,7 @@ app.route('/', suggestionsRouter);
 // `/students/me/settings`.
 app.route("/schools/me/promos", promosRouter);
 app.route("/students/me", studentMembershipsRouter);
+app.route("/admin/jobs", jobOpsRouter);
 
 const landingEventNames = new Set([
   'landing_view',

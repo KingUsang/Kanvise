@@ -147,6 +147,7 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/', 'waitlistRouter', 'src/routes/waitlist.ts', 'public', []),
   router('/', 'suggestionsRouter', 'src/routes/suggestions.ts', 'public', []),
   router('/schools/me/promos', 'promosRouter', 'src/routes/promos.ts', 'protected-account', membershipSequence),
+  router('/admin/jobs', 'jobOpsRouter', 'src/routes/job-ops.ts', 'protected-account', membershipSequence),
   router('/students/me', 'studentMembershipsRouter', 'src/routes/student-memberships.ts', 'authenticated-pre-account', jwtAndProfile),
   router('/', 'retiredQuizRouter', 'src/routes/retired-quiz.ts', 'public', [], {
     exception: 'Answers 410 Gone for the retired /mock, /my-mocks, /guest and /mocks/:id/offers URLs. It reads no data.',
