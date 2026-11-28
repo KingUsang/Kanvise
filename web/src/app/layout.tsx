@@ -6,10 +6,10 @@ import "@fontsource/poppins/latin-600.css";
 import "@fontsource/poppins/latin-700.css";
 import "@fontsource/material-symbols-outlined";
 import "./globals.css";
-import { Toaster } from "sonner";
 import "katex/dist/katex.min.css";
 import { Suspense } from "react";
 import NavigationProgress from "@/components/navigation/NavigationProgress";
+import { AppToaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { BrowserPushEngagementTracker } from "@/components/pwa/browser-push-engagement-tracker";
@@ -59,7 +59,9 @@ export default function RootLayout({
         <InstallPrompt />
         <BrowserPushEngagementTracker />
         <Analytics />
-        <Toaster position="bottom-right" richColors />
+        <Suspense fallback={null}>
+          <AppToaster />
+        </Suspense>
       </body>
     </html>
   );
