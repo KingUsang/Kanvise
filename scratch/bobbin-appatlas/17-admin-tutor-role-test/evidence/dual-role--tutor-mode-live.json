@@ -1,0 +1,285 @@
+{
+  "capturedAt": "2026-11-28T12:13:59.394Z",
+  "url": "https://app.withbobbin.com/",
+  "title": "Dashboard | Bobbin",
+  "headings": [
+    "Good afternoon, Emmanuel",
+    "Today",
+    "This week",
+    "Needs attention"
+  ],
+  "bodyText": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students LIBRARY Recordings Resources ACCOUNT Settings EU Emmanuel Usang Tutor · Science Students Academy Help and updates New updates available Good afternoon, Emmanuel Saturday, 28 November 2026 Today Live view Open calendar You currently have no lessons booked today. This week All lessons MON 23 TUE 24 WED 25 THU 26 FRI 27 SAT 28 SUN 29 No lessons scheduled for this day Needs attention 0 reports to write all caught up NEW · MOBILE APP Record lessons on the go Capture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you. Learn more",
+  "controls": [
+    {
+      "tag": "a",
+      "text": "Skip to content",
+      "label": null,
+      "href": "#main-scroll"
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "href": "/"
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "href": "/courses"
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "href": "/students"
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "href": "/resources"
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "href": "/profile"
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangTutor · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Close menu",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "href": "/"
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "href": "/courses"
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "href": "/students"
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "href": "/resources"
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "href": "/profile"
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangTutor · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Open navigation",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Live view",
+      "label": "Live view",
+      "href": "/lessons/live"
+    },
+    {
+      "tag": "a",
+      "text": "Open calendar",
+      "label": null,
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "All lessons",
+      "label": null,
+      "href": "/lessons"
+    },
+    {
+      "tag": "button",
+      "text": "Mon23",
+      "label": "Monday, 23 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Tue24",
+      "label": "Tuesday, 24 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Wed25",
+      "label": "Wednesday, 25 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Thu26",
+      "label": "Thursday, 26 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Fri27",
+      "label": "Friday, 27 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Sat28",
+      "label": "Saturday, 28 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Sun29",
+      "label": "Sunday, 29 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "0 reports to writeall caught up",
+      "label": "Write reports: 0 reports to write, all caught up",
+      "href": "/lessons?status=awaiting-report"
+    },
+    {
+      "tag": "button",
+      "text": "New · Mobile appRecord lessons on the goCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.Learn more",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Dismiss",
+      "href": null
+    }
+  ],
+  "tutorSwitchStatus": 200
+}

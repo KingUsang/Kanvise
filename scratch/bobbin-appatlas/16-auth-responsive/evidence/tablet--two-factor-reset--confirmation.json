@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-11-28T11:41:13.880Z",
+  "state": "two-factor-reset--confirmation",
+  "requestedRoute": "/auth/two-factor-reset?token=research-reset",
+  "viewport": "tablet",
+  "url": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+  "title": "Turn off two-factor | Bobbin",
+  "headings": [
+    "Locked out?Let's get you back in.",
+    "Turn off two-factor authentication?"
+  ],
+  "bodyText": "Turn off two-factor authentication? An administrator asked to turn off two-factor authentication on your account, so you can log in with your password alone. Only confirm if you asked them to. Turn off two-factor Didn't ask for this? Ignore this page and tell your administrator. Nothing changes unless you confirm.",
+  "controls": [
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Turn off two-factor",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

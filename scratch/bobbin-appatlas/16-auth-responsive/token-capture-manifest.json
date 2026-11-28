@@ -1,0 +1,1028 @@
+[
+  {
+    "viewport": "desktop",
+    "id": "login--two-factor-code",
+    "route": "/login",
+    "kind": "two-factor",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--login--two-factor-code.png",
+    "evidence": "evidence/desktop--login--two-factor-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "One more step to sign in. Your account is protected with two-factor authentication. Enter the code from your authenticator app to finish signing in. Enter your code Open your authenticator app and enter the 6-digit code for Bobbin. Authentication code Verify L"
+  },
+  {
+    "viewport": "desktop",
+    "id": "login--two-factor-recovery-code",
+    "route": "/login",
+    "kind": "two-factor-recovery",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--login--two-factor-recovery-code.png",
+    "evidence": "evidence/desktop--login--two-factor-recovery-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "One more step to sign in. Your account is protected with two-factor authentication. Enter the code from your authenticator app to finish signing in. Enter your code Enter one of the recovery codes you saved when you turned on two-factor authentication. Each co"
+  },
+  {
+    "viewport": "desktop",
+    "id": "login--two-factor-invalid-code",
+    "route": "/login",
+    "kind": "two-factor-invalid",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--login--two-factor-invalid-code.png",
+    "evidence": "evidence/desktop--login--two-factor-invalid-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "One more step to sign in. Your account is protected with two-factor authentication. Enter the code from your authenticator app to finish signing in. Enter your code Open your authenticator app and enter the 6-digit code for Bobbin. Authentication code That cod"
+  },
+  {
+    "viewport": "desktop",
+    "id": "set-password--form",
+    "route": "/auth/set-password?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--set-password--form.png",
+    "evidence": "evidence/desktop--set-password--form.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Set your password"
+    ],
+    "summary": "One last step to sign in. Choose a password for your Bobbin account and you're signed in. Set your password This link is for atlas.research@example.com. This confirms your email address and signs you in. If you already have a password, enter it again to keep i"
+  },
+  {
+    "viewport": "desktop",
+    "id": "set-password--mismatch-validation",
+    "route": "/auth/set-password?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "kind": "password-mismatch",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--set-password--mismatch-validation.png",
+    "evidence": "evidence/desktop--set-password--mismatch-validation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Set your password"
+    ],
+    "summary": "One last step to sign in. Choose a password for your Bobbin account and you're signed in. Set your password This link is for atlas.research@example.com. This confirms your email address and signs you in. If you already have a password, enter it again to keep i"
+  },
+  {
+    "viewport": "desktop",
+    "id": "confirm-signup--form",
+    "route": "/auth/confirm-signup?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--confirm-signup--form.png",
+    "evidence": "evidence/desktop--confirm-signup--form.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Set your password"
+    ],
+    "summary": "One last step to get started. Set a password to secure your Bobbin account. Set your password Choose a password to finish setting up. Password Must be at least 8 characters. Confirm password Set password & log in Back to login"
+  },
+  {
+    "viewport": "desktop",
+    "id": "confirm-signup--password-validation",
+    "route": "/auth/confirm-signup?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "kind": "signup-password-validation",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--confirm-signup--password-validation.png",
+    "evidence": "evidence/desktop--confirm-signup--password-validation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Set your password"
+    ],
+    "summary": "One last step to get started. Set a password to secure your Bobbin account. Set your password Choose a password to finish setting up. Password Must be at least 8 characters. Confirm password Passwords do not match. Passwords do not match. Set password & log in"
+  },
+  {
+    "viewport": "desktop",
+    "id": "accept-invite--existing-account",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "pending",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--accept-invite--existing-account.png",
+    "evidence": "evidence/desktop--accept-invite--existing-account.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Join Atlas Research Academy on Bobbin?"
+    ],
+    "summary": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. Join Atlas Research Academy on Bobbin? Atlas Research Academy invited you to join as a tutor. You'll keep using your existing Bobbin account, and you "
+  },
+  {
+    "viewport": "desktop",
+    "id": "accept-invite--password-required",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "student",
+      "state": "pending",
+      "password_required": true,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--accept-invite--password-required.png",
+    "evidence": "evidence/desktop--accept-invite--password-required.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Join Atlas Research Academy on Bobbin?"
+    ],
+    "summary": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. Join Atlas Research Academy on Bobbin? Atlas Research Academy invited you to join as a student. You'll keep using your existing Bobbin account, and yo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "accept-invite--already-accepted",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "administrator",
+      "state": "accepted",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--accept-invite--already-accepted.png",
+    "evidence": "evidence/desktop--accept-invite--already-accepted.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "You've already joined Atlas Research Academy"
+    ],
+    "summary": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. You've already joined Atlas Research Academy This invite was accepted. Sign in with your Bobbin account to continue. Go to sign in"
+  },
+  {
+    "viewport": "desktop",
+    "id": "accept-invite--declined",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "declined",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--accept-invite--declined.png",
+    "evidence": "evidence/desktop--accept-invite--declined.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "You declined this invite"
+    ],
+    "summary": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. You declined this invite If you change your mind, ask Atlas Research Academy to send you a new one."
+  },
+  {
+    "viewport": "desktop",
+    "id": "accept-invite--withdrawn",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "canceled",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--accept-invite--withdrawn.png",
+    "evidence": "evidence/desktop--accept-invite--withdrawn.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "This invite was withdrawn"
+    ],
+    "summary": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. This invite was withdrawn Ask Atlas Research Academy if you still need to join them."
+  },
+  {
+    "viewport": "desktop",
+    "id": "accept-invite--expired",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "expired",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--accept-invite--expired.png",
+    "evidence": "evidence/desktop--accept-invite--expired.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "This invite has expired"
+    ],
+    "summary": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. This invite has expired Ask Atlas Research Academy to send you a new one if you'd like to join, or decline it if you're not interested. Decline invite"
+  },
+  {
+    "viewport": "desktop",
+    "id": "two-factor-reset--confirmation",
+    "route": "/auth/two-factor-reset?token=research-reset",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--two-factor-reset--confirmation.png",
+    "evidence": "evidence/desktop--two-factor-reset--confirmation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Turn off two-factor authentication?"
+    ],
+    "summary": "Locked out? Let's get you back in. Confirm the reset your administrator asked for, then sign in with your password. Turn off two-factor authentication? An administrator asked to turn off two-factor authentication on your account, so you can log in with your pa"
+  },
+  {
+    "viewport": "desktop",
+    "id": "two-factor-reset--success",
+    "route": "/auth/two-factor-reset?token=research-reset",
+    "kind": "two-factor-reset-success",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--two-factor-reset--success.png",
+    "evidence": "evidence/desktop--two-factor-reset--success.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Two-factor authentication is off"
+    ],
+    "summary": "Locked out? Let's get you back in. Confirm the reset your administrator asked for, then sign in with your password. Two-factor authentication is off You can now log in with your password alone. Turn two-factor authentication on again from your profile to keep "
+  },
+  {
+    "viewport": "desktop",
+    "id": "recording-consent--request",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--recording-consent--request.png",
+    "evidence": "evidence/desktop--recording-consent--request.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Give recording consent for Atlas Student?"
+    ],
+    "summary": "Lesson recording. Your consent. Give recording consent for a student in one step. You can withdraw it later from their profile. Give recording consent for Atlas Student? Atlas Research Academy asks for consent before recording lessons with Atlas Student. Until"
+  },
+  {
+    "viewport": "desktop",
+    "id": "recording-consent--already-given",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": true
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--recording-consent--already-given.png",
+    "evidence": "evidence/desktop--recording-consent--already-given.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Consent is already given"
+    ],
+    "summary": "Lesson recording. Your consent. Give recording consent for a student in one step. You can withdraw it later from their profile. Consent is already given Atlas Research Academy already has recording consent for Atlas Student. To withdraw it, sign in to Bobbin a"
+  },
+  {
+    "viewport": "desktop",
+    "id": "recording-consent--success",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent-success",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--recording-consent--success.png",
+    "evidence": "evidence/desktop--recording-consent--success.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Consent given"
+    ],
+    "summary": "Lesson recording. Your consent. Give recording consent for a student in one step. You can withdraw it later from their profile. Consent given Atlas Research Academy can now record lessons with Atlas Student. To withdraw it, sign in to Bobbin and open Atlas Stu"
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--two-factor-code",
+    "route": "/login",
+    "kind": "two-factor",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--login--two-factor-code.png",
+    "evidence": "evidence/tablet--login--two-factor-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "Enter your code Open your authenticator app and enter the 6-digit code for Bobbin. Authentication code Verify Lost your phone? Use a recovery code Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--two-factor-recovery-code",
+    "route": "/login",
+    "kind": "two-factor-recovery",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--login--two-factor-recovery-code.png",
+    "evidence": "evidence/tablet--login--two-factor-recovery-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "Enter your code Enter one of the recovery codes you saved when you turned on two-factor authentication. Each code works once. Recovery code Verify No recovery codes? Ask an administrator at your organization to reset two-factor authentication on your account. "
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--two-factor-invalid-code",
+    "route": "/login",
+    "kind": "two-factor-invalid",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--login--two-factor-invalid-code.png",
+    "evidence": "evidence/tablet--login--two-factor-invalid-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "Enter your code Open your authenticator app and enter the 6-digit code for Bobbin. Authentication code That code is not right, or it has expired. Try the current one. Verify Lost your phone? Use a recovery code Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "set-password--form",
+    "route": "/auth/set-password?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--set-password--form.png",
+    "evidence": "evidence/tablet--set-password--form.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Set your password"
+    ],
+    "summary": "Set your password This link is for atlas.research@example.com. This confirms your email address and signs you in. If you already have a password, enter it again to keep it. Password Must be at least 8 characters. Confirm password Set password & log in Back to "
+  },
+  {
+    "viewport": "tablet",
+    "id": "set-password--mismatch-validation",
+    "route": "/auth/set-password?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "kind": "password-mismatch",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--set-password--mismatch-validation.png",
+    "evidence": "evidence/tablet--set-password--mismatch-validation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Set your password"
+    ],
+    "summary": "Set your password This link is for atlas.research@example.com. This confirms your email address and signs you in. If you already have a password, enter it again to keep it. Password Must be at least 8 characters. Confirm password Passwords do not match. Passwo"
+  },
+  {
+    "viewport": "tablet",
+    "id": "confirm-signup--form",
+    "route": "/auth/confirm-signup?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--confirm-signup--form.png",
+    "evidence": "evidence/tablet--confirm-signup--form.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Set your password"
+    ],
+    "summary": "Set your password Choose a password to finish setting up. Password Must be at least 8 characters. Confirm password Set password & log in Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "confirm-signup--password-validation",
+    "route": "/auth/confirm-signup?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "kind": "signup-password-validation",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--confirm-signup--password-validation.png",
+    "evidence": "evidence/tablet--confirm-signup--password-validation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Set your password"
+    ],
+    "summary": "Set your password Choose a password to finish setting up. Password Must be at least 8 characters. Confirm password Passwords do not match. Passwords do not match. Set password & log in Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "accept-invite--existing-account",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "pending",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--accept-invite--existing-account.png",
+    "evidence": "evidence/tablet--accept-invite--existing-account.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Join Atlas Research Academy on Bobbin?"
+    ],
+    "summary": "Join Atlas Research Academy on Bobbin? Atlas Research Academy invited you to join as a tutor. You'll keep using your existing Bobbin account, and you can belong to more than one organization. Accept invite Decline Didn't expect this? Decline, or ignore this pa"
+  },
+  {
+    "viewport": "tablet",
+    "id": "accept-invite--password-required",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "student",
+      "state": "pending",
+      "password_required": true,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--accept-invite--password-required.png",
+    "evidence": "evidence/tablet--accept-invite--password-required.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Join Atlas Research Academy on Bobbin?"
+    ],
+    "summary": "Join Atlas Research Academy on Bobbin? Atlas Research Academy invited you to join as a student. You'll keep using your existing Bobbin account, and you can belong to more than one organization. You haven't confirmed this email address with Bobbin yet, so choos"
+  },
+  {
+    "viewport": "tablet",
+    "id": "accept-invite--already-accepted",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "administrator",
+      "state": "accepted",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--accept-invite--already-accepted.png",
+    "evidence": "evidence/tablet--accept-invite--already-accepted.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "You've already joined Atlas Research Academy"
+    ],
+    "summary": "You've already joined Atlas Research Academy This invite was accepted. Sign in with your Bobbin account to continue. Go to sign in"
+  },
+  {
+    "viewport": "tablet",
+    "id": "accept-invite--declined",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "declined",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--accept-invite--declined.png",
+    "evidence": "evidence/tablet--accept-invite--declined.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "You declined this invite"
+    ],
+    "summary": "You declined this invite If you change your mind, ask Atlas Research Academy to send you a new one."
+  },
+  {
+    "viewport": "tablet",
+    "id": "accept-invite--withdrawn",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "canceled",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--accept-invite--withdrawn.png",
+    "evidence": "evidence/tablet--accept-invite--withdrawn.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "This invite was withdrawn"
+    ],
+    "summary": "This invite was withdrawn Ask Atlas Research Academy if you still need to join them."
+  },
+  {
+    "viewport": "tablet",
+    "id": "accept-invite--expired",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "expired",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--accept-invite--expired.png",
+    "evidence": "evidence/tablet--accept-invite--expired.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "This invite has expired"
+    ],
+    "summary": "This invite has expired Ask Atlas Research Academy to send you a new one if you'd like to join, or decline it if you're not interested. Decline invite"
+  },
+  {
+    "viewport": "tablet",
+    "id": "two-factor-reset--confirmation",
+    "route": "/auth/two-factor-reset?token=research-reset",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--two-factor-reset--confirmation.png",
+    "evidence": "evidence/tablet--two-factor-reset--confirmation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Turn off two-factor authentication?"
+    ],
+    "summary": "Turn off two-factor authentication? An administrator asked to turn off two-factor authentication on your account, so you can log in with your password alone. Only confirm if you asked them to. Turn off two-factor Didn't ask for this? Ignore this page and tell "
+  },
+  {
+    "viewport": "tablet",
+    "id": "two-factor-reset--success",
+    "route": "/auth/two-factor-reset?token=research-reset",
+    "kind": "two-factor-reset-success",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--two-factor-reset--success.png",
+    "evidence": "evidence/tablet--two-factor-reset--success.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Two-factor authentication is off"
+    ],
+    "summary": "Two-factor authentication is off You can now log in with your password alone. Turn two-factor authentication on again from your profile to keep your account protected. Go to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "recording-consent--request",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--recording-consent--request.png",
+    "evidence": "evidence/tablet--recording-consent--request.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Give recording consent for Atlas Student?"
+    ],
+    "summary": "Give recording consent for Atlas Student? Atlas Research Academy asks for consent before recording lessons with Atlas Student. Until it's given, those lessons aren't recorded, and any existing recordings of them stay hidden from everyone. You can withdraw cons"
+  },
+  {
+    "viewport": "tablet",
+    "id": "recording-consent--already-given",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": true
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--recording-consent--already-given.png",
+    "evidence": "evidence/tablet--recording-consent--already-given.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Consent is already given"
+    ],
+    "summary": "Consent is already given Atlas Research Academy already has recording consent for Atlas Student. To withdraw it, sign in to Bobbin and open Atlas Student's profile."
+  },
+  {
+    "viewport": "tablet",
+    "id": "recording-consent--success",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent-success",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--recording-consent--success.png",
+    "evidence": "evidence/tablet--recording-consent--success.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Consent given"
+    ],
+    "summary": "Consent given Atlas Research Academy can now record lessons with Atlas Student. To withdraw it, sign in to Bobbin and open Atlas Student's profile."
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--two-factor-code",
+    "route": "/login",
+    "kind": "two-factor",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--login--two-factor-code.png",
+    "evidence": "evidence/mobile--login--two-factor-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "Enter your code Open your authenticator app and enter the 6-digit code for Bobbin. Authentication code Verify Lost your phone? Use a recovery code Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--two-factor-recovery-code",
+    "route": "/login",
+    "kind": "two-factor-recovery",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--login--two-factor-recovery-code.png",
+    "evidence": "evidence/mobile--login--two-factor-recovery-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "Enter your code Enter one of the recovery codes you saved when you turned on two-factor authentication. Each code works once. Recovery code Verify No recovery codes? Ask an administrator at your organization to reset two-factor authentication on your account. "
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--two-factor-invalid-code",
+    "route": "/login",
+    "kind": "two-factor-invalid",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--login--two-factor-invalid-code.png",
+    "evidence": "evidence/mobile--login--two-factor-invalid-code.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "One more stepto sign in.",
+      "Enter your code"
+    ],
+    "summary": "Enter your code Open your authenticator app and enter the 6-digit code for Bobbin. Authentication code That code is not right, or it has expired. Try the current one. Verify Lost your phone? Use a recovery code Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "set-password--form",
+    "route": "/auth/set-password?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--set-password--form.png",
+    "evidence": "evidence/mobile--set-password--form.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Set your password"
+    ],
+    "summary": "Set your password This link is for atlas.research@example.com. This confirms your email address and signs you in. If you already have a password, enter it again to keep it. Password Must be at least 8 characters. Confirm password Set password & log in Back to "
+  },
+  {
+    "viewport": "mobile",
+    "id": "set-password--mismatch-validation",
+    "route": "/auth/set-password?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "kind": "password-mismatch",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--set-password--mismatch-validation.png",
+    "evidence": "evidence/mobile--set-password--mismatch-validation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Set your password"
+    ],
+    "summary": "Set your password This link is for atlas.research@example.com. This confirms your email address and signs you in. If you already have a password, enter it again to keep it. Password Must be at least 8 characters. Confirm password Passwords do not match. Passwo"
+  },
+  {
+    "viewport": "mobile",
+    "id": "confirm-signup--form",
+    "route": "/auth/confirm-signup?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--confirm-signup--form.png",
+    "evidence": "evidence/mobile--confirm-signup--form.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Set your password"
+    ],
+    "summary": "Set your password Choose a password to finish setting up. Password Must be at least 8 characters. Confirm password Set password & log in Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "confirm-signup--password-validation",
+    "route": "/auth/confirm-signup?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+    "kind": "signup-password-validation",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--confirm-signup--password-validation.png",
+    "evidence": "evidence/mobile--confirm-signup--password-validation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Set your password"
+    ],
+    "summary": "Set your password Choose a password to finish setting up. Password Must be at least 8 characters. Confirm password Passwords do not match. Passwords do not match. Set password & log in Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "accept-invite--existing-account",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "pending",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--accept-invite--existing-account.png",
+    "evidence": "evidence/mobile--accept-invite--existing-account.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Join Atlas Research Academy on Bobbin?"
+    ],
+    "summary": "Join Atlas Research Academy on Bobbin? Atlas Research Academy invited you to join as a tutor. You'll keep using your existing Bobbin account, and you can belong to more than one organization. Accept invite Decline Didn't expect this? Decline, or ignore this pa"
+  },
+  {
+    "viewport": "mobile",
+    "id": "accept-invite--password-required",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "student",
+      "state": "pending",
+      "password_required": true,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--accept-invite--password-required.png",
+    "evidence": "evidence/mobile--accept-invite--password-required.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Join Atlas Research Academy on Bobbin?"
+    ],
+    "summary": "Join Atlas Research Academy on Bobbin? Atlas Research Academy invited you to join as a student. You'll keep using your existing Bobbin account, and you can belong to more than one organization. You haven't confirmed this email address with Bobbin yet, so choos"
+  },
+  {
+    "viewport": "mobile",
+    "id": "accept-invite--already-accepted",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "administrator",
+      "state": "accepted",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--accept-invite--already-accepted.png",
+    "evidence": "evidence/mobile--accept-invite--already-accepted.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "You've already joined Atlas Research Academy"
+    ],
+    "summary": "You've already joined Atlas Research Academy This invite was accepted. Sign in with your Bobbin account to continue. Go to sign in"
+  },
+  {
+    "viewport": "mobile",
+    "id": "accept-invite--declined",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "declined",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--accept-invite--declined.png",
+    "evidence": "evidence/mobile--accept-invite--declined.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "You declined this invite"
+    ],
+    "summary": "You declined this invite If you change your mind, ask Atlas Research Academy to send you a new one."
+  },
+  {
+    "viewport": "mobile",
+    "id": "accept-invite--withdrawn",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "canceled",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--accept-invite--withdrawn.png",
+    "evidence": "evidence/mobile--accept-invite--withdrawn.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "This invite was withdrawn"
+    ],
+    "summary": "This invite was withdrawn Ask Atlas Research Academy if you still need to join them."
+  },
+  {
+    "viewport": "mobile",
+    "id": "accept-invite--expired",
+    "route": "/auth/accept-invite?token=research-invite",
+    "kind": "invite",
+    "preview": {
+      "organization_name": "Atlas Research Academy",
+      "user_type": "tutor",
+      "state": "expired",
+      "password_required": false,
+      "from_tutorcruncher": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--accept-invite--expired.png",
+    "evidence": "evidence/mobile--accept-invite--expired.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "This invite has expired"
+    ],
+    "summary": "This invite has expired Ask Atlas Research Academy to send you a new one if you'd like to join, or decline it if you're not interested. Decline invite"
+  },
+  {
+    "viewport": "mobile",
+    "id": "two-factor-reset--confirmation",
+    "route": "/auth/two-factor-reset?token=research-reset",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--two-factor-reset--confirmation.png",
+    "evidence": "evidence/mobile--two-factor-reset--confirmation.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Turn off two-factor authentication?"
+    ],
+    "summary": "Turn off two-factor authentication? An administrator asked to turn off two-factor authentication on your account, so you can log in with your password alone. Only confirm if you asked them to. Turn off two-factor Didn't ask for this? Ignore this page and tell "
+  },
+  {
+    "viewport": "mobile",
+    "id": "two-factor-reset--success",
+    "route": "/auth/two-factor-reset?token=research-reset",
+    "kind": "two-factor-reset-success",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--two-factor-reset--success.png",
+    "evidence": "evidence/mobile--two-factor-reset--success.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Two-factor authentication is off"
+    ],
+    "summary": "Two-factor authentication is off You can now log in with your password alone. Turn two-factor authentication on again from your profile to keep your account protected. Go to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "recording-consent--request",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--recording-consent--request.png",
+    "evidence": "evidence/mobile--recording-consent--request.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Give recording consent for Atlas Student?"
+    ],
+    "summary": "Give recording consent for Atlas Student? Atlas Research Academy asks for consent before recording lessons with Atlas Student. Until it's given, those lessons aren't recorded, and any existing recordings of them stay hidden from everyone. You can withdraw cons"
+  },
+  {
+    "viewport": "mobile",
+    "id": "recording-consent--already-given",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": true
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--recording-consent--already-given.png",
+    "evidence": "evidence/mobile--recording-consent--already-given.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Consent is already given"
+    ],
+    "summary": "Consent is already given Atlas Research Academy already has recording consent for Atlas Student. To withdraw it, sign in to Bobbin and open Atlas Student's profile."
+  },
+  {
+    "viewport": "mobile",
+    "id": "recording-consent--success",
+    "route": "/recording-consent#token=research-consent",
+    "kind": "consent-success",
+    "preview": {
+      "student_name": "Atlas Student",
+      "organization_name": "Atlas Research Academy",
+      "recording_consent_given": false
+    },
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--recording-consent--success.png",
+    "evidence": "evidence/mobile--recording-consent--success.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Consent given"
+    ],
+    "summary": "Consent given Atlas Research Academy can now record lessons with Atlas Student. To withdraw it, sign in to Bobbin and open Atlas Student's profile."
+  }
+]

@@ -1,0 +1,427 @@
+{
+  "capturedAt": "2026-11-28T12:14:02.304Z",
+  "url": "https://app.withbobbin.com/",
+  "title": "Dashboard | Bobbin",
+  "headings": [
+    "Good afternoon, Emmanuel",
+    "Brief your tutors on letting students in",
+    "Today",
+    "This week",
+    "Needs attention",
+    "Get started with confidence",
+    "Find the right plan"
+  ],
+  "bodyText": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up billing Good afternoon, Emmanuel Saturday, 28 November 2026 Explore a sample course Algebra 1 Small Group is a ready-made course with lessons, insights and reports, so you can see Bobbin in action before your own data arrives. Try the planning tools there: its course and lesson plans are yours to edit and regenerate. Open the sample course Delete demo data Brief your tutors on letting students in While a tutor is in the classroom, students wait to join until the tutor lets them in from the lesson tools. Share how it works with your tutors before their first lessons. Read the classroom guide Today Live view Open calendar You currently have no lessons booked today. This week All lessons MON 23 TUE 24 WED 25 THU 26 FRI 27 SAT 28 SUN 29 No lessons scheduled for this day Needs attention 0 safeguarding flags no unresolved flags 0 lesson reports nothing to approve 0 reports outstanding all caught up Get started with confidence Visit the help centre Chat to us Find the right plan Book a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your business Book a call NEW · MOBILE APP Record lessons on the go Capture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you. Learn more",
+  "controls": [
+    {
+      "tag": "a",
+      "text": "Skip to content",
+      "label": null,
+      "href": "#main-scroll"
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "href": "/"
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "href": "/courses"
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "href": "/students"
+    },
+    {
+      "tag": "a",
+      "text": "Clients",
+      "label": "Clients",
+      "href": "/clients"
+    },
+    {
+      "tag": "a",
+      "text": "Tutors",
+      "label": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "tag": "a",
+      "text": "Team",
+      "label": "Team",
+      "href": "/team"
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "href": "/resources"
+    },
+    {
+      "tag": "a",
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "tag": "a",
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "tag": "a",
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "href": "/settings"
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Close menu",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "href": "/"
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "href": "/courses"
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "href": "/students"
+    },
+    {
+      "tag": "a",
+      "text": "Clients",
+      "label": "Clients",
+      "href": "/clients"
+    },
+    {
+      "tag": "a",
+      "text": "Tutors",
+      "label": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "tag": "a",
+      "text": "Team",
+      "label": "Team",
+      "href": "/team"
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "href": "/resources"
+    },
+    {
+      "tag": "a",
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "tag": "a",
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "tag": "a",
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "href": "/settings"
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Set up billing",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Open navigation",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Open the sample course",
+      "label": null,
+      "href": "/courses/9231"
+    },
+    {
+      "tag": "button",
+      "text": "Delete demo data",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Dismiss the classroom tip",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Read the classroom guide",
+      "label": null,
+      "href": "https://help.withbobbin.com/en/articles/17565149-the-tutor-led-classroom"
+    },
+    {
+      "tag": "a",
+      "text": "Live view",
+      "label": "Live view",
+      "href": "/lessons/live"
+    },
+    {
+      "tag": "a",
+      "text": "Open calendar",
+      "label": null,
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "All lessons",
+      "label": null,
+      "href": "/lessons"
+    },
+    {
+      "tag": "button",
+      "text": "Mon23",
+      "label": "Monday, 23 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Tue24",
+      "label": "Tuesday, 24 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Wed25",
+      "label": "Wednesday, 25 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Thu26",
+      "label": "Thursday, 26 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Fri27",
+      "label": "Friday, 27 November, 1 lesson",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Sat28",
+      "label": "Saturday, 28 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Sun29",
+      "label": "Sunday, 29 November, 0 lessons",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "0 safeguarding flagsno unresolved flags",
+      "label": "Review flags: 0 safeguarding flags, no unresolved flags",
+      "href": "/safeguarding"
+    },
+    {
+      "tag": "a",
+      "text": "0 lesson reportsnothing to approve",
+      "label": "Review lesson reports: 0 lesson reports, nothing to approve",
+      "href": "/report-approvals"
+    },
+    {
+      "tag": "a",
+      "text": "0 reports outstandingall caught up",
+      "label": "See outstanding reports: 0 reports outstanding, all caught up",
+      "href": "/lessons?status=awaiting-report"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Watch the Bobbin walkthrough video",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Visit the help centre",
+      "label": null,
+      "href": "https://help.withbobbin.com/en/"
+    },
+    {
+      "tag": "button",
+      "text": "Chat to us",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Find the right planBook a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your businessBook a call",
+      "label": null,
+      "href": "https://calendly.com/gabe-tutorcruncher/30min?utm_source=bobbin-app&utm_medium=referral&utm_campaign=trial-upsell&utm_content=tile"
+    },
+    {
+      "tag": "button",
+      "text": "New · Mobile appRecord lessons on the goCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.Learn more",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Dismiss",
+      "href": null
+    }
+  ],
+  "tutorSwitchStatus": 200,
+  "adminSwitchStatus": 200
+}

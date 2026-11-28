@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-11-28T11:34:58.185Z",
+  "state": "confirm-signup--invalid-link",
+  "requestedRoute": "/auth/confirm-signup",
+  "viewport": "mobile",
+  "url": "https://app.withbobbin.com/auth/confirm-signup",
+  "title": "Set your password | Bobbin",
+  "headings": [
+    "One last stepto get started.",
+    "Invalid link"
+  ],
+  "bodyText": "Invalid link This confirmation link is missing or invalid. Use the link from your welcome email, or sign up again to get a new one. Sign up again Need help? Contact support",
+  "controls": [
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Sign up again",
+      "label": null,
+      "placeholder": null,
+      "href": "/signup",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Contact support",
+      "label": null,
+      "placeholder": null,
+      "href": "mailto:support@tutorcruncher.com",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": false
+}

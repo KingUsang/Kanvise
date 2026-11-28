@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-11-28T11:38:48.581Z",
+  "state": "accept-invite--expired",
+  "requestedRoute": "/auth/accept-invite?token=research-invite",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+  "title": "Join an organization | Bobbin",
+  "headings": [
+    "You're invited.It's your call.",
+    "This invite has expired"
+  ],
+  "bodyText": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. This invite has expired Ask Atlas Research Academy to send you a new one if you'd like to join, or decline it if you're not interested. Decline invite",
+  "controls": [
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Decline invite",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

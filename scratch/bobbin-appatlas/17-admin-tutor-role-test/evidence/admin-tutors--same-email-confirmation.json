@@ -1,0 +1,606 @@
+{
+  "capturedAt": "2026-11-28T12:09:22.070Z",
+  "url": "https://app.withbobbin.com/tutors",
+  "title": "Tutors | Bobbin",
+  "headings": [
+    "Tutors",
+    "Add tutor"
+  ],
+  "bodyText": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up billing Tutors Import Add tutor The tutors running sessions in your organization A sample tutor shows how Bobbin works. It's kept out of this list. Open the sample tutor NAME EMAIL LESSONS COMPLETED AR Atlas Research Tutor kingusang09+atlas-tutor@gmail.com 1 Add tutor Add a tutor to your organization. They have no paying client. First name (optional) Last name Email Timezone Emmanuel Usang is already an admin here. Add them as a tutor too? They keep their own name. Cancel Add Emmanuel Usang as a tutor",
+  "controls": [
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Skip to content",
+      "label": null,
+      "placeholder": null,
+      "href": "#main-scroll",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": null,
+      "label": "Home",
+      "placeholder": null,
+      "href": "/",
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Collapse sidebar",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Expand sidebar",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Search…K",
+      "label": "Search",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "placeholder": null,
+      "href": "/",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Calendar",
+      "label": "Calendar",
+      "placeholder": null,
+      "href": "/calendar",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Lessons",
+      "label": "Lessons",
+      "placeholder": null,
+      "href": "/lessons",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Courses",
+      "label": "Courses",
+      "placeholder": null,
+      "href": "/courses",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Students",
+      "label": "Students",
+      "placeholder": null,
+      "href": "/students",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Clients",
+      "label": "Clients",
+      "placeholder": null,
+      "href": "/clients",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Tutors",
+      "label": "Tutors",
+      "placeholder": null,
+      "href": "/tutors",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Team",
+      "label": "Team",
+      "placeholder": null,
+      "href": "/team",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Recordings",
+      "label": "Recordings",
+      "placeholder": null,
+      "href": "/recordings",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Resources",
+      "label": "Resources",
+      "placeholder": null,
+      "href": "/resources",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "placeholder": null,
+      "href": "/report-approvals",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "placeholder": null,
+      "href": "/safeguarding",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "placeholder": null,
+      "href": "/sessions/unlinked",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Settings",
+      "label": "Settings",
+      "placeholder": null,
+      "href": "/settings",
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Close menu",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": null,
+      "label": "Home",
+      "placeholder": null,
+      "href": "/",
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Collapse sidebar",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Expand sidebar",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Search…K",
+      "label": "Search",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "placeholder": null,
+      "href": "/",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Calendar",
+      "label": "Calendar",
+      "placeholder": null,
+      "href": "/calendar",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Lessons",
+      "label": "Lessons",
+      "placeholder": null,
+      "href": "/lessons",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Courses",
+      "label": "Courses",
+      "placeholder": null,
+      "href": "/courses",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Students",
+      "label": "Students",
+      "placeholder": null,
+      "href": "/students",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Clients",
+      "label": "Clients",
+      "placeholder": null,
+      "href": "/clients",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Tutors",
+      "label": "Tutors",
+      "placeholder": null,
+      "href": "/tutors",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Team",
+      "label": "Team",
+      "placeholder": null,
+      "href": "/team",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Recordings",
+      "label": "Recordings",
+      "placeholder": null,
+      "href": "/recordings",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Resources",
+      "label": "Resources",
+      "placeholder": null,
+      "href": "/resources",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "placeholder": null,
+      "href": "/report-approvals",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "placeholder": null,
+      "href": "/safeguarding",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "placeholder": null,
+      "href": "/sessions/unlinked",
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Settings",
+      "label": "Settings",
+      "placeholder": null,
+      "href": "/settings",
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": null,
+      "id": null,
+      "text": "Set up billing",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": null,
+      "label": "Home",
+      "placeholder": null,
+      "href": "/",
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Open navigation",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Import",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "AddAdd tutor",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": null,
+      "text": null,
+      "label": "Search tutors…",
+      "placeholder": "Search tutors…",
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Open the sample tutor",
+      "label": null,
+      "placeholder": null,
+      "href": "/tutors/24051",
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Name",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "ARAtlas Research Tutor",
+      "label": null,
+      "placeholder": null,
+      "href": "/tutors/24857",
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": null,
+      "id": null,
+      "text": null,
+      "label": "Close",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": "tutor-first-name",
+      "text": null,
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": "tutor-last-name",
+      "text": null,
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "email",
+      "id": "tutor-email",
+      "text": null,
+      "label": null,
+      "placeholder": "tutor@example.com",
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": "tutor-timezone",
+      "text": null,
+      "label": "Timezone",
+      "placeholder": "Select a timezone (optional)",
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Clear selection",
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Cancel",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "submit",
+      "id": null,
+      "text": "Add Emmanuel Usang as a tutor",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "disabled": false
+    }
+  ],
+  "formValidity": {
+    "valid": true,
+    "invalidControlIds": []
+  }
+}

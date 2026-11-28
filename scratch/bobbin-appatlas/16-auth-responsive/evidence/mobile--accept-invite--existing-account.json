@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-11-28T11:42:02.726Z",
+  "state": "accept-invite--existing-account",
+  "requestedRoute": "/auth/accept-invite?token=research-invite",
+  "viewport": "mobile",
+  "url": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+  "title": "Join an organization | Bobbin",
+  "headings": [
+    "You're invited.It's your call.",
+    "Join Atlas Research Academy on Bobbin?"
+  ],
+  "bodyText": "Join Atlas Research Academy on Bobbin? Atlas Research Academy invited you to join as a tutor. You'll keep using your existing Bobbin account, and you can belong to more than one organization. Accept invite Decline Didn't expect this? Decline, or ignore this page. Nothing changes unless you answer.",
+  "controls": [
+    {
+      "tag": "button",
+      "type": "submit",
+      "id": null,
+      "text": "Accept invite",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Decline",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-11-28T11:38:40.492Z",
+  "state": "accept-invite--declined",
+  "requestedRoute": "/auth/accept-invite?token=research-invite",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+  "title": "Join an organization | Bobbin",
+  "headings": [
+    "You're invited.It's your call.",
+    "You declined this invite"
+  ],
+  "bodyText": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. You declined this invite If you change your mind, ask Atlas Research Academy to send you a new one.",
+  "controls": [],
+  "simulatedNetworkOutcome": true
+}

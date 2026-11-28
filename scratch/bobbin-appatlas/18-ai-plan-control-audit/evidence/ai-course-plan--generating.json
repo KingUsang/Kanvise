@@ -1,0 +1,639 @@
+{
+  "capturedAt": "2026-11-28T12:30:43.117Z",
+  "url": "https://app.withbobbin.com/courses/9581",
+  "headings": [
+    "Atlas Research Course",
+    "About",
+    "Build a course plan with AI",
+    "Latest lessons",
+    "At a glance",
+    "Tutor",
+    "Student",
+    "Bobbin is drafting your course plan"
+  ],
+  "bodyText": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up billing Atlas Research Course Actions New lesson Summary Lessons (1) Resources Homework About Synthetic course created for authorized end-to-end product research. Build a course plan with AI Generate a structured plan of modules and topics. Browse curriculum-aligned plans built against published exam-board specifications, or describe your own course and let AI draft it. Review every module and topic before using with students. Browse plans Describe your own Latest lessons View all LESSON DATE TUTORS STUDENTS STATUS Atlas end-to-end classroom research 27 Nov 2026 2:00 AM · 1 hour AR Atlas Research Tutor AR Atlas Research Student Complete At a glance Total lessons 1 Students 1 Tutors 1 Tutor Add AR Atlas Research Tutor Student Add AR Atlas Research Student Bobbin is drafting your course plan Up to a minute, feel free to leave this page. WHILE YOU WAIT Unscramble a few classroom words until your content is ready. Play a word game",
+  "controls": [
+    {
+      "tag": "a",
+      "text": "Skip to content",
+      "label": null,
+      "title": null,
+      "href": "#main-scroll",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "title": null,
+      "href": "/",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "title": "Collapse sidebar",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "title": "Expand sidebar",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "title": "Search (⌘K)",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "title": "Dashboard",
+      "href": "/",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "title": "Calendar",
+      "href": "/calendar",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "title": "Lessons",
+      "href": "/lessons",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "title": "Courses",
+      "href": "/courses",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "title": "Students",
+      "href": "/students",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Clients",
+      "label": "Clients",
+      "title": "Clients",
+      "href": "/clients",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Tutors",
+      "label": "Tutors",
+      "title": "Tutors",
+      "href": "/tutors",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Team",
+      "label": "Team",
+      "title": "Team",
+      "href": "/team",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "title": "Recordings",
+      "href": "/recordings",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "title": "Resources",
+      "href": "/resources",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "title": "Report approvals",
+      "href": "/report-approvals",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "title": "Safeguarding",
+      "href": "/safeguarding",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "title": "Unlinked sessions",
+      "href": "/sessions/unlinked",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "title": "Settings",
+      "href": "/settings",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "title": "Emmanuel Usang",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "title": "Help and updates",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Close menu",
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "title": null,
+      "href": "/",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "title": "Collapse sidebar",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "title": "Expand sidebar",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "title": "Search (⌘K)",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "title": "Dashboard",
+      "href": "/",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "title": "Calendar",
+      "href": "/calendar",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "title": "Lessons",
+      "href": "/lessons",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "title": "Courses",
+      "href": "/courses",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "title": "Students",
+      "href": "/students",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Clients",
+      "label": "Clients",
+      "title": "Clients",
+      "href": "/clients",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Tutors",
+      "label": "Tutors",
+      "title": "Tutors",
+      "href": "/tutors",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Team",
+      "label": "Team",
+      "title": "Team",
+      "href": "/team",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "title": "Recordings",
+      "href": "/recordings",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "title": "Resources",
+      "href": "/resources",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "title": "Report approvals",
+      "href": "/report-approvals",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "title": "Safeguarding",
+      "href": "/safeguarding",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "title": "Unlinked sessions",
+      "href": "/sessions/unlinked",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "title": "Settings",
+      "href": "/settings",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "title": "Emmanuel Usang",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "title": "Help and updates",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": "Set up billing",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "title": null,
+      "href": "/",
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Open navigation",
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "text": "Actions",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "NewNew lesson",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Summary",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Lessons (1)",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Resources",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Homework",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Browse plans",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Describe your own",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "View all",
+      "label": null,
+      "title": null,
+      "href": "/courses/9581/lessons",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Atlas end-to-end classroom research",
+      "label": null,
+      "title": null,
+      "href": "/lessons/118821",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Add",
+      "label": "Add tutors",
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "ARAtlas Research Tutor",
+      "label": null,
+      "title": null,
+      "href": "/tutors/24857",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Remove Atlas Research Tutor",
+      "title": "Remove from the course",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Add",
+      "label": "Add students",
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "ARAtlas Research Student",
+      "label": null,
+      "title": null,
+      "href": "/students/24854",
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Remove Atlas Research Student",
+      "title": "Remove from the course",
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Play a word game",
+      "label": null,
+      "title": null,
+      "href": null,
+      "placeholder": null,
+      "disabled": false,
+      "visible": true
+    }
+  ],
+  "prompt": "Create an eight-week GCSE algebra course for a confident secondary student. Cover algebraic notation and manipulation, linear equations, inequalities, simultaneous equations, straight-line graphs, quadratics, sequences, and a final mixed problem-solving project. Include clear learning objectives, weekly practice, retrieval checks, and formative assessment milestones.",
+  "responses": []
+}

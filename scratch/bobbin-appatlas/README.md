@@ -28,6 +28,9 @@ Local competitive-product research for Bobbin's administrator and tutor experien
 | Review queue | `/report-approvals`, `/safeguarding`, `/sessions/unlinked` | ✅ | `11-*`–`13-*` |
 | Tutor role | tutor workspace routes | ✅ | `15-tutor-role/` |
 | Settings | `/settings/*`, billing | ✅ | `14-settings/` |
+| Authentication — responsive | `/login`, `/signup`, `/auth/*`, `/recording-consent`, `/setup` | ✅ | `16-auth-responsive/` — 132 captures |
+| Admin + tutor dual role | `/tutors`, `/`, role switch | ✅ | `17-admin-tutor-role-test/` — live same-identity verification |
+| AI plan + minute controls | `/courses/9581`, outline, linked people, shared chrome | ✅ | `18-ai-plan-control-audit/` — real generation + control audit |
 
 ## Known gates
 
@@ -42,4 +45,6 @@ Local competitive-product research for Bobbin's administrator and tutor experien
 - [x] Verify synthetic records and invitations are captured and labeled as test data.
 - [x] Run feature-level coverage audit.
 - [x] Normalize screen records and generate the local HTML atlas.
-- [x] Smoke-test `_artifact/atlas.html` in Chromium: 229 cards, 49 links, searchable tutor/admin records, detail sheet and flow surface visible, no browser errors.
+- [x] Capture 44 authentication/access/setup states across desktop, tablet, and mobile with explicit controlled-response provenance for token-gated outcomes.
+- [x] Rebuild and smoke-test `_artifact/atlas.html`: 392 cards, 124 links, 132 responsive authentication/setup records, real AI-plan/control-audit evidence, working search/detail/flow surfaces, and no browser console errors.
+- [x] Run one real AI course-plan generation, capture asynchronous completion, inspect generated outline controls, follow linked roster entities, and audit shared minute controls.

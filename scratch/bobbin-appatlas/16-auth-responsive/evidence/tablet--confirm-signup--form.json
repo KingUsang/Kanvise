@@ -1,0 +1,82 @@
+{
+  "capturedAt": "2026-11-28T11:40:42.639Z",
+  "state": "confirm-signup--form",
+  "requestedRoute": "/auth/confirm-signup?token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImF0bGFzLnJlc2VhcmNoQGV4YW1wbGUuY29tIiwibmV3Ijp0cnVlfQ.research",
+  "viewport": "tablet",
+  "url": "https://app.withbobbin.com/auth/confirm-signup",
+  "title": "Set your password | Bobbin",
+  "headings": [
+    "One last stepto get started.",
+    "Set your password"
+  ],
+  "bodyText": "Set your password Choose a password to finish setting up. Password Must be at least 8 characters. Confirm password Set password & log in Back to login",
+  "controls": [
+    {
+      "tag": "input",
+      "type": "password",
+      "id": "password",
+      "text": null,
+      "label": null,
+      "placeholder": "Create a password",
+      "href": null,
+      "required": true,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Show password",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "password",
+      "id": "confirm_password",
+      "text": null,
+      "label": null,
+      "placeholder": "Re-enter your password",
+      "href": null,
+      "required": true,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": null,
+      "label": "Show password",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "submit",
+      "id": null,
+      "text": "Set password & log in",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Back to login",
+      "label": null,
+      "placeholder": null,
+      "href": "/login",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

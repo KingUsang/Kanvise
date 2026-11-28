@@ -1,0 +1,318 @@
+{
+  "url": "https://app.withbobbin.com/courses/9581/outline/8",
+  "bodyText": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up billing Atlas Research Course Actions New lesson Summary Course outline Lessons (1) Resources Homework Back to plan Edit mode Click any text to change it. Press Enter or the tick to save, Escape to cancel. MODULE 9 OF 9 New module Add a description Remove module Done Add topic Final Mixed Problem-Solving Project Remove this module? \"New module\" is removed from the plan, along with its 0 topics, every objective inside them, and any coverage recorded against those objectives. Cancel Remove module",
+  "controls": [
+    {
+      "tag": "a",
+      "text": "Skip to content",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "title": "Collapse sidebar",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "title": "Expand sidebar",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "title": "Search (⌘K)",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "title": "Dashboard",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "title": "Calendar",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "title": "Lessons",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "title": "Courses",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "title": "Students",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Clients",
+      "label": "Clients",
+      "title": "Clients",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Tutors",
+      "label": "Tutors",
+      "title": "Tutors",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Team",
+      "label": "Team",
+      "title": "Team",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "title": "Recordings",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "title": "Resources",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "title": "Report approvals",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "title": "Safeguarding",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "title": "Unlinked sessions",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "title": "Settings",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "title": "Emmanuel Usang",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "title": "Help and updates",
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Set up billing",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Actions",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "NewNew lesson",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Summary",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Course outline",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Lessons (1)",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Resources",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Homework",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Back to plan",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "New module",
+      "label": "Edit module title",
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Add a description",
+      "label": "Edit module description",
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Remove module",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Done",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Add topic",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Final Mixed Problem-Solving Project",
+      "label": "Previous module: Final Mixed Problem-Solving Project",
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Close",
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Cancel",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "text": "Remove module",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "visible": true
+    }
+  ]
+}

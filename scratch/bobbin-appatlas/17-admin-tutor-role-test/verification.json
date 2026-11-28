@@ -1,0 +1,58 @@
+{
+  "accountState": {
+    "activeRole": "administrator",
+    "activeOrganizationId": 781,
+    "memberships": [
+      {
+        "organizationId": 781,
+        "userType": "administrator"
+      },
+      {
+        "organizationId": 781,
+        "userType": "tutor"
+      }
+    ],
+    "linkedRoles": null
+  },
+  "tutorListed": true,
+  "switchCandidates": [
+    {
+      "text": "Tutors",
+      "label": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "text": "Tutor",
+      "label": null,
+      "href": null
+    },
+    {
+      "text": "Tutors",
+      "label": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "text": "AddAdd tutor",
+      "label": null,
+      "href": null
+    },
+    {
+      "text": "Open the sample tutor",
+      "label": null,
+      "href": "/tutors/24051"
+    },
+    {
+      "text": "ARAtlas Research Tutor",
+      "label": null,
+      "href": "/tutors/24857"
+    },
+    {
+      "text": "EUEmmanuel Usang",
+      "label": null,
+      "href": "/tutors/24050"
+    }
+  ],
+  "menuMentionsTutor": true,
+  "tutorSwitchStatus": 200,
+  "adminSwitchStatus": 200
+}

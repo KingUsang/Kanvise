@@ -1,0 +1,60 @@
+{
+  "capturedAt": "2026-11-28T11:37:58.278Z",
+  "state": "login--two-factor-recovery-code",
+  "requestedRoute": "/login",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/login",
+  "title": "Login | Bobbin",
+  "headings": [
+    "One more stepto sign in.",
+    "Enter your code"
+  ],
+  "bodyText": "One more step to sign in. Your account is protected with two-factor authentication. Enter the code from your authenticator app to finish signing in. Enter your code Enter one of the recovery codes you saved when you turned on two-factor authentication. Each code works once. Recovery code Verify No recovery codes? Ask an administrator at your organization to reset two-factor authentication on your account. Use your authenticator app instead Back to login",
+  "controls": [
+    {
+      "tag": "input",
+      "type": "text",
+      "id": "two_factor_recovery_code",
+      "text": null,
+      "label": null,
+      "placeholder": "xxxxx-xxxxx",
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "submit",
+      "id": null,
+      "text": "Verify",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Use your authenticator app instead",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Back to login",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

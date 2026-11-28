@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-11-28T11:32:29.327Z",
+  "state": "recording-consent--invalid-link",
+  "requestedRoute": "/recording-consent",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/recording-consent",
+  "title": "Recording consent | Bobbin",
+  "headings": [
+    "Lesson recording.Your consent.",
+    "Invalid link"
+  ],
+  "bodyText": "Lesson recording. Your consent. Give recording consent for a student in one step. You can withdraw it later from their profile. Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization for a new consent email.",
+  "controls": [],
+  "simulatedNetworkOutcome": false
+}

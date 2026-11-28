@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-11-28T11:39:00.173Z",
+  "state": "recording-consent--request",
+  "requestedRoute": "/recording-consent#token=research-consent",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/recording-consent",
+  "title": "Recording consent | Bobbin",
+  "headings": [
+    "Lesson recording.Your consent.",
+    "Give recording consent for Atlas Student?"
+  ],
+  "bodyText": "Lesson recording. Your consent. Give recording consent for a student in one step. You can withdraw it later from their profile. Give recording consent for Atlas Student? Atlas Research Academy asks for consent before recording lessons with Atlas Student. Until it's given, those lessons aren't recorded, and any existing recordings of them stay hidden from everyone. You can withdraw consent at any time from Atlas Student's profile in Bobbin. Give consent",
+  "controls": [
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Give consent",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

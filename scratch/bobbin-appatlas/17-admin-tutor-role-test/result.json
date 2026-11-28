@@ -1,0 +1,33 @@
+{
+  "outcome": "submitted-without-visible-row",
+  "apiResult": {
+    "urlPath": "/tutors",
+    "status": 201,
+    "responseKeys": [
+      "first_name",
+      "last_name",
+      "email",
+      "is_demo",
+      "timezone",
+      "created_dt",
+      "onboarding_complete",
+      "last_review_request_dt",
+      "never_review_again",
+      "privacy_policy_accepted_at",
+      "email_verified_at",
+      "id",
+      "lessons_completed",
+      "organizations",
+      "two_factor_enabled",
+      "awaiting_acceptance",
+      "emails_withheld",
+      "linked_roles",
+      "newest_prog_report",
+      "default_course_tutor_permissions",
+      "tc_branch_names"
+    ]
+  },
+  "alertText": [
+    "Tutor created"
+  ]
+}

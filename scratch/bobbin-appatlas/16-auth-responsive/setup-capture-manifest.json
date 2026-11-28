@@ -1,0 +1,323 @@
+[
+  {
+    "viewport": "desktop",
+    "id": "setup--checklist",
+    "action": null,
+    "screenshot": "screenshots/desktop--setup--checklist.png",
+    "evidence": "evidence/desktop--setup--checklist.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Set up your account 0/5 completed Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessi",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "desktop",
+    "id": "setup--client-form",
+    "action": "Add client",
+    "screenshot": "screenshots/desktop--setup--client-form.png",
+    "evidence": "evidence/desktop--setup--client-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add client"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Set up your account 0/5 completed Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessi",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "desktop",
+    "id": "setup--tutor-form",
+    "action": "Add tutor",
+    "screenshot": "screenshots/desktop--setup--tutor-form.png",
+    "evidence": "evidence/desktop--setup--tutor-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add tutor"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Set up your account 0/5 completed Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessi",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "desktop",
+    "id": "setup--student-form",
+    "action": "Add student",
+    "screenshot": "screenshots/desktop--setup--student-form.png",
+    "evidence": "evidence/desktop--setup--student-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add student"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Set up your account 0/5 completed Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessi",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "desktop",
+    "id": "setup--course-form",
+    "action": "Create course",
+    "screenshot": "screenshots/desktop--setup--course-form.png",
+    "evidence": "evidence/desktop--setup--course-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "New course"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Set up your account 0/5 completed Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessi",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "desktop",
+    "id": "setup--lesson-form",
+    "action": "Schedule lesson",
+    "screenshot": "screenshots/desktop--setup--lesson-form.png",
+    "evidence": "evidence/desktop--setup--lesson-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Course & attendees"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Set up your account 0/5 completed Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessi",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "tablet",
+    "id": "setup--checklist",
+    "action": null,
+    "screenshot": "screenshots/tablet--setup--checklist.png",
+    "evidence": "evidence/tablet--setup--checklist.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emman",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "tablet",
+    "id": "setup--client-form",
+    "action": "Add client",
+    "screenshot": "screenshots/tablet--setup--client-form.png",
+    "evidence": "evidence/tablet--setup--client-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add client"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emman",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "tablet",
+    "id": "setup--tutor-form",
+    "action": "Add tutor",
+    "screenshot": "screenshots/tablet--setup--tutor-form.png",
+    "evidence": "evidence/tablet--setup--tutor-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add tutor"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emman",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "tablet",
+    "id": "setup--student-form",
+    "action": "Add student",
+    "screenshot": "screenshots/tablet--setup--student-form.png",
+    "evidence": "evidence/tablet--setup--student-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add student"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emman",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "tablet",
+    "id": "setup--course-form",
+    "action": "Create course",
+    "screenshot": "screenshots/tablet--setup--course-form.png",
+    "evidence": "evidence/tablet--setup--course-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "New course"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emman",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "tablet",
+    "id": "setup--lesson-form",
+    "action": "Schedule lesson",
+    "screenshot": "screenshots/tablet--setup--lesson-form.png",
+    "evidence": "evidence/tablet--setup--lesson-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Course & attendees"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emman",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "mobile",
+    "id": "setup--checklist",
+    "action": null,
+    "screenshot": "screenshots/mobile--setup--checklist.png",
+    "evidence": "evidence/mobile--setup--checklist.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanue",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "mobile",
+    "id": "setup--client-form",
+    "action": "Add client",
+    "screenshot": "screenshots/mobile--setup--client-form.png",
+    "evidence": "evidence/mobile--setup--client-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add client"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanue",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "mobile",
+    "id": "setup--tutor-form",
+    "action": "Add tutor",
+    "screenshot": "screenshots/mobile--setup--tutor-form.png",
+    "evidence": "evidence/mobile--setup--tutor-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add tutor"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanue",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "mobile",
+    "id": "setup--student-form",
+    "action": "Add student",
+    "screenshot": "screenshots/mobile--setup--student-form.png",
+    "evidence": "evidence/mobile--setup--student-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Add student"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanue",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "mobile",
+    "id": "setup--course-form",
+    "action": "Create course",
+    "screenshot": "screenshots/mobile--setup--course-form.png",
+    "evidence": "evidence/mobile--setup--course-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "New course"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanue",
+    "simulatedSetupReadModel": true
+  },
+  {
+    "viewport": "mobile",
+    "id": "setup--lesson-form",
+    "action": "Schedule lesson",
+    "screenshot": "screenshots/mobile--setup--lesson-form.png",
+    "evidence": "evidence/mobile--setup--lesson-form.json",
+    "finalUrl": "https://app.withbobbin.com/setup",
+    "title": "Setup | Bobbin",
+    "headings": [
+      "Welcome to Bobbin, Emmanuel",
+      "Let’s create your first lesson",
+      "Get started with confidence",
+      "Find the right plan",
+      "Course & attendees"
+    ],
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… Setup Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanue",
+    "simulatedSetupReadModel": true
+  }
+]

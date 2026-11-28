@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-11-28T11:32:21.728Z",
+  "state": "accept-invite--invalid-link",
+  "requestedRoute": "/auth/accept-invite",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/auth/accept-invite",
+  "title": "Join an organization | Bobbin",
+  "headings": [
+    "You're invited.It's your call.",
+    "Invalid link"
+  ],
+  "bodyText": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization to send you a new one.",
+  "controls": [],
+  "simulatedNetworkOutcome": false
+}

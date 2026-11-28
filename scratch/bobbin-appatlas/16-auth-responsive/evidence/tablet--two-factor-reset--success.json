@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-11-28T11:41:17.518Z",
+  "state": "two-factor-reset--success",
+  "requestedRoute": "/auth/two-factor-reset?token=research-reset",
+  "viewport": "tablet",
+  "url": "https://app.withbobbin.com/auth/two-factor-reset?token=research-reset",
+  "title": "Turn off two-factor | Bobbin",
+  "headings": [
+    "Locked out?Let's get you back in.",
+    "Two-factor authentication is off"
+  ],
+  "bodyText": "Two-factor authentication is off You can now log in with your password alone. Turn two-factor authentication on again from your profile to keep your account protected. Go to login",
+  "controls": [
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Go to login",
+      "label": null,
+      "placeholder": null,
+      "href": "/login",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-11-28T11:38:44.266Z",
+  "state": "accept-invite--withdrawn",
+  "requestedRoute": "/auth/accept-invite?token=research-invite",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+  "title": "Join an organization | Bobbin",
+  "headings": [
+    "You're invited.It's your call.",
+    "This invite was withdrawn"
+  ],
+  "bodyText": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. This invite was withdrawn Ask Atlas Research Academy if you still need to join them.",
+  "controls": [],
+  "simulatedNetworkOutcome": true
+}

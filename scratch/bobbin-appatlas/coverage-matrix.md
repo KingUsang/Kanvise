@@ -7,11 +7,14 @@
 | Student client-picker and consent default | WALKED | Picker-open, selected, and created detail captured. |
 | Tutor invitation | WALKED | Captured wizard and submitted a controlled test invitation. |
 | Course creation and roster | WALKED | All three wizard steps and created course captured. |
+| AI course-plan generation and generated-outline editing | WALKED | One authorized freeform generation was submitted and auto-applied: loading/game state, 8-module result, overflow actions, module detail/edit mode, objective coverage toggle/revert, immediate blank-module creation, remove confirmation, and cleanup verification captured. |
+| Course roster linked entities | WALKED | Course tutor and student names were followed to their real detail routes; adjacent remove controls are inventoried and earlier roster-management surfaces cover membership changes. |
 | Lesson scheduling | WALKED | Empty-topic validation, filled schedule, review, and scheduled detail captured. |
 | Classroom lifecycle | WALKED | Admin confirmation, pre-start, live room, invite panel, end confirmation, and post-end state captured. |
 | Lesson insights/report generation | WALKED | Sample lesson provides populated AI insights/export/email evidence; synthetic tutor lesson provides the real no-insights manual completion, approval, and client-release path. |
 | Billing / plan selection | WALKED | Trial usage and plan selector captured; Stripe checkout reached, no payment entered. |
 | Dashboard and calendar interactions | WALKED | Admin search/help/account/mobile overlays, Day/Week/Month views, and all entity/status filter pickers captured. |
+| Shared app chrome and minute-control audit | WALKED | Empty and populated global search, Help/updates, account menu, sidebar collapse/expand captured; live inventory covered 20 admin routes and 552 visible controls, cross-checked against earlier section evidence. |
 | Team management | WALKED | Add-member invitation flow and unsent remove/revoke confirmation captured. |
 | Recording lifecycle | WALKED | Populated online sessions, expanded attendance, every filter picker, in-person empty state, and recording player captured; mobile creation is outside the web lane. |
 | Resource upload/library | WALKED | Shared folder creation, real test upload, completed library, and every type/visibility/date filter captured. |
@@ -28,3 +31,5 @@
 | Tutor admin-route enforcement | WALKED | Eight hidden admin/organization routes directly probed; all ultimately redirect to the tutor dashboard. |
 | Tutor classroom entry and controls | WALKED | Pre-entry choice, LessonSpace first-run guide, and hydrated ready room with waiting-room/device/media/collaboration controls captured. |
 | Tutor classroom live/post-lesson report | WALKED | Camera/microphone device preview, final room Join, running recorded lesson, end confirmation, manual completion, awaiting approval, admin edit/approve/release, and tutor-visible Complete state captured. |
+| Responsive authentication and access | WALKED | 44 states × desktop/tablet/mobile: login, notices/errors, signup/referral, recovery, password setup, signup confirmation, invitations, 2FA challenge/reset, protected-route reauthentication, recording consent, and first-time organization setup plus all five entry forms. Controlled states are labeled; see `16-auth-responsive/coverage.md`. |
+| Administrator + tutor dual membership | WALKED | Existing admin email resolved to a two-step confirmation, tutor creation returned HTTP 201 without mailbox acceptance, the identity then held both memberships, and live Tutor/Admin switches each returned HTTP 200 with the expected workspace navigation. |

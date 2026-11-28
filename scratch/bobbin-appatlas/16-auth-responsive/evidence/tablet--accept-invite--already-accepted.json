@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-11-28T11:40:57.992Z",
+  "state": "accept-invite--already-accepted",
+  "requestedRoute": "/auth/accept-invite?token=research-invite",
+  "viewport": "tablet",
+  "url": "https://app.withbobbin.com/auth/accept-invite?token=research-invite",
+  "title": "Join an organization | Bobbin",
+  "headings": [
+    "You're invited.It's your call.",
+    "You've already joined Atlas Research Academy"
+  ],
+  "bodyText": "You've already joined Atlas Research Academy This invite was accepted. Sign in with your Bobbin account to continue. Go to sign in",
+  "controls": [
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Go to sign in",
+      "label": null,
+      "placeholder": null,
+      "href": "/login",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

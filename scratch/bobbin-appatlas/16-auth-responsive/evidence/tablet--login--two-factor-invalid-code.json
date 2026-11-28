@@ -1,0 +1,115 @@
+{
+  "capturedAt": "2026-11-28T11:40:30.671Z",
+  "state": "login--two-factor-invalid-code",
+  "requestedRoute": "/login",
+  "viewport": "tablet",
+  "url": "https://app.withbobbin.com/login",
+  "title": "Login | Bobbin",
+  "headings": [
+    "One more stepto sign in.",
+    "Enter your code"
+  ],
+  "bodyText": "Enter your code Open your authenticator app and enter the 6-digit code for Bobbin. Authentication code That code is not right, or it has expired. Try the current one. Verify Lost your phone? Use a recovery code Back to login",
+  "controls": [
+    {
+      "tag": "input",
+      "type": "text",
+      "id": null,
+      "text": null,
+      "label": "Authentication code, digit 1 of 6",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": null,
+      "text": null,
+      "label": "Authentication code, digit 2 of 6",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": null,
+      "text": null,
+      "label": "Authentication code, digit 3 of 6",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": null,
+      "text": null,
+      "label": "Authentication code, digit 4 of 6",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": null,
+      "text": null,
+      "label": "Authentication code, digit 5 of 6",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "input",
+      "type": "text",
+      "id": null,
+      "text": null,
+      "label": "Authentication code, digit 6 of 6",
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "submit",
+      "id": null,
+      "text": "Verify",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Use a recovery code",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "text": "Back to login",
+      "label": null,
+      "placeholder": null,
+      "href": null,
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": true
+}

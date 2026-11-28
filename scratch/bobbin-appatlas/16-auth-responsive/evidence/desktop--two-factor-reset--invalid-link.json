@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-11-28T11:32:25.417Z",
+  "state": "two-factor-reset--invalid-link",
+  "requestedRoute": "/auth/two-factor-reset",
+  "viewport": "desktop",
+  "url": "https://app.withbobbin.com/auth/two-factor-reset",
+  "title": "Turn off two-factor | Bobbin",
+  "headings": [
+    "Locked out?Let's get you back in.",
+    "Invalid link"
+  ],
+  "bodyText": "Locked out? Let's get you back in. Confirm the reset your administrator asked for, then sign in with your password. Invalid link This link is missing part of its address. Open the link from your email again, or ask your administrator to send a new one. Back to login",
+  "controls": [
+    {
+      "tag": "a",
+      "type": null,
+      "id": null,
+      "text": "Back to login",
+      "label": null,
+      "placeholder": null,
+      "href": "/login",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "simulatedNetworkOutcome": false
+}

@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-11-28T11:42:41.653Z",
+  "state": "recording-consent--success",
+  "requestedRoute": "/recording-consent#token=research-consent",
+  "viewport": "mobile",
+  "url": "https://app.withbobbin.com/recording-consent",
+  "title": "Recording consent | Bobbin",
+  "headings": [
+    "Lesson recording.Your consent.",
+    "Consent given"
+  ],
+  "bodyText": "Consent given Atlas Research Academy can now record lessons with Atlas Student. To withdraw it, sign in to Bobbin and open Atlas Student's profile.",
+  "controls": [],
+  "simulatedNetworkOutcome": true
+}

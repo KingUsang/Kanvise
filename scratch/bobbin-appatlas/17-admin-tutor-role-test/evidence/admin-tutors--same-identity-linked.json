@@ -1,0 +1,333 @@
+{
+  "capturedAt": "2026-11-28T12:13:55.705Z",
+  "url": "https://app.withbobbin.com/tutors",
+  "title": "Tutors | Bobbin",
+  "headings": [
+    "Tutors"
+  ],
+  "bodyText": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up billing Tutors Import Add tutor The tutors running sessions in your organization A sample tutor shows how Bobbin works. It's kept out of this list. Open the sample tutor NAME EMAIL LESSONS COMPLETED AR Atlas Research Tutor kingusang09+atlas-tutor@gmail.com 1 EU Emmanuel Usang kingusang09+6466@gmail.com 0",
+  "controls": [
+    {
+      "tag": "a",
+      "text": "Skip to content",
+      "label": null,
+      "href": "#main-scroll"
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "href": "/"
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "href": "/courses"
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "href": "/students"
+    },
+    {
+      "tag": "a",
+      "text": "Clients",
+      "label": "Clients",
+      "href": "/clients"
+    },
+    {
+      "tag": "a",
+      "text": "Tutors",
+      "label": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "tag": "a",
+      "text": "Team",
+      "label": "Team",
+      "href": "/team"
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "href": "/resources"
+    },
+    {
+      "tag": "a",
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "tag": "a",
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "tag": "a",
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "href": "/settings"
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Close menu",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Collapse sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Expand sidebar",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Search…K",
+      "label": "Search",
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Dashboard",
+      "label": "Dashboard",
+      "href": "/"
+    },
+    {
+      "tag": "a",
+      "text": "Calendar",
+      "label": "Calendar",
+      "href": "/calendar"
+    },
+    {
+      "tag": "a",
+      "text": "Lessons",
+      "label": "Lessons",
+      "href": "/lessons"
+    },
+    {
+      "tag": "a",
+      "text": "Courses",
+      "label": "Courses",
+      "href": "/courses"
+    },
+    {
+      "tag": "a",
+      "text": "Students",
+      "label": "Students",
+      "href": "/students"
+    },
+    {
+      "tag": "a",
+      "text": "Clients",
+      "label": "Clients",
+      "href": "/clients"
+    },
+    {
+      "tag": "a",
+      "text": "Tutors",
+      "label": "Tutors",
+      "href": "/tutors"
+    },
+    {
+      "tag": "a",
+      "text": "Team",
+      "label": "Team",
+      "href": "/team"
+    },
+    {
+      "tag": "a",
+      "text": "Recordings",
+      "label": "Recordings",
+      "href": "/recordings"
+    },
+    {
+      "tag": "a",
+      "text": "Resources",
+      "label": "Resources",
+      "href": "/resources"
+    },
+    {
+      "tag": "a",
+      "text": "Report approvals",
+      "label": "Report approvals",
+      "href": "/report-approvals"
+    },
+    {
+      "tag": "a",
+      "text": "Safeguarding",
+      "label": "Safeguarding",
+      "href": "/safeguarding"
+    },
+    {
+      "tag": "a",
+      "text": "Unlinked sessions",
+      "label": "Unlinked sessions",
+      "href": "/sessions/unlinked"
+    },
+    {
+      "tag": "a",
+      "text": "Settings",
+      "label": "Settings",
+      "href": "/settings"
+    },
+    {
+      "tag": "button",
+      "text": "EUEmmanuel UsangAdmin · Science Students Academy",
+      "label": "Emmanuel Usang",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Help and updatesNew updates available",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Set up billing",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": null,
+      "label": "Home",
+      "href": "/"
+    },
+    {
+      "tag": "button",
+      "text": null,
+      "label": "Open navigation",
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "Import",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "button",
+      "text": "AddAdd tutor",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "Open the sample tutor",
+      "label": null,
+      "href": "/tutors/24051"
+    },
+    {
+      "tag": "button",
+      "text": "Name",
+      "label": null,
+      "href": null
+    },
+    {
+      "tag": "a",
+      "text": "ARAtlas Research Tutor",
+      "label": null,
+      "href": "/tutors/24857"
+    },
+    {
+      "tag": "a",
+      "text": "EUEmmanuel Usang",
+      "label": null,
+      "href": "/tutors/24050"
+    }
+  ],
+  "accountState": {
+    "activeRole": "administrator",
+    "activeOrganizationId": 781,
+    "memberships": [
+      {
+        "organizationId": 781,
+        "userType": "administrator"
+      },
+      {
+        "organizationId": 781,
+        "userType": "tutor"
+      }
+    ],
+    "linkedRoles": null
+  },
+  "tutorListed": true
+}

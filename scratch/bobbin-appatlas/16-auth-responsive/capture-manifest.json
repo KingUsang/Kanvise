@@ -1,0 +1,917 @@
+[
+  {
+    "viewport": "desktop",
+    "id": "login--default",
+    "route": "/login",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--login--default.png",
+    "evidence": "evidence/desktop--login--default.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "login--email-changed-notice",
+    "route": "/login?notice=email_changed",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--login--email-changed-notice.png",
+    "evidence": "evidence/desktop--login--email-changed-notice.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=email_changed",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "login--email-reset-notice",
+    "route": "/login?notice=email_reset",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--login--email-reset-notice.png",
+    "evidence": "evidence/desktop--login--email-reset-notice.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=email_reset",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "login--signup-unavailable",
+    "route": "/login?notice=signup_unavailable&redirect_url=%2Fsignup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--login--signup-unavailable.png",
+    "evidence": "evidence/desktop--login--signup-unavailable.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=signup_unavailable&redirect_url=%2Fsignup",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "login--invalid-credentials",
+    "route": "/login",
+    "action": "invalid-login",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--login--invalid-credentials.png",
+    "evidence": "evidence/desktop--login--invalid-credentials.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "login--password-visible",
+    "route": "/login",
+    "action": "show-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--login--password-visible.png",
+    "evidence": "evidence/desktop--login--password-visible.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "signup--default",
+    "route": "/signup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--signup--default.png",
+    "evidence": "evidence/desktop--signup--default.json",
+    "finalUrl": "https://app.withbobbin.com/signup",
+    "title": "Sign up | Bobbin",
+    "headings": [
+      "Start turning lessonsinto insights.",
+      "Create your account"
+    ],
+    "summary": "Start turning lessons into insights. Create your free Bobbin account and see how every lesson becomes ready-to-send insights for students, tutors and parents. ● Free trial, no card needed ● AI-powered lesson summaries ● Set up in minutes Create your account Ge"
+  },
+  {
+    "viewport": "desktop",
+    "id": "signup--referral-warning",
+    "route": "/signup?ref=ABCDEFGH",
+    "settle": 3000,
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--signup--referral-warning.png",
+    "evidence": "evidence/desktop--signup--referral-warning.json",
+    "finalUrl": "https://app.withbobbin.com/signup?ref=ABCDEFGH",
+    "title": "Sign up | Bobbin",
+    "headings": [
+      "Start turning lessonsinto insights.",
+      "Create your account"
+    ],
+    "summary": "Start turning lessons into insights. Create your free Bobbin account and see how every lesson becomes ready-to-send insights for students, tutors and parents. ● Free trial, no card needed ● AI-powered lesson summaries ● Set up in minutes Create your account Yo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "forgot-password--default",
+    "route": "/auth/forgot-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--forgot-password--default.png",
+    "evidence": "evidence/desktop--forgot-password--default.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Locked out?Let's fix that.",
+      "Forgot your password?"
+    ],
+    "summary": "Locked out? Let's fix that. Enter your email address and we'll send you a link to set a new password. Forgot your password? We'll email you a link to set a new one. Email Send reset link Back to login"
+  },
+  {
+    "viewport": "desktop",
+    "id": "forgot-password--client-audience",
+    "route": "/auth/forgot-password?audience=client",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--forgot-password--client-audience.png",
+    "evidence": "evidence/desktop--forgot-password--client-audience.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password?audience=client",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "First time here?Let's get you in.",
+      "Set your password"
+    ],
+    "summary": "First time here? Let's get you in. Your tutoring company has already set up your account. Set a password to see your lessons. Set your password Enter the email address your lesson emails come to. We'll send you a link to set a password. Email Send link Back to"
+  },
+  {
+    "viewport": "desktop",
+    "id": "forgot-password--success",
+    "route": "/auth/forgot-password",
+    "action": "forgot-success",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--forgot-password--success.png",
+    "evidence": "evidence/desktop--forgot-password--success.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Check yourinbox.",
+      "Check your email"
+    ],
+    "summary": "Check your inbox. If that address has a Bobbin account, a reset link is on its way. Check your email If atlas.research@example.com has a Bobbin account, we've sent it a link to set a new password. The link expires in 48 hours and can be used once. Nothing arri"
+  },
+  {
+    "viewport": "desktop",
+    "id": "forgot-password--rate-limited",
+    "route": "/auth/forgot-password",
+    "action": "forgot-rate-limit",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/desktop--forgot-password--rate-limited.png",
+    "evidence": "evidence/desktop--forgot-password--rate-limited.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Locked out?Let's fix that.",
+      "Forgot your password?"
+    ],
+    "summary": "Locked out? Let's fix that. Enter your email address and we'll send you a link to set a new password. Forgot your password? We'll email you a link to set a new one. Email Too many requests. Wait a little while and try again. Send reset link Back to login"
+  },
+  {
+    "viewport": "desktop",
+    "id": "set-password--invalid-link",
+    "route": "/auth/set-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--set-password--invalid-link.png",
+    "evidence": "evidence/desktop--set-password--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Invalid link"
+    ],
+    "summary": "One last step to sign in. Choose a password for your Bobbin account and you're signed in. Invalid link This link is missing or incomplete. Open the link from your email again, or request a new one from the login page. Back to login Need help? Contact support"
+  },
+  {
+    "viewport": "desktop",
+    "id": "confirm-signup--invalid-link",
+    "route": "/auth/confirm-signup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--confirm-signup--invalid-link.png",
+    "evidence": "evidence/desktop--confirm-signup--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Invalid link"
+    ],
+    "summary": "One last step to get started. Set a password to secure your Bobbin account. Invalid link This confirmation link is missing or invalid. Use the link from your welcome email, or sign up again to get a new one. Sign up again Need help? Contact support"
+  },
+  {
+    "viewport": "desktop",
+    "id": "accept-invite--invalid-link",
+    "route": "/auth/accept-invite",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--accept-invite--invalid-link.png",
+    "evidence": "evidence/desktop--accept-invite--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Invalid link"
+    ],
+    "summary": "You're invited. It's your call. An organization wants to add you on Bobbin. Nothing changes until you answer. Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization to send you a new one."
+  },
+  {
+    "viewport": "desktop",
+    "id": "two-factor-reset--invalid-link",
+    "route": "/auth/two-factor-reset",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--two-factor-reset--invalid-link.png",
+    "evidence": "evidence/desktop--two-factor-reset--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Invalid link"
+    ],
+    "summary": "Locked out? Let's get you back in. Confirm the reset your administrator asked for, then sign in with your password. Invalid link This link is missing part of its address. Open the link from your email again, or ask your administrator to send a new one. Back to"
+  },
+  {
+    "viewport": "desktop",
+    "id": "recording-consent--invalid-link",
+    "route": "/recording-consent",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--recording-consent--invalid-link.png",
+    "evidence": "evidence/desktop--recording-consent--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Invalid link"
+    ],
+    "summary": "Lesson recording. Your consent. Give recording consent for a student in one step. You can withdraw it later from their profile. Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization for a new consen"
+  },
+  {
+    "viewport": "desktop",
+    "id": "protected-activate--reauthentication",
+    "route": "/activate",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--protected-activate--reauthentication.png",
+    "evidence": "evidence/desktop--protected-activate--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Factivate",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "oauth-authorize--reauthentication",
+    "route": "/oauth/authorize",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--oauth-authorize--reauthentication.png",
+    "evidence": "evidence/desktop--oauth-authorize--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Foauth%2Fauthorize",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "desktop",
+    "id": "confirm-email-change--reauthentication",
+    "route": "/auth/confirm-email-change",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/desktop--confirm-email-change--reauthentication.png",
+    "evidence": "evidence/desktop--confirm-email-change--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Fauth%2Fconfirm-email-change",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "The lesson is over. The work isn't. Sign in to Bobbin to turn every lesson into ready-to-send insights for students, tutors and parents, without the headache. ● AI-powered lesson summaries ● Student and tutor insights ● One-click parent reports Welcome back Lo"
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--default",
+    "route": "/login",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--login--default.png",
+    "evidence": "evidence/tablet--login--default.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--email-changed-notice",
+    "route": "/login?notice=email_changed",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--login--email-changed-notice.png",
+    "evidence": "evidence/tablet--login--email-changed-notice.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=email_changed",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Your email is changed. Log in with your new email address. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy"
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--email-reset-notice",
+    "route": "/login?notice=email_reset",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--login--email-reset-notice.png",
+    "evidence": "evidence/tablet--login--email-reset-notice.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=email_reset",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Your email is changed, so you're signed out. Open the link we sent to your new address to set a new password. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signin"
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--signup-unavailable",
+    "route": "/login?notice=signup_unavailable&redirect_url=%2Fsignup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--login--signup-unavailable.png",
+    "evidence": "evidence/tablet--login--signup-unavailable.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=signup_unavailable&redirect_url=%2Fsignup",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--invalid-credentials",
+    "route": "/login",
+    "action": "invalid-login",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--login--invalid-credentials.png",
+    "evidence": "evidence/tablet--login--invalid-credentials.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? That email and password don't match. Check them, or reset your password. If you usually sign in through TutorCruncher, use the TutorCruncher button. Log in OR Login with TutorCruncher Run a tutorin"
+  },
+  {
+    "viewport": "tablet",
+    "id": "login--password-visible",
+    "route": "/login",
+    "action": "show-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--login--password-visible.png",
+    "evidence": "evidence/tablet--login--password-visible.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "tablet",
+    "id": "signup--default",
+    "route": "/signup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--signup--default.png",
+    "evidence": "evidence/tablet--signup--default.json",
+    "finalUrl": "https://app.withbobbin.com/signup",
+    "title": "Sign up | Bobbin",
+    "headings": [
+      "Start turning lessonsinto insights.",
+      "Create your account"
+    ],
+    "summary": "Create your account Get started with Bobbin. First name Last name Email Company name Country 🇦🇫 Afghanistan 🇦🇱 Albania 🇩🇿 Algeria 🇦🇸 American Samoa 🇦🇩 Andorra 🇦🇴 Angola 🇦🇮 Anguilla 🇦🇬 Antigua and Barbuda 🇦🇷 Argentina 🇦🇲 Armenia 🇦🇼 Aruba \ud83c"
+  },
+  {
+    "viewport": "tablet",
+    "id": "signup--referral-warning",
+    "route": "/signup?ref=ABCDEFGH",
+    "settle": 3000,
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--signup--referral-warning.png",
+    "evidence": "evidence/tablet--signup--referral-warning.json",
+    "finalUrl": "https://app.withbobbin.com/signup?ref=ABCDEFGH",
+    "title": "Sign up | Bobbin",
+    "headings": [
+      "Start turning lessonsinto insights.",
+      "Create your account"
+    ],
+    "summary": "Create your account You've been referred to Bobbin Get £50 of credit on your Bobbin invoices. After you sign up, apply code ABCDEFGH in Billing. Get started with Bobbin. First name Last name Email Company name Country 🇦🇫 Afghanistan 🇦🇱 Albania 🇩🇿 Algeria"
+  },
+  {
+    "viewport": "tablet",
+    "id": "forgot-password--default",
+    "route": "/auth/forgot-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--forgot-password--default.png",
+    "evidence": "evidence/tablet--forgot-password--default.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Locked out?Let's fix that.",
+      "Forgot your password?"
+    ],
+    "summary": "Forgot your password? We'll email you a link to set a new one. Email Send reset link Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "forgot-password--client-audience",
+    "route": "/auth/forgot-password?audience=client",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--forgot-password--client-audience.png",
+    "evidence": "evidence/tablet--forgot-password--client-audience.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password?audience=client",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "First time here?Let's get you in.",
+      "Set your password"
+    ],
+    "summary": "Set your password Enter the email address your lesson emails come to. We'll send you a link to set a password. Email Send link Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "forgot-password--success",
+    "route": "/auth/forgot-password",
+    "action": "forgot-success",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--forgot-password--success.png",
+    "evidence": "evidence/tablet--forgot-password--success.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Check yourinbox.",
+      "Check your email"
+    ],
+    "summary": "Check your email If atlas.research@example.com has a Bobbin account, we've sent it a link to set a new password. The link expires in 48 hours and can be used once. Nothing arrived? Check your spam folder. If you sign in through TutorCruncher, your password liv"
+  },
+  {
+    "viewport": "tablet",
+    "id": "forgot-password--rate-limited",
+    "route": "/auth/forgot-password",
+    "action": "forgot-rate-limit",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/tablet--forgot-password--rate-limited.png",
+    "evidence": "evidence/tablet--forgot-password--rate-limited.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Locked out?Let's fix that.",
+      "Forgot your password?"
+    ],
+    "summary": "Forgot your password? We'll email you a link to set a new one. Email Too many requests. Wait a little while and try again. Send reset link Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "set-password--invalid-link",
+    "route": "/auth/set-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--set-password--invalid-link.png",
+    "evidence": "evidence/tablet--set-password--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing or incomplete. Open the link from your email again, or request a new one from the login page. Back to login Need help? Contact support"
+  },
+  {
+    "viewport": "tablet",
+    "id": "confirm-signup--invalid-link",
+    "route": "/auth/confirm-signup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--confirm-signup--invalid-link.png",
+    "evidence": "evidence/tablet--confirm-signup--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This confirmation link is missing or invalid. Use the link from your welcome email, or sign up again to get a new one. Sign up again Need help? Contact support"
+  },
+  {
+    "viewport": "tablet",
+    "id": "accept-invite--invalid-link",
+    "route": "/auth/accept-invite",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--accept-invite--invalid-link.png",
+    "evidence": "evidence/tablet--accept-invite--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization to send you a new one."
+  },
+  {
+    "viewport": "tablet",
+    "id": "two-factor-reset--invalid-link",
+    "route": "/auth/two-factor-reset",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--two-factor-reset--invalid-link.png",
+    "evidence": "evidence/tablet--two-factor-reset--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing part of its address. Open the link from your email again, or ask your administrator to send a new one. Back to login"
+  },
+  {
+    "viewport": "tablet",
+    "id": "recording-consent--invalid-link",
+    "route": "/recording-consent",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--recording-consent--invalid-link.png",
+    "evidence": "evidence/tablet--recording-consent--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization for a new consent email."
+  },
+  {
+    "viewport": "tablet",
+    "id": "protected-activate--reauthentication",
+    "route": "/activate",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--protected-activate--reauthentication.png",
+    "evidence": "evidence/tablet--protected-activate--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Factivate",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "tablet",
+    "id": "oauth-authorize--reauthentication",
+    "route": "/oauth/authorize",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--oauth-authorize--reauthentication.png",
+    "evidence": "evidence/tablet--oauth-authorize--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Foauth%2Fauthorize",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "tablet",
+    "id": "confirm-email-change--reauthentication",
+    "route": "/auth/confirm-email-change",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/tablet--confirm-email-change--reauthentication.png",
+    "evidence": "evidence/tablet--confirm-email-change--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Fauth%2Fconfirm-email-change",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--default",
+    "route": "/login",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--login--default.png",
+    "evidence": "evidence/mobile--login--default.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--email-changed-notice",
+    "route": "/login?notice=email_changed",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--login--email-changed-notice.png",
+    "evidence": "evidence/mobile--login--email-changed-notice.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=email_changed",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Your email is changed. Log in with your new email address. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy"
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--email-reset-notice",
+    "route": "/login?notice=email_reset",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--login--email-reset-notice.png",
+    "evidence": "evidence/mobile--login--email-reset-notice.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=email_reset",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Your email is changed, so you're signed out. Open the link we sent to your new address to set a new password. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signin"
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--signup-unavailable",
+    "route": "/login?notice=signup_unavailable&redirect_url=%2Fsignup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--login--signup-unavailable.png",
+    "evidence": "evidence/mobile--login--signup-unavailable.json",
+    "finalUrl": "https://app.withbobbin.com/login?notice=signup_unavailable&redirect_url=%2Fsignup",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--invalid-credentials",
+    "route": "/login",
+    "action": "invalid-login",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--login--invalid-credentials.png",
+    "evidence": "evidence/mobile--login--invalid-credentials.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? That email and password don't match. Check them, or reset your password. If you usually sign in through TutorCruncher, use the TutorCruncher button. Log in OR Login with TutorCruncher Run a tutorin"
+  },
+  {
+    "viewport": "mobile",
+    "id": "login--password-visible",
+    "route": "/login",
+    "action": "show-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--login--password-visible.png",
+    "evidence": "evidence/mobile--login--password-visible.json",
+    "finalUrl": "https://app.withbobbin.com/login",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "mobile",
+    "id": "signup--default",
+    "route": "/signup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--signup--default.png",
+    "evidence": "evidence/mobile--signup--default.json",
+    "finalUrl": "https://app.withbobbin.com/signup",
+    "title": "Sign up | Bobbin",
+    "headings": [
+      "Start turning lessonsinto insights.",
+      "Create your account"
+    ],
+    "summary": "Create your account Get started with Bobbin. First name Last name Email Company name Country 🇦🇫 Afghanistan 🇦🇱 Albania 🇩🇿 Algeria 🇦🇸 American Samoa 🇦🇩 Andorra 🇦🇴 Angola 🇦🇮 Anguilla 🇦🇬 Antigua and Barbuda 🇦🇷 Argentina 🇦🇲 Armenia 🇦🇼 Aruba \ud83c"
+  },
+  {
+    "viewport": "mobile",
+    "id": "signup--referral-warning",
+    "route": "/signup?ref=ABCDEFGH",
+    "settle": 3000,
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--signup--referral-warning.png",
+    "evidence": "evidence/mobile--signup--referral-warning.json",
+    "finalUrl": "https://app.withbobbin.com/signup?ref=ABCDEFGH",
+    "title": "Sign up | Bobbin",
+    "headings": [
+      "Start turning lessonsinto insights.",
+      "Create your account"
+    ],
+    "summary": "Create your account You've been referred to Bobbin Get £50 of credit on your Bobbin invoices. After you sign up, apply code ABCDEFGH in Billing. Get started with Bobbin. First name Last name Email Company name Country 🇦🇫 Afghanistan 🇦🇱 Albania 🇩🇿 Algeria"
+  },
+  {
+    "viewport": "mobile",
+    "id": "forgot-password--default",
+    "route": "/auth/forgot-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--forgot-password--default.png",
+    "evidence": "evidence/mobile--forgot-password--default.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Locked out?Let's fix that.",
+      "Forgot your password?"
+    ],
+    "summary": "Forgot your password? We'll email you a link to set a new one. Email Send reset link Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "forgot-password--client-audience",
+    "route": "/auth/forgot-password?audience=client",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--forgot-password--client-audience.png",
+    "evidence": "evidence/mobile--forgot-password--client-audience.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password?audience=client",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "First time here?Let's get you in.",
+      "Set your password"
+    ],
+    "summary": "Set your password Enter the email address your lesson emails come to. We'll send you a link to set a password. Email Send link Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "forgot-password--success",
+    "route": "/auth/forgot-password",
+    "action": "forgot-success",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--forgot-password--success.png",
+    "evidence": "evidence/mobile--forgot-password--success.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Check yourinbox.",
+      "Check your email"
+    ],
+    "summary": "Check your email If atlas.research@example.com has a Bobbin account, we've sent it a link to set a new password. The link expires in 48 hours and can be used once. Nothing arrived? Check your spam folder. If you sign in through TutorCruncher, your password liv"
+  },
+  {
+    "viewport": "mobile",
+    "id": "forgot-password--rate-limited",
+    "route": "/auth/forgot-password",
+    "action": "forgot-rate-limit",
+    "simulatedNetworkOutcome": true,
+    "screenshot": "screenshots/mobile--forgot-password--rate-limited.png",
+    "evidence": "evidence/mobile--forgot-password--rate-limited.json",
+    "finalUrl": "https://app.withbobbin.com/auth/forgot-password",
+    "title": "Forgot password | Bobbin",
+    "headings": [
+      "Locked out?Let's fix that.",
+      "Forgot your password?"
+    ],
+    "summary": "Forgot your password? We'll email you a link to set a new one. Email Too many requests. Wait a little while and try again. Send reset link Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "set-password--invalid-link",
+    "route": "/auth/set-password",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--set-password--invalid-link.png",
+    "evidence": "evidence/mobile--set-password--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/set-password",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto sign in.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing or incomplete. Open the link from your email again, or request a new one from the login page. Back to login Need help? Contact support"
+  },
+  {
+    "viewport": "mobile",
+    "id": "confirm-signup--invalid-link",
+    "route": "/auth/confirm-signup",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--confirm-signup--invalid-link.png",
+    "evidence": "evidence/mobile--confirm-signup--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/confirm-signup",
+    "title": "Set your password | Bobbin",
+    "headings": [
+      "One last stepto get started.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This confirmation link is missing or invalid. Use the link from your welcome email, or sign up again to get a new one. Sign up again Need help? Contact support"
+  },
+  {
+    "viewport": "mobile",
+    "id": "accept-invite--invalid-link",
+    "route": "/auth/accept-invite",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--accept-invite--invalid-link.png",
+    "evidence": "evidence/mobile--accept-invite--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/accept-invite",
+    "title": "Join an organization | Bobbin",
+    "headings": [
+      "You're invited.It's your call.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization to send you a new one."
+  },
+  {
+    "viewport": "mobile",
+    "id": "two-factor-reset--invalid-link",
+    "route": "/auth/two-factor-reset",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--two-factor-reset--invalid-link.png",
+    "evidence": "evidence/mobile--two-factor-reset--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/auth/two-factor-reset",
+    "title": "Turn off two-factor | Bobbin",
+    "headings": [
+      "Locked out?Let's get you back in.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing part of its address. Open the link from your email again, or ask your administrator to send a new one. Back to login"
+  },
+  {
+    "viewport": "mobile",
+    "id": "recording-consent--invalid-link",
+    "route": "/recording-consent",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--recording-consent--invalid-link.png",
+    "evidence": "evidence/mobile--recording-consent--invalid-link.json",
+    "finalUrl": "https://app.withbobbin.com/recording-consent",
+    "title": "Recording consent | Bobbin",
+    "headings": [
+      "Lesson recording.Your consent.",
+      "Invalid link"
+    ],
+    "summary": "Invalid link This link is missing part of its address. Open the link from your email again, or ask the organization for a new consent email."
+  },
+  {
+    "viewport": "mobile",
+    "id": "protected-activate--reauthentication",
+    "route": "/activate",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--protected-activate--reauthentication.png",
+    "evidence": "evidence/mobile--protected-activate--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Factivate",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "mobile",
+    "id": "oauth-authorize--reauthentication",
+    "route": "/oauth/authorize",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--oauth-authorize--reauthentication.png",
+    "evidence": "evidence/mobile--oauth-authorize--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Foauth%2Fauthorize",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  },
+  {
+    "viewport": "mobile",
+    "id": "confirm-email-change--reauthentication",
+    "route": "/auth/confirm-email-change",
+    "simulatedNetworkOutcome": false,
+    "screenshot": "screenshots/mobile--confirm-email-change--reauthentication.png",
+    "evidence": "evidence/mobile--confirm-email-change--reauthentication.json",
+    "finalUrl": "https://app.withbobbin.com/login?redirect_url=%2Fauth%2Fconfirm-email-change",
+    "title": "Login | Bobbin",
+    "headings": [
+      "The lesson is over.The work isn't.",
+      "Welcome back"
+    ],
+    "summary": "Welcome back Log in to Bobbin. Email Password Forgot password? Log in OR Login with TutorCruncher Run a tutoring business? Create an account By signing in, you agree to our Terms of Service and Privacy Policy."
+  }
+]

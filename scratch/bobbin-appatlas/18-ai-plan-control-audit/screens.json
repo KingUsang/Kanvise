@@ -1,0 +1,2429 @@
+[
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--actions-menu",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--actions-menu.png",
+    "route": "/courses/9581/outline",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Actions Menu"
+    },
+    "title": "Actions Menu",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Actions Menu"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Mark as helpful"
+      },
+      {
+        "type": "button",
+        "label": "Mark as not helpful"
+      },
+      {
+        "type": "button",
+        "label": "More course plan actions"
+      },
+      {
+        "type": "button",
+        "label": "1Algebraic Notation and ManipulationBuild fluency with algebraic language, expressions, substitution and equivalent forms.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "2Linear Equations and InequalitiesSolve linear equations and inequalities, showing valid steps and interpreting solutions.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "3Simultaneous Linear EquationsFind and interpret the common solution to two linear equations.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "4Straight-Line GraphsConnect linear equations, coordinates, gradients and graphical representations.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "5Quadratic Expressions and EquationsManipulate quadratic expressions, solve factorisable equations and interpret quadratic graphs.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "6Sequences and Algebraic RulesRecognise sequence patterns and express general terms algebraically.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "7Integrated Algebraic Problem SolvingSelect and combine algebra methods to tackle unfamiliar multi-step problems.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "8Final Mixed Problem-Solving ProjectApply course algebra to a multi-part investigation and communicate findings.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "9New module"
+      },
+      {
+        "type": "button",
+        "label": "Add module"
+      },
+      {
+        "type": "button",
+        "label": "History"
+      },
+      {
+        "type": "button",
+        "label": "Change template"
+      },
+      {
+        "type": "button",
+        "label": "Describe your own"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--add-module-dialog",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--add-module-dialog.png",
+    "route": "/courses/9581/outline",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Add Module Dialog"
+    },
+    "title": "Add Module Dialog",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Add Module Dialog"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Mark as helpful"
+      },
+      {
+        "type": "button",
+        "label": "Mark as not helpful"
+      },
+      {
+        "type": "button",
+        "label": "More course plan actions"
+      },
+      {
+        "type": "button",
+        "label": "1Algebraic Notation and ManipulationBuild fluency with algebraic language, expressions, substitution and equivalent forms.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "2Linear Equations and InequalitiesSolve linear equations and inequalities, showing valid steps and interpreting solutions.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "3Simultaneous Linear EquationsFind and interpret the common solution to two linear equations.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "4Straight-Line GraphsConnect linear equations, coordinates, gradients and graphical representations.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "5Quadratic Expressions and EquationsManipulate quadratic expressions, solve factorisable equations and interpret quadratic graphs.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "6Sequences and Algebraic RulesRecognise sequence patterns and express general terms algebraically.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "7Integrated Algebraic Problem SolvingSelect and combine algebra methods to tackle unfamiliar multi-step problems.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "8Final Mixed Problem-Solving ProjectApply course algebra to a multi-part investigation and communicate findings.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "9New module"
+      },
+      {
+        "type": "button",
+        "label": "10New module"
+      },
+      {
+        "type": "button",
+        "label": "Add module"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--blank-module-removed",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--blank-module-removed.png",
+    "route": "/courses/9581/outline",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Blank Module Removed"
+    },
+    "title": "Blank Module Removed",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Blank Module Removed"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Mark as helpful"
+      },
+      {
+        "type": "button",
+        "label": "Mark as not helpful"
+      },
+      {
+        "type": "button",
+        "label": "More course plan actions"
+      },
+      {
+        "type": "button",
+        "label": "1Algebraic Notation and ManipulationBuild fluency with algebraic language, expressions, substitution and equivalent forms.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "2Linear Equations and InequalitiesSolve linear equations and inequalities, showing valid steps and interpreting solutions.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "3Simultaneous Linear EquationsFind and interpret the common solution to two linear equations.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "4Straight-Line GraphsConnect linear equations, coordinates, gradients and graphical representations.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "5Quadratic Expressions and EquationsManipulate quadratic expressions, solve factorisable equations and interpret quadratic graphs.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "6Sequences and Algebraic RulesRecognise sequence patterns and express general terms algebraically.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "7Integrated Algebraic Problem SolvingSelect and combine algebra methods to tackle unfamiliar multi-step problems.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "8Final Mixed Problem-Solving ProjectApply course algebra to a multi-part investigation and communicate findings.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "Add module"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--brief-filled",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--brief-filled.png",
+    "route": "/courses/9581",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Brief Filled"
+    },
+    "title": "Brief Filled",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Brief Filled"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Browse plans"
+      },
+      {
+        "type": "button",
+        "label": "Describe your own"
+      },
+      {
+        "type": "link",
+        "label": "View all"
+      },
+      {
+        "type": "link",
+        "label": "Atlas end-to-end classroom research"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Close"
+      },
+      {
+        "type": "textarea",
+        "label": "Create an eight-week GCSE algebra course for a confident secondary student. Cover algebraic notation and manipulation, linear equations, inequalities, simultaneous equations, straight-line graphs, quadratics, sequences, and a final mixed problem-solving project. Include clear learning objectives, weekly practice, retrieval checks, and formative assessment milestones."
+      },
+      {
+        "type": "button",
+        "label": "Cancel"
+      },
+      {
+        "type": "button",
+        "label": "Generate plan"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": [
+      {
+        "to": "18-ai-plan-control-audit/ai-course-plan--generating",
+        "via": "Generate plan",
+        "type": "submits"
+      }
+    ]
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--course-after-generation",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--course-after-generation.png",
+    "route": "/courses/9581",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Course After Generation"
+    },
+    "title": "Course After Generation",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Course After Generation"
+    ],
+    "elements": [
+      {
+        "type": "link",
+        "label": "Settings"
+      },
+      {
+        "type": "button",
+        "label": "EUEmmanuel UsangAdmin · Science Students Academy"
+      },
+      {
+        "type": "button",
+        "label": "Help and updatesNew updates available"
+      },
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "link",
+        "label": "Course plan8 modules · 21 topic groups · 46 objectives0 of 46 objectives covered0%"
+      },
+      {
+        "type": "link",
+        "label": "View all"
+      },
+      {
+        "type": "link",
+        "label": "Atlas end-to-end classroom research"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Student"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": [
+      {
+        "to": "18-ai-plan-control-audit/ai-course-plan--outline-inventory",
+        "via": "Course outline",
+        "type": "navigates"
+      }
+    ]
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--describe-form",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--describe-form.png",
+    "route": "/courses/9581",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Describe Form"
+    },
+    "title": "Describe Form",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Describe Form"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Browse plans"
+      },
+      {
+        "type": "button",
+        "label": "Describe your own"
+      },
+      {
+        "type": "link",
+        "label": "View all"
+      },
+      {
+        "type": "link",
+        "label": "Atlas end-to-end classroom research"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Close"
+      },
+      {
+        "type": "textarea",
+        "label": "e.g. A 6-week introduction to astrophysics for confident 14-16 year olds. Cover the solar system, stars and stellar evolution, galaxies, and an intro to cosmology. Each module should build towards a short end-of-course project."
+      },
+      {
+        "type": "button",
+        "label": "Cancel"
+      },
+      {
+        "type": "button",
+        "label": "Generate plan"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": [
+      {
+        "to": "18-ai-plan-control-audit/ai-course-plan--brief-filled",
+        "via": "enter brief",
+        "type": "state-change"
+      }
+    ]
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--edit-module-dialog",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--edit-module-dialog.png",
+    "route": "/courses/9581/outline/0",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Edit Module Dialog"
+    },
+    "title": "Edit Module Dialog",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Edit Module Dialog"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Remove topic Simplifying and expanding"
+      },
+      {
+        "type": "button",
+        "label": "Simplify expressions by collecting like terms, including terms with powers."
+      },
+      {
+        "type": "button",
+        "label": "Simplify expressions by collecting like terms, including terms with powers."
+      },
+      {
+        "type": "button",
+        "label": "Remove objective: Simplify expressions by collecting like terms, including terms with powers."
+      },
+      {
+        "type": "button",
+        "label": "Expand a single bracket and simplify the resulting expression."
+      },
+      {
+        "type": "button",
+        "label": "Expand a single bracket and simplify the resulting expression."
+      },
+      {
+        "type": "button",
+        "label": "Remove objective: Expand a single bracket and simplify the resulting expression."
+      },
+      {
+        "type": "button",
+        "label": "Add objective"
+      },
+      {
+        "type": "button",
+        "label": "Factorising and formulae"
+      },
+      {
+        "type": "button",
+        "label": "Reverse expansion and rearrange formulae in simple contexts."
+      },
+      {
+        "type": "button",
+        "label": "Remove topic Factorising and formulae"
+      },
+      {
+        "type": "button",
+        "label": "Factorise expressions by taking out a common factor."
+      },
+      {
+        "type": "button",
+        "label": "Factorise expressions by taking out a common factor."
+      },
+      {
+        "type": "button",
+        "label": "Remove objective: Factorise expressions by taking out a common factor."
+      },
+      {
+        "type": "button",
+        "label": "Change the subject of a one-step or two-step formula."
+      },
+      {
+        "type": "button",
+        "label": "Change the subject of a one-step or two-step formula."
+      },
+      {
+        "type": "button",
+        "label": "Remove objective: Change the subject of a one-step or two-step formula."
+      },
+      {
+        "type": "button",
+        "label": "Add objective"
+      },
+      {
+        "type": "button",
+        "label": "Add topic"
+      },
+      {
+        "type": "button",
+        "label": "Linear Equations and Inequalities"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--generating",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--generating.png",
+    "route": "/courses/9581",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Generating"
+    },
+    "title": "Generating",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Generating"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "EUEmmanuel UsangAdmin · Science Students Academy"
+      },
+      {
+        "type": "button",
+        "label": "Help and updatesNew updates available"
+      },
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Browse plans"
+      },
+      {
+        "type": "button",
+        "label": "Describe your own"
+      },
+      {
+        "type": "link",
+        "label": "View all"
+      },
+      {
+        "type": "link",
+        "label": "Atlas end-to-end classroom research"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Play a word game"
+      }
+    ],
+    "states": [
+      "loading"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": [
+      {
+        "to": "18-ai-plan-control-audit/ai-course-plan--course-after-generation",
+        "via": "asynchronous completion",
+        "type": "state-change"
+      }
+    ]
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--module-expanded",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--module-expanded.png",
+    "route": "/courses/9581/outline/0",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Module Expanded"
+    },
+    "title": "Module Expanded",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Module Expanded"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Back to plan"
+      },
+      {
+        "type": "button",
+        "label": "Edit module"
+      },
+      {
+        "type": "button",
+        "label": "Translate between verbal statements and algebraic expressions, including multiplication, powers and brackets."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Substitute positive and negative integers into expressions and calculate accurately."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Simplify expressions by collecting like terms, including terms with powers."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Expand a single bracket and simplify the resulting expression."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Factorise expressions by taking out a common factor."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Change the subject of a one-step or two-step formula."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Linear Equations and Inequalities"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--next-module",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--next-module.png",
+    "route": "/courses/9581/outline/1",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Next Module"
+    },
+    "title": "Next Module",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Next Module"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Back to plan"
+      },
+      {
+        "type": "button",
+        "label": "Edit module"
+      },
+      {
+        "type": "button",
+        "label": "Solve linear equations requiring one or more inverse operations."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Solve equations containing brackets and simplify before isolating the variable."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Solve equations with the variable on both sides and verify a solution by substitution."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Solve linear inequalities using equivalent operations, reversing the inequality sign when multiplying or dividing by a negative number."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Represent an inequality solution on a number line with correctly placed open or closed endpoints."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Interpret an inequality answer in a simple contextual problem."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Algebraic Notation and Manipulation"
+      },
+      {
+        "type": "button",
+        "label": "Simultaneous Linear Equations"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--objective-covered",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--objective-covered.png",
+    "route": "/courses/9581/outline/0",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Objective Covered"
+    },
+    "title": "Objective Covered",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Objective Covered"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Back to plan"
+      },
+      {
+        "type": "button",
+        "label": "Edit module"
+      },
+      {
+        "type": "button",
+        "label": "Translate between verbal statements and algebraic expressions, including multiplication, powers and brackets."
+      },
+      {
+        "type": "button",
+        "label": "Substitute positive and negative integers into expressions and calculate accurately."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Simplify expressions by collecting like terms, including terms with powers."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Expand a single bracket and simplify the resulting expression."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Factorise expressions by taking out a common factor."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Change the subject of a one-step or two-step formula."
+      },
+      {
+        "type": "button",
+        "label": "Mark covered"
+      },
+      {
+        "type": "button",
+        "label": "Linear Equations and Inequalities"
+      },
+      {
+        "type": "button",
+        "label": "Close notification"
+      }
+    ],
+    "states": [
+      "selected"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--outline-inventory",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--outline-inventory.png",
+    "route": "/courses/9581/outline",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Outline Inventory"
+    },
+    "title": "Outline Inventory",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Outline Inventory"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Mark as helpful"
+      },
+      {
+        "type": "button",
+        "label": "Mark as not helpful"
+      },
+      {
+        "type": "button",
+        "label": "More course plan actions"
+      },
+      {
+        "type": "button",
+        "label": "1Algebraic Notation and ManipulationBuild fluency with algebraic language, expressions, substitution and equivalent forms.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "2Linear Equations and InequalitiesSolve linear equations and inequalities, showing valid steps and interpreting solutions.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "3Simultaneous Linear EquationsFind and interpret the common solution to two linear equations.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "4Straight-Line GraphsConnect linear equations, coordinates, gradients and graphical representations.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "5Quadratic Expressions and EquationsManipulate quadratic expressions, solve factorisable equations and interpret quadratic graphs.0 of 7"
+      },
+      {
+        "type": "button",
+        "label": "6Sequences and Algebraic RulesRecognise sequence patterns and express general terms algebraically.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "7Integrated Algebraic Problem SolvingSelect and combine algebra methods to tackle unfamiliar multi-step problems.0 of 4"
+      },
+      {
+        "type": "button",
+        "label": "8Final Mixed Problem-Solving ProjectApply course algebra to a multi-part investigation and communicate findings.0 of 6"
+      },
+      {
+        "type": "button",
+        "label": "Add module"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": [
+      {
+        "to": "18-ai-plan-control-audit/ai-course-plan--module-expanded",
+        "via": "module",
+        "type": "navigates"
+      }
+    ]
+  },
+  {
+    "id": "18-ai-plan-control-audit/ai-course-plan--remove-blank-module-confirmation",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/ai-course-plan--remove-blank-module-confirmation.png",
+    "route": "/courses/9581/outline/8",
+    "hierarchy": {
+      "page": "AI course plan",
+      "subtab": "Remove Blank Module Confirmation"
+    },
+    "title": "Remove Blank Module Confirmation",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "editor",
+    "flows": [
+      "course-planning",
+      "ai-generation"
+    ],
+    "features": [
+      "Remove Blank Module Confirmation"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "EUEmmanuel UsangAdmin · Science Students Academy"
+      },
+      {
+        "type": "button",
+        "label": "Help and updatesNew updates available"
+      },
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Course outline"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Back to plan"
+      },
+      {
+        "type": "button",
+        "label": "New module"
+      },
+      {
+        "type": "button",
+        "label": "Add a description"
+      },
+      {
+        "type": "button",
+        "label": "Remove module"
+      },
+      {
+        "type": "button",
+        "label": "Done"
+      },
+      {
+        "type": "button",
+        "label": "Add topic"
+      },
+      {
+        "type": "button",
+        "label": "Final Mixed Problem-Solving Project"
+      },
+      {
+        "type": "button",
+        "label": "Close"
+      },
+      {
+        "type": "button",
+        "label": "Cancel"
+      },
+      {
+        "type": "button",
+        "label": "Remove module"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "ai",
+      "editor",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/course-roster--student-detail",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/course-roster--student-detail.png",
+    "route": "/students/24854",
+    "hierarchy": {
+      "page": "Linked course roster",
+      "subtab": "Student Detail"
+    },
+    "title": "Student Detail",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "detail",
+    "flows": [
+      "course-management",
+      "people-management"
+    ],
+    "features": [
+      "Student Detail"
+    ],
+    "elements": [
+      {
+        "type": "link",
+        "label": "Recordings"
+      },
+      {
+        "type": "link",
+        "label": "Resources"
+      },
+      {
+        "type": "link",
+        "label": "Report approvals"
+      },
+      {
+        "type": "link",
+        "label": "Safeguarding"
+      },
+      {
+        "type": "link",
+        "label": "Unlinked sessions"
+      },
+      {
+        "type": "link",
+        "label": "Settings"
+      },
+      {
+        "type": "button",
+        "label": "EUEmmanuel UsangAdmin · Science Students Academy"
+      },
+      {
+        "type": "button",
+        "label": "Help and updatesNew updates available"
+      },
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "Edit"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Progress reports"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Attendance"
+      },
+      {
+        "type": "link",
+        "label": "Atlas Research CourseNo course plan yetAtlas Research Tutor"
+      },
+      {
+        "type": "link",
+        "label": "kingusang09+atlas-student@gmail.com"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Client"
+      },
+      {
+        "type": "button",
+        "label": "Withdraw consent"
+      },
+      {
+        "type": "button",
+        "label": "Stop sharing"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "detail",
+      "cross-link"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/course-roster--tutor-detail",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/course-roster--tutor-detail.png",
+    "route": "/tutors/24857",
+    "hierarchy": {
+      "page": "Linked course roster",
+      "subtab": "Tutor Detail"
+    },
+    "title": "Tutor Detail",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "detail",
+    "flows": [
+      "course-management",
+      "people-management"
+    ],
+    "features": [
+      "Tutor Detail"
+    ],
+    "elements": [
+      {
+        "type": "link",
+        "label": "Clients"
+      },
+      {
+        "type": "link",
+        "label": "Tutors"
+      },
+      {
+        "type": "link",
+        "label": "Team"
+      },
+      {
+        "type": "link",
+        "label": "Recordings"
+      },
+      {
+        "type": "link",
+        "label": "Resources"
+      },
+      {
+        "type": "link",
+        "label": "Report approvals"
+      },
+      {
+        "type": "link",
+        "label": "Safeguarding"
+      },
+      {
+        "type": "link",
+        "label": "Unlinked sessions"
+      },
+      {
+        "type": "link",
+        "label": "Settings"
+      },
+      {
+        "type": "button",
+        "label": "EUEmmanuel UsangAdmin · Science Students Academy"
+      },
+      {
+        "type": "button",
+        "label": "Help and updatesNew updates available"
+      },
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "Edit"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Progress reports"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Attendance"
+      },
+      {
+        "type": "link",
+        "label": "Atlas Research CourseNo course plan yetAtlas Research Student"
+      },
+      {
+        "type": "link",
+        "label": "kingusang09+atlas-tutor@gmail.com"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "detail",
+      "cross-link"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/course-summary--control-inventory",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/course-summary--control-inventory.png",
+    "route": "/courses/9581",
+    "hierarchy": {
+      "page": "Course summary",
+      "subtab": "Control Inventory"
+    },
+    "title": "Control Inventory",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "detail",
+    "flows": [
+      "course-management"
+    ],
+    "features": [
+      "Control Inventory"
+    ],
+    "elements": [
+      {
+        "type": "link",
+        "label": "Settings"
+      },
+      {
+        "type": "button",
+        "label": "EUEmmanuel UsangAdmin · Science Students Academy"
+      },
+      {
+        "type": "button",
+        "label": "Help and updatesNew updates available"
+      },
+      {
+        "type": "button",
+        "label": "Set up billing"
+      },
+      {
+        "type": "button",
+        "label": "Actions"
+      },
+      {
+        "type": "button",
+        "label": "NewNew lesson"
+      },
+      {
+        "type": "button",
+        "label": "Summary"
+      },
+      {
+        "type": "button",
+        "label": "Lessons (1)"
+      },
+      {
+        "type": "button",
+        "label": "Resources"
+      },
+      {
+        "type": "button",
+        "label": "Homework"
+      },
+      {
+        "type": "button",
+        "label": "Browse plans"
+      },
+      {
+        "type": "button",
+        "label": "Describe your own"
+      },
+      {
+        "type": "link",
+        "label": "View all"
+      },
+      {
+        "type": "link",
+        "label": "Atlas end-to-end classroom research"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Tutor"
+      },
+      {
+        "type": "button",
+        "label": "Add"
+      },
+      {
+        "type": "link",
+        "label": "ARAtlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "Remove Atlas Research Student"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "detail",
+      "control-inventory"
+    ],
+    "links": [
+      {
+        "to": "18-ai-plan-control-audit/course-roster--tutor-detail",
+        "via": "Atlas Research Tutor",
+        "type": "navigates"
+      },
+      {
+        "to": "18-ai-plan-control-audit/course-roster--student-detail",
+        "via": "Atlas Research Student",
+        "type": "navigates"
+      }
+    ]
+  },
+  {
+    "id": "18-ai-plan-control-audit/global-account-menu--open",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/global-account-menu--open.png",
+    "route": "/",
+    "hierarchy": {
+      "page": "Shared app chrome",
+      "subtab": "Open"
+    },
+    "title": "Open",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available Emmanuel Usang kingusang09+6466@gmail.com SWITCH ROLE Admin Tutor My profile Sign ou",
+    "pageType": "navigation",
+    "flows": [
+      "global-navigation"
+    ],
+    "features": [
+      "Open"
+    ],
+    "elements": [
+      {
+        "type": "link",
+        "label": "Read the classroom guide"
+      },
+      {
+        "type": "link",
+        "label": "Live view"
+      },
+      {
+        "type": "link",
+        "label": "Open calendar"
+      },
+      {
+        "type": "link",
+        "label": "All lessons"
+      },
+      {
+        "type": "button",
+        "label": "Mon23"
+      },
+      {
+        "type": "button",
+        "label": "Tue24"
+      },
+      {
+        "type": "button",
+        "label": "Wed25"
+      },
+      {
+        "type": "button",
+        "label": "Thu26"
+      },
+      {
+        "type": "button",
+        "label": "Fri27"
+      },
+      {
+        "type": "button",
+        "label": "Sat28"
+      },
+      {
+        "type": "button",
+        "label": "Sun29"
+      },
+      {
+        "type": "link",
+        "label": "0 safeguarding flagsno unresolved flags"
+      },
+      {
+        "type": "link",
+        "label": "0 lesson reportsnothing to approve"
+      },
+      {
+        "type": "link",
+        "label": "0 reports outstandingall caught up"
+      },
+      {
+        "type": "button",
+        "label": "Watch the Bobbin walkthrough video"
+      },
+      {
+        "type": "link",
+        "label": "Visit the help centre"
+      },
+      {
+        "type": "button",
+        "label": "Chat to us"
+      },
+      {
+        "type": "link",
+        "label": "Find the right planBook a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your businessBook a call"
+      },
+      {
+        "type": "button",
+        "label": "New · Mobile appRecord lessons on the goCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.Learn more"
+      },
+      {
+        "type": "button",
+        "label": "Dismiss"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "navigation",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/global-help-updates--open",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/global-help-updates--open.png",
+    "route": "/",
+    "hierarchy": {
+      "page": "Shared app chrome",
+      "subtab": "Open"
+    },
+    "title": "Open",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available What's new New Help guide Share feedback Privacy policy You're currently on a free t",
+    "pageType": "navigation",
+    "flows": [
+      "global-navigation"
+    ],
+    "features": [
+      "Open"
+    ],
+    "elements": [
+      {
+        "type": "link",
+        "label": "Read the classroom guide"
+      },
+      {
+        "type": "link",
+        "label": "Live view"
+      },
+      {
+        "type": "link",
+        "label": "Open calendar"
+      },
+      {
+        "type": "link",
+        "label": "All lessons"
+      },
+      {
+        "type": "button",
+        "label": "Mon23"
+      },
+      {
+        "type": "button",
+        "label": "Tue24"
+      },
+      {
+        "type": "button",
+        "label": "Wed25"
+      },
+      {
+        "type": "button",
+        "label": "Thu26"
+      },
+      {
+        "type": "button",
+        "label": "Fri27"
+      },
+      {
+        "type": "button",
+        "label": "Sat28"
+      },
+      {
+        "type": "button",
+        "label": "Sun29"
+      },
+      {
+        "type": "link",
+        "label": "0 safeguarding flagsno unresolved flags"
+      },
+      {
+        "type": "link",
+        "label": "0 lesson reportsnothing to approve"
+      },
+      {
+        "type": "link",
+        "label": "0 reports outstandingall caught up"
+      },
+      {
+        "type": "button",
+        "label": "Watch the Bobbin walkthrough video"
+      },
+      {
+        "type": "link",
+        "label": "Visit the help centre"
+      },
+      {
+        "type": "button",
+        "label": "Chat to us"
+      },
+      {
+        "type": "link",
+        "label": "Find the right planBook a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your businessBook a call"
+      },
+      {
+        "type": "button",
+        "label": "New · Mobile appRecord lessons on the goCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.Learn more"
+      },
+      {
+        "type": "button",
+        "label": "Dismiss"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "navigation",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/global-search--open",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/global-search--open.png",
+    "route": "/",
+    "hierarchy": {
+      "page": "Shared app chrome",
+      "subtab": "Open"
+    },
+    "title": "Open",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "navigation",
+    "flows": [
+      "global-navigation"
+    ],
+    "features": [
+      "Open"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Fri27"
+      },
+      {
+        "type": "button",
+        "label": "Sat28"
+      },
+      {
+        "type": "button",
+        "label": "Sun29"
+      },
+      {
+        "type": "link",
+        "label": "0 safeguarding flagsno unresolved flags"
+      },
+      {
+        "type": "link",
+        "label": "0 lesson reportsnothing to approve"
+      },
+      {
+        "type": "link",
+        "label": "0 reports outstandingall caught up"
+      },
+      {
+        "type": "button",
+        "label": "Watch the Bobbin walkthrough video"
+      },
+      {
+        "type": "link",
+        "label": "Visit the help centre"
+      },
+      {
+        "type": "button",
+        "label": "Chat to us"
+      },
+      {
+        "type": "link",
+        "label": "Find the right planBook a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your businessBook a call"
+      },
+      {
+        "type": "button",
+        "label": "New · Mobile appRecord lessons on the goCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.Learn more"
+      },
+      {
+        "type": "button",
+        "label": "Dismiss"
+      },
+      {
+        "type": "input",
+        "label": "Search"
+      },
+      {
+        "type": "button",
+        "label": "Close search"
+      },
+      {
+        "type": "button",
+        "label": "Students"
+      },
+      {
+        "type": "button",
+        "label": "Tutors"
+      },
+      {
+        "type": "button",
+        "label": "Clients"
+      },
+      {
+        "type": "button",
+        "label": "Courses"
+      },
+      {
+        "type": "button",
+        "label": "Lessons"
+      },
+      {
+        "type": "button",
+        "label": "Settings"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "navigation",
+      "interactive-state"
+    ],
+    "links": [
+      {
+        "to": "18-ai-plan-control-audit/global-search--results",
+        "via": "search Atlas",
+        "type": "state-change"
+      }
+    ]
+  },
+  {
+    "id": "18-ai-plan-control-audit/global-search--results",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/global-search--results.png",
+    "route": "/",
+    "hierarchy": {
+      "page": "Shared app chrome",
+      "subtab": "Results"
+    },
+    "title": "Results",
+    "summary": "Skip to content S ORGANIZATION Science Students Academy Search… K Dashboard Calendar Lessons Courses PEOPLE Students Clients Tutors Team LIBRARY Recordings Resources TO REVIEW Report approvals Safeguarding Unlinked sessions ORGANIZATION Settings EU Emmanuel Usang Admin · Science Students Academy Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up bi",
+    "pageType": "navigation",
+    "flows": [
+      "global-navigation"
+    ],
+    "features": [
+      "Results"
+    ],
+    "elements": [
+      {
+        "type": "button",
+        "label": "Thu26"
+      },
+      {
+        "type": "button",
+        "label": "Fri27"
+      },
+      {
+        "type": "button",
+        "label": "Sat28"
+      },
+      {
+        "type": "button",
+        "label": "Sun29"
+      },
+      {
+        "type": "link",
+        "label": "0 safeguarding flagsno unresolved flags"
+      },
+      {
+        "type": "link",
+        "label": "0 lesson reportsnothing to approve"
+      },
+      {
+        "type": "link",
+        "label": "0 reports outstandingall caught up"
+      },
+      {
+        "type": "button",
+        "label": "Watch the Bobbin walkthrough video"
+      },
+      {
+        "type": "link",
+        "label": "Visit the help centre"
+      },
+      {
+        "type": "button",
+        "label": "Chat to us"
+      },
+      {
+        "type": "link",
+        "label": "Find the right planBook a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your businessBook a call"
+      },
+      {
+        "type": "button",
+        "label": "New · Mobile appRecord lessons on the goCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.Learn more"
+      },
+      {
+        "type": "button",
+        "label": "Dismiss"
+      },
+      {
+        "type": "input",
+        "label": "Search"
+      },
+      {
+        "type": "button",
+        "label": "Close search"
+      },
+      {
+        "type": "button",
+        "label": "ARAtlas Research Student"
+      },
+      {
+        "type": "button",
+        "label": "ARAtlas Research Tutorkingusang09+atlas-tutor@gmail.com"
+      },
+      {
+        "type": "button",
+        "label": "ARAtlas Research Client"
+      },
+      {
+        "type": "button",
+        "label": "Atlas Research Course"
+      },
+      {
+        "type": "button",
+        "label": "Atlas end-to-end classroom researchAtlas Research Course · 27 Nov 2026Complete"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "navigation",
+      "interactive-state"
+    ],
+    "links": []
+  },
+  {
+    "id": "18-ai-plan-control-audit/global-sidebar--collapsed",
+    "section": "18-ai-plan-control-audit",
+    "sectionTitle": "AI plan + minute controls",
+    "screenshot": "screenshots/global-sidebar--collapsed.png",
+    "route": "/",
+    "hierarchy": {
+      "page": "Shared app chrome",
+      "subtab": "Collapsed"
+    },
+    "title": "Collapsed",
+    "summary": "Skip to content S EU Help and updates New updates available You're currently on a free trial. Set up billing to continue using Bobbin. Set up billing Good afternoon, Emmanuel Saturday, 28 November 2026 Explore a sample course Algebra 1 Small Group is a ready-made course with lessons, insights and reports, so you can see Bobbin in action before your own data arrives. Try the planning tools there: its course and lesson",
+    "pageType": "navigation",
+    "flows": [
+      "global-navigation"
+    ],
+    "features": [
+      "Collapsed"
+    ],
+    "elements": [
+      {
+        "type": "link",
+        "label": "Read the classroom guide"
+      },
+      {
+        "type": "link",
+        "label": "Live view"
+      },
+      {
+        "type": "link",
+        "label": "Open calendar"
+      },
+      {
+        "type": "link",
+        "label": "All lessons"
+      },
+      {
+        "type": "button",
+        "label": "Mon23"
+      },
+      {
+        "type": "button",
+        "label": "Tue24"
+      },
+      {
+        "type": "button",
+        "label": "Wed25"
+      },
+      {
+        "type": "button",
+        "label": "Thu26"
+      },
+      {
+        "type": "button",
+        "label": "Fri27"
+      },
+      {
+        "type": "button",
+        "label": "Sat28"
+      },
+      {
+        "type": "button",
+        "label": "Sun29"
+      },
+      {
+        "type": "link",
+        "label": "0 safeguarding flagsno unresolved flags"
+      },
+      {
+        "type": "link",
+        "label": "0 lesson reportsnothing to approve"
+      },
+      {
+        "type": "link",
+        "label": "0 reports outstandingall caught up"
+      },
+      {
+        "type": "button",
+        "label": "Watch the Bobbin walkthrough video"
+      },
+      {
+        "type": "link",
+        "label": "Visit the help centre"
+      },
+      {
+        "type": "button",
+        "label": "Chat to us"
+      },
+      {
+        "type": "link",
+        "label": "Find the right planBook a call with our sales team to talk through plans and pricing, or to see what Bobbin can do for your businessBook a call"
+      },
+      {
+        "type": "button",
+        "label": "New · Mobile appRecord lessons on the goCapture in-person lessons with one tap. Bobbin writes the transcript and lesson report for you.Learn more"
+      },
+      {
+        "type": "button",
+        "label": "Dismiss"
+      }
+    ],
+    "states": [
+      "populated"
+    ],
+    "tags": [
+      "web",
+      "authenticated",
+      "navigation",
+      "interactive-state"
+    ],
+    "links": []
+  }
+]
