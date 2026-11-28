@@ -66,7 +66,7 @@ export function DashboardHomeClient() {
   if (!sessionQuery.data || !overviewQuery.data) return <DashboardHomeSkeleton />;
 
   return (
-    <div className="animate-in fade-in duration-300">
+    <div>
       <QueryFailure query={overviewQuery} />
       <DashboardHomeView
         overview={overviewQuery.data}

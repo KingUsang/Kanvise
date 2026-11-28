@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useOnboardingState } from '@/lib/onboarding-api'
 import { OnboardingExperience } from './onboarding-experience'
+import { OnboardingSkeleton } from './onboarding-skeleton'
 
 /**
  * Shows onboarding only to the person who created the account and has not
@@ -27,6 +28,6 @@ export function OnboardingGate({ firstName }: { firstName: string }) {
       </div>
     )
   }
-  if (!query.isSuccess || leave) return <div aria-busy="true" className="min-h-dvh bg-dashboard-page" />
+  if (!query.isSuccess || leave) return <OnboardingSkeleton />
   return <OnboardingExperience firstName={firstName} />
 }

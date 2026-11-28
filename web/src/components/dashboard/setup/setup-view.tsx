@@ -24,34 +24,37 @@ export function SetupProgress({ completed, total, label }: { completed: number; 
 function Row({ row, busy, onToggleSkip }: { row: SetupRow; busy: boolean; onToggleSkip: (id: SetupStepId, skipped: boolean) => void }) {
   const finished = row.state !== 'todo'
   return (
-    <li data-state={row.state} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:gap-4">
+    // The status circle stays beside the title on phones; the button moves under the text.
+    <li data-state={row.state} className="flex items-start gap-3 py-4 sm:gap-4">
       <span aria-hidden="true" className={`flex size-10 shrink-0 items-center justify-center rounded-full ${row.state === 'done' ? 'animate-dashboard-pop bg-dashboard-success-surface text-dashboard-success' : 'bg-dashboard-surface-subtle text-dashboard-muted'}`}>
         {row.state === 'done' ? <Check className="size-5" /> : <span className="text-sm font-semibold">{row.state === 'skipped' ? '–' : ''}</span>}
       </span>
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className={`text-base font-semibold ${finished ? 'text-dashboard-muted' : 'text-dashboard-foreground'}`}>{row.title}</h3>
-          <span className="rounded-full bg-dashboard-surface-subtle px-2 py-0.5 text-dashboard-secondary text-dashboard-muted">{row.time}</span>
-          {row.next ? <span className="rounded-full bg-dashboard-primary px-2 py-0.5 text-dashboard-secondary font-semibold text-white">Next</span> : null}
-          {row.state === 'skipped' ? <span className="rounded-full bg-dashboard-surface-subtle px-2 py-0.5 text-dashboard-secondary font-semibold text-dashboard-muted">Skipped</span> : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex min-h-10 flex-wrap items-center gap-2">
+            <h3 className={`text-base font-semibold ${finished ? 'text-dashboard-muted' : 'text-dashboard-foreground'}`}>{row.title}</h3>
+            <span className="rounded-full bg-dashboard-surface-subtle px-2 py-0.5 text-dashboard-secondary text-dashboard-muted">{row.time}</span>
+            {row.next ? <span className="rounded-full bg-dashboard-primary px-2 py-0.5 text-dashboard-secondary font-semibold text-white">Next</span> : null}
+            {row.state === 'skipped' ? <span className="rounded-full bg-dashboard-surface-subtle px-2 py-0.5 text-dashboard-secondary font-semibold text-dashboard-muted">Skipped</span> : null}
+          </div>
+          <p className={`text-sm ${finished ? 'text-dashboard-muted' : 'text-dashboard-foreground'}`}>{row.reason}</p>
         </div>
-        <p className={`text-sm ${finished ? 'text-dashboard-muted' : 'text-dashboard-foreground'}`}>{row.reason}</p>
-      </div>
-      <div className="flex flex-col items-start gap-1 sm:items-end">
-        {row.state === 'done' ? (
-          <Link href={row.href} className="inline-flex min-h-11 items-center text-sm font-semibold text-dashboard-primary underline underline-offset-2">View<span className="sr-only">, {row.title}</span></Link>
-        ) : row.state === 'skipped' ? (
-          <Button variant="outline" disabled={busy} onClick={() => onToggleSkip(row.id, false)}>Do this step</Button>
-        ) : row.disabledReason ? (
-          <Button variant={row.next ? 'primary' : 'outline'} disabledReason={row.disabledReason}>{row.button}</Button>
-        ) : (
-          <LinkButton href={row.href} variant={row.next ? 'primary' : 'outline'}>{row.button}</LinkButton>
-        )}
-        {row.skippable && row.state === 'todo' ? (
-          <button type="button" disabled={busy} onClick={() => onToggleSkip(row.id, true)} className="inline-flex min-h-11 items-center text-sm text-dashboard-muted underline underline-offset-2 hover:text-dashboard-foreground disabled:opacity-60">
-            Skip this step
-          </button>
-        ) : null}
+        <div className="flex flex-col items-start gap-1 sm:items-end">
+          {row.state === 'done' ? (
+            <Link href={row.href} className="inline-flex min-h-11 items-center text-sm font-semibold text-dashboard-primary underline underline-offset-2">View<span className="sr-only">, {row.title}</span></Link>
+          ) : row.state === 'skipped' ? (
+            <Button variant="outline" disabled={busy} onClick={() => onToggleSkip(row.id, false)}>Do this step</Button>
+          ) : row.disabledReason ? (
+            <Button variant={row.next ? 'primary' : 'outline'} disabledReason={row.disabledReason}>{row.button}</Button>
+          ) : (
+            <LinkButton href={row.href} variant={row.next ? 'primary' : 'outline'}>{row.button}</LinkButton>
+          )}
+          {row.skippable && row.state === 'todo' ? (
+            <button type="button" disabled={busy} onClick={() => onToggleSkip(row.id, true)} className="inline-flex min-h-11 items-center text-sm text-dashboard-muted underline underline-offset-2 hover:text-dashboard-foreground disabled:opacity-60">
+              Skip this step
+            </button>
+          ) : null}
+        </div>
       </div>
     </li>
   )
@@ -103,7 +106,7 @@ export function SetupView({ firstName, checklist, helpUrl, showDefaultsBanner, o
               <div className="flex items-start gap-3">
                 <KaviMark />
                 <div>
-                  <h2 className="text-xl font-semibold text-dashboard-foreground">Let&apos;s get your first lesson on the calendar.</h2>
+                  <h2 className="text-lg font-semibold text-dashboard-foreground sm:text-xl">Let&apos;s get your first lesson on the calendar.</h2>
                   <p className="text-sm text-dashboard-muted">A few quick steps and you&apos;re ready to teach.</p>
                 </div>
               </div>

@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest'
 
 const roleSites = [
   'src/lib/supabase/middleware.ts',
-  'src/app/dashboard/layout.tsx',
+  // The dashboard layout's sign-in and role check (moved out of layout.tsx behind a Suspense boundary).
+  'src/components/dashboard/signed-in-layout.tsx',
   'src/app/dashboard/question-banks/page.tsx',
 ] as const
 

@@ -43,7 +43,9 @@ function LessonSecondLine({ lesson, showTutor }: { lesson: OverviewLesson; showT
 
 function TodayRow({ lesson, timezone, showTutor }: { lesson: OverviewLesson; timezone: string; showTutor: boolean }) {
   return (
-    <li className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 sm:gap-4">
+    // Phones: time beside the title, status chip on its own line under it, so the
+    // title is never cut to a few letters. Wider screens: one row.
+    <li className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-2 py-3 first:pt-0 last:pb-0 sm:flex sm:items-center sm:gap-4">
       <div className="w-[4.5rem] shrink-0 text-dashboard-small">
         <p className="font-semibold text-dashboard-foreground">{formatTime(lesson.scheduled_at, timezone)}</p>
         <p className="text-dashboard-secondary text-dashboard-muted">
@@ -51,15 +53,18 @@ function TodayRow({ lesson, timezone, showTutor }: { lesson: OverviewLesson; tim
           {formatTime(lessonEnd(lesson), timezone)}
         </p>
       </div>
-      <CourseSwatch color={courseColorFor(lesson.course_id ?? lesson.id)} size="lg" className="hidden sm:inline-block" />
+      {/* The wrappers own display: CourseSwatch sets inline-block, which beat a plain `hidden`. */}
+      <span className="hidden sm:inline-flex"><CourseSwatch color={courseColorFor(lesson.course_id ?? lesson.id)} size="lg" /></span>
       <div className="min-w-0 flex-1">
         <p className={`flex items-center gap-2 truncate font-semibold text-dashboard-foreground ${lesson.status === 'cancelled' ? 'line-through' : ''}`}>
-          <CourseSwatch color={courseColorFor(lesson.course_id ?? lesson.id)} size="sm" className="sm:hidden" />
+          <span className="inline-flex sm:hidden"><CourseSwatch color={courseColorFor(lesson.course_id ?? lesson.id)} size="sm" /></span>
           <span className="truncate">{lesson.title}</span>
         </p>
         <LessonSecondLine lesson={lesson} showTutor={showTutor} />
       </div>
-      <StatusChip status={lesson.status} />
+      <div className="col-start-2 justify-self-start sm:shrink-0">
+        <StatusChip status={lesson.status} />
+      </div>
     </li>
   )
 }
