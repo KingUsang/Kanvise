@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { Button } from './action-controls'
+import { EntityIcon, type Entity } from '@/components/ui/entity-icon'
 
 export function PageLoadingState({ label }: { label: string }) {
   return (
@@ -38,15 +40,23 @@ export function SectionLoadingState({ label, cards = 3 }: { label: string; cards
   )
 }
 
-export function EmptyState({ icon, title, body, action }: {
-  icon: ReactNode
+/**
+ * Empty state (SH-09): the entity icon in its tinted circle, a title, one or
+ * two lines that explain the concept, and one primary button. Pass `entity`
+ * for the redesign look; `icon` keeps the older square treatment.
+ */
+export function EmptyState({ icon, entity, title, body, action }: {
+  icon?: ReactNode
+  entity?: Entity
   title: string
   body: string
   action?: ReactNode
 }) {
   return (
     <section className="flex min-h-[250px] flex-col items-center justify-center rounded-dashboard-panel border border-dashed border-dashboard-outline bg-dashboard-surface px-5 py-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-dashboard-control bg-dashboard-primary/10 text-dashboard-primary">{icon}</div>
+      {entity
+        ? <EntityIcon entity={entity} size="lg" />
+        : <div className="flex h-12 w-12 items-center justify-center rounded-dashboard-control bg-dashboard-primary/10 text-dashboard-primary">{icon}</div>}
       <h2 className="mt-4 text-base font-bold text-dashboard-foreground">{title}</h2>
       <p className="mt-1 max-w-sm text-sm leading-6 text-dashboard-muted">{body}</p>
       {action ? <div className="mt-5">{action}</div> : null}
@@ -54,25 +64,48 @@ export function EmptyState({ icon, title, body, action }: {
   )
 }
 
-export function ErrorState({ message, onRetry, size = 'page' }: {
-  message: string
+const errorStateClasses = {
+  page: 'rounded-dashboard-panel border border-dashboard-danger/30 bg-dashboard-danger/5 px-6 py-16 text-center text-sm text-dashboard-danger',
+  compact: 'mb-4 rounded-dashboard-panel border border-dashboard-danger/30 bg-dashboard-danger/5 px-4 py-3 text-sm text-dashboard-danger',
+  // SH-09: the card that failed says so; the rest of the page keeps working.
+  card: 'flex flex-col items-center justify-center gap-3 rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface px-5 py-8 text-center text-dashboard-small text-dashboard-foreground',
+} as const
+
+export function ErrorState({ message = "We couldn't load this.", onRetry, size = 'page' }: {
+  message?: string
   onRetry: () => void
-  size?: 'page' | 'compact'
+  size?: keyof typeof errorStateClasses
 }) {
   return (
     <div
       role="alert"
       aria-live="assertive"
       aria-atomic="true"
-      className={size === 'page'
-        ? 'rounded-dashboard-panel border border-dashboard-danger/30 bg-dashboard-danger/5 px-6 py-16 text-center text-sm text-dashboard-danger'
-        : 'mb-4 rounded-dashboard-panel border border-dashboard-danger/30 bg-dashboard-danger/5 px-4 py-3 text-sm text-dashboard-danger'}
+      className={errorStateClasses[size]}
     >
+      {size === 'card' ? <AlertTriangle aria-hidden="true" className="size-5 text-dashboard-danger" /> : null}
       <p>{message}</p>
-      <Button variant="secondary" onClick={onRetry} className={size === 'page' ? 'mt-4' : 'mt-3'}>
+      <Button variant="secondary" onClick={onRetry} className={size === 'page' ? 'mt-4' : size === 'compact' ? 'mt-3' : undefined}>
         Try again
       </Button>
     </div>
+  )
+}
+
+/**
+ * SH-09: if data was already on screen when a refresh failed, it stays, with
+ * this small warning line above it instead of an error card.
+ */
+export function StaleDataNotice({ message = "We couldn't refresh this. You're seeing what was loaded before.", onRetry }: {
+  message?: string
+  onRetry: () => void
+}) {
+  return (
+    <p role="status" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-dashboard-secondary text-dashboard-warning">
+      <AlertTriangle aria-hidden="true" className="size-4 shrink-0" />
+      <span>{message}</span>
+      <button type="button" onClick={onRetry} className="inline-flex min-h-11 items-center font-semibold text-dashboard-primary underline underline-offset-2">Try again</button>
+    </p>
   )
 }
 

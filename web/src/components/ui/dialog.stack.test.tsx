@@ -51,3 +51,28 @@ describe('dialog stack', () => {
     page.remove()
   })
 })
+
+describe('stacked dialogs show one scrim and keep data', () => {
+  it('hides the covered dialog, keeps its input value, and returns on close', () => {
+    function Demo({ top }: { top: boolean }) {
+      return (
+        <>
+          <Dialog label="Wizard"><input aria-label="Name" defaultValue="" /></Dialog>
+          {top ? <Dialog label="Nested"><button>nested</button></Dialog> : null}
+        </>
+      )
+    }
+    const { rerender } = render(<Demo top={false} />)
+    const input = screen.getByLabelText('Name') as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'Ada' } })
+    rerender(<Demo top />)
+    const wizardRoot = screen.getByLabelText('Wizard').parentElement as HTMLElement
+    expect(wizardRoot).toHaveAttribute('data-covered')
+    expect(screen.getByLabelText('Nested').parentElement).not.toHaveAttribute('data-covered')
+    expect(document.querySelectorAll('[data-covered]')).toHaveLength(1)
+    rerender(<Demo top={false} />)
+    expect(wizardRoot).not.toHaveAttribute('data-covered')
+    expect(wizardRoot).not.toHaveAttribute('inert')
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Ada')
+  })
+})

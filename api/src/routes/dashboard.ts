@@ -724,13 +724,26 @@ dashboardRouter.get("/capabilities", async (c) => {
     isTutor = Boolean(assignment);
   }
 
-  const { data: school, error: schoolError } = await supabase
-    .from("schools")
-    .select("account_type")
-    .eq("id", schoolId)
-    .maybeSingle();
+  const [
+    { data: school, error: schoolError },
+    { data: profile, error: profileError },
+  ] = await Promise.all([
+    supabase
+      .from("schools")
+      .select("account_type, name, logo_url")
+      .eq("id", schoolId)
+      .maybeSingle(),
+    supabase
+      .from("user_profiles")
+      .select("profile_photo_url")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
   if (schoolError)
     return c.json({ error: "Could not resolve organisation type" }, 500);
+  // The photo is presentation only: the shell shows initials without it.
+  if (profileError)
+    console.error("dashboard_capabilities.profile_photo_failed", { profileError });
 
   return c.json({
     data: {
@@ -739,6 +752,10 @@ dashboardRouter.get("/capabilities", async (c) => {
       is_tutor: isTutor,
       organisation_type:
         school?.account_type === "independent" ? "independent" : "centre",
+      // The app shell's account card and user card (01-app-shell SH-02).
+      account_name: school?.name ?? null,
+      account_logo_url: school?.logo_url ?? null,
+      profile_photo_url: profile?.profile_photo_url ?? null,
     },
   });
 });

@@ -153,6 +153,99 @@
   --dashboard-radius-control: 0.5rem;
   --dashboard-radius-panel: 0.75rem;
   --dashboard-shadow-card: 0 4px 20px rgba(61, 61, 61, 0.08);
+
+  /* Redesign step 1 roles (01-app-shell SH-01, SH-05, SH-12, SH-15; standard
+     07 "Semantic visual language"). Contrast ratios are against
+     --dashboard-page (#fbf9f8) unless noted. */
+  --dashboard-surface-hover: #f0eded; /* hover and active nav background */
+  /* Graphical outlines that carry meaning (upcoming wizard segments,
+     unchecked controls): 3.35:1 on page. --dashboard-outline is for dividers. */
+  --dashboard-outline-strong: #8a8794;
+  /* Location ("you are here"): bars, underlines, current step. 3.83:1 on
+     page, 4.02:1 on surface, 3.45:1 on surface-hover. Never text. */
+  --dashboard-location: #c26627;
+  /* Only if location ever has to be text: 5.15:1 on page, 4.64:1 on hover. */
+  --dashboard-location-text: #a8521b;
+  --dashboard-focus: #2e2877; /* 11.87:1 */
+  --dashboard-scrim: rgba(27, 28, 28, 0.4);
+  --dashboard-shadow-overlay: 0 16px 48px rgba(27, 28, 28, 0.18);
+  --dashboard-radius-dialog: 1rem;
+
+  /* Feedback roles: text/icon on page and on their own surface >= 4.5:1. */
+  --dashboard-info: #2563eb;
+  --dashboard-info-surface: #eff5ff;
+  --dashboard-success: #15803d;
+  --dashboard-success-surface: #e7f6ec;
+  --dashboard-warning: #a16207;
+  --dashboard-warning-surface: #fdf6dc;
+  /* Matched text in search results (SH-05). Body text on it is 14:1, muted text 7.7:1. */
+  --dashboard-highlight: #fbe9a6;
+  --dashboard-danger-surface: #fdeceb;
+
+  /* Lesson status dots (SH-15). Lesson time colours are never orange. */
+  --dashboard-status-planned: #2563eb;
+  --dashboard-status-soon: #a16207;
+  --dashboard-status-live: #15803d;
+
+  /* Entity icon colour on its tint (SH-05 table); each pair >= 4.4:1
+     (icons need 3:1). */
+  --dashboard-entity-student: #15803d;
+  --dashboard-entity-student-tint: #e7f6ec;
+  --dashboard-entity-tutor: #1d4ed8;
+  --dashboard-entity-tutor-tint: #e6effd;
+  --dashboard-entity-course: #7e22ce;
+  --dashboard-entity-course-tint: #f3e8fd;
+  --dashboard-entity-lesson: #4338ca;
+  --dashboard-entity-lesson-tint: #ebeafd;
+  --dashboard-entity-homework: #0f766e;
+  --dashboard-entity-homework-tint: #e0f4f2;
+  --dashboard-entity-quiz: #be185d;
+  --dashboard-entity-quiz-tint: #fce7f1;
+  --dashboard-entity-resource: #a16207;
+  --dashboard-entity-resource-tint: #fdf1dc;
+  --dashboard-entity-recording: #475569;
+  --dashboard-entity-recording-tint: #e9edf2;
+  --dashboard-entity-settings: #57534e;
+  --dashboard-entity-settings-tint: #efeeec;
+
+  /* Course swatch palette (SH-15). A course stores one of these names. */
+  --dashboard-course-indigo: #4338ca;
+  --dashboard-course-teal: #0f766e;
+  --dashboard-course-purple: #7e22ce;
+  --dashboard-course-pink: #be185d;
+  --dashboard-course-amber: #a16207;
+  --dashboard-course-green: #15803d;
+  --dashboard-course-blue: #1d4ed8;
+  --dashboard-course-slate: #475569;
+
+  /* The shell owns page gutters: 16px below 1024px, 40px from 1024px
+     (SH-01, R-01). */
+  --dashboard-gutter: 16px;
+  /* Everything fixed at the bottom of a phone page, above the safe area
+     (R-10): the bottom bar plus one page-level fixed element (the Fab or a
+     fixed action bar). Toasts and page bottom padding read the total; the
+     Fab reads only the bar offset so it sits just above the bar. */
+  --shell-bar-offset: 0px;
+  --shell-fixed-offset: 0px;
+  --shell-bottom-offset: calc(var(--shell-bar-offset) + var(--shell-fixed-offset));
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --dashboard-gutter: 40px;
+  }
+}
+
+/* The dashboard shell marks <html> while its phone bottom bar shows (64px
+   tall plus safe-area padding, which consumers add themselves). */
+@media (max-width: 767.98px) {
+  html[data-shell-bottom-bar="visible"] {
+    --shell-bar-offset: 4rem;
+  }
+  /* A mounted Fab (56px) and its 16px gap. */
+  html[data-shell-fab] {
+    --shell-fixed-offset: 4.5rem;
+  }
 }
 
 @theme inline {
@@ -202,6 +295,68 @@
   --text-dashboard-eyebrow: 12px;
   --text-dashboard-eyebrow--line-height: 16px;
   --text-dashboard-eyebrow--letter-spacing: 0.14em;
+
+  /* Redesign step 1 utilities (see :root for values and contrast notes). */
+  --color-dashboard-surface-hover: var(--dashboard-surface-hover);
+  --color-dashboard-outline-strong: var(--dashboard-outline-strong);
+  --color-dashboard-location: var(--dashboard-location);
+  --color-dashboard-location-text: var(--dashboard-location-text);
+  --color-dashboard-focus: var(--dashboard-focus);
+  --color-dashboard-scrim: var(--dashboard-scrim);
+  --color-dashboard-info: var(--dashboard-info);
+  --color-dashboard-info-surface: var(--dashboard-info-surface);
+  --color-dashboard-success: var(--dashboard-success);
+  --color-dashboard-success-surface: var(--dashboard-success-surface);
+  --color-dashboard-warning: var(--dashboard-warning);
+  --color-dashboard-warning-surface: var(--dashboard-warning-surface);
+  --color-dashboard-highlight: var(--dashboard-highlight);
+  --color-dashboard-danger-surface: var(--dashboard-danger-surface);
+  --color-dashboard-status-planned: var(--dashboard-status-planned);
+  --color-dashboard-status-soon: var(--dashboard-status-soon);
+  --color-dashboard-status-live: var(--dashboard-status-live);
+  --color-dashboard-entity-student: var(--dashboard-entity-student);
+  --color-dashboard-entity-student-tint: var(--dashboard-entity-student-tint);
+  --color-dashboard-entity-tutor: var(--dashboard-entity-tutor);
+  --color-dashboard-entity-tutor-tint: var(--dashboard-entity-tutor-tint);
+  --color-dashboard-entity-course: var(--dashboard-entity-course);
+  --color-dashboard-entity-course-tint: var(--dashboard-entity-course-tint);
+  --color-dashboard-entity-lesson: var(--dashboard-entity-lesson);
+  --color-dashboard-entity-lesson-tint: var(--dashboard-entity-lesson-tint);
+  --color-dashboard-entity-homework: var(--dashboard-entity-homework);
+  --color-dashboard-entity-homework-tint: var(--dashboard-entity-homework-tint);
+  --color-dashboard-entity-quiz: var(--dashboard-entity-quiz);
+  --color-dashboard-entity-quiz-tint: var(--dashboard-entity-quiz-tint);
+  --color-dashboard-entity-resource: var(--dashboard-entity-resource);
+  --color-dashboard-entity-resource-tint: var(--dashboard-entity-resource-tint);
+  --color-dashboard-entity-recording: var(--dashboard-entity-recording);
+  --color-dashboard-entity-recording-tint: var(--dashboard-entity-recording-tint);
+  --color-dashboard-entity-settings: var(--dashboard-entity-settings);
+  --color-dashboard-entity-settings-tint: var(--dashboard-entity-settings-tint);
+  --color-dashboard-course-indigo: var(--dashboard-course-indigo);
+  --color-dashboard-course-teal: var(--dashboard-course-teal);
+  --color-dashboard-course-purple: var(--dashboard-course-purple);
+  --color-dashboard-course-pink: var(--dashboard-course-pink);
+  --color-dashboard-course-amber: var(--dashboard-course-amber);
+  --color-dashboard-course-green: var(--dashboard-course-green);
+  --color-dashboard-course-blue: var(--dashboard-course-blue);
+  --color-dashboard-course-slate: var(--dashboard-course-slate);
+  --radius-dashboard-dialog: var(--dashboard-radius-dialog);
+  --shadow-dashboard-overlay: var(--dashboard-shadow-overlay);
+  --spacing-dashboard-gutter: var(--dashboard-gutter);
+  --spacing-dashboard-sidebar: 264px;
+  --spacing-dashboard-rail: 64px;
+  --spacing-dashboard-topbar: 56px;
+  --spacing-dashboard-target: 44px;
+  --container-dashboard-content: 1200px;
+  --text-dashboard-body: 16px;
+  --text-dashboard-body--line-height: 24px;
+  --text-dashboard-small: 14px;
+  --text-dashboard-small--line-height: 20px;
+  /* Secondary text never goes below 13px (R-06). */
+  --text-dashboard-secondary: 13px;
+  --text-dashboard-secondary--line-height: 18px;
+  --text-dashboard-section-title: 18px;
+  --text-dashboard-section-title--line-height: 26px;
 
   /* Stitch Design System Additions */
   --color-surface-container-high: #eae8e7;
@@ -311,6 +466,202 @@
   --font-headline-md: var(--font-sans);
 }
 
+/* ── Motion (01-app-shell SH-11). Every utility here is switched off by the
+   prefers-reduced-motion block at the end of this file. ── */
+@theme {
+  --animate-dashboard-dialog-in: dashboard-dialog-in 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dashboard-sheet-up: dashboard-sheet-up 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dashboard-sheet-right: dashboard-sheet-right 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dashboard-sheet-left: dashboard-sheet-left 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dashboard-scrim-in: dashboard-scrim-in 160ms ease-out both;
+  --animate-dashboard-menu-in: dashboard-menu-in 120ms ease-out both;
+  --animate-dashboard-toast-in: dashboard-toast-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dashboard-step-forward: dashboard-step-forward 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dashboard-step-back: dashboard-step-back 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dashboard-shimmer: dashboard-shimmer 1.4s linear infinite;
+  --animate-dashboard-live-pulse: dashboard-live-pulse 1.6s ease-out infinite;
+
+  @keyframes dashboard-dialog-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes dashboard-sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes dashboard-sheet-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes dashboard-sheet-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes dashboard-scrim-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes dashboard-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes dashboard-toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes dashboard-step-forward {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes dashboard-step-back {
+    from {
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes dashboard-shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes dashboard-live-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--dashboard-status-live) 45%, transparent);
+    }
+    70% {
+      box-shadow: 0 0 0 6px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+}
+
+/* Skeleton shimmer surface. */
+.dashboard-shimmer {
+  background-color: var(--dashboard-surface-subtle);
+  background-image: linear-gradient(
+    90deg,
+    var(--dashboard-surface-subtle) 0%,
+    var(--dashboard-surface-hover) 50%,
+    var(--dashboard-surface-subtle) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Progress bars fill smoothly. */
+.dashboard-progress-fill {
+  transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Cards that are links lift slightly on hover; hover only adds emphasis. */
+.dashboard-card-lift {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+.dashboard-card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--dashboard-shadow-card);
+}
+
+/* Buttons scale to 98% while pressed. */
+.dashboard-press {
+  transition:
+    transform 100ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.dashboard-press:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Toasts (SH-08): Poppins, 12px radius, 44px action targets (R-06). */
+[data-sonner-toaster] {
+  font-family: var(--font-sans);
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
+  border-radius: var(--dashboard-radius-panel);
+  font-size: 14px;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-button] {
+  height: 44px;
+  padding-left: 16px;
+  padding-right: 16px;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-close-button] {
+  width: 28px;
+  height: 28px;
+}
+/* Invisible hit area so the close button is a 44px target. */
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-close-button]::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+/* Sideways-scrolling strips (tabs) fade at the edge on narrow screens (R-04). */
+.dashboard-scroll-fade {
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+@media (min-width: 768px) {
+  .dashboard-scroll-fade {
+    mask-image: none;
+  }
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
@@ -343,9 +694,10 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Focus states for accessibility */
+/* Focus states for accessibility: one 2px ring outside the control, never a
+   second border (SH-12, DEV-UI-016). */
 *:focus-visible {
-  outline: 3px solid var(--kv-blue-rose);
+  outline: 2px solid var(--dashboard-focus);
   outline-offset: 2px;
 }
 
@@ -550,11 +902,23 @@ html {
   }
 }
 
+/* The one reduced-motion block (SH-11, DEV-UI-017): with reduced motion on,
+   everything appears instantly without movement. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto !important;
   }
 
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [class*="animate-"],
   .animate-fade-up,
   .animate-fade-in,
   .animate-slide-right,
@@ -562,8 +926,25 @@ html {
   .animate-float-delayed,
   .animate-pulse,
   .animate-bounce,
-  .animate-ping {
+  .animate-ping,
+  .animate-spin,
+  .animate-dashboard-dialog-in,
+  .animate-dashboard-sheet-up,
+  .animate-dashboard-sheet-right,
+  .animate-dashboard-sheet-left,
+  .animate-dashboard-scrim-in,
+  .animate-dashboard-menu-in,
+  .animate-dashboard-toast-in,
+  .animate-dashboard-step-forward,
+  .animate-dashboard-step-back,
+  .animate-dashboard-shimmer,
+  .animate-dashboard-live-pulse {
     animation: none !important;
+  }
+
+  .dashboard-card-lift:hover,
+  .dashboard-press:active:not(:disabled) {
+    transform: none !important;
   }
 
   .animate-fade-up,
@@ -588,4 +969,11 @@ html {
     transform: none !important;
     transition: none !important;
   }
+}
+
+/* A dialog covered by another dialog stays mounted (typed data kept) but is hidden, so only one scrim shows. */
+[data-covered] {
+  visibility: hidden;
+  background: transparent !important;
+  backdrop-filter: none !important;
 }

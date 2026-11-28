@@ -52,6 +52,13 @@ export const smokeInputs: { [K in EmailEventName]: EmailTemplateInputs[K] } = {
   pilot_ending: { firstName: 'Ada', actionUrl: `${baseUrl}/dashboard` },
 }
 
+// Smoke emails show the real footer. The token is not stored, so the link
+// opens the "This link has expired." page.
+const smokeUnsubscribe = {
+  pageUrl: `${baseUrl}/unsubscribe?token=${'s'.repeat(43)}`,
+  oneClickUrl: null,
+}
+
 export async function runEmailSmoke() {
   const send = process.env.EMAIL_SMOKE_SEND === 'true'
   const recipient = process.env.EMAIL_SMOKE_TO?.trim()
@@ -64,13 +71,14 @@ export async function runEmailSmoke() {
 
   for (const event of Object.keys(smokeInputs) as EmailEventName[]) {
     const input = smokeInputs[event] as unknown as Record<string, unknown>
-    const rendered = await renderEmail(event, input as never, logoUrl)
+    const rendered = await renderEmail(event, input as never, logoUrl, { unsubscribe: smokeUnsubscribe })
     let sentId: string | null | undefined
     if (send && recipient) {
       const delivery = await sendNotificationEmail(event, {
         ...input,
         to: recipient,
         idempotencyKey: `smoke:${event}:${timestamp}`,
+        unsubscribe: smokeUnsubscribe,
       } as never)
       sentId = delivery.id
     }

@@ -1,5 +1,6 @@
 import { Button, Heading, Text, Img } from '@react-email/components'
 import { BrandedLayout } from './branded-layout'
+import type { EmailFooter } from '../footer'
 import * as React from 'react'
 
 const styles = {
@@ -22,11 +23,12 @@ export type LifecycleEmailProps = {
   firstName: string
   actionUrl: string
   logoUrl: string
+  footer: EmailFooter
 }
 
-export function WelcomePilotEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailProps) {
+export function WelcomePilotEmail({ firstName, actionUrl, logoUrl, footer }: LifecycleEmailProps) {
   return (
-    <BrandedLayout preview="You're in. Here's what happens next." logoUrl={logoUrl}>
+    <BrandedLayout preview="You're in. Here's what happens next." logoUrl={logoUrl} footer={footer}>
       <Text style={styles.copy}>Hey {firstName},</Text>
       <Text style={styles.copy}>It's official. You're in.</Text>
       <Text style={styles.copy}>We are opening Kanvise to a very small group of educators for this pilot, and we are genuinely glad you're one of them.</Text>
@@ -44,9 +46,9 @@ export function WelcomePilotEmail({ firstName, actionUrl, logoUrl }: LifecycleEm
   )
 }
 
-export function FounderLetterEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailProps) {
+export function FounderLetterEmail({ firstName, actionUrl, logoUrl, footer }: LifecycleEmailProps) {
   return (
-    <BrandedLayout preview="This started with a problem we couldn't ignore." logoUrl={logoUrl}>
+    <BrandedLayout preview="This started with a problem we couldn't ignore." logoUrl={logoUrl} footer={footer}>
       <Text style={styles.copy}>Hey {firstName},</Text>
       <Text style={styles.copy}>My name is Mayokun. Emmanuel and I founded Kanvise from our small rooms in University of Ibadan.</Text>
       <Text style={styles.copy}>Before Kanvise was a product, I was a tutor.</Text>
@@ -75,9 +77,9 @@ export function FounderLetterEmail({ firstName, actionUrl, logoUrl }: LifecycleE
   )
 }
 
-export function MeetKaviEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailProps) {
+export function MeetKaviEmail({ firstName, actionUrl, logoUrl, footer }: LifecycleEmailProps) {
   return (
-    <BrandedLayout preview="Okay, I have something to tell you 👀" logoUrl={logoUrl}>
+    <BrandedLayout preview="Okay, I have something to tell you 👀" logoUrl={logoUrl} footer={footer}>
       <Text style={styles.copy}>Hey {firstName}!</Text>
       <Text style={styles.copy}>Okay, I've been waiting for this one.</Text>
       <Text style={styles.copy}>You've probably seen my name around already, but we haven't actually met.</Text>
@@ -103,9 +105,9 @@ export function MeetKaviEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailP
   )
 }
 
-export function LetUsUseThisEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailProps) {
+export function LetUsUseThisEmail({ firstName, actionUrl, logoUrl, footer }: LifecycleEmailProps) {
   return (
-    <BrandedLayout preview="You're in. Now let's actually use Kanvise 👀" logoUrl={logoUrl}>
+    <BrandedLayout preview="You're in. Now let's actually use Kanvise 👀" logoUrl={logoUrl} footer={footer}>
       <Text style={styles.copy}>Hey {firstName}!</Text>
       <Text style={styles.copy}>Enough introductions. 😂</Text>
       <Text style={styles.copy}>You've met the team. You've met me.</Text>
@@ -132,9 +134,9 @@ export function LetUsUseThisEmail({ firstName, actionUrl, logoUrl }: LifecycleEm
   )
 }
 
-export function FirstWeekEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailProps) {
+export function FirstWeekEmail({ firstName, actionUrl, logoUrl, footer }: LifecycleEmailProps) {
   return (
-    <BrandedLayout preview="So… what happened when you actually used it? 👀" logoUrl={logoUrl}>
+    <BrandedLayout preview="So… what happened when you actually used it? 👀" logoUrl={logoUrl} footer={footer}>
       <Text style={styles.copy}>Hey {firstName}!</Text>
       <Text style={styles.copy}>One week already.</Text>
       <Text style={styles.copy}>Which means you've probably gone from:</Text>
@@ -161,9 +163,9 @@ export function FirstWeekEmail({ firstName, actionUrl, logoUrl }: LifecycleEmail
   )
 }
 
-export function KaviChallengeEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailProps) {
+export function KaviChallengeEmail({ firstName, actionUrl, logoUrl, footer }: LifecycleEmailProps) {
   return (
-    <BrandedLayout preview="You've seen the basics. Now try this 👀" logoUrl={logoUrl}>
+    <BrandedLayout preview="You've seen the basics. Now try this 👀" logoUrl={logoUrl} footer={footer}>
       <Text style={styles.copy}>Hey {firstName}!</Text>
       <Text style={styles.copy}>Okay, I have a little challenge for you.</Text>
       <Text style={styles.copy}>By now, you've probably found the parts of Kanvise you naturally gravitate towards.</Text>
@@ -183,9 +185,9 @@ export function KaviChallengeEmail({ firstName, actionUrl, logoUrl }: LifecycleE
   )
 }
 
-export function PilotEndingEmail({ firstName, actionUrl, logoUrl }: LifecycleEmailProps) {
+export function PilotEndingEmail({ firstName, actionUrl, logoUrl, footer }: LifecycleEmailProps) {
   return (
-    <BrandedLayout preview="You were here before everyone else 💛" logoUrl={logoUrl}>
+    <BrandedLayout preview="You were here before everyone else 💛" logoUrl={logoUrl} footer={footer}>
       <Text style={styles.copy}>Hey {firstName},</Text>
       <Text style={styles.copy}>And just like that…</Text>
       <Text style={styles.copy}><strong>our pilot is coming to an end.</strong></Text>

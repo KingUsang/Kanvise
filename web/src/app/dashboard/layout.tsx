@@ -51,6 +51,7 @@ export default async function DashboardLayout({
     first_name: user.user_metadata?.first_name || "",
     last_name: user.user_metadata?.last_name || "",
     role,
+    email: user.email || "",
   };
 
   // A new Admin must be able to render the setup screen before a school exists.

@@ -1,5 +1,17 @@
 import { Button, Heading, Text } from '@react-email/components'
 import type { ReactNode } from 'react'
+import { formatEmailDateTime } from '../format-email-time'
+import type { EmailFooter } from '../footer'
+
+export { formatEmailDateTime }
+
+/** What every template gets besides its own input (18 NTF-04). */
+export type EmailChrome = {
+  logoUrl: string
+  footer: EmailFooter
+  /** The account's timezone: every time in the email is written in it. */
+  timeZone: string
+}
 
 export const templateStyles = {
   eyebrow: { color: '#C26627', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', margin: '0 0 12px' },
@@ -18,11 +30,17 @@ export function EmailButton({ href, children }: { href: string; children: ReactN
   return <Button href={href} style={templateStyles.button}>{children}</Button>
 }
 
-export function formatEmailDate(value: string): string {
+/** '28 November 2026 at 4:00 pm' in the given zone (payment receipts keep this style). */
+export function formatLongEmailDate(value: string, timeZone: string): string {
   return new Intl.DateTimeFormat('en-NG', {
     dateStyle: 'long',
     timeStyle: 'short',
-    timeZone: 'Africa/Lagos',
+    timeZone,
   }).format(new Date(value))
+}
+
+/** '28 November 2026' in the given zone, for invitation expiry dates. */
+export function formatLongEmailDay(value: string, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-NG', { dateStyle: 'long', timeZone }).format(new Date(value))
 }
 

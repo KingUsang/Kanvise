@@ -4,6 +4,10 @@ import { emailSubjects } from './subjects'
 import type { EmailEventName, EmailTemplateInputs } from './types'
 
 const logoUrl = 'https://kanvise.com/kanvise_logo_small_blue.png'
+const unsubscribe = {
+  pageUrl: 'https://kanvise.com/unsubscribe?token=tok',
+  oneClickUrl: 'https://api.kanvise.com/unsubscribe/one-click?token=tok',
+}
 
 const cases: Array<{
   event: EmailEventName
@@ -75,7 +79,7 @@ const cases: Array<{
 
 describe('initial email templates', () => {
   it.each(cases)('renders HTML and plain text for $event', async ({ event, input, expected, link }) => {
-    const result = await renderEmail(event, input as never, logoUrl)
+    const result = await renderEmail(event, input as never, logoUrl, { unsubscribe })
 
     expect(result.subject).not.toBe('')
     expect(result.html).toContain(logoUrl)
@@ -120,5 +124,57 @@ describe('initial email templates', () => {
   it('removes control characters from centrally generated subjects', () => {
     expect(emailSubjects.welcome({ firstName: 'Ada\r\nBcc: attacker@example.com', dashboardUrl: 'https://kanvise.com' }))
       .toBe('Welcome to Kanvise, Ada Bcc: attacker@example.com')
+  })
+
+  it.each(['tutor_invitation', 'student_invitation', 'welcome', 'payment_confirmed', 'class_cancellation'] as const)(
+    'essential %s says why it was sent and has no unsubscribe link or header',
+    async (event) => {
+      const input = cases.find((item) => item.event === event)!.input
+      const result = await renderEmail(event, input as never, logoUrl, { unsubscribe })
+      expect(result.text).toMatch(/You're getting this because|You’re getting this because/)
+      expect(result.html).not.toContain('unsubscribe?token')
+      expect(result.text).not.toContain('Unsubscribe')
+      expect(result.headers).toBeUndefined()
+    },
+  )
+
+  it('writes the reason for a cancelled lesson with the tutor or agency name (NTF-04)', async () => {
+    const input = cases.find((item) => item.event === 'class_cancellation')!.input
+    const result = await renderEmail('class_cancellation', input as never, logoUrl)
+    expect(result.text).toContain('because Bright Minds teaches you on Kanvise.')
+  })
+
+  it.each(['live_class_reminder', 'assignment_deadline', 'submission_graded', 'mock_published', 'mock_fully_graded'] as const)(
+    'switchable %s has an Unsubscribe link and one-click headers',
+    async (event) => {
+      const input = cases.find((item) => item.event === event)!.input
+      const result = await renderEmail(event, input as never, logoUrl, { unsubscribe })
+      expect(result.html).toContain('https://kanvise.com/unsubscribe?token=tok')
+      expect(result.text).toContain('Unsubscribe')
+      expect(result.text).not.toContain("You're getting this because")
+      expect(result.headers).toEqual({
+        'List-Unsubscribe': '<https://api.kanvise.com/unsubscribe/one-click?token=tok>',
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      })
+    },
+  )
+
+  it('refuses to render a switchable email without an unsubscribe link', async () => {
+    const input = cases.find((item) => item.event === 'live_class_reminder')!.input
+    await expect(renderEmail('live_class_reminder', input as never, logoUrl)).rejects.toThrow('needs an unsubscribe link')
+  })
+
+  it('falls back to the page link in List-Unsubscribe when the API URL is unknown', async () => {
+    const input = cases.find((item) => item.event === 'live_class_reminder')!.input
+    const result = await renderEmail('live_class_reminder', input as never, logoUrl, { unsubscribe: { ...unsubscribe, oneClickUrl: null } })
+    expect(result.headers).toEqual({ 'List-Unsubscribe': '<https://kanvise.com/unsubscribe?token=tok>' })
+  })
+
+  it('writes times in the account timezone with the zone named (NTF-04)', async () => {
+    const input = cases.find((item) => item.event === 'live_class_reminder')!.input
+    const lagos = await renderEmail('live_class_reminder', input as never, logoUrl, { unsubscribe })
+    expect(lagos.text).toContain('Mon 20 Jul, 4:00 PM WAT')
+    const nairobi = await renderEmail('live_class_reminder', input as never, logoUrl, { unsubscribe, timeZone: 'Africa/Nairobi' })
+    expect(nairobi.text).toContain('Mon 20 Jul, 6:00 PM EAT')
   })
 })

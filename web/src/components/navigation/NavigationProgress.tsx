@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { TopProgressLine } from "@/components/ui/skeleton";
 
 const MAX_WAIT_MS = 15_000;
 const NAVIGATION_START_EVENT = "kanvise:navigation-start";
@@ -101,21 +102,5 @@ export default function NavigationProgress() {
 
   if (!visible) return null;
 
-  return (
-    <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[9999] h-1 bg-black/10"
-      role="progressbar"
-      aria-label="Loading page"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(progress)}
-    >
-      <div
-        className="relative h-full bg-gradient-to-r from-[#f59e0b] via-[#c26627] to-[#2e2877] shadow-[0_1px_4px_rgba(255,255,255,0.9),0_0_14px_rgba(194,102,39,0.9)] transition-[width] duration-200 ease-out"
-        style={{ width: `${progress}%` }}
-      >
-        <span className="absolute right-0 top-1/2 size-2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_10px_3px_rgba(245,158,11,0.9)]" />
-      </div>
-    </div>
-  );
+  return <TopProgressLine progress={progress} position="fixed" />;
 }

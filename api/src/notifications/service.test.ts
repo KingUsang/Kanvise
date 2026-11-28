@@ -1,6 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
-import type { NotificationRepository } from './repository'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { NotificationRepository, PreferenceRecord } from './repository'
 import { deliverNotification } from './service'
+
+// No database in unit tests: the token issuer is a double.
+vi.mock('./unsubscribe', () => ({ issueUnsubscribeToken: vi.fn(async () => 'T'.repeat(43)) }))
+
+beforeEach(() => {
+  process.env.FRONTEND_URL = 'https://kanvise.com'
+  delete process.env.API_PUBLIC_URL
+})
 import type { NotificationRecipient } from './types'
 
 function fakeRepository(recipients: NotificationRecipient[]): NotificationRepository & {
@@ -193,5 +201,93 @@ describe('deliverNotification', () => {
     const result = await deliverNotification({ ...base, event: 'class_recap_ready' as const }, { repository, sendEmail, sendPush, logger: quietLogger })
     expect(result).toMatchObject({ inAppCreated: 1, pushSent: 1, emailsSent: 0, skippedNoEmail: 0 })
     expect(sendEmail).not.toHaveBeenCalled()
+  })
+
+  describe('switches (12 CFG-N, 09 SA-10)', () => {
+    const student = { id: 'student-1', schoolId: 'school-1', email: 'one@example.com', firstName: 'Ada' }
+    const withPreferences = (rows: PreferenceRecord[] | Error) => {
+      const state = new Map<string, { status: string; error?: string }>()
+      return {
+        state,
+        repository: {
+          ...fakeRepository([student]),
+          async getPreferences() { if (rows instanceof Error) throw rows; return rows },
+          async getAccountName() { return 'Science Students Academy' },
+          async recordChannel(key: any, status: string, error?: string) { state.set(key.channel, { status, error }) },
+        },
+      }
+    }
+    const push = () => vi.fn(async () => ({ sent: 1, alreadySent: 0, skipped: 0, failures: [] }))
+
+    it('skips a switched-off email and records why', async () => {
+      const { repository, state } = withPreferences([{ personId: 'student-1', rowKey: 'lesson_reminders', pushOn: null, emailOn: false }])
+      const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+      const sendPush = push()
+      const result = await deliverNotification(request, { repository, sendEmail, sendPush, logger: quietLogger })
+      expect(sendEmail).not.toHaveBeenCalled()
+      expect(sendPush).toHaveBeenCalledOnce()
+      expect(result.switchedOff).toBe(1)
+      expect(state.get('email')).toEqual({ status: 'skipped', error: 'Switched off' })
+    })
+
+    it('skips a switched-off push and still emails', async () => {
+      const { repository, state } = withPreferences([{ personId: 'student-1', rowKey: 'student_push', pushOn: false, emailOn: null }])
+      const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+      const sendPush = push()
+      await deliverNotification(request, { repository, sendEmail, sendPush, logger: quietLogger })
+      expect(sendPush).not.toHaveBeenCalled()
+      expect(sendEmail).toHaveBeenCalledOnce()
+      expect(state.get('push')).toEqual({ status: 'skipped', error: 'Switched off' })
+    })
+
+    it('never skips an essential event', async () => {
+      const { repository } = withPreferences([
+        { personId: 'student-1', rowKey: 'student_push', pushOn: false, emailOn: false },
+        { personId: 'student-1', rowKey: 'lesson_reminders', pushOn: false, emailOn: false },
+      ])
+      const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+      const sendPush = push()
+      const cancelled = {
+        ...request,
+        event: 'class_cancelled' as const,
+        emailInput: () => ({
+          firstName: 'Ada', classTitle: 'Physics', scheduledAt: '2026-07-20T15:00:00Z',
+          schoolName: 'Bright Minds', dashboardUrl: 'https://kanvise.com/dashboard',
+        }),
+      }
+      const result = await deliverNotification(cancelled, { repository, sendEmail, sendPush, logger: quietLogger })
+      expect(sendPush).toHaveBeenCalledOnce()
+      expect(sendEmail).toHaveBeenCalledWith('class_cancellation', expect.not.objectContaining({ unsubscribe: expect.anything() }))
+      expect(result.switchedOff).toBe(0)
+    })
+
+    it('sends with the defaults and logs when the switches cannot be read', async () => {
+      const { repository } = withPreferences(new Error('database unavailable'))
+      const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+      const sendPush = push()
+      const logger = { info: vi.fn(), error: vi.fn() }
+      await deliverNotification(request, { repository, sendEmail, sendPush, logger })
+      expect(sendEmail).toHaveBeenCalledOnce()
+      expect(sendPush).toHaveBeenCalledOnce()
+      expect(logger.error).toHaveBeenCalledWith('notification.preferences_read_failed', expect.objectContaining({ error: 'database unavailable' }))
+    })
+
+    it('gives a switchable email its unsubscribe link, the account as sender and the account timezone', async () => {
+      const { repository } = withPreferences([])
+      const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+      await deliverNotification(request, { repository, sendEmail, sendPush: push(), logger: quietLogger, resolveTimeZone: async () => 'Africa/Nairobi' })
+      expect(sendEmail).toHaveBeenCalledWith('live_class_reminder', expect.objectContaining({
+        senderName: 'Science Students Academy',
+        timeZone: 'Africa/Nairobi',
+        unsubscribe: { pageUrl: `https://kanvise.com/unsubscribe?token=${'T'.repeat(43)}`, oneClickUrl: null },
+      }))
+    })
+
+    it("uses the request's sender name before the account name", async () => {
+      const { repository } = withPreferences([])
+      const sendEmail = vi.fn(async () => ({ id: 'email-1' }))
+      await deliverNotification({ ...request, senderName: 'Michael Chen' }, { repository, sendEmail, sendPush: push(), logger: quietLogger })
+      expect(sendEmail).toHaveBeenCalledWith('live_class_reminder', expect.objectContaining({ senderName: 'Michael Chen' }))
+    })
   })
 })
