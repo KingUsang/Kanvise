@@ -18,12 +18,14 @@ import {
 } from "@/components/account/account-switcher";
 import { ErrorState, PageLoadingState } from "@/components/dashboard/async-states";
 import { NotAvailable } from "@/components/shell/not-available";
+import { SearchProvider, SearchTrigger } from "@/components/shell/search-palette";
 import { ShellFrame } from "@/components/shell/shell-frame";
 import type { ShellAccount, ShellActions, ShellData } from "@/components/shell/types";
 import { clearActiveAccountId } from "@/lib/account-preference";
 import { loginHref } from "@/lib/auth-continuation";
 import { authenticatedApiFetch, SESSION_ENDED_EVENT } from "@/lib/authenticated-fetch";
 import { useDashboardSession } from "@/lib/dashboard-session";
+import { fetchSearch } from "@/lib/search";
 import { getPendingUploadCount } from "@/lib/pending-uploads";
 import { detachBrowserPushOnLogout } from "@/lib/push-notifications";
 import { rememberAccountSwitch, takeAccountSwitch } from "@/lib/shell-preferences";
@@ -201,7 +203,9 @@ export function DashboardShell({
       : <PageLoadingState label="Loading this page" />;
   }
 
-  return (
+  // Search needs an account; a new admin setting up their agency has none yet.
+  const searchReady = !setupRequired && !failed;
+  const frame = (
     <ShellFrame
       shellData={shellData}
       actions={actions}
@@ -209,8 +213,16 @@ export function DashboardShell({
       signedOut={signedOut}
       signInHref={loginHref({ redirect: pathname })}
       onSignOutStart={() => { signingOutRef.current = true; }}
+      searchSlot={searchReady ? (rail) => <SearchTrigger variant="sidebar" rail={rail} /> : undefined}
+      phoneSearchSlot={searchReady ? <SearchTrigger variant="phone" /> : undefined}
     >
       {content}
     </ShellFrame>
+  );
+
+  return (
+    <SearchProvider capabilities={capabilities} search={fetchSearch} enabled={searchReady}>
+      {frame}
+    </SearchProvider>
   );
 }

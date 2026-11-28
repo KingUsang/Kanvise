@@ -13,7 +13,7 @@ import { ShellChromeProvider, type ShellChrome } from './shell-context'
 import { accountMenuItems, helpMenuItems } from './shell-menus'
 import { ShareFeedbackDialog } from './share-feedback-dialog'
 import { SignedOutDialog } from './signed-out-dialog'
-import { DesktopSidebar, SidebarContent } from './sidebar'
+import { DesktopSidebar, SidebarContent, type SidebarContentProps } from './sidebar'
 import type { ShellAccount, ShellActions, ShellData, ShellLinks, ShellOverlay } from './types'
 import { WhatsNewDialog } from './whats-new-dialog'
 
@@ -83,7 +83,7 @@ export type ShellFrameProps = {
   /** Called before signing out, so a sign-out is not mistaken for an expired sign-in. */
   onSignOutStart?: () => void
   /** Search trigger, filled by the search feature (SH-05). */
-  searchSlot?: ReactNode
+  searchSlot?: SidebarContentProps['searchSlot']
   phoneSearchSlot?: ReactNode
   /** Design preview: open an overlay on first render. */
   initialOverlay?: ShellOverlay

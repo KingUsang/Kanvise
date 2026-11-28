@@ -15,7 +15,7 @@ describe('route policy inventory', () => {
   it('classifies every mounted router and inline route in the live API assembly', () => {
     const discovered = discoverMountedRouteKeys(indexSource)
 
-    expect(discovered).toHaveLength(43)
+    expect(discovered).toHaveLength(44)
     expect(new Set(discovered).size).toBe(discovered.length)
     expect(validateCurrentRoutePolicyInventory(indexSource)).toEqual([])
     expect(routePolicyInventory).toHaveLength(discovered.length)

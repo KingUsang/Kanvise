@@ -19,7 +19,8 @@ function one(value: string | string[] | undefined) {
  *
  * Query: role=admin|tutor|independent, open=more|help|account-menu|switcher|
  * whats-new|feedback|sign-out-confirm|phone-menu, page=not-available|admin-only|
- * error|loading, rail=1, path=/dashboard/..., long=1, badge=<n>|failed, read=1, pending=<n>.
+ * error|loading, rail=1, path=/dashboard/..., long=1, badge=<n>|failed, read=1, pending=<n>,
+ * search=empty|results|no-results|error|offline|loading (opens the search palette, SH-05).
  */
 export default async function ShellPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (process.env.NEXT_PUBLIC_ENABLE_DESIGN_PREVIEW !== '1') notFound()
@@ -34,6 +35,7 @@ export default async function ShellPreviewPage({ searchParams }: { searchParams:
     badge: one(params.badge),
     read: one(params.read) === '1',
     pending: Number(one(params.pending)) || 0,
+    search: one(params.search),
     signedOut: one(params.open) === 'signed-out',
   }
   return <ShellPreview options={options} />

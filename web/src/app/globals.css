@@ -178,6 +178,8 @@
   --dashboard-success-surface: #e7f6ec;
   --dashboard-warning: #a16207;
   --dashboard-warning-surface: #fdf6dc;
+  /* Matched text in search results (SH-05). Body text on it is 14:1, muted text 7.7:1. */
+  --dashboard-highlight: #fbe9a6;
   --dashboard-danger-surface: #fdeceb;
 
   /* Lesson status dots (SH-15). Lesson time colours are never orange. */
@@ -307,6 +309,7 @@
   --color-dashboard-success-surface: var(--dashboard-success-surface);
   --color-dashboard-warning: var(--dashboard-warning);
   --color-dashboard-warning-surface: var(--dashboard-warning-surface);
+  --color-dashboard-highlight: var(--dashboard-highlight);
   --color-dashboard-danger-surface: var(--dashboard-danger-surface);
   --color-dashboard-status-planned: var(--dashboard-status-planned);
   --color-dashboard-status-soon: var(--dashboard-status-soon);

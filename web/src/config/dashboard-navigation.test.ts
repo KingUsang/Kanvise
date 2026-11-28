@@ -28,7 +28,7 @@ describe('dashboard navigation groups (SH-02)', () => {
     expect(groups(agencyAdminTutor)).toEqual([
       [null, ['Dashboard', 'Calendar', 'Timetable', 'Courses']],
       ['People', ['Students', 'Tutors']],
-      ['Work', ['Homework', 'Quizzes']],
+      ['Work', ['Homework', 'Quizzes', 'Question banks']],
       ['Library', ['Resources']],
       ['Account', ['Settings', 'Payments']],
     ])
@@ -38,7 +38,7 @@ describe('dashboard navigation groups (SH-02)', () => {
     expect(groups(agencyAdmin)).toEqual([
       [null, ['Dashboard', 'Calendar', 'Timetable', 'Courses']],
       ['People', ['Students', 'Tutors']],
-      ['Work', ['Quizzes']],
+      ['Work', ['Quizzes', 'Question banks']],
       ['Account', ['Settings', 'Payments']],
     ])
   })
@@ -46,7 +46,7 @@ describe('dashboard navigation groups (SH-02)', () => {
   it('keeps today\'s tutor access: no People or Account group for an agency tutor', () => {
     expect(groups(agencyTutor)).toEqual([
       [null, ['Dashboard', 'Calendar', 'Courses']],
-      ['Work', ['Homework', 'Quizzes']],
+      ['Work', ['Homework', 'Quizzes', 'Question banks']],
       ['Library', ['Resources']],
     ])
   })
@@ -55,7 +55,7 @@ describe('dashboard navigation groups (SH-02)', () => {
     expect(groups(independentTutor)).toEqual([
       [null, ['Dashboard', 'Calendar', 'Courses']],
       ['People', ['Students']],
-      ['Work', ['Homework', 'Quizzes']],
+      ['Work', ['Homework', 'Quizzes', 'Question banks']],
       ['Library', ['Resources']],
       ['Account', ['Settings', 'Payments']],
     ])

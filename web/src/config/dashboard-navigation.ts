@@ -13,7 +13,7 @@ export type DashboardNavGroupId = 'top' | 'people' | 'work' | 'library' | 'accou
 /** Icon names; the shell maps them to Lucide outline icons. */
 export type DashboardNavIcon =
   | 'dashboard' | 'calendar' | 'timetable' | 'courses' | 'students' | 'tutors'
-  | 'homework' | 'quizzes' | 'resources' | 'settings' | 'payments' | 'setup'
+  | 'homework' | 'quizzes' | 'questionBanks' | 'resources' | 'settings' | 'payments' | 'setup'
 
 /** Phone bottom bar areas (R-02). Everything else lives behind More. */
 export type BottomBarArea = 'today' | 'calendar' | 'students' | 'more'
@@ -64,14 +64,15 @@ export const dashboardNavGroupLabels: Record<DashboardNavGroupId, string | null>
  * | Team       | HIDDEN (step 3)          |                                                  |
  * | Homework   | /dashboard/assignments   | tutor access, as today                           |
  * | Quizzes    | /dashboard/mocks         | shared; badge = quizzes waiting to be marked     |
+ * | Question banks | /dashboard/question-banks | transitional, WORK, shared (retires in step 7) |
  * | Recordings | HIDDEN (step 5)          |                                                  |
  * | Resources  | /dashboard/notes         | tutor access, as today                           |
  * | Settings   | /dashboard/settings      | access as today (admins)                         |
  * | Payments   | /dashboard/payments      | transitional, ACCOUNT, admins (payments on hold) |
  * | Timetable  | /dashboard/timetable     | transitional, agency admins (merges into Calendar in step 4) |
  *
- * Profile (/dashboard/profile, from the account menu), tutoring agency setup
- * and question banks stay reachable as today through dashboardRouteRules.
+ * Profile (/dashboard/profile, from the account menu) and tutoring agency
+ * setup stay reachable as today through dashboardRouteRules.
  */
 export const dashboardNavItems: DashboardNavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'dashboard', group: 'top', access: 'all', keywords: ['home', 'overview', 'today'] },
@@ -82,6 +83,8 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { label: 'Tutors', href: '/dashboard/tutors', icon: 'tutors', group: 'people', access: 'admin', agencyOnly: true, keywords: ['tutors', 'invites'] },
   { label: 'Homework', href: '/dashboard/assignments', icon: 'homework', group: 'work', access: 'tutor', keywords: ['homework', 'submissions', 'marking'] },
   { label: 'Quizzes', href: '/dashboard/mocks', icon: 'quizzes', group: 'work', access: 'shared', keywords: ['quizzes', 'tests', 'marking'], badge: 'ungradedQuizzes' },
+  // transitional: question banks retire in step 7 (14-old-flows-inventory)
+  { label: 'Question banks', href: '/dashboard/question-banks', icon: 'questionBanks', group: 'work', access: 'shared', keywords: ['question banks', 'questions'] },
   { label: 'Resources', href: '/dashboard/notes', icon: 'resources', group: 'library', access: 'tutor', keywords: ['resources', 'notes', 'materials'] },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings', group: 'account', access: 'admin', keywords: ['settings', 'branding'] },
   { label: 'Payments', href: '/dashboard/payments', icon: 'payments', group: 'account', access: 'admin', keywords: ['payments', 'payouts'] },
@@ -104,7 +107,6 @@ export const dashboardRouteRules: RouteRule[] = [
   ...dashboardNavItems.map(({ href, access, agencyOnly, label }) => ({ href, access, agencyOnly, title: label })),
   { href: '/dashboard/profile', access: 'shared', title: 'My profile' },
   { href: '/dashboard/school-setup', access: 'admin', title: 'Set up tutoring agency' },
-  { href: '/dashboard/question-banks', access: 'shared', title: 'Question banks' },
 ]
 
 function matchRule(pathname: string) {

@@ -86,6 +86,7 @@ import { waitlistRouter } from './routes/waitlist';
 import { clientAddress } from './lib/ip-rate-limit';
 import { suggestionsRouter } from './routes/suggestions';
 import { jobOpsRouter } from './routes/job-ops';
+import { searchRouter } from './routes/search';
 
 app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
@@ -125,6 +126,7 @@ app.route("/submissions", submissionsRouter);
 app.route("/mock-answers", mockAnswersRouter);
 app.route("/health", healthRouter);
 app.route('/feedback', feedbackRouter);
+app.route('/search', searchRouter);
 app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
 app.route('/', waitlistRouter);

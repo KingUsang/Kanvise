@@ -8,10 +8,12 @@ import { EmptyState, ErrorState, PageLoadingState } from '@/components/dashboard
 import { Button } from '@/components/dashboard/action-controls'
 import { PageHeader } from '@/components/ui/page-header'
 import { NotAvailable } from '@/components/shell/not-available'
+import { SearchProvider, SearchTrigger, type SearchPreviewState } from '@/components/shell/search-palette'
 import { ShellFrame } from '@/components/shell/shell-frame'
 import type { ShellData, ShellOverlay } from '@/components/shell/types'
 import { markWhatsNewRead } from '@/lib/shell-preferences'
 import { toast } from '@/lib/toast'
+import type { SearchFunction, SearchGroup } from '@/lib/search'
 
 export type PreviewOptions = {
   role: 'admin' | 'tutor' | 'independent'
@@ -24,6 +26,7 @@ export type PreviewOptions = {
   read: boolean
   pending: number
   signedOut: boolean
+  search?: string
 }
 
 const overlays: ShellOverlay[] = ['more', 'help', 'account-menu', 'switcher', 'whats-new', 'feedback', 'sign-out-confirm', 'phone-menu']
@@ -88,6 +91,45 @@ function fixture(options: PreviewOptions): ShellData {
   }
 }
 
+const searchStates: SearchPreviewState[] = ['empty', 'results', 'no-results', 'error', 'offline', 'loading']
+
+const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString()
+
+// Sample search results, filtered by what is typed. Preview only.
+function sampleGroups(role: PreviewOptions['role']): SearchGroup[] {
+  const groups: SearchGroup[] = [
+    {
+      type: 'student', label: 'Students', results: [
+        { id: 's1', type: 'student', name: 'Ada Okonkwo', detail: 'ada.okonkwo@example.com', href: '/dashboard/students' },
+        { id: 's2', type: 'student', name: 'Adaeze Nwosu', detail: 'No email', href: '/dashboard/students' },
+      ],
+    },
+    { type: 'tutor', label: 'Tutors', results: [{ id: 't1', type: 'tutor', name: 'Adam Bello', detail: 'adam.bello@example.com', href: '/dashboard/tutors' }] },
+    { type: 'course', label: 'Courses', results: [{ id: 'c1', type: 'course', name: 'Adaptive Maths Revision', detail: null, href: '/dashboard/classes/c1' }] },
+    {
+      type: 'lesson', label: 'Lessons', results: [
+        { id: 'l1', type: 'lesson', name: 'Ada catch-up: simultaneous equations', detail: `Adaptive Maths Revision · ${new Date(inDays(1)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`, href: '/dashboard/schedule/l1', status: 'planned', scheduled_at: inDays(1) },
+        { id: 'l2', type: 'lesson', name: 'Adaptive Maths: quadratics', detail: `Adaptive Maths Revision · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`, href: '/dashboard/schedule/l2', status: 'live', scheduled_at: inDays(0) },
+      ],
+    },
+  ]
+  if (role === 'tutor') return groups.filter((group) => group.type === 'course' || group.type === 'lesson')
+  if (role === 'independent') return groups.filter((group) => group.type !== 'tutor')
+  return groups
+}
+
+function previewSearch(role: PreviewOptions['role'], state?: SearchPreviewState): SearchFunction {
+  return async (query) => {
+    await wait(300)
+    if (state === 'error') throw new Error('Preview failure')
+    const term = query.toLowerCase()
+    const groups = sampleGroups(role)
+      .map((group) => ({ ...group, results: group.results.filter((result) => `${result.name} ${result.detail ?? ''}`.toLowerCase().includes(term)) }))
+      .filter((group) => group.results.length > 0)
+    return { query, groups }
+  }
+}
+
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -137,8 +179,21 @@ export function ShellPreview({ options }: { options: PreviewOptions }) {
 
   const open = overlays.includes(options.open as ShellOverlay) ? (options.open as ShellOverlay) : undefined
 
+  const searchState = searchStates.includes(options.search as SearchPreviewState) ? (options.search as SearchPreviewState) : undefined
+  const initialQuery = searchState === 'no-results' ? 'Photosynthesis' : searchState && searchState !== 'empty' ? 'Ada' : ''
+
   return (
+    <SearchProvider
+      capabilities={data.capabilities}
+      search={previewSearch(options.role, searchState)}
+      initialOpen={Boolean(searchState)}
+      initialQuery={initialQuery}
+      previewState={searchState}
+      onOpenResult={(href) => toast.info(`In the app this opens ${href}.`)}
+    >
     <ShellFrame
+      searchSlot={(rail) => <SearchTrigger variant="sidebar" rail={rail} />}
+      phoneSearchSlot={<SearchTrigger variant="phone" />}
       shellData={shellData}
       pathname={path}
       initialOverlay={open}
@@ -161,5 +216,6 @@ export function ShellPreview({ options }: { options: PreviewOptions }) {
     >
       {content}
     </ShellFrame>
+    </SearchProvider>
   )
 }

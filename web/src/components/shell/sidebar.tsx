@@ -182,7 +182,8 @@ export type SidebarContentProps = {
   unread: boolean
   signingOut: boolean
   initialOverlay?: ShellOverlay
-  searchSlot?: ReactNode
+  /** Search field for the sidebar; a function receives the rail classes. Not shown in the phone More sheet, which has search in the top bar. */
+  searchSlot?: ReactNode | ((rail: { srInRail: string; hideInRail: string; centreInRail: string; tooltips: boolean }) => ReactNode)
   onNavigate?: () => void
   onSwitchAccount: (account: ShellAccount) => void
   onOpenWhatsNew: () => void
@@ -222,7 +223,9 @@ export function SidebarContent({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className={cx('space-y-3', variant === 'sidebar' ? 'px-3 pb-2' : 'pb-2')}>
         <AccountCard data={data} r={r} defaultOpen={initialOverlay === 'switcher'} onSwitch={onSwitchAccount} />
-        {searchSlot}
+        {variant === 'sidebar'
+          ? (typeof searchSlot === 'function' ? searchSlot({ srInRail: r.srInRail, hideInRail: r.hideInRail, centreInRail: r.centreInRail, tooltips }) : searchSlot)
+          : null}
       </div>
 
       <nav aria-label="Main" className={cx('min-h-0 flex-1', variant === 'sidebar' ? 'overflow-y-auto px-2 pb-3' : 'pb-3')}>
