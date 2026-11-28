@@ -366,7 +366,7 @@ screens Kanvise owns.
 
 ## SH-13 · Saving and offline
 
-Every field that saves by itself (lesson summary, lesson notes, private notes,
+Every field that saves by itself (lesson summary, lesson notes, student notes,
 lesson plan, homework instructions, and in the student app a student's homework
 text and quiz answers) shows one honest saving state next to it, or in the
 editor's header.

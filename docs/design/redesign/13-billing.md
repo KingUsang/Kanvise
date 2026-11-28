@@ -1,8 +1,11 @@
 # 13 · Billing (proposal)
 
-Status: **proposal for discussion.** Payments are on hold until the owner's
-payments revamp. Nothing here is built until then. Builds on `00-decisions.md`
-§14.
+Status: **proposal for discussion, not built.** Billing is out of the build
+(owner: leave it out for now, but design with it in mind). Payments are on
+hold until the owner's payments revamp, and nothing here is built until then.
+Builds on `00-decisions.md` §14. The room the build leaves for it (a price per
+course, who pays on the student, completed lessons per student per course, a
+hidden Billing item in Settings) is listed in `20-data-model.md` DM-31.
 
 **Who:** tutors and agency admins bill; whoever pays receives an invoice link.
 **Goal:** get paid for lessons without chasing anyone, using a pattern people

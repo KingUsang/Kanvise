@@ -264,9 +264,12 @@ part of a series).
     (text link). Once drafted or written, a rich-text plan with 👍 / 👎 (Kavi
     drafts only) and **⋯** (Regenerate, Clear). Failure states are in the Kavi
     block below.
-  - **Notes:** private notes (private notes rule, 00 section 16). Line: **Only
-    you, your admins and the course's tutors can see these. Students never
-    do.** Empty: **No notes yet. Add the first one above.** (Bobbin's.)
+  - **Notes:** the lesson notes, one note for this lesson, saved as you type.
+    The same text shows in the classroom's Lesson tools (07 CR-03) and as the
+    **Lesson notes** section of the summary (08 SM-01). Private notes rule (00
+    section 16). Line: **Only you, your admins and the course's tutors can see
+    these. Students never do.** Empty placeholder: **No notes yet. Jot down
+    anything to remember for this lesson.**
 
 **Right column:**
 - **Activity:** a timeline grouped by date, newest last: **Lesson created**,
@@ -282,8 +285,8 @@ part of a series).
 
 - Input: the lesson topic, the linked plan topic and its objectives, the course
   plan around it, the last completed lesson summary's What we covered and What
-  to work on, and the default lesson length. Never private notes (00 section
-  16).
+  to work on, and the default lesson length. Never lesson notes or student
+  notes (00 section 16).
 - Output: a lesson plan (objectives, a timed structure, activities, a short
   check for understanding) in the Lesson plan tab, as in Bobbin's
   `sample-lesson--plan.png`.
@@ -620,8 +623,9 @@ As in 16 R-07:
   this link" line (LP-01, LP-05).
 - `03-lessons/screenshots/sample-lesson--plan.png`, `sample-lesson--notes.png`:
   lesson plan shape for the Kavi block; Bobbin's "Internal notes / Only visible
-  to admins" replaced by the 00 section 16 line; "No notes yet. Add the first
-  one above." copied.
+  to admins" replaced by the 00 section 16 line, and Bobbin's list of notes by
+  one lesson note; Bobbin's "No notes yet." kept, with a second line that
+  fits a single note.
 
 Final Bobbin pass (FEAT-009):
 - `15-tutor-role/screenshots/tutor-new-lesson--step-2.png`: Bobbin titles step 2 "Topic & schedule" with "When does the lesson take place?"; Kanvise words it **Topic and time** because the step also links plan topics (LW-2).

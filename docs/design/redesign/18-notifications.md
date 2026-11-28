@@ -553,8 +553,8 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
 - **Push:** title **Lesson summary ready** · body as the Bell item.
 - **Opens:** the past lesson in the student app (09 SA-05), at the Summary.
 - **Not sent when:** undone in the window; the lesson was closed with **No
-  summary needed** (08 SM-07). Private notes are never part of it (00 section
-  16). A no-email student gets nothing; the tutor sees **Copy summary** and
+  summary needed** (08 SM-07). Lesson notes and student notes are never part
+  of it (00 section 16). A no-email student gets nothing; the tutor sees **Copy summary** and
   **Send on WhatsApp** (NTF-05).
 
 #### NTF-302 · Summary edited after it was completed
@@ -563,7 +563,7 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
   SM-04).
 - **Bell:** **Michael updated the summary of Monday's lesson.**
 - **Opens:** as NTF-301.
-- **Not sent when:** only private notes changed; or this summary already sent
+- **Not sent when:** only the lesson notes changed; or this summary already sent
   one today (at most once per summary per day, in the account's timezone).
 
 #### NTF-303 · Lesson marked Missed

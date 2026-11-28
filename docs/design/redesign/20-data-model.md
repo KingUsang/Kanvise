@@ -21,6 +21,9 @@ the work can be sized (F-44).
   as today (the public schema is locked behind the API on staging).
 - Key columns are the ones the specs depend on, not a full schema. Types,
   indexes and row rules are for the build.
+- **Reserved for billing, not built** marks room left for billing, which is
+  out of the build (00 section 14). Nothing marked this way is created now
+  (DM-31).
 
 The Kavi service (what Kavi reads, keeps, costs and how it fails) is the last
 section, DM-21 to DM-30, and is built last, after every feature works without
@@ -43,6 +46,12 @@ Kavi.
     `student`), status (invited, active, removed), joined and removed times.
   - Student fields from 06: goal (free text), status, recording consent
     (DM-09), can watch recordings (DM-09).
+  - `student_notes` (New): student notes (06 STU-06): account, student,
+    author, text, pinned, created at, edited at. Private notes rule (00
+    section 16): readable only by the course's tutors and the account's
+    admins, never returned by a student-facing API, never sent to Kavi.
+  - Who pays (13 BL-03): **reserved for billing, not built** (DM-31). No
+    column now.
 - **Owning specs:** 06 (students), 12 (CFG-P, CFG-A), 19 (tutors and admins),
   01 SH-07 (account switching).
 - **Staging:** `user_profiles`, `schools`, `account_memberships`,
@@ -78,6 +87,8 @@ Kavi.
   - Course tutor: course, tutor, assigned by, assigned at, ended at (kept as
     history so reassignment in 19 TM-06 is traceable).
   - Course students: course, student, added at, removed at.
+  - Price per course (13 BL-02): **reserved for billing, not built** (DM-31).
+    Staging's old price columns on `courses` are not reused for it.
 - **Owning spec:** 04 (CRS, CW); reassignment 19 TM-06.
 - **Staging:** `courses` (also has `programme_id`, `sub_programme_id`, price
   and publish columns), `tutor_course_assignments`, `enrolments`.
@@ -226,17 +237,22 @@ Kavi.
 - **Purpose:** the summary a tutor completes after a lesson (08), and the
   lesson-level outcome when no summary is written.
 - **Key columns:** lesson, sections (**What we covered**, **What went well**,
-  **What to work on**, **Homework** link), private notes (separate column, 00
-  section 16), Notes for Kavi (separate, not private, 08), status (draft,
-  complete), no-summary reason (**No summary needed** with the optional
+  **What to work on**, **Homework** link), status (draft, complete), no-summary reason (**No summary needed** with the optional
   reason chip, 08 SM-07), ticked topics with **Got it** / **Needs more work**,
   objectives ticked in the lesson (07), completed by, completed at, edited at,
   Kavi draft used (yes or no, which route).
-- **Private notes rule:** private notes are readable only by the course's
-  tutors and the account's admins, are never returned by any student-facing
-  API, and are never sent to Kavi for any output in this version (00
-  section 16, DM-25). Keeping them in their own
-  column (or table) makes that rule easy to enforce and test.
+- **Lesson notes:** `lesson_notes` (New), one row per lesson: account,
+  lesson, text, updated by, updated at. It is the one record behind the
+  classroom's Lesson tools **Notes** (07 CR-03), the lesson page's **Notes**
+  tab (05 LP-02) and the summary's **Lesson notes** section (08 SM-01); none
+  of them keeps its own copy. It is per lesson, not per student. There is no
+  separate "notes for Kavi" storage.
+- **Private notes rule:** lesson notes are readable only by the course's
+  tutors and the account's admins and are never returned by any
+  student-facing API, notification or email. They are sent to Kavi only by
+  the summary draft from lesson notes, for that lesson, when the tutor presses
+  **Draft with Kavi** (00 section 16, DM-25). Keeping them in their own table
+  makes that rule easy to enforce and test.
 - **Owning spec:** 08 (SM-01 to SM-07); student view 09 SA-05.
 - **Staging:** `live_class_recaps` (`draft_body`, `published_body`, status
   `pending`, `generating`, `draft`, `published`, `failed`).
@@ -389,7 +405,7 @@ Kavi.
 ## DM-19 · Offline queue (client only)
 
 - **Purpose:** keep what a person typed when the connection drops (01 SH-13,
-  16 R-08), for example summary text and private notes, and send it when the
+  16 R-08), for example summary text and lesson notes, and send it when the
   connection is back.
 - **Where:** in the browser only (IndexedDB), per person and device, cleared
   on sign-out. There is no server table. The server takes each queued save
@@ -406,7 +422,7 @@ build:
 
 | Staging tables | Why |
 |---|---|
-| `programmes`, `sub_programmes`, `payments`, `paystack_subaccounts`, `kanvise_subscriptions`, `school_promos`, `reviews` | Priced classes, programmes and public pages are retired; billing is on hold (13) |
+| `programmes`, `sub_programmes`, `payments`, `paystack_subaccounts`, `kanvise_subscriptions`, `school_promos`, `reviews` | Priced classes, programmes and public pages are retired; billing is out of the build, and its room is reserved in DM-31 without these tables (13) |
 | `mock_*` tables, `question_banks`, `bank_question*`, `question_media`, `question_stimul*`, `mock_marketplace_*`, `mock_access_*`, `mock_entitlements`, `mock_orders`, `mock_import_jobs`, `guest_mock_*` | Mock exams, the question bank, the marketplace and the PDF import are retired; quizzes use DM-13 |
 | `live_class_guests`, `guest_live_class_attendance`, `live_class_recording_share_links`, `direct_assignments`, `direct_assignment_submissions` | Guest flows and share links are retired |
 | `telegram_*` | The Telegram teaching layer is not part of the redesign |
@@ -497,7 +513,8 @@ starts from facts):
   its honest failure state (the **Couldn't generate** line in each spec's
   Kavi block). No partial or invented output is shown.
 - **Not enough to go on** is decided before calling the model, by fixed rules
-  in each spec (for example notes under 20 characters, 08 SM-02; a one-word
+  in each spec (for example lesson notes empty or under 20 characters, 08
+  SM-02; a one-word
   topic with no objectives, 04 and 11). Such requests are recorded as
   `not_enough` and cost nothing.
 - Provider errors: 429 is not retried at once (it usually means a quota
@@ -510,7 +527,7 @@ starts from facts):
   lesson plan (05 LP-01), quiz questions (11 QZ-01, QZ-02), starting check
   questions (04 DIAG-D, DIAG-P), suggested topic order (04 DIAG-R), homework
   suggestion and homework feedback (10 HW-01, HW-05), the summary draft from
-  notes (08 SM-02), and Ask Kavi (06 STU-05).
+  lesson notes (08 SM-02), and Ask Kavi (06 STU-05).
 - **Server-sent events** on `POST /kavi/:feature/stream`. Events: `status`
   (preparing, retrying), `item` (one finished module, topic, question or
   section, each already checked with its own zod schema), `done` (the whole
@@ -558,8 +575,8 @@ it is.
    checks and retries as in DM-22, and saves a `kavi_drafts` row. It sends the
    tutor **Kavi's draft is ready** (18 NTF-01) and nothing to students.
 - Up to 3 attempts per job, 5 minutes apart, as today. After the last one the
-  draft is `failed` and 08 SM-02 shows **Kavi couldn't draft this right now.**
-  with **Draft from my notes instead**. The recording itself is never held up:
+  draft is `failed` and 08 SM-02 shows **Kavi couldn't draft from the
+  recording.**, and the card offers **Draft with Kavi** from the lesson notes. The recording itself is never held up:
   students can watch it whatever happens to the transcript.
 - **Restart (07 CR-06).** The recording version goes up by one each time a
   restarted lesson adds to the recording. When the lesson restarts, any
@@ -588,14 +605,23 @@ These apply to every Kavi feature and are tested, not just written down:
   work** are never filled (10 HW-05, 08 SM-02); course plan changes go through
   CRS-08 with every row unticked. The API rejects a confirm request that
   carries Kavi picks the tutor didn't select.
-- **Private notes are never sent to Kavi in this version** (00 section 16,
-  section 17), for any output, so the promise in 12 CFG-K
-  (**Never sent: private notes**) is simply true. The context builders have no
-  access to the private notes columns (DM-10, 06 STU-06). The only notes Kavi
-  reads are the separate **Notes for Kavi** box (08 SM-01), including text the
-  tutor copied in on purpose with **Use my lesson notes**.
+- **Private notes** (00 section 16, section 17), so the promise in 12 CFG-K
+  (**Never sent: student notes, lesson notes for anything other than drafting
+  that lesson's summary**) is simply true:
+  - **Student notes are never sent to Kavi.** No context builder can read
+    `student_notes` (DM-01).
+  - **Lesson notes are sent only by the summary draft from lesson notes**
+    (DM-30), for that one lesson, and only on the tutor's **Draft with Kavi**
+    request from 08 SM-01. That builder is the only one allowed to read
+    `lesson_notes` (DM-10); the recording draft (DM-24) and every other
+    feature can't. The request records the route, so a test can check that
+    no other feature ever sent them.
+  - The draft is stored in `kavi_drafts` (DM-28), never shown to students,
+    and becomes part of the summary only when the tutor presses **Complete**.
+  - Lesson notes never appear in any notification, email or student view.
 - **Consent gate.** No transcript is made unless every student on the lesson
-  consented (DM-24). Without a transcript, Kavi drafts only from notes.
+  consented (DM-24). Without a transcript, Kavi drafts only from the lesson
+  notes, when the tutor asks.
 - **Minimum length.** Recordings under 5 minutes are not transcribed.
 - **One account at a time.** Every request, draft, job payload and usage row
   carries `school_id`. A context builder reads only that account's rows, and
@@ -607,7 +633,8 @@ These apply to every Kavi feature and are tested, not just written down:
   (12 CFG-L), and when any student on the lesson has their data deleted (06
   STU-11). Drafts made from it are deleted with it unless a tutor already
   completed the summary (the completed summary is the tutor's).
-- **What is never sent to a provider:** private notes, students' email
+- **What is never sent to a provider:** student notes, lesson notes (except
+  for that lesson's summary draft, above), students' email
   addresses, phone numbers and passwords (12 CFG-K). Student first names are
   sent only where the output needs them (summary, feedback, Ask Kavi).
 - **Students never call Kavi** (09). Every Kavi request comes from a tutor or
@@ -622,7 +649,7 @@ be checked against the signed agreements first.
 | Provider | What Kanvise sends | What the provider keeps, and for how long | On deletion in Kanvise |
 |---|---|---|---|
 | **Deepgram** (`nova-3`, pre-recorded) | The audio of consented recordings of 5 minutes or more | With `mip_opt_out=true` on the request, Deepgram's Model Improvement Program page says data "is retained only for the duration necessary to process the request". Without it, Deepgram may keep samples for model training, so the flag is required on every call. Whether opting out changes the price: **confirm before launch**. Request logs (time, length, model, no audio): **confirm before launch** | Nothing left to delete if the flag was set. Kanvise deletes its own transcript (DM-25) |
-| **Google Gemini API** (paid Cloud project) | Transcript text, Notes for Kavi, course plan topics and objectives, lesson summaries, topic statuses and results, typed answers and images of handed-in work (only when the tutor asks for feedback) | Paid tier: Google says it doesn't use prompts or responses to improve its products, and keeps prompts, context and outputs for 55 days only to detect abuse and for legal requests (Gemini API terms and abuse monitoring page). The free tier uses data for training and human review, so Kanvise never uses it. Kanvise sends inline content only (no Files API, no context caching), so nothing else is stored | Kanvise can't delete Google's 55-day abuse logs early; they expire. The privacy policy says so. Whether Google offers zero retention for this use: **confirm before launch** |
+| **Google Gemini API** (paid Cloud project) | Transcript text, a lesson's lesson notes (only for that lesson's summary draft, on the tutor's request), course plan topics and objectives, lesson summaries, topic statuses and results, typed answers and images of handed-in work (only when the tutor asks for feedback) | Paid tier: Google says it doesn't use prompts or responses to improve its products, and keeps prompts, context and outputs for 55 days only to detect abuse and for legal requests (Gemini API terms and abuse monitoring page). The free tier uses data for training and human review, so Kanvise never uses it. Kanvise sends inline content only (no Files API, no context caching), so nothing else is stored | Kanvise can't delete Google's 55-day abuse logs early; they expire. The privacy policy says so. Whether Google offers zero retention for this use: **confirm before launch** |
 
 **Writing provider:** students never call Kavi. The owner has accepted the
 Gemini API terms for launch, including the line on users under 18 (00 section
@@ -645,7 +672,7 @@ Gemini API terms for launch, including the line on users under 18 (00 section
   (**confirm before launch**): a 60 minute recorded lesson is 60 × $0.0043
   (Deepgram `nova-3` pre-recorded) ≈ $0.26, plus about 12,000 input tokens ×
   $0.30 per million and about 3,000 output tokens × $2.50 per million
-  (Gemini 2.5 Flash, paid) ≈ $0.01, so about $0.27. The notes route costs
+  (Gemini 2.5 Flash, paid) ≈ $0.01, so about $0.27. The lesson notes route costs
   about $0.01. Transcription is most of the cost. The measured figure from
   `kavi_usage` replaces this estimate once lessons run.
 - **Feedback:** 👍 / 👎 on every draft (04, 05, 08, 11) and **Not now** with
@@ -663,7 +690,7 @@ Gemini API terms for launch, including the line on users under 18 (00 section
   connections. Measure word error rate on a hand-checked sample, whether
   diarization tells tutor and student apart, how many drafts the tutor keeps
   with small edits, and the time from recording ready to draft ready. If
-  accuracy is poor, the recording route stays off and the notes route ships
+  accuracy is poor, the recording route stays off and the lesson notes route ships
   alone.
 - **"About 5 minutes" is unverified.** No screen promises a time until the
   test above measures it (F-21).
@@ -739,20 +766,35 @@ Kavi** path works.
 | Starting check questions | 04 DIAG-D, DIAG-P | Chosen topics and objectives, subject, level | Two MCQ per topic (streamed) | The tutor writes them in DIAG-P (the 11 question card in its starting check mode); DIAG-D sends the same way |
 | Suggested topic order | 04 DIAG-R | Check results (statuses come from rules) | **Suggested order** card | No card; the tutor orders the Next strip |
 | Lesson plan | 05 LP-01 | Lesson topic, linked plan topic and objectives, plan around it, last summary's What we covered and What to work on, lesson length | Objectives, timed structure, activities, check for understanding (tutor-only) | **Write my own** with the template |
-| Student questions and suggestions | 06 STU-05 | Goal, topic statuses, completed summaries, homework and quiz results, check results, attendance (no private notes) | Short answer with **Based on** links; up to three **Kavi's pick** cards | Question box hidden; Summary tab cards; rule **Suggestions** |
+| Student questions and suggestions | 06 STU-05 | Goal, topic statuses, completed summaries, homework and quiz results, check results, attendance (no student notes or lesson notes) | Short answer with **Based on** links; up to three **Kavi's pick** cards | Question box hidden; Summary tab cards; rule **Suggestions** |
 | Classroom | 07 | None live in v1 | None | Lesson tools as written |
 | Summary draft from recording | 08 SM-01, SM-02 | Transcript (all consented, 5 minutes or more), objectives and topics, ticked objectives, quick check totals, last What to work on | What went well, What to work on, unticked **Kavi's pick** topics, one homework suggestion (background job, DM-24) | Blank editor with the same five sections |
-| Summary draft from notes | 08 SM-01, SM-02 | **Notes for Kavi** and the same lesson facts | The same draft (streamed) | Blank editor |
-| Dashboard suggestions | 03 DB-06 | Summaries (no private notes), plan statuses, check results, marked homework | Extra **Kavi's pick** cards after the rule cards | Rule cards titled **Suggestions** (built first) |
+| Summary draft from lesson notes | 08 SM-01, SM-02 | That lesson's lesson notes (only when there is no usable recording and the tutor presses **Draft with Kavi**; disabled when they are empty) and the same lesson facts | The same draft (streamed), tutor-only until **Complete** | Blank editor |
+| Dashboard suggestions | 03 DB-06 | Summaries (no student notes or lesson notes), plan statuses, check results, marked homework | Extra **Kavi's pick** cards after the rule cards | Rule cards titled **Suggestions** (built first) |
 | Homework suggestion | 10 HW-01 (from 08 SM-02) | The summary draft and lesson topics | Title and instructions that **Use this** copies into HW-01 | HW-01 filled in by hand |
 | Homework feedback | 10 HW-05 | Title, instructions, the student's typed answer and images, linked topics (only on request, only with the CFG-K switch on) | Feedback in a separate **Kavi's pick** box; never a mark | The tutor writes feedback |
 | Quiz questions | 11 QZ-01, QZ-02 | Ticked topics and objectives, subject, levels, reading level, count, difficulty | MCQ with topic and explanation, labelled **Kavi** until checked (streamed) | **Write my own** |
 | Kavi settings | 12 CFG-K | None | Settings read by every row above | Section hidden; level names move to CFG-T |
-| Student app, billing, resources, recordings, notifications, team | 09, 13, 15, 17, 18, 19 | None | None (18 sends **Kavi's draft is ready** to the tutor) | Unchanged |
+| Student app, resources, recordings, notifications, team (billing is not built, DM-31) | 09, 13, 15, 17, 18, 19 | None | None (18 sends **Kavi's draft is ready** to the tutor) | Unchanged |
 
 The rule cards in 03 DB-06 are the first version of **Kavi suggests**: they
 ship with the dashboard, store feedback in `kavi_feedback`, and Kavi's cards
 are added after them later.
+
+## DM-31 · Reserved for billing (not built)
+
+Billing is out of the build (00 section 14); spec 13 stays a proposal. The
+owner asked for the design to leave room for it, so these are named now and
+**reserved for billing, not built**. No tables or columns are created for
+them now, and no screen shows them.
+
+| Reserved for | What it will hold (13) | Where it will live | Where the field will go on screen | Now |
+|---|---|---|---|---|
+| Price per course | How the course is charged (per lesson, monthly, package), amount, currency, per-student overrides (BL-02) | A new course price table linked to `courses` (DM-03). Staging's old `courses` price columns belong to retired priced classes and are not reused | Course page **Actions › Pricing**, and an extra part of the wizard's People step (04 CW-2) | Not built. The wizard and course page have no price field |
+| Who pays, on the student | **The student** or an **other contact** (name, email, phone), one contact for several students (BL-03) | A new payer contact table and a payer link per student (DM-01) | After **Course** in Add student (06 STU-03), and on Edit (06 STU-07) | Not built. Add student and Edit have no payer field |
+| Completed lessons per student per course | The count billing adds up for invoices (BL-04) | Worked out from lesson status (DM-06), lesson students (DM-06) and attendance (DM-08), which are already per student per lesson | None | Already stored for other reasons; nothing extra |
+| Billing in Settings | Turn on billing, payout account, billing period (BL-01) | Account settings (DM-14) | Settings › ACCOUNT › **Billing** (12 Layout) | The item is hidden until billing exists |
+| Invoices and payments | Invoices, statuses, Paystack payments (BL-04 to BL-07) | New tables, designed in the payments revamp. Staging's `payments` and `paystack_subaccounts` are on the DM-20 list | Spec 13 | Not built |
 
 ## Checked against Bobbin
 

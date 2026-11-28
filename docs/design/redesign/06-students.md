@@ -15,7 +15,7 @@ everything about one student in one place.
   → Add student dialog: STU-03 one student · STU-04 import a list
   → Student page /students/:id (STU-05)
       Summary · Lessons · Homework and quizzes · Summaries · Attendance
-  → Private notes (STU-06) · Edit (STU-07) · Resend invite (STU-08)
+  → Student notes (STU-06) · Edit (STU-07) · Resend invite (STU-08)
   → Remove (STU-09) · Export (STU-10) · Delete the student's data (STU-11)
 ```
 
@@ -91,6 +91,10 @@ Subtitle **Add a student and, if you like, put them on a course.**
 | Timezone | Pre-filled with the tutor's timezone, searchable, with a clear button | Line: **Lesson times are shown to them in this timezone.** |
 | Course (optional) | Dropdown of courses with swatches | **Put on a course now** |
 | **Recording consent already given** | Checkbox, unticked | Line: **Tick only if the student, or their family for a child, has agreed to lessons being recorded. Leave it unticked if they haven't yet: their lessons won't be recorded until you record consent on their page.** |
+
+**Billing (not built).** There is no **Who pays?** field. Billing is out of the
+build (00 section 14). When it exists, **Who pays?** goes after **Course** in
+this dialog and on Edit (STU-07), as 13 BL-03 says (20 DM-31).
 
 Bobbin's checkbox starts ticked. Kanvise starts it unticked, because ticking
 it is the tutor saying consent was given, and lessons are recorded only when
@@ -226,7 +230,7 @@ Right column:
   answer appears under it, tutor-only, with links to the summaries and results
   it used. Suggested questions as chips: **How is Casey doing?** · **What
   should we do next?** · **What keeps coming up?**
-- **Private notes** (STU-06): the most recent note, with **All notes** and
+- **Student notes** (STU-06): the most recent note, with **All notes** and
   **+ Add a note**.
 
 **Record consent** opens a small dialog: **Record consent for Casey?** · "Only
@@ -292,9 +296,9 @@ rules are in `17-recordings-and-attendance.md`.
 
 ---
 
-## STU-06 · Private notes about the student
+## STU-06 · Student notes
 
-Notes about the student overall, not tied to one lesson (for example "Gets
+Private notes about the student overall, not tied to one lesson (for example "Gets
 anxious before tests; start with an easy win" or "Prefers WhatsApp after
 6 pm").
 
@@ -303,7 +307,10 @@ anxious before tests; start with an easy win" or "Prefers WhatsApp after
   listed newest first with the author and date, e.g. **Michael Chen · 27 Nov**.
 - Each note has **Edit** and **Delete** (author or admin). Edited notes show
   **Edited**. **Pin** keeps one note at the top.
-- They follow the private notes rule (00 section 16). Line beside the field:
+- Notes about one lesson are that lesson's lesson notes (07 CR-03, 08 SM-01),
+  not student notes.
+- They follow the private notes rule (00 section 16) and are never sent to
+  Kavi. Line beside the field:
   **Only you, your admins and the course's tutors can see these. Students never
   do.**
 - Agency tutors can add notes about students on their courses.
@@ -349,8 +356,8 @@ follows.
 
 **What is deleted, straight away:**
 - The profile: names, email, phone, timezone, goal, sign-in.
-- Private notes about the student (STU-06), and their section of every lesson
-  summary. One-to-one summaries are deleted whole.
+- Student notes (STU-06), their section of every lesson summary, and the
+  lesson notes of their one-to-one lessons. One-to-one summaries are deleted whole.
 - Homework and quiz answers, uploaded files, marks, feedback, starting check
   results and topic statuses.
 - Recordings of one-to-one lessons.
@@ -386,7 +393,7 @@ of Kavi requests expire after 55 days and can't be deleted early.
 | Add, import | Yes | Yes | No (admins add students) |
 | Edit, remove, export | Yes | Yes | No (view only) |
 | Record or withdraw recording consent | Yes | Yes | No (sees the state) |
-| Write private notes | Yes | Yes | Students on their courses |
+| Write student notes | Yes | Yes | Students on their courses |
 | Delete a student's data (STU-11) | Yes | Yes | No |
 
 ### Kavi
@@ -396,8 +403,8 @@ Casey**, and the **Kavi suggests** card. Both are tutor-only.
 
 - Input: the student's goal, topic statuses (04 Topic status model), completed
   lesson summaries, homework and quiz results, starting check results and
-  attendance, for the courses the asker can see. Never private notes, even
-  though the answer is tutor-only (00 section 16, 20 DM-25). **Use this** on
+  attendance, for the courses the asker can see. Never student notes or lesson
+  notes, even though the answer is tutor-only (00 section 16, 20 DM-25). **Use this** on
   a card can also change what students see (a lesson topic).
 - Output: a short plain answer under the question box, with **Based on** links
   to the summaries and results used; and up to three suggestion cards in the
@@ -432,6 +439,7 @@ Tables are in `20-data-model.md`: people DM-01, invitations DM-02, recording con
   (optional), timezone, goal, status.
 - Recording consent per student: state, who recorded or withdrew it and when
   (history kept). Recording visibility per student.
+- Student notes (STU-06): author, text, pinned, edited (20 DM-01).
 - Import job with row-level results (already partly built in Slice 6A).
 - Attendance per lesson (already recorded from the classroom).
 - Data deletion job following STU-11, with the kept and deleted counts.

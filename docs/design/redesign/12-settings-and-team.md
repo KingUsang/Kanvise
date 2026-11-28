@@ -41,8 +41,11 @@ the right: **Jump to ▾** and **Find a setting** (search), as in Bobbin.
 | YOUR TEACHING | Lessons and classroom | Yes | Yes | No |
 | YOUR TEACHING | Kavi | Yes | Yes | No |
 | ACCOUNT | Business details | Yes | Yes | No |
-| ACCOUNT | Billing | Later | Later | No |
+| ACCOUNT | Billing | Hidden until billing exists | Hidden until billing exists | No |
 | ACCOUNT | Data and privacy | Yes | Yes | No |
+
+**Billing** is out of the build (00 section 14). The row is reserved: the item
+stays hidden, not disabled, until billing exists (13 BL-01, 20 DM-31).
 
 Agency tutors see only the YOU group, as Bobbin's tutors see only Your details,
 Password, Two-factor and Notifications (`15-tutor-role/screenshots/tutor-profile--default.png`).
@@ -225,7 +228,8 @@ and `settings-ai-style-compare.png`.
 - The reading level for students comes from **Who you mostly teach** (CFG-T).
 
 **What Kavi does** card (toggles):
-- **Kavi drafts lesson summaries:** on.
+- **Kavi drafts lesson summaries:** on. Line: **From the recording, or from
+  your lesson notes when you press Draft with Kavi (08).**
 - **Kavi suggestions on the dashboard:** on (03 DB-06).
 - **Kavi can read handed-in work when you ask for feedback:** on. Line:
   **Only when you press Draft feedback with Kavi (10 HW-05).**
@@ -238,10 +242,11 @@ outside services. Named here so tutors and admins know what leaves Kanvise.
 | Service | What it does | What is sent | When |
 |---|---|---|---|
 | **Deepgram** | Turns lesson audio into a transcript | The audio of recorded lessons | Only for lessons recorded with every student's consent |
-| **Google Gemini** | Writes Kavi's drafts | Transcript text, Notes for Kavi (08), course plan topics and objectives, lesson summaries, topic statuses and results (for suggestions and Ask Kavi), the typed answers and images of handed-in work (only when the tutor asks for feedback) | Each time Kavi drafts something |
+| **Google Gemini** | Writes Kavi's drafts | Transcript text, a lesson's lesson notes (only when the tutor presses **Draft with Kavi** on that lesson's summary, 08 SM-01), course plan topics and objectives, lesson summaries, topic statuses and results (for suggestions and Ask Kavi), the typed answers and images of handed-in work (only when the tutor asks for feedback) | Each time Kavi drafts something |
 
-Under the table: **Never sent: private notes (00 section 16), students' email
-addresses and phone numbers, passwords.** and **What these services keep, and
+Under the table: **Never sent: student notes, lesson notes for anything other
+than drafting that lesson's summary (00 section 16), students' email addresses
+and phone numbers, passwords.** and **What these services keep, and
 for how long, is listed in the data model (20 DM-26).** with a link to
 the privacy policy. In short: Deepgram keeps no audio after the transcript is
 made; Google keeps Kavi's requests for 55 days to check for abuse, and never

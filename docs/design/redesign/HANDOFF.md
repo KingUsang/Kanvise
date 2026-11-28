@@ -34,8 +34,8 @@ For continuing this work in a new chat. Read this first, then `00-decisions.md`.
 
 ## Owner decisions
 
-Confirmed by the owner (recorded in `00-decisions.md` sections 14b, 14d and
-19):
+Confirmed by the owner (recorded in `00-decisions.md` sections 14, 14b, 14d,
+16 and 19):
 
 1. **Recording consent starts unticked** when adding a student (06 STU-03).
    Bobbin starts it ticked. Kanvise unticks it because ticking it is the tutor
@@ -52,19 +52,30 @@ Confirmed by the owner (recorded in `00-decisions.md` sections 14b, 14d and
    tutor is already in the lesson.
 5. **Personal join links** can be sent by Copy, WhatsApp or Email (05 LP-05).
 6. **Gemini API terms and under-18s** are not a launch blocker (20 DM-26).
+7. **Two kinds of private note.** **Student notes** on the student page (06
+   STU-06), and **lesson notes**: one note per lesson, written in the
+   classroom's Lesson tools (07 CR-03) or on the lesson page (05 LP-02), and
+   shown as the **Lesson notes** section of the summary (08 SM-01). One record
+   in three places (20 DM-10). The **Notes for Kavi** box, **Draft from my
+   notes** and **Use my lesson notes** are removed. When there is no usable
+   recording, **Draft with Kavi** drafts the summary from the lesson notes,
+   and is disabled with a helper line when they are empty. Lesson notes go to
+   Kavi only for that lesson's summary draft, when the tutor presses the
+   button; student notes never do; neither appears in any notification, email
+   or student view (00 section 16, 20 DM-25). This replaces the earlier rule
+   that private notes were never sent to Kavi.
+8. **Billing is out of the build**, designed in only as reserved room: a
+   price per course, who pays on the student, completed lessons per student
+   per course (already stored), and a Billing item in Settings hidden until
+   billing exists (00 section 14, 20 DM-31). Spec 13 stays a proposal. The
+   course wizard and Add student have no billing fields; each notes where
+   they will go (04 CW-2, 06 STU-03).
 
 Decided in the specs so building can start, still for the owner to confirm:
 
 1. **Students see Taught, Knows it and Next**; Needs work is shown to tutors
    only (04 Topic status model, 09 SA-08).
 2. **Quizzes in v1** are multiple choice, one attempt, no time limit (11).
-3. **Private notes are never sent to Kavi in v1**, even for tutor-only
-   answers (00 sections 16 and 17, 20 DM-25).
-4. **Use my lesson notes** (08 SM-01) lets the tutor copy their private
-   classroom notes into **Notes for Kavi** with one tap, to edit before
-   drafting. A line under the button warns that Kavi writes What went well and
-   What to work on from that box, which students see. The alternative is to
-   drop the button and have tutors type Notes for Kavi from scratch.
 
 ## Launch checks
 
@@ -74,7 +85,7 @@ Decided in the specs so building can start, still for the owner to confirm:
   cost-per-lesson estimate (about $0.27 for a 60 minute recorded lesson).
 - **Accuracy test before the recording route ships** (20 DM-27): Nigerian
   English, children's and teens' voices, two speakers, low-bitrate audio. If
-  it fails, Kavi drafts only from the tutor's notes.
+  it fails, Kavi drafts only from the lesson notes.
 - **Classroom spikes** before building spec 07 (07 Spikes before build):
   starting a lesson without reloading the room, per-student Quick check
   results, the admin name label, and phones as a second device. Each has a
@@ -168,7 +179,9 @@ deliberate changes for the owner to accept:
 | 05 LP-02 **Write summary**, 07 CR-07 **Write lesson summary**, DB-03 **Write summary** (step 5) | 08 (step 6) | Step 5 ships 08 SM-07 **No summary needed** (the dialog and the Complete state), so ended lessons can be closed; **Write summary** is hidden until step 6 |
 | 12 CFG-L values used by 05 and 07 | Settings (step 3) | Already built |
 
-Billing (13) stays on hold with payments.
+Billing (13) is out of the build: it stays a proposal, on hold with payments.
+No step builds it. The room left for it is in 20 DM-31, and the Settings
+Billing item stays hidden.
 
 Every page PR:
 - includes screenshots at 360, 768 and 1280 px wide;

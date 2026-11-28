@@ -185,10 +185,15 @@ Kanvise's additions:
        lesson page in a new tab.
      - **Last lesson:** the previous lesson's summary for these students (What
        went well, What to work on).
-     - **Notes:** private notes for this lesson, saved as you type (**Saved**
-       appears for a moment). They follow the private notes rule (00 section
-       16). Line: **Only you, your admins and the course's tutors can see
-       these. Students never do.**
+     - **Notes:** the lesson notes, one note for this lesson, saved as you
+       type (**Saved** appears for a moment). The same text shows on the
+       lesson page's Notes tab (05 LP-02) and as the **Lesson notes** section
+       of the summary (08 SM-01), where Kavi can draft the summary from it
+       when there is no usable recording. They follow the private notes rule
+       (00 section 16). Line: **Only you, your admins and the course's tutors
+       can see these. Students never do.** Placeholder: **e.g. Elimination
+       method, Q1-6. Good on setting up equations. Mixed up signs on Q3 and
+       Q5.**
    - **End lesson** (outline, red text) at the bottom of the card (CR-06).
 3. **Today's objectives:** the objectives from the lesson plan as a tick-list.
    Ticking one marks it as taught in the lesson; the summary shows it ticked
@@ -307,8 +312,10 @@ Kanvise page, light again (back to the app's look). A centred card:
   - Recorded and at least 5 minutes long: Kavi mark, **Kavi is drafting your
     lesson summary from the recording.** A progress line. (No promised time
     until it has been measured.)
-  - Not recorded: **This lesson wasn't recorded. Write the summary, or jot a
-    few notes and let Kavi draft it.**
+  - Not recorded (or under 5 minutes) with lesson notes: **This lesson wasn't
+    recorded. Kavi can draft the summary from your lesson notes.**
+  - Not recorded and no lesson notes: **This lesson wasn't recorded. Add a few
+    lesson notes on the summary, and Kavi can draft it for you.**
   - Before Kavi exists: **Write your lesson summary so Casey knows what to work
     on.**
   - Nobody came: 08 SM-06.
@@ -495,9 +502,10 @@ For the tutor's second device, usually a phone pointed at written work.
 - Input: none during the lesson in v1. Nothing in the classroom calls Kavi
   live. Afterwards, the transcript of the recording (only with every
   student's consent, and only for 5 minutes or more, 20 DM-24) and the
-  objectives ticked in the lesson feed the summary draft in 08. Private notes
-  from Lesson tools are never sent (00 section 16) unless the tutor copies
-  them into Notes for Kavi (08 SM-01).
+  objectives ticked in the lesson feed the summary draft in 08. The lesson
+  notes from Lesson tools are sent only when there is no usable recording and
+  the tutor presses **Draft with Kavi** on the summary (00 section 16, 08
+  SM-01).
 - Output: none in the classroom.
 - Failure state: none in the classroom; the summary draft states are in 08.
 - What the tutor must confirm: nothing here; the summary is confirmed in 08.
@@ -514,7 +522,8 @@ Tables are in `20-data-model.md`: lessons and room state DM-06, join links DM-07
   lifecycle code has start and end).
 - Recording consent check at start and restart, and the result on the lesson
   (recorded, or not recorded with the students who lacked consent).
-- Objectives ticked during the lesson, notes, quick-check results (new).
+- Objectives ticked during the lesson, the lesson notes (one per lesson,
+  shared with 05 LP-02 and 08 SM-01; 20 DM-10), quick-check results (new).
 - Attendance from PlugNMeet analytics and webhooks (exists), with admin rows
   marked as Lead or Watch.
 - Lesson materials linked to PlugNMeet whiteboard upload (needs the docking

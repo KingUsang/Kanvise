@@ -28,13 +28,14 @@ is the only step. Bobbin's **Tutor performance** section is also not copied.
    **summaries to write** count goes up by one.
 3. Attendance is saved from PlugNMeet: who came, when they joined, how long
    they stayed (`17-recordings-and-attendance.md`).
-4. Kavi can draft the summary two ways, shown side by side (SM-01):
+4. Kavi can draft the summary in one of two ways (SM-01):
    - **From the recording**, only when the lesson was recorded (every student
      had consent, 00 section 14d) and the recording is at least 5 minutes long.
      This starts on its own when the recording is ready; the tutor presses
      **Show it** to use the draft;
-   - **From your notes**, always: the tutor jots a few lines for Kavi and
-     presses **Draft from my notes**.
+   - **From the lesson notes**, when there is no usable recording: the tutor
+     presses **Draft with Kavi** and Kavi drafts from the lesson notes they
+     wrote in the classroom or on the summary (00 section 16).
 5. The tutor opens the summary (SM-01), checks any draft, ticks what was
    covered (with **Got it** or **Needs more work**), and sets homework if any.
 6. The tutor presses **Complete** (SM-04):
@@ -56,7 +57,7 @@ and Mark as cancelled (05 LP-02).
 ```
 Lesson ends (CR-07) / Dashboard › Write summary / Lesson page › Write summary
   → SM-01 summary editor (per student)
-       ↳ SM-02 Draft with Kavi (recording or notes)
+       ↳ SM-02 Draft with Kavi (recording, or lesson notes when there is no usable recording)
        ↳ SM-03 Set homework (spec 10)
   → SM-04 Complete → CRS-08 Review changes → SM-05 Summary on the lesson page (Copy)
   → SM-06 Nobody came (Missed)
@@ -86,29 +87,35 @@ SH-13).
   summary and no course plan changes from this lesson unless the tutor turns
   on **Include Casey anyway**.
 
-**Draft with Kavi** bar (top of the form, Kavi mark). Two equal cards side by
-side (one above the other on phones); neither is the "real" route:
-- **From the recording** · "Kavi drafts from what was said in the lesson."
-  This route has no button: when a recorded lesson of 5 minutes or more ends,
-  Kavi starts drafting from the recording on its own, in the background (07
-  CR-07, 20 DM-24). The card shows where it has got to: **Kavi is listening
-  back to the lesson…**, then **Kavi's draft is ready.** with **Show it**, or
-  the failure line with **Try again** (SM-02). When it can't be used, the card
-  stays and says why: **This lesson wasn't recorded.** or **The recording is
-  too short (under 5 minutes).** The draft is tutor-only and fills nothing
-  until the tutor presses **Show it**.
-- **From your notes** · "Jot a few lines about what happened and Kavi turns
-  them into a summary." A text box **Notes for Kavi** (up to 1,000
-  characters), placeholder **e.g. Elimination method, Q1-6. Good on setting up
-  equations. Mixed up signs on Q3 and Q5.**, and **Draft from my notes**.
-  **Use my lesson notes** copies the private notes from the classroom into this
-  box so the tutor can edit them first. A line sits under the button at all
-  times: **Kavi uses this box to write What went well and What to work on,
-  which your students will see. Take out anything private before drafting.** After
-  copying, the copied text is highlighted until the tutor edits it or presses
-  Draft. Nothing from private notes is sent unless the tutor copies it here and
-  presses Draft. (Owner confirmation, HANDOFF.)
-- Before Kavi exists, the bar is not shown (see the Kavi block).
+**Draft with Kavi** card (top of the form, Kavi mark). One card, which shows
+the route that fits this lesson:
+- **Usable recording** (recorded with every student's consent, 5 minutes or
+  more): "Kavi drafts from what was said in the lesson." There is no button:
+  when the lesson ends, Kavi starts drafting from the recording on its own, in
+  the background (07 CR-07, 20 DM-24). The card shows where it has got to:
+  **Kavi is listening back to the lesson…**, then **Kavi's draft is ready.**
+  with **Show it**, or the failure line with **Try again** (SM-02). The draft
+  is tutor-only and fills nothing until the tutor presses **Show it**. The
+  recording draft never reads the lesson notes.
+- **No usable recording** (not recorded, under 5 minutes, the recording
+  didn't save, or the recording draft failed after its last try): the card
+  says why in one line (**This lesson wasn't recorded.**, **The recording is
+  too short (under 5 minutes).**, **The recording didn't save.**) and offers
+  **Draft with Kavi**, which drafts from the lesson notes (section 5). A line
+  sits beside the button at all times: **Kavi reads your lesson notes to draft
+  this. Check it before you complete it, because students see the summary.**
+  Under it, the first two lines of the lesson notes, greyed, so the tutor can
+  see what Kavi will read, with **Edit lesson notes** (opens section 5).
+- **No lesson notes and no usable recording:** **Draft with Kavi** is
+  disabled, with the helper line **Add a few lesson notes or record the
+  lesson, and Kavi can draft this for you.** and **Add lesson notes**, which
+  opens section 5 with the cursor in it. The button turns on as soon as the
+  lesson notes have text; nothing is sent until the tutor presses it.
+- Pressing **Draft with Kavi** is the tutor asking for the draft. Kavi never
+  fills anything before a press (**Show it**, **Draft with Kavi** or **Use
+  this**). Whatever Kavi drafts is tutor-only until the tutor edits it and
+  presses **Complete** (SM-04).
+- Before Kavi exists, the card is not shown (see the Kavi block).
 
 **Sections:**
 
@@ -140,10 +147,17 @@ side (one above the other on phones); neither is the "real" route:
      this lesson's students filled in. Homework already set in the classroom
      (07 CR-03) shows here as a card (title, due date). **No homework this
      time** is a quiet text button.
-5. **Private notes** (collapsed under **+ Add private notes**)
+5. **Lesson notes** (open when they have text; collapsed under **+ Add
+   lesson notes** when empty)
+   - The lesson's one set of lesson notes: the same text the tutor wrote in
+     the classroom (07 CR-03) or on the lesson page's Notes tab (05 LP-02).
+     Editing it here edits it there too; it saves as the tutor types. For a
+     group it is one note for the lesson, not one per student, and stays the
+     same on every student tab.
    - Private notes rule (00 section 16). Line: **Only you, your admins and the
      course's tutors can see these. Students never do.** They never appear in
-     Preview or Copy, and are never sent to Kavi for the summary.
+     Preview, Copy, the student's app or any notification. Kavi reads them
+     only when the tutor presses **Draft with Kavi** (above).
 
 **Validation on Complete:** at least one ticked item in **What we covered**,
 and something in either **What went well** or **What to work on**. Error at
@@ -157,14 +171,16 @@ at the bottom (16 R-10).
 
 | State | What the tutor sees |
 |---|---|
-| Recording still processing | The recording card: **Kavi is listening back to the lesson…** with a progress line. This starts on its own when the recording is ready (DM-24). The tutor can keep writing or draft from notes instead. Kavi's draft never overwrites what they typed. When ready: an inline **Kavi's draft is ready.** with **Show it** on the card (and a toast if they are elsewhere on the page). |
+| Recording still processing | The recording card: **Kavi is listening back to the lesson…** with a progress line. This starts on its own when the recording is ready (DM-24). The tutor can keep writing. Kavi's draft never overwrites what they typed. When ready: an inline **Kavi's draft is ready.** with **Show it** on the card (and a toast if they are elsewhere on the page). |
 | Recording draft shown | **Show it** fills the empty sections at once, each sliding open in turn (instant with reduced motion), with the same Kavi borders, labels and **Kavi suggests** rows as the Drafting row below. |
 | Lesson restarted (07 CR-06) | Any recording draft in progress or not yet shown is dropped, and the card goes back to **Kavi is listening back to the lesson…** once the restarted lesson ends. (Restart is only offered before a summary is started, 07 CR-06, so no shown draft is lost.) |
-| Drafting (from notes) | Text streams into empty sections, a few words at a time, in a busy region announced once when done (01 SH-12). Each section Kavi filled gets a faint Kavi-tinted border and a small **Kavi's draft** label. Sections the tutor already wrote are left alone; Kavi's version appears under them as **Kavi suggests** with **Use this**. |
+| Drafting (from lesson notes) | Text streams into empty sections, a few words at a time, in a busy region announced once when done (01 SH-12). Each section Kavi filled gets a faint Kavi-tinted border and a small **Kavi's draft** label. Sections the tutor already wrote are left alone; Kavi's version appears under them as **Kavi suggests** with **Use this**. |
 | Draft ready | The label stays on each Kavi section until the tutor edits it. Above the form: **Check Kavi's draft before completing. It can get things wrong.** with 👍 / 👎 and **Regenerate**. |
-| Too short | **The recording is under 5 minutes, which is too short for Kavi to draft from.** with **Draft from my notes instead**. |
-| Not enough notes | **Kavi needs a bit more to go on. Add a sentence about what you covered.** (notes under 20 characters) |
-| Failed | **Kavi couldn't draft this right now. Nothing you typed was changed.** with **Try again** and **Draft from my notes instead** (or **Write it myself**). |
+| Too short | **The recording is under 5 minutes, which is too short for Kavi to draft from.** The card then offers **Draft with Kavi** from the lesson notes (SM-01). |
+| No lesson notes | **Draft with Kavi** disabled, with **Add a few lesson notes or record the lesson, and Kavi can draft this for you.** and **Add lesson notes** (SM-01). |
+| Not enough notes | **Kavi needs a bit more to go on. Add a sentence about what you covered to your lesson notes.** with **Edit lesson notes** (lesson notes under 20 characters; nothing is sent). |
+| Failed (recording) | After the last try: **Kavi couldn't draft from the recording. Nothing you typed was changed.** The card then offers **Draft with Kavi** from the lesson notes, or the tutor writes it themselves. |
+| Failed (lesson notes) | **Kavi couldn't draft this right now. Nothing you typed was changed.** with **Try again**. |
 
 What Kavi fills:
 - **What we covered:** **Kavi's pick** suggestions, unticked (SM-01). It never
@@ -172,7 +188,7 @@ What Kavi fills:
 - **What went well** and **What to work on:** with examples from the lesson
   ("When you solved 3x + 2y = 12…").
 - It never sets **Got it** or **Needs more work**; those stay the tutor's call.
-- It never writes private notes and never sets homework. It can suggest
+- It never writes lesson notes and never sets homework. It can suggest
   homework: **Kavi suggests homework: 5 elimination questions** with **Use
   this**, which opens the homework dialog filled in for the tutor to confirm
   (10 HW-01).
@@ -180,15 +196,17 @@ What Kavi fills:
 ### Kavi
 
 - Input: the lesson transcript (only when every student consented and the
-  recording is at least 5 minutes), or the tutor's **Notes for Kavi**; plus the
+  recording is at least 5 minutes), or, when there is no usable recording and
+  the tutor presses **Draft with Kavi**, that lesson's lesson notes; plus the
   lesson's objectives and topics, the objectives ticked in the lesson, quick
-  check totals, and the last summary's What to work on. Never private notes
-  (00 section 16), unless the tutor copied text into Notes for Kavi.
+  check totals, and the last summary's What to work on. Never student notes,
+  and never another lesson's notes (00 section 16).
 - Output: drafts of What went well and What to work on, **Kavi's pick**
   suggestions for What we covered, and at most one homework suggestion, all in
   SM-01.
 - Failure state: preparing (**Kavi is listening back to the lesson…**), too
-  short (**The recording is under 5 minutes…**), not enough notes, couldn't
+  short (**The recording is under 5 minutes…**), no lesson notes (button
+  disabled with its helper line), not enough notes, couldn't
   generate (**Kavi couldn't draft this right now. Nothing you typed was
   changed.**), as in the SM-02 table.
 - What the tutor must confirm: ticking each Kavi's pick, editing or keeping the
@@ -207,7 +225,7 @@ lesson** on the next one.
 ## SM-04 · Preview and Complete
 
 **Preview** opens a dialog showing exactly what the student sees in their app
-(spec 09). Private notes and Kavi's unticked picks never appear. Buttons
+(spec 09). Lesson notes and Kavi's unticked picks never appear. Buttons
 **Back to editing** · **Complete**.
 
 **Complete** has no extra "are you sure" step; Preview is there for that, and
@@ -317,7 +335,7 @@ a lesson covered by another summary.
 |---|---|---|---|---|
 | Write, edit, complete, No summary needed | Yes | Yes (including an admin who led the lesson, 07 CR-09) | No | No |
 | Accept course plan changes (CRS-08) | Yes | Yes | No | No |
-| See private notes | Yes | Yes | Yes (00 section 16) | No |
+| See and edit lesson notes | Yes | Yes | See only (00 section 16) | No |
 | Read the summary | Yes | Yes | Yes | Their own, in the app |
 
 ## Data needed (for the build)
@@ -326,11 +344,12 @@ Tables are in `20-data-model.md`: lesson summaries DM-10, topic status proposals
 
 - Summary per lesson per student: sections, ticked topics with Got it / Needs
   more work, which ticks came from the lesson, Kavi's picks and whether each
-  was accepted, homework link, private notes, completed and edited times, the
-  No summary needed reason.
-- Notes for Kavi (kept with the summary, tutor-only).
+  was accepted, homework link, completed and edited times, the No summary
+  needed reason.
+- Lesson notes: one per lesson, shared with the classroom (07 CR-03) and the
+  lesson page (05 LP-02), not stored with the summary (20 DM-10).
 - Kavi draft from the recording transcript (today's recap processing) or from
-  Notes for Kavi, with which sections Kavi wrote.
+  the lesson notes, with which route and which sections Kavi wrote.
 - Course plan status proposals for CRS-08 (04 Data needed).
 - In-app notification and push to the student, held until the undo window
   closes.

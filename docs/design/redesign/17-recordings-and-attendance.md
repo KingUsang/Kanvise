@@ -155,7 +155,7 @@ Under the table, one line about the recording when it isn't a plain Ready:
 - Switched off: **Not recorded: recording is off for your account.** with
   **Change** (12 CFG-L) for independent tutors and admins.
 - Failed: **The recording didn't save. Kavi can still draft the summary from
-  your notes (08).** There is no retry: the audio is gone.
+  your lesson notes (08).** There is no retry: the audio is gone.
 - Ready: **Kept until 25 Feb (90 days).** from 12 CFG-L **Keep recordings
   for**.
 

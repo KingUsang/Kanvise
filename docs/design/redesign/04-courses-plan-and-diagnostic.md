@@ -147,6 +147,11 @@ Title **People** · subtitle **Add students and tutors to the course.**
 **Continue** validates. Errors: **Choose at least one student.** · for admins
 **Choose at least one tutor.**
 
+**Billing (not built).** The wizard has no price field. Billing is out of the
+build (00 section 14). When it exists, the course price goes in this step,
+under the students, as 13 BL-02 says, and on the course page under **Actions ›
+Pricing** (20 DM-31).
+
 ### CW-3 · Review and create
 
 Title **Review and create** · subtitle **Check the details before creating.**

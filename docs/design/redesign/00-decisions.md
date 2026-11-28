@@ -132,9 +132,11 @@ below.
   system.
 - Sections: **What we covered** (topics, which tick off on the course plan),
   **What went well**, **What to work on** (with examples), **Homework**, and
-  **Private notes** (tutor side only; see "One rule for private notes").
+  **Lesson notes** (tutor side only; the same lesson notes the tutor writes in
+  the classroom; see "One rule for private notes").
 - The tutor writes it, or uses **Draft with Kavi**, which drafts it from the
-  lesson recording or from the tutor's notes. The tutor edits and completes it.
+  lesson recording or, when there is no usable recording, from the lesson
+  notes. The tutor edits and completes it.
 - The student sees it only after the tutor completes it.
 - **No summary needed** closes a lesson without a summary (for example a
   lesson that was cut short), with an optional reason. Nothing is shown to the
@@ -286,9 +288,27 @@ them.
 Kavi's lines never joke or praise for nothing ("Nice.", "Got it!"). They say
 what happens next.
 
-## 14. Billing (a proposal, on hold)
+## 14. Billing (out of the build; a proposal)
 
-Billing is a proposal only, built after the payments hold (spec 13).
+**Billing is out of the build.** Spec 13 is a proposal only, built after the
+payments hold. Owner decision: leave billing out for now, but design with it
+in mind. So the build leaves room for it without building any of it:
+
+- **A price per course:** the course wizard and course page have no price
+  field now. When billing exists, the price goes on the course page under
+  **Actions › Pricing** and as an extra part of the wizard's People step (04
+  CW-2), as 13 BL-02 says.
+- **Who pays, on the student:** Add student and Edit have no payer field now.
+  When billing exists, **Who pays?** goes after Course in Add student (06
+  STU-03) and on Edit (06 STU-07), as 13 BL-03 says.
+- **Completed lessons counted per student per course:** already true, because
+  attendance (17) and lesson statuses (05) are stored per student per lesson.
+  Billing will count from them; nothing extra is stored now.
+- **A Billing item in Settings:** hidden until billing exists (12 Layout).
+- In the data model these are marked **reserved for billing, not built**, with
+  no tables or columns created now (20 DM-31).
+
+What the proposal says, for later:
 
 - A **Who pays?** choice on each student: **the student** or an **other
   contact** (name, email, phone). A contact, not an account. An other contact
@@ -351,7 +371,7 @@ Billing is a proposal only, built after the payments hold (spec 13).
   is the tutor saying consent was given. Confirmed by the owner.
 - A lesson is recorded only when every student in it has consent recorded.
   Otherwise it runs without a recording, and Kavi can only draft the summary
-  from the tutor's notes.
+  from the lesson notes.
 - Everyone sees that a lesson is being recorded when they join.
 
 ## 14e. Classroom
@@ -392,15 +412,35 @@ Billing is a proposal only, built after the payments hold (spec 13).
 
 ## 16. One rule for private notes
 
-Private notes (on a lesson, on a lesson summary, or on a student) follow one
-rule everywhere:
+There are only two kinds of private note:
+
+- **Student notes** (06 STU-06): notes about the student overall, on the
+  student page, not tied to one lesson.
+- **Lesson notes**: one note per lesson. The tutor writes it in the classroom
+  (Lesson tools **Notes**, 07 CR-03) or on the lesson page's **Notes** tab (05
+  LP-02), and the same text is the **Lesson notes** section of the lesson
+  summary (08 SM-01). It is one record shown in those places, not separate
+  notes, so whatever the tutor jots during the lesson is already there when
+  they write the summary.
+
+Both follow one rule everywhere:
 
 - They are visible **only** to the tutor who wrote them, the admins of the
   agency, and the other tutors on the same course.
-- They are **never** visible to students.
-- They are **never** sent to Kavi in this version, for any output, including
-  tutor-only suggestions. Kavi reads only the separate **Notes for Kavi** box
-  (08 SM-01), and only what the tutor types or copies into it on purpose.
+- They are **never** visible to students, and **never** appear in any
+  notification, email, Preview, Copy, export or student view.
+- **Student notes are never sent to Kavi**, for any output.
+- **Lesson notes are sent to Kavi only to draft that lesson's summary**, and
+  only when the tutor presses **Draft with Kavi** (08 SM-01). They are never
+  sent for any other output (lesson plans, suggestions, Ask Kavi, homework,
+  quizzes) and never with the recording draft, which starts on its own.
+
+**Owner decision** (replaces the earlier rule that private notes were never
+sent to Kavi and that Kavi read only a separate **Notes for Kavi** box): the
+**Notes for Kavi** box, **Draft from my notes** and **Use my lesson notes**
+are removed. Kavi drafts from the lesson notes the tutor already wrote, the
+draft stays tutor-only until the tutor edits it and presses **Complete**, and
+a line by the action says so (08 SM-01).
 
 Every spec refers to this rule ("private notes rule, 00 section 16") instead of
 writing its own version. The line shown beside a notes field is: **Only you,
@@ -413,7 +453,8 @@ shape:
 
 ```
 ### Kavi
-- Input: what Kavi reads (never private notes for student-facing output).
+- Input: what Kavi reads (never student notes; lesson notes only for that
+  lesson's summary draft, section 16).
 - Output: what Kavi drafts, and where it appears.
 - Failure state: the honest copy shown when Kavi is preparing, has not enough
   to go on, or couldn't generate.
@@ -431,8 +472,9 @@ Rules for every spec:
   one.
 - Every screen works before Kavi exists. The **Without Kavi** line is a
   working, designed path, not an error message.
-- Private notes are never sent to Kavi in this version, even for tutor-only
-  output. Kavi reads only the separate **Notes for Kavi** box (08 SM-01).
+- Student notes are never sent to Kavi. Lesson notes are sent only to draft
+  that lesson's summary, when the tutor presses **Draft with Kavi** (section
+  16, 08 SM-01).
 - Every Kavi draft has 👍 / 👎; 👎 asks one optional **Why not?** (20 DM-27).
 - Kavi is built last. Its service (providers, prompts, streaming, background
   jobs, safety rules, what the providers keep, cost and the list of every Kavi
@@ -485,6 +527,13 @@ the matching build ticket starts.
   offered only when the tutor is already in the lesson (section 14b, 07 CR-09).
 - The Gemini API terms on users under 18 are not a launch blocker; the owner
   accepted them for launch (20 DM-26).
+- Two kinds of private note, student notes and lesson notes. Lesson notes may
+  be sent to Kavi only to draft that lesson's summary, when the tutor presses
+  **Draft with Kavi**; student notes never are. Neither appears in any
+  notification, email or student view (section 16). This replaces the earlier
+  rule and the **Notes for Kavi** box.
+- Billing is out of the build, designed in only as reserved room (section 14,
+  20 DM-31).
 
 ## Open items
 
