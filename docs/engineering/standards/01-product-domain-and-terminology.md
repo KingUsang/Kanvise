@@ -7,11 +7,10 @@
 This document defines the product concepts and language used by new Kanvise
 work. Legacy implementation names do not redefine the product model.
 
-## Proposed amendment: redesign wording (2026-11-28)
+## Approved amendment: redesign wording (2026-11-28)
 
-**Status of this amendment:** Proposed with redesign build step 1 (branch
-`redesign/01-app-shell`). It is approved when the owner approves or merges
-that pull request. Until then the earlier Approved text still applies.
+**Status of this amendment:** Approved by the owner on 28 Nov 2026, with
+redesign build step 1 (branch `redesign/01-app-shell`).
 
 **Source:** `docs/design/redesign/00-decisions.md` section 18 (standards and
 ledger changes), sections 2 and 13a. Ledger rows: DOM-001, DOM-002, DOM-005
@@ -60,7 +59,7 @@ Keep "tutoring account" out of customer-facing text. Choose wording by context:
 4. Use neutral wording ("your learners", "your classes") on owner pages that
    both Independent Tutors and agency Admins see.
 
-Proposed amendment (2026-11-28, see the top of this document): in items 3
+Approved amendment (2026-11-28, see the top of this document): in items 3
 and 4, read "student-facing", "your students" and "your courses". In the UI,
 "tutoring account" appears only on the account switcher, where it literally
 means the account.
@@ -80,7 +79,7 @@ The product roles are:
 
 - **Admin:** manages a tutoring account and may also teach.
 - **Tutor:** teaches within a tutoring account according to their assignments.
-- **Learner:** receives tutoring and completes learning activities. Proposed
+- **Learner:** receives tutoring and completes learning activities. Approved
   amendment (2026-11-28): user-facing text calls this role **Student**.
   Internal names such as the `learner` role value may stay.
 
@@ -106,7 +105,7 @@ New product surfaces must use these terms. The persistence model may continue
 to use `programme`, `course`, and `live_class` behind an explicit adapter until
 their migration is approved.
 
-Proposed amendment (2026-11-28): in the UI, Class, Subject and Session are
+Approved amendment (2026-11-28): in the UI, Class, Subject and Session are
 replaced by **Course** and **Lesson**:
 
 - **Course:** an ongoing teaching relationship with one subject, one or more
@@ -141,7 +140,7 @@ special tutor–learner relationship entity.
 - **Quiz:** simple objective/MCQ work inside a tutoring workspace. It may be
   timed, scheduled, subject-based, or attempt-limited.
 - **Assignment:** instruction-based work submitted by a Learner for review.
-  Proposed amendment (2026-11-28): user-facing text calls this **Homework**.
+  Approved amendment (2026-11-28): user-facing text calls this **Homework**.
   Internal names such as `assignments` may stay.
 
 `Mock`, `mock exam`, and `mock examination` are not product concepts. An

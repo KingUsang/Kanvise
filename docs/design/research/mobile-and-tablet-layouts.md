@@ -95,7 +95,10 @@ Recommendation:
 3. Students arrives for agency tutors in step 3. Lessons arrives in step 4. Until then those pages are reachable only if they exist, and nothing disabled is shown.
 4. Keep Calendar and Lessons as separate tabs (owner decision). A bar of Today, Calendar, Lessons, Students and More has 5 items, which is the upper limit for a navigation bar (19).
 
-Owner question for `pr-summary.md`: when Lessons ships, the bar will have five items for admins and tutors. Should Students move into More, or does the five-item bar stay? This does not change any owner decision today.
+Owner decision (28 Nov 2026):
+
+- When Lessons ships in step 4, the bar keeps five items: Today, Calendar, Lessons, Students, More.
+- A bottom bar tab is added only in the release that ships its page.
 
 ## Recommendations for step 1
 
@@ -111,6 +114,6 @@ No code changes were made from this research. The existing shell already matches
 - Step 3 (Students, people pages): use cards on phones with name, one or two key facts and a status. Lock the first column and show sideways scroll if a table must stay (8). Use list and detail on tablets.
 - Step 4 (Lessons): the status filter row scrolls sideways in Bobbin and is cut mid-label (`bobbin-admin-768-lessons.png`). Use a filter sheet on phones. Lesson cards show date, who and status.
 - Step 5 (Calendar): copy the shape of Bobbin's phone calendar: Day, Week and Month, a month grid, and a selected-day list (18).
-- Sheets (primitive): support the Back gesture closing a sheet (7). The current `Sheet` does not. This needs history handling, so it is left for a later step. Also add an unsaved-changes confirm when a sheet with a form is swiped away (4).
+- Sheets (primitive): support the Back gesture closing a sheet (7). The current `Sheet` does not. Owner decision (28 Nov 2026): sheets close on the phone Back gesture, to be built in step 2. It needs history handling. Also add an unsaved-changes confirm when a sheet with a form is swiped away (4).
 - Wizards: one step per screen on phones, no second dialog on top (7).
 - Real-device check: keyboard behaviour with sticky actions cannot be tested headless.

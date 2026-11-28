@@ -10,13 +10,10 @@ applies to Admin, Tutor, Learner, public, auth, and live-class experiences.
 
 ## Changes
 
-**2026-11-28: location token and redesign wording (proposed).**
+**2026-11-28: location token and redesign wording (approved).**
 
-- **Status:** Proposed with redesign build step 1 (branch
-  `redesign/01-app-shell`). It is approved when the owner approves or merges
-  that pull request. If the owner rejects it, the earlier Approved text
-  (indigo for selected navigation, and the earlier product term list)
-  applies again.
+- **Status:** Approved by the owner on 28 Nov 2026, with redesign build step 1
+  (branch `redesign/01-app-shell`).
 - **Source:** `docs/design/redesign/00-decisions.md` section 18 (standards
   and ledger changes) and sections 11 and 13a; `docs/design/redesign/01-app-shell.md`
   SH-12 (contrast) and SH-15 (colour rule). Ledger row UI-003.
@@ -69,10 +66,12 @@ Core roles are:
 - outline/divider;
 - primary action and links;
 - location (orange, "you are here"): selected navigation and the current
-  place (proposed 2026-11-28, see Changes);
+  place (approved 2026-11-28, see Changes);
 - accent/eyebrow;
 - success, warning, danger, and information, each with surface, border, text,
   and icon roles; and
+- search highlight (`--dashboard-highlight`, #fbe9a6): the pale yellow behind
+  matched text in search results (approved 2026-11-28); and
 - focus ring, disabled, scrim, and selected states.
 
 Colour communicates emphasis but never carries meaning alone. The canonical
@@ -82,7 +81,7 @@ an alternate page-title colour. Accent brown is for restrained
 eyebrows/highlights, not competing primary buttons. This resolves the current
 black-versus-blue header drift.
 
-The location role (proposed 2026-11-28, see Changes) is an orange token that
+The location role (approved 2026-11-28, see Changes) is an orange token that
 means "you are here" and nothing else. It is used only for:
 
 - the active sidebar item's left bar;
@@ -227,7 +226,7 @@ not a later audit.
 
 ## Copy and localization readiness
 
-Use these product terms in user-facing text (proposed 2026-11-28, see
+Use these product terms in user-facing text (approved 2026-11-28, see
 Changes): Independent Tutor, tutoring agency, Admin, Tutor, Student, Course,
 Lesson, Homework, Quiz, and Lesson summary. Do not use learner, live class,
 class, session, assignment, report (for what a tutor writes after a lesson),
