@@ -20,8 +20,12 @@ export type ShellData = {
   account: { id: string | null; name: string; logoUrl: string | null } | null
   /** Every account this person belongs to; the switcher shows with two or more. */
   accounts: ShellAccount[]
-  /** "Needs you" counts. Null when unknown or failed: nothing is shown. */
-  badges: { ungradedQuizzes: number | null }
+  /**
+   * "Needs you" counts. Null while loading: nothing is shown. When the count
+   * could not load, `ungradedQuizzesUnavailable` is true and the sidebar shows
+   * an "unavailable" marker instead of hiding the badge (DEV-QUIZ-034).
+   */
+  badges: { ungradedQuizzes: number | null; ungradedQuizzesUnavailable?: boolean }
   /** Capabilities still loading: the nav shows skeleton rows. */
   loading?: boolean
 }

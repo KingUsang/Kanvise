@@ -122,12 +122,13 @@ function AccountCard({ data, r, defaultOpen, onSwitch }: {
   )
 }
 
-function NavLink({ item, active, r, tooltips, badge, onNavigate }: {
+function NavLink({ item, active, r, tooltips, badge, unavailable = false, onNavigate }: {
   item: DashboardNavItem
   active: boolean
   r: RailClasses
   tooltips: boolean
   badge: number | null
+  unavailable?: boolean
   onNavigate?: () => void
 }) {
   const Icon = navIcons[item.icon]
@@ -154,6 +155,12 @@ function NavLink({ item, active, r, tooltips, badge, onNavigate }: {
       <span className={cx('min-w-0 flex-1 truncate', r.srInRail)}>{item.label}</span>
       {item.badge === 'ungradedQuizzes' ? <CountBadge count={count} label={`${count} to mark`} className={r.hideInRail} /> : null}
       {item.badge === 'ungradedQuizzes' && count > 0 ? <span className={cx('sr-only', r.onlyInRail)}>{`, ${count} to mark`}</span> : null}
+      {item.badge === 'ungradedQuizzes' && unavailable ? (
+        <>
+          <span data-badge-unavailable="" aria-hidden="true" title="Marking count unavailable" className={cx('inline-flex min-w-5 items-center justify-center rounded-full border border-dashboard-outline-strong px-1.5 text-dashboard-secondary font-bold leading-5 text-dashboard-muted', r.hideInRail)}>?</span>
+          <span className="sr-only">, marking count unavailable</span>
+        </>
+      ) : null}
     </Link>
   )
   if (!tooltips) return link
@@ -250,6 +257,7 @@ export function SidebarContent({
                       r={r}
                       tooltips={tooltips}
                       badge={item.badge === 'ungradedQuizzes' ? data.badges.ungradedQuizzes : null}
+                      unavailable={item.badge === 'ungradedQuizzes' && data.badges.ungradedQuizzesUnavailable === true}
                       onNavigate={onNavigate}
                     />
                   </li>

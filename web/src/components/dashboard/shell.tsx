@@ -157,7 +157,10 @@ export function DashboardShell({
       ? { id: selected?.school_id ?? null, name: accountName, logoUrl: session?.account.logo_url ?? null }
       : null,
     accounts,
-    badges: { ungradedQuizzes: ungraded.isSuccess ? ungraded.data : null },
+    badges: {
+      ungradedQuizzes: ungraded.isSuccess ? ungraded.data : null,
+      ungradedQuizzesUnavailable: ungraded.isError,
+    },
     loading,
   };
 

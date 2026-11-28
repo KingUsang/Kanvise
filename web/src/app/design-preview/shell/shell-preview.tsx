@@ -63,7 +63,7 @@ function fixture(options: PreviewOptions): ShellData {
   const longAgency = 'The Northern Lights Science and Mathematics Students Academy'
   const agency = options.long ? longAgency : 'Science Students Academy'
   const badgeCount = options.badge === 'failed' ? null : Number(options.badge ?? 3)
-  const badges = { ungradedQuizzes: Number.isFinite(badgeCount) ? badgeCount : null }
+  const badges = { ungradedQuizzes: Number.isFinite(badgeCount) ? badgeCount : null, ungradedQuizzesUnavailable: options.badge === 'failed' }
   if (options.role === 'tutor') {
     const capabilities: DashboardCapabilities = { isAdmin: false, isTutor: true, organisationType: 'centre' }
     return {

@@ -86,9 +86,16 @@ describe('ShellFrame', () => {
     expect(sidebar().getByRole('link', { name: /Quizzes.*3 to mark/ })).toBeInTheDocument()
   })
 
-  it('shows nothing, not a question mark, when the count failed', () => {
+  it('shows nothing while the count is still loading', () => {
     renderShell({ data: adminData({ badges: { ungradedQuizzes: null } }) })
-    expect(sidebar().getByRole('link', { name: 'Quizzes' })).not.toHaveTextContent('?')
+    const link = sidebar().getByRole('link', { name: 'Quizzes' })
+    expect(link).not.toHaveTextContent('?')
+    expect(link).not.toHaveTextContent('unavailable')
+  })
+
+  it('shows an unavailable marker when the count could not load (DEV-QUIZ-034)', () => {
+    renderShell({ data: adminData({ badges: { ungradedQuizzes: null, ungradedQuizzesUnavailable: true } }) })
+    expect(sidebar().getByRole('link', { name: /Quizzes.*marking count unavailable/ })).toBeInTheDocument()
   })
 
   it('toggles the collapse button and remembers it on this device', () => {
