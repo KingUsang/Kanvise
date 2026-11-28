@@ -58,6 +58,11 @@ for (const role of ['admin', 'tutor', 'independent']) {
     [`${role}-%w-undo-toast`, shell(`${q}&toast=undo`), all],
   )
 }
+async function openStackedDialog(page) {
+  await page.getByRole('button', { name: 'Wizard dialog' }).click()
+  await page.getByLabel('Wizard course name').fill('Year 9 Maths')
+  await page.getByRole('button', { name: 'Add a student' }).click()
+}
 shots.push(
   ['admin-%w-switcher', shell('role=admin&open=switcher'), [768, 1280]],
   ['admin-%w-switcher', shell('role=admin&open=more'), [360], openPhoneSwitcher],
@@ -81,6 +86,7 @@ shots.push(
   ['admin-%w-conflict', shell('role=admin&page=conflict'), [360, 1280]],
   ['admin-%w-long-names', shell('role=admin&long=1&read=1'), all],
   ['catalog-%w', '/design-system', [360, 1280], null, { fullPage: true }],
+  ['catalog-%w-stacked-dialog', '/design-system', [360, 1280], openStackedDialog],
 )
 for (const state of ['loading', 'confirm', 'success', 'undone', 'expired', 'error']) {
   shots.push([`student-%w-unsubscribe-${state}`, `/unsubscribe?preview=${state}&label=lesson%20reminder`, all])

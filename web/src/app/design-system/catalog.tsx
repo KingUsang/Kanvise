@@ -156,6 +156,7 @@ export function DesignSystemCatalog() {
   const page = parsePageParam(searchParams.get('page'))
   const [dialog, setDialog] = useState<'none' | 'form' | 'centred' | 'wizard' | 'alert' | 'sheet' | 'side'>('none')
   const [dirty, setDirty] = useState(false)
+  const [nested, setNested] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [tab, setTab] = useState('overview')
   const [step, setStep] = useState(0)
@@ -166,6 +167,7 @@ export function DesignSystemCatalog() {
   const close = () => {
     setDialog('none')
     setDirty(false)
+    setNested(false)
   }
 
   return (
@@ -466,7 +468,20 @@ export function DesignSystemCatalog() {
       >
         <WizardStep stepKey={step} title={wizardSteps[step]} direction={direction}>
           <p className="text-dashboard-small text-dashboard-muted">Step {step + 1} of {wizardSteps.length}.</p>
+          <Field label="Wizard course name" hint="Typed text is kept while the nested dialog is open.">
+            <input className={fieldControlClassName} aria-label="Wizard course name" defaultValue="" />
+          </Field>
+          <Button variant="quiet" className="mt-3" onClick={() => setNested(true)}>Add a student</Button>
         </WizardStep>
+      </ModalDialog>
+      <ModalDialog
+        open={dialog === 'wizard' && nested}
+        onClose={() => setNested(false)}
+        title="Add student"
+        subtitle="Add a student to your account and link them to a paying client."
+        footer={<><Button variant="outline" onClick={() => setNested(false)}>Cancel</Button><Button onClick={() => setNested(false)}>Add student</Button></>}
+      >
+        <Field label="First name"><input className={fieldControlClassName} data-autofocus="" /></Field>
       </ModalDialog>
       <AlertDialog open={dialog === 'alert'} title="Delete this lesson?" description="Students will no longer see it. This can't be undone." confirmLabel="Delete lesson" onCancel={close} onConfirm={close} />
       <Sheet open={dialog === 'sheet'} onClose={close} title="Filter" footer={<Button onClick={close}>Show results</Button>}>

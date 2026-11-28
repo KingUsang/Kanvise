@@ -52,3 +52,7 @@ Run with `step-01-checks.mjs` on 12 pages: the shell for each role, long names, 
 | At most one fixed element above the bottom bar | Pass: none on ordinary pages, one (the toast) while an Undo toast shows. |
 | Keyboard never covers the focused field | Not testable in headless Chromium. The bottom bar hides while the on-screen keyboard is open (FEAT-004). Needs the real-device check. |
 | Accessibility scan (axe-core 4, WCAG 2.1 A and AA plus best practice) at 360 and 1280 | No violations on any of the 12 pages. |
+
+## Review
+
+See REVIEW.md for the design and wording review. All screenshots and compare/ images were re-shot after the review fixes (36px desktop sidebar rows, stacked dialogs: catalog-360-stacked-dialog.png and catalog-1280-stacked-dialog.png).

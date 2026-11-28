@@ -138,7 +138,7 @@ function NavLink({ item, active, r, tooltips, badge, onNavigate }: {
       aria-current={active ? 'page' : undefined}
       onClick={onNavigate}
       className={cx(
-        'relative flex min-h-11 w-full items-center gap-3 rounded-dashboard-control px-3 text-dashboard-small lg:min-h-10',
+        'relative flex min-h-11 w-full items-center gap-3 rounded-dashboard-control px-3 text-dashboard-small lg:min-h-9',
         focusRing,
         active
           ? 'bg-dashboard-surface-hover font-semibold text-dashboard-foreground'

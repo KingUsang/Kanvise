@@ -970,3 +970,10 @@ html {
     transition: none !important;
   }
 }
+
+/* A dialog covered by another dialog stays mounted (typed data kept) but is hidden, so only one scrim shows. */
+[data-covered] {
+  visibility: hidden;
+  background: transparent !important;
+  backdrop-filter: none !important;
+}

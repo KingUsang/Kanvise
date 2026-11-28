@@ -37,12 +37,30 @@ export function inertSiblings(root: HTMLElement, body: HTMLElement = document.bo
 
 /** Mounted dialogs, oldest first. Only the last one handles Escape and Tab. */
 const dialogStack: symbol[] = [];
-export function pushDialog(token: symbol) {
+const dialogRoots = new Map<symbol, HTMLElement>();
+/**
+ * Only the top dialog is visible, with a single scrim (as in Bobbin, where a
+ * dialog opened from a wizard replaces it on screen). Covered dialogs stay
+ * mounted, hidden with `data-covered`, so typed data and focus targets survive.
+ */
+function syncCovered() {
+  dialogStack.forEach((token, index) => {
+    const root = dialogRoots.get(token);
+    if (!root) return;
+    if (index < dialogStack.length - 1) root.setAttribute("data-covered", "");
+    else root.removeAttribute("data-covered");
+  });
+}
+export function pushDialog(token: symbol, root?: HTMLElement | null) {
   dialogStack.push(token);
+  if (root) dialogRoots.set(token, root);
+  syncCovered();
 }
 export function removeDialog(token: symbol) {
   const index = dialogStack.indexOf(token);
   if (index >= 0) dialogStack.splice(index, 1);
+  dialogRoots.delete(token);
+  syncCovered();
 }
 export function isTopDialog(token: symbol) {
   return dialogStack[dialogStack.length - 1] === token;
@@ -80,7 +98,7 @@ export function Dialog({ label, labelledBy, describedBy, onClose, dismissOnBackd
 
   useEffect(() => {
     const token = Symbol("dialog");
-    pushDialog(token);
+    pushDialog(token, rootRef.current);
     const previous = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     const previousOverflow = document.body.style.overflow;
