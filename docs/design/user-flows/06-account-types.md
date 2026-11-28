@@ -113,12 +113,11 @@ Things to notice:
 
 ## 6. Growing from solo to team
 
-![Solo to team](diagrams/19-solo-to-team.png)
-
-There is no switch to flip. A solo tutor presses **Add a colleague** (Settings › How you
-teach) and invites the first person. The team turns on by itself, and turns off by
-itself when nobody else is left. Nothing is deleted either way (owner decision,
-28 Nov: the switch was redundant).
+There is no upgrade path (owner decision, 28 Nov). The account type is chosen once,
+in onboarding, and cannot change. Someone who wants an agency creates a separate
+account for it, and uses the account switcher (01 SH-07) to move between the two.
+Onboarding says so under the question. It is revisited only if people ask for it
+(OQ-17).
 
 ## 7. The admin who also teaches
 
@@ -143,7 +142,6 @@ Applied on this branch (spec checker passes):
 - `12` CFG-P: the **I teach too** toggle is gone. CFG-N and the Data section follow.
 - `07` CR-09: the dialog says to switch to your Tutor role.
 - `02`, `04`, `05`, `17`, `18`, `20`: every mention of **I teach too** reworded.
-- `12` CFG-T: the confirm dialog when moving to a team (diagram 19) is still to add.
 
 ## 10. Other things the atlas update added
 

@@ -41,7 +41,7 @@ Kavi.
     number (New), `supabase_auth_id` (empty for a student who hasn't accepted
     or has no email, F-01), `is_active`.
   - `schools`: account name, logo, `account_type` (`centre` = agency,
-    `independent`; set by the people on the account, not by a setting), timezone (New), business details (12 CFG-A).
+    `independent`; chosen once at sign-up and never changed), timezone (New), business details (12 CFG-A).
   - `account_memberships`: person, account, role (`admin`, `tutor`,
     `student`), status (invited, active, removed), joined and removed times,
     and for admins **`can_teach`** (New, default false). One membership per

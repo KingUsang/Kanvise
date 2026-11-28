@@ -1,7 +1,7 @@
 # All the diagrams in one place
 
 Every diagram is a PNG in `diagrams/`, and the same pictures are in one file,
-`diagrams/all-diagrams.pdf` (30 pages, in the order below). The editable source of each
+`diagrams/all-diagrams.pdf` (29 pages, in the order below). The editable source of each
 is a text file in `diagrams/src/`.
 
 ## The whole product
@@ -68,9 +68,6 @@ is a text file in `diagrams/src/`.
 
 ### 18 · Agency, start to finish
 ![18](diagrams/18-agency-journey.png)
-
-### 19 · Growing from solo to team (no switch, the team follows the people)
-![19](diagrams/19-solo-to-team.png)
 
 ### 20 · An admin who also teaches (Add me as a tutor, Switch role)
 ![20](diagrams/20-dual-role.png)

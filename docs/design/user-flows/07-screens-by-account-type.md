@@ -18,7 +18,7 @@ Two switches decide almost everything on screen:
 So an independent tutor needs no special screens. They get the admin's powers
 (create courses, add students, settings, data) minus everything that only makes
 sense when there is a team (Tutors page, tutor columns and filters, and so on).
-When they invite their first colleague, the team turns on by itself and those items appear.
+An independent account never gets them; the account type is chosen once.
 
 The "model" I kept calling D-22 is just this: **roles plus a team switch, instead of
 separate account types.** The only new thing for people is **Switch role** in the
@@ -96,7 +96,7 @@ exactly as a tutor sees them.
 | Student notes | Yes | Yes | Students on their courses | Never |
 | **Tutors** page, tutor page, remove and reassign | Hidden | Yes | No | No |
 | **Team** page, add team member | Hidden | Yes (not themselves, not the last admin) | No | No |
-| Invite tutors | Not available until team is on | Yes | No | No |
+| Invite tutors | Not available (independent accounts have no team) | Yes | No | No |
 
 ## 7. Work and library (10, 11, 15, 17)
 
@@ -131,10 +131,11 @@ exactly as a tutor sees them.
 | Billing (hidden until it exists) | Yes | Yes | No |
 | **Add me as a tutor** (Tutors page, setup step) | Not needed, already both roles | Yes, once | Not shown |
 
-## 10. What turns on when team goes on
+## 10. What only agencies have
 
-Everything listed as **Hidden** for Independent is controlled by one fact: the team
-is on. It turns on by itself when the owner invites the first colleague (Settings › How you teach › **Add a colleague**), and adds:
+Everything listed as **Hidden** for Independent belongs to agency accounts only. The
+account type is chosen once, in onboarding, and cannot change (owner decision, 28 Nov).
+An agency has:
 
 - the Tutors and Team pages,
 - the Tutor column and filter on lists, the calendar and recordings,
@@ -147,8 +148,7 @@ is on. It turns on by itself when the owner invites the first colleague (Setting
 - invitations for tutors and team members,
 - concerns going to admins instead of Kanvise support.
 
-The owner's own courses and students stay as they were. Nothing is deleted.
-It turns off by itself when nobody else is left (diagram `19-solo-to-team.png`).
+A tutor who wants an agency creates a separate account for it.
 
 ## 11. Gaps this exercise found
 

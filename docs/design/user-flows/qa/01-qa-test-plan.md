@@ -302,7 +302,7 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-TM-010 | Discover the Tutor role (D-02) | Open Join as an admin dialog | Line says to switch to your Tutor role; link to Add me as a tutor if not yet one; no "other account" text | P1 | E2E |
 | TC-TM-011 | Invite Again | After removal | Courses not restored | P1 | E2E |
 | TC-TM-012 | Admin dashboard | `adm` opens dashboard | Admin rows, Mine only toggle, Live now refreshes every 15 s | P1 | E2E |
-| TC-TM-013 | Team turns on | Solo owner presses Add a colleague and invites someone | Team on at once: Tutors and Team pages, Switch role, label TUTORING AGENCY; courses and name unchanged | P1 | E2E |
+| TC-TM-013 | Account type is fixed | Independent tutor looks for a way to add colleagues or switch to a team | No such control anywhere; Tutors and Team never shown; onboarding states it cannot be changed | P1 | E2E |
 | TC-TM-014 | Team removal | Remove a team member | Their own row has no Remove; teaching admin goes through Reassign | P1 | E2E |
 | TC-TM-015 | Decline an invitation (D-23) | Existing user presses Decline | Admin sees "Invite declined"; Invite again works | P1 | E2E |
 | TC-TM-016 | Withdrawn and used links | Open a withdrawn link, then an accepted one | "This invitation was withdrawn." and "...already been accepted." | P1 | API |
@@ -311,7 +311,7 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-TM-019 | Role in permissions | Tutor role calls an admin-only endpoint | Refused, even though the same login is an admin | P0 | API |
 | TC-TM-020 | Link in the other role | Admin in Tutor view opens a push about an admin-only item | Switches to Admin with a toast; if the person holds neither, Not available | P1 | E2E |
 | TC-TM-021 | Stop teaching | Admin with the Admin chip row presses Stop teaching | Asks for new tutors if sole tutor; stays an admin; never removed from the agency | P0 | E2E |
-| TC-TM-022 | Team turns off | Remove or decline the last other person, no invitation waiting | Team off at once: pages and Switch role gone; nothing deleted; no course without a tutor | P0 | E2E |
+| TC-TM-022 | Tutors URL on independent account | Open `/tutors` and `/team` directly | Not available page (SH-14a), no data returned | P0 | E2E, API |
 
 ## STU · Student app (flow 12)
 

@@ -140,11 +140,7 @@ lessons, password emails) are always sent and have no row here (18 NTF-01,
 
 ## CFG-T · How you teach
 
-The onboarding answers (spec 02), editable:
-- **Teaching with others:** there is no switch. It reads **Just you** with an
-  **Add a colleague** button (opens Add tutor, 19 TM-03), or, once there is a
-  team, **Your team: 3 people** with **Go to Team**. The team follows the people
-  on the account (see "When the team turns on and off" below).
+The onboarding answers (spec 02), editable, except whether the account is an independent tutor or an agency, which is chosen once and cannot be changed (02 ONB-02):
 - **Who you mostly teach:** Children and teens · Adults · Both. Sets the
   default lesson length (45 minutes for children and teens, otherwise an hour)
   and the reading level of what Kavi writes for students.
@@ -154,24 +150,6 @@ The onboarding answers (spec 02), editable:
 - **Subjects.** Suggested first in the New course wizard's Subject field.
 - Line: **These change your defaults and what Kanvise suggests. They never
   delete anything.**
-
-### When the team turns on and off
-
-There is no setting and no dialog. The account follows who is on it:
-
-- **On:** the moment the owner invites the first colleague (a tutor or a team
-  member), even before they accept. The Tutors and Team pages appear, **Switch
-  role** appears in the account menu, and the account card label becomes
-  **TUTORING AGENCY**.
-- **Off:** only for an account that started as **On my own** (02 ONB-02): when
-  nobody else is left (everyone removed or declined) and no invitation is
-  waiting. An account that started as **With a team** stays a team. The pages and **Switch role** disappear. Courses that
-  someone else taught were already reassigned when that person was removed (19
-  TM-06), so no course is left without a tutor.
-- Nothing is deleted either way. The name students and emails see stays the same
-  (12 CFG-A).
-- The owner keeps the admin role with the teaching capability throughout
-  (20 DM-01).
 
 ## CFG-L · Lessons and classroom
 
@@ -309,7 +287,7 @@ Tutors and team members moved to `19-tutors-and-team.md`: the Tutors list,
 Add tutor, the tutor page, the Team page, removing someone with the required
 Reassign step, adding yourself as a tutor, **Switch role** and the
 50-invitations-an-hour limit (19 TM-01 to TM-11). There is no team
-switch in Settings; the team follows the people (CFG-T).
+setting in Settings: the account type is chosen once, in onboarding (02 ONB-02).
 
 ## CFG-D · Data and privacy
 

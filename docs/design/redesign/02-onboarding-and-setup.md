@@ -95,11 +95,18 @@ link top right. A single column, 560px wide, centred.
 
 | ID | Kavi asks | Chips | Kavi's reply after the answer |
 |---|---|---|---|
-| ONB-02 | Do you teach on your own or with a team? | **On my own** · **With a team** | On my own: "Okay. I'll leave out the team features for now." With a team: "Okay. I'll add a step for inviting your tutors." |
+| ONB-02 | Do you teach on your own or with a team? | **On my own** · **With a team** | On my own: "Okay. I'll leave out the team features." With a team: "Okay. I'll add a step for inviting your tutors." |
 | ONB-03 | Who do you mostly teach? | **Children and teens** · **Adults** · **Both** | Children and teens: "I'll set lessons to 45 minutes and keep what I write short and simple for young readers." Adults: "I'll set lessons to an hour and write for adult readers." Both: "I'll set lessons to an hour and match each course's level." |
 | ONB-04 | How do you usually teach? | **One-to-one** · **Small groups** · **Both** | One-to-one: "New courses will start with one student." Small groups: "New courses will start ready for a group." Both: "New courses will ask each time." |
 | ONB-05 | What do you teach? | Free-text field with suggestions as chips under it: **Mathematics**, **English**, **Physics**, **Chemistry**, **Biology**, **Coding**, **Languages**, **Music**. Several allowed. **Continue** button. | "I'll suggest these when you create a course." |
 | ONB-06 | Do you already have students? | **Yes, I have students** · **Not yet** | Yes: "Setup starts with importing your list." Not yet: "There's a sample course you can explore first." |
+
+Under the ONB-02 chips a quiet line reads **You can't change this later. If you
+start an agency, create a separate account for it.** (On the plain form, ONB-11, the
+same line sits under the question.) There is no way to turn an independent account
+into an agency; the owner decided on 28 Nov that a new account is enough, and
+revisits it only if people ask for it.
+
 
 ### What each answer changes
 
