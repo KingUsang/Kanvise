@@ -373,12 +373,16 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-PAY-011 | Dispute | Flag, alerts, evidence, outcomes | P1 | API |
 | TC-PAY-012 | Integer money | No floats, subunits only | P0 | Unit |
 | TC-PAY-013 | Payout account | Name resolved and confirmed before saving | P1 | E2E |
+| TC-PAY-014 | Payer pays Paystack fee (D-21) | Total equals price plus estimated fee; tutor's payout equals the price | P0 | API |
+| TC-PAY-015 | Fee rounding | Fee computed in whole subunits, rounded up, never negative | P0 | Unit |
+| TC-PAY-016 | No card-fee line for payers abroad | One total shown, no separate surcharge line (pending legal check, OQ-11) | P1 | E2E |
+| TC-PAY-017 | Payer region | Changing the payer's region recalculates the fee before sending | P1 | E2E |
 
 ## GM · Progress and motivation (proposal, build later)
 
 | ID | Scenario | Expected | Pri | Level |
 |---|---|---|---|---|
-| TC-GM-001 | Off by default | Nothing shown or recorded until the tutor turns it on | P0 | E2E |
+| TC-GM-001 | On by default (D-20) | A new course shows progress to its students with no setup; when the tutor switches it off, nothing is shown or recorded and past data is kept 30 days | P0 | E2E |
 | TC-GM-002 | XP idempotency | Replaying an event gives no extra XP | P0 | API |
 | TC-GM-003 | Weekly streak | Week met, week skipped (no lessons), freeze used | P1 | API |
 | TC-GM-004 | Tutor-caused misses | Cancelled or not held lessons do not break a streak | P0 | API |

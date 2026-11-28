@@ -11,7 +11,7 @@ flowchart TD
   end
   subgraph INV["Invoicing (BL-04, BL-05)"]
     B1["Draft invoice built from completed lessons<br/>or when 2 lessons are left in a package"] --> B2["Dashboard row: invoices ready to send"]
-    B2 --> B3["Tutor reviews and edits<br/>lines, amounts, notes, due date"]
+    B2 --> B3["Tutor reviews and edits<br/>lines, amounts, notes, due date<br/>total = price + Paystack fee estimate, payer pays it<br/>no separate card-fee line for payers abroad"]
     B3 --> B4["Send<br/>email with pay link, optional WhatsApp message"]
     B4 --> B5["Status Sent"]
   end

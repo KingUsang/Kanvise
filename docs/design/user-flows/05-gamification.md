@@ -3,8 +3,9 @@
 Status: **proposal, not in the redesign specs.** The redesign retired the
 avatar builder, cohort programmes and the old XP, league and mascot ideas from
 `THE KANVISE EXPERIENCE.md` (00-decisions section 15). This file designs what
-could replace them, grounded in research and in who Kanvise is for now. It needs
-the owner's approval before any build ticket (**decision D-16**).
+could replace them, grounded in research and in who Kanvise is for now. The owner
+agreed to the direction (**D-16**) and decided it is **on by default** (**D-20**).
+Details below still need review before any build ticket.
 
 ## Why the old design does not fit
 
@@ -45,8 +46,10 @@ Kanvise. Measure after launch (see "How we know it works").
 2. **Private by default.** A student sees their own progress. The tutor sees it
    too. Nobody else does.
 3. **Compare with yourself.** Personal bests, progress bars, "your best week".
-4. **The tutor is in charge.** Progress is off until the tutor turns it on for a
-   course, and can turn it off again.
+4. **On by default, and the tutor is in charge.** Progress is on for every new
+   course (owner decision D-20), because most students benefit and it asks the
+   tutor for nothing. The tutor can switch it off for a course, or for the whole
+   account, at any time.
 5. **No shame.** No guilt notifications, no lives that lock learning, no
    public lists of who is behind.
 6. **Light on data and eyes.** Respect reduced motion and data-saver settings,
@@ -116,7 +119,7 @@ XP is never taken away. A redo gives no extra XP for the same homework.
 
 New tables on top of 20-data-model, nothing in existing ones changes:
 
-- `progress_settings` (course_id, enabled, weekly_goal, shared_goal_enabled)
+- `progress_settings` (course_id, enabled default true, weekly_goal, shared_goal_enabled default true for courses with 2 or more students)
 - `xp_events` (id, student_id, course_id, type, points, source_type, source_id,
   created_at) with a unique key on (student_id, source_type, source_id, type)
   so a replayed event cannot give points twice

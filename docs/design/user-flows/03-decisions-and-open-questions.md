@@ -1,8 +1,9 @@
 # Decisions and open questions
 
-Written 28 Nov 2026. The owner approved decisions D-01 to D-19 on 28 Nov. They are
-applied to the redesign specs on this branch, except D-15 (payments) and D-16
-(progress features), which stay proposals, and D-11 and D-14, which need no spec change.
+Written 28 Nov 2026. The owner approved decisions D-01 to D-21 on 28 Nov (D-20 and D-21 are the owner's own answers). They are
+applied to the redesign specs on this branch, except D-15 (payments), D-16
+(progress features), D-20 and D-21, which are written into the proposals in
+`04-payments.md` and `05-gamification.md`, and D-11 and D-14, which need no spec change.
 **OQ-** items still need the owner.
 
 Spec files changed: `02`, `05`, `07`, `09`, `10`, `11`, `12`, `17`, `18`, `19`, and the new
@@ -17,6 +18,8 @@ The spec checker (`history/check.py`) passes.
 - Payments: design the flow from standard practice. See `04-payments.md`.
 - Gamification: design it. See `05-gamification.md`.
 - Reports: leave for now.
+- Payments: the payer pays Paystack's fee, and Kanvise's own fee is revisited later (D-21).
+- Progress features: on by default (D-20).
 
 ## Decisions (D-)
 
@@ -38,6 +41,8 @@ The spec checker (`history/check.py`) passes.
 | D-14 | Old data migration | None needed (owner) | Owner | none |
 | D-15 | Payments | Proposal in `04-payments.md` | Owner asked for it | 13 |
 | D-16 | Gamification | Proposal in `05-gamification.md`, no leaderboard | Owner asked for it, plus research | new |
+| D-20 | Should progress features be on or off for new courses? | **On by default** for every new course (owner, 28 Nov). The tutor can switch it off per course or for the whole account | Most students benefit and it asks the tutor for nothing. Supersedes OQ-08 | `05-gamification.md` |
+| D-21 | Who pays Paystack's fee? | **The payer** (owner, 28 Nov). Kanvise's own fee is revisited later | Tutors keep the full price of their lessons | `04-payments.md`, 13 |
 | D-17 | Settings group names are unclear: YOUR TEACHING covers agency-wide settings and shows for admins who do not teach. Teaching preferences holds team size, audience and subjects | Rename groups: YOU becomes **PERSONAL**, YOUR TEACHING becomes **LESSONS**, ACCOUNT stays. Rename Teaching preferences to **How you teach**. Leave Lessons and classroom, and Data and privacy as they are | The names now say what is inside | 12 Layout, CFG-T |
 | D-18 | Business details asks independent tutors for a name and photo twice (CFG-P and CFG-A). "Business" does not fit a tutor, and "Account details" reads like bank details | One shared section for both account types, called **General** (it replaces Business details). Same screen and component; the fields shown depend on the account type. Agencies see name, logo, timezone and currency. Independent tutors see only timezone and currency, because their name and photo come from **My profile** (the account name defaults to the tutor's own name) | One screen to build and test, no duplicated fields, a word that fits everyone. Supersedes the earlier idea of a separate Agency section | 12 CFG-P, CFG-A |
 | D-19 | Design principle, not a screen: prefer one component with conditions over parallel screens for each account type | Where independent tutors and agencies differ, show or hide fields and rows on the same screen. Build separate screens only when the task is different (for example Tutors and Team pages, which only agencies have). AI makes writing code cheaper, but every extra variant still has to be tested, kept in sync and explained to users | Balances product design with build and maintenance cost | All specs |
@@ -46,16 +51,17 @@ The spec checker (`history/check.py`) passes.
 
 | ID | Question | My recommendation |
 |---|---|---|
-| OQ-01 | Which currency will UK and North American families pay in, since Paystack's documents list NGN, GHS, ZAR, KES and USD? | Accept USD at first and check whether a second provider is needed |
-| OQ-02 | Who pays the Kanvise fee and the Paystack fee? | Tutor pays; show it before they turn billing on |
+| OQ-01 | What price do families abroad see? Paystack's support page says cards from anywhere work, a Nigeria-based business is charged and paid in NGN by default, and USD payouts need a Zenith USD account. GBP is not offered | NGN for everyone at first, then USD for payers abroad once a USD account exists. Also confirm whose Paystack business holds the account |
+| OQ-02 | Kanvise's own fee (the Paystack fee is paid by the payer, D-21) | Decide later, as the owner said. Show it on its own line when it exists |
 | OQ-03 | Payment before the revamp: should the product show any payment step now? | No payment step in the product until the revamp ships. Tutors are paid directly, outside Kanvise |
 | OQ-04 | Is there a mascot, or just a profile photo? | Profile photo only |
 | OQ-05 | Does an admin with no I teach too see "Summaries to write" and "Homework to mark"? Spec 03 only says "admins who teach" | Show the counts as the agency's totals, labelled for admins |
 | OQ-06 | What does a tutor see after being removed from an agency but belonging to another one? | They keep the other account; show the account picker |
 | OQ-07 | Reports and weekly digests | Parked by the owner |
-| OQ-08 | Gamification: turn on by default for new courses, or off? | Off, tutor opts in |
+| OQ-08 | Gamification: turn on by default for new courses, or off? | Answered: on by default (D-20) |
 | OQ-09 | Agency settings Bobbin has and Kanvise lacks: an activity log (who changed what), role checkboxes for who can view recordings, and an organization-wide recording-consent default | Add an activity log for agencies later. Keep the single recordings switch and per-student consent for now |
 | OQ-10 | A wording pass over every label and message that tutors, students and admins read, with a short glossary of plain terms | Do it before the first screens are built |
+| OQ-11 | Fee line on invoices: the fee depends on the card, which is unknown until the payer pays; and UK law bans card surcharges on consumers (since 13 Jan 2018) | Estimate by payer region, built into one total for payers abroad with no separate card-fee line, and have a lawyer check the UK and other countries |
 
 ## Contradictions found in the specs
 

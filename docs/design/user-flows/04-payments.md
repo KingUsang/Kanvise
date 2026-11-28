@@ -92,13 +92,57 @@ The invoice is flagged **Disputed**, the tutor and Kanvise support are alerted,
 and the tutor can attach evidence from records Kanvise already has (lesson
 dates, attendance, summaries). Outcome: won (stays Paid) or lost (Chargeback).
 
+## Fees (decision D-21)
+
+The owner decided on 28 Nov that **the payer pays Paystack's processing fee**.
+Kanvise's own fee is decided later (OQ-02), and the design leaves room for it as
+a separate line.
+
+How it works:
+
+- The invoice total is the tutor's price plus the processing fee, so the tutor
+  receives the full price for their lessons. The invoice shows the price, the
+  fee and the total. Paystack can also be set so a subaccount, not the main
+  account, bears its fees ([Paystack transaction API](https://paystack.com/docs/api/transaction/)),
+  but that moves the fee to the tutor, so it is not used here.
+- Paystack's fee depends on the card. For a Nigeria-based business Paystack lists
+  3.9% plus NGN 100 for international cards charged in NGN, and 3.9% for USD
+  ([Paystack: international payments](https://support.paystack.com/en/articles/2130690)).
+  Local card rates are different and not on that page. Kanvise does not know the
+  card until the payer pays, so the fee on the invoice is an **estimate by payer
+  region** (local or international), worked out when the invoice is drafted, in
+  whole subunits and rounded up.
+- If the real fee differs from the estimate, the difference is settled in
+  Kanvise's own fee later. Nobody is asked for a second payment. (OQ-11.)
+- A tutor can see the fee before they send, and can change the payer's region.
+
+**UK rule to check before building.** Since 13 January 2018 UK shops may not
+charge consumers extra for paying by debit or credit card
+([GOV.UK](https://www.gov.uk/government/news/card-surcharge-ban-means-no-more-nasty-surprises-for-shoppers)).
+A separate "card fee" line on an invoice to a UK family could break that rule.
+The safer design for payers abroad is one total, with the processing cost built
+into the price the tutor sees and agrees, and no separate card-fee line. Other
+countries may have similar rules, and this needs a lawyer's check (OQ-11). I am
+not giving legal advice.
+
 ## Currency
 
-Paystack's documents list NGN, GHS, ZAR, KES and USD for card charges
-([minimum amounts list](https://paystack.com/docs/payments/recurring-charges/)).
-I did not find GBP there. Kanvise serves families in the UK and North America
-(00 section 1), so before building decide whether those payers pay in USD, or
-whether a second provider is needed. This is open question **OQ-01**.
+Paystack's support page on international payments says:
+
+- Customers anywhere can pay with Mastercard, Visa or Verve cards. A business
+  has to switch international payments on and pass Paystack's checks first.
+- By default the charge and the payout are in the business's own currency. The
+  payer's bank converts. So a UK family can pay a Nigerian-priced invoice with
+  their card.
+- Nigeria-based businesses can also be paid in USD, but need a Zenith Bank USD
+  domiciliary account for USD payouts.
+- GBP is not listed as a currency a business can price in.
+
+So families abroad can pay. The open choice is what price they see: NGN, with
+their bank converting, or USD if a USD account is set up. Recommendation: show
+NGN to Nigerian payers, and USD to payers abroad once the USD account exists.
+Until then, NGN for everyone. Whose Paystack business holds the account (Kanvise's
+or each tutor's) decides which country's rules apply, so this stays open (OQ-01).
 
 ## Notifications to add to spec 18
 
@@ -120,9 +164,11 @@ history on the student page.
 
 ## Open questions (owner)
 
-- **OQ-01** Currency for abroad payers (above).
-- Who pays Kanvise's fee, and how much (13, DEV-PAY-013).
-- Who pays the Paystack fee: tutor, payer, or split.
+- **OQ-01** The price payers abroad see (above), and whose Paystack business
+  holds the account.
+- **OQ-02** Kanvise's own fee, later. The Paystack fee is paid by the payer (D-21).
+- **OQ-11** How the fee line is shown and settled: estimate by region, UK card
+  surcharge rule, and the difference between estimate and real fee.
 - Whether agencies bill under one subaccount or each tutor gets their own.
 
 ## Test ideas
