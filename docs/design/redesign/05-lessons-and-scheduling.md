@@ -48,7 +48,7 @@ follow 01 SH-15.
 | Planned, Starting soon, Not held | Planned | Rescheduled to a future time (LP-03) |
 | Planned, Starting soon | Cancelled | Cancelled (LP-04) |
 | Starting soon | Not held | The scheduled end passes without a start |
-| Not held | Live | **Start anyway**, until midnight of that day in the lesson's timezone |
+| Not held | Live | **Start anyway**, until midnight of that day in the lesson's timezone. Starting extends every student's join link (LP-05) |
 | Not held | Cancelled | **Mark as cancelled** (nobody is told unless the tutor chooses to) |
 | Live | Awaiting summary | **End lesson**, or the automatic end after everyone leaves |
 | Awaiting summary | Live | **Restart this lesson**, within 60 minutes of an automatic end and before a summary is started (00 section 14e, 07 CR-06) |
@@ -406,9 +406,16 @@ classroom as Atlas.").
 - The tutor gets a notice in Lesson tools (07) when a link is opened on a
   second device: **Casey's link was just opened on another device.** with
   **Get a new link**.
-- A link stops working 2 hours after the lesson's scheduled end, when the
-  lesson is cancelled, or when a new link is made. Then it shows **This link has
-  expired. Ask Mrs Bello for a new one.**
+- A link stops working 2 hours after the lesson's end, when the lesson is
+  cancelled, or when a new link is made. "The lesson's end" is the scheduled
+  end until the lesson starts. Once it starts (on time, late, or with **Start
+  anyway** on a Not held lesson), every link on the lesson stays valid while it
+  is Live and until 2 hours after it actually ends, and a restart (07 CR-06)
+  moves that time again. A link that had run out of time works again once the
+  lesson starts; a link replaced with **Get a new link** never does. So a 4:00
+  PM lesson started at 8:00 PM works for every student, including those with
+  no email, whose link is their only way in. Then it shows **This link has
+  expired. Ask Michael for a new one.**
 - Links are tokens stored only as a hash and are rate-limited like the check
   link (04 Starting check).
 

@@ -206,7 +206,7 @@ Right column:
   and **Edit**. Empty: **+ Add a phone number**.
 - **Lesson recording** (Bobbin's card, adapted):
   - **Can be recorded** with **Consented** (green chip) and the line **Lessons
-    with Casey can be recorded. Consent recorded by Alex on 3 Nov.** Button
+    with Casey can be recorded. Consent recorded by Michael Chen on 3 Nov.** Button
     **Withdraw consent**.
   - Or **Can be recorded** with **No consent** (grey chip) and the line
     **Lessons with Casey aren't recorded, and nor are group lessons Casey is
@@ -247,13 +247,19 @@ A student without an email joins lessons through the links the tutor sends
 or recordings in Kanvise (00 section 14a). The page says so plainly instead of
 showing empty tabs:
 
-- Under the header, a grey notice: **Casey has no email, so they join lessons
+- Under the header, a grey notice: **Alex has no email, so they join lessons
   from the links you send and can't see homework, quizzes or summaries in
   Kanvise.** with **Add an email to give them homework, quizzes and
   summaries** (opens STU-07 with the email field focused).
-- **Homework and quizzes** tab: the same line and button instead of the list.
+- **Homework and quizzes** tab: **Starting check** results first, because a
+  no-email student can still take a check from their personal check link (04
+  The rules). Each attempt shows as a row (**Starting check · finished 26
+  Nov · checked 8 of 32 topics**) that opens 04 DIAG-R; a check still waiting
+  shows **Sent 2 days ago · link expires 10 Dec** with **Copy link**. Below
+  it, the same line and button instead of the homework and quiz list.
   Homework can't be set for them; the Set homework dialog (10 HW-01) leaves
-  them unticked with **No email** beside their name.
+  them unticked with **No email** beside their name. With no check sent
+  either, the tab shows only the line and button.
 - **Summaries** tab: summaries are still written and kept. Each has **Copy**
   and, when there is a phone, **Send on WhatsApp** (the copied text,
   prefilled).
@@ -294,7 +300,7 @@ anxious before tests; start with an easy win" or "Prefers WhatsApp after
 
 - Opened from the Summary card, as a side panel.
 - **+ Add a note:** a text box (up to 2,000 characters) and **Save**. Notes are
-  listed newest first with the author and date, e.g. **Alex · 27 Nov**.
+  listed newest first with the author and date, e.g. **Michael Chen · 27 Nov**.
 - Each note has **Edit** and **Delete** (author or admin). Edited notes show
   **Edited**. **Pin** keeps one note at the top.
 - They follow the private notes rule (00 section 16). Line beside the field:
@@ -390,10 +396,9 @@ Casey**, and the **Kavi suggests** card. Both are tutor-only.
 
 - Input: the student's goal, topic statuses (04 Topic status model), completed
   lesson summaries, homework and quiz results, starting check results and
-  attendance, for the courses the asker can see. Never private notes: 00
-  section 16 would allow them for tutor-only output, but this version sends
-  none to Kavi (20 DM-25), and **Use this** on a card can change what
-  students see (a lesson topic).
+  attendance, for the courses the asker can see. Never private notes, even
+  though the answer is tutor-only (00 section 16, 20 DM-25). **Use this** on
+  a card can also change what students see (a lesson topic).
 - Output: a short plain answer under the question box, with **Based on** links
   to the summaries and results used; and up to three suggestion cards in the
   DB-06 shape, each with a **Kavi's pick** badge and its evidence (**From the

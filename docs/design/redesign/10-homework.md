@@ -47,7 +47,7 @@ have to remember two different rules. Students never see each other's work.
 | Field | Rules | Notes |
 |---|---|---|
 | Course | Required. Fixed when opened from a course, lesson or summary; otherwise a picker at the top | |
-| Students | A line under the subtitle: **3 students · Change**. **Change** opens checkbox rows of the course's students, all ticked | For giving one student extra work. A student without an email is unticked, can't be ticked, and shows **No email** beside the name with the line **Casey can't get homework in Kanvise without an email.** (00 section 14a, 06 No email) |
+| Students | A line under the subtitle: **3 students · Change**. **Change** opens checkbox rows of the course's students, all ticked | For giving one student extra work. A student without an email is unticked, can't be ticked, and shows **No email** beside the name with the line **Alex can't get homework in Kanvise without an email.** (00 section 14a, 06 No email) |
 | Title | Required, 2 to 120 characters | Placeholder **e.g. Simultaneous equations worksheet** |
 | Due | Required. Defaults to the day before the next lesson at 6:00 PM, or 7 days from now at 6:00 PM if none is booked | A date-time picker. Line under it: **Shown in each student's timezone.** |
 | Instructions (optional) | Bold, italic, lists, undo, redo (Bobbin's toolbar) | Placeholder **What to do, and what to hand in** |
@@ -106,7 +106,7 @@ the first unmarked hand-in).
 - **Not handed in** (grey), **Handed in · on time** (blue), **Handed in · 1 day
   late** (amber), **Marked · 8/10** (neutral with a tick, 01 SH-15),
   **Redo asked** (amber);
-- **Remind** for students who haven't handed in (in-app and push: **Alex is
+- **Remind** for students who haven't handed in (in-app and push: **Michael is
   waiting for your Simultaneous equations worksheet.**), once a day at most;
 - tapping a student opens their hand-in (HW-05).
 
@@ -130,7 +130,7 @@ From Home › To do, or Homework in the student app (09 SA-06).
   upload, and every file follows the hand-in row of the upload limits table
   (`15-resources.md`).
 - **Hand in** (primary). Confirmation: **Hand in your work? You can still change
-  it until Alex marks it.** **Cancel** · **Hand in**.
+  it until Michael marks it.** **Cancel** · **Hand in**.
 - After handing in: **Handed in · Tue 6:42 PM** with **Change my work**
   (replaces the files or text; the tutor sees the latest version and when it
   changed).

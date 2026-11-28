@@ -61,7 +61,7 @@ way:
 | Start without reload | Can a lesson go from "entered without starting" to started without reloading the room? Kanvise creates the room on entry and only starts letting students in on **Start lesson**, so no new room should be needed. Starting must keep the tutor's microphone, camera choice and anything on the whiteboard | Hide **Enter without starting a lesson**; the pre-entry card offers **Start lesson** only, and the device check (CR-10) covers setup |
 | Quick check results | Does PlugNMeet's `voted_poll` analytics field give each student's choice, or only whether they voted? | Quick check shows class totals only (**3 of 4 chose B**), and the summary gets the totals, never per-student answers |
 | Phone as tutor device | Whiteboard drawing, file upload and the Lesson tools sheet on a 360px screen | Keep the laptop line above; phones are a second device only |
-| Admin watching label | Can the participant name carry **(Admin watching)** for every viewer, with `is_hidden: false`? | Kanvise shows **Mrs Bello is watching** in Lesson tools and in the students' Kanvise bar |
+| Admin watching label | Can the participant name carry **(Admin watching)** for every viewer, with `is_hidden: false`? | Kanvise shows **Chidi Okafor is watching** in Lesson tools and in the students' Kanvise bar |
 
 ## Flow at a glance
 
@@ -124,15 +124,15 @@ and the account setting (12 CFG-L **Record lessons**):
 ## CR-02 · Waiting for the tutor (student)
 
 Same dark full page. Card:
-- Tutor's avatar, **Alex hasn't started yet.**
+- Tutor's avatar, **Michael hasn't started yet.**
 - "We'll bring you in as soon as the lesson starts. Keep this tab open."
 - Lesson card: time, topic.
 - A soft pulsing dot while it checks every few seconds.
 - **Test your microphone** link (opens CR-10 in a side panel, so they don't lose
   their place).
-- **Let Alex know** chips (CR-12): **Can't make it** and **Need another
+- **Let Michael know** chips (CR-12): **Can't make it** and **Need another
   time**. (**Running late** isn't shown here, because Casey is already
-  waiting and Alex can see that.)
+  waiting and Michael can see that.)
 - When the lesson will be recorded: **This lesson will be recorded.**
 
 When the tutor starts, a short sound plays (if allowed), the tab title changes
@@ -144,9 +144,9 @@ at 4:00 PM. The classroom opens at 3:45 PM.** with **Add to calendar**. If
 the tutor has already started, the student goes straight in.
 
 If the tutor hasn't started 10 minutes after the start time, the card adds:
-**Alex is running late. We've let them know you're waiting.** (Kanvise sends
+**Michael is running late. We've let them know you're waiting.** (Kanvise sends
 the tutor a push and email, CR-11.) If the tutor sent **Running late** (CR-12),
-the card shows that instead: **Alex is running about 10 minutes late.**
+the card shows that instead: **Michael is running about 10 minutes late.**
 
 ## CR-03 · The room, with Lesson tools (tutor)
 
@@ -198,7 +198,7 @@ Kanvise's additions:
    **In the lesson** (green), **Not here yet**, **Left at 4:32 PM**, plus their
    latest message if they sent one (**Running late · 4:02 PM**, CR-12). For
    students not here: **Copy link**, **WhatsApp** (when they have a phone),
-   **Email** (when they have an email), and **Remind** ("Your lesson with Alex
+   **Email** (when they have an email), and **Remind** ("Your lesson with Michael
    has started", push, or email when they have no push; 18 NTF-01). **Let Casey know** (or **Let everyone
    know**) opens the tutor chips (CR-12). When a link is opened on a second
    device: **Casey's link was just opened on another device.** with **Get a
@@ -228,8 +228,8 @@ Kanvise's additions:
    even in another tab.** with **Turn on alerts** / **Not now** (CR-11).
 10. **Report a concern** (a quiet text link at the bottom, CR-13).
 
-When an admin is in the room (CR-09), a line under the header: **Mrs Bello is
-watching.** or **Mrs Bello (admin) is leading.**
+When an admin is in the room (CR-09), a line under the header: **Chidi Okafor is
+watching.** or **Chidi Okafor (admin) is leading.**
 
 **Phone and narrow screens:** Lesson tools opens as a bottom sheet from a
 **Tools** button above the room, with End lesson inside the sheet; on tablets
@@ -244,7 +244,7 @@ polls. Kanvise doesn't add controls inside it.
 - Above the room, a slim Kanvise bar: the lesson topic, a red **Recording** dot
   when the lesson is recorded, **Report a concern** (CR-13) and **Leave
   lesson**.
-- When an admin is watching: **Mrs Bello (admin) is watching** in the bar, and
+- When an admin is watching: **Chidi Okafor (admin) is watching** in the bar, and
   their name in the participants list. There are no hidden people in a lesson.
 - Microphone muted on entry and camera off; the tutor can unmute or the
   student can when allowed.
@@ -286,10 +286,12 @@ emptied the room):
   (CR-01), the lesson page (05 LP-02) and the dashboard's lesson row.
 - It returns the lesson to Live (05 status transitions). Attendance continues
   in the same records, and if the lesson was being recorded, the new part is
-  added to the same recording.
+  added to the same recording. Any Kavi transcript or draft already started
+  from the shorter recording is dropped, and Kavi starts again from the whole
+  recording when the restarted lesson ends (08 SM-02, 20 DM-24).
 - Students' links work again; students who are still on the lesson page are
   brought back in.
-- Activity shows **Restarted by Alex at 4:51 PM**.
+- Activity shows **Restarted by Michael at 4:51 PM**.
 - After 60 minutes, or once a summary has been started, it's gone and the
   lesson stays Awaiting summary.
 
@@ -317,7 +319,7 @@ Kanvise page, light again (back to the app's look). A centred card:
 ## CR-08 · Lesson ended (student)
 
 - **That's the end of the lesson.**
-- "Alex will write a lesson summary with what to work on next. You'll find it
+- "Michael will write a lesson summary with what to work on next. You'll find it
   in your lessons."
 - If homework was set during the lesson (CR-03 item 6): **New homework:
   Simultaneous equations worksheet, due Fri.** with **Open**.
@@ -336,16 +338,20 @@ under it:
   account, join from that account instead."
 - Two choices (radio cards):
   - **Lead** · "Start, end and run the lesson, present files and share your
-    screen. Shown as Admin, leads the room." Selected when the tutor isn't in
-    the lesson.
+    screen. Shown as Admin, leads the room." Always selected to start with,
+    because the owner's decision is that an admin in the room has moderator
+    rights (00 section 14b).
   - **Watch** · "Camera and microphone off. Everyone in the lesson sees that
-    you're watching." Selected when the tutor is in the lesson.
+    you're watching." Offered only when the tutor is already in the lesson,
+    with the line **Michael is teaching. Choose Watch to sit in without
+    taking over.** Watch is a Kanvise addition for owner confirmation
+    (HANDOFF).
 - **Cancel** · **Join as admin**.
 
 | | Lead | Watch |
 |---|---|---|
 | PlugNMeet join token | `is_admin: true`, `is_hidden: false` | `is_admin: false`, `is_hidden: false` |
-| Shown to others | **Mrs Bello (Admin, leads the room)** | **Mrs Bello (Admin watching)** |
+| Shown to others | **Chidi Okafor (Admin, leads the room)** | **Chidi Okafor (Admin watching)** |
 | Pre-entry | The tutor's choices (CR-01): **Start lesson** or **Enter without starting a lesson** | Goes straight in. Can't start the lesson without switching to Lead |
 | Lesson tools | Full | Read-only: plan, objectives, students. No Notes editing, Set homework or Quick check |
 | Microphone and camera | Off on entry, like everyone | Off, and can't be turned on |
@@ -353,7 +359,7 @@ under it:
 
 - A watching admin can switch with **Lead the room** in the Kanvise bar. It
   rejoins them with the Lead token (a moment of reconnecting) and tells the
-  tutor: **Mrs Bello is now leading.**
+  tutor: **Chidi Okafor is now leading.**
 - There are no hidden watchers. Students and the tutor always see an admin in
   the room (CR-03, CR-04).
 - An admin who leads a lesson whose tutor never joined: attendance shows
@@ -392,8 +398,8 @@ only gives the wording.
 
 | Who | When | Message |
 |---|---|---|
-| Student | Before the lesson, at the 12 CFG-L **Remind students** time | "Your lesson with Alex starts at 4:00 PM." |
-| Student | Tutor starts the lesson | "Alex has started your lesson. Join now." |
+| Student | Before the lesson, at the 12 CFG-L **Remind students** time | "Your lesson with Michael starts at 4:00 PM." |
+| Student | Tutor starts the lesson | "Michael has started your lesson. Join now." |
 | Student | Tutor sends a Let {student} know chip (CR-12) | The chip's message |
 | Tutor | A student is waiting and the lesson hasn't started | "Casey is waiting for your 4:00 PM lesson." |
 | Tutor | 10 minutes after the start, not started | "Your 4:00 PM lesson hasn't started. Casey is waiting." |
@@ -409,10 +415,10 @@ lesson; they only tell the other person. Out of scope: free chat.
 
 **Tutor to student** (Lesson tools Students section, the lesson page's
 Students card in 05 LP-01, and the dashboard's next-lesson row in 03):
-- **Running late**, with a minutes choice (**5**, **10**, **15**): "Alex is
+- **Running late**, with a minutes choice (**5**, **10**, **15**): "Michael is
   running about 10 minutes late. Stay on your lesson page."
-- **Starting now**: "Alex is starting your lesson now."
-- **Can't make it**: "Alex can't make today's lesson and will be in touch
+- **Starting now**: "Michael is starting your lesson now."
+- **Can't make it**: "Michael can't make today's lesson and will be in touch
   about a new time." After sending, the tutor sees **Reschedule** and **Cancel
   lesson** (05 LP-03, LP-04); nothing is cancelled by the chip.
 
@@ -466,9 +472,9 @@ For the tutor's second device, usually a phone pointed at written work.
 - **Add a device** opens a small panel: a QR code and a short link, with
   **Open this on your phone. It joins as you, with the microphone and speaker
   off so there's no echo.** The link works for 10 minutes and once.
-- The phone joins as **Alex (phone)**, camera on if the tutor allows it there,
+- The phone joins as **Michael (phone)**, camera on if the tutor allows it there,
   never counted again in attendance.
-- The panel then lists it: **Alex's phone · connected** with **Remove**.
+- The panel then lists it: **Michael's phone · connected** with **Remove**.
 - One added device at a time.
 
 ## Permissions

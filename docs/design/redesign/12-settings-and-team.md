@@ -57,7 +57,7 @@ the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
 - **Photo:** upload, crop to a circle. Shown to students in their app.
 - **First name**, **Last name**. Card line: **This is the name shown to others
   in Kanvise.**
-- **Display name for students:** placeholder **e.g. Mr Alex**. Line: **What
+- **Display name for students:** placeholder **e.g. Mr Chen**. Line: **What
   your students see. Leave blank to use your name.**
 - **Subjects you teach:** chips (the same list as onboarding).
 - **Short bio (optional):** 300 characters, shown on the student's course page.

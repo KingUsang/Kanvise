@@ -90,7 +90,7 @@ below.
 
 ## 5. Starting check
 
-- **Name:** tutors see **Starting check**. Students see **check** ("Alex sent
+- **Name:** tutors see **Starting check**. Students see **check** ("Michael sent
   you a short check"). The word "diagnostic" is not used in the UI.
 - **Purpose:** find what the student does not know, so the tutor teaches what
   matters. It also sets a starting point, so progress can be shown later by
@@ -99,8 +99,9 @@ below.
   one topic: as a card on the course page, and when a student is added to an
   existing course.
 - Kavi drafts it from the course plan's topics. The tutor previews, edits and
-  sends it. Without Kavi, the tutor writes the questions in the quiz builder
-  (spec 11), one or more per topic.
+  sends it. Without Kavi, the tutor writes the questions in the same starting
+  check editor (04 DIAG-P, built on the quiz question card in 11 QZ-02), two
+  per topic.
 - Multiple choice only, like every quiz in this version (section 8).
 - It stops asking about a topic once the student has clearly missed it, which
   keeps it short. The exact length, how many topics it covers, and how many
@@ -191,8 +192,8 @@ below.
   2. Who do you mostly teach? Children and teens, adults, or both (the default
      lesson length, 45 minutes for children and teens and an hour otherwise,
      and the reading level of what Kavi writes for students)
-  3. How do you usually teach? One-to-one, small groups, or both (wizard and
-     lesson summary defaults)
+  3. How do you usually teach? One-to-one, small groups, or both (how the New
+     course wizard's People step opens, 02)
   4. What do you teach? (Kavi's starting point for course plans and quizzes)
   5. Do you already have students? (setup starts with adding students, or with
      the sample course)
@@ -249,8 +250,12 @@ below.
 - The specs use one sample set, taken from Bobbin's sample data: the course
   **Algebra 1 Small Group** (subject Mathematics), students **Alex Thompson**
   and **Casey Davis**, tutor **Michael Chen**, agency **Science Students
-  Academy**. Level names such as SS2 or Year 9 appear only where the optional
-  level names setting is described (12 CFG-K).
+  Academy**, and agency admin **Chidi Okafor** (Bobbin's sample admin is
+  only "Admin User", so the admin's name is Kanvise's). In examples Casey
+  has an email and Alex doesn't, so a no-email line always names Alex. Other
+  names appear only to fill a group of three or more. Level names such as SS2
+  or Year 9 appear only where the optional level names setting is described
+  (12 CFG-K).
 - Say **Student**, not Learner, in all user-facing text. Routes and database
   names stay as they are. Standard 01 must be updated to match (see the
   standards table).
@@ -321,6 +326,10 @@ Billing is a proposal only, built after the payments hold (spec 13).
 - The admin has moderator rights in the room. They can start and lead the
   lesson, shown as **Admin, leads the room**, and it never counts as the tutor
   attending. This settles DEV-ACC-004. Spec 07 has the details.
+- **Lead** is always the preselected way in. When the tutor is already in the
+  lesson, the admin can choose **Watch** instead (camera and microphone off,
+  visible to everyone; 07 CR-09). Watch is a Kanvise addition for owner
+  confirmation (HANDOFF).
 
 ## 14c. Permissions
 
@@ -385,9 +394,9 @@ rule everywhere:
 - They are visible **only** to the tutor who wrote them, the admins of the
   agency, and the other tutors on the same course.
 - They are **never** visible to students.
-- They are **never** sent to Kavi as input for anything a student will see
-  (lesson summaries, homework, quizzes, checks). Kavi may use them only for
-  tutor-only suggestions.
+- They are **never** sent to Kavi in this version, for any output, including
+  tutor-only suggestions. Kavi reads only the separate **Notes for Kavi** box
+  (08 SM-01), and only what the tutor types or copies into it on purpose.
 
 Every spec refers to this rule ("private notes rule, 00 section 16") instead of
 writing its own version. The line shown beside a notes field is: **Only you,
@@ -462,7 +471,10 @@ the matching build ticket starts.
 - Remove the `school_id` claim.
 - Students see their own progress. Progress is tracked separately per course.
 - No self-confidence rating. A student's goal is free text.
-- Reminders go to tutors (spec 18 lists each notification).
+- Reminders go to tutors, read as in 18 NTF-02 (tutors get reminders of
+  their own lessons; students get the reminders set in 12 CFG-L; chasing
+  reminders go out only when a tutor presses Remind). This reading is listed
+  for owner confirmation in HANDOFF; spec 18 lists each notification.
 
 ## Open items
 

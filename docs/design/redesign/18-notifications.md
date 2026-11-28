@@ -81,6 +81,7 @@ is the starting value of a switch. **Setting** names where the switch is.
 | Tutor presses **Remind** in Lesson tools (07 CR-03) | That student | Bell, Push; Email only when the student has no push | Always (a person sent it) | None |
 | A student is waiting and the lesson hasn't started (07 CR-11) | The lesson's tutor | Push, Page | On | CFG-N **A student is waiting for my lesson** |
 | 10 minutes after the start, not started (07 CR-11) | The lesson's tutor | Push, Email | On | CFG-N **My lesson hasn't started on time** |
+| Not held lesson marked as cancelled (05 LP-02) | Nobody, unless the tutor ticks **Let students know**; then the students on it | Bell, Push, Email, as for a cancelled lesson; held (NTF-03) | Off (the tick starts unticked) | The tick in LP-02 |
 | Lesson becomes Not held (05) | The lesson's tutor | Page (Lessons, Not held tab). Admins: dashboard and the daily summary (NTF-06) | Always | None |
 | Tutor sends a **Let {student} know** chip (07 CR-12) | The chosen students | Bell, Push; Email when the student has no push | Always (a person sent it) | None |
 | Student sends a chip: Running late, Can't make it, Need another time (07 CR-12, 09) | The lesson's tutor | Page (lesson Activity, Lesson tools), Push; Email when the tutor has no push | On | CFG-N **A student sent a message about a lesson** |
@@ -92,8 +93,9 @@ is the starting value of a switch. **Setting** names where the switch is.
 | Event | Recipient | Channel | Default | Setting |
 |---|---|---|---|---|
 | Summary completed (08 SM-04), held (NTF-03) | Students on the lesson | Bell, Push. Not emailed (00 section 6) | On | SA-10 **Push** |
-| Summary edited after it was completed (08 SM-04) | Students on the lesson | Bell only: **Alex updated the summary of Monday's lesson.** At most once a day per summary; edits to private notes never notify | On | None |
-| **No summary needed** (08 SM-07) or Missed (08 SM-06) | Nobody | None | n/a | n/a |
+| Summary edited after it was completed (08 SM-04) | Students on the lesson | Bell only: **Michael updated the summary of Monday's lesson.** At most once a day per summary; edits to private notes never notify | On | None |
+| **No summary needed** (08 SM-07) | Nobody | None | n/a | n/a |
+| Lesson marked **Missed** (08 SM-06) | Nobody, unless the tutor ticks **Let Casey know**; then that student | Bell only: **You missed today's lesson. Michael will be in touch about the next one.** No-email students get nothing automatic (NTF-05) | Off (the tick starts unticked) | The tick in SM-06 |
 | Summary still to write 24 hours after the lesson (08 SM-04) | The lesson's tutor | Push, Email, once | On | CFG-N **Summary still to write** |
 | Kavi's draft is ready (08, once Kavi exists) | The lesson's tutor | Push, Page | On | CFG-N **Kavi's draft is ready** |
 | Recording ready (17) | The lesson's tutor | Page (17 REC-01, lesson Session tab) | Always | None |
@@ -158,7 +160,7 @@ a change they then undo.
 
 ## NTF-04 · Email rules
 
-- **From:** **Alex Bello via Kanvise** (or the agency name) so the student
+- **From:** **Michael Chen via Kanvise** (or the agency name) so the student
   knows who it is about.
 - **Times** use the account's timezone with the zone named (**4:00 PM WAT**,
   00 section 19). When the student's own timezone (06) is different, their
@@ -170,8 +172,8 @@ a change they then undo.
   notifications** (12 CFG-N, or 09 SA-10 for students). The email also carries
   the one-click unsubscribe header for mail apps.
 - **Essential emails** (Default **Always** in NTF-01) have no unsubscribe link.
-  Their footer says why they were sent: **You're getting this because Alex
-  Bello teaches you on Kanvise.**
+  Their footer says why they were sent: **You're getting this because Michael
+  Chen teaches you on Kanvise.**
 - **Language:** plain, short, one button. Private notes are never in an email
   (00 section 16). Summaries are not emailed (00 section 6).
 - **A bounced email** is shown on the lesson page's Activity (**Email to Casey

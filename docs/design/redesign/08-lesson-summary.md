@@ -30,8 +30,11 @@ is the only step. Bobbin's **Tutor performance** section is also not copied.
    they stayed (`17-recordings-and-attendance.md`).
 4. Kavi can draft the summary two ways, shown side by side (SM-01):
    - **From the recording**, only when the lesson was recorded (every student
-     had consent, 00 section 14d) and the recording is at least 5 minutes long;
-   - **From your notes**, always: the tutor jots a few lines for Kavi.
+     had consent, 00 section 14d) and the recording is at least 5 minutes long.
+     This starts on its own when the recording is ready; the tutor presses
+     **Show it** to use the draft;
+   - **From your notes**, always: the tutor jots a few lines for Kavi and
+     presses **Draft from my notes**.
 5. The tutor opens the summary (SM-01), checks any draft, ticks what was
    covered (with **Got it** or **Needs more work**), and sets homework if any.
 6. The tutor presses **Complete** (SM-04):
@@ -86,16 +89,25 @@ SH-13).
 **Draft with Kavi** bar (top of the form, Kavi mark). Two equal cards side by
 side (one above the other on phones); neither is the "real" route:
 - **From the recording** · "Kavi drafts from what was said in the lesson."
-  Button **Draft from the recording**. When it can't be used, the card stays
-  and says why: **This lesson wasn't recorded.** or **The recording is too
-  short (under 5 minutes).** or **The recording is still being processed.**
+  This route has no button: when a recorded lesson of 5 minutes or more ends,
+  Kavi starts drafting from the recording on its own, in the background (07
+  CR-07, 20 DM-24). The card shows where it has got to: **Kavi is listening
+  back to the lesson…**, then **Kavi's draft is ready.** with **Show it**, or
+  the failure line with **Try again** (SM-02). When it can't be used, the card
+  stays and says why: **This lesson wasn't recorded.** or **The recording is
+  too short (under 5 minutes).** The draft is tutor-only and fills nothing
+  until the tutor presses **Show it**.
 - **From your notes** · "Jot a few lines about what happened and Kavi turns
   them into a summary." A text box **Notes for Kavi** (up to 1,000
   characters), placeholder **e.g. Elimination method, Q1-6. Good on setting up
   equations. Mixed up signs on Q3 and Q5.**, and **Draft from my notes**.
   **Use my lesson notes** copies the private notes from the classroom into this
-  box so the tutor can edit them first. Nothing from private notes is sent
-  unless the tutor copies it here and presses Draft.
+  box so the tutor can edit them first. A line sits under the button at all
+  times: **Kavi uses this box to write What went well and What to work on,
+  which your students will see. Take out anything private before drafting.** After
+  copying, the copied text is highlighted until the tutor edits it or presses
+  Draft. Nothing from private notes is sent unless the tutor copies it here and
+  presses Draft. (Owner confirmation, HANDOFF.)
 - Before Kavi exists, the bar is not shown (see the Kavi block).
 
 **Sections:**
@@ -145,8 +157,10 @@ at the bottom (16 R-10).
 
 | State | What the tutor sees |
 |---|---|
-| Recording still processing | The recording card: **Kavi is listening back to the lesson…** with a progress line. The tutor can keep writing or draft from notes instead. Kavi's draft never overwrites what they typed. When ready: an inline **Kavi's draft is ready.** with **Show it** on the card (and a toast if they are elsewhere on the page). |
-| Drafting | Text streams into empty sections, a few words at a time, in a busy region announced once when done (01 SH-12). Each section Kavi filled gets a faint Kavi-tinted border and a small **Kavi's draft** label. Sections the tutor already wrote are left alone; Kavi's version appears under them as **Kavi suggests** with **Use this**. |
+| Recording still processing | The recording card: **Kavi is listening back to the lesson…** with a progress line. This starts on its own when the recording is ready (DM-24). The tutor can keep writing or draft from notes instead. Kavi's draft never overwrites what they typed. When ready: an inline **Kavi's draft is ready.** with **Show it** on the card (and a toast if they are elsewhere on the page). |
+| Recording draft shown | **Show it** fills the empty sections at once, each sliding open in turn (instant with reduced motion), with the same Kavi borders, labels and **Kavi suggests** rows as the Drafting row below. |
+| Lesson restarted (07 CR-06) | Any recording draft in progress or not yet shown is dropped, and the card goes back to **Kavi is listening back to the lesson…** once the restarted lesson ends. (Restart is only offered before a summary is started, 07 CR-06, so no shown draft is lost.) |
+| Drafting (from notes) | Text streams into empty sections, a few words at a time, in a busy region announced once when done (01 SH-12). Each section Kavi filled gets a faint Kavi-tinted border and a small **Kavi's draft** label. Sections the tutor already wrote are left alone; Kavi's version appears under them as **Kavi suggests** with **Use this**. |
 | Draft ready | The label stays on each Kavi section until the tutor edits it. Above the form: **Check Kavi's draft before completing. It can get things wrong.** with 👍 / 👎 and **Regenerate**. |
 | Too short | **The recording is under 5 minutes, which is too short for Kavi to draft from.** with **Draft from my notes instead**. |
 | Not enough notes | **Kavi needs a bit more to go on. Add a sentence about what you covered.** (notes under 20 characters) |
@@ -205,6 +219,14 @@ the toast has **Undo**.
 - A toast: **Lesson complete.** with **Undo** (01 SH-08). The student's
   notification is held until the undo window closes; **Undo** returns the
   lesson to Awaiting summary and nobody is told.
+- **Undo also sets back the course plan changes accepted from this summary**
+  in CRS-08 while the toast was showing, because they came from a summary that
+  is no longer complete. Each status returns to what it was before, the
+  proposals go back to waiting, and the history notes **Set back (lesson
+  reopened)**. A status that someone changed again since is left as it is.
+  The toast that follows says what happened: **Lesson reopened. 3 course plan
+  changes were set back.** The toast stays clickable over the sheet (01
+  SH-08), and CRS-08's own **Course plan updated.** toast waits behind it.
 - The **Review changes to the course plan** sheet (04 CRS-08) opens over the
   page when there are proposals: one row per student per ticked topic
   (**Factorising: Next → Knows it · From this lesson's summary**), each
@@ -212,14 +234,14 @@ the toast has **Undo**.
   **3 changes to review** on the Summary tab. Students who didn't join get no
   rows (04 Groups and absence).
 - When the window closes, the student gets an in-app notification and a push:
-  **Alex added a summary of today's lesson.** A no-email student gets nothing
+  **Michael added a summary of today's lesson.** A no-email student gets nothing
   from Kanvise; the tutor sees **Copy summary** and **Send on WhatsApp** (06
   No email).
 - Kavi may add a suggestion for the next lesson (dashboard, DB-06).
 - The dashboard's **summaries to write** count drops by one.
 
 **Editing after completing:** allowed. The summary shows **Edited 27 Nov, 6:10
-PM**, and the student sees the latest version, with a Bell notice **Alex
+PM**, and the student sees the latest version, with a Bell notice **Michael
 updated the summary of Monday's lesson.** (at most once a day, 18 NTF-01).
 Newly ticked topics or changed choices create new CRS-08 rows; nothing
 changes the plan without them.
@@ -261,7 +283,7 @@ When a lesson ends and no student joined:
   anyway**.
 - **Mark as missed** shows nothing to the student unless the tutor ticks **Let
   Casey know**, which posts a short, neutral note in their app: **You missed
-  today's lesson. Alex will be in touch about the next one.**
+  today's lesson. Michael will be in touch about the next one.**
 
 ## SM-07 · No summary needed
 

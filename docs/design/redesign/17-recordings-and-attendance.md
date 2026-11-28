@@ -122,7 +122,7 @@ only to admins).
 | Not recorded, consent | **Not recorded** with an info icon; the expanded row says why (REC-02) |
 | Not recorded, switched off | **Not recorded** (the account has **Record lessons** off, 12 CFG-L) |
 | Failed | **Recording failed** in red tint; the expanded row explains (REC-02) |
-| Deleted | **Deleted** in grey: **Deleted on 25 Feb after 90 days.** or **Deleted by Mrs Bello on 3 Dec.** |
+| Deleted | **Deleted** in grey: **Deleted on 25 Feb after 90 days.** or **Deleted by Chidi Okafor on 3 Dec.** |
 
 Every recording state also appears on the lesson page's Session tab (05
 LP-02) with the same words.

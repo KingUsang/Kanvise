@@ -50,7 +50,7 @@ link top right. A single column, 560px wide, centred.
 1. The Kavi mark, with a small wave animation.
 2. A typing indicator (three dots) for about 0.4s, then Kavi's message appears
    as if typed:
-   > Hi Alex, I'm Kavi.
+   > Hi Michael, I'm Kavi.
    > Five quick questions, so Kanvise fits the way you teach. About a minute.
 3. Button: **Let's go**.
 4. Under it, a quiet text link: **Answer as a form instead** (ONB-11).
@@ -207,7 +207,7 @@ For people who prefer it, and for anyone using a screen reader who chooses it.
 
 **Shell:** the normal app shell (spec 01). **Setup** is the active sidebar item.
 
-**Header:** **Welcome to Kanvise, Alex**. No subtitle; the card does the
+**Header:** **Welcome to Kanvise, Michael**. No subtitle; the card does the
 talking (Bobbin: "Welcome to Bobbin, Emmanuel").
 
 **Main card (left, about 2/3 width):**

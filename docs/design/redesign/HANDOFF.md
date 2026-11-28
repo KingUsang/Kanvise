@@ -49,7 +49,17 @@ confirm each one:
    only (04 Topic status model, 09 SA-08).
 5. **Quizzes in v1** are multiple choice, one attempt, no time limit (11).
 6. **Private notes are never sent to Kavi in v1**, even for tutor-only
-   answers (20 DM-25, 00 section 17). This is stricter than 00 section 16.
+   answers (00 sections 16 and 17, 20 DM-25).
+7. **Admins choose Lead or Watch** when joining a lesson they don't teach (07
+   CR-09). Lead is always preselected, as the owner said an admin has
+   moderator rights. Watch (camera and microphone off, no moderator rights,
+   always visible to everyone) is a Kanvise addition, offered only when the
+   tutor is already in the lesson.
+8. **Use my lesson notes** (08 SM-01) lets the tutor copy their private
+   classroom notes into **Notes for Kavi** with one tap, to edit before
+   drafting. A line under the button warns that Kavi writes What went well and
+   What to work on from that box, which students see. The alternative is to
+   drop the button and have tutors type Notes for Kavi from scratch.
 
 ## Launch blockers and checks
 
@@ -85,20 +95,52 @@ These must exist before launch. None blocks building the screens.
 
 ## Build order
 
-Build page by page on `staging`, in this order:
+Build page by page on `staging`, in this order. No step ships a button, tab or
+card that opens a screen from a later step: it stays hidden (not disabled)
+until that step ships. The table after the list names the places where this
+matters most.
 
-1. Design system and app shell (01, 16).
-2. Dashboard (03) and setup (02).
-3. Courses and lessons, including the calendar (04, 05).
-4. Students (06).
-5. Classroom (07).
-6. Lesson summary (08).
-7. Student app (09).
-8. Homework and quizzes (10, 11).
-9. Recordings, notifications, tutors and team, settings, resources (17, 18,
-   19, 12, 15).
-10. The Kavi service and every Kavi feature, last (20, Kavi service section).
-    Until then every screen uses the **Without Kavi** path in its Kavi block.
+1. **Design system and app shell** (01, 16), with the message channels every
+   later step sends through: the email rules and held messages (18 Channels,
+   NTF-03, NTF-04).
+2. **People and settings:** students (06), tutors and team (19), settings
+   (12, without CFG-K), and the student app's sign-in, shell and Me page (09
+   SA-01, SA-02a, SA-03 frame, SA-09, SA-10), because inviting a student in
+   this step sends them to SA-01.
+3. **Courses, course plan and resources** (04 CRS-01 to CRS-08 and the wizard;
+   15), with the student's course pages (09 SA-07, SA-08). The starting check
+   card (CRS-07) is hidden until step 5.
+4. **Homework and quizzes** (10, 11), with the student's pages (HW-04, QZ-05,
+   09 SA-06) and the QZ-02 question card's starting check mode.
+5. **Starting check** (04 DIAG-D to DIAG-R, the Without Kavi path), built on
+   step 4's question card.
+6. **Lessons and calendar** (05), with the student's lessons and join links
+   (09 SA-02, SA-04, SA-05).
+7. **Classroom, recordings and attendance** (07, 17), with the student's
+   classroom screens (07 CR-02, CR-08) and recordings (17 REC-08).
+8. **Lesson summary** (08), with the summary on the student's lesson page (09
+   SA-05).
+9. **Dashboard and setup** (03, 02), which summarise everything above.
+10. **Notification preferences and push** (12 CFG-N, 18 NTF-06, NTF-07).
+    Every NTF-01 row is sent from the step that owns its event; this step adds
+    the switches, push and the admin daily summary.
+11. **The Kavi service and every Kavi feature, last** (20, Kavi service
+    section, DM-30). Until then every screen uses the **Without Kavi** path in
+    its Kavi block.
+
+| Place | Opens | Before the later step ships |
+|---|---|---|
+| 04 CRS-07, DIAG-D (step 3) | Starting check (step 5) | The card is hidden; the course page shows only **Build the course plan** |
+| 04 CRS-05 Homework, Quizzes and Lessons tabs (step 3) | Steps 4 and 6 | Tabs hidden |
+| 06 STU-05 Lessons, Homework and quizzes, Summaries, Attendance tabs (step 2) | Steps 4 to 8 | Tabs hidden; the Summary tab shows what exists |
+| 05 LP-01 **Join classroom**, LP-05 join links (step 6) | Classroom (step 7) | Hidden; the lesson page works for planning, rescheduling and cancelling. Step 6 is not released to real lessons before step 7 |
+| 05 LP-01 **Before this lesson** homework card (step 6) | 10 (step 4) | Already built |
+| 07 Lesson tools **Set homework** (step 7) | 10 HW-01 (step 4) | Already built |
+| 08 SM-01 **Set homework** (step 8) | 10 HW-01 (step 4) | Already built |
+| 05 LP-02 **Write summary**, 07 CR-07 **Write lesson summary** (step 7) | 08 (step 8) | Lessons can only end once the classroom exists (step 7). Step 7 therefore ships 08 SM-07 **No summary needed** as its minimum slice (the dialog and the Complete state), so ended lessons can be closed; **Write summary** is hidden until step 8 |
+| Dashboard (step 9) | Everything | The current Kanvise dashboard stays the landing page. If an earlier landing page is wanted, ship DB-01, DB-03 and DB-04 right after step 6, showing only actions whose screens exist; Needs attention and Suggestions follow in step 9 |
+| 02 onboarding and /setup (step 9) | Steps 2 to 8 | New accounts skip onboarding and use the 02 ONB-09 defaults; the sidebar setup card (01 SH-02) is hidden |
+| 12 CFG-L values used by 05 and 07 | Settings (step 2) | Already built |
 
 Billing (13) stays on hold with payments.
 

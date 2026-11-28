@@ -123,9 +123,14 @@ Title **People** · subtitle **Add students and tutors to the course.**
   first, with **0 of 12 selected** (and **Clear** once something is ticked) on
   the right of the label. Search at the top once there are more than 8
   students.
-- **+ Add a student** under the list opens a small inline form inside the step
-  (first name, last name, email optional, phone optional; 06 STU-03 fields).
-  Saving adds and selects the student without leaving the wizard.
+- **+ Add a student** under the list opens an inline form inside the step with
+  the 06 STU-03 fields, rules and lines: first name, last name, email
+  (optional), phone (optional), timezone (pre-filled), and **Recording consent
+  already given** (unticked, with its line). The Course field is left out,
+  because the student goes on this course. Saving creates the student exactly
+  as STU-03 does (including the invite line and the invite email), then
+  selects them without leaving the wizard. They stay in the students list even
+  if the wizard is closed. Validation and duplicate messages are STU-03's.
 - Students without an email show a small grey **No email** chip. Tap or focus
   shows: **They can't sign in yet. You'll send them their lesson links
   yourself.**
@@ -211,7 +216,7 @@ Left column, top to bottom:
 3. **About:** the description, with an **Edit** pencil. Empty: **Add a short
    description so students know what this course is for.**
 4. **Course plan** card (once the plan is Active): **Course plan** eyebrow,
-   **Mathematics · High School**, **8 modules · 32 topics · 96 objectives**, a
+   **Mathematics · Algebra 1**, **8 modules · 32 topics · 96 objectives**, a
    segmented progress bar **12 of 32 topics covered** with the percentage, and
    **Open course plan ›**. In a group course the bar shows the group average
    and the line says **Average across 3 students**.
@@ -236,7 +241,7 @@ Right column:
 
 Checked against `04-courses/screenshots/sample-course--outline.png`.
 
-- **Header card:** **Course plan** eyebrow, title **Mathematics · High School**,
+- **Header card:** **Course plan** eyebrow, title **Mathematics · Algebra 1**,
   **8 modules · 32 topics · 96 objectives**, the progress bar, 👍 / 👎 while any
   module is still an unedited Kavi draft, and **⋯** (Export, Regenerate
   untouched modules, Copy plan from another course).
@@ -470,7 +475,9 @@ full-height sheet on phones.
   proposals wait, and the place that opened the sheet shows **4 changes to
   review**).
 - After accepting, a toast **Course plan updated.** (no Undo; each change can
-  be set back by hand, and the history shows what changed).
+  be set back by hand, and the history shows what changed). One exception:
+  rows accepted from a lesson summary are set back if the tutor presses
+  **Undo** on that summary's **Lesson complete.** toast (08 SM-04).
 - Proposals that are not accepted within 30 days are dropped, and the history
   notes **Not reviewed**.
 
@@ -510,18 +517,21 @@ knows before you teach it.**
   topic for another.
 - Kavi line: **Kavi will write two questions for each topic. You can edit every
   question before it's sent.** Without Kavi: **Write two questions for each
-  topic in the quiz builder.** with **Open quiz builder** (spec 11), which opens
-  with one section per topic.
+  topic.** with **Write the questions**, which opens DIAG-P with two empty
+  questions under each chosen topic.
 - **Preview questions** (opens DIAG-P). **Send** is enabled only once the
   questions exist; until then the button reads **Preview questions** and the
-  reason line says **Questions are drafted when you preview.**
+  reason line says **Questions are drafted when you preview.** (without Kavi:
+  **Write the questions first.**)
 - **Send to** line, per student: **Casey will find it in their Kanvise app and
   by email.** For a student without an email: **Alex has no email. After
   sending, copy Alex's link or send it on WhatsApp.**
 
 **On send:** the dialog shows each no-email student's link with **Copy** and
-**WhatsApp** (prefilled: **Hi Alex, here's a short check from Mrs Bello before
-your first lesson. It takes about 10 minutes: {link}**), then **Done**. Toast:
+**WhatsApp** (prefilled: **Hi Alex, here's a short check from Michael before
+your first lesson. It takes about {minutes} minutes: {link}**, where
+{minutes} is the chosen length's **About** time: 10, 20 or 35), then
+**Done**. Toast:
 **Starting check sent to 2 students.**
 **If sending fails:** an inline error in the dialog, **We couldn't send the
 check. Your questions are saved. Try again.** If the dialog is closed after a
@@ -529,8 +539,13 @@ failure, the course page shows the persistent banner from CRS-03 (01 SH-08).
 
 ### DIAG-P · Preview and edit the starting check
 
-A large dialog over DIAG-D.
-- Header line: **12 topics · 24 questions** and 👍 / 👎.
+A large dialog over DIAG-D. It is the starting check editor, with or without
+Kavi. Without Kavi it opens with two empty questions under each chosen topic;
+with Kavi the questions stream in. Each question uses the quiz question card
+from 11 QZ-02 in its starting check mode (11 Starting check mode), so the
+check is built after spec 11 (HANDOFF build order).
+- Header line: **12 topics · 24 questions** (without Kavi: **12 topics · 3 of
+  24 questions written**) and 👍 / 👎 (Kavi drafts only).
 - Left: the question list grouped by module and topic, two questions per topic.
 - Right: the selected question, editable: question text, four options, the
   correct answer, and the topic it checks. **Not sure** is added automatically
@@ -539,7 +554,11 @@ A large dialog over DIAG-D.
   question; the topic then shows **Needs 2 questions** and DIAG-D's Send stays
   disabled until it has two again (or the topic is removed from the check).
 - **+ Add a question** at the end of each topic (for replacing one).
-- **Done** returns to DIAG-D with **24 questions ready**.
+- An empty or unfinished question has an amber dot in the list, and its topic
+  counts as **Needs 2 questions** until both are complete (text, four options,
+  a correct answer).
+- **Done** returns to DIAG-D with **24 questions ready** (or **21 of 24
+  questions ready**, with Send still disabled).
 - Failure states: see the Kavi block below.
 
 ### The rules
@@ -585,7 +604,7 @@ A large dialog over DIAG-D.
     You're carrying on from question 7.**
   - no guest record is made: answers belong to the existing student. This is
     the ledger exception recorded in 00 section 18 (DOM-009, standard 03, SEC-007).
-- Expired or revoked link: **This link has expired. Ask Mrs Bello for a new
+- Expired or revoked link: **This link has expired. Ask Michael for a new
   one.** Done already: **You've already finished this check. Thanks.**
 
 **Sending again.** **Send again** (on DIAG-R, in **⋯**) opens DIAG-D with the
@@ -595,9 +614,10 @@ can be compared.
 
 ### DIAG-S · The student takes the check
 
-**Email** (students with an email): subject **Mrs Bello has sent you a short
-check before your first lesson**. Body: what it is, that it takes about 10
-minutes, that it isn't a test they pass or fail, and one button **Start the
+**Email** (students with an email): subject **Michael has sent you a short
+check before your first lesson**. Body: what it is, that it takes about
+{minutes} minutes (the chosen length's **About** time, as in DIAG-D), that it
+isn't a test they pass or fail, and one button **Start the
 check**.
 
 **Check screen** (student app shell, distraction-free):
@@ -612,7 +632,7 @@ check**.
 - **Save and finish later** keeps the answers; the app card or the same link
   resumes.
 
-**Done:** **All done, thanks Casey.** "Mrs Bello will use this to plan your
+**Done:** **All done, thanks Casey.** "Michael will use this to plan your
 lessons." No score and no per-topic result are shown to the student. Their
 course plan (SA-08) shows any statuses only after the tutor accepts them, using
 the student wording rule in the Topic status model.
@@ -671,8 +691,8 @@ the notification (`18-notifications.md`).
   says **Couldn't regenerate. The question is unchanged.**
 - What the tutor must confirm: reviewing in DIAG-P and pressing **Send**. Every
   question is shown; nothing is sent without that press.
-- Without Kavi: the tutor writes the questions in the quiz builder (spec 11),
-  two per topic, and DIAG-D sends them the same way.
+- Without Kavi: **Write the questions** opens DIAG-P with two empty questions
+  per topic; the tutor fills them in, and DIAG-D sends them the same way.
 
 **Result proposals (DIAG-R)**
 - Input: the answers and the rules above (the statuses come from the rules,
@@ -728,6 +748,10 @@ Tables are in `20-data-model.md`: courses DM-03, course plan DM-04, topic status
 - `04-courses/screenshots/new-course--step-2-roster.png`, `new-course--step-2-selected.png`:
   CW-2 title "People", "Add students and tutors to the course.", checkbox
   rows, "1 of 1 selected", "Add a student", "Add a tutor", round back arrow.
+  Difference: when onboarding said one-to-one (02 ONB-04), Kanvise opens the
+  student list as a single-choice picker with **Add another student**;
+  Bobbin always shows checkbox rows. The inline add-student form uses the 06
+  STU-03 fields, including timezone and recording consent.
 - `04-courses/screenshots/new-course--step-3-review.png`: CW-3 bordered review
   table and **Create course**.
 - `04-courses/screenshots/course-created--detail.png`: course page header with

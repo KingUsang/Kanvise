@@ -165,7 +165,10 @@ Kavi.
 - **Purpose:** one personal link per student per lesson (05 LP-05), plus the
   admin Lead and Watch tokens and the added-device link (07).
 - **Key columns:** lesson, student (or person and role for staff), `token_hash`,
-  expires at (2 hours after the scheduled end), revoked at, last opened at,
+  expires at (2 hours after the scheduled end; once the lesson starts,
+  recalculated as 2 hours after the actual end, and moved again on restart,
+  05 LP-05; an expired link becomes valid again when the lesson starts),
+  revoked at, last opened at,
   open count, active connection (the device currently in the lesson, for
   **Join here instead**).
 - **Owning spec:** 05 LP-05; 07 CR-05, CR-09, CR-14; 09 SA-02.
@@ -196,8 +199,9 @@ Kavi.
   student's recording consent with its history (00 section 14d).
 - **Key columns:**
   - `live_class_recordings`: lesson, storage key, status (`pending`,
-    `uploaded`, `ready`, `failed`), length, size, delete after (New, from 12
-    CFG-L), deleted at and by (New).
+    `uploaded`, `ready`, `failed`), length, size, version (New; goes up by
+    one when a restarted lesson adds to the recording, DM-24), delete after
+    (New, from 12 CFG-L), deleted at and by (New).
   - Not-recorded reason on the lesson (New): recorded, consent missing (with
     the students), recording off.
   - Recording consent (New): student, state (given, not given), recorded by,
@@ -227,8 +231,8 @@ Kavi.
   Kavi draft used (yes or no, which route).
 - **Private notes rule:** private notes are readable only by the course's
   tutors and the account's admins, are never returned by any student-facing
-  API, and are never sent to Kavi (00 section 16; in this version not even
-  for tutor-only output, DM-25). Keeping them in their own
+  API, and are never sent to Kavi for any output in this version (00
+  section 16, DM-25). Keeping them in their own
   column (or table) makes that rule easy to enforce and test.
 - **Owning spec:** 08 (SM-01 to SM-07); student view 09 SA-05.
 - **Staging:** `live_class_recaps` (`draft_body`, `published_body`, status
@@ -283,7 +287,8 @@ Kavi.
   - Quiz (New): course, title, topics, status (draft, sent), sent at,
     students, show score to students.
   - Question (New): quiz, text, options, correct option, topic, position.
-    The same editor writes starting check questions (DM-11).
+    The same question card, in its starting check mode (11), writes
+    starting check questions (DM-11).
   - Attempt and answers (New): quiz, student, started at, finished at, score
     (one mark per question), chosen option per question. One attempt each, no
     time limit (11).
@@ -528,8 +533,10 @@ replaces today's `recording_process` job on `live_class_jobs`;
 `recording_finalize` (merging recorder segments) is not Kavi and stays where
 it is.
 
-1. **`kavi_transcribe`** (dedupe key `kavi_transcribe:<lesson id>`), queued
-   when the recording becomes `ready`. Payload: `school_id`, lesson id,
+1. **`kavi_transcribe`** (dedupe key
+   `kavi_transcribe:<lesson id>:<recording version>`), queued automatically
+   when the recording becomes `ready`. There is no button for this route: the
+   tutor sees its progress on the recording card (08 SM-01, SM-02). Payload: `school_id`, lesson id,
    recording id. When it runs it checks again, because consent can change
    after the lesson:
    - every student on the lesson had consent for the whole recording (DM-09);
@@ -541,7 +548,8 @@ it is.
    Then it sends the audio to Deepgram (the lease is extended while it
    waits), saves the transcript (DM-28 `lesson_transcripts`) and queues step 2.
 2. **`kavi_summary_draft`** (dedupe key
-   `kavi_summary_draft:<lesson id>:<template version>`). Builds the 08 input
+   `kavi_summary_draft:<lesson id>:<recording version>:<template version>`).
+   Builds the 08 input
    (transcript, objectives and topics, objectives ticked in the lesson, quick
    check totals, last summary's What to work on), calls the writing provider,
    checks and retries as in DM-22, and saves a `kavi_drafts` row. It sends the
@@ -550,6 +558,12 @@ it is.
   draft is `failed` and 08 SM-02 shows **Kavi couldn't draft this right now.**
   with **Draft from my notes instead**. The recording itself is never held up:
   students can watch it whatever happens to the transcript.
+- **Restart (07 CR-06).** The recording version goes up by one each time a
+  restarted lesson adds to the recording. When the lesson restarts, any
+  `kavi_transcribe` or `kavi_summary_draft` job for the earlier version that is
+  queued or running is cancelled, and a draft already made from it is marked
+  `expired` (never shown). The recording becomes `ready` again when the
+  restarted lesson ends, which queues new jobs for the new version.
 - If the tutor completes the summary (or presses **No summary needed**) before
   the draft is ready, step 2 is cancelled; a transcript already made follows
   the normal retention (DM-25).
@@ -571,8 +585,8 @@ These apply to every Kavi feature and are tested, not just written down:
   work** are never filled (10 HW-05, 08 SM-02); course plan changes go through
   CRS-08 with every row unticked. The API rejects a confirm request that
   carries Kavi picks the tutor didn't select.
-- **Private notes are never sent to Kavi in this version.** 00 section 16
-  allows tutor-only use, but v1 uses none, so the promise in 12 CFG-K
+- **Private notes are never sent to Kavi in this version** (00 section 16,
+  section 17), for any output, so the promise in 12 CFG-K
   (**Never sent: private notes**) is simply true. The context builders have no
   access to the private notes columns (DM-10, 06 STU-06). The only notes Kavi
   reads are the separate **Notes for Kavi** box (08 SM-01), including text the
@@ -722,7 +736,7 @@ Kavi** path works.
 | Onboarding questions | 02 ONB-01 to ONB-08 | None (scripted, no AI call) | Fixed lines | The same scripted lines; ONB-11 as a form |
 | Course plan | 04 CRS-06 | Subject, description and text area, teaching context (02 ONB-03), style and levels | Modules, topics, objectives as a Draft plan (streamed) | **Start blank** or **Copy plan from another course** |
 | Regenerate untouched modules | 04 CRS-04 | The plan, which modules are untouched | Redrafted modules in a preview | The tutor edits modules by hand |
-| Starting check questions | 04 DIAG-D, DIAG-P | Chosen topics and objectives, subject, level | Two MCQ per topic (streamed) | The tutor writes them in the 11 editor; DIAG-D sends the same way |
+| Starting check questions | 04 DIAG-D, DIAG-P | Chosen topics and objectives, subject, level | Two MCQ per topic (streamed) | The tutor writes them in DIAG-P (the 11 question card in its starting check mode); DIAG-D sends the same way |
 | Suggested topic order | 04 DIAG-R | Check results (statuses come from rules) | **Suggested order** card | No card; the tutor orders the Next strip |
 | Lesson plan | 05 LP-01 | Lesson topic, linked plan topic and objectives, plan around it, last summary's What we covered and What to work on, lesson length | Objectives, timed structure, activities, check for understanding (tutor-only) | **Write my own** with the template |
 | Student questions and suggestions | 06 STU-05 | Goal, topic statuses, completed summaries, homework and quiz results, check results, attendance (no private notes) | Short answer with **Based on** links; up to three **Kavi's pick** cards | Question box hidden; Summary tab cards; rule **Suggestions** |

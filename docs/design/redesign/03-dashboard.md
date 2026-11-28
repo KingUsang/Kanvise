@@ -13,7 +13,7 @@ attention on the right).
 ## Layout (desktop)
 
 ```
-Good afternoon, Alex                                    [Schedule lesson]
+Good afternoon, Michael                                   [Schedule lesson]
 Friday, 27 November 2026
 
 [Banner area: sample course or welcome, at most one at a time]
@@ -71,17 +71,25 @@ straight in, 00 section 14a), so there is no classroom tip banner of any kind.
     **with Michael Chen**);
   - on the right, the action and then the status chip, as in Bobbin.
 
-**When Join appears.** The classroom opens a set time before the start, from
-the account's **Classroom opens** setting (12 CFG-L: 5, 10, 15 or 30 minutes;
-15 by default). Nothing on the dashboard uses a fixed number of minutes.
+**Join on every upcoming row.** As in Bobbin
+(`15-tutor-role/screenshots/tutor-dashboard--default.png`: **Join** beside the
+**Planned** chip), tutors and admins always see **Join** on a lesson that
+hasn't ended, because their Join classroom is always enabled (05 LP-01; the
+pre-entry screen, 07 CR-01, offers **Enter without starting a lesson** before
+students can join). What changes is the chip and the button's weight. The
+classroom opens for students a set time before the start, from the account's
+**Classroom opens** setting (12 CFG-L: 5, 10, 15 or 30 minutes; 15 by
+default); that moment turns **Planned** into **Starting soon**. Nothing on the
+dashboard uses a fixed number of minutes.
 
 | Lesson state | Chip (icon + text, 01 SH-12) | Action |
 |---|---|---|
-| Scheduled, classroom not open yet | **Planned** (blue dot) | **Prepare** → lesson page, Lesson plan tab |
+| Scheduled, classroom not open for students yet | **Planned** (blue dot) | **Join** (video camera icon, secondary style) → classroom pre-entry (07 CR-01) |
 | Classroom open, lesson not started | **Starting soon** (amber dot) | **Join** (video camera icon, indigo) → classroom (spec 07) |
 | Running | **Live** (green pulsing dot) | **Join** |
 | Ended, summary not written | **Awaiting summary** (pen icon, neutral) | **Write summary** → lesson summary (spec 08). For 60 minutes after an automatic end, **Restart this lesson** sits beside it (07 CR-06) |
-| Should have started, nobody joined | **Not held** (grey, crossed-circle icon; status defined in spec 05) | **Open** → lesson page, where the tutor says what happened |
+| The scheduled end passed and nobody started the lesson | **Not held** (grey, crossed-circle icon; status defined in spec 05) | **Open** → lesson page, where the tutor reschedules, starts it anyway or marks it cancelled (05 LP-02) |
+| Started, but no student joined, and the tutor marked it missed | **Missed** (grey, person-off icon; 05) | none; the row opens the lesson |
 | Summary done, or **No summary needed** | **Complete** (neutral, tick icon) | none; the row opens the lesson |
 | Cancelled | **Cancelled** (grey, struck-through topic) | none |
 
@@ -124,7 +132,7 @@ something" are hidden at 0.
 | Lesson summaries to write | **2 lesson summaries to write** · "From lessons that have ended" | Lessons filtered to Awaiting summary |
 | Homework to mark | **3 submissions to mark** · "Handed in and waiting for you" | Homework filtered to To mark |
 | Starting checks finished | **1 starting check to review** · "Casey finished the check you sent" | That check's results (04 DIAG-R); with more than one, the course list of finished checks |
-| Links to send (only when there is something) | **2 join links to send** · "Sam and Ada have no email. Send their links for this week's lessons." | The next of those lessons, at its join links (spec 05), where **Copy**, **WhatsApp** and **Email** are |
+| Links to send (only when there is something) | **2 join links to send** · "Alex has no email. Send Alex's links for this week's 2 lessons." | The next of those lessons, at its join links (spec 05), where **Copy**, **WhatsApp** and **Email** are |
 
 - **Links to send** counts students without an email who have a lesson in the
   next 7 days, where nobody has yet pressed Copy, WhatsApp or Email on that
@@ -261,5 +269,9 @@ approval rows (out of scope, 00 section 15) and adds homework, starting check,
 links and team rows; Suggestions has no Bobbin equivalent.
 
 Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-dashboard--default.png` (review v1): the
+  Planned row shows a yellow **Join** beside the **Planned** chip. DB-03 now
+  shows **Join** on Planned rows for tutors and admins (secondary style until
+  the classroom opens for students), replacing the earlier **Prepare**.
 - `15-tutor-role/screenshots/tutor-account-menu.png`: tutor dashboard with one Today row (Join and Planned side by side), This week strip and Needs attention at 0 "all caught up"; DB-02 to DB-05 match.
 - `15-tutor-role/screenshots/tutor-mobile-app-learn-more.png`: the NEW · MOBILE APP card's dialog; the card is not copied (03 has no mobile app card).

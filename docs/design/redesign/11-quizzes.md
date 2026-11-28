@@ -20,8 +20,9 @@ beyond it is in **Later** at the end of this spec.
 The starting check (04, DIAG-D to DIAG-R) is not a quiz. It has its own rules
 (two questions per topic, **Not sure**, the dependency rule), its own taker
 (04 DIAG-S) and its own link rules. The only thing it shares with this spec is
-the question editor in QZ-02, which DIAG-D opens when the tutor writes the
-check's questions without Kavi.
+the question card in QZ-02, which the starting check editor (04 DIAG-P) uses
+in a fixed mode (Starting check mode, under QZ-02). Spec 11 is therefore built
+before the starting check (HANDOFF build order).
 
 ## Flow at a glance
 
@@ -92,12 +93,31 @@ correct option and a topic. Problems are marked in the list and the first one
 opens: **Choose the correct answer.** · **Add at least two options.** ·
 **Choose a topic for this question.**
 
+### Starting check mode
+
+The same question card, used inside 04 DIAG-P. It differs from a quiz
+question in these ways only:
+
+| | Quiz (QZ-02) | Starting check mode (04 DIAG-P) |
+|---|---|---|
+| List | Flat, drag to reorder | Grouped by module, then topic, two questions per topic, no dragging (the check asks topics in plan order) |
+| Options | 2 to 6, **+ Add an option** | Exactly four, no add or remove, one marked **Correct** |
+| **Not sure** | None | Added as a fifth option, shown greyed, can't be edited or removed |
+| Topic | Picker, required | Fixed to the topic the question sits under; no picker |
+| Explanation | Optional | Hidden (the student sees no answers, 04 DIAG-S) |
+| Question images | Allowed | Allowed, same upload limits |
+| Missing parts | Amber dot | Amber dot, and the topic shows **Needs 2 questions** until both are complete |
+| Add or remove | **+ Add a question**, **Delete** | **Remove** and **+ Add a question** within a topic, never more than two per topic |
+
+Validation messages are the quiz ones, plus **Write 4 options.** when one is
+empty.
+
 ## QZ-03 · Settings
 
 A side panel over the builder:
 - **Students:** the course's students, all ticked. A student without an email
-  is listed unticked and can't be ticked, with the line **Casey has no email,
-  so can't take quizzes in Kanvise. Add an email on Casey's page.** (00
+  is listed unticked and can't be ticked, with the line **Alex has no email,
+  so can't take quizzes in Kanvise. Add an email on Alex's page.** (00
   section 14a).
 - **Due:** optional date-time. **No due date** by default. Line: **Shown in
   each student's timezone.**

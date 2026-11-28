@@ -32,16 +32,16 @@ Home ─┬─ Lessons (SA-04) → lesson (SA-05) → classroom (spec 07)
 ## SA-01 · Getting in
 
 **From the invitation email** (spec 06):
-- Email: **Alex has invited you to Kanvise.** "You'll see your lessons,
-  homework and what Alex says after each lesson." Button **Accept invitation**.
+- Email: **Michael has invited you to Kanvise.** "You'll see your lessons,
+  homework and what Michael says after each lesson." Button **Accept invitation**.
 - The link opens **Set your password** with the student's name and email
   already filled in: **Password** (8+ characters, a show/hide eye), **Create
   account**. A line: **Already use Kanvise? Sign in instead.** for students
   invited by a second tutor.
 - On success: a one-screen welcome, typed in line by line as in onboarding (a
   fixed script, not an AI call): **Hi Casey, I'm Kavi. This is where your
-  lessons with Alex live.** with **Let's go**, then Home.
-- Expired invite: **This invitation has expired. Ask Alex to send a new one.**
+  lessons with Michael live.** with **Let's go**, then Home.
+- Expired invite: **This invitation has expired. Ask Michael to send a new one.**
 
 **Signing in later:** the normal sign-in page (restyle deferred), with **Forgot
 password?**. Students land on Home.
@@ -56,8 +56,8 @@ Each student has their own join link for each lesson (05 LP-05). Opening it:
   tutor (07 CR-02), or goes straight in once the tutor has started. There is
   no admit step.
 - After the lesson: **This lesson has ended.** and, if the student has an
-  account, **Sign in to see what Alex said**.
-- Expired or revoked: **This link has expired. Ask Alex for a new one.**
+  account, **Sign in to see what Michael said**.
+- Expired or revoked: **This link has expired. Ask Michael for a new one.**
 
 The link only opens that lesson, as that student. It never opens the rest of
 the app.
@@ -98,11 +98,11 @@ orange "you are here" marker as the tutor app, and Me at the bottom.
 | Before the classroom opens (12 CFG-L **Classroom opens**) | **Add to calendar** (secondary), and the line **Opens at 3:45 PM** |
 | Classroom open, not started (amber **Starting soon**) | **Join** (opens the screen that waits for the tutor, 07 CR-02) |
 | Tutor has started (green **Live**) | **Join now** (indigo, with a soft pulse; still on reduced motion) |
-| No lesson scheduled | Card reads **No lesson booked yet.** "Alex will add your next one." |
+| No lesson scheduled | Card reads **No lesson booked yet.** "Michael will add your next one." |
 
-   - **Let Alex know** (07 CR-12): a row of quiet chips under the button,
+   - **Let Michael know** (07 CR-12): a row of quiet chips under the button,
      shown from 24 hours before the lesson until it ends: **Running late** ·
-     **Can't make it** · **Need another time**. Tapping one asks **Tell Alex
+     **Can't make it** · **Need another time**. Tapping one asks **Tell Michael
      you're running late?** with **Send**. A sent chip shows **Sent 4:02 PM**,
      and each can be sent once per lesson. The tutor gets it in the app and by
      push; nothing about the lesson changes on its own.
@@ -111,7 +111,7 @@ orange "you are here" marker as the tutor app, and Me at the bottom.
    it. Empty: **Nothing due right now.**
 4. **From your last lesson:** the latest lesson summary, collapsed to **What to
    work on** with **Read the full summary ›**. Empty until the first summary.
-5. **Your check** (only while one is waiting): **Alex sent you a short
+5. **Your check** (only while one is waiting): **Michael sent you a short
    check before your first lesson. About 10 minutes.** with **Start**.
 
 ## SA-04 · Lessons
@@ -125,20 +125,20 @@ orange "you are here" marker as the tutor app, and Me at the bottom.
 |---|---|
 | Complete, with a summary | **Summary ready** (neutral with a tick) |
 | Complete, No summary needed (08 SM-07) | **Done** |
-| Awaiting summary | **Waiting for Alex's summary** |
+| Awaiting summary | **Waiting for Michael's summary** |
 | Not held (nobody started it) | **Didn't go ahead** (grey) |
 | Missed, or the student didn't join a lesson that others attended | **Missed** (grey) |
 | Cancelled | **Cancelled** (grey, topic struck through) |
 
   A Not held lesson that the tutor starts later that day moves back to
   Upcoming with **Join now**. Tapping a row opens SA-05.
-- Empty: **No lessons yet.** "When Alex books a lesson, it'll show up here."
+- Empty: **No lessons yet.** "When Michael books a lesson, it'll show up here."
 
 ## SA-05 · A lesson
 
 **Upcoming:** topic, date and time (with timezone: **4:00 PM your time · 3:00
-PM Alex's time** when they differ), course, tutor, **Join** (when open), **Add
-to calendar**, the **Let Alex know** chips (as in SA-03), and a **Before this
+PM Michael's time** when they differ), course, tutor, **Join** (when open), **Add
+to calendar**, the **Let Michael know** chips (as in SA-03), and a **Before this
 lesson · Homework** card (as on Bobbin's lesson page): homework due before it,
 with **Open**, or **Nothing is due before this lesson.**
 
@@ -151,10 +151,10 @@ with **Open**, or **Nothing is due before this lesson.**
   plays inline and can go full screen.
 - **Files from this lesson:** materials the tutor presented or attached.
 
-**Past, no summary yet:** **Alex hasn't added a summary yet.** The recording
+**Past, no summary yet:** **Michael hasn't added a summary yet.** The recording
 shows as soon as it's processed.
 
-**Didn't go ahead (Not held):** **This lesson didn't go ahead.** "Alex will be
+**Didn't go ahead (Not held):** **This lesson didn't go ahead.** "Michael will be
 in touch about a new time." with **Need another time** (the chip, if not sent
 already).
 
@@ -209,7 +209,7 @@ students see):
 when the tutor shows it). Taking a quiz: 11 QZ-05.
 
 **Resources:** files the tutor shared with this course, by folder, with **Open**
-and **Download**. Empty: **Alex hasn't shared any files yet.**
+and **Download**. Empty: **Michael hasn't shared any files yet.**
 
 ## SA-09 · Notifications
 
@@ -217,11 +217,11 @@ The full list of what a student is sent, on which channel and with which
 default, is the matrix in 18 NTF-01. This section is the student's view.
 - A bell in the top bar with a count. The list shows, newest first, for
   example:
-  - **Alex started your lesson. Join now.**
+  - **Michael started your lesson. Join now.**
   - **Your lesson starts in 30 minutes.**
-  - **Alex is running about 10 minutes late.**
+  - **Michael is running about 10 minutes late.**
   - **New homework: Simultaneous equations worksheet, due Fri.**
-  - **Alex added a summary of today's lesson.**
+  - **Michael added a summary of today's lesson.**
   - **Your homework was marked: 8/10.**
   - **New quiz: Simultaneous equations check.**
   - **Your lesson on Mon was moved to Tue, 4:00 PM.** / **…was cancelled.**
@@ -250,8 +250,8 @@ default, is the matrix in 18 NTF-01. This section is the student's view.
 Right after accepting an invitation, before anything is scheduled:
 - Next lesson: **No lesson booked yet.**
 - To do: **Nothing due right now.**
-- A friendly card: **When Alex books your first lesson, you'll see it here.
-  You'll also find homework and what Alex says after each lesson.**
+- A friendly card: **When Michael books your first lesson, you'll see it here.
+  You'll also find homework and what Michael says after each lesson.**
 
 ### Kavi
 

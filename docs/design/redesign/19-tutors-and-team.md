@@ -235,8 +235,8 @@ always has you).
 Checked against `08-team/screenshots/add-team-member--dialog.png` and
 `add-team-member--filled.png`.
 
-- Title **Add team member** · "Team members can manage everything in Bello
-  Tutors, including every course, lesson and student."
+- Title **Add team member** · "Team members can manage everything in Science
+  Students Academy, including every course, lesson and student."
 - **First name (optional)**, **Last name**, **Email** with the line: **We'll
   email Ada an invite to set a password and sign in. If they already use
   Kanvise, they'll sign in with their existing password instead.**
