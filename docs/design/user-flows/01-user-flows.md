@@ -160,8 +160,9 @@ built last, so every screen must work without it.
 ![Admin and team](diagrams/11-admin-team.png)
 
 - An admin who also teaches turns on **I teach too** in their profile settings.
-  It is the same account, not a second one. Bobbin instead tells the admin to
-  join from a separate tutor account; Kanvise chose one account.
+  It is the same account, not a second one. Bobbin works the same way: one
+  login holds an admin and a tutor role, with a **Switch role** menu (see
+  `06-account-types.md`).
 - Where an admin finds it: the setup step "Add a tutor", the Tutors empty
   state, profile settings, and (proposed) the Join as an admin dialog.
   **Decision D-02.**

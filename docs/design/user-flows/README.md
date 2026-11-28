@@ -12,6 +12,7 @@ proposed changes to the specs.
 |---|---|---|
 | `01-user-flows.md` | Every journey as a diagram, with the steps, error and edge cases, and the spec IDs to open | Product, design, devs |
 | `02-state-machines.md` | The life cycle of a lesson, invitation, homework, quiz, links, recording, topic status, student account and invoice | Devs, QA |
+| `06-account-types.md` | How an independent tutor and a tutoring agency each work, side by side, with the admin-who-teaches role switch (proposal D-22) | Owner, product, devs |
 | `03-decisions-and-open-questions.md` | Judgment calls made while writing this, and what still needs the owner | Owner |
 | `04-payments.md` | A payment flow design for when billing is built (proposal) | Owner, devs |
 | `05-gamification.md` | A progress and motivation design that fits the redesign (proposal) | Owner, design |

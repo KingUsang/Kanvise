@@ -1,0 +1,14 @@
+flowchart TD
+  A["Independent tutor<br/>has_team = off"] --> B["Settings, How you teach<br/>With a team"]
+  B --> C["Confirm dialog<br/>You'll see Tutors and Team pages.<br/>Your courses, students and lessons stay as they are"]
+  C -->|"Cancel"| A
+  C -->|"Continue"| D["Ask for an agency name<br/>optional logo in General"]
+  D --> E["has_team = on<br/>owner keeps admin and tutor roles"]
+  E --> F["Tutors and Team pages appear<br/>Set up your team, Add tutor"]
+  F --> G["Owner can use Switch role<br/>Admin or Tutor in the account menu"]
+  E --> H["Existing courses keep the owner as tutor"]
+  F --> I["Invite a tutor TM-03"]
+  I --> J["Tutor accepts, owner gives them courses"]
+  K["Going back to On my own"] --> L{"Other team members still active?"}
+  L -->|"yes"| M["Not allowed<br/>Remove or reassign them first"]
+  L -->|"no"| N["has_team = off<br/>pages hidden, nothing deleted"]

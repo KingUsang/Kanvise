@@ -141,8 +141,13 @@ Paystack's support page on international payments says:
 So families abroad can pay. The open choice is what price they see: NGN, with
 their bank converting, or USD if a USD account is set up. Recommendation: show
 NGN to Nigerian payers, and USD to payers abroad once the USD account exists.
-Until then, NGN for everyone. Whose Paystack business holds the account (Kanvise's
-or each tutor's) decides which country's rules apply, so this stays open (OQ-01).
+Until then, NGN for everyone.
+
+**Who holds the Paystack account (owner, 28 Nov).** Kanvise does. Kanvise is the
+merchant, handles everything with Paystack (activation, international payments,
+fees, disputes), and pays tutors out. Tutors and agencies never open a Paystack
+account. In Paystack terms each organisation gets a subaccount for its payout
+bank account, and Kanvise's own account takes each payment before splitting it.
 
 ## Notifications to add to spec 18
 
@@ -164,12 +169,11 @@ history on the student page.
 
 ## Open questions (owner)
 
-- **OQ-01** The price payers abroad see (above), and whose Paystack business
-  holds the account.
+- **OQ-01** The price payers abroad see (above).
 - **OQ-02** Kanvise's own fee, later. The Paystack fee is paid by the payer (D-21).
 - **OQ-11** How the fee line is shown and settled: estimate by region, UK card
   surcharge rule, and the difference between estimate and real fee.
-- Whether agencies bill under one subaccount or each tutor gets their own.
+- **OQ-12** Payout account per organisation (see `06-account-types.md`).
 
 ## Test ideas
 

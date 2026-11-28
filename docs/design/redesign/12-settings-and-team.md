@@ -77,10 +77,13 @@ the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
   admin?** (07 CR-09). Turning it off while they are a course's only tutor
   asks: **You're the only tutor on 2 courses. Choose a new tutor first.** with
   the reassign list (19 TM-10, TM-06).
-  This replaces Bobbin's advice in its admin join dialog ("If you teach this
-  lesson from another account, join from that account instead",
-  `03-lessons/screenshots/classroom--join-dialog.png`): one account can both
-  run the agency and teach.
+  Bobbin's admin join dialog says "If you teach this lesson from another
+  account, join from that account instead"
+  (`03-lessons/screenshots/classroom--join-dialog.png`). Bobbin's own test
+  (atlas `17-admin-tutor-role-test`) shows what it means: the same login holds
+  an admin and a tutor role, and **Switch role** in the account menu changes
+  between them. Kanvise's one account can both run the agency and teach in the
+  same way (see `docs/design/user-flows/06-account-types.md`).
 - **Save changes.**
 
 ## CFG-S · Sign-in and security

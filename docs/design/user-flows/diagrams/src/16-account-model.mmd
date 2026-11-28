@@ -1,0 +1,21 @@
+flowchart LR
+  subgraph IND["Independent tutor: an organisation of one"]
+    I1["Casey Obi<br/>one login"] --> IM1["role: admin"]
+    I1 --> IM2["role: tutor"]
+    IM1 --> IO["Organisation: Casey Obi<br/>has_team = off<br/>Tutors and Team pages hidden<br/>no role switch, one merged view"]
+    IM2 --> IO
+  end
+  subgraph AG["Tutoring agency: an organisation with people"]
+    A1["Owner or admin<br/>one login"] --> AM1["role: admin"]
+    A2["Tutor<br/>one login"] --> AM2["role: tutor"]
+    A3["Admin who teaches<br/>one login"] --> AM3["role: admin"]
+    A3 --> AM4["role: tutor"]
+    AM1 --> AO["Organisation: Science Students Academy<br/>has_team = on<br/>Tutors and Team pages shown"]
+    AM2 --> AO
+    AM3 --> AO
+    AM4 --> AO
+  end
+  S["Student<br/>one login"] --> SM["role: student"]
+  SM --> IO
+  SM --> AO
+  AO -.->|"admin with both roles sees<br/>Switch role: Admin or Tutor"| AM4

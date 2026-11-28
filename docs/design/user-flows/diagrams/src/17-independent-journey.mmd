@@ -1,0 +1,25 @@
+flowchart TD
+  subgraph S1["1 Start"]
+    A1["Sign up, verify email<br/>AU-01, AU-02"] --> A2["Kavi questions<br/>On my own"]
+    A2 --> A3["Setup list, five steps<br/>students, course, plan, first lesson, classroom check"]
+  end
+  subgraph S2["2 Teach, week after week"]
+    B1["Add students<br/>invite by email, or links only"] --> B2["Course and course plan"]
+    B2 --> B3["Schedule lessons<br/>join links to students"]
+    B3 --> B4["Teach in the classroom"]
+    B4 --> B5["Write the summary, set homework"]
+    B5 --> B6["Mark homework, review changes to the plan"]
+    B6 --> B3
+  end
+  subgraph S3["3 Get paid (proposal)"]
+    C1["Turn on billing<br/>one payout account for this tutor"] --> C2["Invoice per student or payer<br/>payer pays the Paystack fee"]
+    C2 --> C3["Money goes to Kanvise's Paystack account<br/>then to the tutor's bank account"]
+  end
+  subgraph S4["4 Grow"]
+    D1["Bring in a colleague<br/>Settings, How you teach, With a team"] --> D2["Becomes an agency<br/>see flow 19"]
+  end
+  A3 --> B1
+  B5 -.-> C1
+  B6 -.-> D1
+  X["One person, one login, one merged view:<br/>tutor screens plus owner powers<br/>(create courses, add students, settings, data)"]
+  X -.- S2

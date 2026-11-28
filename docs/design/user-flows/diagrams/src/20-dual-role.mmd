@@ -1,0 +1,15 @@
+flowchart TD
+  A["Admin who also teaches"] --> B{"How do they start?"}
+  B -->|"Settings, My profile, I teach too"| C["Turn on I teach too<br/>no email, no invitation"]
+  B -->|"Tutors, Add tutor, types own email"| D["Dialog: You're already an admin here.<br/>Add yourself as a tutor too?"]
+  D -->|"Confirm"| C
+  C --> E["Second role added to the same login<br/>role: tutor"]
+  E --> F["Appears in Tutors with an Admin chip<br/>selectable in course and lesson wizards"]
+  E --> G["Account menu shows Switch role<br/>Admin or Tutor"]
+  G -->|"Tutor"| H["Tutor view<br/>exactly what an agency tutor sees:<br/>own courses, own lessons,<br/>no Tutors, Team or agency settings"]
+  G -->|"Admin"| I["Admin view<br/>everything in the agency<br/>Mine only toggle on the dashboard"]
+  H --> J["Teach own lessons as Tutor<br/>attendance counts as Tutor"]
+  I --> K["Open someone else's lesson<br/>Join as an admin: Lead or Watch"]
+  I --> L["Open own lesson from admin view<br/>Join classroom works as Tutor"]
+  C -.->|"turn OFF while sole tutor on courses"| M["Choose a new tutor first<br/>Reassign step, TM-06"]
+  H -.->|"whether the role is remembered<br/>on next sign-in is OQ-13"| G
