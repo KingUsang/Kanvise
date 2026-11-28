@@ -9,9 +9,9 @@ Read `README.md` in this folder first. It explains what Kavi does for tutors.
 
 ## Where the specs are
 
-The redesign specs are in `docs/design/redesign/`. They are on the branch
-`docs/user-flows` (and on `design/redesign-spec`), not yet on `staging`, because
-PR #78 isn't merged. Please read them from the branch.
+The redesign specs are in `docs/design/redesign/`, and the other design documents are
+in `docs/design/`. Start with `docs/design/user-flows/README.md` for how everything
+fits together.
 
 ## What you own
 
