@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Dialog, ModalDialog, resetBackHandlingForTests } from './dialog'
@@ -53,6 +54,27 @@ describe('phone Back gesture on sheets', () => {
     // A nav link tapped inside the sheet pushes the new page on top of the sheet's entry.
     window.history.pushState({}, '', '/elsewhere')
     unmount()
+    expect(back).not.toHaveBeenCalled()
+    window.history.replaceState({}, '', '/')
+  })
+
+  it('does not pop when a link click closes the sheet before the route change commits', () => {
+    const { back } = spyHistory()
+    function Host() {
+      const [open, setOpen] = useState(true)
+      return (
+        <Sheet open={open} onClose={() => setOpen(false)} title="More">
+          <a href="#next" onClick={(e) => { e.preventDefault(); setOpen(false) }}>Next page</a>
+        </Sheet>
+      )
+    }
+    render(<Host />)
+    fireEvent.click(screen.getByText('Next page'))
+    // The sheet is gone but the router has not pushed yet, so the URL and entry are still the sheet's own.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(back).not.toHaveBeenCalled()
+    // The deferred route commit lands afterwards.
+    window.history.pushState({}, '', '/elsewhere')
     expect(back).not.toHaveBeenCalled()
     window.history.replaceState({}, '', '/')
   })

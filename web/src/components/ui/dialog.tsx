@@ -73,7 +73,7 @@ export function isTopDialog(token: symbol) {
  * that pop is ignored. The current history state is copied so the Next.js
  * router still recognises the entry.
  */
-type BackEntry = { token: symbol; close: () => boolean | void; pushed: boolean; href: string };
+type BackEntry = { token: symbol; close: () => boolean | void; pushed: boolean; href: string; navigating: boolean };
 const backStack: BackEntry[] = [];
 /** Pops this module asked for. Each expires after a short wait so a pop that never arrives cannot swallow a real Back. */
 let ignoredPops: symbol[] = [];
@@ -104,23 +104,24 @@ function pushBackEntry(entry: BackEntry) {
   window.history.pushState({ ...(window.history.state ?? {}), kanviseSheet: true }, "", window.location.href);
 }
 
-function registerBack(token: symbol, close: () => boolean | void): () => void {
-  const entry: BackEntry = { token, close, pushed: false, href: window.location.href };
+function registerBack(token: symbol, close: () => boolean | void): { unregister: () => void; markNavigating: () => void } {
+  const entry: BackEntry = { token, close, pushed: false, href: window.location.href, navigating: false };
   backStack.push(entry);
   if (!backListening) {
     window.addEventListener("popstate", onPopState);
     backListening = true;
   }
   pushBackEntry(entry);
-  return () => {
+  const unregister = () => {
     const index = backStack.indexOf(entry);
     if (index >= 0) backStack.splice(index, 1);
     if (entry.pushed) {
       entry.pushed = false;
-      // Closed because a link was followed: the entry is behind the new page, so popping would undo the navigation.
-      // Also skip when the current entry is not ours, since back() would then leave the page.
+      // Closed because a link inside was clicked: the route change commits after this unmount, so popping now
+      // would race it and can restore the old page. Leave the spare entry; Back passes through it.
+      // Also skip when navigation already committed or the current entry is not ours, since back() would then leave the page.
       const stillOnOwnEntry = window.location.href === entry.href && Boolean((window.history.state as { kanviseSheet?: boolean } | null)?.kanviseSheet);
-      if (stillOnOwnEntry) {
+      if (stillOnOwnEntry && !entry.navigating) {
         const mark = Symbol("ignored-pop");
         ignoredPops.push(mark);
         setTimeout(() => {
@@ -134,6 +135,7 @@ function registerBack(token: symbol, close: () => boolean | void): () => void {
       backListening = false;
     }
   };
+  return { unregister, markNavigating: () => { entry.navigating = true; } };
 }
 
 interface DialogProps {
@@ -198,9 +200,16 @@ export function Dialog({ closeOnBack = false, onBack, label, labelledBy, describ
       (target === null || target < 0 ? panel : items[target]).focus();
     };
     document.addEventListener("keydown", onKeyDown, true);
-    const unregisterBack = closeOnBack && onCloseRef.current ? registerBack(token, () => (onBackRef.current ? onBackRef.current() : onCloseRef.current?.())) : null;
+    const back = closeOnBack && onCloseRef.current ? registerBack(token, () => (onBackRef.current ? onBackRef.current() : onCloseRef.current?.())) : null;
+    const root = rootRef.current;
+    const onLinkClick = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest?.("a[href]");
+      if (link && !link.hasAttribute("download") && link.getAttribute("target") !== "_blank") back?.markNavigating();
+    };
+    if (back) root?.addEventListener("click", onLinkClick);
     return () => {
-      unregisterBack?.();
+      root?.removeEventListener("click", onLinkClick);
+      back?.unregister();
       document.removeEventListener("keydown", onKeyDown, true);
       removeDialog(token);
       restoreInert();
