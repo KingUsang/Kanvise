@@ -81,37 +81,43 @@ function rethrow<T>(result: { data: T | null; error: unknown }) {
 }
 
 type PersonRow = { id: string; first_name: string | null; last_name: string | null; email: string | null; created_at?: string }
+type MembershipRow = { person: PersonRow | PersonRow[] | null }
 
 /**
  * People in one account with a role, matched on first name, last name, email
- * and "first last". Separate parameterised filters keep typed text out of
- * PostgREST `or()` strings.
+ * and "first last". The account comes from active account_memberships, so a
+ * person who belongs to several accounts is found in each of them, not only in
+ * the one stored on their profile (DEV-ACC-001). A student is a "learner"
+ * membership. Separate parameterised filters keep typed text out of PostgREST
+ * `or()` strings.
  */
 async function searchPeople(accountId: string, role: 'student' | 'tutor', term: string) {
   const pattern = containsPattern(term)
-  const base = () => supabase.from('user_profiles')
-    .select('id, first_name, last_name, email, created_at')
+  const base = () => supabase.from('account_memberships')
+    .select('person:user_profiles!account_memberships_person_id_fkey!inner(id, first_name, last_name, email, created_at)')
     .eq('school_id', accountId)
-    .eq('role', role)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
+    .eq('role', role === 'student' ? 'learner' : 'tutor')
+    .eq('status', 'active')
+    .eq('person.is_active', true)
+    .order('joined_at', { ascending: false })
     .limit(SEARCH_GROUP_LIMIT)
   const queries = [
-    base().ilike('first_name', pattern),
-    base().ilike('last_name', pattern),
-    base().ilike('email', pattern),
+    base().ilike('person.first_name', pattern),
+    base().ilike('person.last_name', pattern),
+    base().ilike('person.email', pattern),
   ]
   const space = term.indexOf(' ')
   if (space > 0) {
     queries.push(base()
-      .ilike('first_name', containsPattern(term.slice(0, space)))
-      .ilike('last_name', containsPattern(term.slice(space + 1))))
+      .ilike('person.first_name', containsPattern(term.slice(0, space)))
+      .ilike('person.last_name', containsPattern(term.slice(space + 1))))
   }
   const results = await Promise.all(queries)
   const seen = new Map<string, PersonRow>()
   for (const result of results) {
-    for (const row of (rethrow(result) || []) as PersonRow[]) {
-      if (!seen.has(row.id)) seen.set(row.id, row)
+    for (const row of (rethrow(result) || []) as unknown as MembershipRow[]) {
+      const person = Array.isArray(row.person) ? row.person[0] : row.person
+      if (person && !seen.has(person.id)) seen.set(person.id, person)
     }
   }
   return [...seen.values()].slice(0, SEARCH_GROUP_LIMIT)
