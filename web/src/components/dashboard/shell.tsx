@@ -26,6 +26,8 @@ import { loginHref } from "@/lib/auth-continuation";
 import { authenticatedApiFetch, SESSION_ENDED_EVENT } from "@/lib/authenticated-fetch";
 import { useDashboardSession } from "@/lib/dashboard-session";
 import { fetchSearch } from "@/lib/search";
+import { useSetupState } from "@/lib/onboarding-api";
+import { buildSetupChecklist } from "@/lib/setup-checklist";
 import { discardPendingUploads, getPendingUploadCount } from "@/lib/pending-uploads";
 import { getSaveQueue } from "@/lib/offline/save-queue";
 import { useUploadingCount } from "@/lib/offline/use-autosave-field";
@@ -81,6 +83,11 @@ export function DashboardShell({
     staleTime: 60_000,
     retry: 1,
   });
+  // Only the account owner has a checklist (02 Permissions); the read answers
+  // "not eligible" for everyone else, so it is asked of admins only.
+  const setupQuery = useSetupState(
+    !setupRequired && sessionQuery.isSuccess && Boolean(sessionQuery.data?.capabilities.isAdmin),
+  );
   const [signedOut, setSignedOut] = React.useState(false);
   const signingOutRef = React.useRef(false);
 
@@ -128,9 +135,19 @@ export function DashboardShell({
     isAdmin: user.role === "admin",
     isTutor: user.role === "tutor",
   };
+  const setupData = setupQuery.data;
+  const checklist =
+    setupData?.eligible
+      ? buildSetupChecklist({ accountType: setupData.accountType, facts: setupData.facts, skippedSteps: setupData.skippedSteps })
+      : null;
+  // Rows for later build steps stay hidden, so an empty or finished list shows no card (SH-02).
+  const setupProgress =
+    checklist && checklist.total > 0 && !checklist.allDone
+      ? { completed: checklist.completed, total: checklist.total, label: checklist.label }
+      : null;
   const capabilities: DashboardCapabilities = setupRequired
     ? { isAdmin: true, isTutor: false, setupRequired: true }
-    : session?.capabilities || fallbackCapabilities;
+    : { ...(session?.capabilities || fallbackCapabilities), setupVisible: Boolean(setupProgress) };
   const loading = !setupRequired && !session && sessionQuery.isPending;
   const failed = !setupRequired && !session && sessionQuery.isError;
 
@@ -161,6 +178,7 @@ export function DashboardShell({
       ungradedQuizzes: ungraded.isSuccess ? ungraded.data : null,
       ungradedQuizzesUnavailable: ungraded.isError,
     },
+    setup: setupProgress,
     loading,
   };
 

@@ -33,7 +33,8 @@ export async function updateSession(request: NextRequest) {
   const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard')
   const isAccountSetupRoute = request.nextUrl.pathname.startsWith('/account/setup')
   const isAccountPickerRoute = request.nextUrl.pathname.startsWith('/account/select')
-  const isProtectedRoute = isDashboardRoute || isAccountSetupRoute || isAccountPickerRoute
+  const isOnboardingRoute = request.nextUrl.pathname.startsWith('/onboarding')
+  const isProtectedRoute = isDashboardRoute || isAccountSetupRoute || isAccountPickerRoute || isOnboardingRoute
 
   let claims: Record<string, any> | null = null
   try {

@@ -82,6 +82,17 @@ describe('dashboard navigation groups (SH-02)', () => {
     }
   })
 
+  it('puts Setup above Dashboard for the account owner while the checklist has rows to do (SH-02)', () => {
+    const owner: DashboardCapabilities = { ...independentTutor, setupVisible: true }
+    expect(getDashboardNavItems(owner).slice(0, 2).map((item) => [item.label, item.href])).toEqual([['Setup', '/dashboard/setup'], ['Dashboard', '/dashboard']])
+    expect(getDashboardNavGroups(owner)[0].items[0].label).toBe('Setup')
+    expect(getDashboardNavItems(independentTutor).map((item) => item.label)).not.toContain('Setup')
+    // A tutor has no checklist even if the flag leaked through.
+    expect(getDashboardNavItems({ ...agencyTutor, setupVisible: true }).map((item) => item.label)).not.toContain('Setup')
+    expect(canAccessDashboardPath('/dashboard/setup', owner)).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/setup', agencyTutor)).toBe(false)
+  })
+
   it('uses the redesign words', () => {
     const labels = getDashboardNavItems(agencyAdminTutor).map((item) => item.label).join(' ')
     expect(labels).not.toMatch(/Learner|Class|Session|Assignment|Material/)

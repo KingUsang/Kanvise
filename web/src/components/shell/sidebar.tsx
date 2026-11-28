@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Check, ChevronsUpDown, CircleHelp, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Check, ChevronRight, ChevronsUpDown, CircleHelp, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import {
   getDashboardNavGroups,
   isActiveNavHref,
@@ -11,6 +11,7 @@ import {
 import { Avatar } from '@/components/ui/avatar'
 import { CountBadge } from '@/components/ui/badge'
 import { Menu, type MenuItem } from '@/components/ui/menu'
+import { SetupProgress } from '@/components/dashboard/setup/setup-view'
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton'
 import { Tooltip } from '@/components/ui/tooltip'
 import { navIcons } from './nav-icons'
@@ -122,6 +123,24 @@ function AccountCard({ data, r, defaultOpen, onSwitch }: {
   )
 }
 
+/** Setup card (SH-02 item 3): links to /dashboard/setup until setup is finished. */
+function SetupCard({ setup, r, active, onNavigate }: { setup: NonNullable<ShellData['setup']>; r: RailClasses; active: boolean; onNavigate?: () => void }) {
+  return (
+    <Link
+      href="/dashboard/setup"
+      onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
+      className={cx('block space-y-2 rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface px-3 py-3 hover:bg-dashboard-surface-hover', focusRing, r.hideInRail)}
+    >
+      <span className="flex items-center justify-between gap-2 text-dashboard-small font-semibold text-dashboard-foreground">
+        Set up your account
+        <ChevronRight aria-hidden="true" className="size-4 text-dashboard-muted" />
+      </span>
+      <SetupProgress completed={setup.completed} total={setup.total} label={setup.label} />
+    </Link>
+  )
+}
+
 function NavLink({ item, active, r, tooltips, badge, unavailable = false, onNavigate }: {
   item: DashboardNavItem
   active: boolean
@@ -202,7 +221,7 @@ export type SidebarContentProps = {
 
 /**
  * Sidebar content, top to bottom (SH-02): account card, search slot, setup
- * card slot (hidden in build step 1), grouped navigation, user card. The
+ * card (until setup is finished), grouped navigation, user card. The
  * phone More sheet shows the same content (SH-16).
  */
 export function SidebarContent({
@@ -234,6 +253,9 @@ export function SidebarContent({
         <AccountCard data={data} r={r} defaultOpen={initialOverlay === 'switcher'} onSwitch={onSwitchAccount} />
         {variant === 'sidebar'
           ? (typeof searchSlot === 'function' ? searchSlot({ srInRail: r.srInRail, hideInRail: r.hideInRail, centreInRail: r.centreInRail, tooltips }) : searchSlot)
+          : null}
+        {!data.loading && data.setup && !data.capabilities.setupRequired
+          ? <SetupCard setup={data.setup} r={r} active={isActiveNavHref(pathname, '/dashboard/setup')} onNavigate={onNavigate} />
           : null}
       </div>
 
