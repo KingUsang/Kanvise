@@ -7,6 +7,8 @@ data ownership, or backend capability.
 
 - `auth/`: authentication and enrollment behaviour plus its storyboard
 - `flows/`: broad product journeys and navigation studies
+- `user-flows/`: end-to-end user flows, state machines, QA test plan and
+  proposals for payments and progress, written from the redesign specs
 - `dashboard/`: dashboard and timetable composition references
 - `landing/`: marketing and waitlist direction
 - `email/`: lifecycle-email composition references

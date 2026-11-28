@@ -1,0 +1,52 @@
+flowchart TD
+  subgraph SETUP["Tutor or admin: one-time setup (BL-01 to BL-03)"]
+    A1["Settings, Billing<br/>hidden until payments ship"] --> A2["Business details<br/>name, address, currency, billing period"]
+    A2 --> A3["Payout account<br/>bank and account number"]
+    A3 --> A4{"Paystack resolves the account name?"}
+    A4 -->|"no"| A5["We couldn't verify this account<br/>check the number and bank"]
+    A5 --> A3
+    A4 -->|"yes"| A6["Tutor confirms the name shown<br/>subaccount created for payouts"]
+    A6 --> A7["BL-02 Price on a course<br/>per lesson, monthly, or package"]
+    A7 --> A8["BL-03 Payer on each student<br/>the student, or another contact<br/>name, email, phone"]
+  end
+  subgraph INV["Invoicing (BL-04, BL-05)"]
+    B1["Draft invoice built from completed lessons<br/>or when 2 lessons are left in a package"] --> B2["Dashboard row: invoices ready to send"]
+    B2 --> B3["Tutor reviews and edits<br/>lines, amounts, notes, due date"]
+    B3 --> B4["Send<br/>email with pay link, optional WhatsApp message"]
+    B4 --> B5["Status Sent"]
+  end
+  subgraph PAY["Payer (no login)"]
+    C1["Opens invoice link<br/>BL-06"] --> C2{"Link valid?"}
+    C2 -->|"invalid or voided"| C3["This invoice is no longer available<br/>Contact your tutor"]
+    C2 -->|"already paid"| C4["Paid, thank you<br/>Download receipt"]
+    C2 -->|"valid"| C5["Invoice page<br/>Pay amount"]
+    C5 --> C6["Paystack checkout<br/>card, bank transfer, USSD"]
+    C6 --> C7{"Outcome"}
+    C7 -->|"abandoned or declined"| C8["Back on invoice page<br/>Payment didn't go through, Try again<br/>invoice stays Sent"]
+    C8 --> C5
+    C7 -->|"bank transfer pending"| C9["We're waiting for your bank<br/>page updates when confirmed"]
+    C7 -->|"success redirect"| C10["Confirming your payment<br/>do not mark Paid from the redirect"]
+  end
+  subgraph SYS["System (Paystack webhook)"]
+    D1["charge.success webhook"] --> D2{"Signature valid?<br/>HMAC-SHA512 of raw body"}
+    D2 -->|"no"| D3["Reject, log, alert"]
+    D2 -->|"yes"| D4{"Reference known, amount and<br/>currency match invoice?"}
+    D4 -->|"no"| D5["Hold for manual review<br/>tutor and Kanvise support alerted"]
+    D4 -->|"yes"| D6{"Already processed?"}
+    D6 -->|"yes"| D7["Ignore, return 200 (idempotent)"]
+    D6 -->|"no"| D8["Mark invoice Paid<br/>record payment"]
+    D8 --> D9["Receipt email to payer<br/>tutor notified"]
+  end
+  subgraph LATE["Overdue and exceptions (BL-07)"]
+    E1["Due date passes"] --> E2["Status Overdue, red chip"]
+    E2 --> E3["Tutor presses Send a reminder<br/>nothing is sent automatically"]
+    E2 --> E4["Mark as paid<br/>cash or direct transfer, with a note"]
+    B5 --> E5["Void with a reason<br/>link stops working"]
+  end
+  A8 --> B1
+  B5 --> C1
+  C6 -.-> D1
+  C10 -.-> D8
+  D8 -.-> C4
+  B5 -->|"due date passes unpaid"| E1
+  E4 --> D8

@@ -1,0 +1,20 @@
+stateDiagram-v2
+  direction LR
+  state "Needs work" as NW
+  state "Knows it" as KI
+  [*] --> None: topic added to plan
+  None --> Next: tutor sets or Use this order
+  None --> Taught: lesson summary accepted
+  Next --> Taught: lesson summary accepted
+  Taught --> KI: homework, quiz or check accepted
+  Taught --> NW: homework, quiz or check accepted
+  None --> KI: starting check accepted
+  None --> NW: starting check accepted
+  NW --> KI: later evidence accepted
+  KI --> NW: later evidence accepted
+  Taught --> None: tutor changes by hand
+  note right of NW
+    Tutor-only. A student sees it as Taught.
+    Nothing changes without an accepted proposal
+    or a hand edit. Proposals expire after 30 days.
+  end note

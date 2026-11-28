@@ -1,0 +1,51 @@
+flowchart TD
+  subgraph SRC["Real events already in Kanvise"]
+    E1["Attended a lesson<br/>attendance DM-08"]
+    E2["Homework handed in on time<br/>DM-12"]
+    E3["Quiz finished<br/>DM-13"]
+    E4["Starting check finished<br/>DM-11"]
+    E5["Topic moves to Knows it<br/>tutor accepted, DM-05"]
+  end
+  subgraph ENG["Progress engine (proposal)"]
+    G0{"Tutor turned on<br/>Progress for this course?"}
+    G1["Write one XP event per source event<br/>idempotent by source id"]
+    G2["Update weekly streak"]
+    G3["Check badge rules"]
+    G4["Update quests"]
+  end
+  subgraph UI["What the student sees (student app only)"]
+    U1["Home: streak, this week's XP, quests"]
+    U2["Course page: progress bar and map of the course plan"]
+    U3["Badge shelf on Me"]
+    U4["Celebration for a new badge or milestone<br/>reduced motion respected, dismissible"]
+    U5["Gentle nudge, at most 1 a day<br/>never guilt, never to under-18s after 8 PM"]
+    U6["Small group course only:<br/>one shared weekly goal, for example<br/>everyone hands in homework<br/>no ranking, no leaderboard"]
+  end
+  subgraph TUT["What the tutor sees and controls"]
+    T1["Student page: streak, XP, badges<br/>private to tutor and student"]
+    T2["Course settings: Progress on or off,<br/>weekly goal, custom challenge"]
+    T3["Lesson Tools: shout out a win<br/>or Most improved this week"]
+    T4["Needs attention: streak about to break<br/>replaces the old at-risk digest"]
+  end
+  E1 --> G0
+  E2 --> G0
+  E3 --> G0
+  E4 --> G0
+  E5 --> G0
+  G0 -->|"no"| X(["Nothing recorded, nothing shown"])
+  G0 -->|"yes"| G1
+  G1 --> G2
+  G1 --> G3
+  G1 --> G4
+  G2 --> U1
+  G4 --> U1
+  G3 --> U3
+  G3 --> U4
+  G1 --> U2
+  G2 -->|"week at risk"| U5
+  G1 -->|"course has 2 or more students"| U6
+  G2 --> T1
+  G2 -->|"week at risk"| T4
+  T2 --> G0
+  T3 --> U4
+  S1["Streak freeze: one miss per month is forgiven<br/>power cuts and data problems are normal"] -.-> G2

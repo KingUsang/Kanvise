@@ -1,0 +1,39 @@
+flowchart TD
+  A["Courses list CRS-01<br/>or empty CRS-02"] -->|"New course"| B["CW-1 Name and presentation<br/>name, subject, description, colour,<br/>This is a trial switch"]
+  B --> C["CW-2 People<br/>students, plus tutors for agencies"]
+  C -->|"student not in list"| C1["Add student inline STU-03<br/>invitation is sent immediately"]
+  C1 --> C
+  C --> D["CW-3 Review"]
+  D -->|"Create course"| E{"Created?"}
+  E -->|"fails"| E1["We couldn't create the course<br/>Nothing was saved. Try again"]
+  E1 --> D
+  E -->|"yes"| F["Course page CRS-03 Summary"]
+  F --> G{"Trial course?"}
+  G -->|"yes"| H["Card: Schedule the trial lesson"]
+  H --> H1["After the trial lesson ends"]
+  H1 --> H2["Turn this into a full course"]
+  H1 --> H3["Archive trial"]
+  H2 --> I
+  G -->|"no"| I["Card CRS-06 Build the course plan"]
+  I --> J{"How?"}
+  J -->|"Draft with Kavi"| K["Describe the course<br/>20 characters minimum"]
+  K --> K1{"Kavi result"}
+  K1 -->|"ok"| K2["Plan saved as Draft<br/>Review draft, then Use this plan"]
+  K1 -->|"fails"| K3["Try again or Start blank instead"]
+  K3 --> J
+  J -->|"Start blank"| L["Plan Active and empty<br/>tutor adds modules and topics"]
+  J -->|"Copy plan from another course"| M["Pick a course with a plan"]
+  K2 --> N["CRS-04 Course plan is Active"]
+  L --> N
+  M --> N
+  N --> O["Card CRS-07 Find out what they know<br/>needs at least one topic"]
+  O -->|"Not now"| Q
+  O --> P["DIAG-D Send starting check<br/>questions, two per topic"]
+  P --> P1["DIAG-P preview and edit"]
+  P1 -->|"Send"| P2["Email, or personal link<br/>by Copy or WhatsApp if no email"]
+  P2 --> P3["Student takes the check, see flow 10"]
+  P3 --> P4["DIAG-R results by topic"]
+  P4 --> P5["CRS-08 Review changes<br/>tutor ticks each proposal"]
+  P5 --> Q["Schedule the first lesson<br/>opens the new lesson wizard, flow 05"]
+  F -.-> R["Tutor edits topic statuses by hand at any time<br/>None, Next, Taught, Needs work, Knows it"]
+  R -.-> N

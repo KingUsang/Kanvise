@@ -1,0 +1,18 @@
+stateDiagram-v2
+  direction LR
+  state "No account" as NA
+  state "Invited" as INV
+  state "Active" as ACT
+  state "Deleted" as DEL
+  [*] --> NA: tutor adds student, no email
+  [*] --> INV: tutor adds student with email
+  NA --> INV: tutor adds an email
+  INV --> ACT: accepts and sets password
+  INV --> INV: resend, 72 h reminder once
+  ACT --> DEL: tutor deletes student data, STU-11
+  NA --> DEL: tutor deletes student data, STU-11
+  INV --> DEL: tutor deletes student data
+  note right of NA
+    Join links and check links only.
+    No homework, quizzes, summaries or recordings in Kanvise.
+  end note

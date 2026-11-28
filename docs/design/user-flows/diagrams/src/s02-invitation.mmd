@@ -1,0 +1,12 @@
+stateDiagram-v2
+  direction LR
+  [*] --> Sent: admin or tutor invites
+  Sent --> Accepted: person sets password or signs in
+  Sent --> Expired: 7 days pass, student expiry to confirm D-12
+  Sent --> Revoked: person removed before accepting
+  Sent --> Sent: resend, new link, old link stops
+  Expired --> Sent: resend
+  Revoked --> Sent: Invite again
+  Accepted --> Removed: tutor or team member removed
+  Removed --> Sent: Invite again
+  Accepted --> [*]

@@ -1,0 +1,34 @@
+flowchart TD
+  subgraph TUT["Tutor"]
+    T1["QZ-01 Start<br/>Write my own or Generate with Kavi"] --> T2{"Course has a plan?"}
+    T2 -->|"no"| T3["Kavi blocked<br/>Write my own only"]
+    T2 -->|"yes"| T4["Kavi: topics, count 5 10 15, difficulty"]
+    T3 --> T5
+    T4 --> T5["QZ-02 Builder<br/>question, options, correct answer,<br/>topic, explanation"]
+    T5 -->|"Continue"| T6{"Valid?"}
+    T6 -->|"no"| T7["Choose the correct answer<br/>Add at least two options<br/>Choose a topic"]
+    T7 --> T5
+    T6 -->|"yes"| T8["QZ-03 Settings<br/>students, due date,<br/>show score only or score and answers, shuffle"]
+    T8 --> T9["QZ-04 Review<br/>Kavi questions must be checked"]
+    T9 -->|"Save as draft"| T10["Draft"]
+    T9 -->|"Send to students"| T11{"Sent?"}
+    T11 -->|"fails"| T12["Saved as draft. Try again"]
+    T11 -->|"ok"| T13["Sent NTF-407"]
+    T13 --> T14["QZ-06 Results<br/>Summary, By student, By topic"]
+    T14 --> T15["CRS-08 proposals<br/>Knows it only if all right, at least 2 questions<br/>Needs work if half or fewer right"]
+    T14 -->|"Edit wording"| T16["Wording and explanations only<br/>after anyone starts, duplicate to change answers"]
+    T14 -->|"Close"| T17["No new attempts"]
+  end
+  subgraph STD["Student"]
+    S1["Notification or Home To do"] --> S2["SA-08 Quizzes tab<br/>To take"]
+    S2 --> S3["QZ-05 Start screen"]
+    S3 -->|"Start quiz"| S4["One question per screen<br/>answers autosave, Back and Next"]
+    S4 -->|"offline"| S5["Answers saved and sent when back online"]
+    S5 --> S4
+    S4 -->|"leaves and returns"| S4
+    S4 --> S6["Finish check<br/>lists unanswered questions"]
+    S6 -->|"Hand in"| S7["Result<br/>score, and answers if tutor allows<br/>one attempt only"]
+    S7 --> S8["Tutor notified NTF-408"]
+  end
+  T13 --> S1
+  S8 --> T14

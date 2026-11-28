@@ -1,0 +1,16 @@
+stateDiagram-v2
+  direction LR
+  state "Quiz, tutor view" as QZ {
+    [*] --> Draft
+    Draft --> Sent: Send to students
+    Sent --> Closed: tutor closes, decision D-07
+  }
+  state "One student's attempt" as AT {
+    [*] --> NotStarted
+    NotStarted --> InProgress: Start quiz, Late flag if past due
+    InProgress --> InProgress: answer autosaved, offline queue
+    InProgress --> Done: Hand in
+    NotStarted --> Blocked: quiz closed before starting
+    Done --> [*]
+    Blocked --> [*]
+  }

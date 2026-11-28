@@ -1,0 +1,17 @@
+stateDiagram-v2
+  direction LR
+  state "Join link (one per student per lesson)" as JL {
+    [*] --> Active: lesson scheduled
+    Active --> Replaced: Get a new link
+    Active --> Revoked: lesson cancelled or student removed
+    Active --> Expired: 2 hours after scheduled end
+    Active --> Active: lesson live, expiry follows actual end
+    Revoked --> Active: Undo of the cancel, decision D-13
+  }
+  state "Starting check link (one per student)" as CL {
+    [*] --> CActive: check sent
+    CActive --> CReplaced: Send again, old link stops at once
+    CActive --> CExpired: 14 days
+    CActive --> CDone: student finishes
+    CActive --> CCancelled: tutor cancels the check
+  }

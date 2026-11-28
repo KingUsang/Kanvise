@@ -1,0 +1,27 @@
+flowchart TD
+  A["Tutor sends starting check<br/>DIAG-D, from course card CRS-07"] --> B{"Student has an account?"}
+  B -->|"yes"| C["Email NTF-409 and bell<br/>Your check card on Home"]
+  B -->|"no email"| D["Personal check link<br/>tutor presses Copy or WhatsApp"]
+  C --> E["DIAG-S Start the check"]
+  D --> F{"Link valid?"}
+  F -->|"expired after 14 days or replaced"| G["This link has expired<br/>Ask your tutor for a new one"]
+  G --> H["Tutor Sends again<br/>new link, old link stops at once"]
+  H --> D
+  F -->|"already finished"| I["You've already finished this check. Thanks"]
+  F -->|"more than 10 opens in an hour"| J["Too many tries. Try again in an hour"]
+  F -->|"valid"| E
+  E --> K["One question at a time<br/>four options plus Not sure<br/>no going back, no score shown"]
+  K -->|"Save and finish later"| L["Same link or card resumes<br/>other device continues from last question"]
+  L --> K
+  K -->|"missed a topic"| M["Later topics in that module are skipped<br/>unless marked as not building on each other"]
+  M --> K
+  K --> N["All done, thanks"]
+  N --> O["Tutor notified NTF-411"]
+  O --> P["DIAG-R Results by topic<br/>two right Knows it, two wrong or Not sure Needs work,<br/>mixed Not sure yet"]
+  P -->|"unfinished"| Q["Send a reminder NTF-410<br/>email or WhatsApp button"]
+  Q --> K
+  P --> R["Review changes CRS-08<br/>tutor ticks each proposed status"]
+  P --> S["Suggested order card<br/>only when Kavi exists"]
+  P -->|"Send again"| A
+  P -->|"Cancel this check"| T["Attempt cancelled"]
+  U["New student joins the course later"] --> A
