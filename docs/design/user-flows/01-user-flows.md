@@ -2,8 +2,8 @@
 
 Every flow below is drawn from the redesign specs. IDs in brackets are the
 spec state IDs (README in `docs/design/redesign/` lists the prefixes). A line
-marked **Decision D-nn** is a proposal made while writing this folder; see
-`03-decisions-and-open-questions.md`.
+marked **Decision D-nn** is a decision approved by the owner on 28 Nov 2026 and applied
+to the specs; see `03-decisions-and-open-questions.md`.
 
 Roles: **Independent tutor** (one person, full rights), **Agency admin**,
 **Agency tutor** (only their own courses), **Student** (with account), and

@@ -1,9 +1,13 @@
 # Decisions and open questions
 
-Written 28 Nov 2026. The owner said minor gaps can be settled using good product
-judgment, and the hard ones confirmed with them. **D-** items below are my
-proposals. They change or fill in the specs, so each needs a quick yes or no
-from the owner before the spec text is edited. **OQ-** items need the owner.
+Written 28 Nov 2026. The owner approved decisions D-01 to D-19 on 28 Nov. They are
+applied to the redesign specs on this branch, except D-15 (payments) and D-16
+(progress features), which stay proposals, and D-11 and D-14, which need no spec change.
+**OQ-** items still need the owner.
+
+Spec files changed: `02`, `05`, `07`, `09`, `10`, `11`, `12`, `17`, `18`, `19`, and the new
+`21-sign-in-and-sign-up.md` (with the `AU` ID prefix in the README and the checker).
+The spec checker (`history/check.py`) passes.
 
 ## Owner answers already given (28 Nov)
 

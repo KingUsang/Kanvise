@@ -34,7 +34,7 @@ from collections import defaultdict
 REF_PREFIXES = [
     "SH", "ONB", "SET", "DB", "CRS", "CW", "DIAG", "LL", "LW", "LP", "CAL",
     "STU", "CR", "SM", "SA", "HW", "QZ", "CFG", "BL", "RS", "R", "REC", "NTF",
-    "TM", "DM",
+    "TM", "DM", "AU",
 ]
 RETIRED_PREFIXES = ["LS", "ST"]
 

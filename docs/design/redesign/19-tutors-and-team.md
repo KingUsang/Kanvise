@@ -97,7 +97,9 @@ A dialog, as Bobbin's:
   shown as **Lagos (WAT) · 4:02 PM** (12 CFG-P style).
 - **Courses (optional):** a multi-select of the agency's courses with
   swatches. Line: **They'll see only the courses you give them.** A course
-  that already has a tutor shows **Replaces Priya Shah** beside it.
+  that already has a tutor shows **Priya Shah also teaches this** beside it.
+  Adding a tutor never replaces anyone: a course can have several tutors, and
+  each lesson has exactly one (05 LW-1).
 - **Cancel** · **Add tutor**.
 
 **After adding:** the tutor page (TM-04) opens with the **Invite not

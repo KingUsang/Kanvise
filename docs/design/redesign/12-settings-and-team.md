@@ -15,7 +15,7 @@ Checked against `14-settings/screenshots/page--default.png`,
 Route `/settings`. Header **Settings** · "Set up Kanvise the way you teach." On
 the right: **Jump to ▾** and **Find a setting** (search), as in Bobbin.
 
-- **Left list** of sections under small group labels (YOU, YOUR TEACHING,
+- **Left list** of sections under small group labels (PERSONAL, LESSONS,
   ACCOUNT). The current section carries the orange "you are here" marker (01
   SH-15).
 - **Content** on the right as cards. Each card has a title and **Show details**
@@ -34,20 +34,20 @@ the right: **Jump to ▾** and **Find a setting** (search), as in Bobbin.
 
 | Group | Section | Independent tutor | Agency admin | Agency tutor |
 |---|---|---|---|---|
-| YOU | My profile | Yes | Yes | Yes |
-| YOU | Sign-in and security | Yes | Yes | Yes |
-| YOU | Notifications | Yes | Yes | Yes |
-| YOUR TEACHING | Teaching preferences | Yes | Yes | No |
-| YOUR TEACHING | Lessons and classroom | Yes | Yes | No |
-| YOUR TEACHING | Kavi | Yes | Yes | No |
-| ACCOUNT | Business details | Yes | Yes | No |
+| PERSONAL | My profile | Yes | Yes | Yes |
+| PERSONAL | Sign-in and security | Yes | Yes | Yes |
+| PERSONAL | Notifications | Yes | Yes | Yes |
+| LESSONS | How you teach | Yes | Yes | No |
+| LESSONS | Lessons and classroom | Yes | Yes | No |
+| LESSONS | Kavi | Yes | Yes | No |
+| ACCOUNT | General | Yes | Yes | No |
 | ACCOUNT | Billing | Hidden until billing exists | Hidden until billing exists | No |
 | ACCOUNT | Data and privacy | Yes | Yes | No |
 
 **Billing** is out of the build (00 section 14). The row is reserved: the item
 stays hidden, not disabled, until billing exists (13 BL-01, 20 DM-31).
 
-Agency tutors see only the YOU group, as Bobbin's tutors see only Your details,
+Agency tutors see only the PERSONAL group, as Bobbin's tutors see only Your details,
 Password, Two-factor and Notifications (`15-tutor-role/screenshots/tutor-profile--default.png`).
 
 Tutors and team members are not managed here. They have their own pages in
@@ -117,6 +117,8 @@ and **Push** and **Email** toggles, as Bobbin's personal Notifications card
 | Lesson reminder before my lesson | Anyone who teaches | Push on, email on |
 | A student is waiting for my lesson | Anyone who teaches | Push on, email off |
 | My lesson hasn't started on time | Anyone who teaches | Push on, email on |
+| My lesson didn't take place (18 NTF-214) | Anyone who teaches | Push on, email off |
+| A recording didn't save (18 NTF-308) | Anyone who teaches | Push on, email off |
 | A student sent a message about a lesson (07 CR-12) | Anyone who teaches | Push on, email off |
 | Homework handed in | Anyone who teaches | Push on, email off |
 | Quiz finished | Anyone who teaches | Push on, email off |
@@ -140,7 +142,7 @@ lessons, password emails) are always sent and have no row here (18 NTF-01,
 - Times in emails use the account's timezone (CFG-A), with the zone named, for
   example **4:00 PM WAT** (00 section 19).
 
-## CFG-T · Teaching preferences
+## CFG-T · How you teach
 
 The onboarding answers (spec 02), editable:
 - **On my own / With a team** (switching to a team shows **Set up your team**,
@@ -263,17 +265,22 @@ uses them to train its models.
 - What the tutor must confirm: choosing a style (**Use Structured**) or
   switching a toggle. Nothing changes what was already written.
 - Without Kavi: the Kavi section is not shown in the left list. **How you name
-  levels** moves to Teaching preferences (CFG-T), since course levels still
+  levels** moves to How you teach (CFG-T), since course levels still
   use it.
 
-## CFG-A · Business details
+## CFG-A · General
 
-- **Name:** the agency name, or the independent tutor's account name.
-- **Logo** (agencies) or photo (independent tutors): shown in the student app.
-- **Country and currency:** used later for billing.
-- **Timezone:** the account's timezone. Line: **Used for times in emails and
-  as the starting timezone for new students.** (Bobbin's General › Timezone,
-  `14-settings/screenshots/settings-general--full.png`.)
+One screen for every account type. The fields shown depend on the account, so
+there is one component to build and test (user-flows decision D-18, D-19).
+
+- **Name:** agencies only: the agency name. An independent tutor's account
+  takes their name from **My profile** (CFG-P), so it is not asked twice.
+- **Logo:** agencies only, shown in the student app. An independent tutor's
+  photo is the one in **My profile**.
+- **Country and currency:** everyone. Used later for billing.
+- **Timezone:** everyone: the account's timezone. Line: **Used for times in
+  emails and as the starting timezone for new students.** (Bobbin's General ›
+  Timezone, `14-settings/screenshots/settings-general--full.png`.)
 - **Save changes.**
 
 There is no public web address setting: public pages are retired (00 section

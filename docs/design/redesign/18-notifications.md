@@ -79,7 +79,7 @@ is the starting value of a switch. **Setting** names where the switch is.
 | NTF-109 Team member removed (19 TM-09) | The admin | Email | Always | None |
 | NTF-110 A course is given to a tutor | The new tutor | Page, Push, Email | On | CFG-N **Courses given to me** |
 | NTF-111 A course's tutor changes | Students on the course | Bell, Push, Email | Always | None |
-| NTF-112 Email change requested (12 CFG-S) | The new address | Email | Always | None |
+| NTF-112 Email change requested (12 CFG-S) | The new address; a notice to the old address | Email | Always | None |
 | NTF-113 Password changed | The person | Email | Always | None |
 | NTF-114 Password reset asked for | The person | Email | Always | None |
 | NTF-115 Data export ready (12 CFG-D, 17 REC-05) | The person who asked | Email | Always | None |
@@ -94,6 +94,9 @@ is the starting value of a switch. **Setting** names where the switch is.
 - **Opens:** **Set your password** (09 SA-01) with the name and email filled
   in. A person who already uses Kanvise follows **Sign in instead** and lands
   on Home (09 SA-03) with the new tutor added to **Your tutors** (09 SA-10).
+- **Link life:** the link works for 7 days and once, as tutor invitations do
+  (19 TM-11). After that: **This invitation has expired. Ask Michael to send a
+  new one.**
 - **Not sent when:** the student has no email (NTF-05).
 
 #### NTF-102 · Invitation not accepted after 3 days
@@ -211,6 +214,10 @@ is the starting value of a switch. **Setting** names where the switch is.
   your email** (12 CFG-S).
 - **Email:** to the new address. Subject **Confirm your new email for
   Kanvise** · button **Confirm email**.
+- **Notice to the old address:** sent at the same time. Subject **Someone asked
+  to change your Kanvise email.** · text **If this was you, no action is needed.
+  If it wasn't, reset your password now.** · button **Reset password**. The old
+  address keeps working until the new one is confirmed.
 - **Opens:** confirms the change, then Settings, Sign-in and security
   (`/settings`, 12 CFG-S), showing the new email. Signed out: sign in with the
   new email, then the same page.
@@ -261,7 +268,7 @@ is the starting value of a switch. **Setting** names where the switch is.
 | NTF-211 A student is waiting and the lesson hasn't started (07 CR-11) | The lesson's tutor | Page, Push | On | CFG-N **A student is waiting for my lesson** |
 | NTF-212 10 minutes after the start, not started (07 CR-11) | The lesson's tutor | Push, Email | On | CFG-N **My lesson hasn't started on time** |
 | NTF-213 Not held lesson marked as cancelled (05 LP-02) | Nobody, unless the tutor ticks **Let students know** | Bell, Push, Email | Off (the tick starts unticked) | The tick in LP-02 |
-| NTF-214 Lesson becomes Not held (05) | The lesson's tutor; admins | Page; admins also the daily summary (NTF-06) | Always | None |
+| NTF-214 Lesson becomes Not held (05) | The lesson's tutor; admins | Page, Push for the tutor; admins also the daily summary (NTF-06) | On | CFG-N **My lesson didn't take place** |
 | NTF-215 Tutor sends a **Let {student} know** chip (07 CR-12) | The chosen students | Bell, Push; Email only without push | Always (a person sent it) | None |
 | NTF-216 Student sends a chip (07 CR-12, 09) | The lesson's tutor | Page, Push; Email only without push | On | CFG-N **A student sent a message about a lesson** |
 | NTF-217 Link opened on a second device (05 LP-05) | The lesson's tutor | Page (Lesson tools only) | Always | None |
@@ -475,6 +482,8 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
   05 LL-01) and its page shows the grey **This lesson didn't take place.**
   banner (05 LP-02). Admins: the **Lessons that didn't start** row on the
   dashboard (03 DB-05) and the next daily summary (NTF-06).
+- **Push (the tutor):** **Your 4:00 PM lesson with Casey didn't take place.**
+  Not sent to students.
 - **Opens:** the lesson page (`/lessons/:id`).
 
 #### NTF-215 · Tutor sends a Let {student} know chip
@@ -542,7 +551,7 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
 | NTF-305 Kavi's draft is ready (08, once Kavi exists) | The lesson's tutor | Page, Push | On | CFG-N **Kavi's draft is ready** |
 | NTF-306 Recording ready (17) | The lesson's tutor | Page | Always | None |
 | NTF-307 Recording ready (17 REC-08) | Students allowed to watch it | Bell | On | None |
-| NTF-308 Recording failed (17) | The lesson's tutor | Page | Always | None |
+| NTF-308 Recording failed (17) | The lesson's tutor | Page, Push | On | CFG-N **A recording didn't save** |
 
 #### NTF-301 · Summary completed
 
@@ -624,6 +633,7 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
 - **Fires:** when processing fails.
 - **Page:** **Recording failed** on the Recordings row (17 REC-01), with the
   explanation in the expanded row and on the lesson's Session tab (17 REC-02).
+- **Push (the tutor):** **The recording of your 4:00 PM lesson didn't save.**
   Students are never told.
 
 ### Homework, quizzes and starting checks

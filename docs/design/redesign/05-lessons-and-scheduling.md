@@ -410,7 +410,8 @@ classroom as Atlas.").
   second device: **Casey's link was just opened on another device.** with
   **Get a new link**.
 - A link stops working 2 hours after the lesson's end, when the lesson is
-  cancelled, or when a new link is made. "The lesson's end" is the scheduled
+  cancelled and the undo window has closed (LP-04; **Undo** while the toast
+  shows brings the same links back), or when a new link is made. "The lesson's end" is the scheduled
   end until the lesson starts. Once it starts (on time, late, or with **Start
   anyway** on a Not held lesson), every link on the lesson stays valid while it
   is Live and until 2 hours after it actually ends, and a restart (07 CR-06)

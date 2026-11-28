@@ -30,6 +30,7 @@ conflicts; `16-responsive.md` wins on phone behaviour.
 | 18-notifications.md | The notification matrix, reminders, held messages, email rules, admin daily summary, push | Draft for review |
 | 19-tutors-and-team.md | Tutors list and page, add and remove with reassign, Team, I teach too, invitations | Draft for review |
 | 20-data-model.md | Product tables mapped to staging (DM-01 to DM-20); Kavi service (DM-21 to DM-30), built last; reserved for billing, not built (DM-31) | Draft for review |
+| 21-sign-in-and-sign-up.md | Sign up, sign in, forgot and reset password, signed-out dialog. Flow and words only; look waits for the owner's screenshots | Draft for review |
 
 ## State IDs
 
@@ -65,6 +66,7 @@ retired; a new state takes the next free number or a letter suffix (`SH-04a`).
 | NTF | 18 | Notifications |
 | TM | 19 | Tutors and team |
 | DM | 20 | Data model and Kavi service |
+| AU | 21 | Sign up and sign in |
 
 The spec fix pass retired two old prefixes because they collided between
 specs. The old LS numbers became LL-01 (05) and SM-01 to SM-06 (08). The old

@@ -152,7 +152,7 @@ nothing pretends to build it.
   two buttons: **Try again** and **Continue with defaults**.
 - **Continue with defaults** opens `/setup` with the ONB-09 defaults. A
   persistent info banner at the top of `/setup` says **We used the default
-  settings. You can change them in Settings → Teaching preferences.** with a
+  settings. You can change them in Settings → How you teach.** with a
   link and a ✕. It is not a toast (01, SH-08).
 
 ---
@@ -167,17 +167,21 @@ nothing pretends to build it.
 | What they teach | Nothing chosen |
 | Existing students | Not yet |
 
-All answers live in **Settings → Teaching preferences** (12 CFG-T) and can be
+All answers live in **Settings → How you teach** (12 CFG-T) and can be
 changed at any time. Changing them later updates the sidebar and defaults, but
 never deletes data.
 
 ---
 
-## ONB-10 · Invited agency tutors
+## ONB-10 · Invited agency tutors and admins
 
 An agency tutor does not create courses or add students (00 section 14c), so
 they get no questions and no checklist, as in Bobbin, where an invited tutor
-lands on the dashboard.
+lands on the dashboard. An admin invited to an existing agency takes the same
+short path: no questions, no checklist (the agency's setup is already the
+owner's). After accepting, they land on the dashboard in the admin view with
+the **Welcome** banner pointing to **Team** and **Tutors**, and no **Test
+classroom** button unless they turn on **I teach too**.
 
 - They inherit the agency's answers: lesson length, reading level, how the
   agency teaches and its subjects. They cannot change them (12 CFG-T is hidden
@@ -327,7 +331,7 @@ When all five steps are done or skipped:
 |---|---|---|
 | Independent tutor | Yes | Yes, until done (independent tutor list) |
 | Agency owner or admin who created the agency | Yes | Yes, until done (agency admin list) |
-| Admin invited to an existing agency | No | No; the agency's setup is already the owner's |
+| Admin invited to an existing agency | No | No; the agency's setup is already the owner's. They get the Welcome banner (ONB-10) |
 | Tutor invited to an agency | No (ONB-10) | No. They get the Welcome banner on their dashboard (spec 03) |
 | Student | No | No |
 
