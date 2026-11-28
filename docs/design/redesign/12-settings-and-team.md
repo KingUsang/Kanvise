@@ -273,17 +273,19 @@ uses them to train its models.
 
 ## CFG-A · General
 
-One screen for every account type. The fields shown depend on the account, so
-there is one component to build and test (user-flows decision D-18, D-19).
+One screen with the same four fields for every account type, so there is one
+component to build and test (user-flows decisions D-18, D-19).
 
-- **Name:** agencies only: the agency name. An independent tutor's account
-  takes their name from **My profile** (CFG-P), so it is not asked twice.
-- **Logo:** agencies only, shown in the student app. An independent tutor's
-  photo is the one in **My profile**.
-- **Country and currency:** everyone. Used later for billing.
-- **Timezone:** everyone: the account's timezone. Line: **Used for times in
-  emails and as the starting timezone for new students.** (Bobbin's General ›
-  Timezone, `14-settings/screenshots/settings-general--full.png`.)
+- **Name:** the agency name, or for an independent tutor the name of their
+  tutoring (it starts as their own name, and can be something like **Alex
+  Thompson Tutoring**, which is what the sidebar's account card shows, 01
+  SH-02).
+- **Logo:** optional. Shown in the student app. An independent tutor who adds no
+  logo shows the photo from **My profile** instead.
+- **Country and currency:** used later for billing.
+- **Timezone:** the account's timezone. Line: **Used for times in emails and
+  as the starting timezone for new students.** (Bobbin's General › Timezone,
+  `14-settings/screenshots/settings-general--full.png`.)
 - **Save changes.**
 
 There is no public web address setting: public pages are retired (00 section

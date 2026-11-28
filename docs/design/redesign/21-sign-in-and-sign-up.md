@@ -65,6 +65,20 @@ Session runs out → 01 SH-14b → back to the same page
 - Done: **Password changed.** with **Sign in**. NTF-113 confirms by email.
 - An expired or used link: **This link has expired.** with **Send a new link**.
 
+## AU-07 · Invitation page (tutors and team members)
+
+From the emailed link (19 TM-11, 18 NTF-104, NTF-105).
+- Title **Science Students Academy invited you to teach on Kanvise.** (or **to join
+  the team**). A person who already uses Kanvise signs in first, then sees
+  **Accept** and **Decline**. A new person chooses a password (8+ characters) and
+  presses **Accept and create account**; **Decline** is a quiet link under it.
+- After **Accept**: a tutor goes to ONB-10, an admin to the dashboard.
+- After **Decline**: **You've declined this invitation.** The admin sees **Invite
+  declined** (19 TM-01).
+- Link problems: **This invite has expired. Ask Science Students Academy to send
+  a new one.** · **This invitation was withdrawn.** · **This invitation has already
+  been accepted.** with **Sign in**.
+
 ## AU-06 · Signed out while working
 
 The dialog and rules are 01 SH-14b: the page stays, typed text is kept on the

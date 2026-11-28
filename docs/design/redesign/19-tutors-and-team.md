@@ -286,8 +286,15 @@ owns what it changes.
   you to teach on Kanvise.** with **Accept invitation**. Accepting sets a
   password and goes to the invited tutor's welcome (02 ONB-10), or signs in an
   existing Kanvise user and adds the agency to their account switcher.
+- A person who already uses Kanvise sees the agency's name and the role, with
+  **Accept** and **Decline** after signing in. A new person sets a password and
+  is accepted by doing so, and can still use the **Decline** link on the page.
+  **Decline** is final for that link: the admin sees an amber **Invite
+  declined** chip on the row, with **Invite again** and **Remove**.
 - An invite link works for 7 days and once. **Resend invite** makes a new link;
-  the old one stops at once. An expired link shows: **This invite has expired.
+  the old one stops at once. A link the admin has withdrawn (by removing the
+  row) shows **This invitation was withdrawn.**; one already used shows **This
+  invitation has already been accepted.** with **Sign in**. An expired link shows: **This invite has expired.
   Ask Science Students Academy to send a new one.**
 - **Limit:** an account can send at most 50 invitations an hour, counting
   students, tutors and team members together (00 section 19). Over that, the

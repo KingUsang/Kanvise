@@ -45,7 +45,9 @@ Settings › Billing: **Get paid through Kanvise.** "Send invoices for your
 lessons. Students, or whoever pays for them, pay by card, bank transfer or
 USSD." Steps:
 1. **Business details:** name on invoices, address (optional).
-2. **Payout account:** bank details, verified through Paystack.
+2. **Payout account:** bank details, verified through Paystack. One per
+   organisation: an independent tutor's own account, or the agency's. The agency
+   pays its own tutors; Kanvise does not split money among them.
 3. **Billing period:** **Monthly** (default) · **Every 2 weeks** · **After each
    lesson**.
 4. **Currency:** the account's currency.

@@ -149,6 +149,9 @@ is the starting value of a switch. **Setting** names where the switch is.
 - **Page:** the **Invite not accepted** chip goes from their row on Tutors
   (`/tutors`, 19 TM-01) or Team (`/team`, 19 TM-07), and the dashboard row
   **Tutors not joined yet** (03 DB-05) drops by one.
+- **If they decline:** the same moment, the chip becomes **Invite declined**
+  (amber) and the dashboard row still counts them as not joined. No email goes
+  to the admin or to the person.
 
 #### NTF-107 · Invitation resent
 
@@ -548,7 +551,7 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
 | **No summary needed** (08 SM-07) | Nobody | None | n/a | n/a |
 | NTF-303 Lesson marked **Missed** (08 SM-06) | Nobody, unless the tutor ticks **Let Casey know** | Bell only | Off (the tick starts unticked) | The tick in SM-06 |
 | NTF-304 Summary still to write 24 hours after the lesson (08 SM-04) | The lesson's tutor | Push, Email, once | On | CFG-N **Summary still to write** |
-| NTF-305 Kavi's draft is ready (08, once Kavi exists) | The lesson's tutor | Page, Push | On | CFG-N **Kavi's draft is ready** |
+| NTF-305 Kavi's draft is ready (08 and 04, once Kavi exists) | The lesson's tutor | Page, Push | On | CFG-N **Kavi's draft is ready** |
 | NTF-306 Recording ready (17) | The lesson's tutor | Page | Always | None |
 | NTF-307 Recording ready (17 REC-08) | Students allowed to watch it | Bell | On | None |
 | NTF-308 Recording failed (17) | The lesson's tutor | Page, Push | On | CFG-N **A recording didn't save** |
@@ -602,14 +605,17 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
 
 #### NTF-305 · Kavi's draft is ready
 
-- **Fires:** when Kavi finishes drafting the summary (08), once Kavi exists.
+- **Fires:** when Kavi finishes drafting the summary (08), or a course plan the
+  tutor left the page on (04 CRS-06), once Kavi exists.
 - **Page:** the Awaiting summary banner on the lesson page (05 LP-02) shows
   that a draft is waiting.
 - **Push:** title **Kavi's draft is ready** · body **Kavi drafted the summary
   of your lesson with Casey. Check it before you complete it.**
-- **Opens:** the summary editor (`/lessons/:id/summary`).
-- **Not sent when:** the tutor is already in the summary editor, or the
-  draft failed (the editor shows the failure, 08).
+- **Opens:** the summary editor (`/lessons/:id/summary`). For a plan draft the
+  title is **Kavi's plan is ready**, the body is **Kavi drafted a plan for Algebra
+  1. Review it before you use it.**, and it opens the Course plan tab.
+- **Not sent when:** the tutor is already in the summary editor or the
+  plan dialog, or the draft failed (the editor or dialog shows the failure).
 
 #### NTF-306 · Recording ready (tutor)
 

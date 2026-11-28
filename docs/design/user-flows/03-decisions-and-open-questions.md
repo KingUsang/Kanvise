@@ -1,12 +1,12 @@
 # Decisions and open questions
 
-Written 28 Nov 2026. The owner approved decisions D-01 to D-21 on 28 Nov (D-20 and D-21 are the owner's own answers). D-22 and D-23 are new and wait for a yes. They are
+Written 28 Nov 2026. The owner approved decisions D-01 to D-21 on 28 Nov (D-20 and D-21 are the owner's own answers). D-23, OQ-12 and OQ-13 were agreed on 28 Nov and applied (D-23, OQ-12) or noted (OQ-13). D-22 waits for the owner's yes. They are
 applied to the redesign specs on this branch, except D-15 (payments), D-16
 (progress features), D-20 and D-21, which are written into the proposals in
 `04-payments.md` and `05-gamification.md`, and D-11 and D-14, which need no spec change.
 **OQ-** items still need the owner.
 
-Spec files changed: `02`, `05`, `07`, `09`, `10`, `11`, `12`, `17`, `18`, `19`, and the new
+Spec files changed: `02`, `04`, `05`, `07`, `09`, `10`, `11`, `12`, `13`, `17`, `18`, `19`, and the new
 `21-sign-in-and-sign-up.md` (with the `AU` ID prefix in the README and the checker).
 The spec checker (`history/check.py`) passes.
 
@@ -44,9 +44,14 @@ The spec checker (`history/check.py`) passes.
 | D-20 | Should progress features be on or off for new courses? | **On by default** for every new course (owner, 28 Nov). The tutor can switch it off per course or for the whole account | Most students benefit and it asks the tutor for nothing. Supersedes OQ-08 | `05-gamification.md` |
 | D-21 | Who pays Paystack's fee? | **The payer** (owner, 28 Nov). Kanvise's own fee is revisited later | Tutors keep the full price of their lessons | `04-payments.md`, 13 |
 | D-22 | How should an admin who teaches, and an independent tutor, work? | **Proposed, needs your yes:** one login holds roles (admin, tutor, student) in an organisation. An independent tutor is an organisation of one with both roles and one merged view. An admin who teaches gets **Switch role** (Bobbin's tested behaviour). **I teach too** stays as the easy way to add the tutor role | Same code for both, the tutor view reused as is, simpler permission checks | `06-account-types.md`, then 07, 12, 19 |
-| D-23 | Tutor invitations: can the person decline? | **Proposed:** yes, with declined and withdrawn states, as Bobbin has | Cheap, and the admin sees what happened | 19, 21 |
+| D-23 | Tutor invitations: can the person decline? | **Agreed 28 Nov, applied:** yes, with declined and withdrawn states, as Bobbin has | Cheap, and the admin sees what happened | 19, 21 |
+| D-24 | Bobbin's AI plan lets you leave the page while it drafts. Kanvise's dialog did not say | Kavi finishes in the background, saves a Draft and sends **Kavi's draft is ready**. Fallback if the build cannot: ask the tutor to stay on the page for about a minute | Tutors on phones will leave the page | 04 CRS-06, 18 NTF-305 |
+| D-25 | Bobbin applies an AI plan at once. Kanvise saves a Draft first | Keep Kanvise's way: **Use this plan** is the tutor's decision | The tutor owns the plan | none |
+| D-26 | Bobbin shows why each module sits where it does | Kavi-drafted modules carry a one-line **Why this order**, editable | Helps a tutor judge a draft quickly | 04 CRS-04 |
+| D-27 | Removing a module or topic that is in use | Ask first and say what depends on it; unused items go with an Undo toast | Stops accidental loss of statuses and links | 04 CRS-04 |
+| D-28 | The screen-by-screen view for independent tutor, agency admin and agency tutor | Written in `07-screens-by-account-type.md`: roles plus one team switch decide every screen | Shows what changes on each screen | `07-screens-by-account-type.md` |
 | D-17 | Settings group names are unclear: YOUR TEACHING covers agency-wide settings and shows for admins who do not teach. Teaching preferences holds team size, audience and subjects | Rename groups: YOU becomes **PERSONAL**, YOUR TEACHING becomes **LESSONS**, ACCOUNT stays. Rename Teaching preferences to **How you teach**. Leave Lessons and classroom, and Data and privacy as they are | The names now say what is inside | 12 Layout, CFG-T |
-| D-18 | Business details asks independent tutors for a name and photo twice (CFG-P and CFG-A). "Business" does not fit a tutor, and "Account details" reads like bank details | One shared section for both account types, called **General** (it replaces Business details). Same screen and component; the fields shown depend on the account type. Agencies see name, logo, timezone and currency. Independent tutors see only timezone and currency, because their name and photo come from **My profile** (the account name defaults to the tutor's own name) | One screen to build and test, no duplicated fields, a word that fits everyone. Supersedes the earlier idea of a separate Agency section | 12 CFG-P, CFG-A |
+| D-18 | Business details asks independent tutors for a name and photo twice (CFG-P and CFG-A). "Business" does not fit a tutor, and "Account details" reads like bank details | One shared section called **General** with the **same four fields for everyone**: name, logo (optional), country and currency, timezone. For an independent tutor the name starts as their own name (for example "Alex Thompson Tutoring", as the sidebar already shows) and the logo falls back to their profile photo. Revised on 28 Nov: the earlier version hid fields for independent tutors, which added conditions and lost the tutoring name | One screen, no conditions, nothing asked twice | 12 CFG-A |
 | D-19 | Design principle, not a screen: prefer one component with conditions over parallel screens for each account type | Where independent tutors and agencies differ, show or hide fields and rows on the same screen. Build separate screens only when the task is different (for example Tutors and Team pages, which only agencies have). AI makes writing code cheaper, but every extra variant still has to be tested, kept in sync and explained to users | Balances product design with build and maintenance cost | All specs |
 
 ## Open questions for the owner (OQ-)
@@ -64,8 +69,10 @@ The spec checker (`history/check.py`) passes.
 | OQ-09 | Agency settings Bobbin has and Kanvise lacks: an activity log (who changed what), role checkboxes for who can view recordings, and an organization-wide recording-consent default | Add an activity log for agencies later. Keep the single recordings switch and per-student consent for now |
 | OQ-10 | A wording pass over every label and message that tutors, students and admins read, with a short glossary of plain terms | Do it before the first screens are built |
 | OQ-11 | Fee line on invoices: the fee depends on the card, which is unknown until the payer pays; and UK law bans card surcharges on consumers (since 13 Jan 2018) | Estimate by payer region, built into one total for payers abroad with no separate card-fee line, and have a lawyer check the UK and other countries |
-| OQ-12 | Payout bank account: one per organisation, or one per tutor in an agency? | One per organisation. The agency pays its own tutors |
-| OQ-13 | Is the chosen role (Admin or Tutor) remembered at the next sign-in? | Yes, per device |
+| OQ-12 | Payout bank account: one per organisation, or one per tutor in an agency? | **Agreed 28 Nov, applied in 13 BL-01:** one per organisation. The agency pays its own tutors |
+| OQ-13 | Is the chosen role (Admin or Tutor) remembered at the next sign-in? | **Agreed 28 Nov:** yes, per device. Goes into the specs with D-22 |
+| OQ-14 | Plan history (view and restore earlier versions of a course plan), as Bobbin's History menu | Later |
+| OQ-15 | Is there a limit on Kavi plan drafts per tutor per day, and do we show how many are left? | Decide with the Kavi cost work (20 DM-26) |
 
 ## Contradictions found in the specs
 

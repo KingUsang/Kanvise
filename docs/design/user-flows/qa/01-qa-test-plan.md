@@ -113,6 +113,9 @@ it, in quotes.
 | TC-CRS-017 | Several tutors (D-04) | Add a second tutor | Allowed, no "Replaces" wording, each lesson has one tutor | P1 | E2E |
 | TC-CRS-018 | Create fails | Fail the call | "We couldn't create the course. Nothing was saved. Try again." | P1 | E2E |
 | TC-CRS-019 | Absent student | Absent from lesson | No status change from that summary | P1 | API |
+| TC-CRS-020 | New module appears at once | Press + Module | Module shows immediately, cursor in its name | P1 | E2E |
+| TC-CRS-021 | Leave while Kavi drafts (D-24) | Close the dialog mid-draft | Draft saves; "Kavi's draft is ready" arrives; or the stay-on-page line shows | P1 | E2E |
+| TC-CRS-022 | Remove a topic in use (D-27) | Remove a topic with statuses and links | Dialog states what depends on it; unused topic removes with Undo | P1 | E2E |
 
 ## CHK · Starting check (flow 10)
 
@@ -300,6 +303,8 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-TM-012 | Admin dashboard | `adm` opens dashboard | Admin rows, Mine only toggle, Live now refreshes every 15 s | P1 | E2E |
 | TC-TM-013 | Switch to team | Solo in CFG-T | Set up your team, becomes admin | P1 | E2E |
 | TC-TM-014 | Team removal | Remove a team member | Their own row has no Remove; teaching admin goes through Reassign | P1 | E2E |
+| TC-TM-015 | Decline an invitation (D-23) | Existing user presses Decline | Admin sees "Invite declined"; Invite again works | P1 | E2E |
+| TC-TM-016 | Withdrawn and used links | Open a withdrawn link, then an accepted one | "This invitation was withdrawn." and "...already been accepted." | P1 | API |
 
 ## STU · Student app (flow 12)
 
