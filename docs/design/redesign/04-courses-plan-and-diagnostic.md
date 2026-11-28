@@ -174,7 +174,12 @@ applies. Right: **Actions ▾** (Edit course, Archive course, Delete course) and
 primary **New lesson**. Bobbin's menu has Edit course and Delete course;
 Kanvise adds Archive, because a course with taught lessons can't be deleted.
 
-- **Edit course** opens CW-1's fields in one dialog (no steps).
+- **Edit course** opens CW-1's fields in one dialog (no steps), as in Bobbin
+  (`15-tutor-role/screenshots/tutor-course-edit.png`): title **Edit course**,
+  subtitle **Name, subject, description and colour.**, the colour line **Used
+  to identify this course at a glance on the calendar and in lists.**, and one
+  button **Save changes**. Agency tutors see it for their own courses only
+  (Permissions); Bobbin's Actions menu also lets them delete, Kanvise doesn't.
 - **Archive course** hides it from the list (Status filter: Archived), cancels
   nothing in the past and asks first if future lessons exist: **3 lessons are
   still scheduled. Cancel them and archive?**
@@ -216,7 +221,11 @@ Left column, top to bottom:
 
 Right column:
 - **At a glance:** Total lessons, Students, Tutors (Bobbin's three rows).
-- **Tutor** card (with **+ Add** for admins).
+- **Tutor** card (with **+ Add** for admins). **+ Add** opens Bobbin's
+  **Add tutors** dialog (`15-tutor-role/screenshots/tutor-course-add-tutor.png`):
+  "Pick tutors from your agency to add to the course.", a picker with **0 of 3
+  selected**, **+ Add a tutor** (opens 19 TM-03), **Cancel** and **Add tutors**
+  (disabled until one is picked).
 - **Students** card: avatar, name, and one status line: **Starting check not
   sent** / **Starting check sent 2 days ago** / **Starting check done · checked
   8 of 32 topics** / **Invite not accepted**. **+ Add** for admins and
@@ -742,3 +751,9 @@ Tables are in `20-data-model.md`: courses DM-03, course plan DM-04, topic status
 - `15-tutor-role/screenshots/tutor-course-actions-menu.png`,
   `tutor-course-delete-confirmation.png`: Actions menu (Edit course, Delete
   course) and the delete rule copied into the course page.
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-course-edit.png`: Edit course dialog wording and Save changes (CRS-03 Actions).
+- `15-tutor-role/screenshots/tutor-course-lessons-tab.png`: course Lessons tab table (Lesson, Date, Tutors, Students, Status) and Latest lessons skeleton.
+- `15-tutor-role/screenshots/tutor-courses-filter.png`: Filter facets Student, Tutor, Client (Client not copied).
+- `15-tutor-role/screenshots/tutor-course-add-tutor.png`: Add tutors dialog (CRS-03 Tutor card).

@@ -259,3 +259,7 @@ classroom tip card; no trial banner, sales card or mobile app card (billing is
 on hold and Kanvise is online only); Needs attention has no safeguarding or
 approval rows (out of scope, 00 section 15) and adds homework, starting check,
 links and team rows; Suggestions has no Bobbin equivalent.
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-account-menu.png`: tutor dashboard with one Today row (Join and Planned side by side), This week strip and Needs attention at 0 "all caught up"; DB-02 to DB-05 match.
+- `15-tutor-role/screenshots/tutor-mobile-app-learn-more.png`: the NEW · MOBILE APP card's dialog; the card is not copied (03 has no mobile app card).

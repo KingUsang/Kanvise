@@ -246,6 +246,11 @@ below.
 - Examples and placeholders are general (for example "Algebra 1 Small Group",
   "Solving Systems of Linear Equations", "Ready for the end-of-term test"),
   never tied to a specific exam board or school calendar.
+- The specs use one sample set, taken from Bobbin's sample data: the course
+  **Algebra 1 Small Group** (subject Mathematics), students **Alex Thompson**
+  and **Casey Davis**, tutor **Michael Chen**, agency **Science Students
+  Academy**. Level names such as SS2 or Year 9 appear only where the optional
+  level names setting is described (12 CFG-K).
 - Say **Student**, not Learner, in all user-facing text. Routes and database
   names stay as they are. Standard 01 must be updated to match (see the
   standards table).

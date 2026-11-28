@@ -58,7 +58,7 @@ is the starting value of a switch. **Setting** names where the switch is.
 | Team member invited (19 TM-08) | The new admin | Email | Always | None |
 | Tutor or team member accepted | The admin who invited them | Page (Tutors or Team list status) | Always | None |
 | Invitation resent | The invited person | Email (new link; the old one stops working) | Always | None |
-| Tutor removed from the agency (19 TM-06) | The tutor | Email: **You no longer have access to Bello Tutors.** | Always | None |
+| Tutor removed from the agency (19 TM-06) | The tutor | Email: **You no longer have access to Science Students Academy.** | Always | None |
 | Team member removed (19 TM-09) | The admin | Email, as above | Always | None |
 | A course is given to a tutor (created, reassigned, 19 TM-06) | The new tutor | Page, Push, Email | On | CFG-N **Courses given to me** |
 | A course's tutor changes | Students on the course | Bell, Push, Email: **Priya Shah is now your tutor for Algebra 1.** | Always | None |
@@ -199,7 +199,7 @@ without opening the dashboard.
 
 - One email per admin, at 7:00 AM in the account's timezone, only on days when
   at least one line has something in it.
-- Subject: **Bello Tutors today: 3 summaries overdue, 1 lesson didn't start**.
+- Subject: **Science Students Academy today: 3 summaries overdue, 1 lesson didn't start**.
 - Body, the same three counts as the dashboard's admin rows (03 DB-05), each
   with a link to the filtered list:
   - **Summaries overdue, by tutor** (lesson ended over 48 hours ago, no summary
@@ -284,3 +284,7 @@ DM-16. The existing `notifications`, `notification_deliveries`,
 - `01-dashboard/screenshots/page--default.png`: Bobbin's shell has no
   notification bell, only the help button beside the account; Kanvise also has
   none for tutors (the Page channel). The student Bell is Kanvise's own.
+
+Final Bobbin pass (FEAT-009):
+- `03-lessons/screenshots/classroom--tutor-invite-emailed.png`: the email button on classroom Invite rows; Kanvise's Remind uses push first, email only without push (NTF-01).
+- `08-team/screenshots/add-team-member--dialog.png`: invite line "Your organization's emails reach them once they accept."; Kanvise sends a tutor or admin only the invitation and its resend until they accept (NTF-01 invitation rows).

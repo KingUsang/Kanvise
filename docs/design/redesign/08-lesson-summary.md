@@ -326,3 +326,7 @@ Tables are in `20-data-model.md`: lesson summaries DM-10, topic status proposals
   after this lesson** Homework card.
 - `15-tutor-role/screenshots/tutor-lesson-finalized.png`, `tutor-lessons-status-awaiting-report.png`:
   Bobbin's **Awaiting approval** status and tab; not copied (no approvals).
+
+Final Bobbin pass (FEAT-009):
+- `03-lessons/screenshots/lesson-ended--recheck.png` and `sample-lesson--loaded.png`: Bobbin's Summary tab (AI lesson summary, Student performance and Tutor performance rows) and the too-short "No insights" banner; Kanvise keeps the tutor-written five sections (SM-01) and the 5 minute minimum (SM-02 Too short).
+- `03-lessons/screenshots/sample-session--recheck.png`: transcript lives on the Session tab, not in the summary.

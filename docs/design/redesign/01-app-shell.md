@@ -202,7 +202,9 @@ headers, empty states):
 
 ## SH-06 · Account menu
 
-Opens upward from the user card. Matches Bobbin's account menu.
+Opens upward from the user card. Matches Bobbin's admin account menu. Bobbin's
+tutor menu has only Sign out (tutors reach their profile from Settings);
+Kanvise shows the same two items to every role.
 - The person's name and email at the top (not clickable).
 - **My profile** → `/profile`
 - **Sign out**. Signs out immediately and returns to `/auth/login`. If there
@@ -491,3 +493,7 @@ Checked against Bobbin (screenshots opened and compared):
 Deliberate differences from Bobbin: orange left bar instead of a black filled
 active item; a WORK group (Homework, Quizzes) that Bobbin does not have; no
 Clients, TO REVIEW or trial banner (00 sections 14 and 15).
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-account-menu.png`: Bobbin's tutor account menu has only Sign out; Kanvise keeps My profile for every role (SH-06).
+- `15-tutor-role/screenshots/tutor-help-updates--open.png`: tutor help menu (What's new with New, Help guide, Share feedback, Privacy policy) matches SH-04.

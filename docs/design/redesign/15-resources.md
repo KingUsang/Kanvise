@@ -96,9 +96,11 @@ A dialog. Title **Upload files**.
 
 ## RS-03 · New folder
 
-Checked against `10-resources/screenshots/new-folder--filled.png`.
+Checked against `10-resources/screenshots/new-folder--filled.png` and
+`new-folder--dialog.png`.
 
-Dialog: **Name** (required) and, for agency admins, **Share with the team**
+Title **New folder**. Dialog: **Name** (required, placeholder **e.g. Algebra
+worksheets** as in Bobbin; **Create folder** stays disabled until typed) and, for agency admins, **Share with the team**
 (unticked for a folder, as in Bobbin): **Every tutor in your agency can see
 this folder.** **Cancel** · **Create folder**. Toast: **Folder created.**
 
@@ -189,8 +191,14 @@ Tables are in `20-data-model.md`: resources and uploads DM-18.
   Visibility filter.
 - `10-resources/screenshots/resources-filter-type.png`, `resources-filter-visibility.png`:
   Filter groups Type (Images, PDFs, Documents) and Visibility (Shared with
-  everyone, Not shared with everyone). The Uploaded from / to filters are
-  taken from the atlas text (`10-resources/spec.md`).
+  everyone, Not shared with everyone).
+- `10-resources/screenshots/resources-filter-uploaded-from.png`: Uploaded
+  from is a sub-panel with a back arrow, one date field and **Apply**
+  (disabled until a date is set); Uploaded to is the same. Kanvise copies it.
+- `10-resources/screenshots/new-folder--dialog.png`: empty New folder dialog,
+  placeholder **e.g. Algebra worksheets** (RS-03).
+- `15-tutor-role/screenshots/tutor-resources--default.png`: a tutor with no
+  folders sees only FILES and the No files yet empty state (RS-01).
 - `10-resources/screenshots/upload-files--dialog.png`, `upload-files--selected.png`,
   `upload-files--completed.png`: drop area wording, accepted types (PNG, JPG,
   PDF, Word or PowerPoint; no video), Add to folder, Add more files, Rename and

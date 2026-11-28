@@ -306,3 +306,7 @@ email in the captured flows). The student app was checked against:
   portal): its seven-item purple sidebar, Subjects count, "Recent updates" feed
   and "Report a problem" footer link are replaced by the four tabs, the Next
   lesson card, To do, and Report a concern on lesson pages and in Me.
+
+Final Bobbin pass (FEAT-009):
+- `03-lessons/screenshots/classroom--joined.png`: the tutor start card; the student's CR-02 waiting screen is Kanvise's own because Bobbin's student side isn't in the atlas.
+- `15-tutor-role/screenshots/tutor-lesson-detail--default.png`: per-student join link line "Anyone with this link enters the classroom as Atlas." kept for SA-02.

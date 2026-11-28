@@ -93,7 +93,12 @@ the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
   and **Change password**, as Bobbin's Password card.
 - **Signed-in devices:** list with **Sign out** on each and **Sign out
   everywhere else**.
-- Two-step sign-in: later (Bobbin has Two-factor; not in this version).
+- Two-step sign-in: later (Bobbin has Two-factor; not in this version). When
+  it is added, copy Bobbin's start dialog
+  (`15-tutor-role/screenshots/tutor-profile-two-factor-setup.png`): **Turn on
+  two-factor authentication** · "Confirm your password to start. You'll scan a
+  QR code with your authenticator app on the next step." · **Current
+  password** · **Cancel** · **Continue** (disabled until typed).
 
 ## CFG-N · Notifications
 
@@ -208,9 +213,10 @@ and `settings-ai-style-compare.png`.
 
 **Language and levels** card:
 - **Language:** English, written in British spelling. One default for every
-  account; there is no US English choice. Kavi's examples and the spec's
-  sample course names follow the account's level names (for example **Year 9
-  Maths** or **SS2 Chemistry**).
+  account; there is no US English choice. When Kavi mentions a level it uses
+  the account's level names below (for example **SS2** or **Year 9**); with
+  **None** it names no level. The sample course and the examples in these
+  specs stay general (**Algebra 1 Small Group**, 00 section 13).
 - **How you name levels (optional):** **None** (default) · **JSS / SS** ·
   **Year (Year 1 to 13)** · **Grade (Grade 1 to 12)**. Used as the choices for
   a course's level, and in what Kavi writes (course plans, quiz and check
@@ -356,3 +362,7 @@ unsubscribe tokens DM-15, people DM-01.
   card with **Save changes**, the email and timezone lines, the Change your
   email dialog, the Password card, and a tutor's reduced settings list (CFG-P,
   CFG-S, CFG-N).
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-profile-two-factor-setup.png`: Turn on two-factor authentication dialog (CFG-S, later).
+- `15-tutor-role/screenshots/tutor-account-menu.png`: tutors reach settings from the sidebar; the account menu only signs out.

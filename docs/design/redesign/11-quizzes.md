@@ -243,3 +243,7 @@ parts that copy Bobbin patterns were checked against:
 - `14-settings/screenshots/settings-ai-style-compare.png`: Bobbin labels AI
   output and asks for a choice before use; Kanvise's **Kavi** label and
   **Check Kavi's questions** line follow the same idea.
+
+Final Bobbin pass (FEAT-009):
+- `11-report-approvals/screenshots/report-approvals--populated.png`: Bobbin's review queue (list on the left, one item with Previous / Next and Approve); not copied, Kanvise has no approvals, and quiz results open 04 CRS-08 instead.
+- `15-tutor-role/screenshots/tutor-course-set-homework.png` (rechecked): Bobbin has no quiz dialog; QZ dialogs follow the homework dialog's field order and Cancel / primary buttons.

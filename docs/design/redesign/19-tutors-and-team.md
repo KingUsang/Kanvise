@@ -86,7 +86,7 @@ Checked against `07-tutors/screenshots/add-tutor--step-1.png` and
 `tutor-created--detail.png`.
 
 A dialog, as Bobbin's:
-- Title **Add tutor** · "Add a tutor to Bello Tutors." (Bobbin's "They have no
+- Title **Add tutor** · "Add a tutor to Science Students Academy." (Bobbin's "They have no
   paying client" is dropped: Kanvise has no clients.)
 - **First name (optional)** and **Last name** side by side.
 - **Email**, placeholder **tutor@example.com**. Line under it, Bobbin's
@@ -110,7 +110,7 @@ courses once they accept.** (Bobbin's toast, `tutor-created--detail.png`).
 - Already a tutor or admin here: **Michael is already in your agency.** with
   **Open their page**.
 - The email belongs to a student in this agency: **This email belongs to a
-  student in Bello Tutors. Use a different email for teaching.**
+  student in Science Students Academy. Use a different email for teaching.**
 - Over the invite limit (TM-11): **You've sent a lot of invitations. Try again
   in an hour.**
 
@@ -168,8 +168,8 @@ From **⋯ › Remove from agency** (TM-01) or **Actions › Remove from agency*
 (TM-04). A dialog with up to two steps.
 
 **Step 1, confirm:**
-- **Remove Michael Chen from Bello Tutors?**
-- "Michael will no longer be able to sign in to Bello Tutors, and an invite
+- **Remove Michael Chen from Science Students Academy?**
+- "Michael will no longer be able to sign in to Science Students Academy, and an invite
   they haven't accepted stops working. Their past lessons, summaries and
   students' work stay, with their name on them."
 - If they teach no course: **Cancel** · **Remove** (red). Done.
@@ -214,7 +214,7 @@ From **⋯ › Remove from agency** (TM-01) or **Actions › Remove from agency*
 Checked against `08-team/screenshots/page--default.png` and
 `team-member-created--list.png`.
 
-Route `/team`. Header **Team** · "The admins who run Bello Tutors. Admins can
+Route `/team`. Header **Team** · "The admins who run Science Students Academy. Admins can
 see and change everything in the agency." (Bobbin's "client manager" line is
 dropped: Kanvise has no clients.) On the right: **Add team member**.
 
@@ -251,7 +251,7 @@ Checked against `08-team/screenshots/add-team-member--dialog.png` and
 Checked against `08-team/screenshots/team-remove-confirmation.png`.
 
 - **Remove from team?**
-- "Ada Obi will no longer be able to manage Bello Tutors, and an invite they
+- "Ada Obi will no longer be able to manage Science Students Academy, and an invite they
   haven't accepted stops working. If they aren't in another account on
   Kanvise, they can no longer sign in."
 - **Cancel** · **Remove** (red).
@@ -280,13 +280,13 @@ owns what it changes.
 
 ## TM-11 · Invitations and limits
 
-- **The invite email** (18 NTF-01): from the agency, **Bello Tutors invited
+- **The invite email** (18 NTF-01): from the agency, **Science Students Academy invited
   you to teach on Kanvise.** with **Accept invitation**. Accepting sets a
   password and goes to the invited tutor's welcome (02 ONB-10), or signs in an
   existing Kanvise user and adds the agency to their account switcher.
 - An invite link works for 7 days and once. **Resend invite** makes a new link;
   the old one stops at once. An expired link shows: **This invite has expired.
-  Ask Bello Tutors to send a new one.**
+  Ask Science Students Academy to send a new one.**
 - **Limit:** an account can send at most 50 invitations an hour, counting
   students, tutors and team members together (00 section 19). Over that, the
   dialog shows **You've sent a lot of invitations. Try again in an hour.** and
@@ -347,3 +347,7 @@ DM-15.
   step 1 of TM-06). The Reassign step is Kanvise's own (F-35).
 - `01-dashboard/screenshots/page--default.png`: PEOPLE group with Students,
   Clients, Tutors and Team (Clients not copied).
+
+Final Bobbin pass (FEAT-009):
+- `08-team/screenshots/add-team-member--dialog.png`: empty Add team member dialog (TM-08).
+- `15-tutor-role/screenshots/tutor-course-add-tutor.png`: Add tutors to a course, with + Add a tutor opening TM-03.

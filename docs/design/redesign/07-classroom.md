@@ -97,6 +97,7 @@ A dark, calm full-page screen (matching the room), Kanvise logo top left,
 
 | State | Card |
 |---|---|
+| Loading | A spinner with **Loading the classroom…** (Bobbin's, `15-tutor-role/screenshots/tutor-classroom-entered.png`), on the dark background instead of Bobbin's white. |
 | Ready, lesson not started | **Start your 4:00 PM lesson** · an inner lesson card (**Today, 4:00 PM - 5:00 PM**, topic) with primary **Start lesson** inside it · below, a full-width secondary **Enter without starting a lesson** (Bobbin's layout and wording). Line: **Students can join once you start.** |
 | Ready, before the classroom opens for students (12 CFG-L **Classroom opens**) | Tutors and admins can always go in. The Ready card with one extra line: **Students can join from 3:45 PM, or as soon as you start.** |
 | Waking the classroom server | **Getting your classroom ready…** "This can take up to a minute." A progress line. It checks every few seconds and moves on by itself. |
@@ -545,3 +546,8 @@ Tables are in `20-data-model.md`: lessons and room state DM-06, join links DM-07
   `15-tutor-role_tutor-classroom-popup.png`: same states in the curated set.
 - `12-safeguarding/screenshots/safeguarding-open.png`, `page--default.png`:
   Bobbin's automatic transcript flags; not copied, CR-13 is raised by a person.
+
+Final Bobbin pass (FEAT-009):
+- `03-lessons/screenshots/classroom--joined.png`: start card wording (CR-01).
+- `03-lessons/screenshots/classroom--tutor-invite-emailed.png`, `15-tutor-role/screenshots/tutor-classroom-live--media-ready.png`: Lesson tools panel (Lesson plan, Last lesson, Notes, End lesson, Invite rows with Copy link and email, Other devices) and the pre-join media check with "This session is being recorded." (CR-03).
+- `15-tutor-role/screenshots/tutor-classroom-entered.png`: "Loading the classroom..." spinner (CR-01 Loading row).

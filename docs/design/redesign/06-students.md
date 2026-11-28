@@ -459,3 +459,7 @@ Tables are in `20-data-model.md`: people DM-01, invitations DM-02, recording con
 - `06-clients/screenshots/add-client--step-1.png`, `client-created--detail.png`,
   `client-created--populated-list.png`, `page--default.png`: clients are
   retired; only the Contact card idea (email link) is kept, on the student.
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-students--default.png`: tutor's Students list has no buttons, only search, Name and Lessons completed; Kanvise's tutor list keeps its own columns and shows no buttons (STU-01).
+- `15-tutor-role/screenshots/tutor-student-attendance.png`, `tutor-student-progress-reports.png`: tutor student page with Linked courses ("No course plan yet"), Lesson recording card read-only, Activity counts (STU-05).

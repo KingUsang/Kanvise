@@ -319,8 +319,15 @@ part of a series).
   · **Notes**, as in Bobbin. When no student joined, the banner is the one in 08
   SM-06.
 - **Session tab** (Awaiting summary, Missed and Complete): attendance per
-  person (status, joined, left, time in lesson), then the recording and its
-  transcript when the lesson was recorded, or **Not recorded**.
+  person (status, joined, left, time in lesson) under **Attendance** with the
+  line **10:15 AM - 11:15 AM · 1 hr · Recorded** (or **Not recorded**), then
+  the recording when the lesson was recorded, and its transcript once one
+  exists (transcripts are made only when Kavi exists, 17 Kavi). The transcript
+  card copies Bobbin's (`03-lessons/screenshots/sample-session--recheck.png`):
+  **Session transcript** · "Made from the lesson recording." · **Search
+  transcript…** · **Download**, then one row per turn with name, role and time
+  (**Michael Chen · Tutor · 0:52**). Tutors and admins only; students never see
+  the transcript.
 - **Missed:** a grey banner **Nobody joined this lesson.** with **Schedule a
   replacement**.
 - **Complete:** the same tabs with Summary open. The right column adds **Set
@@ -608,3 +615,9 @@ As in 16 R-07:
   lesson plan shape for the Kavi block; Bobbin's "Internal notes / Only visible
   to admins" replaced by the 00 section 16 line; "No notes yet. Add the first
   one above." copied.
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-new-lesson--step-2.png`: Bobbin titles step 2 "Topic & schedule" with "When does the lesson take place?"; Kanvise words it **Topic and time** because the step also links plan topics (LW-2).
+- `15-tutor-role/screenshots/tutor-lesson-detail--default.png`, `tutor-lesson-detail-after-live.png`, `03-lessons/screenshots/lesson-ended--recheck.png`: lesson page with "No insights for this lesson" and End lesson; Kanvise shows the Awaiting summary or Not held banner instead (LP-02), keeps the Set after this lesson card, Activity, Tutor and Students cards with the join link line.
+- `03-lessons/screenshots/sample-session--recheck.png`: Session tab transcript card (Session transcript, Search transcript, Download), copied into LP-02.
+- `15-tutor-role/screenshots/tutor-lessons-status-all.png`, `tutor-lessons-status-canceled-chargeable.png`: Bobbin's seven status tabs, including its approval and chargeable statuses that Kanvise drops, active filter chip and Clear all, "No lessons match these filters." (LL-01, CAL-06).

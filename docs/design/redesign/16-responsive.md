@@ -194,3 +194,7 @@ Checked against Bobbin (screenshots opened and compared):
 
 Bobbin's web app has no phone layout in the atlas; its phone experience is a
 separate recording app. The phone rules here are Kanvise's own.
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-mobile-app-learn-more.png`: Bobbin's phone experience is a separate recording app (Upcoming, then lessons waiting for write-up); Kanvise uses one responsive web app instead.
+- `15-tutor-role/screenshots/tutor-account-menu.png`: desktop account menu that the phone More sheet repeats (R-02).

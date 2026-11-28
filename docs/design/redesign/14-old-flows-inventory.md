@@ -24,7 +24,7 @@ the first redesign pass.
 | `/dashboard/tutors` | Tutors, invitations, subject assignments | Keep as Tutors and Team (agencies) | 19 Tutors and team |
 | `/dashboard/assignments`, `/assignments/[id]/submissions` | Assignments and marking | Keep as Homework | 10 Homework |
 | `/dashboard/direct-assignments`, `/direct-assignment/[token]` | Share-link assignments for guests | Retire (owner decision: no guest flows) | 10 |
-| `/dashboard/mocks`, `/mocks/builder`, `/mocks/[id]/results` | Quizzes, builder, results | Keep as Quizzes, rebuilt with Generate with Kavi | 11 Quizzes |
+| `/dashboard/mocks`, `/mocks/builder`, `/mocks/[id]/results` | Quizzes, builder, results | Keep as Quizzes, rebuilt: every quiz belongs to a course, multiple choice only in v1 (today's written answers and "pending grading" move to the 11 Later list), Write my own first, Generate with Kavi added with the Kavi build | 11 Quizzes |
 | `/dashboard/mocks/[id]/offers` | Public and paid quiz offers | Retired already (DOM-009) | none |
 | `/dashboard/question-banks` | Question bank | Retire. Kavi generates questions; no bank | 11 |
 | `/dashboard/notes` | Materials (notes, files) | Keep as Resources | Resources (new spec, see below) |
@@ -136,3 +136,17 @@ for features inside pages, not only the pages themselves.
 | Install prompt, push prompt and settings | Whole app | Kept (spec 09 SA-09, spec 12 CFG-N) |
 | Navigation progress bar, unsaved-changes guard | Whole app | Kept as app behaviour (spec 01) |
 | Class session composer, timetable | Class workspace | Replaced by the New lesson wizard with repeats (spec 05) |
+
+## Checked against today's Kanvise
+
+Final pass (FEAT-009), screenshots of today's staging app opened:
+- `/projects/sandbox/atlas/kanvise/admin_dashboard_mocks.png`: the Assessments
+  page (status tabs, standalone quizzes, "pending grading" for written
+  answers, and the old feedback link in the sidebar). Covered by the
+  `/dashboard/mocks` row; written answers move to the 11 Later list.
+- `/projects/sandbox/atlas/kanvise/class_workspace.png`: the class workspace
+  (subject pills, seven tabs, stat cards, Quick actions). Covered by the
+  `/dashboard/classes` row and the Class workspace rows above.
+- `/projects/sandbox/atlas/kanvise/admin_dashboard.png`,
+  `admin_dashboard_more.png`, `learner_dashboard_student.png`: opened in
+  earlier passes (01, 03, 09).

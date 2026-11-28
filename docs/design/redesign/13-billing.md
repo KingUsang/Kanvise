@@ -127,3 +127,7 @@ lessons and prices, not by Kavi.
   (checked in FEAT-005): Bobbin's clients are the people who pay. Kanvise has
   no clients; the payer is the student or an **other contact** that
   is a contact, not an account, and receives nothing automatically (BL-03).
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-lessons-status-canceled-chargeable.png`: Bobbin's "Canceled (chargeable)" lesson status; not copied while billing is on hold (05 has no chargeable status).
+- `11-report-approvals/screenshots/report-approvals--populated.png`: the trial banner "Set up billing" across every Bobbin page; Kanvise shows no billing banner.

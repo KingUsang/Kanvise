@@ -349,3 +349,8 @@ and consent DM-09, settings DM-14. Export jobs use the existing durable jobs.
 - Kanvise additions not in Bobbin: Late and Left early, Admin watching, Tutor
   didn't join, Deleted student, consent reasons, retention line, Delete
   recording, the student view.
+
+Final Bobbin pass (FEAT-009):
+- `13-unlinked-sessions/screenshots/unlinked-sessions--latest.png`: Bobbin's Unlinked sessions page (classroom sessions no lesson claims); not needed in Kanvise because a room only exists for a lesson.
+- `15-tutor-role/screenshots/tutor-student-attendance.png`: student page Attendance tab; 06 STU-05 Attendance tab uses these attendance rules.
+- `03-lessons/screenshots/sample-session--recheck.png`: Attendance card (Participant, Status, Joined, Left, Time in lesson) matches the Attendance rules.

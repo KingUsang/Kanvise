@@ -363,3 +363,7 @@ before the checklist (Bobbin asks none); Bobbin's step 1 "Add a client" is
 replaced by "Build the course plan" (no clients in Kanvise); the independent
 tutor list has "Check your classroom" instead of "Add a tutor"; Bobbin's "Find
 the right plan" sales card and "Chat to us" are not copied.
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-help-updates--open.png`: Help guide opens the external help site, the same link /setup uses.
+- `15-tutor-role/screenshots/tutor-mobile-app-learn-more.png`: Bobbin's mobile app dialog (phone mock, five ticked benefits, store buttons); not copied, Kanvise has no separate app and keeps setup on /setup.

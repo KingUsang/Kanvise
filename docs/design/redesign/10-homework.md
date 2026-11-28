@@ -240,3 +240,7 @@ Tables are in `20-data-model.md`: homework and hand-ins DM-12, topic status prop
   weeks before this lesson."), which 09 SA-05 copies for students.
 - Bobbin's hand-in and marking screens are not in the atlas; HW-04 and HW-05
   are Kanvise's own.
+
+Final Bobbin pass (FEAT-009):
+- `15-tutor-role/screenshots/tutor-course-resources-tab.png` and `15-tutor-role/screenshots/tutor-course-lessons-tab.png`: course tabs Summary, Lessons, Resources, Homework; Kanvise adds Course plan and Quizzes.
+- `15-tutor-role/screenshots/tutor-lesson-detail--default.png`: Set after this lesson card, "No homework was set in the two weeks after this lesson." with All homework.
