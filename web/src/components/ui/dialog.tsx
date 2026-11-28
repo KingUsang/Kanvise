@@ -66,7 +66,70 @@ export function isTopDialog(token: symbol) {
   return dialogStack[dialogStack.length - 1] === token;
 }
 
+/**
+ * Phone Back gesture for sheets. A sheet pushes one history entry when it
+ * opens; Back pops it and closes the top-most sheet instead of leaving the
+ * page. When a sheet closes by any other route its entry is popped again, and
+ * that pop is ignored. The current history state is copied so the Next.js
+ * router still recognises the entry.
+ */
+type BackEntry = { token: symbol; close: () => boolean | void; pushed: boolean };
+const backStack: BackEntry[] = [];
+let ignoredPops = 0;
+let backListening = false;
+
+function onPopState() {
+  if (ignoredPops > 0) {
+    ignoredPops -= 1;
+    return;
+  }
+  const top = backStack[backStack.length - 1];
+  if (!top || !top.pushed) return;
+  // The browser already popped the entry; closing must not pop it again.
+  top.pushed = false;
+  // A guard (unsaved changes, busy) can refuse: the dialog stays, so it gets its entry back.
+  if (top.close() === false) pushBackEntry(top);
+}
+
+/** Test helper: forget pops that a mocked history.back() never delivered. */
+export function resetBackHandlingForTests() {
+  backStack.length = 0;
+  ignoredPops = 0;
+}
+
+function pushBackEntry(entry: BackEntry) {
+  entry.pushed = true;
+  window.history.pushState({ ...(window.history.state ?? {}), kanviseSheet: true }, "", window.location.href);
+}
+
+function registerBack(token: symbol, close: () => boolean | void): () => void {
+  const entry: BackEntry = { token, close, pushed: false };
+  backStack.push(entry);
+  if (!backListening) {
+    window.addEventListener("popstate", onPopState);
+    backListening = true;
+  }
+  pushBackEntry(entry);
+  return () => {
+    const index = backStack.indexOf(entry);
+    if (index >= 0) backStack.splice(index, 1);
+    if (entry.pushed) {
+      entry.pushed = false;
+      ignoredPops += 1;
+      window.history.back();
+    }
+    if (backStack.length === 0 && backListening) {
+      window.removeEventListener("popstate", onPopState);
+      backListening = false;
+    }
+  };
+}
+
 interface DialogProps {
+  /** Phone Back gesture closes this dialog (sheets). Needs `onClose`. */
+  closeOnBack?: boolean;
+  /** What Back does instead of `onClose`. Return false when a guard keeps the dialog open. */
+  onBack?: () => boolean | void;
   /** Accessible name. Use `labelledBy` instead when a visible heading exists. */
   label?: string;
   labelledBy?: string;
@@ -88,13 +151,15 @@ interface DialogProps {
  * Shared modal dialog: role/aria-modal, focus moved in on open, Tab trapped,
  * Escape closes, focus restored to the previously focused element on close.
  */
-export function Dialog({ label, labelledBy, describedBy, onClose, dismissOnBackdrop = true, className, panelClassName, role = "dialog", layout, children }: DialogProps) {
+export function Dialog({ closeOnBack = false, onBack, label, labelledBy, describedBy, onClose, dismissOnBackdrop = true, className, panelClassName, role = "dialog", layout, children }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const onBackRef = useRef(onBack);
   useEffect(() => {
     onCloseRef.current = onClose;
-  }, [onClose]);
+    onBackRef.current = onBack;
+  }, [onClose, onBack]);
 
   useEffect(() => {
     const token = Symbol("dialog");
@@ -122,13 +187,16 @@ export function Dialog({ label, labelledBy, describedBy, onClose, dismissOnBackd
       (target === null || target < 0 ? panel : items[target]).focus();
     };
     document.addEventListener("keydown", onKeyDown, true);
+    const unregisterBack = closeOnBack && onCloseRef.current ? registerBack(token, () => (onBackRef.current ? onBackRef.current() : onCloseRef.current?.())) : null;
     return () => {
+      unregisterBack?.();
       document.removeEventListener("keydown", onKeyDown, true);
       removeDialog(token);
       restoreInert();
       document.body.style.overflow = previousOverflow;
       if (previous && document.contains(previous)) previous.focus();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- set up once per mount
   }, []);
 
   if (typeof document === "undefined") return null;
@@ -220,9 +288,10 @@ export function ModalDialog({
   const { titleId, descriptionId } = useDialogIds();
   if (!open) return null;
   const requestClose = (reason: DialogCloseReason) => {
-    if (busy) return;
-    if (onRequestClose && onRequestClose(reason) === false) return;
+    if (busy) return false;
+    if (onRequestClose && onRequestClose(reason) === false) return false;
     onClose();
+    return true;
   };
   const sheet = phoneLayout === "sheet";
   const width = size === "lg" ? "md:max-w-[640px]" : "md:max-w-[480px]";
@@ -230,8 +299,10 @@ export function ModalDialog({
     <Dialog
       labelledBy={titleId}
       describedBy={descriptionId}
-      onClose={() => requestClose("dismiss")}
+      onClose={() => { requestClose("dismiss"); }}
       layout={sheet ? "sheet" : "centred"}
+      closeOnBack
+      onBack={() => requestClose("dismiss")}
       className={sheet ? `${scrimClassName} max-md:p-0` : scrimClassName}
       panelClassName={[
         "flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-dashboard-dialog bg-dashboard-surface shadow-dashboard-overlay outline-none",
