@@ -182,6 +182,30 @@ Opens upward from the **?** in the user card. Matches Bobbin's help menu.
 - Footer: **↑ ↓ Navigate · ↵ Open · esc Close**.
 - Results respect permissions: a tutor only finds their own courses, lessons
   and students.
+
+**How matching works** (agreed with the first build, step 1):
+- **Contains, any case.** Typed text matches any part of a name, so "ali" finds
+  "Natalie". It needs at least 2 characters, up to 100. A typed percent sign,
+  underscore or asterisk is treated as plain text.
+- **What is matched:** people on first name, last name, email and "first last";
+  courses on their name; lessons on their topic.
+- **Never searched:** lesson notes, lesson summaries, student notes, homework
+  or quiz text, and anything Kavi wrote (private notes rule, 00 section 16).
+- **Timing:** the search waits 200 ms after the last key. If an older answer
+  arrives late it is ignored.
+- **Scope:** only the current account. Switching account (SH-07) changes it.
+- **Order inside a group:** people newest first; courses A to Z; lessons
+  upcoming soonest first, then past ones newest first. Cancelled lessons are
+  left out. Up to five per group.
+- **Who sees which group:** Students for admins and independent tutors, and for
+  an agency tutor only the students on their courses. Tutors for agency admins
+  only. Courses and Lessons for everyone, limited to the person's own for an
+  agency tutor. Homework, Quizzes and Resources arrive with their build steps.
+- **Opening a result** goes to that item's page. Where a page has no filter yet,
+  a person or tutor result opens the list.
+- **Errors:** **We couldn't search right now.** with **Try again**, and a
+  separate offline message.
+- **Not in this version:** recent searches, typo tolerance.
 - Keyboard and screen readers: see SH-12 (combobox and listbox).
 
 Entity icons and tints, used everywhere these things appear (lists, search,
