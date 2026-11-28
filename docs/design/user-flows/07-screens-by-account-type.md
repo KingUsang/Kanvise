@@ -18,7 +18,7 @@ Two switches decide almost everything on screen:
 So an independent tutor needs no special screens. They get the admin's powers
 (create courses, add students, settings, data) minus everything that only makes
 sense when there is a team (Tutors page, tutor columns and filters, and so on).
-When they add their first colleague, team turns on and those items appear.
+When they invite their first colleague, the team turns on by itself and those items appear.
 
 The "model" I kept calling D-22 is just this: **roles plus a team switch, instead of
 separate account types.** The only new thing for people is **Switch role** in the
@@ -134,7 +134,7 @@ exactly as a tutor sees them.
 ## 10. What turns on when team goes on
 
 Everything listed as **Hidden** for Independent is controlled by one fact: the team
-is on. Turning it on (Settings › How you teach › **With a team**) adds:
+is on. It turns on by itself when the owner invites the first colleague (Settings › How you teach › **Add a colleague**), and adds:
 
 - the Tutors and Team pages,
 - the Tutor column and filter on lists, the calendar and recordings,
@@ -148,8 +148,7 @@ is on. Turning it on (Settings › How you teach › **With a team**) adds:
 - concerns going to admins instead of Kanvise support.
 
 The owner's own courses and students stay as they were. Nothing is deleted.
-Going back to **On my own** is only allowed when no other team member is active
-(diagram `19-solo-to-team.png`).
+It turns off by itself when nobody else is left (diagram `19-solo-to-team.png`).
 
 ## 11. Gaps this exercise found
 

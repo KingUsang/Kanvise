@@ -4,9 +4,10 @@ Status: draft for owner review. Builds on `00-decisions.md` (§2, §14c, §19),
 `01-app-shell.md` (SH-02, SH-08, SH-14a), `02` (SET-01, ONB-10), `03` (DB-05),
 `04` (CW-2), `05` (LW-1), `07` (CR-09), `12` (CFG-P, CFG-T), `17`, `18`.
 
-**Who:** agency admins. Independent tutors have no Tutors or Team page; they
-switch to a team in 12 CFG-T (**With a team** › **Set up your team**), which
-turns their account into an agency with them as its admin.
+**Who:** agency admins. Independent tutors have no Tutors or Team page until
+they invite their first colleague, from **Add a colleague** in 12 CFG-T. That
+turns their account into an agency with them as its admin, with no switch to
+flip (12 CFG-T, "When the team turns on and off").
 **Goal:** add the people who teach and run the agency, see how each tutor is
 doing, and remove someone without leaving a course without a tutor.
 
@@ -331,7 +332,7 @@ adds the teaching capability, with no email.
 
 | Action | Agency admin | Agency tutor | Independent tutor |
 |---|---|---|---|
-| See `/tutors`, `/tutors/:id`, `/team` | Yes | No (01 SH-14a) | No (switch to a team in 12 CFG-T) |
+| See `/tutors`, `/tutors/:id`, `/team` | Yes | No (01 SH-14a) | No (use **Add a colleague** in 12 CFG-T) |
 | Add tutor, add team member, resend invites | Yes | No | No |
 | Edit a tutor | Yes | No (they edit their own profile in 12) | n/a |
 | Remove a tutor or team member, reassign | Yes, except themselves and the last admin | No | n/a |

@@ -21,6 +21,7 @@ proposed changes to the specs.
 | `05-gamification.md` | A progress and motivation design that fits the redesign (proposal) | Owner, design |
 | `qa/01-qa-test-plan.md` | About 260 test cases tied to flow and spec IDs, plus cross-cutting checks | QA, devs |
 | `qa/02-ai-qa-tooling.md` | How AI agents are changing QA in 2026 and what to adopt here | QA, devs |
+| `DIAGRAMS.md` and `diagrams/all-diagrams.pdf` | Every diagram on one page, and as one 30-page PDF | Everyone |
 | `diagrams/` | PNG of every diagram, and the Mermaid source in `diagrams/src/` | Everyone |
 
 ## Terms

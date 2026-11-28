@@ -141,9 +141,10 @@ lessons, password emails) are always sent and have no row here (18 NTF-01,
 ## CFG-T · How you teach
 
 The onboarding answers (spec 02), editable:
-- **On my own / With a team** (switching to a team shows **Set up your team**,
-  `19-tutors-and-team.md`; switching back is only possible with no other team
-  members).
+- **Teaching with others:** there is no switch. It reads **Just you** with an
+  **Add a colleague** button (opens Add tutor, 19 TM-03), or, once there is a
+  team, **Your team: 3 people** with **Go to Team**. The team follows the people
+  on the account (see "When the team turns on and off" below).
 - **Who you mostly teach:** Children and teens · Adults · Both. Sets the
   default lesson length (45 minutes for children and teens, otherwise an hour)
   and the reading level of what Kavi writes for students.
@@ -154,30 +155,23 @@ The onboarding answers (spec 02), editable:
 - Line: **These change your defaults and what Kanvise suggests. They never
   delete anything.**
 
-### Switching between On my own and With a team
+### When the team turns on and off
 
-**To a team** (from **On my own**): a dialog **Switch to a team?** "You'll see
-the Tutors and Team pages and can invite colleagues. Your courses, students and
-lessons stay exactly as they are. You become an admin, and you can switch to
-your tutor role from the account menu." A field **Agency name**, filled with the
-current account name (12 CFG-A). **Cancel** · **Switch to a team**. After it: the
-Tutors and Team pages appear, **Switch role** appears in the account menu, the
-account card label changes to **TUTORING AGENCY**, and the dashboard shows the
-**Set up your team** card with **Add tutor** (19). Students and emails see the
-same name as before, unless the owner renames it.
+There is no setting and no dialog. The account follows who is on it:
 
-**Back to On my own:**
-- If other people are on the team (active admins or tutors): the dialog **You
-  can't switch back yet.** "Remove or reassign the other people on your team
-  first." with **Go to Team** and **Go to Tutors**. Nothing changes.
-- If only invitations that haven't been accepted are left: **Switch back to
-  working on your own?** "{n} invitations will be withdrawn. Your courses,
-  students and lessons stay as they are." **Cancel** · **Switch back**.
-- If any course is taught only by someone else, they must be reassigned first
-  (19 TM-06), so the owner is the tutor on every course before switching back.
-- After it: the Tutors and Team pages and **Switch role** disappear, and the
-  owner keeps the admin role with the teaching capability (20 DM-01). Nothing
-  is deleted.
+- **On:** the moment the owner invites the first colleague (a tutor or a team
+  member), even before they accept. The Tutors and Team pages appear, **Switch
+  role** appears in the account menu, and the account card label becomes
+  **TUTORING AGENCY**.
+- **Off:** only for an account that started as **On my own** (02 ONB-02): when
+  nobody else is left (everyone removed or declined) and no invitation is
+  waiting. An account that started as **With a team** stays a team. The pages and **Switch role** disappear. Courses that
+  someone else taught were already reassigned when that person was removed (19
+  TM-06), so no course is left without a tutor.
+- Nothing is deleted either way. The name students and emails see stays the same
+  (12 CFG-A).
+- The owner keeps the admin role with the teaching capability throughout
+  (20 DM-01).
 
 ## CFG-L · Lessons and classroom
 
@@ -314,8 +308,8 @@ There is no public web address setting: public pages are retired (00 section
 Tutors and team members moved to `19-tutors-and-team.md`: the Tutors list,
 Add tutor, the tutor page, the Team page, removing someone with the required
 Reassign step, adding yourself as a tutor, **Switch role** and the
-50-invitations-an-hour limit (19 TM-01 to TM-11). Settings keeps only
-**On my own / With a team** (CFG-T).
+50-invitations-an-hour limit (19 TM-01 to TM-11). There is no team
+switch in Settings; the team follows the people (CFG-T).
 
 ## CFG-D · Data and privacy
 

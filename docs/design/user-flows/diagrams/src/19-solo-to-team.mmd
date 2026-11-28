@@ -1,14 +1,13 @@
 flowchart TD
-  A["Independent tutor<br/>has_team = off"] --> B["Settings, How you teach<br/>With a team"]
-  B --> C["Confirm dialog<br/>You'll see Tutors and Team pages.<br/>Your courses, students and lessons stay as they are"]
-  C -->|"Cancel"| A
-  C -->|"Continue"| D["Ask for an agency name<br/>optional logo in General"]
-  D --> E["has_team = on<br/>owner keeps admin and tutor roles"]
-  E --> F["Tutors and Team pages appear<br/>Set up your team, Add tutor"]
-  F --> G["Owner can use Switch role<br/>Admin or Tutor in the account menu"]
-  E --> H["Existing courses keep the owner as tutor"]
-  F --> I["Invite a tutor TM-03"]
-  I --> J["Tutor accepts, owner gives them courses"]
-  K["Going back to On my own"] --> L{"Other team members still active?"}
-  L -->|"yes"| M["Not allowed<br/>Remove or reassign them first"]
-  L -->|"no"| N["has_team = off<br/>pages hidden, nothing deleted"]
+  A["Independent tutor<br/>just the owner, team is off<br/>Settings, How you teach: Just you"] --> B["Add a colleague<br/>opens Add tutor, or Add team member"]
+  B --> C["Invitation sent<br/>no switch, no dialog"]
+  C --> D["Team turns on by itself"]
+  D --> E["Tutors and Team pages appear<br/>Switch role appears in the account menu<br/>account card says TUTORING AGENCY"]
+  D --> F["Courses, students, lessons and the account name<br/>stay exactly as they were"]
+  E --> G["Owner gives the colleague courses<br/>colleague accepts, or declines"]
+  G --> H{"Anyone else left on the account?<br/>active, or an invitation waiting"}
+  H -->|"yes"| E
+  H -->|"no, and the account started solo"| I["Team turns off by itself<br/>pages and Switch role disappear<br/>nothing is deleted"]
+  H -->|"no, but the account started as a team"| M["Stays a team<br/>owner can add people again"]
+  J["Removing a colleague who teaches"] --> K["Reassign step first, TM-06<br/>so no course is left without a tutor"]
+  K --> H

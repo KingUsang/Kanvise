@@ -115,8 +115,10 @@ Things to notice:
 
 ![Solo to team](diagrams/19-solo-to-team.png)
 
-Nothing is deleted when someone goes either way. Going back to **On my own** is
-only allowed when no other team member is active.
+There is no switch to flip. A solo tutor presses **Add a colleague** (Settings › How you
+teach) and invites the first person. The team turns on by itself, and turns off by
+itself when nobody else is left. Nothing is deleted either way (owner decision,
+28 Nov: the switch was redundant).
 
 ## 7. The admin who also teaches
 
