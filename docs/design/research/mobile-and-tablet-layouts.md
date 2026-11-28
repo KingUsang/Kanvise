@@ -35,6 +35,7 @@ Limits:
 | 16 | [Stripe Docs, Dashboard mobile app](https://docs.stripe.com/dashboard/mobile) | The phone app is a separate, smaller product. It covers metrics, payments, customers and payouts, and leaves the rest to the web dashboard. |
 | 17 | [Shopify Help, Shopify admin](https://help.shopify.com/en/manual/shopify-admin/shopify-mobile-app) | The mobile app covers orders, products and analytics. "Some advanced settings require you to be on a desktop." |
 | 18 | [Google Calendar on the App Store](https://apps.apple.com/us/app/google-calendar-get-organized/id909319292) | "Quickly switch between month, week, and day views." |
+| 19 | [Android, Navigation bar](https://developer.android.com/develop/ui/compose/components/navigation-bar) | A navigation bar suits 3 to 5 destinations. |
 
 ## What Bobbin does on phones and tablets
 
@@ -92,7 +93,7 @@ Recommendation:
 1. Add a tab in the release that ships its page. Never switch a tab on or off inside a session.
 2. Choose the set of tabs once per role at sign-in. Do not change it when data loads.
 3. Students arrives for agency tutors in step 3. Lessons arrives in step 4. Until then those pages are reachable only if they exist, and nothing disabled is shown.
-4. Keep Calendar and Lessons as separate tabs (owner decision). A bar of Today, Calendar, Lessons, Students and More has 5 items, which is the upper limit in Material guidance (6).
+4. Keep Calendar and Lessons as separate tabs (owner decision). A bar of Today, Calendar, Lessons, Students and More has 5 items, which is the upper limit for a navigation bar (19).
 
 Owner question for `pr-summary.md`: when Lessons ships, the bar will have five items for admins and tutors. Should Students move into More, or does the five-item bar stay? This does not change any owner decision today.
 
