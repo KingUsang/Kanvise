@@ -44,9 +44,9 @@ Where the redesign differs from the standard, the change is listed in
   label **TUTORING AGENCY**, then the agency name.
 - **Independent tutor:** their photo or initials, the label **YOUR TUTORING**,
   then their display name (for example "Alex Thompson Tutoring").
-- If the person belongs to more than one account, the card shows a chevron and
-  opens the account switcher (SH-07). With one account there is no chevron and
-  the card is not clickable.
+- Tutors and admins always see a chevron, and the card opens the account switcher
+  (SH-07), which also holds **Create another account**. Students have no account
+  switcher.
 
 ### 2. Search
 - A field reading **Search…** with a **⌘K** hint (**Ctrl K** on Windows).
@@ -226,11 +226,15 @@ their profile from Settings); Kanvise shows the same two items to every role.
 
 ## SH-07 · Account switcher
 
-Only for people in more than one account. Opens from the account card.
-- One row per account: logo or letter, name, and the person's role there.
+For tutors and admins. Opens from the account card.
+- One row per account: logo or letter, name, and the person's role there. With
+  one account there is one row.
 - The current account has a tick.
 - Choosing another account reloads the dashboard for that account, with a toast
   **Now in Science Students Academy.**
+- At the bottom, **Create another account** (the same login, no new password). It
+  starts onboarding for a new account (02 ONB-12). Someone who would rather keep the
+  accounts apart can still sign up again with a different email; nothing stops that.
 
 ## SH-08 · Toasts and feedback
 

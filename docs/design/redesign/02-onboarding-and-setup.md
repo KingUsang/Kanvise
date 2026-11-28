@@ -200,6 +200,23 @@ classroom** button unless they add themselves as a tutor (19 TM-10).
 
 ---
 
+## ONB-12 · Another account
+
+From **Create another account** in the account switcher (01 SH-07). The person is
+already signed in, so there is no sign-up and no email check.
+
+- It opens Kavi at ONB-02 (**Do you teach on your own or with a team?**), skipping the
+  hello, and runs ONB-03 to ONB-07 as for a first account, with blank answers. The
+  plain form (ONB-11) is offered the same way.
+- **Cancel** or the browser back button returns to the current account, and nothing
+  is created.
+- At the end the new account is created with the person as its owner (admin, with
+  the teaching capability), and they land on its `/setup` (SET-01) with the toast
+  **Now in {new name}.** The other account is untouched.
+- The new account's name starts as the person's name for an independent tutor, or the
+  agency name from ONB-07.
+- Students have no such option.
+
 ## ONB-11 · The same questions as a plain form
 
 For people who prefer it, and for anyone using a screen reader who chooses it.

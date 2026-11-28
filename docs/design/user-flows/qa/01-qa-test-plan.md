@@ -50,6 +50,8 @@ it, in quotes.
 | TC-AUTH-007 | Session expiry mid-form | Expire the session while typing | SH-14b dialog, page stays, typed text kept, sign in returns to same page | P1 | E2E |
 | TC-AUTH-008 | Two accounts | Sign in as a user in two agencies | SH-07 picker, switching shows a toast | P2 | E2E |
 | TC-AUTH-009 | Deep link while signed out | Open a push or email target | Sign in, then land on the target | P1 | E2E |
+| TC-AUTH-010 | Create another account | Tutor with one account opens the account switcher and picks Create another account | Onboarding starts at ONB-02 with blank answers; Cancel creates nothing; at the end the new account is current with the owner as admin; the old account is untouched | P1 | E2E |
+| TC-AUTH-011 | Students and the switcher | Student looks for the account switcher | None shown | P1 | E2E |
 
 ## ONB · Onboarding and setup (flow 01)
 

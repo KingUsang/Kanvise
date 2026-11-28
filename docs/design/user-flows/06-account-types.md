@@ -115,9 +115,11 @@ Things to notice:
 
 There is no upgrade path (owner decision, 28 Nov). The account type is chosen once,
 in onboarding, and cannot change. Someone who wants an agency creates a separate
-account for it, and uses the account switcher (01 SH-07) to move between the two.
-Onboarding says so under the question. It is revisited only if people ask for it
-(OQ-17).
+account for it. **Create another account** sits in the account switcher (01 SH-07)
+and uses the same login (02 ONB-12), and the switcher moves between the two.
+Someone who prefers to keep them apart can sign up again with a different email.
+Onboarding says all this under the question. An upgrade is revisited only if people
+ask for it (D-34).
 
 ## 7. The admin who also teaches
 
