@@ -31,7 +31,7 @@ desktop. There is no hamburger menu.
 | Calendar | Calendar (agenda view, see the Calendar section of spec 05) |
 | Lessons | Lessons list |
 | Students | Students list |
-| More | The full sidebar as a sheet (spec 01, SH-16): account card, setup card while unfinished, every group from desktop (Courses, PEOPLE, WORK, LIBRARY, ACCOUNT), then the user card with the account and help menus |
+| More | The full sidebar as a sheet (spec 01, SH-16): account card, setup card while unfinished, every group from desktop (Courses, PEOPLE, WORK, LIBRARY, ACCOUNT), then the user card with the account and help menus (the account menu holds **Switch role** for someone who also teaches) |
 
 - The bar keeps only the four daily items plus More. Hidden navigation gets
   used less, and two menus for the same links would confuse, so More shows the

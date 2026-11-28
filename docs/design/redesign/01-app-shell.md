@@ -212,7 +212,12 @@ their profile from Settings); Kanvise shows the same two items to every role.
   one. Choosing the other reloads the dashboard in that role, with a toast
   **Now working as a tutor.** or **Now working as an admin.** The choice is
   remembered on this device. In the Tutor role the person sees exactly what an
-  agency tutor sees (own courses, own lessons, personal settings).
+  agency tutor sees (own courses, own lessons, personal settings). The role is
+  per account: someone who is an admin in one agency and a tutor in another
+  uses the account switcher (SH-07) for that, not Switch role.
+- **Links from email, push or the bell** that need the other role switch to it
+  with the toast, as long as the person holds it. If they hold neither, the Not
+  available page (SH-14a) shows.
 - **My profile** → `/profile`
 - **Sign out**. Signs out immediately and returns to `/auth/login`. If there
   are changes saved on this device that have not uploaded yet (SH-13), it asks

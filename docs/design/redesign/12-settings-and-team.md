@@ -103,7 +103,8 @@ the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
 `18-notifications.md` holds the full list (18 NTF-01: every event, who gets
 it, on which channel, the default and where it can be switched off). This
 section is where a person switches their own rows. It shows only the rows
-that can be switched for that person's role, each with a line under the title
+that can be switched for what that person can do (an admin who also teaches
+sees the teaching rows in both views), each with a line under the title
 and **Push** and **Email** toggles, as Bobbin's personal Notifications card
 (`15-tutor-role/screenshots/tutor-profile-notifications.png`):
 
@@ -152,6 +153,31 @@ The onboarding answers (spec 02), editable:
 - **Subjects.** Suggested first in the New course wizard's Subject field.
 - Line: **These change your defaults and what Kanvise suggests. They never
   delete anything.**
+
+### Switching between On my own and With a team
+
+**To a team** (from **On my own**): a dialog **Switch to a team?** "You'll see
+the Tutors and Team pages and can invite colleagues. Your courses, students and
+lessons stay exactly as they are. You become an admin, and you can switch to
+your tutor role from the account menu." A field **Agency name**, filled with the
+current account name (12 CFG-A). **Cancel** · **Switch to a team**. After it: the
+Tutors and Team pages appear, **Switch role** appears in the account menu, the
+account card label changes to **TUTORING AGENCY**, and the dashboard shows the
+**Set up your team** card with **Add tutor** (19). Students and emails see the
+same name as before, unless the owner renames it.
+
+**Back to On my own:**
+- If other people are on the team (active admins or tutors): the dialog **You
+  can't switch back yet.** "Remove or reassign the other people on your team
+  first." with **Go to Team** and **Go to Tutors**. Nothing changes.
+- If only invitations that haven't been accepted are left: **Switch back to
+  working on your own?** "{n} invitations will be withdrawn. Your courses,
+  students and lessons stay as they are." **Cancel** · **Switch back**.
+- If any course is taught only by someone else, they must be reassigned first
+  (19 TM-06), so the owner is the tutor on every course before switching back.
+- After it: the Tutors and Team pages and **Switch role** disappear, and the
+  owner keeps the admin role with the teaching capability (20 DM-01). Nothing
+  is deleted.
 
 ## CFG-L · Lessons and classroom
 

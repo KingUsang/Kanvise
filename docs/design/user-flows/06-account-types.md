@@ -72,6 +72,12 @@ email, and **Switch role** is how the admin moves between views. The button sits
 where an admin looks first (the setup step, the Tutors page and its empty
 state), so the feature stays easy to find.
 
+### How it is stored (changed after the impact check)
+
+The user sees two roles, but the database keeps **one membership per person per
+account** and gives an admin a `can_teach` flag. Two rows would break an existing
+uniqueness rule and could duplicate people in lists. See `09-impact-check.md`.
+
 ## 3. Side by side
 
 | | Independent tutor | Tutoring agency |

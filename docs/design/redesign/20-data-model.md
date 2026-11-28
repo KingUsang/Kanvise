@@ -43,7 +43,19 @@ Kavi.
   - `schools`: account name, logo, `account_type` (`centre` = agency,
     `independent`), timezone (New), business details (12 CFG-A).
   - `account_memberships`: person, account, role (`admin`, `tutor`,
-    `student`), status (invited, active, removed), joined and removed times.
+    `student`), status (invited, active, removed), joined and removed times,
+    and for admins **`can_teach`** (New, default false). One membership per
+    person per account stays (`UNIQUE (person_id, school_id)`), so no query that
+    joins memberships can return a person twice. **Add me as a tutor** (19
+    TM-10) sets `can_teach`; the independent tutor's owner is an admin with
+    `can_teach` on.
+  - **Switch role is a request that can only narrow.** The client sends the
+    view it wants (admin or tutor) with each request. Hono checks the person
+    really has it (admin role, or `can_teach` for the tutor view) and then
+    applies that view's rules, which are never wider than the person's own
+    authority. The tutor view can never reach an admin-only route (standard 03,
+    00 section 18). The choice is kept as a per-device preference, not in the
+    token or the database.
   - Student fields from 06: goal (free text), status, recording consent
     (DM-09), can watch recordings (DM-09).
   - `student_notes` (New): student notes (06 STU-06): account, student,
@@ -331,8 +343,8 @@ Kavi.
     (on my own or with a team, who you mostly teach, how you usually teach,
     subjects), level names, Kavi writing style and switches.
   - Person (New columns on `user_profiles`, or a person settings table):
-    timezone, display name. An admin who also teaches holds both the admin and
-    tutor roles (DM-01), added from 19 TM-10; there is no separate setting.
+    timezone, display name. An admin who also teaches has `can_teach` on their membership
+    (DM-01), added from 19 TM-10; there is no separate setting.
 - **Owning spec:** 12 (CFG-P, CFG-T, CFG-L, CFG-K, CFG-A); onboarding answers
   02.
 - **Staging:** `schools` (`account_type`, business details),

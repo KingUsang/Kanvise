@@ -57,7 +57,7 @@ not joined yet** row (03 DB-05) opens this list on **Invited**.
 | **Courses** | Count, with the first two course swatches |
 | **This week** | Lessons this week: **6 lessons** |
 | **Summaries overdue** | A count in red tint when over 0 (ended over 48 hours ago, 03 DB-05), otherwise **-** |
-| **⋯** | **Resend invite** (Invited only), **Edit**, **Remove from agency** |
+| **⋯** | **Resend invite** (Invited only), **Edit**, **Remove from agency**. On a row with the **Admin** chip, **Stop teaching** replaces **Remove from agency** (TM-10), so an admin who teaches is never removed from the agency from here |
 
 - Rows open the tutor page (TM-04).
 - **Removed** tutors keep a row so their past lessons stay findable; their
@@ -181,8 +181,8 @@ From **⋯ › Remove from agency** (TM-01) or **Actions › Remove from agency*
 - **Who teaches Michael's courses now?** · "Their upcoming lessons and
   unwritten summaries move with each course."
 - One row per course they teach: swatch, name, **4 upcoming lessons**, and a
-  **New tutor** dropdown (active and invited tutors, and admins with **I teach
-  too**, TM-10). When the course has other tutors, the first of them is
+  **New tutor** dropdown (active and invited tutors, and admins who are also
+  tutors, TM-10). When the course has other tutors, the first of them is
   preselected. Under the list: **+ Add a tutor** opens TM-03 on top and returns
   with the new tutor selectable.
 - **Use one tutor for all** fills every row at once.
@@ -294,9 +294,15 @@ toggle on the dashboard (03 DB-08). The user card shows the active role (**Tutor
 teach works as the tutor. On a lesson they do not teach, the Admin role shows
 **Join as an admin?** (07 CR-09).
 
-**Removing the role:** Tutors › their own row › **Remove** (TM-06). If they are
-the only tutor on courses, step 2 asks them to choose a new tutor first. They stay
-an admin. The line reads **You'll stay an admin.**
+**Stopping:** Tutors › the row with the **Admin** chip › **Stop teaching**. It is
+not **Remove from agency**: it only takes away the teaching capability, and the
+person stays an admin (leaving the agency is on the Team page, TM-09). If they
+are the only tutor on any course, step 2 of TM-06 asks for a new tutor for each
+first. The dialog line reads **You'll stay an admin.**
+
+**Same confirm for any admin:** typing any existing admin's email in Add tutor
+(TM-03) shows **{Name} is already an admin here. Add them as a tutor too?** and
+adds the teaching capability, with no email.
 
 ## TM-11 · Invitations and limits
 

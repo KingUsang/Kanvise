@@ -463,7 +463,9 @@ of scope, 00 section 15).
   - **What happened** (text, required, up to 2,000 characters).
   - **Send to:** **Your agency's admins** (default in an agency) · **Kanvise
     support**. For an independent tutor's lesson, it goes to **Kanvise
-    support** only.
+    support** only. The admins exclude the person the concern is about; if
+    that person is the only admin (for example the owner of a team of one), it
+    goes to **Kanvise support**.
   - Line: **If someone is in danger now, call your local emergency number
     first.**
   - **Cancel** · **Send**.

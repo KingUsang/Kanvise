@@ -284,6 +284,7 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-NTF-013 | Tutor alerts (D-09) | Not held, recording failed | Push sent, switchable | P1 | API |
 | TC-NTF-014 | Email change (D-10) | Change email | Old address notified | P1 | API |
 | TC-NTF-015 | Invite emails | Each type | Correct sender, button, copy, expiry line | P1 | Manual |
+| TC-NTF-016 | One message per person | Admin who is also the tutor | One reminder per lesson, not two; daily summary still sent | P1 | API |
 
 ## TM · Admin and team (flow 11)
 
@@ -308,6 +309,9 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-TM-017 | Switch role | Admin with both roles switches to Tutor | Tutor screens only (own courses, no Tutors or Team), toast, user card shows Tutor, remembered next sign-in on this device | P0 | E2E |
 | TC-TM-018 | Own email in Add tutor | Admin types their own email | Confirm dialog, no invitation email | P1 | E2E |
 | TC-TM-019 | Role in permissions | Tutor role calls an admin-only endpoint | Refused, even though the same login is an admin | P0 | API |
+| TC-TM-020 | Link in the other role | Admin in Tutor view opens a push about an admin-only item | Switches to Admin with a toast; if the person holds neither, Not available | P1 | E2E |
+| TC-TM-021 | Stop teaching | Admin with the Admin chip row presses Stop teaching | Asks for new tutors if sole tutor; stays an admin; never removed from the agency | P0 | E2E |
+| TC-TM-022 | Switch to a team and back | Independent tutor switches, adds and removes people, switches back | Dialogs as spec; blocked while others are active; pending invitations withdrawn with a count; courses and students unchanged | P0 | E2E |
 
 ## STU · Student app (flow 12)
 
@@ -344,6 +348,7 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-SEC-009 | Secrets | Scan repo and logs | No keys, no tokens in logs | P0 | Static |
 | TC-SEC-010 | Consent | Recording and transcript | Only when every student consented | P0 | API |
 | TC-SEC-011 | Existence leaks | Open non-existent vs forbidden | Identical responses and timing class | P1 | API |
+| TC-SEC-012 | Role narrowing | Request the Tutor view, then call admin-only routes and ask for other tutors' data | Refused; the Tutor view never returns more than the person's own authority, and a person without `can_teach` cannot ask for it | P0 | API |
 
 ## X · Phones, devices, networks, accessibility (cross-cutting)
 

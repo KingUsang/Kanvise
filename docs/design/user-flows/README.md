@@ -15,6 +15,7 @@ proposed changes to the specs.
 | `06-account-types.md` | How an independent tutor and a tutoring agency each work, side by side, with the admin-who-teaches role switch (proposal D-22) | Owner, product, devs |
 | `07-screens-by-account-type.md` | Every screen, and what an independent tutor, agency admin, agency tutor and student each see | Design, devs, QA |
 | `08-ai-plan-bobbin-comparison.md` | What Bobbin's AI course plan does and what Kanvise takes from it | Product, design |
+| `09-impact-check.md` | What D-22 and D-29 could break (including a database constraint) and how each was handled | Devs, QA, owner |
 | `03-decisions-and-open-questions.md` | Judgment calls made while writing this, and what still needs the owner | Owner |
 | `04-payments.md` | A payment flow design for when billing is built (proposal) | Owner, devs |
 | `05-gamification.md` | A progress and motivation design that fits the redesign (proposal) | Owner, design |

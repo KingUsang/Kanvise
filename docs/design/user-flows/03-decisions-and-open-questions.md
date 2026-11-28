@@ -6,7 +6,7 @@ applied to the redesign specs on this branch, except D-15 (payments), D-16
 `04-payments.md` and `05-gamification.md`, and D-11 and D-14, which need no spec change.
 **OQ-** items still need the owner.
 
-Spec files changed: `02`, `04`, `05`, `07`, `09`, `10`, `11`, `12`, `13`, `17`, `18`, `19`, and the new
+Spec files changed: `01`, `02`, `03`, `04`, `05`, `07`, `09`, `10`, `11`, `12`, `13`, `16`, `17`, `18`, `19`, `20`, `00`, and the new
 `21-sign-in-and-sign-up.md` (with the `AU` ID prefix in the README and the checker).
 The spec checker (`history/check.py`) passes.
 
@@ -51,6 +51,10 @@ The spec checker (`history/check.py`) passes.
 | D-27 | Removing a module or topic that is in use | Ask first and say what depends on it; unused items go with an Undo toast | Stops accidental loss of statuses and links | 04 CRS-04 |
 | D-28 | The screen-by-screen view for independent tutor, agency admin and agency tutor | Written in `07-screens-by-account-type.md`: roles plus one team switch decide every screen | Shows what changes on each screen | `07-screens-by-account-type.md` |
 | D-29 | Remove the **I teach too** toggle | **Approved 28 Nov, applied:** **Add me as a tutor** (setup step, Tutors page, or your own email in Add tutor) adds the Tutor role with no email. **Switch role** moves between views | One path instead of two | 19 TM-10, 12 CFG-P, 01 SH-06, 02, 04, 05, 07, 17, 18, 20 |
+| D-30 | How is the dual role stored? | One membership per person per account plus an admin-only `can_teach` flag, not two roles. Switch role can only narrow authority | The database already enforces one membership row, and standard 03 treats admin teaching as a capability | `20` DM-01, 00 section 18 |
+| D-31 | An admin's own row on the Tutors page | The action is **Stop teaching**, never **Remove from agency** | Avoids removing an admin from the agency by accident | 19 TM-01, TM-10 |
+| D-32 | Concerns in a team of one | Exclude the person concerned; if nobody is left, Kanvise support | A concern must never reach the person it is about | 07 CR-13, 18 NTF-218 |
+| D-33 | Switching between On my own and With a team | Dialogs written in spec 12 (what appears, pending invitations withdrawn, owner must teach every course before going back) | No data loss either way | 12 CFG-T |
 | D-17 | Settings group names are unclear: YOUR TEACHING covers agency-wide settings and shows for admins who do not teach. Teaching preferences holds team size, audience and subjects | Rename groups: YOU becomes **PERSONAL**, YOUR TEACHING becomes **LESSONS**, ACCOUNT stays. Rename Teaching preferences to **How you teach**. Leave Lessons and classroom, and Data and privacy as they are | The names now say what is inside | 12 Layout, CFG-T |
 | D-18 | Business details asks independent tutors for a name and photo twice (CFG-P and CFG-A). "Business" does not fit a tutor, and "Account details" reads like bank details | One shared section called **General** with the **same four fields for everyone**: name, logo (optional), country and currency, timezone. For an independent tutor the name starts as their own name (for example "Alex Thompson Tutoring", as the sidebar already shows) and the logo falls back to their profile photo. Revised on 28 Nov: the earlier version hid fields for independent tutors, which added conditions and lost the tutoring name | One screen, no conditions, nothing asked twice | 12 CFG-A |
 | D-19 | Design principle, not a screen: prefer one component with conditions over parallel screens for each account type | Where independent tutors and agencies differ, show or hide fields and rows on the same screen. Build separate screens only when the task is different (for example Tutors and Team pages, which only agencies have). AI makes writing code cheaper, but every extra variant still has to be tested, kept in sync and explained to users | Balances product design with build and maintenance cost | All specs |
@@ -74,6 +78,7 @@ The spec checker (`history/check.py`) passes.
 | OQ-13 | Is the chosen role (Admin or Tutor) remembered at the next sign-in? | **Agreed 28 Nov:** yes, per device. Goes into the specs with D-22 |
 | OQ-14 | Plan history (view and restore earlier versions of a course plan), as Bobbin's History menu | Later |
 | OQ-15 | Is there a limit on Kavi plan drafts per tutor per day, and do we show how many are left? | Decide with the Kavi cost work (20 DM-26) |
+| OQ-16 | Keep **Mine only** on the admin dashboard now that Switch role exists? | Keep both for now and revisit after use |
 
 ## Contradictions found in the specs
 

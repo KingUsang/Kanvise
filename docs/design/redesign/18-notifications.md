@@ -534,6 +534,8 @@ Bell items and pushes open the lesson in the student app (09 SA-05), where
 
 - **Fires:** immediately, when the person presses **Send** (07 CR-13, 09
   SA-05).
+- **Who:** each chosen admin except the person the concern is about. If that
+  leaves nobody, Kanvise support.
 - **Email:** to each chosen admin: subject **A concern was raised about a
   lesson on Algebra 1 Small Group** · button **Open the lesson**. The body
   has the lesson, the time, who sent it and what they wrote. To Kanvise

@@ -51,7 +51,7 @@ Shows at most one banner, in this priority order:
 | Banner | When | Content | Actions |
 |---|---|---|---|
 | Sample course | Sample data exists and the user has no real course yet | **Explore a sample course.** "Algebra 1 Small Group is a ready-made course with lessons, summaries and a course plan, so you can see Kanvise working before your own students arrive." | **Open the sample course**, **Delete sample data** (asks to confirm) |
-| Welcome (invited tutor) | A tutor's first visit to an agency (spec 02, ONB-10) | **Welcome to Science Students Academy.** "Your admin has given you access to your courses. Test your classroom before your first lesson." | **Test classroom**, ✕ |
+| Welcome (new tutor) | An invited tutor's first visit to an agency (spec 02, ONB-10), or an admin's first visit to the Tutor view after adding themselves as a tutor (19 TM-10) | **Welcome to Science Students Academy.** "Your admin has given you access to your courses. Test your classroom before your first lesson." | **Test classroom**, ✕ |
 
 Dismissing a banner shrinks it away; the next one does not appear until the
 next visit.
