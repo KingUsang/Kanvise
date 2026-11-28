@@ -1,0 +1,37 @@
+flowchart TD
+  subgraph TUT["Tutor"]
+    T1["HW-01 Set homework<br/>from course tab, summary, Lesson tools,<br/>/homework or Kavi suggestion"] --> T2{"Valid?"}
+    T2 -->|"no"| T3["Add a title<br/>Choose a due date<br/>Due date has passed<br/>Choose at least one student"]
+    T3 --> T1
+    T2 -->|"yes"| T4["Homework set, toast<br/>students without email are unticked"]
+    T4 --> T5["HW-03 Homework page<br/>Open, Past due, Closed"]
+    T5 --> T6["Mark next, HW-05"]
+    T6 --> T7["Mark, feedback,<br/>Topics this checked<br/>Got it or Needs more work"]
+    T7 -->|"Save and next"| T8["Student notified NTF-405"]
+    T7 -->|"Ask to redo"| T9["Status Redo asked NTF-406"]
+    T8 --> T10["CRS-08 Review changes<br/>after the last mark"]
+    T5 -->|"Remind, once a day"| T11["NTF-403 to students who haven't handed in"]
+    T5 -->|"Edit or Extend due date"| T12["Students notified NTF-402<br/>skipped if already marked"]
+    T5 -->|"Close"| T13["No new hand-ins<br/>students can still view"]
+    T5 -->|"Delete"| T14["Confirm, hand-ins deleted too"]
+  end
+  subgraph STD["Student"]
+    S1["Notification NTF-401"] --> S2["SA-06 Homework tabs<br/>To do, Handed in, Marked"]
+    S2 --> S3["HW-04 Open homework"]
+    S3 --> S4["Your answer<br/>photo or file, text, or both"]
+    S4 -->|"upload fails"| S5["That didn't upload<br/>files kept, retry"]
+    S5 --> S4
+    S4 -->|"offline"| S6["Text autosaves on device,<br/>sends when back online"]
+    S6 --> S4
+    S4 -->|"Hand in"| S7{"Past due?"}
+    S7 -->|"yes"| S8["Allowed, marked Late<br/>until tutor closes"]
+    S7 -->|"no"| S9["Handed in with time"]
+    S8 --> S9
+    S9 -->|"Change my work, until marked"| S4
+    S9 --> S10["Tutor sees on Page and push NTF-404<br/>grouped over 30 minutes"]
+    S10 --> T5
+    T8 --> S11["Marked with feedback"]
+    T9 --> S12["Redo asked appears in To do"]
+    S12 --> S4
+  end
+  T4 --> S1

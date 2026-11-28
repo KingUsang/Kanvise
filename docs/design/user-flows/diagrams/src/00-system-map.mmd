@@ -1,0 +1,38 @@
+flowchart LR
+  subgraph T["Tutor or agency admin"]
+    T1["Sign up and set up<br/>ONB, SET"] --> T2["Add students<br/>STU"]
+    T2 --> T3["Create course<br/>CW, CRS"]
+    T3 --> T4["Build course plan<br/>CRS-04"]
+    T4 --> T5["Schedule lessons<br/>LW, LP"]
+    T5 --> T6["Teach in classroom<br/>CR"]
+    T6 --> T7["Write lesson summary<br/>SM"]
+    T7 --> T8["Set and mark homework<br/>HW"]
+    T7 --> T9["Send quizzes<br/>QZ"]
+  end
+  subgraph S["Student"]
+    S1["Invitation email<br/>SA-01"] --> S2["Home<br/>SA-03"]
+    S2 --> S3["Join lesson<br/>SA-02"]
+    S2 --> S4["Homework<br/>SA-06 HW-04"]
+    S2 --> S5["Quizzes<br/>QZ-05"]
+    S2 --> S6["Courses and plan<br/>SA-07 SA-08"]
+    S3 --> S7["Summary and recording<br/>SA-05"]
+  end
+  subgraph SY["System"]
+    Y1["Reminders and alerts<br/>NTF"]
+    Y2["Recording and attendance<br/>REC"]
+    Y3["Kavi drafts<br/>last to be built"]
+  end
+  T2 -->|"invitation"| S1
+  T5 -->|"join link"| S3
+  T5 -.-> Y1
+  Y1 -.-> S2
+  T6 --> Y2
+  Y2 --> T7
+  Y3 -.->|"drafts only"| T4
+  Y3 -.->|"drafts only"| T7
+  T7 -->|"Complete"| S7
+  T8 <--> S4
+  T9 --> S5
+  S4 -->|"hand in"| T8
+  S5 -->|"results"| T9
+  T7 -->|"proposed topic changes"| T4

@@ -1,0 +1,22 @@
+flowchart TD
+  A["Login page"] -->|"details correct"| B{"Who signed in?"}
+  A -->|"details wrong"| A1["Inline error<br/>Email or password is incorrect"]
+  A1 --> A
+  A -->|"Forgot password"| F1["Enter email"]
+  F1 --> F2["Same message every time<br/>If an account exists, we sent a link<br/>never reveals whether it exists"]
+  F2 --> F3["Reset email<br/>NTF-114"]
+  F3 -->|"opens link in time"| F4["Set a new password"]
+  F4 --> F5["Confirmation email<br/>NTF-113"]
+  F5 --> A
+  F3 -->|"link expired or used"| F6["This link has expired<br/>Request a new one"]
+  F6 --> F1
+  B -->|"more than one account"| G["SH-07 account picker"]
+  G --> B
+  B -->|"tutor or admin, setup not done"| C["/setup SET-01"]
+  B -->|"tutor or admin"| D["Dashboard DB-01"]
+  B -->|"student"| E["Student Home SA-03"]
+  H(["Session expires while working"]) --> I["SH-14b dialog<br/>You've been signed out<br/>page stays, typed text kept on device"]
+  I --> J["Sign in again"]
+  J --> K(["Back on the same page"])
+  L(["Email, push or bell tap while signed out"]) --> A
+  A -.->|"after sign in"| M(["Opens the original target"])

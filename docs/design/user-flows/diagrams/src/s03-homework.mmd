@@ -1,0 +1,23 @@
+stateDiagram-v2
+  direction LR
+  state "Not handed in" as NotIn
+  state "Handed in" as In
+  state "Redo asked" as Redo
+  state "Past due" as PastDue
+  state "Homework (tutor view)" as HW {
+    [*] --> Open: set
+    Open --> PastDue: due date passes
+    Open --> Closed: tutor closes
+    PastDue --> Closed: tutor closes
+    PastDue --> Open: Extend due date
+    Closed --> Open: reopen, decision D-06
+  }
+  state "One student's work" as ST {
+    [*] --> NotIn
+    NotIn --> In: Hand in, Late flag if past due
+    In --> In: Change my work until marked
+    In --> Marked: tutor saves mark
+    In --> Redo: Ask to redo
+    Redo --> In: student hands in again
+    Marked --> [*]
+  }

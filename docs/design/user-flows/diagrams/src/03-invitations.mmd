@@ -1,0 +1,39 @@
+flowchart TD
+  subgraph STU["Student invitation"]
+    S1["Tutor or admin adds student<br/>STU-03 or STU-04 CSV import"] --> S2{"Has an email?"}
+    S2 -->|"yes"| S3["Invitation email NTF-101<br/>Michael has invited you to Kanvise"]
+    S2 -->|"no"| S9["No account<br/>join links and check links only<br/>SA-02a"]
+    S3 --> S4{"Student acts?"}
+    S4 -->|"Accept invitation"| S5["SA-01 Set your password<br/>name and email prefilled"]
+    S5 --> S6["Kavi welcome, Let's go"]
+    S6 --> S7(["SA-03 Student Home"])
+    S4 -->|"nothing for 72 hours"| S8["One reminder email NTF-102<br/>never reminds again on its own"]
+    S8 --> S4
+    S4 -->|"link expired"| S10["This invitation has expired<br/>Ask your tutor to send a new one"]
+    S10 --> S11["Tutor presses Resend STU-08<br/>old link stops, blocked for 1 hour after last send"]
+    S11 --> S3
+    S4 -->|"already has a Kanvise account"| S12["Sign in instead<br/>agency added to account picker"]
+    S12 --> S7
+    S9 -->|"tutor adds an email later"| S3
+  end
+  subgraph TUT["Tutor invitation"]
+    T1["Admin adds tutor<br/>TM-03"] --> T2["Invitation email NTF-104<br/>valid 7 days, works once"]
+    T2 --> T3{"Has a Kanvise account?"}
+    T3 -->|"no"| T4["Set a password"]
+    T3 -->|"yes"| T5["Sign in<br/>agency added to account picker"]
+    T4 --> T6["ONB-10 invited tutor welcome"]
+    T5 --> T6
+    T6 --> T7(["Dashboard with Welcome banner<br/>and Test classroom"])
+    T2 -->|"expired"| T8["This invite has expired<br/>Ask the agency to send a new one"]
+    T8 --> T9["Admin resends<br/>new link, old link stops"]
+    T9 --> T2
+    T2 -->|"removed before accepting"| T10["Invitation revoked<br/>link shows the expired message"]
+  end
+  subgraph ADM["Team member (admin) invitation"]
+    A1["Admin adds team member<br/>TM-08"] --> A2["Invitation email NTF-105"]
+    A2 --> A3["Accept, set password or sign in"]
+    A3 --> A4(["Dashboard in admin view<br/>Welcome banner points to Team and Tutors<br/>no onboarding questions, no /setup"])
+  end
+  L1["Limit across all invitations<br/>50 per hour per account TM-11"] -.-> S1
+  L1 -.-> T1
+  L1 -.-> A1

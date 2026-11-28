@@ -1,0 +1,24 @@
+stateDiagram-v2
+  direction LR
+  state "Partly refunded" as PR
+  state "Partly paid" as PP
+  [*] --> Draft: built from completed lessons
+  Draft --> Sent: tutor sends
+  Draft --> Void: tutor voids
+  Sent --> Paid: verified webhook or Mark as paid
+  Sent --> PP: partial payment, proposal addition
+  PP --> Paid: balance received
+  Sent --> Overdue: due date passes
+  PP --> Overdue: due date passes
+  Overdue --> Paid: payment or Mark as paid
+  Overdue --> Void: tutor voids with reason
+  Sent --> Void: tutor voids with reason
+  Paid --> PR: partial refund, proposal addition
+  Paid --> Refunded: full refund, proposal addition
+  Paid --> Disputed: bank dispute, proposal addition
+  Disputed --> Paid: dispute won
+  Disputed --> Chargeback: dispute lost
+  PR --> Refunded: rest refunded
+  Void --> [*]
+  Refunded --> [*]
+  Chargeback --> [*]

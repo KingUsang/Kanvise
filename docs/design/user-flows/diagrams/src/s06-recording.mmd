@@ -1,0 +1,18 @@
+stateDiagram-v2
+  direction LR
+  state "Not recorded" as NR
+  [*] --> Decide: lesson starts
+  state Decide <<choice>>
+  Decide --> NR: account has Record lessons off
+  Decide --> NR: a student has not given consent
+  Decide --> Pending: recording on and all consented
+  Pending --> Uploaded: room ends, file arrives
+  Uploaded --> Ready: processed, usually within 30 min
+  Pending --> Failed: audio lost
+  Uploaded --> Failed: processing fails
+  Ready --> Deleted: retention reached 30, 90 or 365 days
+  Ready --> Deleted: tutor deletes, no undo
+  Ready --> Deleted: student data deletion, one-to-one only
+  Failed --> [*]
+  NR --> [*]
+  Deleted --> [*]
