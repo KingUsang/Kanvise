@@ -1,10 +1,13 @@
 # Kanvise redesign specs
 
-Read `HANDOFF.md` first, then `00-decisions.md`. `00-decisions.md` wins if
-anything conflicts; `16-responsive.md` wins on phone behaviour.
+New session? Start with [SESSION-HANDOFF.md](SESSION-HANDOFF.md). Then read
+`HANDOFF.md`, then `00-decisions.md`. `00-decisions.md` wins if anything
+conflicts; `16-responsive.md` wins on phone behaviour.
 
 | File | Covers | Status |
 |---|---|---|
+| SESSION-HANDOFF.md | Start here in a new session: who the owner is and how they work, repo workflow, what's done, next step, open items, opening prompt | Current |
+| history/ | Archived critic review, spec fix notes, screenshot index and the spec checker (`check.py`) | Archive |
 | HANDOFF.md | Where things stand, owner decisions, content dependencies, launch checks, build order | Current |
 | 00-decisions.md | What has been agreed, words we don't use, permissions, consent, private notes (student notes and lesson notes), Kavi rules, billing left out, standards changes | Agreed |
 | 01-app-shell.md | Sidebar, search, help, account menu, toasts, dialogs, saving and offline, colour rule, accessibility | Draft for review |

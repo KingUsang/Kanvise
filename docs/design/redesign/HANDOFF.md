@@ -200,9 +200,9 @@ Backend fix rounds continue in parallel.
   security / data / docs / tests, ~55 payments, deployment, performance (on hold
   or deferred).
 - Plan and history: `/projects/sandbox/Kanvise-fix-plan.md` and
-  `/projects/sandbox/step0-report.md` in the sandbox (not in the repo). The
-  spec fix pass notes (finding by finding) are in
-  `/projects/sandbox/spec-fix-notes.md`.
+  `/projects/sandbox/step0-report.md` in the sandbox (not in the repo, may be
+  gone). The spec fix pass notes (finding by finding) are in
+  `history/spec-fix-notes.md`.
 
 ## Working notes
 
@@ -214,8 +214,8 @@ Backend fix rounds continue in parallel.
   `amaka.eze@seed.kanvise.test` (tutor), `ngozi.umeh@seed.kanvise.test`
   (student). Playwright with Chromium in `/projects/sandbox/.pw` can screenshot
   staging (`shoot.mjs`).
-- Spec consistency checker (outside the repo):
-  `python3 /projects/sandbox/.spec-check/check.py docs/design/redesign` (no
+- Spec consistency checker (copy in `history/check.py`):
+  `python3 docs/design/redesign/history/check.py docs/design/redesign` (no
   duplicate or undefined IDs, no banned words, no em dashes).
 - The owner wants plain, human wording, real research (not generic sources),
   good design and UX, and checks against the real Bobbin screenshots before
