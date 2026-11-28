@@ -413,8 +413,12 @@ Rules for every spec:
   one.
 - Every screen works before Kavi exists. The **Without Kavi** line is a
   working, designed path, not an error message.
-- Kavi is built last. Its service (inputs, limits, cost, failure handling) is
-  described in spec 20.
+- Private notes are never sent to Kavi in this version, even for tutor-only
+  output. Kavi reads only the separate **Notes for Kavi** box (08 SM-01).
+- Every Kavi draft has 👍 / 👎; 👎 asks one optional **Why not?** (20 DM-27).
+- Kavi is built last. Its service (providers, prompts, streaming, background
+  jobs, safety rules, what the providers keep, cost and the list of every Kavi
+  feature) is 20 DM-21 to DM-30.
 
 ## 18. Standards and ledger changes required
 

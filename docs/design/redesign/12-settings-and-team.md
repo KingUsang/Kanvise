@@ -231,12 +231,14 @@ outside services. Named here so tutors and admins know what leaves Kanvise.
 | Service | What it does | What is sent | When |
 |---|---|---|---|
 | **Deepgram** | Turns lesson audio into a transcript | The audio of recorded lessons | Only for lessons recorded with every student's consent |
-| **Google Gemini** | Writes Kavi's drafts | Transcript text, Notes for Kavi (08), course plan topics and objectives, the typed answers and images of handed-in work (only when the tutor asks for feedback) | Each time Kavi drafts something |
+| **Google Gemini** | Writes Kavi's drafts | Transcript text, Notes for Kavi (08), course plan topics and objectives, lesson summaries, topic statuses and results (for suggestions and Ask Kavi), the typed answers and images of handed-in work (only when the tutor asks for feedback) | Each time Kavi drafts something |
 
 Under the table: **Never sent: private notes (00 section 16), students' email
 addresses and phone numbers, passwords.** and **What these services keep, and
-for how long, is listed in the data model (20-data-model.md).** with a link to
-the privacy policy.
+for how long, is listed in the data model (20 DM-26).** with a link to
+the privacy policy. In short: Deepgram keeps no audio after the transcript is
+made; Google keeps Kavi's requests for 55 days to check for abuse, and never
+uses them to train its models.
 
 ### Kavi
 

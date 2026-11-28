@@ -47,7 +47,7 @@ the first redesign pass.
 | `/class/[id]` | Join the PlugNMeet classroom; preparing state; admin takeover | Keep, rebuilt around Lesson tools | 07 Classroom |
 | `/live/[shareToken]` | "Anyone with the link" guest classroom | Retire (owner decision: no guest flows) | 07 |
 | `/recording/[shareToken]` | Shared recording link | Retire. Students watch recordings in their app; there are no public share links | 09 Student app |
-| Recordings and recaps (API) | Recording processing and AI summaries | Keep: feeds Draft with Kavi | 08 |
+| Recordings and recaps (API) | Recording processing and AI summaries | Keep recording processing; the AI summary step is rebuilt as the Kavi background jobs (20 DM-24) and recaps fold into lesson summaries (20 DM-29) | 08, 20 |
 | Recorder fleet, provider wake (API) | Infrastructure for the classroom | No UI change | none |
 
 ## Student pages

@@ -24,7 +24,7 @@ Read in order. `00-decisions.md` wins if anything conflicts.
 | 17-recordings-and-attendance.md | Recordings page, attendance rules, player, export, what students see | Draft for review |
 | 18-notifications.md | The notification matrix, reminders, held messages, email rules, admin daily summary | Draft for review |
 | 19-tutors-and-team.md | Tutors list and page, add and remove with reassign, Team, I teach too, invitations | Draft for review |
-| 20-data-model.md | Product tables mapped to staging; Kavi service section to follow | Draft for review |
+| 20-data-model.md | Product tables mapped to staging; Kavi service (DM-21 to DM-30), built last | Draft for review |
 
 State IDs (for example `CW-3`, `LP-04`) are stable so build tickets and reviews
 can refer to them.

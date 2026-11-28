@@ -216,7 +216,7 @@ Tables are in `20-data-model.md`: quizzes DM-13, topic status proposals DM-05.
 - Attempts (one per student per quiz) with saved answers and score.
 - Topic results per student feeding status proposals for CRS-08 (04 Data
   needed).
-- Kavi generation from course plan topics (20-data-model.md, Kavi service).
+- Kavi generation from course plan topics (20 DM-23 streaming, DM-28 tables).
 
 ## Later
 

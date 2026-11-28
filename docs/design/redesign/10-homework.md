@@ -179,9 +179,10 @@ stacked.
   topics (see 08's Kavi block). For feedback drafts, only when the tutor
   presses **Draft feedback with Kavi**: the homework title and instructions,
   the student's typed answer and the images they handed in, and the linked
-  topics. Never private notes (00 section 16), never other students' work.
-  Images of work leave Kanvise for this (named in 12 CFG-K, Where your data
-  goes).
+  topics, and only while **Kavi can read handed-in work** is on (12 CFG-K).
+  Never private notes (00 section 16), never other students' work. Images of
+  work leave Kanvise for this (named in 12 CFG-K, Where your data goes; what
+  Google keeps is in 20 DM-26).
 - Output: a homework suggestion (title and instructions) that **Use this**
   copies into HW-01; a feedback draft in its own box in HW-05 with a **Kavi's
   pick** badge.

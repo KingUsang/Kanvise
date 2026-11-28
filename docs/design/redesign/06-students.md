@@ -369,7 +369,8 @@ follows.
 (**12 lessons · 3 recordings deleted · 2 group recordings kept**), offers
 **Export Casey's data first**, and requires typing the student's name. It
 can't be undone. Copies held by the services Kavi uses are covered in
-`20-data-model.md`.
+20 DM-26: Deepgram keeps no audio after processing, and Google's abuse logs
+of Kavi requests expire after 55 days and can't be deleted early.
 
 ## Permissions
 
@@ -389,9 +390,10 @@ Casey**, and the **Kavi suggests** card. Both are tutor-only.
 
 - Input: the student's goal, topic statuses (04 Topic status model), completed
   lesson summaries, homework and quiz results, starting check results and
-  attendance, for the courses the asker can see. Private notes may be read
-  only because the output is tutor-only (00 section 16); answers and cards
-  never quote a note.
+  attendance, for the courses the asker can see. Never private notes: 00
+  section 16 would allow them for tutor-only output, but this version sends
+  none to Kavi (20 DM-25), and **Use this** on a card can change what
+  students see (a lesson topic).
 - Output: a short plain answer under the question box, with **Based on** links
   to the summaries and results used; and up to three suggestion cards in the
   DB-06 shape, each with a **Kavi's pick** badge and its evidence (**From the

@@ -307,7 +307,8 @@ and consent DM-09, settings DM-14. Export jobs use the existing durable jobs.
 ### Kavi
 
 - Input: none on this page. The transcript of a consented recording feeds the
-  summary draft in 08; that is described there and in spec 20.
+  summary draft in 08; that is described there and in 20 DM-24. A transcript
+  is deleted with its recording (REC-06, 20 DM-25).
 - Output: none here.
 - Failure state: none here; a failed recording is shown in REC-01 and REC-02.
 - What the tutor must confirm: nothing on this page.

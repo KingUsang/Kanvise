@@ -486,9 +486,11 @@ For the tutor's second device, usually a phone pointed at written work.
 ### Kavi
 
 - Input: none during the lesson in v1. Nothing in the classroom calls Kavi
-  live. Afterwards, the recording (only with every student's consent) and the
+  live. Afterwards, the transcript of the recording (only with every
+  student's consent, and only for 5 minutes or more, 20 DM-24) and the
   objectives ticked in the lesson feed the summary draft in 08. Private notes
-  from Lesson tools are never sent (00 section 16).
+  from Lesson tools are never sent (00 section 16) unless the tutor copies
+  them into Notes for Kavi (08 SM-01).
 - Output: none in the classroom.
 - Failure state: none in the classroom; the summary draft states are in 08.
 - What the tutor must confirm: nothing here; the summary is confirmed in 08.
