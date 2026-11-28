@@ -7,6 +7,7 @@ import {
   hashUnsubscribeToken,
   issueUnsubscribeToken,
   lookupUnsubscribe,
+  purgeUnsubscribeTokens,
   undoUnsubscribe,
   unsubscribe,
   USED_TOKEN_GRACE_MS,
@@ -174,5 +175,40 @@ describe('unsubscribe routes', () => {
     const limited = await post('/lookup', { token })
     expect(limited.status).toBe(429)
     expect(limited.headers.get('retry-after')).not.toBeNull()
+  })
+})
+
+describe('purgeUnsubscribeTokens', () => {
+  /** Records each delete call's filters and returns canned rows. */
+  function fakeClient(rowsPerDelete: number[]) {
+    const calls: Array<{ table: string; filters: Array<[string, string, string]> }> = []
+    const client = {
+      from(table: string) {
+        const call = { table, filters: [] as Array<[string, string, string]> }
+        calls.push(call)
+        const count = rowsPerDelete[calls.length - 1] ?? 0
+        const chain = {
+          delete: () => chain,
+          lte: (column: string, value: string) => { call.filters.push(['lte', column, value]); return chain },
+          select: async () => ({ data: Array.from({ length: count }, (_, i) => ({ id: String(i) })), error: null }),
+        }
+        return chain
+      },
+    }
+    return { client: client as never, calls }
+  }
+
+  it('deletes expired tokens and tokens used past the grace window, and counts them', async () => {
+    const now = new Date('2027-01-10T12:00:00.000Z')
+    const { client, calls } = fakeClient([2, 3])
+    expect(await purgeUnsubscribeTokens(client, now)).toBe(5)
+    expect(calls.map((call) => call.table)).toEqual(['unsubscribe_tokens', 'unsubscribe_tokens'])
+    expect(calls[0].filters).toEqual([['lte', 'expires_at', now.toISOString()]])
+    expect(calls[1].filters).toEqual([['lte', 'used_at', new Date(now.getTime() - USED_TOKEN_GRACE_MS).toISOString()]])
+  })
+
+  it('throws when the database refuses', async () => {
+    const client = { from: () => ({ delete: () => ({ lte: () => ({ select: async () => ({ data: null, error: new Error('db down') }) }) }) }) }
+    await expect(purgeUnsubscribeTokens(client as never)).rejects.toThrow('db down')
   })
 })
