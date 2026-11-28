@@ -346,7 +346,8 @@ Billing is a proposal only, built after the payments hold (spec 13).
 - After an automatic end (for example a power cut emptied the room), the tutor
   can restart the lesson.
 - Kanvise's own slides presenter is retired. Files are shown on the PlugNMeet
-  whiteboard, which accepts uploaded PDFs and slides up to 10 MB each today.
+  whiteboard, which takes PDFs and images up to 10 MB each today. Slides are
+  saved as a PDF first (`15-resources.md`, Upload limits).
 
 ## 15. Retired and out of scope
 

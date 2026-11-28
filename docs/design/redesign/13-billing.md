@@ -9,7 +9,7 @@ payments revamp. Nothing here is built until then. Builds on `00-decisions.md`
 already know (an invoice with a Pay button), without building a second kind of
 account for whoever pays.
 
-Research basis: tutoring tools bill families with invoices built from lessons
+Research basis: tutoring tools bill students with invoices built from lessons
 (TutorBird, Teachworks: per lesson, flat monthly, or prepaid packages), and
 Paystack supports invoices sent as a payment link.
 
@@ -64,7 +64,8 @@ On the student page and in Add student (spec 06), once billing is on:
 - **Who pays?** **The student** · **Other contact**.
 - **Other contact:** name, email, phone. Line: **They only get the invoices you
   send. They don't get a login, and Kanvise sends them nothing on its own.**
-- One payer can pay for several students (siblings); invoices combine them.
+- One other contact can pay for several students (for example one person paying
+  for two students, or a company paying for its staff); invoices combine them.
 
 ## BL-04 · Invoice drafts
 
@@ -77,8 +78,8 @@ Route `/billing`. Tabs: **Drafts** · **Sent** · **Paid** · **Overdue**.
 
 ## BL-05 · Send
 
-**Send invoice to Mrs Davis?** "They'll get an email with a link to pay
-₦20,000." Optional **Also send on WhatsApp**. **Send**. Status **Sent**.
+**Send invoice to Ngozi Okafor?** "They'll get an email with a link to pay
+₦20,000." (the student, or the other contact set in BL-03) Optional **Also send on WhatsApp**. **Send**. Status **Sent**.
 
 ## BL-06 · The payer's invoice page (no login)
 
@@ -96,9 +97,33 @@ notification: **Casey Davis's invoice was paid: ₦20,000.**
   with an optional note.
 - **Void** cancels an invoice, with a reason.
 
+### Kavi
+
+No Kavi feature in billing. Invoice drafts are built by rules from completed
+lessons and prices, not by Kavi.
+- Input: none.
+- Output: none.
+- Failure state: none.
+- What the tutor must confirm: every invoice is sent only when the tutor
+  presses **Send** (BL-05); reminders only when they press **Send a reminder**
+  (BL-07).
+- Without Kavi: billing works as written.
+
 ## Open questions for the payments revamp
 
 1. Who pays the Kanvise fee, and how much (DEV-PAY-013)?
 2. Refunds and chargebacks (DEV-PAY-008).
 3. Charging for late cancellations (left out for now).
 4. Whether a public "book a lesson" page is wanted for new students.
+
+## Checked against Bobbin
+
+- `14-settings/screenshots/billing--entry.png`, `billing--loaded.png`,
+  `billing--starter-selected.png`: Bobbin's Billing is its own subscription
+  (trial hours, Starter / Plus / Pro / Enterprise plans, promotion code,
+  Stripe checkout). It is not a way for tutors to bill students, so nothing
+  in this proposal copies it.
+- `06-clients/screenshots/add-client--step-1.png`, `client-created--detail.png`
+  (checked in FEAT-005): Bobbin's clients are the people who pay. Kanvise has
+  no clients; the payer is the student or an **other contact** that
+  is a contact, not an account, and receives nothing automatically (BL-03).

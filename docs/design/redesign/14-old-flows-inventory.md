@@ -28,7 +28,7 @@ the first redesign pass.
 | `/dashboard/mocks/[id]/offers` | Public and paid quiz offers | Retired already (DOM-009) | none |
 | `/dashboard/question-banks` | Question bank | Retire. Kavi generates questions; no bank | 11 |
 | `/dashboard/notes` | Materials (notes, files) | Keep as Resources | Resources (new spec, see below) |
-| Slides / presentations (API, used in the classroom) | Upload a deck and present it live, with annotations | Retire. Replaced by the PlugNMeet whiteboard, which takes uploaded PDFs and slides (owner decision) | 07 Classroom |
+| Slides / presentations (API, used in the classroom) | Upload a deck and present it live, with annotations | Retire. Replaced by the PlugNMeet whiteboard, which takes uploaded PDFs and images; slides are saved as PDF first (owner decision, 15 Upload limits) | 07 Classroom |
 | `/dashboard/payments` | Student payments and payout details | Later: replaced by Billing | 13 Billing |
 | `/dashboard/school-setup` | Account profile, logo, media, slug | Merge into onboarding (name) and Settings (profile, logo) | 02, 12 |
 | `/dashboard/settings`, `/dashboard/profile` | Account and personal settings | Keep as Settings and My profile | 12 Settings |
@@ -98,7 +98,7 @@ Each spec lists the emails its flow sends.
 1. **Resources** needs its own spec (files, folders, sharing to a course, files
    for the classroom whiteboard). Added as spec 15.
 2. **Files on the PlugNMeet whiteboard** must be in spec 07 (upload a PDF or
-   slides, draw on them). Kanvise's own slides presenter is retired.
+   image, draw on it). Kanvise's own slides presenter is retired.
 3. **Push notifications** must be in spec 07 (student waiting) and spec 12
    (notification settings).
 4. **Attendance** is no longer a page; it lives on the lesson page and the
@@ -122,7 +122,7 @@ for features inside pages, not only the pages themselves.
 | Lesson recap: view, edit, publish | Session detail | Becomes the lesson summary (spec 08). Complete = publish |
 | Public recording share link (`/recording-share-link`, `/recording/[token]`) | Session detail | Retire. Students watch recordings in their app |
 | Regenerate a lesson link | Session detail | Keep as **Get a new link** on each student's join link (spec 05) |
-| Slides presenter with page sync and annotations (`/slides/*`) | Classroom | Retire (owner decision). Replaced by the PlugNMeet whiteboard, which takes uploaded PDFs and slides and has its own drawing tools (spec 07) |
+| Slides presenter with page sync and annotations (`/slides/*`) | Classroom | Retire (owner decision). Replaced by the PlugNMeet whiteboard, which takes uploaded PDFs and images (slides saved as PDF) and has its own drawing tools (spec 07) |
 | Anti-cheat wrapper and exam calculator on quizzes | Student quiz attempt | Not in the first quiz version (starting checks and quizzes, not exams). Later with exam modes |
 | Attempt answer queue (saves answers offline) | Student quiz attempt | Kept in spec 11 (answers save as chosen, offline-safe) |
 | Subject combination (JAMB-style) | Student settings | Retire with multi-subject exams |

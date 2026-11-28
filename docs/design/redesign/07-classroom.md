@@ -106,7 +106,7 @@ A dark, calm full-page screen (matching the room), Kanvise logo top left,
 | Lesson ended or cancelled | **This lesson has ended.** with **Open the lesson** (or **This lesson was cancelled.**). |
 
 **Enter without starting a lesson** lets the tutor set up (test audio, open the
-whiteboard, upload slides) while students still wait. Lesson tools then shows
+whiteboard, upload a PDF) while students still wait. Lesson tools then shows
 **Start** in the Lesson card (CR-03). Starting must not reload the room (see
 Spikes before build).
 
@@ -203,7 +203,9 @@ Kanvise's additions:
    device: **Casey's link was just opened on another device.** with **Get a
    new link** (05 LP-05).
 5. **Materials:** files attached to this lesson or its course. **Present** next
-   to PDFs and slide files puts them on the PlugNMeet whiteboard. **+ Add a
+   to PDFs and images within the whiteboard limit puts them on the PlugNMeet
+   whiteboard; PowerPoint files show **Open** and the save-as-PDF line from
+   the upload limits table. **+ Add a
    file** uploads to the whiteboard, within the whiteboard limit in the
    upload limits table of `15-resources.md` (10 MB per file today). A larger
    file gets **This file is over 10 MB. Compress it first for students on

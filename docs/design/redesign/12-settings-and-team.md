@@ -1,20 +1,36 @@
 # 12 · Settings and team
 
-Status: draft for owner review. Builds on `00-decisions.md`, `01-app-shell.md`.
+Status: draft for owner review. Builds on `00-decisions.md` (§9, §14c, §14d,
+§16, §17, §19), `01-app-shell.md`, `02`, `06` (STU-11), `07`.
 
-**Who:** tutors (personal settings), agency admins (account and team settings).
+**Who:** tutors (personal settings), independent tutors and agency admins
+(account settings).
 **Goal:** every setting in one place, each explained in one line, easy to find.
 
 ## Layout
 
-Route `/settings`. Header **Settings** · "Set up Kanvise the way you teach." On
-the right: **Find a setting** (search) and **Jump to ▾**.
+Checked against `14-settings/screenshots/page--default.png`,
+`settings-jump-to.png` and `settings-search-recording.png`.
 
-A left list of sections (underline-style active marker in orange), the content
-on the right as cards. Each setting is a row: a title, one line explaining what
-it does, and a control on the right (toggle, field, or button). Changes save as
-they're made, with a small **Saved** tick beside the row. Settings that can't
-be undone use a separate button with a confirmation, never a toggle.
+Route `/settings`. Header **Settings** · "Set up Kanvise the way you teach." On
+the right: **Jump to ▾** and **Find a setting** (search), as in Bobbin.
+
+- **Left list** of sections under small group labels (YOU, YOUR TEACHING,
+  ACCOUNT). The current section carries the orange "you are here" marker (01
+  SH-15).
+- **Content** on the right as cards. Each card has a title and **Show details**
+  (expands a short paragraph on what the card's settings do). Each setting is a
+  row: a title, one line explaining what it does, and a control on the right
+  (toggle, field, choice or button).
+- **Saving:** toggles and choices save as they're changed, with a small
+  **Saved** tick beside the row. Forms with typed fields (My profile, Business
+  details) use **Save changes** at the bottom of the card, disabled until
+  something changes, as in Bobbin's Your details. Settings that can't be undone
+  use a separate button with a confirmation, never a toggle.
+- **Loading:** grey skeleton cards in the shape of the section (as Bobbin's
+  `billing--entry.png`), never a spinner on a blank page.
+- **If a change doesn't save:** the row keeps its old value and shows
+  **Couldn't save. Try again.** (01 SH-13).
 
 | Group | Section | Independent tutor | Agency admin | Agency tutor |
 |---|---|---|---|---|
@@ -25,56 +41,91 @@ be undone use a separate button with a confirmation, never a toggle.
 | YOUR TEACHING | Lessons and classroom | Yes | Yes | No |
 | YOUR TEACHING | Kavi | Yes | Yes | No |
 | ACCOUNT | Business details | Yes | Yes | No |
-| ACCOUNT | Team | No | Yes | No |
+| ACCOUNT | Team (moving to `19-tutors-and-team.md`) | No | Yes | No |
 | ACCOUNT | Billing | Later | Later | No |
 | ACCOUNT | Data and privacy | Yes | Yes | No |
+
+Agency tutors see only the YOU group, as Bobbin's tutors see only Your details,
+Password, Two-factor and Notifications (`15-tutor-role/screenshots/tutor-profile--default.png`).
 
 ---
 
 ## CFG-P · My profile (`/profile`, also reachable from the account menu)
 
 - **Photo:** upload, crop to a circle. Shown to students in their app.
-- **First name**, **Last name**.
+- **First name**, **Last name**. Card line: **This is the name shown to others
+  in Kanvise.**
 - **Display name for students:** placeholder **e.g. Mr Alex**. Line: **What
   your students see. Leave blank to use your name.**
 - **Subjects you teach:** chips (the same list as onboarding).
 - **Short bio (optional):** 300 characters, shown on the student's course page.
-- **Timezone:** searchable, with the current local time.
+- **Timezone:** searchable by city, shown as **Lagos (WAT) · 4:02 PM** rather
+  than Bobbin's raw **Africa/Lagos** list. Line: **Lesson times are shown in
+  this timezone.**
 - **WhatsApp number (optional):** Line: **Used for the WhatsApp buttons you
   see. Never shown to students unless you share it.**
+- **I teach too** (agency admins only, a toggle, off by default). Line: **Turn
+  this on to be added to courses as a tutor and lead lessons as their tutor.**
+  When it is on, the admin appears in the Tutors list of the course wizard (04
+  CW-2) and the lesson wizard (05 LW-1), and their own lessons count as a
+  tutor's. When it is off, an admin leads a lesson through **Join as an
+  admin?** (07 CR-09). Turning it off while they are a course's only tutor
+  asks: **You're the only tutor on 2 courses. Choose a new tutor first.** with
+  the list (`19-tutors-and-team.md`).
+  This replaces Bobbin's advice in its admin join dialog ("If you teach this
+  lesson from another account, join from that account instead",
+  `03-lessons/screenshots/classroom--join-dialog.png`): one account can both
+  run the agency and teach.
+- **Save changes.**
 
 ## CFG-S · Sign-in and security
 
-- **Email:** change it (sends a confirmation to the new address; the old one
-  keeps working until confirmed).
-- **Password:** **Change password** (current, new, confirm).
+- **Email:** **Change** beside the field. Line: **This is the email you sign
+  in with. We'll send a link to confirm a new one.** **Change** opens Bobbin's
+  dialog: **Change your email** · "We'll email a link to the new address. Your
+  email changes once you open it." · **New email**, **Current password**,
+  **Forgot it? Reset your password.** · **Cancel** · **Send link**. The old
+  email keeps working until the link is opened.
+- **Password:** current password (with **Forgotten it? Reset your
+  password.**), new password (**Must be at least 8 characters.**), confirm,
+  and **Change password**, as Bobbin's Password card.
 - **Signed-in devices:** list with **Sign out** on each and **Sign out
   everywhere else**.
-- Two-step sign-in: later.
+- Two-step sign-in: later (Bobbin has Two-factor; not in this version).
 
 ## CFG-N · Notifications
 
-Rows with **Push** and **Email** toggles:
+`18-notifications.md` holds the full list (every event, who gets it, on which
+channel, the default and whether it can be switched off). This section is the
+place where a person switches their own rows. It shows only the rows that can
+be switched for that person's role, with **Push** and **Email** toggles:
 
-| Notification | Default |
+| Notification (examples) | Default |
 |---|---|
-| Lesson reminder (30 min before) | Push on, email on |
+| Lesson reminder before my lesson | Push on, email on |
 | A student is waiting for my lesson | Push on, email off |
 | My lesson hasn't started on time | Push on, email on |
+| A student sent a message about a lesson (07 CR-12) | Push on, email off |
 | Homework handed in | Push on, email off |
 | Quiz finished | Push on, email off |
 | Starting check finished | Push on, email on |
 | Summary still to write (after 24 h) | Push on, email on |
-| Weekly round-up (Monday morning) | Email on |
 
-A row at the top: **Browser notifications:** **On** / **Turn on** (asks the
-browser), with a note when the browser has blocked them and how to allow them.
+- A row at the top: **Browser notifications:** **On** / **Turn on** (asks the
+  browser), with a note when the browser has blocked them and how to allow
+  them.
+- Every email has an unsubscribe link. It opens this section with that row
+  switched off and a toast **You won't get these emails any more.** with
+  **Undo**.
+- Times in emails use the account's timezone (CFG-A), with the zone named, for
+  example **4:00 PM WAT** (00 section 19).
 
 ## CFG-T · Teaching preferences
 
 The onboarding answers (spec 02), editable:
 - **On my own / With a team** (switching to a team shows **Set up your team**,
-  CFG-TM; switching back is only possible with no other team members).
+  `19-tutors-and-team.md`; switching back is only possible with no other team
+  members).
 - **Who you mostly teach:** Children and teens · Adults · Both. Sets the
   default lesson length (45 minutes for children and teens, otherwise an hour)
   and the reading level of what Kavi writes for students.
@@ -87,53 +138,125 @@ The onboarding answers (spec 02), editable:
 
 ## CFG-L · Lessons and classroom
 
+Checked against `14-settings/screenshots/settings-lessons--full.png`,
+`settings-lessons-reorder.png` and `settings-lessons-reset-confirmation.png`.
+
+**Lessons** card:
 - **Default lesson length:** 30 / 45 / 60 / 90 min. Starts at 45 if onboarding
   said Children and teens, otherwise 60.
-- **Classroom opens:** 5 / 10 / 15 (default) / 30 minutes before. This gates
-  students only: tutors and admins can always go in early to set up (05 LP-01).
-  The amber **Starting soon** status starts at the same time.
+- **Classroom opens for students:** 5 / 10 / 15 (default) / 30 minutes before.
+  This gates students only: tutors and admins can always go in early to set up
+  (05 LP-01). The amber **Starting soon** status starts at the same time.
 - **Remind students:** 30 min before (default), also 24 hours before (toggle).
 - **End lessons automatically:** after everyone leaves, wait 5 / 10 (default)
   / 15 / 30 minutes (toggle, on). After an automatic end the tutor can restart
   the lesson for 60 minutes (07 CR-06).
+- Cameras are off on entry for everyone, with no setting to change it (07,
+  Room settings; F-43).
+
+**Recordings** card:
 - **Record lessons:** on by default, but a lesson is recorded only when every
   student in it has recording consent (00 section 14d, 06 STU-05). Line:
   **Lessons are recorded only when every student has consent. Recordings let
   Kavi draft your lesson summary and let students watch the lesson again.**
   Everyone sees that a lesson is being recorded when they join (07 CR-01,
-  CR-04).
+  CR-04), so there is no separate "show a recording notice" switch.
 - **Students can watch recordings:** on by default.
 - **Keep recordings for:** 30 / 90 (default) / 365 days. Line: **Recordings are
   deleted after this. Summaries are kept.** Applying a shorter period to older
   recordings is a separate button: **Apply to existing recordings**, with a
   confirmation stating how many will be deleted.
-- Cameras are off on entry for everyone, with no setting to change it (07,
-  Room settings).
-- **Test classroom:** button, opens the device check (spec 07, CR-10).
+
+**Test classroom:** button, opens the device check (07 CR-10).
 
 ## CFG-K · Kavi
 
-- **Kavi drafts lesson summaries:** on by default.
-- **Kavi suggestions on the dashboard:** on by default.
-- **Writing style:** **Short** · **Balanced** (default) · **Detailed**, shown
-  side by side as the same lesson summary written three ways (like Bobbin's AI
-  content style), each with **Use this style**.
-- **Language for students:** **UK English** · **US English** (affects
-  spelling in what Kavi writes).
-- Line: **Kavi only drafts. Nothing reaches your students until you complete
-  it.**
+Checked against `14-settings/screenshots/settings-ai-content-style--full.png`
+and `settings-ai-style-compare.png`.
+
+**Writing style** card (Bobbin's AI content style):
+- Card line: **One style shapes what Kavi drafts for you: lesson summaries,
+  course plans and homework instructions. A change only affects what Kavi
+  writes from now on.**
+- A short table of the three styles, and on the right an **In use** box with
+  the current style, its line and **Compare styles**:
+
+| Style | What it means |
+|---|---|
+| **Detailed** | Full sentences in every section, with an example from the lesson |
+| **Structured** (default) | Short bullet points under each section heading. Best for reading on a phone |
+| **Concise** | One or two sentences per section |
+
+- **Compare styles** opens a large dialog, **Choose a writing style**: the same
+  sample lesson summary written three ways, **Side by side** (default on
+  desktop) or **One at a time** (the only view on phones, with arrows). The
+  style in use is tinted with **In use** and **Currently in use** (disabled);
+  the others have **Use Structured** / **Use Concise**. Choosing one closes the
+  dialog with the toast **Kavi will use Concise from now on.**
+
+**Language and levels** card:
+- **Language:** English, written in British spelling. One default for every
+  account; there is no US English choice. Kavi's examples and the spec's
+  sample course names follow the account's level names (for example **Year 9
+  Maths** or **SS2 Chemistry**).
+- **How you name levels (optional):** **None** (default) · **JSS / SS** ·
+  **Year (Year 1 to 13)** · **Grade (Grade 1 to 12)**. Used as the choices for
+  a course's level, and in what Kavi writes (course plans, quiz and check
+  questions). Line: **Kavi uses these names when it mentions a level.**
+- The reading level for students comes from **Who you mostly teach** (CFG-T).
+
+**What Kavi does** card (toggles):
+- **Kavi drafts lesson summaries:** on.
+- **Kavi suggestions on the dashboard:** on (03 DB-06).
+- **Kavi can read handed-in work when you ask for feedback:** on. Line:
+  **Only when you press Draft feedback with Kavi (10 HW-05).**
+- Line: **Kavi only drafts. Nothing reaches your students until you complete,
+  set or send it.**
+
+**Where your data goes** card (read-only, no controls): Kavi runs on two
+outside services. Named here so tutors and admins know what leaves Kanvise.
+
+| Service | What it does | What is sent | When |
+|---|---|---|---|
+| **Deepgram** | Turns lesson audio into a transcript | The audio of recorded lessons | Only for lessons recorded with every student's consent |
+| **Google Gemini** | Writes Kavi's drafts | Transcript text, Notes for Kavi (08), course plan topics and objectives, the typed answers and images of handed-in work (only when the tutor asks for feedback) | Each time Kavi drafts something |
+
+Under the table: **Never sent: private notes (00 section 16), students' email
+addresses and phone numbers, passwords.** and **What these services keep, and
+for how long, is listed in the data model (20-data-model.md).** with a link to
+the privacy policy.
+
+### Kavi
+
+- Input: none; this section configures Kavi.
+- Output: the style, language, level names and switches are read by every
+  Kavi draft (04, 08, 10, 11, 03 DB-06).
+- Failure state: if a change can't be saved, the row shows **Couldn't save.
+  Try again.** and keeps the old value. The compare dialog's samples are fixed
+  text, so it never waits on Kavi.
+- What the tutor must confirm: choosing a style (**Use Structured**) or
+  switching a toggle. Nothing changes what was already written.
+- Without Kavi: the Kavi section is not shown in the left list. **How you name
+  levels** moves to Teaching preferences (CFG-T), since course levels still
+  use it.
 
 ## CFG-A · Business details
 
 - **Name:** the agency name, or the independent tutor's account name.
 - **Logo** (agencies) or photo (independent tutors): shown in the student app.
-- **Address for students (optional):** web address for links,
-  `kanvise.com/{slug}`, with a warning when changing it: **Old links will stop
-  working.**
 - **Country and currency:** used later for billing.
-- **Default timezone** for new students.
+- **Timezone:** the account's timezone. Line: **Used for times in emails and
+  as the starting timezone for new students.** (Bobbin's General › Timezone,
+  `14-settings/screenshots/settings-general--full.png`.)
+- **Save changes.**
+
+There is no public web address setting: public pages are retired (00 section
+15, F-63).
 
 ## CFG-TM · Team (agencies)
+
+This section moves to `19-tutors-and-team.md`, which will own the Tutors and
+Team pages. Until then the rules below stand.
 
 Two tabs: **Tutors** · **Admins**.
 
@@ -144,6 +267,8 @@ Two tabs: **Tutors** · **Admins**.
   **Courses (optional)**. Line: **We'll email them an invite to set a password
   and sign in. They'll see only the courses you give them.** Button **Send
   invite**.
+- An account can send at most 50 invitations an hour (00 section 19). Over
+  that: **You've sent a lot of invitations. Try again in an hour.**
 - **Remove tutor:** **Remove Michael Chen? They'll lose access straight away.
   Their courses need a new tutor before their next lessons.** with a list of
   affected courses and a **Reassign to** dropdown. **Remove** (red).
@@ -157,24 +282,80 @@ Two tabs: **Tutors** · **Admins**.
 
 ## CFG-D · Data and privacy
 
-- **Export your data:** all students, courses, lessons, summaries and homework
-  as CSV files in a ZIP. **Request export** emails a download link when ready.
+Checked against `14-settings/screenshots/settings-data-export--full.png`.
+
+- **Export a student's data:** as Bobbin's Data export: **Student** (search),
+  then **Request export**. Line: **We'll email you a link to download
+  everything Kanvise holds about this student. The link works for 7 days.**
+- **Export everything:** all students, courses, lessons, summaries and
+  homework as CSV files in a ZIP. **Request export** emails a download link
+  when ready.
 - **Delete a student's data:** pick a student; the dialog follows 06 STU-11
   (what is deleted, what is kept, including group recordings with the
-  student's name removed). Confirmation requires typing the student's name.
+  student's name removed, and the copies held by the services in CFG-K).
+  Confirmation requires typing the student's name.
 - **Close account:** later (owner deferred the account-closure policy).
 
 ## Search and Jump to
 
-- **Find a setting** filters the left list and highlights matching rows as you
-  type (for example "record" shows Record lessons, Students can watch
-  recordings, Keep recordings for).
-- **Jump to ▾** lists every section.
+- **Find a setting** replaces the content with a results card, as in Bobbin:
+  **3 settings matching "record"**, each row with the setting's title, its
+  line, and where it lives on the right (**Lessons and classroom ›
+  Recordings**). Choosing a row opens that section and highlights the row for
+  two seconds. No results: **No settings match "zoom".**
+- **Jump to ▾** lists the cards in the current section (for Lessons and
+  classroom: **Lessons**, **Recordings**) and scrolls to the one chosen.
 
 ## Data needed (for the build)
 
-- Personal settings (profile, notification preferences per channel).
+- Personal settings (profile, I teach too, notification preferences per
+  channel, unsubscribe tokens).
 - Account settings (teaching preferences, lesson defaults, recording rules,
-  Kavi preferences).
-- Team members and invitations (today's account invitations).
-- Export job and per-student deletion job.
+  Kavi style, level names, Kavi switches, timezone).
+- Team members and invitations (today's account invitations), with the
+  50-an-hour limit.
+- Per-student export, full export, and per-student deletion jobs.
+
+## Checked against Bobbin
+
+- `14-settings/screenshots/page--default.png`: header, Jump to and Find a
+  setting top right, grouped left list, cards with **Show details**, toggle
+  rows with title and line.
+- `14-settings/screenshots/settings-jump-to.png`: Jump to lists the cards in
+  the current section (was "every section" here; corrected).
+- `14-settings/screenshots/settings-search-recording.png`: search shows a
+  results card with a count and a breadcrumb per row (was "filters the left
+  list"; corrected).
+- `14-settings/screenshots/settings-lessons--full.png`, `settings-lessons-reorder.png`,
+  `settings-lessons-reset-confirmation.png`: Lessons, Recordings and Consent
+  cards; **Apply to existing recordings** beside **Days to keep recordings**;
+  "Start a lesson before students join their tutor" (Kanvise has no admit
+  step, so this is not copied). Bobbin's approval and Lesson insights cards
+  are not copied (approvals out of scope; the summary has fixed sections).
+- `14-settings/screenshots/settings-ai-content-style--full.png`, `settings-ai-content-style.png`,
+  `settings-ai-style-compare.png`: Detailed / Structured / Concise, the In use
+  box with Compare styles, the compare dialog with Side by side / One at a
+  time, Currently in use, Use Structured, and "a change only affects content
+  generated from now on".
+- `14-settings/screenshots/settings-general--full.png`, `settings-general-timezone-options.png`:
+  the account timezone row (CFG-A).
+- `14-settings/screenshots/settings-emails--full.png`, `settings-emails.png`:
+  Bobbin's account-wide email switches; Kanvise keeps per-person rows here and
+  the full list in `18-notifications.md`.
+- `14-settings/screenshots/settings-data-export--full.png`: per-person export
+  (CFG-D).
+- `14-settings/screenshots/settings-safeguarding--full.png`, `settings-safeguarding.png`,
+  `settings-api--full.png`, `settings-api-create-key.png`, `settings-webhooks--full.png`,
+  `settings-webhook-add-endpoint.png`, `settings-studybugs--full.png`,
+  `settings-beta--full.png`, `settings-beta-feedback.png`, `settings-activity--full.png`,
+  `settings-activity-filter.png`, `billing--entry.png`, `billing--loaded.png`,
+  `billing--starter-selected.png`: not copied (automatic safeguarding flags,
+  API, MCP, webhooks, Studybugs, beta features and the activity log are out of
+  scope; Bobbin's Billing is its own subscription plans, not tutors billing
+  students, which is the spec 13 proposal). `billing--entry.png` gives the
+  skeleton loading state used in Layout.
+- `15-tutor-role/screenshots/tutor-profile--default.png`, `tutor-profile-email-change.png`,
+  `tutor-profile-password.png`, `tutor-profile-notifications.png`: Your details
+  card with **Save changes**, the email and timezone lines, the Change your
+  email dialog, the Password card, and a tutor's reduced settings list (CFG-P,
+  CFG-S, CFG-N).
