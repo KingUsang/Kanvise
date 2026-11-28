@@ -34,6 +34,8 @@ from the owner before the spec text is edited. **OQ-** items need the owner.
 | D-14 | Old data migration | None needed (owner) | Owner | none |
 | D-15 | Payments | Proposal in `04-payments.md` | Owner asked for it | 13 |
 | D-16 | Gamification | Proposal in `05-gamification.md`, no leaderboard | Owner asked for it, plus research | new |
+| D-17 | Settings group names are unclear: YOUR TEACHING covers agency-wide settings and shows for admins who do not teach. Teaching preferences holds team size, audience and subjects | Rename groups: YOU becomes **PERSONAL**, YOUR TEACHING becomes **LESSONS**, ACCOUNT stays. Rename Teaching preferences to **How you teach**. Leave Lessons and classroom, and Data and privacy as they are | The names now say what is inside | 12 Layout, CFG-T |
+| D-18 | Business details asks independent tutors for a name and photo twice (CFG-P and CFG-A). "Business" does not fit a tutor, and "Account details" reads like bank details | Independent tutors get no separate section: timezone and currency move into **My profile**, and the duplicate name and photo go. Agency admins get one section called **Agency** (name, logo, timezone, currency) | One place for each setting, and a word that matches who is reading | 12 CFG-P, CFG-A |
 
 ## Open questions for the owner (OQ-)
 
@@ -47,6 +49,8 @@ from the owner before the spec text is edited. **OQ-** items need the owner.
 | OQ-06 | What does a tutor see after being removed from an agency but belonging to another one? | They keep the other account; show the account picker |
 | OQ-07 | Reports and weekly digests | Parked by the owner |
 | OQ-08 | Gamification: turn on by default for new courses, or off? | Off, tutor opts in |
+| OQ-09 | Agency settings Bobbin has and Kanvise lacks: an activity log (who changed what), role checkboxes for who can view recordings, and an organization-wide recording-consent default | Add an activity log for agencies later. Keep the single recordings switch and per-student consent for now |
+| OQ-10 | A wording pass over every label and message that tutors, students and admins read, with a short glossary of plain terms | Do it before the first screens are built |
 
 ## Contradictions found in the specs
 
