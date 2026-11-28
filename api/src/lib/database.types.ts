@@ -96,6 +96,33 @@ isOneToOne: false
             referencedColumns: ["id"]
           },
         ]
+      },"account_onboarding_answers": {
+                  Row: {
+                    "answered_by": string | null,"audience": string,"class_format": string,"created_at": string,"has_students": boolean,"school_id": string,"skipped_steps": string[],"subjects": string[],"teaching_mode": string,"updated_at": string,"used_defaults": boolean
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "answered_by"?: string | null,"audience"?: string,"class_format"?: string,"created_at"?: string,"has_students"?: boolean,"school_id": string,"skipped_steps"?: string[],"subjects"?: string[],"teaching_mode"?: string,"updated_at"?: string,"used_defaults"?: boolean
+                  }
+                  Update: {
+                    "answered_by"?: string | null,"audience"?: string,"class_format"?: string,"created_at"?: string,"has_students"?: boolean,"school_id"?: string,"skipped_steps"?: string[],"subjects"?: string[],"teaching_mode"?: string,"updated_at"?: string,"used_defaults"?: boolean
+                  }
+                  Relationships: [
+                    {
+                      foreignKeyName: "account_onboarding_answers_answered_by_fkey"
+                      columns: ["answered_by"]
+                      isOneToOne: false
+                      referencedRelation: "user_profiles"
+                      referencedColumns: ["id"]
+                    },
+                    {
+                      foreignKeyName: "account_onboarding_answers_school_id_fkey"
+                      columns: ["school_id"]
+                      isOneToOne: true
+                      referencedRelation: "schools"
+                      referencedColumns: ["id"]
+                    },
+                  ]
       },"assignments": {
                   Row: {
                     "attachment_file_key": string | null,"attachment_file_name": string | null,"course_id": string,"created_at": string,"deadline_at": string,"description": string,"id": string,"is_published": boolean,"school_id": string,"title": string,"tutor_id": string,"updated_at": string
