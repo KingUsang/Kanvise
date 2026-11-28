@@ -150,6 +150,18 @@ describe('unsubscribe routes', () => {
     expect(wrongBody.status).toBe(400)
   })
 
+  it('one-click returns 410 and changes nothing when the link does not work', async () => {
+    const send = (query: string) => app.request(`/unsubscribe/one-click${query}`, {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'List-Unsubscribe=One-Click',
+    })
+    for (const query of ['', '?token=nope', `?token=${'A'.repeat(43)}`, `?token=${'A'.repeat(201)}`]) {
+      const response = await send(query)
+      expect(response.status).toBe(410)
+      expect((await response.json()).code).toBe('LINK_EXPIRED')
+    }
+    expect(env.preferences.size).toBe(0)
+  })
+
   it('GET never unsubscribes', async () => {
     const response = await app.request(`/unsubscribe/one-click?token=${token}`)
     expect(response.status).toBe(404)

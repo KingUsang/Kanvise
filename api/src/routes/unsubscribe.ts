@@ -90,5 +90,9 @@ unsubscribeRouter.post('/one-click', async (c) => {
     throw validationError('Expected List-Unsubscribe=One-Click.', 'List-Unsubscribe')
   }
   const token = c.req.query('token')
-  return respond(c, await unsubscribe(typeof token === 'string' && token.length <= 200 ? token : '', store))
+  const result = await unsubscribe(typeof token === 'string' && token.length <= 200 ? token : '', store)
+  // Mail apps treat any 2xx as "unsubscribed". Nothing changed for an unknown,
+  // malformed, expired or used-up link, so say so.
+  if (result.state === 'expired') return apiError(c, 410, 'LINK_EXPIRED', 'This link has expired.')
+  return respond(c, result)
 })
