@@ -1,0 +1,25 @@
+stateDiagram-v2
+  direction LR
+  state "Starting soon" as StartingSoon
+  state "Not held" as NotHeld
+  state "Awaiting summary" as AwaitingSummary
+  [*] --> Planned: scheduled
+  Planned --> StartingSoon: classroom opens (CFG-L)
+  Planned --> Cancelled: cancel
+  Planned --> NotHeld: scheduled end passes unstarted
+  StartingSoon --> Live: tutor presses Start lesson
+  StartingSoon --> Cancelled: cancel
+  StartingSoon --> NotHeld: scheduled end passes unstarted
+  Live --> AwaitingSummary: End lesson or auto-end
+  AwaitingSummary --> Live: Restart within 60 min of auto-end
+  AwaitingSummary --> Complete: summary Completed
+  AwaitingSummary --> Complete: No summary needed
+  AwaitingSummary --> Missed: nobody joined, tutor marks Missed
+  Complete --> AwaitingSummary: Undo within window
+  NotHeld --> Live: Start anyway until midnight
+  NotHeld --> Planned: Reschedule
+  NotHeld --> Cancelled: Mark as cancelled
+  Cancelled --> Planned: Undo within 5 minutes
+  Complete --> [*]
+  Missed --> [*]
+  Cancelled --> [*]

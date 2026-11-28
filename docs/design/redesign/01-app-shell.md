@@ -44,9 +44,9 @@ Where the redesign differs from the standard, the change is listed in
   label **TUTORING AGENCY**, then the agency name.
 - **Independent tutor:** their photo or initials, the label **YOUR TUTORING**,
   then their display name (for example "Alex Thompson Tutoring").
-- If the person belongs to more than one account, the card shows a chevron and
-  opens the account switcher (SH-07). With one account there is no chevron and
-  the card is not clickable.
+- Tutors and admins always see a chevron, and the card opens the account switcher
+  (SH-07), which also holds **Create another account**. Students have no account
+  switcher.
 
 ### 2. Search
 - A field reading **Search…** with a **⌘K** hint (**Ctrl K** on Windows).
@@ -98,7 +98,7 @@ text label. Setup sits above Dashboard while it is unfinished.
 ### 5. User card (bottom)
 - Photo or initials, name, and a second line with role and account, for
   example **Admin · Science Students Academy** or **Tutor · Science Students
-  Academy**. Independent tutors see only their email.
+  Academy** (the active role, for someone who holds both). Independent tutors see only their email.
 - Clicking the name opens the account menu (SH-06).
 - A **?** icon button to the right opens the help menu (SH-04). A small blue
   dot on it (the information colour, never orange) means there is something new
@@ -182,6 +182,30 @@ Opens upward from the **?** in the user card. Matches Bobbin's help menu.
 - Footer: **↑ ↓ Navigate · ↵ Open · esc Close**.
 - Results respect permissions: a tutor only finds their own courses, lessons
   and students.
+
+**How matching works** (agreed with the first build, step 1):
+- **Contains, any case.** Typed text matches any part of a name, so "ali" finds
+  "Natalie". It needs at least 2 characters, up to 100. A typed percent sign,
+  underscore or asterisk is treated as plain text.
+- **What is matched:** people on first name, last name, email and "first last";
+  courses on their name; lessons on their topic.
+- **Never searched:** lesson notes, lesson summaries, student notes, homework
+  or quiz text, and anything Kavi wrote (private notes rule, 00 section 16).
+- **Timing:** the search waits 200 ms after the last key. If an older answer
+  arrives late it is ignored.
+- **Scope:** only the current account. Switching account (SH-07) changes it.
+- **Order inside a group:** people newest first; courses A to Z; lessons
+  upcoming soonest first, then past ones newest first. Cancelled lessons are
+  left out. Up to five per group.
+- **Who sees which group:** Students for admins and independent tutors, and for
+  an agency tutor only the students on their courses. Tutors for agency admins
+  only. Courses and Lessons for everyone, limited to the person's own for an
+  agency tutor. Homework, Quizzes and Resources arrive with their build steps.
+- **Opening a result** goes to that item's page. Where a page has no filter yet,
+  a person or tutor result opens the list.
+- **Errors:** **We couldn't search right now.** with **Try again**, and a
+  separate offline message.
+- **Not in this version:** recent searches, typo tolerance.
 - Keyboard and screen readers: see SH-12 (combobox and listbox).
 
 Entity icons and tints, used everywhere these things appear (lists, search,
@@ -202,10 +226,22 @@ headers, empty states):
 
 ## SH-06 · Account menu
 
-Opens upward from the user card. Matches Bobbin's admin account menu. Bobbin's
-tutor menu has only Sign out (tutors reach their profile from Settings);
-Kanvise shows the same two items to every role.
+Opens upward from the user card. Matches Bobbin's admin account menu, including
+its **Switch role** group for someone who is both admin and tutor (atlas
+`17-admin-tutor-role-test`). Bobbin's tutor menu has only Sign out (tutors reach
+their profile from Settings); Kanvise shows the same two items to every role.
 - The person's name and email at the top (not clickable).
+- **SWITCH ROLE** (only for a person who holds both the admin and tutor roles
+  in a team account, 19 TM-10): **Admin** and **Tutor**, a tick on the active
+  one. Choosing the other reloads the dashboard in that role, with a toast
+  **Now working as a tutor.** or **Now working as an admin.** The choice is
+  remembered on this device. In the Tutor role the person sees exactly what an
+  agency tutor sees (own courses, own lessons, personal settings). The role is
+  per account: someone who is an admin in one agency and a tutor in another
+  uses the account switcher (SH-07) for that, not Switch role.
+- **Links from email, push or the bell** that need the other role switch to it
+  with the toast, as long as the person holds it. If they hold neither, the Not
+  available page (SH-14a) shows.
 - **My profile** → `/profile`
 - **Sign out**. Signs out immediately and returns to `/auth/login`. If there
   are changes saved on this device that have not uploaded yet (SH-13), it asks
@@ -214,11 +250,15 @@ Kanvise shows the same two items to every role.
 
 ## SH-07 · Account switcher
 
-Only for people in more than one account. Opens from the account card.
-- One row per account: logo or letter, name, and the person's role there.
+For tutors and admins. Opens from the account card.
+- One row per account: logo or letter, name, and the person's role there. With
+  one account there is one row.
 - The current account has a tick.
 - Choosing another account reloads the dashboard for that account, with a toast
   **Now in Science Students Academy.**
+- At the bottom, **Create another account** (the same login, no new password). It
+  starts onboarding for a new account (02 ONB-12). Someone who would rather keep the
+  accounts apart can still sign up again with a different email; nothing stops that.
 
 ## SH-08 · Toasts and feedback
 

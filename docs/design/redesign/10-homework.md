@@ -98,6 +98,10 @@ email or WhatsApp." **Set homework**.
 **⋯** (Edit, Extend due date, Close, Delete) and primary **Mark next** (opens
 the first unmarked hand-in).
 
+**Close:** stops new hand-ins. Students can still open the homework and their
+own work. **Extend due date** reopens it. Until it is closed, late hand-ins are
+allowed (HW-04).
+
 **Facts strip:** Course · Due · Set after (lesson, if linked) · Marking.
 
 **Main:** instructions and files as students see them.
@@ -134,8 +138,8 @@ From Home › To do, or Homework in the student app (09 SA-06).
 - After handing in: **Handed in · Tue 6:42 PM** with **Change my work**
   (replaces the files or text; the tutor sees the latest version and when it
   changed).
-- Late: handing in after the due date is allowed and labelled **Late** for the
-  tutor. The student sees **This is past the due date. You can still hand it
+- Late: handing in after the due date is allowed, until the tutor closes the
+  homework, and labelled **Late** for the tutor. The student sees **This is past the due date. You can still hand it
   in.**
 - Upload failures keep what was chosen and say **That didn't upload. Check your
   connection and try again.** Uploads show progress and retry on a weak signal.

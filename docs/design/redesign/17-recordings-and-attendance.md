@@ -74,8 +74,8 @@ because the tutor restarted it after an automatic end (07 CR-06).
 
 - If an admin led and the tutor never came, the tutor's row says **Tutor didn't
   join** (07 CR-09) in red tint and the admin row stays below it.
-- An admin with **I teach too** (12 CFG-P) who is the lesson's tutor is shown
-  as **Tutor**, like any tutor.
+- An admin who has added themselves as a tutor (19 TM-10) and is the lesson's
+  tutor is shown as **Tutor**, like any tutor.
 
 **People summary on a row (REC-01):** the tutor's avatar and name, and under it
 one line: **All 3 joined** (grey), or **1 student missed** in red, or **Tutor
@@ -272,8 +272,9 @@ lesson page shows:
   is allowed to watch, including a student who missed it. A lesson is recorded
   only when every student on it has consent (00 section 14d), so everyone who
   can see it has consented.
-- **Not recorded** lessons show nothing about recording to students (no names,
-  no consent reasons).
+- A lesson with no recording this student can watch (not recorded, not allowed
+  to watch, or deleted) shows **No recording for this lesson.** to the student,
+  with no names and no consent reasons.
 - A student removed from a course keeps no access to its recordings.
 - Their own attendance only: **You joined at 4:02 PM · 56 min** or **You
   missed this lesson.** Never other students' attendance.

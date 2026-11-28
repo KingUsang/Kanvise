@@ -1,0 +1,29 @@
+flowchart TD
+  subgraph ADM["Agency admin"]
+    A1["Sign up, Kavi questions<br/>With a team, agency name"] --> A2["Setup list<br/>Add a tutor or add yourself,<br/>students, course, plan, first lesson"]
+    A2 --> A3["Add tutors<br/>TM-03, invitation email"]
+    A3 --> A4["Create courses, add students<br/>give each course its tutors"]
+    A4 --> A5["Oversee<br/>dashboard admin rows, Live now,<br/>daily 7 AM summary"]
+    A5 --> A6["Join a tutor's lesson<br/>Lead or Watch"]
+    A5 --> A7["Change the team<br/>remove tutor with Reassign step"]
+    A5 --> A8["Agency billing (proposal)<br/>one payout account for the agency"]
+  end
+  subgraph TUT["Agency tutor"]
+    T1["Invitation email<br/>valid 7 days"] --> T2{"Has a Kanvise login?"}
+    T2 -->|"no"| T3["Set a password"]
+    T2 -->|"yes"| T4["Sign in, agency added to picker"]
+    T3 --> T5["ONB-10 Welcome banner<br/>Test classroom"]
+    T4 --> T5
+    T5 --> T6{"Admin has given courses?"}
+    T6 -->|"no"| T7["Your admin adds you to courses<br/>They'll show up here"]
+    T6 -->|"yes"| T8["Own courses only<br/>schedule, teach, summarise, mark"]
+    T7 --> T6
+  end
+  subgraph STU["Student"]
+    S1["Invitation or join link"] --> S2["Home, lessons, homework,<br/>quizzes, course plan"]
+  end
+  A3 --> T1
+  A4 --> T8
+  T8 --> S1
+  T8 -.->|"summaries overdue, lessons not held"| A5
+  A8 -.->|"payer pays the agency, not each tutor"| S2

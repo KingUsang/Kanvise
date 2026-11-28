@@ -15,7 +15,7 @@ Checked against `14-settings/screenshots/page--default.png`,
 Route `/settings`. Header **Settings** · "Set up Kanvise the way you teach." On
 the right: **Jump to ▾** and **Find a setting** (search), as in Bobbin.
 
-- **Left list** of sections under small group labels (YOU, YOUR TEACHING,
+- **Left list** of sections under small group labels (PERSONAL, LESSONS,
   ACCOUNT). The current section carries the orange "you are here" marker (01
   SH-15).
 - **Content** on the right as cards. Each card has a title and **Show details**
@@ -34,20 +34,20 @@ the right: **Jump to ▾** and **Find a setting** (search), as in Bobbin.
 
 | Group | Section | Independent tutor | Agency admin | Agency tutor |
 |---|---|---|---|---|
-| YOU | My profile | Yes | Yes | Yes |
-| YOU | Sign-in and security | Yes | Yes | Yes |
-| YOU | Notifications | Yes | Yes | Yes |
-| YOUR TEACHING | Teaching preferences | Yes | Yes | No |
-| YOUR TEACHING | Lessons and classroom | Yes | Yes | No |
-| YOUR TEACHING | Kavi | Yes | Yes | No |
-| ACCOUNT | Business details | Yes | Yes | No |
+| PERSONAL | My profile | Yes | Yes | Yes |
+| PERSONAL | Sign-in and security | Yes | Yes | Yes |
+| PERSONAL | Notifications | Yes | Yes | Yes |
+| LESSONS | How you teach | Yes | Yes | No |
+| LESSONS | Lessons and classroom | Yes | Yes | No |
+| LESSONS | Kavi | Yes | Yes | No |
+| ACCOUNT | General | Yes | Yes | No |
 | ACCOUNT | Billing | Hidden until billing exists | Hidden until billing exists | No |
 | ACCOUNT | Data and privacy | Yes | Yes | No |
 
 **Billing** is out of the build (00 section 14). The row is reserved: the item
 stays hidden, not disabled, until billing exists (13 BL-01, 20 DM-31).
 
-Agency tutors see only the YOU group, as Bobbin's tutors see only Your details,
+Agency tutors see only the PERSONAL group, as Bobbin's tutors see only Your details,
 Password, Two-factor and Notifications (`15-tutor-role/screenshots/tutor-profile--default.png`).
 
 Tutors and team members are not managed here. They have their own pages in
@@ -69,18 +69,13 @@ the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
   this timezone.**
 - **WhatsApp number (optional):** Line: **Used for the WhatsApp buttons you
   see. Never shown to students unless you share it.**
-- **I teach too** (agency admins only, a toggle, off by default). Line: **Turn
-  this on to be added to courses as a tutor and lead lessons as their tutor.**
-  When it is on, the admin appears in the Tutors list of the course wizard (04
-  CW-2) and the lesson wizard (05 LW-1), and their own lessons count as a
-  tutor's. When it is off, an admin leads a lesson through **Join as an
-  admin?** (07 CR-09). Turning it off while they are a course's only tutor
-  asks: **You're the only tutor on 2 courses. Choose a new tutor first.** with
-  the reassign list (19 TM-10, TM-06).
-  This replaces Bobbin's advice in its admin join dialog ("If you teach this
-  lesson from another account, join from that account instead",
-  `03-lessons/screenshots/classroom--join-dialog.png`): one account can both
-  run the agency and teach.
+- **There is no "I teach too" switch here.** An admin who also teaches adds
+  themselves as a tutor from the Tutors page (19 TM-10) and then sees **Switch
+  role** in the account menu (01 SH-06). Bobbin works this way: its admin join
+  dialog says "If you teach this lesson from another account, join from that
+  account instead", and its own test (atlas `17-admin-tutor-role-test`) shows
+  that means the **Switch role** menu on the same login. See
+  `docs/design/user-flows/06-account-types.md`.
 - **Save changes.**
 
 ## CFG-S · Sign-in and security
@@ -108,7 +103,8 @@ the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
 `18-notifications.md` holds the full list (18 NTF-01: every event, who gets
 it, on which channel, the default and where it can be switched off). This
 section is where a person switches their own rows. It shows only the rows
-that can be switched for that person's role, each with a line under the title
+that can be switched for what that person can do (an admin who also teaches
+sees the teaching rows in both views), each with a line under the title
 and **Push** and **Email** toggles, as Bobbin's personal Notifications card
 (`15-tutor-role/screenshots/tutor-profile-notifications.png`):
 
@@ -117,13 +113,15 @@ and **Push** and **Email** toggles, as Bobbin's personal Notifications card
 | Lesson reminder before my lesson | Anyone who teaches | Push on, email on |
 | A student is waiting for my lesson | Anyone who teaches | Push on, email off |
 | My lesson hasn't started on time | Anyone who teaches | Push on, email on |
+| My lesson didn't take place (18 NTF-214) | Anyone who teaches | Push on, email off |
+| A recording didn't save (18 NTF-308) | Anyone who teaches | Push on, email off |
 | A student sent a message about a lesson (07 CR-12) | Anyone who teaches | Push on, email off |
 | Homework handed in | Anyone who teaches | Push on, email off |
 | Quiz finished | Anyone who teaches | Push on, email off |
 | Starting check finished | Anyone who teaches | Push on, email on |
 | Summary still to write (after 24 h) | Anyone who teaches | Push on, email on |
 | Kavi's draft is ready (once Kavi exists) | Anyone who teaches | Push on, email off |
-| Courses given to me | Agency tutors, admins with I teach too | Push on, email on |
+| Courses given to me | Agency tutors, admins who are also tutors | Push on, email on |
 | Daily summary for admins (18 NTF-06) | Agency admins | Email on (no push) |
 
 Messages a person needs to take part (invitations, moved or cancelled
@@ -140,12 +138,9 @@ lessons, password emails) are always sent and have no row here (18 NTF-01,
 - Times in emails use the account's timezone (CFG-A), with the zone named, for
   example **4:00 PM WAT** (00 section 19).
 
-## CFG-T · Teaching preferences
+## CFG-T · How you teach
 
-The onboarding answers (spec 02), editable:
-- **On my own / With a team** (switching to a team shows **Set up your team**,
-  `19-tutors-and-team.md`; switching back is only possible with no other team
-  members).
+The onboarding answers (spec 02), editable, except whether the account is an independent tutor or an agency, which is chosen once and cannot be changed (02 ONB-02):
 - **Who you mostly teach:** Children and teens · Adults · Both. Sets the
   default lesson length (45 minutes for children and teens, otherwise an hour)
   and the reading level of what Kavi writes for students.
@@ -263,13 +258,20 @@ uses them to train its models.
 - What the tutor must confirm: choosing a style (**Use Structured**) or
   switching a toggle. Nothing changes what was already written.
 - Without Kavi: the Kavi section is not shown in the left list. **How you name
-  levels** moves to Teaching preferences (CFG-T), since course levels still
+  levels** moves to How you teach (CFG-T), since course levels still
   use it.
 
-## CFG-A · Business details
+## CFG-A · General
 
-- **Name:** the agency name, or the independent tutor's account name.
-- **Logo** (agencies) or photo (independent tutors): shown in the student app.
+One screen with the same four fields for every account type, so there is one
+component to build and test (user-flows decisions D-18, D-19).
+
+- **Name:** the agency name, or for an independent tutor the name of their
+  tutoring (it starts as their own name, and can be something like **Alex
+  Thompson Tutoring**, which is what the sidebar's account card shows, 01
+  SH-02).
+- **Logo:** optional. Shown in the student app. An independent tutor who adds no
+  logo shows the photo from **My profile** instead.
 - **Country and currency:** used later for billing.
 - **Timezone:** the account's timezone. Line: **Used for times in emails and
   as the starting timezone for new students.** (Bobbin's General › Timezone,
@@ -283,9 +285,9 @@ There is no public web address setting: public pages are retired (00 section
 
 Tutors and team members moved to `19-tutors-and-team.md`: the Tutors list,
 Add tutor, the tutor page, the Team page, removing someone with the required
-Reassign step, **I teach too** and the 50-invitations-an-hour limit (19 TM-01
-to TM-11). Settings keeps only the **I teach too** toggle (CFG-P) and
-**On my own / With a team** (CFG-T).
+Reassign step, adding yourself as a tutor, **Switch role** and the
+50-invitations-an-hour limit (19 TM-01 to TM-11). There is no team
+setting in Settings: the account type is chosen once, in onboarding (02 ONB-02).
 
 ## CFG-D · Data and privacy
 
@@ -318,7 +320,7 @@ Checked against `14-settings/screenshots/settings-data-export--full.png`.
 Tables are in `20-data-model.md`: settings DM-14, notification preferences and
 unsubscribe tokens DM-15, people DM-01.
 
-- Personal settings (profile, I teach too, notification preferences per
+- Personal settings (profile, notification preferences per
   channel, unsubscribe tokens).
 - Account settings (teaching preferences, lesson defaults, recording rules,
   Kavi style, level names, Kavi switches, timezone).

@@ -341,8 +341,11 @@ It opens a confirmation (wording as in Bobbin), with Kanvise's two ways in
 under it:
 - **Join as an admin?**
 - "You're joining as an admin, not as this lesson's tutor, so your attendance
-  won't count toward the tutor's. If you teach this lesson from another
-  account, join from that account instead."
+  won't count toward the tutor's. If you teach this lesson, switch to your
+  Tutor role in the account menu." For an admin who has not added themselves as
+  a tutor yet, the line ends **Add yourself as a tutor first**, linking to
+  19 TM-10. Kanvise has one account per person, so there is no other account to
+  join from.
 - Two choices (radio cards):
   - **Lead** · "Start, end and run the lesson, present files and share your
     screen. Shown as Admin, leads the room." Always selected to start with,
@@ -460,7 +463,9 @@ of scope, 00 section 15).
   - **What happened** (text, required, up to 2,000 characters).
   - **Send to:** **Your agency's admins** (default in an agency) · **Kanvise
     support**. For an independent tutor's lesson, it goes to **Kanvise
-    support** only.
+    support** only. The admins exclude the person the concern is about; if
+    that person is the only admin (for example the owner of a team of one), it
+    goes to **Kanvise support**.
   - Line: **If someone is in danger now, call your local emergency number
     first.**
   - **Cancel** · **Send**.

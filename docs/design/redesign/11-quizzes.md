@@ -148,6 +148,9 @@ From Home › To do, or the course's Quizzes tab (09 SA-08).
 - Answers save as soon as they're chosen, so a dropped connection loses
   nothing. Offline: **You're offline. Your answers are saved and will send when
   you're back.**
+- **After the due date:** a student can still start the quiz, labelled **Late**
+  for the tutor, until the tutor closes it. **Close** (QZ-06) stops new
+  starts; a student already part-way through can still finish and hand in.
 - **Finish:** a check screen listing unanswered questions (tap one to go back),
   then **Hand in**. Confirmation: **Hand in your quiz? You can't change your
   answers after this.**

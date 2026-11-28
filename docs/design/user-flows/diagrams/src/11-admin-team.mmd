@@ -1,0 +1,35 @@
+flowchart TD
+  subgraph ADD["Add people"]
+    A1["Tutors, Add tutor TM-03"] --> A2{"Already in agency?"}
+    A2 -->|"yes"| A3["Already in your agency<br/>Open their page"]
+    A2 -->|"is a student here"| A4["Email belongs to a student<br/>cannot invite as tutor"]
+    A2 -->|"new"| A5["Invitation sent NTF-104<br/>chip: Invite not accepted"]
+    A5 --> A6["Optional: assign courses<br/>a course can have several tutors, decision D-04"]
+    B1["Team, Add team member TM-08"] --> B2["Invitation NTF-105"]
+  end
+  subgraph TEACH["Admin who also teaches"]
+    C1["Add me as a tutor<br/>1 Setup step Add a tutor<br/>2 Tutors empty state or page header<br/>3 Type own email in Add tutor"] --> C2["Confirm: Add yourself as a tutor?<br/>no email, no invitation"]
+    C2 --> C3["Admin appears in Tutors with an Admin chip<br/>tutor choices in wizards and Reassign<br/>reminders and attendance count as Tutor"]
+    C3 --> C4["Account menu: Switch role<br/>Admin or Tutor"]
+    C3 -->|"remove own tutor row while sole tutor on courses"| C5["Choose a new tutor first<br/>Reassign step, TM-06, stays an admin"]
+  end
+  subgraph LEAD["Admin joins a lesson they don't teach"]
+    D1["Lesson page, Join classroom"] --> D2["CR-09 Join as an admin?<br/>your attendance won't count for the tutor"]
+    D2 -->|"Lead, preselected"| D3["Start, end and run the lesson<br/>shown as Admin, leads the room"]
+    D2 -->|"Watch"| D4["Observe, shown as Admin watching"]
+  end
+  subgraph REMOVE["Remove a tutor TM-06"]
+    E1["Remove from agency"] --> E2{"Teaches any course?"}
+    E2 -->|"no"| E3["Confirm, remove"]
+    E2 -->|"yes"| E4["Step 2 Reassign every course<br/>Use one tutor for all, or Add a tutor"]
+    E4 -->|"all chosen"| E5["Remove and reassign"]
+    E1 -->|"tutor is teaching right now"| E6["Blocked until the lesson ends"]
+    E3 --> E7["Access ends at once, no Undo<br/>future lessons keep times and links, tutor changes<br/>unwritten summaries move to new tutor"]
+    E5 --> E7
+    E7 --> E8["Students told NTF-111<br/>tutor gets removal email NTF-108<br/>row shows Removed, Invite again"]
+  end
+  subgraph DAILY["Admin oversight"]
+    F1["Dashboard admin rows DB-05, Mine only toggle DB-08"] --> F2["Live lessons DB-09, refreshes every 15 s"]
+    F3["7 AM daily summary email NTF-501<br/>only on days with something in it<br/>summaries overdue, lessons not held, homework waiting"]
+  end
+  A5 --> C1

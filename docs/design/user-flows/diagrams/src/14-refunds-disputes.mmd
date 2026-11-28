@@ -1,0 +1,20 @@
+flowchart TD
+  A["Paid invoice"] --> B{"Why is money going back?"}
+  B -->|"tutor decides to refund<br/>lesson cancelled, goodwill"| C["Invoice, Refund<br/>full or partial amount, reason"]
+  C --> D["Confirm: amount cannot exceed what was paid"]
+  D --> E["Refund requested through Paystack"]
+  E --> F{"Paystack result"}
+  F -->|"processed"| G["Invoice shows Refunded or Partly refunded<br/>payer emailed, tutor notified"]
+  F -->|"pending"| H["Refund pending<br/>status updates from webhook"]
+  H --> F
+  F -->|"failed"| I["Refund failed<br/>tutor told, can retry or refund another way"]
+  B -->|"payer disputes with their bank"| J["Dispute webhook from Paystack"]
+  J --> K["Invoice flagged Disputed<br/>tutor and Kanvise support alerted"]
+  K --> L["Tutor uploads evidence<br/>lesson dates, attendance, summaries"]
+  L --> M{"Outcome"}
+  M -->|"won"| N["Flag cleared, stays Paid"]
+  M -->|"lost"| O["Invoice shows Chargeback<br/>amount reversed"]
+  B -->|"paid twice by mistake"| P["Duplicate detected by reference<br/>second payment flagged"]
+  P --> C
+  A --> Q["Payer asks for receipt again"]
+  Q --> R["Invoice link, Download receipt<br/>no login needed"]

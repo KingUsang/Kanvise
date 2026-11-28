@@ -1,0 +1,29 @@
+flowchart TD
+  A(["Tutor lands on Kanvise"]) --> B["Sign up<br/>name, email, password"]
+  B --> C["Check your email"]
+  C -->|"opens link"| D["ONB-01 Kavi says hello"]
+  C -->|"link expired"| C2["Resend verification email"]
+  C2 --> C
+  D -->|"Let's go"| E["ONB-02 to ONB-06<br/>five scripted questions<br/>each skippable"]
+  D -->|"Answer as a form instead"| F["ONB-11 same questions on one page"]
+  D -->|"Skip setup"| G["ONB-09 defaults applied<br/>solo, 60 min lessons"]
+  E --> H{"Teaching alone<br/>or with a team?"}
+  H -->|"with a team"| I["ONB-07 agency name<br/>2 to 80 characters"]
+  H -->|"on my own"| J["ONB-08 save answers"]
+  I --> J
+  F --> J
+  J -->|"save fails"| K["Inline error<br/>Try again or Continue with defaults"]
+  K -->|"Try again"| J
+  K -->|"Continue with defaults"| G
+  J --> L["SET-01 /setup checklist"]
+  G --> L
+  L --> M{"Which list?"}
+  M -->|"independent tutor"| N["1 Add students<br/>2 Create a course<br/>3 Build the plan, skippable<br/>4 Schedule first lesson<br/>5 Check your classroom"]
+  M -->|"agency admin"| O["1 Add a tutor, or add yourself<br/>2 Add students<br/>3 Create a course<br/>4 Build the plan, skippable<br/>5 Schedule first lesson"]
+  N --> P["Each step opens its normal flow<br/>returning to /setup ticks it, SET-02"]
+  O --> P
+  P --> Q{"All five done<br/>or skipped?"}
+  Q -->|"no"| P
+  Q -->|"yes"| R["SET-03 All done"]
+  R --> S(["Dashboard DB-01<br/>/setup now redirects here"])
+  L -.->|"Setup item and card stay in sidebar<br/>until the list is done"| S

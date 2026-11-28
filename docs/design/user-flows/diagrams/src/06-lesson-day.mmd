@@ -1,0 +1,42 @@
+flowchart TD
+  A(["Lesson time approaching"]) --> B["Reminders sent<br/>tutor 30 min, students 30 min"]
+  B --> C["Classroom opens for students<br/>5 to 30 min before, default 15"]
+  C --> D["Status: Starting soon"]
+  subgraph TUT["Tutor"]
+    T1["Lesson page, Join classroom"] --> T2["CR-01 pre-entry<br/>device check CR-10 if not done"]
+    T2 --> T3{"Start now?"}
+    T3 -->|"Start lesson"| T4["Lesson Live<br/>students not in get a push NTF-209"]
+    T3 -->|"Enter without starting"| T5["Wait in room"]
+    T5 --> T3
+    T4 --> T6["CR-03 Lesson tools<br/>whiteboard and files, Notes,<br/>Set homework, Remind, Let student know,<br/>Add a device, Report a concern"]
+    T6 --> T7["End lesson"]
+  end
+  subgraph STD["Student"]
+    S1["Opens personal join link<br/>or Join on Home"] --> S2{"Classroom open?"}
+    S2 -->|"not yet"| S3["Waiting card<br/>Your lesson starts at 4:00 PM"]
+    S3 --> S2
+    S2 -->|"open, tutor not started"| S4["CR-02 waiting for your tutor<br/>no admit step"]
+    S2 -->|"tutor has started"| S5["In the room"]
+    S4 -->|"tutor starts"| S5
+    S4 -->|"10 minutes pass"| S6["Card says tutor is running late<br/>tutor gets push and email NTF-212"]
+    S6 --> S4
+    S5 --> S7["Leave lesson"]
+    S5 -->|"second device"| S8["Join here instead<br/>other device is signed out of the room"]
+  end
+  D --> T1
+  D --> S1
+  S4 -.->|"student waiting"| T9["Tutor alert NTF-211"]
+  T9 -.-> T1
+  T7 --> U["Awaiting summary<br/>attendance written, recording processing"]
+  S5 -.->|"everyone leaves"| V["Auto-end after 5 to 30 min<br/>default 10"]
+  V --> U
+  U -->|"tutor presses Restart within 60 min"| T4
+  D -->|"scheduled end passes, nobody started"| W["Not held<br/>tutor notified, admins in daily summary"]
+  W -->|"Start anyway until midnight"| T4
+  W -->|"Reschedule"| X(["Back to Planned"])
+  W -->|"Mark as cancelled"| Y(["Cancelled<br/>Let students know is unticked by default"])
+  U --> Z(["Flow 07 After the lesson"])
+  S5 -.->|"tutor late, student sends chip"| S9["Running late, Can't make it, Need another time<br/>one of each per lesson"]
+  S9 -.-> T6
+  AD["Agency admin<br/>Join classroom on a lesson they don't teach"] -.-> AD1["CR-09 Join as an admin?<br/>Lead or Watch"]
+  AD1 -.-> T6

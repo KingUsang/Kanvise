@@ -95,11 +95,18 @@ link top right. A single column, 560px wide, centred.
 
 | ID | Kavi asks | Chips | Kavi's reply after the answer |
 |---|---|---|---|
-| ONB-02 | Do you teach on your own or with a team? | **On my own** · **With a team** | On my own: "Okay. I'll leave out the team features for now." With a team: "Okay. I'll add a step for inviting your tutors." |
+| ONB-02 | Do you teach on your own or with a team? | **On my own** · **With a team** | On my own: "Okay. I'll leave out the team features." With a team: "Okay. I'll add a step for inviting your tutors." |
 | ONB-03 | Who do you mostly teach? | **Children and teens** · **Adults** · **Both** | Children and teens: "I'll set lessons to 45 minutes and keep what I write short and simple for young readers." Adults: "I'll set lessons to an hour and write for adult readers." Both: "I'll set lessons to an hour and match each course's level." |
 | ONB-04 | How do you usually teach? | **One-to-one** · **Small groups** · **Both** | One-to-one: "New courses will start with one student." Small groups: "New courses will start ready for a group." Both: "New courses will ask each time." |
 | ONB-05 | What do you teach? | Free-text field with suggestions as chips under it: **Mathematics**, **English**, **Physics**, **Chemistry**, **Biology**, **Coding**, **Languages**, **Music**. Several allowed. **Continue** button. | "I'll suggest these when you create a course." |
 | ONB-06 | Do you already have students? | **Yes, I have students** · **Not yet** | Yes: "Setup starts with importing your list." Not yet: "There's a sample course you can explore first." |
+
+Under the ONB-02 chips a quiet line reads **You can't change this later. If you
+start an agency, create a separate account for it.** (On the plain form, ONB-11, the
+same line sits under the question.) There is no way to turn an independent account
+into an agency; the owner decided on 28 Nov that a new account is enough, and
+revisits it only if people ask for it.
+
 
 ### What each answer changes
 
@@ -152,7 +159,7 @@ nothing pretends to build it.
   two buttons: **Try again** and **Continue with defaults**.
 - **Continue with defaults** opens `/setup` with the ONB-09 defaults. A
   persistent info banner at the top of `/setup` says **We used the default
-  settings. You can change them in Settings → Teaching preferences.** with a
+  settings. You can change them in Settings → How you teach.** with a
   link and a ✕. It is not a toast (01, SH-08).
 
 ---
@@ -167,17 +174,21 @@ nothing pretends to build it.
 | What they teach | Nothing chosen |
 | Existing students | Not yet |
 
-All answers live in **Settings → Teaching preferences** (12 CFG-T) and can be
+All answers live in **Settings → How you teach** (12 CFG-T) and can be
 changed at any time. Changing them later updates the sidebar and defaults, but
 never deletes data.
 
 ---
 
-## ONB-10 · Invited agency tutors
+## ONB-10 · Invited agency tutors and admins
 
 An agency tutor does not create courses or add students (00 section 14c), so
 they get no questions and no checklist, as in Bobbin, where an invited tutor
-lands on the dashboard.
+lands on the dashboard. An admin invited to an existing agency takes the same
+short path: no questions, no checklist (the agency's setup is already the
+owner's). After accepting, they land on the dashboard in the admin view with
+the **Welcome** banner pointing to **Team** and **Tutors**, and no **Test
+classroom** button unless they add themselves as a tutor (19 TM-10).
 
 - They inherit the agency's answers: lesson length, reading level, how the
   agency teaches and its subjects. They cannot change them (12 CFG-T is hidden
@@ -188,6 +199,23 @@ lands on the dashboard.
 - No Setup item or setup card appears in their sidebar.
 
 ---
+
+## ONB-12 · Another account
+
+From **Create another account** in the account switcher (01 SH-07). The person is
+already signed in, so there is no sign-up and no email check.
+
+- It opens Kavi at ONB-02 (**Do you teach on your own or with a team?**), skipping the
+  hello, and runs ONB-03 to ONB-07 as for a first account, with blank answers. The
+  plain form (ONB-11) is offered the same way.
+- **Cancel** or the browser back button returns to the current account, and nothing
+  is created.
+- At the end the new account is created with the person as its owner (admin, with
+  the teaching capability), and they land on its `/setup` (SET-01) with the toast
+  **Now in {new name}.** The other account is untouched.
+- The new account's name starts as the person's name for an independent tutor, or the
+  agency name from ONB-07.
+- Students have no such option.
 
 ## ONB-11 · The same questions as a plain form
 
@@ -236,7 +264,7 @@ Both lists have five steps, as Bobbin's does. The total is always 5, and
 
 | # | Step | Time | Reason line | Button | Opens | Done when |
 |---|---|---|---|---|---|---|
-| 1 | Add a tutor | 1 min | Tutors run the lessons. Add a colleague, or turn on **I teach too** if you teach. | **Add tutor** | Add tutor dialog (19 TM-03), or **I teach too** (19 TM-10) | The agency has at least one tutor (an invited tutor counts, as does an admin with **I teach too**) |
+| 1 | Add a tutor | 1 min | Tutors run the lessons. Add a colleague, or add yourself if you teach. | **Add tutor** | Add tutor dialog (19 TM-03), or **Add me as a tutor** (19 TM-10) | The agency has at least one tutor (an invited tutor counts, as does an admin who has added themselves) |
 | 2 | Add your students | 2 mins | Students are the people your tutors teach. They get their lessons, homework and summaries in Kanvise. | **Add students** | Add student dialog (06 STU-03, or STU-04 as above) | At least one real student |
 | 3 | Create a course | 2 mins | A course pairs a student with a tutor over time. | **Create course** | New course wizard (spec 04) | At least one real course |
 | 4 | Build the course plan | 2 mins | The topics the course will cover, so lessons and summaries tick them off. | **Build plan** | The **Build the course plan** card on the course from step 3 | That course plan has at least one topic, or the step was skipped |
@@ -327,7 +355,7 @@ When all five steps are done or skipped:
 |---|---|---|
 | Independent tutor | Yes | Yes, until done (independent tutor list) |
 | Agency owner or admin who created the agency | Yes | Yes, until done (agency admin list) |
-| Admin invited to an existing agency | No | No; the agency's setup is already the owner's |
+| Admin invited to an existing agency | No | No; the agency's setup is already the owner's. They get the Welcome banner (ONB-10) |
 | Tutor invited to an agency | No (ONB-10) | No. They get the Welcome banner on their dashboard (spec 03) |
 | Student | No | No |
 

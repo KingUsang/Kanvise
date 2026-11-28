@@ -4,9 +4,9 @@ Status: draft for owner review. Builds on `00-decisions.md` (§2, §14c, §19),
 `01-app-shell.md` (SH-02, SH-08, SH-14a), `02` (SET-01, ONB-10), `03` (DB-05),
 `04` (CW-2), `05` (LW-1), `07` (CR-09), `12` (CFG-P, CFG-T), `17`, `18`.
 
-**Who:** agency admins. Independent tutors have no Tutors or Team page; they
-switch to a team in 12 CFG-T (**With a team** › **Set up your team**), which
-turns their account into an agency with them as its admin.
+**Who:** agency admins. Independent tutors have no Tutors or Team page and never
+get one: the account type is chosen once in onboarding (02 ONB-02). Someone who
+wants an agency creates a separate account for it.
 **Goal:** add the people who teach and run the agency, see how each tutor is
 doing, and remove someone without leaving a course without a tutor.
 
@@ -21,7 +21,7 @@ PEOPLE › Tutors (/tutors) → TM-01 list → Add tutor (TM-03) → TM-04 tutor
                                         → ⋯ Remove (TM-06 with Reassign)
 PEOPLE › Team (/team)     → TM-07 list → Add team member (TM-08)
                                         → Remove (TM-09, Reassign if they teach)
-Admin teaches too: 12 CFG-P I teach too → TM-10
+Admin teaches too: Add me as a tutor → Switch role → TM-10
 Invitations and the 50-an-hour limit: TM-11
 ```
 
@@ -29,10 +29,10 @@ Invitations and the 50-an-hour limit: TM-11
 
 | | Agency admin | Agency tutor |
 |---|---|---|
-| Where they are listed | Team (`/team`); also Tutors when **I teach too** is on | Tutors (`/tutors`) |
+| Where they are listed | Team (`/team`); also Tutors when they have added themselves as a tutor | Tutors (`/tutors`) |
 | Courses and lessons | Sees and changes everything in the agency (00 section 14c) | Only courses they are the tutor on |
 | Create courses, add students | Yes | No (owner decision, standard 03) |
-| Teach lessons as the tutor | Only with **I teach too** (TM-10); otherwise **Join as an admin?** (07 CR-09) | Their own lessons |
+| Teach lessons as the tutor | Only after adding themselves as a tutor (TM-10), in the Tutor role; otherwise **Join as an admin?** (07 CR-09) | Their own lessons |
 
 ---
 
@@ -53,11 +53,11 @@ not joined yet** row (03 DB-05) opens this list on **Invited**.
 
 | Column | Shows |
 |---|---|
-| **Name** | Avatar, name, and a chip: **Invite not accepted** (amber, as Bobbin), **Admin** (for an admin with **I teach too**), **You** |
+| **Name** | Avatar, name, and a chip: **Invite not accepted** (amber, as Bobbin), **Admin** (for an admin who is also a tutor), **You** |
 | **Courses** | Count, with the first two course swatches |
 | **This week** | Lessons this week: **6 lessons** |
 | **Summaries overdue** | A count in red tint when over 0 (ended over 48 hours ago, 03 DB-05), otherwise **-** |
-| **⋯** | **Resend invite** (Invited only), **Edit**, **Remove from agency** |
+| **⋯** | **Resend invite** (Invited only), **Edit**, **Remove from agency**. On a row with the **Admin** chip, **Stop teaching** replaces **Remove from agency** (TM-10), so an admin who teaches is never removed from the agency from here |
 
 - Rows open the tutor page (TM-04).
 - **Removed** tutors keep a row so their past lessons stay findable; their
@@ -70,8 +70,8 @@ Checked against `07-tutors/screenshots/page--default.png`.
 
 - **Empty**, as Bobbin's card: people icon in the Tutors tint, **No tutors
   yet**, "Tutors teach your agency's courses. Add one so you can put them on a
-  course." Buttons: **Add tutor** (primary) and, for an admin who teaches,
-  **I teach too** (secondary, opens 12 CFG-P with the toggle highlighted, TM-10).
+  course." Buttons: **Add tutor** (primary) and, for an admin who is not yet a
+  tutor, **Add me as a tutor** (secondary, opens the confirm in TM-10).
   Bobbin's sample tutor banner is not copied: the sample course (02) is enough.
 - **No results** (search or chip): **No tutors match "mic".** with **Clear
   search**.
@@ -97,7 +97,9 @@ A dialog, as Bobbin's:
   shown as **Lagos (WAT) · 4:02 PM** (12 CFG-P style).
 - **Courses (optional):** a multi-select of the agency's courses with
   swatches. Line: **They'll see only the courses you give them.** A course
-  that already has a tutor shows **Replaces Priya Shah** beside it.
+  that already has a tutor shows **Priya Shah also teaches this** beside it.
+  Adding a tutor never replaces anyone: a course can have several tutors, and
+  each lesson has exactly one (05 LW-1).
 - **Cancel** · **Add tutor**.
 
 **After adding:** the tutor page (TM-04) opens with the **Invite not
@@ -179,8 +181,8 @@ From **⋯ › Remove from agency** (TM-01) or **Actions › Remove from agency*
 - **Who teaches Michael's courses now?** · "Their upcoming lessons and
   unwritten summaries move with each course."
 - One row per course they teach: swatch, name, **4 upcoming lessons**, and a
-  **New tutor** dropdown (active and invited tutors, and admins with **I teach
-  too**, TM-10). When the course has other tutors, the first of them is
+  **New tutor** dropdown (active and invited tutors, and admins who are also
+  tutors, TM-10). When the course has other tutors, the first of them is
   preselected. Under the list: **+ Add a tutor** opens TM-03 on top and returns
   with the new tutor selectable.
 - **Use one tutor for all** fills every row at once.
@@ -220,7 +222,7 @@ dropped: Kanvise has no clients.) On the right: **Add team member**.
 
 **Table** (Bobbin's two columns):
 - **Name:** avatar, name, chips **You**, **Invite not accepted** (amber),
-  **Teaches too** (when **I teach too** is on).
+  **Teaches too** (an admin who has added themselves as a tutor).
 - **Email.**
 - Actions as plain text buttons on the right, as Bobbin: **Resend invite**
   (only while not accepted) and **Remove**. Your own row and the only admin's
@@ -255,28 +257,52 @@ Checked against `08-team/screenshots/team-remove-confirmation.png`.
   haven't accepted stops working. If they aren't in another account on
   Kanvise, they can no longer sign in."
 - **Cancel** · **Remove** (red).
-- If the admin has **I teach too** and teaches courses, **Remove** becomes
+- If the admin is also a tutor and teaches courses, **Remove** becomes
   **Next: choose new tutors** and step 2 of TM-06 follows.
 - There is always at least one admin: the last admin has no **Remove**, and
   you can't remove yourself (another admin must).
 - Toast: **Ada Obi removed from the team.**
 
-## TM-10 · I teach too
+## TM-10 · Add yourself as a tutor, and Switch role
 
-The setting is in 12 CFG-P (agency admins only, off by default). This section
-owns what it changes.
+For an agency admin who also teaches. An independent tutor already has both roles
+(there is no team, so no Tutors page and no switch).
 
-- **On:** the admin also appears in Tutors (TM-01, with the **Admin** chip), in
-  the tutor choices of the course wizard (04 CW-2), the lesson wizard (05
-  LW-1) and Reassign (TM-06). Lessons they teach count as a tutor's: reminders
-  (18 NTF-02), Summaries overdue, attendance as **Tutor** (17).
-- **Off:** they lead a lesson only through **Join as an admin?** (07 CR-09).
-- **Turning it off while teaching courses:** the dialog **You're the only
-  tutor on 2 courses. Choose a new tutor first.** with step 2 of TM-06 for
-  those courses. Turning it off is saved only after every course has a new
-  tutor.
-- A one-person agency (the owner teaches) turns it on once; the setup step
-  **Add a tutor** (02 SET-01) counts it as done.
+**Adding the role** (no email, no invitation, as Bobbin does):
+- **Where:** the setup step **Add a tutor** (02 SET-01) has **Add me as a tutor**
+  beside **Add tutor**; the Tutors empty state and the Tutors page header show
+  **Add me as a tutor** while the admin is not yet a tutor; and typing your own
+  email in Add tutor (TM-03) shows the same confirm.
+- **Confirm:** title **Add yourself as a tutor?** "You're already an admin here.
+  You keep your own name and no invitation is sent." **Cancel** · **Add me as a
+  tutor**. Toast: **You're now a tutor too. Use Switch role in your account menu
+  to see what your tutors see.**
+- **Result:** the admin appears in Tutors with the **Admin** chip, in the tutor
+  choices of the course wizard (04 CW-2), the lesson wizard (05 LW-1) and
+  Reassign (TM-06). Lessons they teach count as a tutor's: reminders (18
+  NTF-02), Summaries overdue, attendance as **Tutor** (17). The setup step
+  **Add a tutor** counts as done.
+
+**Switch role** (01 SH-06): shown in the account menu for anyone who holds both
+roles. In the **Tutor** role the person sees exactly what an agency tutor sees:
+their own courses and lessons, personal settings, no Tutors, Team or agency
+settings. In the **Admin** role they see the whole agency, with the **Mine only**
+toggle on the dashboard (03 DB-08). The user card shows the active role (**Tutor
+· Science Students Academy**). The choice is remembered on this device.
+
+**Joining a lesson:** from either role, **Join classroom** on a lesson they
+teach works as the tutor. On a lesson they do not teach, the Admin role shows
+**Join as an admin?** (07 CR-09).
+
+**Stopping:** Tutors › the row with the **Admin** chip › **Stop teaching**. It is
+not **Remove from agency**: it only takes away the teaching capability, and the
+person stays an admin (leaving the agency is on the Team page, TM-09). If they
+are the only tutor on any course, step 2 of TM-06 asks for a new tutor for each
+first. The dialog line reads **You'll stay an admin.**
+
+**Same confirm for any admin:** typing any existing admin's email in Add tutor
+(TM-03) shows **{Name} is already an admin here. Add them as a tutor too?** and
+adds the teaching capability, with no email.
 
 ## TM-11 · Invitations and limits
 
@@ -284,8 +310,15 @@ owns what it changes.
   you to teach on Kanvise.** with **Accept invitation**. Accepting sets a
   password and goes to the invited tutor's welcome (02 ONB-10), or signs in an
   existing Kanvise user and adds the agency to their account switcher.
+- A person who already uses Kanvise sees the agency's name and the role, with
+  **Accept** and **Decline** after signing in. A new person sets a password and
+  is accepted by doing so, and can still use the **Decline** link on the page.
+  **Decline** is final for that link: the admin sees an amber **Invite
+  declined** chip on the row, with **Invite again** and **Remove**.
 - An invite link works for 7 days and once. **Resend invite** makes a new link;
-  the old one stops at once. An expired link shows: **This invite has expired.
+  the old one stops at once. A link the admin has withdrawn (by removing the
+  row) shows **This invitation was withdrawn.**; one already used shows **This
+  invitation has already been accepted.** with **Sign in**. An expired link shows: **This invite has expired.
   Ask Science Students Academy to send a new one.**
 - **Limit:** an account can send at most 50 invitations an hour, counting
   students, tutors and team members together (00 section 19). Over that, the
@@ -298,18 +331,18 @@ owns what it changes.
 
 | Action | Agency admin | Agency tutor | Independent tutor |
 |---|---|---|---|
-| See `/tutors`, `/tutors/:id`, `/team` | Yes | No (01 SH-14a) | No (switch to a team in 12 CFG-T) |
+| See `/tutors`, `/tutors/:id`, `/team` | Yes | No (01 SH-14a) | No (independent accounts have no team) |
 | Add tutor, add team member, resend invites | Yes | No | No |
 | Edit a tutor | Yes | No (they edit their own profile in 12) | n/a |
 | Remove a tutor or team member, reassign | Yes, except themselves and the last admin | No | n/a |
-| Turn on **I teach too** | Their own | n/a | n/a |
+| Add themselves as a tutor, Switch role | Their own | n/a | n/a (they hold both roles already) |
 | Create courses, add students | Yes | No (owner decision) | Yes |
 
 ## Data needed (for the build)
 
 Tables are in `20-data-model.md`: people, memberships and roles DM-01,
 invitations and the hourly limit DM-02, course tutors and reassignment DM-03,
-lessons DM-06, attendance DM-08, settings (I teach too) DM-14, notifications
+lessons DM-06, attendance DM-08, roles DM-01, notifications
 DM-15.
 
 ### Kavi

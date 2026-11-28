@@ -132,8 +132,8 @@ Title **Course and students** · subtitle **Pick a course and who's attending.**
   with **1 of 1 selected** and **Clear**, as in Bobbin. Students can be unticked
   for this lesson only (for example someone is away).
 - **Tutor** (admins only): one choice from the course's tutors, the first
-  preselected. An admin appears here only when they have **I teach too** on (12
-  CFG-P, 19 TM-10) and are on the course; otherwise they
+  preselected. An admin appears here only when they have added themselves as a tutor
+  (19 TM-10) and are on the course; otherwise they
   lead a lesson through **Join as an admin?** (07 CR-09).
 - No courses yet: the step shows **You need a course first.** with **Create a
   course** (or, for agency tutors, **Ask your admin to add you to a course.**).
@@ -410,7 +410,8 @@ classroom as Atlas.").
   second device: **Casey's link was just opened on another device.** with
   **Get a new link**.
 - A link stops working 2 hours after the lesson's end, when the lesson is
-  cancelled, or when a new link is made. "The lesson's end" is the scheduled
+  cancelled and the undo window has closed (LP-04; **Undo** while the toast
+  shows brings the same links back), or when a new link is made. "The lesson's end" is the scheduled
   end until the lesson starts. Once it starts (on time, late, or with **Start
   anyway** on a Not held lesson), every link on the lesson stays valid while it
   is Live and until 2 hours after it actually ends, and a restart (07 CR-06)
@@ -427,7 +428,7 @@ classroom as Atlas.").
 | Action | Independent tutor | Agency admin | Agency tutor |
 |---|---|---|---|
 | Schedule, reschedule, cancel | Yes | Yes, any lesson | Lessons on their courses |
-| Start and teach as the tutor | Yes | Only lessons where they are the tutor (needs **I teach too**) | Their own lessons |
+| Start and teach as the tutor | Yes | Only lessons where they are the tutor (needs the Tutor role, 19 TM-10) | Their own lessons |
 | Join a lesson they don't teach | n/a | Yes, as an admin (07 CR-09) | No |
 | Copy, send or renew join links | Yes | Yes | Their own lessons |
 

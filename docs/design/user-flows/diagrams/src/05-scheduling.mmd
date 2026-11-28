@@ -1,0 +1,28 @@
+flowchart TD
+  A["Entry points<br/>Lessons list, Calendar button or empty slot,<br/>course page, Dashboard, Duplicate,<br/>Schedule a replacement"] --> B["LW-1 Course and students<br/>agencies also choose the tutor"]
+  B -->|"no courses"| B1["You need a course first<br/>link to New course"]
+  B --> C["LW-2 Topic and time<br/>topic from course plan, date, time, length,<br/>repeat, timezone"]
+  C -->|"validation"| C1["Add a lesson topic<br/>Choose a time in the future<br/>Lesson must end after it starts"]
+  C1 --> C
+  C -->|"clash with tutor or student"| C2["Non-blocking warning"]
+  C2 --> D
+  C --> D["LW-3 Review and schedule"]
+  D -->|"Schedule lesson or N lessons"| E{"Saved?"}
+  E -->|"fails"| E1["We couldn't schedule the lesson<br/>Nothing was saved. Try again"]
+  E1 --> D
+  E -->|"yes"| F["LP-01 Lesson page, status Planned"]
+  F --> G["Students notified NTF-201<br/>one email per series, own join link"]
+  F --> H["LP-05 Join links<br/>Copy, WhatsApp, Email,<br/>Get a new link, Remove from this lesson"]
+  F --> I{"Change of plan?"}
+  I -->|"Reschedule LP-03"| J["Pick new time or drag on calendar<br/>or press M with keyboard"]
+  J --> J1["Toast: Lesson moved, Undo<br/>emails held until undo window closes"]
+  J1 -->|"Undo"| J2["Nothing is sent"]
+  J1 -->|"window closes"| J3["NTF-202 sent<br/>no-email students: Send on WhatsApp or Copy message"]
+  I -->|"Cancel LP-04"| K["Per-student wording, optional message,<br/>this lesson or this and following"]
+  K --> K1["Toast: Lesson cancelled, Undo for 5 minutes"]
+  K1 -->|"Undo"| K2["Back to Planned, no email"]
+  K1 -->|"window closes"| K3["NTF-204 sent, join links die"]
+  I -->|"Duplicate"| A
+  F --> L["Reminders NTF-207 and NTF-208<br/>30 minutes before, 24 hours optional"]
+  L -->|"booked or moved less than 30 min ahead"| L1["No reminder, the join-link email is enough"]
+  F --> M["Notes and Lesson plan tabs<br/>Draft lesson plan with Kavi, or write my own"]

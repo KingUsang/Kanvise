@@ -140,7 +140,7 @@ Title **People** · subtitle **Add students and tutors to the course.**
 - **Tutors** (agency admins only): checkbox rows of the agency's tutors with
   **1 of 3 selected**, at least one required, and **+ Add a tutor** (opens the
   Add tutor dialog, 19 TM-03). An admin is listed here only if
-  they have turned on **I teach too** (12 CFG-P, 19 TM-10);
+  they have added themselves as a tutor (19 TM-10);
   otherwise an admin leads a lesson through **Join as an admin?** (07 CR-09).
   Independent tutors don't see this section; they are the tutor.
 
@@ -267,7 +267,8 @@ Checked against `04-courses/screenshots/sample-course--outline.png`.
   **Everyone** view the strip shows topics that are Next for every student, and
   a line **Casey and Alex have different next topics.** when they differ.
 - **Modules:** numbered rows (expandable) as in Bobbin: module name, one-line
-  description, a module chip (**Not started**, **In progress** with a half-filled
+  description (an expanded Kavi-drafted module also shows **Why this order**,
+  one line the tutor can edit or delete, as Bobbin shows its ordering reason), a module chip (**Not started**, **In progress** with a half-filled
   circle icon, **Complete** neutral with a tick icon, 01 SH-15), **3 of 6** and a
   six-segment mini bar. A module is Complete when all its topics are covered
   (Taught or Knows it) for the selected student, or for every student in
@@ -294,6 +295,11 @@ Checked against `04-courses/screenshots/sample-course--outline.png`.
   and the others make room), or **Move up** / **Move down** in the row's **⋯**,
   or arrow keys on the focused handle. The new position is announced (01
   SH-12).
+- **Removing a module or topic** asks first. If anything depends on it, the
+  dialog says so: **This topic has statuses for 2 students and is linked to 3
+  lessons and 1 quiz question. Removing it removes those links.** **Cancel** ·
+  **Remove**. A module or topic nobody uses is removed at once, with an **Undo**
+  toast.
 - **Editing:** **+ Module** in the header, **+ Topic** at the end of each
   module, **+ Objective** under each topic. Rows edit in place.
 - **Export** (in ⋯): **Download as PDF** or **Copy as text** (modules, topics,
@@ -363,6 +369,11 @@ course plan":
   be able to do by the end. The more detail, the better the plan.**
 - **Cancel** · **Generate plan** (Kavi mark), disabled until there are 20
   characters, with the reason under it: **Write a little more first.**
+- **Leaving:** the tutor can close the dialog or leave the page. Kavi finishes
+  in the background (about a minute at most), saves the plan as a Draft and
+  sends **Kavi's draft is ready** (18 NTF-305). If the build cannot finish a
+  draft after the page closes, the dialog instead says **Stay on this page for
+  about a minute while Kavi drafts.**
 - **Generating:** modules appear one by one under the text area (numbered
   name, one-line description, topic count), with **Stop**. The region is busy
   for screen readers and announces once: "Kavi's draft is ready" (01 SH-12).

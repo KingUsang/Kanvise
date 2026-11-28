@@ -154,6 +154,11 @@ with **Open**, or **Nothing is due before this lesson.**
 **Past, no summary yet:** **Michael hasn't added a summary yet.** The recording
 shows as soon as it's processed.
 
+**No recording for this student:** when the lesson was not recorded, or this
+student may not watch it, or it has been deleted, the lesson page says **No
+recording for this lesson.** It never gives a reason or names anyone (17
+REC-08).
+
 **Didn't go ahead (Not held):** **This lesson didn't go ahead.** "Michael will be
 in touch about a new time." with **Need another time** (the chip, if not sent
 already).
@@ -186,7 +191,8 @@ for telling us.** A concern a student raises is never shown to their tutor.
 
 A card per course: course swatch, name, tutor, **12 of 32 topics covered**,
 and **Next: Factorising**. If the student has several tutors or agencies,
-cards are grouped under each one's name.
+cards are grouped under each one's name, with a tutor filter above the list
+(**All tutors** by default).
 
 ## SA-08 · A course
 
@@ -239,8 +245,9 @@ default, is the matrix in 18 NTF-01. This section is the student's view.
 - **Password:** change it.
 - **Notifications:** push on/off; email reminders on/off.
 - **Your tutors:** each tutor or agency the student belongs to, for students
-  with more than one. Choosing one switches Home, Lessons, Homework and Courses
-  to that tutor. (Same account switching as the tutor app, SH-07.)
+  with more than one. Choosing one filters Home, Lessons, Homework and Courses
+  to that tutor, and **All tutors** clears it. It is one account, so there is
+  no account switching for students.
 - **Install Kanvise on your phone** (shown when installable): one tap to add to
   the home screen.
 - **Help** (with **Report a concern**) and **Sign out**.

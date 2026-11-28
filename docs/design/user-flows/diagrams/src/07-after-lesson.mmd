@@ -1,0 +1,33 @@
+flowchart TD
+  A(["Lesson ended: Awaiting summary"]) --> B{"Did any student join?"}
+  B -->|"nobody joined"| C["SM-06 Mark as Missed<br/>optionally Let student know"]
+  C --> C1["Schedule a replacement"]
+  B -->|"yes"| D{"Tutor's choice"}
+  D -->|"No summary needed SM-07<br/>optional reason"| E(["Lesson Complete<br/>no student notification"])
+  D -->|"Write summary"| F["SM-01 Summary editor<br/>What we covered, What went well,<br/>What to work on, Homework, Lesson notes"]
+  F --> G{"Draft with Kavi?"}
+  G -->|"recording over 5 min and consent"| H["SM-02 drafts from recording"]
+  G -->|"no usable recording"| I{"Lesson notes written?"}
+  I -->|"yes"| J["Drafts from lesson notes"]
+  I -->|"no"| K["Button disabled<br/>Add notes or record the lesson"]
+  G -->|"no, write by hand"| L["Tutor writes"]
+  H --> M["Draft is shown, nothing pre-ticked<br/>tutor checks and edits"]
+  J --> M
+  L --> M
+  M --> N["Optional: SM-03 Set homework from here"]
+  N --> O["Preview shows what the student sees"]
+  M --> O
+  O --> P["Complete<br/>needs at least one ticked item in What we covered"]
+  P --> Q["Toast: Lesson complete, Undo"]
+  Q -->|"Undo"| R["Back to Awaiting summary<br/>all proposals from this summary withdrawn<br/>no notification"]
+  Q -->|"window closes"| S["Student notified NTF-301 bell and push<br/>never emailed"]
+  P --> T["CRS-08 Review changes<br/>proposed topic statuses, nothing pre-selected"]
+  T --> T1["Tutor accepts rows or Not now<br/>proposals expire after 30 days"]
+  S --> U["Student sees summary, recording if allowed,<br/>homework, files"]
+  P --> V["Tutor can Copy summary<br/>and send on WhatsApp or anywhere"]
+  A -->|"24 hours pass, no summary"| W["One reminder to the tutor NTF-304"]
+  W --> D
+  A -.-> X["Recording processing<br/>usually ready in 30 min"]
+  X -->|"ready"| Y["Tutor sees Watch NTF-306<br/>students see it if allowed NTF-307"]
+  X -->|"failed"| Z["Tutor sees 'The recording didn't save' NTF-308<br/>Kavi can still draft from notes"]
+  F -->|"edit after Complete"| AA["Students see change, bell only NTF-302<br/>once per summary per day"]
