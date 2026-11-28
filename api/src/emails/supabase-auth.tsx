@@ -144,6 +144,21 @@ export function buildSupabaseAuthMessages(
   return messages
 }
 
+// Account emails are essential (18 NTF-112 to NTF-114): no unsubscribe link,
+// and the footer says why the email was sent (NTF-04).
+const authEmailReasons: Record<string, string> = {
+  signup: "You're getting this because this email address was used to sign up for Kanvise.",
+  recovery: "You're getting this because someone asked to reset the password for this Kanvise account.",
+  invite: "You're getting this because you were invited to Kanvise.",
+  magiclink: "You're getting this because someone asked to sign in to Kanvise with this email address.",
+  email_change: "You're getting this because someone asked to change the email address on a Kanvise account.",
+  reauthentication: "You're getting this because someone asked for a code to confirm a change on this Kanvise account.",
+}
+
+export function authEmailReason(action: string): string {
+  return authEmailReasons[action] || "You're getting this because someone asked for a code for this Kanvise account."
+}
+
 export async function deliverSupabaseAuthEmail(input: {
   env?: NodeJS.ProcessEnv
   payload: SupabaseSendEmailHookPayload
@@ -168,6 +183,7 @@ export async function deliverSupabaseAuthEmail(input: {
       code={message.code}
       heading={message.heading}
       logoUrl={config.logoUrl}
+      footer={{ kind: 'essential', reason: authEmailReason(input.payload.email_data.email_action_type) }}
       preview={message.subject}
       kaviSignOff={message.kaviSignOff}
     />

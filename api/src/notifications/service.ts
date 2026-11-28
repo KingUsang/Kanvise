@@ -9,6 +9,10 @@ import {
 } from './types'
 import { sendWebPushNotification } from '../push/service'
 import { holdSentClaim, retryWrite } from '../lib/retry-write'
+import { buildUnsubscribeLinks } from '../emails/footer'
+import { resolveAccountTimeZone } from '../emails/format-email-time'
+import { emailClassification, notificationChannelRows, rowDefault, type ChannelRule } from './rows'
+import { issueUnsubscribeToken } from './unsubscribe'
 
 type Logger = Pick<Console, 'info' | 'error'>
 
@@ -17,6 +21,9 @@ export type NotificationDependencies = {
   sendEmail: typeof sendNotificationEmail
   logger: Logger
   sendPush?: typeof sendWebPushNotification
+  /** Issues the token behind a switchable email's unsubscribe link. */
+  issueUnsubscribeToken?: typeof issueUnsubscribeToken
+  resolveTimeZone?: typeof resolveAccountTimeZone
 }
 
 const defaultDependencies: NotificationDependencies = {
@@ -24,6 +31,8 @@ const defaultDependencies: NotificationDependencies = {
   sendEmail: sendNotificationEmail,
   logger: console,
   sendPush: sendWebPushNotification,
+  issueUnsubscribeToken,
+  resolveTimeZone: resolveAccountTimeZone,
 }
 
 function errorMessage(error: unknown): string {
@@ -44,6 +53,7 @@ export async function deliverNotification<K extends NotificationEvent>(
     pushSent: 0,
     pushAlreadySent: 0,
     pushSkipped: 0,
+    switchedOff: 0,
     failures: [],
   }
 
@@ -71,8 +81,53 @@ export async function deliverNotification<K extends NotificationEvent>(
   result.recipients = tenantRecipients.length
   const batchSize = Math.max(1, Math.min(request.batchSize ?? 25, 100))
 
+  // Which switch decides each channel (rows.ts). 'always' is never skipped.
+  const channelRules = notificationChannelRows[request.event]
+  const switchableRows = [...new Set([channelRules.push, channelRules.email]
+    .filter((rule): rule is Exclude<ChannelRule, 'always'> => rule !== 'always'))]
+
+  // Sender name and timezone are the same for every recipient; read them once
+  // and only when an email may go out. A failed read falls back to the defaults.
+  const emailEvent = notificationEmailEvents[request.event]
+  let emailContext: Promise<{ senderName: string | null; timeZone: string }> | null = null
+  const loadEmailContext = () => {
+    emailContext ??= (async () => {
+      let senderName: string | null = request.senderName?.trim() || null
+      if (!senderName && dependencies.repository.getAccountName) {
+        try { senderName = await dependencies.repository.getAccountName(request.schoolId) } catch (error) {
+          dependencies.logger.error('notification.account_name_read_failed', { schoolId: request.schoolId, error: errorMessage(error) })
+        }
+      }
+      const timeZone = await (dependencies.resolveTimeZone || resolveAccountTimeZone)(request.schoolId)
+      return { senderName, timeZone }
+    })()
+    return emailContext
+  }
+
   for (let offset = 0; offset < tenantRecipients.length; offset += batchSize) {
     const batch = tenantRecipients.slice(offset, offset + batchSize)
+
+    // One read per batch. If it fails, the catalogue defaults apply, so people
+    // are still reached; the failure is logged.
+    const preferences = new Map<string, { pushOn: boolean | null; emailOn: boolean | null }>()
+    if (switchableRows.length && dependencies.repository.getPreferences) {
+      try {
+        const rows = await dependencies.repository.getPreferences(request.schoolId, batch.map((recipient) => recipient.id), switchableRows)
+        for (const row of rows) preferences.set(`${row.personId}:${row.rowKey}`, { pushOn: row.pushOn, emailOn: row.emailOn })
+      } catch (error) {
+        dependencies.logger.error('notification.preferences_read_failed', {
+          schoolId: request.schoolId, event: request.event, error: errorMessage(error),
+        })
+      }
+    }
+    const channelOn = (recipientId: string, channel: 'push' | 'email') => {
+      const rule = channelRules[channel]
+      if (rule === 'always') return true
+      const saved = preferences.get(`${recipientId}:${rule}`)
+      const value = channel === 'push' ? saved?.pushOn : saved?.emailOn
+      return value ?? rowDefault(rule, channel)
+    }
+
     await Promise.all(batch.map(async (recipient) => {
       const channelKey = (channel: 'in_app' | 'push' | 'email') => ({
         schoolId: request.schoolId, event: request.event, relatedEntityId: request.relatedEntityId, recipientId: recipient.id, channel,
@@ -105,7 +160,11 @@ export async function deliverNotification<K extends NotificationEvent>(
         await record('in_app', 'failed', errorMessage(error))
       }
 
-      if (!await alreadySent('push')) try {
+      const pushSentBefore = await alreadySent('push')
+      if (!pushSentBefore && !channelOn(recipient.id, 'push')) {
+        result.switchedOff += 1
+        await record('push', 'skipped', 'Switched off')
+      } else if (!pushSentBefore) try {
         const push = await (dependencies.sendPush || sendWebPushNotification)({
           userId: recipient.id,
           schoolId: request.schoolId,
@@ -131,7 +190,6 @@ export async function deliverNotification<K extends NotificationEvent>(
         await record('push', 'failed', errorMessage(error))
       }
 
-      const emailEvent = notificationEmailEvents[request.event]
       if (!emailEvent || !request.emailInput) return
       if (!recipient.email) {
         result.skippedNoEmail += 1
@@ -140,6 +198,11 @@ export async function deliverNotification<K extends NotificationEvent>(
       }
       if (await alreadySent('email')) {
         result.emailsAlreadySent += 1
+        return
+      }
+      if (!channelOn(recipient.id, 'email')) {
+        result.switchedOff += 1
+        await record('email', 'skipped', 'Switched off')
         return
       }
 
@@ -159,10 +222,21 @@ export async function deliverNotification<K extends NotificationEvent>(
           result.emailsAlreadySent += 1
           return
         }
+        const { senderName, timeZone } = await loadEmailContext()
+        // A switchable email always carries its own unsubscribe link (18 NTF-04).
+        const classification = emailClassification[emailEvent]
+        const unsubscribe = classification.kind === 'switchable'
+          ? buildUnsubscribeLinks(await (dependencies.issueUnsubscribeToken || issueUnsubscribeToken)({
+            personId: recipient.id, schoolId: request.schoolId, rowKey: classification.row,
+          }))
+          : undefined
         const sent = await dependencies.sendEmail(emailEvent, {
           ...request.emailInput(recipient),
           to: recipient.email,
           idempotencyKey: key,
+          senderName,
+          timeZone,
+          ...(unsubscribe ? { unsubscribe } : {}),
         } as never)
         providerAccepted = true
         result.emailsSent += 1

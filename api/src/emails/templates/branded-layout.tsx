@@ -5,19 +5,23 @@ import {
   Hr,
   Html,
   Img,
+  Link,
   Preview,
   Section,
   Text,
 } from '@react-email/components'
 import type { ReactNode } from 'react'
+import type { EmailFooter } from '../footer'
 
 type BrandedLayoutProps = {
   preview: string
   logoUrl: string
+  /** Required: why an essential email was sent, or its unsubscribe link (18 NTF-04). */
+  footer: EmailFooter
   children: ReactNode
 }
 
-export function BrandedLayout({ preview, logoUrl, children }: BrandedLayoutProps) {
+export function BrandedLayout({ preview, logoUrl, footer, children }: BrandedLayoutProps) {
   return (
     <Html lang="en">
       <Head />
@@ -30,9 +34,11 @@ export function BrandedLayout({ preview, logoUrl, children }: BrandedLayoutProps
           </Section>
           <Section style={styles.content}>{children}</Section>
           <Hr style={styles.rule} />
-          <Text style={styles.footer}>
-            Kanvise helps tutors and learning teams run focused, professional online teaching.
-          </Text>
+          {footer.kind === 'essential'
+            ? <Text style={styles.footer}>{footer.reason}</Text>
+            : <Text style={styles.footer}>
+              Don&apos;t want these emails? <Link href={footer.unsubscribeUrl} style={styles.footerLink}>Unsubscribe</Link>
+            </Text>}
         </Container>
       </Body>
     </Html>
@@ -79,4 +85,5 @@ const styles = {
     padding: '22px 36px 28px',
     textAlign: 'center' as const,
   },
+  footerLink: { color: '#77727F', textDecoration: 'underline' },
 }

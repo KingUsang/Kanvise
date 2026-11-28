@@ -1,5 +1,6 @@
 import { Button, Heading, Text } from '@react-email/components'
 import { BrandedLayout } from './branded-layout'
+import type { EmailFooter } from '../footer'
 
 export type AuthActionEmailProps = {
   actionLabel?: string
@@ -8,6 +9,7 @@ export type AuthActionEmailProps = {
   code?: string
   heading: string
   logoUrl: string
+  footer: EmailFooter
   preview: string
   kaviSignOff?: boolean
 }
@@ -19,10 +21,11 @@ export function AuthActionEmail({
   code,
   heading,
   logoUrl,
+  footer,
   preview,
   kaviSignOff,
 }: AuthActionEmailProps) {
-  return <BrandedLayout preview={preview} logoUrl={logoUrl}>
+  return <BrandedLayout preview={preview} logoUrl={logoUrl} footer={footer}>
     <Text style={styles.eyebrow}>KANVISE ACCOUNT SECURITY</Text>
     <Heading as="h1" style={styles.heading}>{heading}</Heading>
     {body.split('\n\n').map((paragraph, idx) => (

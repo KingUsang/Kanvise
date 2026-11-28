@@ -1,17 +1,20 @@
 import { Button, Heading, Text } from '@react-email/components'
 import { BrandedLayout } from './branded-layout'
+import type { EmailFooter } from '../footer'
 
 export type WelcomeEmailProps = {
   firstName: string
   dashboardUrl: string
   logoUrl: string
+  footer: EmailFooter
 }
 
-export function WelcomeEmail({ firstName, dashboardUrl, logoUrl }: WelcomeEmailProps) {
+export function WelcomeEmail({ firstName, dashboardUrl, logoUrl, footer }: WelcomeEmailProps) {
   return (
     <BrandedLayout
       preview="Your Kanvise account is ready. 👀"
       logoUrl={logoUrl}
+      footer={footer}
     >
       <Text style={styles.copy}>Hey {firstName}!</Text>
       <Text style={styles.copy}>

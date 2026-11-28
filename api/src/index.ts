@@ -87,6 +87,8 @@ import { clientAddress } from './lib/ip-rate-limit';
 import { suggestionsRouter } from './routes/suggestions';
 import { jobOpsRouter } from './routes/job-ops';
 import { searchRouter } from './routes/search';
+import { heldMessagesRouter } from './routes/held-messages';
+import { unsubscribeRouter } from './routes/unsubscribe';
 
 app.route('/auth', publicRegistrationRouter);
 app.route("/auth", authRouter);
@@ -127,6 +129,8 @@ app.route("/mock-answers", mockAnswersRouter);
 app.route("/health", healthRouter);
 app.route('/feedback', feedbackRouter);
 app.route('/search', searchRouter);
+app.route('/held-messages', heldMessagesRouter);
+app.route('/unsubscribe', unsubscribeRouter);
 app.route('/support/feedback', feedbackResolutionRouter);
 app.route("/users/me/push", pushRouter);
 app.route('/', waitlistRouter);

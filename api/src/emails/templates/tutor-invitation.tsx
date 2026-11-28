@@ -1,12 +1,12 @@
 import { Button, Heading, Text } from '@react-email/components'
 import { BrandedLayout } from './branded-layout'
+import { formatLongEmailDay, type EmailChrome } from './shared'
 
-export type TutorInvitationProps = {
+export type TutorInvitationProps = EmailChrome & {
   inviteUrl: string
   invitedByName: string
   schoolName: string
   expiresAt: string
-  logoUrl: string
 }
 
 export function TutorInvitationEmail({
@@ -15,16 +15,16 @@ export function TutorInvitationEmail({
   schoolName,
   expiresAt,
   logoUrl,
+  footer,
+  timeZone,
 }: TutorInvitationProps) {
-  const expiry = new Intl.DateTimeFormat('en-NG', {
-    dateStyle: 'long',
-    timeZone: 'Africa/Lagos',
-  }).format(new Date(expiresAt))
+  const expiry = formatLongEmailDay(expiresAt, timeZone)
 
   return (
     <BrandedLayout
       preview={`${invitedByName} added you to ${schoolName} on Kanvise. 👀`}
       logoUrl={logoUrl}
+      footer={footer}
     >
       <Text style={styles.copy}>Hey!</Text>
       <Text style={styles.copy}>

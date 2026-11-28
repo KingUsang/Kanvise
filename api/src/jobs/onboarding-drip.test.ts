@@ -8,6 +8,10 @@ const state = {
   sentEvents: [] as string[],
   scanFilter: null as null | { column: string, value: string },
   scanLimit: 0,
+  switchedOff: [] as string[],
+  preferenceError: null as null | { message: string },
+  sentPayloads: [] as Array<{ headers?: Record<string, string> }>,
+  renderOptions: [] as unknown[],
 }
 
 vi.mock('../lib/supabase', () => ({
@@ -28,6 +32,21 @@ vi.mock('../lib/supabase', () => ({
               gte: vi.fn((column: string, value: string) => { state.scanFilter = { column, value }; return chain }),
               order: vi.fn(() => chain),
               limit: vi.fn(async (count: number) => { state.scanLimit = count; return { data: state.users, error: null } }),
+            }
+            return chain
+          },
+        }
+      }
+
+      if (table === 'notification_preferences') {
+        return {
+          select() {
+            const chain: any = {
+              in: vi.fn(() => chain),
+              is: vi.fn(() => chain),
+              eq: vi.fn((column: string) => column === 'email_on'
+                ? Promise.resolve({ data: state.switchedOff.map((person_id) => ({ person_id })), error: state.preferenceError })
+                : chain),
             }
             return chain
           },
@@ -65,8 +84,9 @@ vi.mock('../lib/supabase', () => ({
 }))
 
 vi.mock('../emails/provider-router', () => ({
-  sendEmail: vi.fn(async (_payload, metadata: { event: string }) => {
+  sendEmail: vi.fn(async (payload: { headers?: Record<string, string> }, metadata: { event: string }) => {
     state.sentEvents.push(metadata.event)
+    state.sentPayloads.push(payload)
     return { id: `msg-${metadata.event}` }
   }),
 }))
@@ -80,11 +100,19 @@ vi.mock('../emails/config', () => ({
 }))
 
 vi.mock('../emails/render-email', () => ({
-  renderEmail: vi.fn(async (event: string) => ({
-    subject: `Subject ${event}`,
-    html: `<p>${event}</p>`,
-    text: event,
-  })),
+  renderEmail: vi.fn(async (event: string, _input: unknown, _logo: string, options: { unsubscribe?: { pageUrl: string } }) => {
+    state.renderOptions.push(options)
+    return {
+      subject: `Subject ${event}`,
+      html: `<p>${event}</p>`,
+      text: event,
+      headers: { 'List-Unsubscribe': `<${options.unsubscribe?.pageUrl}>` },
+    }
+  }),
+}))
+
+vi.mock('../notifications/unsubscribe', () => ({
+  issueUnsubscribeToken: vi.fn(async () => 'A'.repeat(43)),
 }))
 
 import { runOnboardingDripJob } from './onboarding-drip'
@@ -94,6 +122,11 @@ describe('runOnboardingDripJob', () => {
     state.users = []
     state.deliveries = new Map()
     state.sentEvents = []
+    state.switchedOff = []
+    state.preferenceError = null
+    state.sentPayloads = []
+    state.renderOptions = []
+    process.env.FRONTEND_URL = 'https://kanvise.com'
     vi.restoreAllMocks()
   })
 
@@ -158,5 +191,43 @@ describe('runOnboardingDripJob', () => {
     await runOnboardingDripJob()
 
     expect(state.sentEvents).toEqual(['meet_kavi'])
+  })
+
+  it('gives every drip its own unsubscribe link and List-Unsubscribe header', async () => {
+    state.users = [{
+      id: 'user-1', first_name: 'Ada', email: 'ada@example.com',
+      created_at: new Date(Date.now() - (20 * 24 * 60 * 60 * 1000)).toISOString(), role: 'admin',
+    }]
+
+    await runOnboardingDripJob()
+
+    expect(state.renderOptions[0]).toEqual({ unsubscribe: {
+      pageUrl: `https://kanvise.com/unsubscribe?token=${'A'.repeat(43)}`, oneClickUrl: null,
+    } })
+    expect(state.sentPayloads[0].headers).toEqual({ 'List-Unsubscribe': `<https://kanvise.com/unsubscribe?token=${'A'.repeat(43)}>` })
+  })
+
+  it('sends nothing to someone who unsubscribed from Kanvise tips', async () => {
+    state.users = [{
+      id: 'user-1', first_name: 'Ada', email: 'ada@example.com',
+      created_at: new Date(Date.now() - (20 * 24 * 60 * 60 * 1000)).toISOString(), role: 'admin',
+    }]
+    state.switchedOff = ['user-1']
+
+    await runOnboardingDripJob()
+
+    expect(state.sentEvents).toEqual([])
+  })
+
+  it('emails nobody this run when the switches cannot be read', async () => {
+    state.users = [{
+      id: 'user-1', first_name: 'Ada', email: 'ada@example.com',
+      created_at: new Date(Date.now() - (20 * 24 * 60 * 60 * 1000)).toISOString(), role: 'admin',
+    }]
+    state.preferenceError = { message: 'database unavailable' }
+
+    await runOnboardingDripJob()
+
+    expect(state.sentEvents).toEqual([])
   })
 })

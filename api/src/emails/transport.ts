@@ -5,6 +5,8 @@ export type EmailPayload = {
   html: string
   text: string
   replyTo?: string
+  /** Extra message headers, for example List-Unsubscribe (18 NTF-04). */
+  headers?: Record<string, string>
 }
 
 export type EmailTransport = {

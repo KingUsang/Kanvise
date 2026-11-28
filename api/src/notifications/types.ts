@@ -39,6 +39,8 @@ export type NotificationRequest<K extends NotificationEvent> = EmailInputFor<K> 
   relatedEntityId: string
   push: { body: string; url: string }
   batchSize?: number
+  /** Who the email is from: "Michael Chen via Kanvise". Defaults to the account's name (18 NTF-04). */
+  senderName?: string
 }
 
 export type NotificationFailure = {
@@ -57,5 +59,7 @@ export type NotificationResult = {
   pushSent: number
   pushAlreadySent: number
   pushSkipped: number
+  /** Channels not sent because the person switched that row off. */
+  switchedOff: number
   failures: NotificationFailure[]
 }

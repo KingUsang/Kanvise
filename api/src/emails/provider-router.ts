@@ -85,6 +85,7 @@ export function createResendSender(
         html: payload.html,
         text: payload.text,
         ...(payload.replyTo ? { reply_to: payload.replyTo } : {}),
+        ...(payload.headers && Object.keys(payload.headers).length ? { headers: payload.headers } : {}),
       }),
       signal: AbortSignal.timeout(timeoutMs),
     })
@@ -123,8 +124,11 @@ export function createBrevoSender(
         htmlContent: payload.html,
         textContent: payload.text,
         ...(payload.replyTo ? { replyTo: parseMailbox(payload.replyTo) } : {}),
-        ...(options.idempotencyKey ? {
-          headers: { idempotencyKey: stableUuid(options.idempotencyKey) },
+        ...(options.idempotencyKey || payload.headers ? {
+          headers: {
+            ...(payload.headers || {}),
+            ...(options.idempotencyKey ? { idempotencyKey: stableUuid(options.idempotencyKey) } : {}),
+          },
         } : {}),
       }),
       signal: AbortSignal.timeout(timeoutMs),
@@ -166,6 +170,7 @@ export function createMailjetSender(
           TextPart: payload.text,
           ...(payload.replyTo ? { ReplyTo: capitalizeMailbox(parseMailbox(payload.replyTo)) } : {}),
           ...(options.idempotencyKey ? { CustomID: stableUuid(options.idempotencyKey) } : {}),
+          ...(payload.headers && Object.keys(payload.headers).length ? { Headers: payload.headers } : {}),
         }],
       }),
       signal: AbortSignal.timeout(timeoutMs),

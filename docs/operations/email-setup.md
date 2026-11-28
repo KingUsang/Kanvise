@@ -2,7 +2,7 @@
 
 **Status:** Current (setup guide)
 **Owner:** Kanvise engineering
-**Last verified:** 2026-11-26 against `api/src/emails/config.ts`, `api/src/routes/supabase-email-hook.ts` and `api/src/scripts/email-smoke.ts`. Statements about hosted Supabase, Resend, Brevo or Mailjet accounts are marked **unverified** because they cannot be checked from the repository.
+**Last verified:** 2026-11-28 against `api/src/emails/config.ts`, `api/src/emails/footer.ts`, `api/src/notifications/rows.ts`, `api/src/routes/supabase-email-hook.ts` and `api/src/scripts/email-smoke.ts`. Statements about hosted Supabase, Resend, Brevo or Mailjet accounts are marked **unverified** because they cannot be checked from the repository.
 
 The Hono API sends platform email (invitations, welcome, payment, notifications) through a provider router. Supabase Auth email (sign-up verification, password reset) is also delivered by the API through a Supabase Send Email hook. For the deployment sequence see the [email and notification deployment checklist](email-notification-deployment-checklist.md).
 
@@ -31,6 +31,30 @@ SEND_EMAIL_HOOK_SECRET=v1,whsec_...          # required for Supabase Auth email 
 `api/.env.example` lists only the Resend variables. Which providers hold live keys in staging and production is **unverified**.
 
 Scheduled notification jobs start with the API unless `SCHEDULED_JOBS_ENABLED=false`. Set that only on a process that must serve HTTP without running schedulers (for example a second web-only instance). Run schedulers on exactly one API process.
+
+## Footers, unsubscribe links and sender names
+
+Every email has one footer (18 NTF-04). `api/src/notifications/rows.ts` classifies each template:
+
+- **Essential** emails (invitations, welcome, payment receipt, cancelled lesson, account emails from Supabase Auth) say why they were sent, for example "You're getting this because Michael Chen teaches you on Kanvise." They have no unsubscribe link and no List-Unsubscribe header.
+- **Switchable** emails (lesson reminders, homework and quiz emails, onboarding emails) end with "Don't want these emails? Unsubscribe". `renderEmail` refuses to render one without an unsubscribe link.
+
+Each switchable email gets its own token. Only the token's sha-256 hash is stored, in `unsubscribe_tokens`. The link works for 90 days and, once used, for one more day.
+
+| What | URL |
+|---|---|
+| Footer link (web page, no sign-in) | `${FRONTEND_URL}/unsubscribe?token=...` |
+| `List-Unsubscribe` with `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058) | `${API_PUBLIC_URL}/unsubscribe/one-click?token=...` |
+
+Set `API_PUBLIC_URL` (for example `https://api.kanvise.com`) on the API so mail apps get one-click unsubscribe. Without it, `List-Unsubscribe` points at the web page and there is no `List-Unsubscribe-Post` header. The headers are passed to Resend (`headers`), Brevo (`headers`) and Mailjet (`Headers`).
+
+The page itself calls `POST /unsubscribe/lookup`, `POST /unsubscribe` and `POST /unsubscribe/undo` with the token in the JSON body. Opening the link never unsubscribes anyone, because mail scanners open links. The public routes are rate limited per address in each API process.
+
+Notification emails come from "{account name} via Kanvise" using the address in `EMAIL_FROM`. Times in them use the account's timezone with the zone named (`4:00 PM WAT`). Accounts have no timezone setting yet, so this is Africa/Lagos for everyone (`resolveAccountTimeZone` in `api/src/emails/format-email-time.ts`).
+
+## Held messages
+
+A message caused by an action with an Undo toast waits in `held_messages` until the undo window closes (18 NTF-03). The durable job `release_held_messages` runs at the end of the window, and again at once after Undo or when the toast closes early. It sends only the newest held message per subject. Step 1 has no event that is held; later steps register builders in `api/src/notifications/held-messages.ts`.
 
 ## Logo
 

@@ -12,6 +12,7 @@ Use this checklist separately for staging and production. Never share Supabase, 
 - Confirm `email_deliveries` exists and has RLS enabled.
 - Confirm `confirm_student_payment(text, text, bigint)` is executable only by `service_role`.
 - Confirm notification RLS lets authenticated users read their own rows and update only `is_read`.
+- Confirm `held_messages`, `notification_preferences` and `unsubscribe_tokens` have RLS enabled and no `anon` or `authenticated` grants.
 - Run the Supabase security and performance advisors.
 
 ## 2. Supabase Auth URLs
@@ -47,7 +48,7 @@ Fix, in the Supabase Dashboard for the affected environment:
 
 - Verify the sending domain per environment and publish the provider's SPF and DKIM records in Cloudflare DNS.
 - Use separate restricted API keys for staging and production.
-- Set the provider variables, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `FRONTEND_URL`, `SEND_EMAIL_HOOK_SECRET` and optional `EMAIL_LOGO_URL` on the API process.
+- Set the provider variables, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `FRONTEND_URL`, `SEND_EMAIL_HOOK_SECRET`, `API_PUBLIC_URL` (for one-click unsubscribe) and optional `EMAIL_LOGO_URL` on the API process.
 - Confirm the logo URL is publicly reachable without authentication.
 
 ## 4. Staging delivery checks
@@ -59,7 +60,7 @@ EMAIL_SMOKE_SEND=true EMAIL_SMOKE_TO=qa-gmail@example.com npm run email:smoke
 EMAIL_SMOKE_SEND=true EMAIL_SMOKE_TO=qa-yahoo@example.com npm run email:smoke
 ```
 
-Verify receipt, spam placement, sender and reply-to, logo, mobile layout, plain-text fallback and every link. Real sending is blocked when `NODE_ENV=production`. No record of a completed Gmail and Yahoo run exists in the repository (DEV-TRK-010-01).
+Verify receipt, spam placement, sender and reply-to, logo, mobile layout, plain-text fallback, every link, the footer (reason line or Unsubscribe link) and the List-Unsubscribe header in the raw message. Real sending is blocked when `NODE_ENV=production`. No record of a completed Gmail and Yahoo run exists in the repository (DEV-TRK-010-01).
 
 ## 5. Monitoring
 

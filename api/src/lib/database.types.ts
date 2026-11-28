@@ -636,6 +636,48 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"held_messages": {
+                  Row: {
+                    "attempts": number,"actor_id": string,"created_at": string,"event": string,"id": string,"last_error": string | null,"params": NonNullable<Json>,"release_at": string,"released_at": string | null,"school_id": string,"status": string,"subject_key": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"actor_id": string,"created_at"?: string,"event": string,"id"?: string,"last_error"?: string | null,"params"?: NonNullable<Json>,"release_at": string,"released_at"?: string | null,"school_id": string,"status"?: string,"subject_key": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"actor_id"?: string,"created_at"?: string,"event"?: string,"id"?: string,"last_error"?: string | null,"params"?: NonNullable<Json>,"release_at"?: string,"released_at"?: string | null,"school_id"?: string,"status"?: string,"subject_key"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"notification_preferences": {
+                  Row: {
+                    "created_at": string,"email_on": boolean | null,"id": string,"person_id": string,"push_on": boolean | null,"row_key": string,"school_id": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"email_on"?: boolean | null,"id"?: string,"person_id": string,"push_on"?: boolean | null,"row_key": string,"school_id"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"email_on"?: boolean | null,"id"?: string,"person_id"?: string,"push_on"?: boolean | null,"row_key"?: string,"school_id"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"unsubscribe_tokens": {
+                  Row: {
+                    "created_at": string,"expires_at": string,"id": string,"person_id": string,"row_key": string,"school_id": string | null,"token_hash": string,"used_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"expires_at": string,"id"?: string,"person_id": string,"row_key": string,"school_id"?: string | null,"token_hash": string,"used_at"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"expires_at"?: string,"id"?: string,"person_id"?: string,"row_key"?: string,"school_id"?: string | null,"token_hash"?: string,"used_at"?: string | null
+                  }
+                  Relationships: [
+
+                  ]
                 },"upload_intents": {
                   Row: {
                     "consumed_at": string | null,"content_type": string,"context_id": string,"created_at": string,"entity_type": string,"expires_at": string,"file_key": string,"file_size_bytes": number,"id": string,"requester_id": string,"school_id": string,"scope": string,"status": string
@@ -3217,6 +3259,22 @@ isOneToOne: false
                            },
 "fail_durable_job":
 { Args: { "p_error": string,"p_id": string,"p_retry_seconds"?: number,"p_worker": string }; Returns: boolean
+                           },
+"cancel_held_message":
+{ Args: { "p_actor_id": string,"p_id": string,"p_school_id": string }; Returns: boolean
+                           },
+"release_held_message_now":
+{ Args: { "p_actor_id": string,"p_id": string,"p_school_id": string }; Returns: boolean
+                           },
+"claim_due_held_messages":
+{ Args: { "p_limit"?: number }; Returns: {
+              "attempts": number,"actor_id": string,"created_at": string,"event": string,"id": string,"last_error": string | null,"params": NonNullable<Json>,"release_at": string,"released_at": string | null,"school_id": string,"status": string,"subject_key": string,"updated_at": string
+            }[]
+                           },
+"apply_unsubscribe_token":
+{ Args: { "p_email_on": boolean,"p_token_hash": string }; Returns: {
+              "applied_email_on": boolean,"applied_row_key": string
+            }[]
                            },
 "record_notification_delivery":
 { Args: { "p_channel": string,"p_error"?: string,"p_event": string,"p_recipient_id": string,"p_related_entity_id": string,"p_school_id": string,"p_status": string }; Returns: undefined

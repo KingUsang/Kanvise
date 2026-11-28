@@ -141,6 +141,10 @@ export const routePolicyInventory: readonly RoutePolicyEntry[] = [
   router('/health', 'healthRouter', 'src/routes/health.ts', 'public', []),
   router('/feedback', 'feedbackRouter', 'src/routes/feedback.ts', 'protected-account', membershipSequence),
   router('/search', 'searchRouter', 'src/routes/search.ts', 'protected-account', membershipSequence),
+  router('/held-messages', 'heldMessagesRouter', 'src/routes/held-messages.ts', 'protected-account', membershipSequence),
+  router('/unsubscribe', 'unsubscribeRouter', 'src/routes/unsubscribe.ts', 'public', [], {
+    exception: 'Unsubscribe links work without signing in (18 NTF-04). The hashed token from the email allows only switching that one email row off or back on.',
+  }),
   router('/support/feedback', 'feedbackResolutionRouter', 'src/routes/feedback.ts', 'public', [], {
     exception: 'Signed support-token verification owns this public resolution boundary.',
   }),

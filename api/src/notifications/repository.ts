@@ -27,6 +27,17 @@ export type NotificationRepository = {
   /** Per-channel delivery state (DEV-NTF-004). Optional so older doubles keep working. */
   channelAlreadySent?(key: ChannelKey): Promise<boolean>
   recordChannel?(key: ChannelKey, status: 'sent' | 'failed' | 'skipped', error?: string): Promise<void>
+  /** Switches people changed (12 CFG-N, 09 SA-10). Optional so older doubles keep working. */
+  getPreferences?(schoolId: string, personIds: string[], rowKeys: string[]): Promise<PreferenceRecord[]>
+  /** The account's name, used as the email sender name (18 NTF-04). */
+  getAccountName?(schoolId: string): Promise<string | null>
+}
+
+export type PreferenceRecord = {
+  personId: string
+  rowKey: string
+  pushOn: boolean | null
+  emailOn: boolean | null
 }
 
 export type ChannelKey = {
@@ -175,6 +186,23 @@ export const notificationRepository: NotificationRepository = {
       .eq('recipient_id', key.recipientId).eq('channel', key.channel).maybeSingle()
     if (error) throw error
     return data?.status === 'sent'
+  },
+
+  async getPreferences(schoolId, personIds, rowKeys) {
+    if (!personIds.length || !rowKeys.length) return []
+    const { data, error } = await supabase.from('notification_preferences')
+      .select('person_id, row_key, push_on, email_on')
+      .eq('school_id', schoolId)
+      .in('person_id', personIds)
+      .in('row_key', rowKeys)
+    if (error) throw error
+    return (data || []).map((row) => ({ personId: row.person_id, rowKey: row.row_key, pushOn: row.push_on, emailOn: row.email_on }))
+  },
+
+  async getAccountName(schoolId) {
+    const { data, error } = await supabase.from('schools').select('name').eq('id', schoolId).maybeSingle()
+    if (error) throw error
+    return data?.name?.trim() || null
   },
 
   async recordChannel(key, status, message) {

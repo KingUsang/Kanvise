@@ -3,6 +3,8 @@ import { sendEmail } from '../emails/provider-router'
 import { getEmailConfig } from '../emails/config'
 import { renderEmail } from '../emails/render-email'
 import { holdSentClaim, retryWrite } from '../lib/retry-write'
+import { buildUnsubscribeLinks } from '../emails/footer'
+import { issueUnsubscribeToken } from '../notifications/unsubscribe'
 
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = 24 * ONE_HOUR
@@ -40,10 +42,24 @@ export async function runOnboardingDripJob() {
     return
   }
 
+  // Onboarding emails can be switched off with their unsubscribe link (row
+  // kanvise_tips, 18 NTF-04). If the switches can't be read, nobody is emailed
+  // this hour rather than risk emailing someone who said no.
+  const userIds = users.map((user) => user.id)
+  const { data: switchedOff, error: preferenceError } = userIds.length
+    ? await supabase.from('notification_preferences').select('person_id')
+      .in('person_id', userIds).is('school_id', null).eq('row_key', 'kanvise_tips').eq('email_on', false)
+    : { data: [], error: null }
+  if (preferenceError) {
+    console.error('Failed to read drip email switches', preferenceError)
+    return
+  }
+  const unsubscribed = new Set((switchedOff || []).map((row) => row.person_id))
+
   const now = Date.now()
 
   for (const user of users) {
-    if (!user.email) continue
+    if (!user.email || unsubscribed.has(user.id)) continue
     const ageMs = now - new Date(user.created_at).getTime()
 
     for (const step of DRIP_STEPS) {
@@ -82,10 +98,11 @@ export async function runOnboardingDripJob() {
         if (claimError) throw claimError
         if (!claimed) break
 
-        const rendered = await renderEmail(step.key as any, {
+        const token = await issueUnsubscribeToken({ personId: user.id, schoolId: null, rowKey: 'kanvise_tips' })
+        const rendered = await renderEmail(step.key, {
           firstName: user.first_name,
           actionUrl: `${frontendUrl}/dashboard`,
-        }, config.logoUrl)
+        }, config.logoUrl, { unsubscribe: buildUnsubscribeLinks(token) })
 
         const result = await sendEmail({
           from: config.from,
@@ -94,6 +111,7 @@ export async function runOnboardingDripJob() {
           html: rendered.html,
           text: rendered.text,
           replyTo: config.replyTo,
+          headers: rendered.headers,
         }, { event: step.key, idempotencyKey })
         providerAccepted = true
 

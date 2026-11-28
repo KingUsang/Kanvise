@@ -1,16 +1,16 @@
 import { Button, Text } from '@react-email/components'
 import { BrandedLayout } from './branded-layout'
+import { formatLongEmailDay, type EmailChrome } from './shared'
 
-export function StudentInvitationEmail({ inviteUrl, invitedByName, schoolName, programmeName, expiresAt, logoUrl }: {
+export function StudentInvitationEmail({ inviteUrl, invitedByName, schoolName, programmeName, expiresAt, logoUrl, footer, timeZone }: EmailChrome & {
   inviteUrl: string
   invitedByName: string
   schoolName: string
   programmeName: string
   expiresAt: string
-  logoUrl: string
 }) {
-  const expiry = new Intl.DateTimeFormat('en-NG', { dateStyle: 'long', timeZone: 'Africa/Lagos' }).format(new Date(expiresAt))
-  return <BrandedLayout preview={`${invitedByName} invited you to ${programmeName} on Kanvise.`} logoUrl={logoUrl}>
+  const expiry = formatLongEmailDay(expiresAt, timeZone)
+  return <BrandedLayout preview={`${invitedByName} invited you to ${programmeName} on Kanvise.`} logoUrl={logoUrl} footer={footer}>
     <Text style={copy}>Hey!</Text>
     <Text style={copy}>{invitedByName} invited you to <strong>{programmeName}</strong> at <strong>{schoolName}</strong>.</Text>
     <Text style={copy}>Open your invitation to create your account and access your learning dashboard. You can reopen this same link if setup is interrupted.</Text>
