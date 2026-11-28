@@ -331,7 +331,8 @@ Kavi.
     (on my own or with a team, who you mostly teach, how you usually teach,
     subjects), level names, Kavi writing style and switches.
   - Person (New columns on `user_profiles`, or a person settings table):
-    **I teach too** (admins, 12 CFG-P, 19 TM-10), timezone, display name.
+    timezone, display name. An admin who also teaches holds both the admin and
+    tutor roles (DM-01), added from 19 TM-10; there is no separate setting.
 - **Owning spec:** 12 (CFG-P, CFG-T, CFG-L, CFG-K, CFG-A); onboarding answers
   02.
 - **Staging:** `schools` (`account_type`, business details),

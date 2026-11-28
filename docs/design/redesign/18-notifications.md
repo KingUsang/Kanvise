@@ -805,7 +805,7 @@ The owner's default "reminders go to tutors" is read like this. The owner
 confirmed this reading (00 section 19).
 
 1. **Every lesson reminds its tutor.** The tutor of a lesson (including an
-   admin with **I teach too** who is the tutor) gets a push and email 30
+   admin who has added themselves as a tutor and is the tutor) gets a push and email 30
    minutes before: **Your lesson with Casey starts at 4:00 PM.** with **Open
    classroom** (NTF-208). On by default, switchable in 12 CFG-N. Admins who
    don't teach the lesson get no reminder.

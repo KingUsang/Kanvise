@@ -129,7 +129,7 @@ exactly as a tutor sees them.
 | LESSONS: How you teach, Lessons and classroom, Kavi | Yes | Yes | No (inherited, read-only) |
 | ACCOUNT: General, Data and privacy | Yes | Yes | No |
 | Billing (hidden until it exists) | Yes | Yes | No |
-| **I teach too** in My profile | Not shown | Yes | Not shown |
+| **Add me as a tutor** (Tutors page, setup step) | Not needed, already both roles | Yes, once | Not shown |
 
 ## 10. What turns on when team goes on
 

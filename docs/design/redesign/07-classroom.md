@@ -341,10 +341,11 @@ It opens a confirmation (wording as in Bobbin), with Kanvise's two ways in
 under it:
 - **Join as an admin?**
 - "You're joining as an admin, not as this lesson's tutor, so your attendance
-  won't count toward the tutor's. If you teach this lesson, turn on **I teach
-  too** in your profile and ask to be added as its tutor." The words **I teach
-  too** link to the setting (12 CFG-P). Kanvise has one account per person, so
-  there is no other account to join from.
+  won't count toward the tutor's. If you teach this lesson, switch to your
+  Tutor role in the account menu." For an admin who has not added themselves as
+  a tutor yet, the line ends **Add yourself as a tutor first**, linking to
+  19 TM-10. Kanvise has one account per person, so there is no other account to
+  join from.
 - Two choices (radio cards):
   - **Lead** · "Start, end and run the lesson, present files and share your
     screen. Shown as Admin, leads the room." Always selected to start with,

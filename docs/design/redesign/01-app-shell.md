@@ -98,7 +98,7 @@ text label. Setup sits above Dashboard while it is unfinished.
 ### 5. User card (bottom)
 - Photo or initials, name, and a second line with role and account, for
   example **Admin · Science Students Academy** or **Tutor · Science Students
-  Academy**. Independent tutors see only their email.
+  Academy** (the active role, for someone who holds both). Independent tutors see only their email.
 - Clicking the name opens the account menu (SH-06).
 - A **?** icon button to the right opens the help menu (SH-04). A small blue
   dot on it (the information colour, never orange) means there is something new
@@ -202,10 +202,17 @@ headers, empty states):
 
 ## SH-06 · Account menu
 
-Opens upward from the user card. Matches Bobbin's admin account menu. Bobbin's
-tutor menu has only Sign out (tutors reach their profile from Settings);
-Kanvise shows the same two items to every role.
+Opens upward from the user card. Matches Bobbin's admin account menu, including
+its **Switch role** group for someone who is both admin and tutor (atlas
+`17-admin-tutor-role-test`). Bobbin's tutor menu has only Sign out (tutors reach
+their profile from Settings); Kanvise shows the same two items to every role.
 - The person's name and email at the top (not clickable).
+- **SWITCH ROLE** (only for a person who holds both the admin and tutor roles
+  in a team account, 19 TM-10): **Admin** and **Tutor**, a tick on the active
+  one. Choosing the other reloads the dashboard in that role, with a toast
+  **Now working as a tutor.** or **Now working as an admin.** The choice is
+  remembered on this device. In the Tutor role the person sees exactly what an
+  agency tutor sees (own courses, own lessons, personal settings).
 - **My profile** → `/profile`
 - **Sign out**. Signs out immediately and returns to `/auth/login`. If there
   are changes saved on this device that have not uploaded yet (SH-13), it asks

@@ -19,7 +19,7 @@ flowchart TD
   G --> L
   L --> M{"Which list?"}
   M -->|"independent tutor"| N["1 Add students<br/>2 Create a course<br/>3 Build the plan, skippable<br/>4 Schedule first lesson<br/>5 Check your classroom"]
-  M -->|"agency admin"| O["1 Add a tutor or turn on I teach too<br/>2 Add students<br/>3 Create a course<br/>4 Build the plan, skippable<br/>5 Schedule first lesson"]
+  M -->|"agency admin"| O["1 Add a tutor, or add yourself<br/>2 Add students<br/>3 Create a course<br/>4 Build the plan, skippable<br/>5 Schedule first lesson"]
   N --> P["Each step opens its normal flow<br/>returning to /setup ticks it, SET-02"]
   O --> P
   P --> Q{"All five done<br/>or skipped?"}

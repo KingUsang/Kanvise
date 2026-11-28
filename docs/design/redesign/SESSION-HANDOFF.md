@@ -147,7 +147,7 @@ screenshots go with which spec) and `history/check.py` (the checker).
 | 16-responsive.md | Phone, tablet and desktop rules for every screen and role |
 | 17-recordings-and-attendance.md | Attendance rules, recordings page, player, export, delete and retention |
 | 18-notifications.md | The notification matrix (NTF-101 to NTF-501), reminders, held messages, email rules, push |
-| 19-tutors-and-team.md | Tutors list and page, add and remove with reassign, Team, I teach too, invitations |
+| 19-tutors-and-team.md | Tutors list and page, add and remove with reassign, Team, adding yourself as a tutor, Switch role, invitations |
 | 20-data-model.md | Product tables mapped to staging (DM-01 to DM-20), Kavi service (DM-21 to DM-30), billing room (DM-31) |
 
 ## 5. Current state and next step

@@ -69,21 +69,13 @@ the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
   this timezone.**
 - **WhatsApp number (optional):** Line: **Used for the WhatsApp buttons you
   see. Never shown to students unless you share it.**
-- **I teach too** (agency admins only, a toggle, off by default). Line: **Turn
-  this on to be added to courses as a tutor and lead lessons as their tutor.**
-  When it is on, the admin appears in the Tutors list of the course wizard (04
-  CW-2) and the lesson wizard (05 LW-1), and their own lessons count as a
-  tutor's. When it is off, an admin leads a lesson through **Join as an
-  admin?** (07 CR-09). Turning it off while they are a course's only tutor
-  asks: **You're the only tutor on 2 courses. Choose a new tutor first.** with
-  the reassign list (19 TM-10, TM-06).
-  Bobbin's admin join dialog says "If you teach this lesson from another
-  account, join from that account instead"
-  (`03-lessons/screenshots/classroom--join-dialog.png`). Bobbin's own test
-  (atlas `17-admin-tutor-role-test`) shows what it means: the same login holds
-  an admin and a tutor role, and **Switch role** in the account menu changes
-  between them. Kanvise's one account can both run the agency and teach in the
-  same way (see `docs/design/user-flows/06-account-types.md`).
+- **There is no "I teach too" switch here.** An admin who also teaches adds
+  themselves as a tutor from the Tutors page (19 TM-10) and then sees **Switch
+  role** in the account menu (01 SH-06). Bobbin works this way: its admin join
+  dialog says "If you teach this lesson from another account, join from that
+  account instead", and its own test (atlas `17-admin-tutor-role-test`) shows
+  that means the **Switch role** menu on the same login. See
+  `docs/design/user-flows/06-account-types.md`.
 - **Save changes.**
 
 ## CFG-S · Sign-in and security
@@ -128,7 +120,7 @@ and **Push** and **Email** toggles, as Bobbin's personal Notifications card
 | Starting check finished | Anyone who teaches | Push on, email on |
 | Summary still to write (after 24 h) | Anyone who teaches | Push on, email on |
 | Kavi's draft is ready (once Kavi exists) | Anyone who teaches | Push on, email off |
-| Courses given to me | Agency tutors, admins with I teach too | Push on, email on |
+| Courses given to me | Agency tutors, admins who are also tutors | Push on, email on |
 | Daily summary for admins (18 NTF-06) | Agency admins | Email on (no push) |
 
 Messages a person needs to take part (invitations, moved or cancelled
@@ -295,8 +287,8 @@ There is no public web address setting: public pages are retired (00 section
 
 Tutors and team members moved to `19-tutors-and-team.md`: the Tutors list,
 Add tutor, the tutor page, the Team page, removing someone with the required
-Reassign step, **I teach too** and the 50-invitations-an-hour limit (19 TM-01
-to TM-11). Settings keeps only the **I teach too** toggle (CFG-P) and
+Reassign step, adding yourself as a tutor, **Switch role** and the
+50-invitations-an-hour limit (19 TM-01 to TM-11). Settings keeps only
 **On my own / With a team** (CFG-T).
 
 ## CFG-D · Data and privacy
@@ -330,7 +322,7 @@ Checked against `14-settings/screenshots/settings-data-export--full.png`.
 Tables are in `20-data-model.md`: settings DM-14, notification preferences and
 unsubscribe tokens DM-15, people DM-01.
 
-- Personal settings (profile, I teach too, notification preferences per
+- Personal settings (profile, notification preferences per
   channel, unsubscribe tokens).
 - Account settings (teaching preferences, lesson defaults, recording rules,
   Kavi style, level names, Kavi switches, timezone).

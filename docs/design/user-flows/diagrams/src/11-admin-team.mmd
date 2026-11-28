@@ -4,13 +4,14 @@ flowchart TD
     A2 -->|"yes"| A3["Already in your agency<br/>Open their page"]
     A2 -->|"is a student here"| A4["Email belongs to a student<br/>cannot invite as tutor"]
     A2 -->|"new"| A5["Invitation sent NTF-104<br/>chip: Invite not accepted"]
-    A5 --> A6["Optional: assign courses<br/>Replaces wording removed, see decision D-04"]
+    A5 --> A6["Optional: assign courses<br/>a course can have several tutors, decision D-04"]
     B1["Team, Add team member TM-08"] --> B2["Invitation NTF-105"]
   end
   subgraph TEACH["Admin who also teaches"]
-    C1["Where admins find it:<br/>1 Setup step Add a tutor, link I teach too<br/>2 Tutors empty state button<br/>3 Profile settings CFG-P<br/>4 Join as an admin? dialog link, decision D-02"] --> C2["I teach too ON<br/>TM-10"]
-    C2 --> C3["Admin appears in Tutors with Admin chip<br/>tutor choices in wizards and Reassign<br/>reminders and attendance count as Tutor"]
-    C2 -->|"turn OFF while sole tutor on courses"| C4["Choose a new tutor first<br/>Reassign step, saved only when all done"]
+    C1["Add me as a tutor<br/>1 Setup step Add a tutor<br/>2 Tutors empty state or page header<br/>3 Type own email in Add tutor"] --> C2["Confirm: Add yourself as a tutor?<br/>no email, no invitation"]
+    C2 --> C3["Admin appears in Tutors with an Admin chip<br/>tutor choices in wizards and Reassign<br/>reminders and attendance count as Tutor"]
+    C3 --> C4["Account menu: Switch role<br/>Admin or Tutor"]
+    C3 -->|"remove own tutor row while sole tutor on courses"| C5["Choose a new tutor first<br/>Reassign step, TM-06, stays an admin"]
   end
   subgraph LEAD["Admin joins a lesson they don't teach"]
     D1["Lesson page, Join classroom"] --> D2["CR-09 Join as an admin?<br/>your attendance won't count for the tutor"]

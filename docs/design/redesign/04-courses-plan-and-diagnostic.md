@@ -140,7 +140,7 @@ Title **People** · subtitle **Add students and tutors to the course.**
 - **Tutors** (agency admins only): checkbox rows of the agency's tutors with
   **1 of 3 selected**, at least one required, and **+ Add a tutor** (opens the
   Add tutor dialog, 19 TM-03). An admin is listed here only if
-  they have turned on **I teach too** (12 CFG-P, 19 TM-10);
+  they have added themselves as a tutor (19 TM-10);
   otherwise an admin leads a lesson through **Join as an admin?** (07 CR-09).
   Independent tutors don't see this section; they are the tutor.
 

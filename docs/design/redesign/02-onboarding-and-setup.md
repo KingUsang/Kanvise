@@ -181,7 +181,7 @@ lands on the dashboard. An admin invited to an existing agency takes the same
 short path: no questions, no checklist (the agency's setup is already the
 owner's). After accepting, they land on the dashboard in the admin view with
 the **Welcome** banner pointing to **Team** and **Tutors**, and no **Test
-classroom** button unless they turn on **I teach too**.
+classroom** button unless they add themselves as a tutor (19 TM-10).
 
 - They inherit the agency's answers: lesson length, reading level, how the
   agency teaches and its subjects. They cannot change them (12 CFG-T is hidden
@@ -240,7 +240,7 @@ Both lists have five steps, as Bobbin's does. The total is always 5, and
 
 | # | Step | Time | Reason line | Button | Opens | Done when |
 |---|---|---|---|---|---|---|
-| 1 | Add a tutor | 1 min | Tutors run the lessons. Add a colleague, or turn on **I teach too** if you teach. | **Add tutor** | Add tutor dialog (19 TM-03), or **I teach too** (19 TM-10) | The agency has at least one tutor (an invited tutor counts, as does an admin with **I teach too**) |
+| 1 | Add a tutor | 1 min | Tutors run the lessons. Add a colleague, or add yourself if you teach. | **Add tutor** | Add tutor dialog (19 TM-03), or **Add me as a tutor** (19 TM-10) | The agency has at least one tutor (an invited tutor counts, as does an admin who has added themselves) |
 | 2 | Add your students | 2 mins | Students are the people your tutors teach. They get their lessons, homework and summaries in Kanvise. | **Add students** | Add student dialog (06 STU-03, or STU-04 as above) | At least one real student |
 | 3 | Create a course | 2 mins | A course pairs a student with a tutor over time. | **Create course** | New course wizard (spec 04) | At least one real course |
 | 4 | Build the course plan | 2 mins | The topics the course will cover, so lessons and summaries tick them off. | **Build plan** | The **Build the course plan** card on the course from step 3 | That course plan has at least one topic, or the step was skipped |

@@ -21,7 +21,7 @@ PEOPLE › Tutors (/tutors) → TM-01 list → Add tutor (TM-03) → TM-04 tutor
                                         → ⋯ Remove (TM-06 with Reassign)
 PEOPLE › Team (/team)     → TM-07 list → Add team member (TM-08)
                                         → Remove (TM-09, Reassign if they teach)
-Admin teaches too: 12 CFG-P I teach too → TM-10
+Admin teaches too: Add me as a tutor → Switch role → TM-10
 Invitations and the 50-an-hour limit: TM-11
 ```
 
@@ -29,10 +29,10 @@ Invitations and the 50-an-hour limit: TM-11
 
 | | Agency admin | Agency tutor |
 |---|---|---|
-| Where they are listed | Team (`/team`); also Tutors when **I teach too** is on | Tutors (`/tutors`) |
+| Where they are listed | Team (`/team`); also Tutors when they have added themselves as a tutor | Tutors (`/tutors`) |
 | Courses and lessons | Sees and changes everything in the agency (00 section 14c) | Only courses they are the tutor on |
 | Create courses, add students | Yes | No (owner decision, standard 03) |
-| Teach lessons as the tutor | Only with **I teach too** (TM-10); otherwise **Join as an admin?** (07 CR-09) | Their own lessons |
+| Teach lessons as the tutor | Only after adding themselves as a tutor (TM-10), in the Tutor role; otherwise **Join as an admin?** (07 CR-09) | Their own lessons |
 
 ---
 
@@ -53,7 +53,7 @@ not joined yet** row (03 DB-05) opens this list on **Invited**.
 
 | Column | Shows |
 |---|---|
-| **Name** | Avatar, name, and a chip: **Invite not accepted** (amber, as Bobbin), **Admin** (for an admin with **I teach too**), **You** |
+| **Name** | Avatar, name, and a chip: **Invite not accepted** (amber, as Bobbin), **Admin** (for an admin who is also a tutor), **You** |
 | **Courses** | Count, with the first two course swatches |
 | **This week** | Lessons this week: **6 lessons** |
 | **Summaries overdue** | A count in red tint when over 0 (ended over 48 hours ago, 03 DB-05), otherwise **-** |
@@ -70,8 +70,8 @@ Checked against `07-tutors/screenshots/page--default.png`.
 
 - **Empty**, as Bobbin's card: people icon in the Tutors tint, **No tutors
   yet**, "Tutors teach your agency's courses. Add one so you can put them on a
-  course." Buttons: **Add tutor** (primary) and, for an admin who teaches,
-  **I teach too** (secondary, opens 12 CFG-P with the toggle highlighted, TM-10).
+  course." Buttons: **Add tutor** (primary) and, for an admin who is not yet a
+  tutor, **Add me as a tutor** (secondary, opens the confirm in TM-10).
   Bobbin's sample tutor banner is not copied: the sample course (02) is enough.
 - **No results** (search or chip): **No tutors match "mic".** with **Clear
   search**.
@@ -222,7 +222,7 @@ dropped: Kanvise has no clients.) On the right: **Add team member**.
 
 **Table** (Bobbin's two columns):
 - **Name:** avatar, name, chips **You**, **Invite not accepted** (amber),
-  **Teaches too** (when **I teach too** is on).
+  **Teaches too** (an admin who has added themselves as a tutor).
 - **Email.**
 - Actions as plain text buttons on the right, as Bobbin: **Resend invite**
   (only while not accepted) and **Remove**. Your own row and the only admin's
@@ -257,28 +257,46 @@ Checked against `08-team/screenshots/team-remove-confirmation.png`.
   haven't accepted stops working. If they aren't in another account on
   Kanvise, they can no longer sign in."
 - **Cancel** · **Remove** (red).
-- If the admin has **I teach too** and teaches courses, **Remove** becomes
+- If the admin is also a tutor and teaches courses, **Remove** becomes
   **Next: choose new tutors** and step 2 of TM-06 follows.
 - There is always at least one admin: the last admin has no **Remove**, and
   you can't remove yourself (another admin must).
 - Toast: **Ada Obi removed from the team.**
 
-## TM-10 · I teach too
+## TM-10 · Add yourself as a tutor, and Switch role
 
-The setting is in 12 CFG-P (agency admins only, off by default). This section
-owns what it changes.
+For an agency admin who also teaches. An independent tutor already has both roles
+(there is no team, so no Tutors page and no switch).
 
-- **On:** the admin also appears in Tutors (TM-01, with the **Admin** chip), in
-  the tutor choices of the course wizard (04 CW-2), the lesson wizard (05
-  LW-1) and Reassign (TM-06). Lessons they teach count as a tutor's: reminders
-  (18 NTF-02), Summaries overdue, attendance as **Tutor** (17).
-- **Off:** they lead a lesson only through **Join as an admin?** (07 CR-09).
-- **Turning it off while teaching courses:** the dialog **You're the only
-  tutor on 2 courses. Choose a new tutor first.** with step 2 of TM-06 for
-  those courses. Turning it off is saved only after every course has a new
-  tutor.
-- A one-person agency (the owner teaches) turns it on once; the setup step
-  **Add a tutor** (02 SET-01) counts it as done.
+**Adding the role** (no email, no invitation, as Bobbin does):
+- **Where:** the setup step **Add a tutor** (02 SET-01) has **Add me as a tutor**
+  beside **Add tutor**; the Tutors empty state and the Tutors page header show
+  **Add me as a tutor** while the admin is not yet a tutor; and typing your own
+  email in Add tutor (TM-03) shows the same confirm.
+- **Confirm:** title **Add yourself as a tutor?** "You're already an admin here.
+  You keep your own name and no invitation is sent." **Cancel** · **Add me as a
+  tutor**. Toast: **You're now a tutor too. Use Switch role in your account menu
+  to see what your tutors see.**
+- **Result:** the admin appears in Tutors with the **Admin** chip, in the tutor
+  choices of the course wizard (04 CW-2), the lesson wizard (05 LW-1) and
+  Reassign (TM-06). Lessons they teach count as a tutor's: reminders (18
+  NTF-02), Summaries overdue, attendance as **Tutor** (17). The setup step
+  **Add a tutor** counts as done.
+
+**Switch role** (01 SH-06): shown in the account menu for anyone who holds both
+roles. In the **Tutor** role the person sees exactly what an agency tutor sees:
+their own courses and lessons, personal settings, no Tutors, Team or agency
+settings. In the **Admin** role they see the whole agency, with the **Mine only**
+toggle on the dashboard (03 DB-08). The user card shows the active role (**Tutor
+· Science Students Academy**). The choice is remembered on this device.
+
+**Joining a lesson:** from either role, **Join classroom** on a lesson they
+teach works as the tutor. On a lesson they do not teach, the Admin role shows
+**Join as an admin?** (07 CR-09).
+
+**Removing the role:** Tutors › their own row › **Remove** (TM-06). If they are
+the only tutor on courses, step 2 asks them to choose a new tutor first. They stay
+an admin. The line reads **You'll stay an admin.**
 
 ## TM-11 · Invitations and limits
 
@@ -311,14 +329,14 @@ owns what it changes.
 | Add tutor, add team member, resend invites | Yes | No | No |
 | Edit a tutor | Yes | No (they edit their own profile in 12) | n/a |
 | Remove a tutor or team member, reassign | Yes, except themselves and the last admin | No | n/a |
-| Turn on **I teach too** | Their own | n/a | n/a |
+| Add themselves as a tutor, Switch role | Their own | n/a | n/a (they hold both roles already) |
 | Create courses, add students | Yes | No (owner decision) | Yes |
 
 ## Data needed (for the build)
 
 Tables are in `20-data-model.md`: people, memberships and roles DM-01,
 invitations and the hourly limit DM-02, course tutors and reassignment DM-03,
-lessons DM-06, attendance DM-08, settings (I teach too) DM-14, notifications
+lessons DM-06, attendance DM-08, roles DM-01, notifications
 DM-15.
 
 ### Kavi

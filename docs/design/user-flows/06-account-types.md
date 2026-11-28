@@ -2,8 +2,8 @@
 
 Status: draft for owner review, 28 Nov 2026. Uses the updated Bobbin atlas
 (`research/bobbin-appatlas`, commit `c49a8fb`) and the redesign specs. The model
-in section 2 (D-22) is a **recommendation that changes approved spec text**, so it
-waits for your yes before I edit the specs.
+in section 2 (D-22) was **approved on 28 Nov** and is applied to the specs, and
+**I teach too** is removed (D-29).
 
 ## 1. What the atlas update showed
 
@@ -29,7 +29,7 @@ instead") means this role switch. I have fixed the wording in my notes (below).
 Bobbin has no "independent tutor" type. Everyone, even a one-person business, is
 an organisation. That is a useful hint for the model below.
 
-## 2. The model (recommendation D-22)
+## 2. The model (approved, D-22)
 
 One person has one login. A login can hold roles in organisations: **admin**,
 **tutor** or **student**. An **independent tutor is an organisation of one**
@@ -58,17 +58,19 @@ Why this model, in plain terms:
 
 ### Options compared
 
-| | A. Toggle only (spec as approved) | B. Two roles and Switch role (recommended) |
+| | A. Toggle only (old spec) | B. Two roles and Switch role (chosen) |
 |---|---|---|
-| How an admin starts teaching | **I teach too** in My profile | The same switch in My profile, or Bobbin's confirm on Tutors, Add tutor |
+| How an admin starts teaching | **I teach too** in My profile | **Add me as a tutor** (setup step, Tutors page), or their own email in Add tutor |
 | What they see while teaching | The admin view, with tutor items added and a **Mine only** toggle | Tutor view, identical to an agency tutor's |
 | Extra build | Rules inside the admin view (tutor lists, reminders, attendance) | A role switch in the account menu, using the tutor view that already exists |
 | Risk | Admin view grows more complex over time | A person can forget which role they are in. The role is shown in the account card |
 | Independent tutor | Separate account type with its own rules | Organisation of one, same code |
 
-**I teach too stays.** It is the easy, visible way to add yourself as a tutor
-(one switch, no email), and it creates the tutor role. The role switch is what
-changes after that.
+**I teach too is removed (D-29).** It would be a second way to do the same
+thing. There is now one path: **Add me as a tutor** adds the tutor role with no
+email, and **Switch role** is how the admin moves between views. The button sits
+where an admin looks first (the setup step, the Tutors page and its empty
+state), so the feature stays easy to find.
 
 ## 3. Side by side
 
@@ -77,7 +79,7 @@ changes after that.
 | What it is | An organisation of one | An organisation with admins and tutors |
 | Chosen at | Kavi: **On my own** | Kavi: **With a team**, then the agency name |
 | Roles | One person holds admin and tutor | Admins, tutors, and admins who also teach |
-| Setup list | Add students, Create course, Build plan, Schedule first lesson, Check classroom | Add a tutor (or I teach too), Add students, Create course, Build plan, Schedule first lesson |
+| Setup list | Add students, Create course, Build plan, Schedule first lesson, Check classroom | Add a tutor (or add yourself), Add students, Create course, Build plan, Schedule first lesson |
 | Pages | No Tutors, Team | Tutors, Team |
 | Create courses, add students | Yes | Admins only |
 | Lesson wizard | No tutor choice | Tutor choice |
@@ -122,21 +124,18 @@ independent tutor uses their own. An agency uses the agency's, and the agency
 pays its own tutors. Kanvise does not split money among an agency's tutors. This
 keeps Kanvise out of employment and tax questions it has no reason to enter.
 
-## 9. If you approve D-22, these spec edits follow
+## 9. Spec edits made for D-22 and D-29
 
-- `12` CFG-P: **I teach too** adds the tutor role (no email), and **Switch role**
-  appears in the account menu when a person holds both roles.
-- `07` CR-09: the dialog line becomes "If you teach this lesson, switch to your
-  Tutor role from the account menu." The text can mention **I teach too** for
-  admins who have not added the role.
-- `19` TM-03 and TM-10: typing your own email in Add tutor shows Bobbin's
-  confirm ("You're already an admin here. Add yourself as a tutor too?").
-- `01` SH-07 and the account card: show the active role, for example **Tutor ·
-  Science Students Academy**.
-- `02`: an independent tutor is described as an organisation of one with both
-  roles. Nothing the user sees changes.
-- `16`: the role switch on phones lives in the More sheet.
-- `12` CFG-T: the confirm dialog when moving to a team (diagram 19).
+Applied on this branch (spec checker passes):
+
+- `01` SH-06: **Switch role** in the account menu, remembered per device (OQ-13). SH-02
+  user card shows the active role.
+- `19` TM-10: rewritten as **Add yourself as a tutor, and Switch role**. TM-01 empty
+  state and header show **Add me as a tutor**. TM-03 recognises your own email.
+- `12` CFG-P: the **I teach too** toggle is gone. CFG-N and the Data section follow.
+- `07` CR-09: the dialog says to switch to your Tutor role.
+- `02`, `04`, `05`, `17`, `18`, `20`: every mention of **I teach too** reworded.
+- `12` CFG-T: the confirm dialog when moving to a team (diagram 19) is still to add.
 
 ## 10. Other things the atlas update added
 
@@ -162,7 +161,8 @@ Not yet applied, and for you to look at:
 
 | ID | Item | Recommendation |
 |---|---|---|
-| D-22 | Two roles plus **Switch role** for admins who teach; independent tutor is an organisation of one | Yes (this document) |
-| D-23 | Tutor invitations can be **declined**, with declined and withdrawn states | Yes |
-| OQ-12 | One payout account per organisation | Yes |
-| OQ-13 | Is the chosen role remembered when someone signs in again? | Yes, per device |
+| D-22 | Two roles plus **Switch role** for admins who teach; independent tutor is an organisation of one | **Approved 28 Nov** |
+| D-23 | Tutor invitations can be **declined**, with declined and withdrawn states | **Approved 28 Nov, applied** |
+| D-29 | Remove the **I teach too** toggle. **Add me as a tutor** plus **Switch role** replace it | **Approved 28 Nov, applied** |
+| OQ-12 | One payout account per organisation | **Approved, applied in 13** |
+| OQ-13 | Is the chosen role remembered when someone signs in again? | **Approved:** yes, per device |

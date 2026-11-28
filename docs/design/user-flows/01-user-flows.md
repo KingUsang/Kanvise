@@ -155,17 +155,17 @@ built last, so every screen must work without it.
 - No score is shown to the student.
 - Specs: 04 (DIAG-D, DIAG-P, DIAG-S, DIAG-R), 18 (NTF-409 to NTF-411).
 
-## 11 · Admin, team and "I teach too"
+## 11 · Admin, team and an admin who also teaches
 
 ![Admin and team](diagrams/11-admin-team.png)
 
-- An admin who also teaches turns on **I teach too** in their profile settings.
-  It is the same account, not a second one. Bobbin works the same way: one
-  login holds an admin and a tutor role, with a **Switch role** menu (see
-  `06-account-types.md`).
+- An admin who also teaches presses **Add me as a tutor** (setup step, Tutors
+  page, or by typing their own email in Add tutor). No email is sent. The same
+  login now holds two roles, and **Switch role** appears in the account menu,
+  as in Bobbin (see `06-account-types.md`). There is no "I teach too" switch
+  any more (decisions D-22, D-29).
 - Where an admin finds it: the setup step "Add a tutor", the Tutors empty
-  state, profile settings, and (proposed) the Join as an admin dialog.
-  **Decision D-02.**
+  state and page header, and the Join as an admin dialog. **Decision D-02.**
 - Removing a tutor who teaches courses forces a reassign step. Removal cannot
   be undone, and is blocked while the tutor is teaching a lesson.
 - Specs: 19 (TM-01 to TM-11), 12 (CFG-P), 07 (CR-09), 03 (DB-05, DB-08, DB-09),
@@ -197,7 +197,7 @@ See `05-gamification.md`.
 | Create courses, add students | Yes | Yes | No | No |
 | See all courses in the account | Yes | Yes | Only theirs | Only their own |
 | Invite tutors and team | n/a | Yes | No | No |
-| Teach a lesson as the tutor | Yes | Only with I teach too | Their own | No |
+| Teach a lesson as the tutor | Yes | Only after adding themselves as a tutor | Their own | No |
 | Join someone else's lesson | n/a | Yes, Lead or Watch | No | No |
 | Complete a summary | Yes | Yes | Their own lessons | No |
 | See private lesson and student notes | Yes | Yes | Their own courses | Never |

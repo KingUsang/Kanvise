@@ -25,7 +25,7 @@ if the owner decides otherwise (`../03-decisions-and-open-questions.md`).
 | Name | Setup |
 |---|---|
 | `solo` | Independent tutor, one course, two students (one with email, one without) |
-| `agency` | Agency with admin `adm`, tutors `tutA` and `tutB`, an admin with I teach too `adm2` |
+| `agency` | Agency with admin `adm`, tutors `tutA` and `tutB`, an admin who has added themselves as a tutor `adm2` |
 | `stuE` | Student with account |
 | `stuN` | Student without email |
 | `other` | A second agency, for isolation tests |
@@ -178,7 +178,7 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-CLS-007 | Not held actions | Reschedule, Mark as cancelled | Planned, or Cancelled with "Let students know" unticked | P1 | E2E |
 | TC-CLS-008 | Second device | Open link on a second device | "Join here instead", first device told, tutor notified | P1 | E2E |
 | TC-CLS-009 | Admin joins | Admin opens a lesson they do not teach | "Join as an admin?", Lead preselected, attendance not counted as tutor | P0 | E2E |
-| TC-CLS-010 | Admin with I teach too | Teach own lesson | Counts as Tutor in attendance | P1 | E2E |
+| TC-CLS-010 | Admin who is also a tutor | Teach own lesson | Counts as Tutor in attendance | P1 | E2E |
 | TC-CLS-011 | Recording rules | Recording off, or a student without consent | Not recorded, reason shown to tutor only | P0 | API |
 | TC-CLS-012 | Device check | Run CR-10 | Setup row ticks | P2 | E2E |
 | TC-CLS-013 | Whiteboard file limit | 11 MB PDF | "This file is over 10 MB. Compress it first..." | P2 | E2E |
@@ -293,18 +293,21 @@ Real audio and video are checked manually. Automated runs use fake media devices
 | TC-TM-002 | Remove tutor with courses | Remove | Reassign step required, button disabled until all set | P0 | E2E |
 | TC-TM-003 | Remove effects | Confirm | Access ends, future lessons keep times, students told, summaries move | P0 | API |
 | TC-TM-004 | Remove while teaching | Tutor is Live | Blocked with message | P1 | E2E |
-| TC-TM-005 | I teach too on | Toggle | Admin in Tutors with chip, wizards, reminders | P0 | E2E |
-| TC-TM-006 | I teach too off | Sole tutor on courses | Choose a new tutor first, saved only after | P0 | E2E |
+| TC-TM-005 | Add me as a tutor | Press it, confirm | No email sent. Admin in Tutors with chip, wizards, reminders. Switch role appears | P0 | E2E |
+| TC-TM-006 | Remove own tutor row | Sole tutor on courses | Choose a new tutor first, saved only after, stays admin | P0 | E2E |
 | TC-TM-007 | Last admin | Remove them | No Remove shown, API refuses | P0 | API |
 | TC-TM-008 | Agency tutor access | Open Tutors, Team | "Not available" page | P0 | E2E, DB |
 | TC-TM-009 | Duplicates | Existing email, student email | Messages from spec | P1 | API |
-| TC-TM-010 | Discover I teach too (D-02) | Open Join as an admin dialog | Link to profile setting, no "other account" text | P1 | E2E |
+| TC-TM-010 | Discover the Tutor role (D-02) | Open Join as an admin dialog | Line says to switch to your Tutor role; link to Add me as a tutor if not yet one; no "other account" text | P1 | E2E |
 | TC-TM-011 | Invite Again | After removal | Courses not restored | P1 | E2E |
 | TC-TM-012 | Admin dashboard | `adm` opens dashboard | Admin rows, Mine only toggle, Live now refreshes every 15 s | P1 | E2E |
 | TC-TM-013 | Switch to team | Solo in CFG-T | Set up your team, becomes admin | P1 | E2E |
 | TC-TM-014 | Team removal | Remove a team member | Their own row has no Remove; teaching admin goes through Reassign | P1 | E2E |
 | TC-TM-015 | Decline an invitation (D-23) | Existing user presses Decline | Admin sees "Invite declined"; Invite again works | P1 | E2E |
 | TC-TM-016 | Withdrawn and used links | Open a withdrawn link, then an accepted one | "This invitation was withdrawn." and "...already been accepted." | P1 | API |
+| TC-TM-017 | Switch role | Admin with both roles switches to Tutor | Tutor screens only (own courses, no Tutors or Team), toast, user card shows Tutor, remembered next sign-in on this device | P0 | E2E |
+| TC-TM-018 | Own email in Add tutor | Admin types their own email | Confirm dialog, no invitation email | P1 | E2E |
+| TC-TM-019 | Role in permissions | Tutor role calls an admin-only endpoint | Refused, even though the same login is an admin | P0 | API |
 
 ## STU · Student app (flow 12)
 

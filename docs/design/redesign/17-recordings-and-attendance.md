@@ -74,8 +74,8 @@ because the tutor restarted it after an automatic end (07 CR-06).
 
 - If an admin led and the tutor never came, the tutor's row says **Tutor didn't
   join** (07 CR-09) in red tint and the admin row stays below it.
-- An admin with **I teach too** (12 CFG-P) who is the lesson's tutor is shown
-  as **Tutor**, like any tutor.
+- An admin who has added themselves as a tutor (19 TM-10) and is the lesson's
+  tutor is shown as **Tutor**, like any tutor.
 
 **People summary on a row (REC-01):** the tutor's avatar and name, and under it
 one line: **All 3 joined** (grey), or **1 student missed** in red, or **Tutor
