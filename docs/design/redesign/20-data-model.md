@@ -71,9 +71,10 @@ Kavi.
   and its tutor.
 - **Key columns:**
   - `courses`: account, name, subject, description, colour (course swatch,
-    01 SH-15), level (from 12 CFG-K level names), `is_trial` (New, the
-    **This is a trial** switch, 04 CW-1), status (active, archived; New),
-    created by.
+    01 SH-15), level (optional: short text such as High School, or one of
+    the 12 CFG-K level names when set; edited on the 04 CRS-04 header),
+    `is_trial` (New, the **This is a trial** switch, 04 CW-1), status
+    (active, archived; New), created by.
   - Course tutor: course, tutor, assigned by, assigned at, ended at (kept as
     history so reassignment in 19 TM-06 is traceable).
   - Course students: course, student, added at, removed at.
@@ -114,8 +115,10 @@ Kavi.
     old and new status, source, source id (the lesson, check, homework or
     quiz), changed by.
   - `topic_status_proposals` (New): rows waiting in **Review changes** (04
-    CRS-08): student, topic, proposed status, source, created at, accepted or
-    dismissed, by whom. Nothing changes `topic_statuses` without an accepted
+    CRS-08): student, topic, proposed status, source, source id, created at,
+    accepted, dismissed or withdrawn, by whom. Undo on a lesson summary's
+    Complete withdraws every proposal with that summary as its source (08
+    SM-04), so completing it again creates fresh rows. Nothing changes `topic_statuses` without an accepted
     proposal or a person setting it by hand.
 - **Owning spec:** 04 (Topic status model, CRS-08); fed by 08, 10, 11, 04
   starting check.

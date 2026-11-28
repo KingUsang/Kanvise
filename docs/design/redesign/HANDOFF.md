@@ -95,52 +95,78 @@ These must exist before launch. None blocks building the screens.
 
 ## Build order
 
-Build page by page on `staging`, in this order. No step ships a button, tab or
-card that opens a screen from a later step: it stays hidden (not disabled)
-until that step ships. The table after the list names the places where this
-matters most.
+Build page by page on `staging`, in this order. No step ships a button, tab,
+card or row that opens a screen from a later step: it stays hidden (not
+disabled) until that step ships. The table after the list names the places
+where this matters most.
 
 1. **Design system and app shell** (01, 16), with the message channels every
    later step sends through: the email rules and held messages (18 Channels,
    NTF-03, NTF-04).
-2. **People and settings:** students (06), tutors and team (19), settings
-   (12, without CFG-K), and the student app's sign-in, shell and Me page (09
-   SA-01, SA-02a, SA-03 frame, SA-09, SA-10), because inviting a student in
-   this step sends them to SA-01.
-3. **Courses, course plan and resources** (04 CRS-01 to CRS-08 and the wizard;
-   15), with the student's course pages (09 SA-07, SA-08). The starting check
-   card (CRS-07) is hidden until step 5.
-4. **Homework and quizzes** (10, 11), with the student's pages (HW-04, QZ-05,
-   09 SA-06) and the QZ-02 question card's starting check mode.
-5. **Starting check** (04 DIAG-D to DIAG-R, the Without Kavi path), built on
-   step 4's question card.
-6. **Lessons and calendar** (05), with the student's lessons and join links
-   (09 SA-02, SA-04, SA-05).
-7. **Classroom, recordings and attendance** (07, 17), with the student's
-   classroom screens (07 CR-02, CR-08) and recordings (17 REC-08).
-8. **Lesson summary** (08), with the summary on the student's lesson page (09
+2. **Dashboard and setup** (03, 02), as a slice that grows with every later
+   step. This step ships the dashboard frame (DB-01, DB-03, DB-04, DB-07 and
+   DB-08 layouts) with their empty states, the scripted onboarding (ONB-01 to
+   ONB-11) and the `/setup` page (SET-01 to SET-03) with the sidebar setup
+   card (01 SH-02). It is the first screen every tutor sees and the most
+   Bobbin-shaped one, so it is the first side-by-side check of the new look
+   (`15-tutor-role/screenshots/tutor-dashboard--default.png`,
+   `01-dashboard/screenshots/page--default.png`, and the **Set up your
+   account** card in `04-courses/screenshots/sample-course--outline.png`).
+   Each later step adds its own dashboard rows and setup rows (table below).
+3. **People and settings:** students (06), tutors and team (19), settings
+   (12, without CFG-K and CFG-N), and the student app's sign-in, shell and Me
+   page (09 SA-01, SA-02a, SA-03 frame, SA-09, SA-10), because inviting a
+   student in this step sends them to SA-01.
+4. **Courses and lessons:** courses, course plan and resources (04 CRS-01 to
+   CRS-08 and the wizard; 15), lessons and calendar (05), the sample course,
+   and the student's course, lesson and join link pages (09 SA-02, SA-04,
+   SA-05, SA-07, SA-08).
+5. **Classroom, recordings and attendance** (07, 17), with the student's
+   classroom screens (07 CR-02, CR-08), recordings (17 REC-08) and 08 SM-07
+   **No summary needed** as this step's summary slice.
+6. **Lesson summary** (08), with the summary on the student's lesson page (09
    SA-05).
-9. **Dashboard and setup** (03, 02), which summarise everything above.
-10. **Notification preferences and push** (12 CFG-N, 18 NTF-06, NTF-07).
-    Every NTF-01 row is sent from the step that owns its event; this step adds
-    the switches, push and the admin daily summary.
-11. **The Kavi service and every Kavi feature, last** (20, Kavi service
-    section, DM-30). Until then every screen uses the **Without Kavi** path in
-    its Kavi block.
+7. **Homework and quizzes** (10, 11), with the student's pages (HW-04, QZ-05,
+   09 SA-06) and the QZ-02 question card's starting check mode.
+8. **Starting check** (04 DIAG-D to DIAG-R, the Without Kavi path), built on
+   step 7's question card.
+9. **Notification preferences and push** (12 CFG-N, 18 NTF-06, NTF-07).
+   Every NTF-01 row is sent from the step that owns its event; this step adds
+   the switches, push and the admin daily summary.
+10. **The Kavi service and every Kavi feature, last** (20, Kavi service
+    section, DM-30, 12 CFG-K). Until then every screen uses the **Without
+    Kavi** path in its Kavi block.
+
+This keeps the briefed order (shell, dashboard and setup, courses and lessons,
+classroom, summary, homework and quizzes, then the rest, Kavi last) with three
+deliberate changes for the owner to accept:
+- Students, team and settings move up to step 3, before courses, because the
+  New course wizard's inline add-student form creates the student exactly as
+  06 STU-03 does, and lessons and the classroom read the 12 CFG-L values.
+- The student app is built step by step alongside the tutor screens it
+  mirrors, instead of as one later step, so no invite or join link points at
+  a student screen that doesn't exist yet.
+- Recordings ship with the classroom (step 5), because the classroom makes
+  them, and resources ship with courses (step 4).
 
 | Place | Opens | Before the later step ships |
 |---|---|---|
-| 04 CRS-07, DIAG-D (step 3) | Starting check (step 5) | The card is hidden; the course page shows only **Build the course plan** |
-| 04 CRS-05 Homework, Quizzes and Lessons tabs (step 3) | Steps 4 and 6 | Tabs hidden |
-| 06 STU-05 Lessons, Homework and quizzes, Summaries, Attendance tabs (step 2) | Steps 4 to 8 | Tabs hidden; the Summary tab shows what exists |
-| 05 LP-01 **Join classroom**, LP-05 join links (step 6) | Classroom (step 7) | Hidden; the lesson page works for planning, rescheduling and cancelling. Step 6 is not released to real lessons before step 7 |
-| 05 LP-01 **Before this lesson** homework card (step 6) | 10 (step 4) | Already built |
-| 07 Lesson tools **Set homework** (step 7) | 10 HW-01 (step 4) | Already built |
-| 08 SM-01 **Set homework** (step 8) | 10 HW-01 (step 4) | Already built |
-| 05 LP-02 **Write summary**, 07 CR-07 **Write lesson summary** (step 7) | 08 (step 8) | Lessons can only end once the classroom exists (step 7). Step 7 therefore ships 08 SM-07 **No summary needed** as its minimum slice (the dialog and the Complete state), so ended lessons can be closed; **Write summary** is hidden until step 8 |
-| Dashboard (step 9) | Everything | The current Kanvise dashboard stays the landing page. If an earlier landing page is wanted, ship DB-01, DB-03 and DB-04 right after step 6, showing only actions whose screens exist; Needs attention and Suggestions follow in step 9 |
-| 02 onboarding and /setup (step 9) | Steps 2 to 8 | New accounts skip onboarding and use the 02 ONB-09 defaults; the sidebar setup card (01 SH-02) is hidden |
-| 12 CFG-L values used by 05 and 07 | Settings (step 2) | Already built |
+| 03 DB-01 **Schedule lesson**, DB-03 empty state **Schedule lesson** (step 2) | 05 New lesson wizard (step 4) | Hidden. DB-03 and DB-04 show their empty states (**Nothing scheduled yet.**, **Nothing scheduled this week.**) until lessons exist |
+| 03 DB-05 Needs attention (step 2) | Steps 3 to 8 | Each row ships with the step that owns its target: **Students not joined yet** and **Tutors not joined yet** in step 3; **Lessons that didn't start**, **Links to send** and **Lessons without a tutor** in step 4; **Lesson summaries to write** and **Summaries overdue** in step 6; **Homework to mark** and **Homework waiting over 3 days** in step 7; **Starting checks finished** in step 8. The section is hidden while it has no rows |
+| 03 DB-06 Suggestions (step 2) | Steps 4 and 6 | **Next lesson has no topic** and **Nothing booked next week** ship in step 4; **Needs work twice** ships in step 6, once summaries set statuses |
+| 03 DB-09 Live lessons, DB-03 **Join** and **Live now ›** (step 2) | Classroom (step 5) | Hidden until step 5; DB-03 rows open the lesson page |
+| 03 DB-02 banners (step 2) | Steps 3 to 5 | **Sample course** banner from step 4. **Welcome (invited tutor)** banner from step 3, with **Test classroom** hidden until step 5 |
+| 02 `/setup` rows and the sidebar setup card (step 2) | Steps 3 to 5 | Each row appears when its target ships: Add your students and Add a tutor in step 3; Create a course, Build the course plan and Schedule your first lesson in step 4; Check your classroom in step 5. Until all five rows exist, the count reads **{n}/{rows shown} completed**. The right column's **Explore the sample course** shows from step 4 |
+| 02 onboarding answers (step 2) | Steps 3 and 4 | Saved in step 2 and used as each screen ships: **Yes, I have students** opens STU-04 in step 3; **How they teach** sets the wizard's People step in step 4 |
+| 04 CRS-07, DIAG-D (step 4) | Starting check (step 8) | The card is hidden; the course page shows only **Build the course plan**. The CRS-03 Students card shows **Invite not accepted** or nothing |
+| 04 CRS-05 Homework and Quizzes tabs (step 4) | Step 7 | Tabs hidden |
+| 06 STU-05 Lessons, Homework and quizzes, Summaries, Attendance tabs (step 3) | Steps 4 to 7 | Each tab appears with its step; the Summary tab shows what exists |
+| 05 LP-01 **Join classroom**, LP-05 join links (step 4) | Classroom (step 5) | Hidden; the lesson page works for planning, rescheduling and cancelling. Step 4 is not released to real lessons before step 5 |
+| 05 LP-01 **Before this lesson** homework card (step 4) | 10 (step 7) | Hidden |
+| 07 Lesson tools **Set homework** (step 5) | 10 HW-01 (step 7) | Hidden |
+| 08 SM-01 Homework section and **Set homework** (step 6) | 10 HW-01 (step 7) | The Homework section is hidden; the student's summary has no Homework part |
+| 05 LP-02 **Write summary**, 07 CR-07 **Write lesson summary**, DB-03 **Write summary** (step 5) | 08 (step 6) | Step 5 ships 08 SM-07 **No summary needed** (the dialog and the Complete state), so ended lessons can be closed; **Write summary** is hidden until step 6 |
+| 12 CFG-L values used by 05 and 07 | Settings (step 3) | Already built |
 
 Billing (13) stays on hold with payments.
 

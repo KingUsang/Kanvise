@@ -219,13 +219,17 @@ the toast has **Undo**.
 - A toast: **Lesson complete.** with **Undo** (01 SH-08). The student's
   notification is held until the undo window closes; **Undo** returns the
   lesson to Awaiting summary and nobody is told.
-- **Undo also sets back the course plan changes accepted from this summary**
-  in CRS-08 while the toast was showing, because they came from a summary that
-  is no longer complete. Each status returns to what it was before, the
-  proposals go back to waiting, and the history notes **Set back (lesson
-  reopened)**. A status that someone changed again since is left as it is.
-  The toast that follows says what happened: **Lesson reopened. 3 course plan
-  changes were set back.** The toast stays clickable over the sheet (01
+- **Undo also withdraws every course plan proposal from this summary**,
+  because they came from a summary that is no longer complete. Rows accepted
+  in CRS-08 while the toast was showing are set back: each status returns to
+  what it was before, and the history notes **Set back (lesson reopened)**. A
+  status that someone changed again since is left as it is. Rows still
+  waiting are removed, so the Summary tab no longer shows **3 changes to
+  review** on a lesson that is Awaiting summary. When the tutor completes the
+  summary again, CRS-08 proposes fresh rows from what is ticked then, so no
+  topic is proposed twice. The toast that follows says what happened:
+  **Lesson reopened. 3 course plan changes were set back.** (or, when nothing
+  had been accepted, **Lesson reopened.**) The toast stays clickable over the sheet (01
   SH-08), and CRS-08's own **Course plan updated.** toast waits behind it.
 - The **Review changes to the course plan** sheet (04 CRS-08) opens over the
   page when there are proposals: one row per student per ticked topic

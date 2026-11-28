@@ -219,7 +219,8 @@ and `settings-ai-style-compare.png`.
   specs stay general (**Algebra 1 Small Group**, 00 section 13).
 - **How you name levels (optional):** **None** (default) · **JSS / SS** ·
   **Year (Year 1 to 13)** · **Grade (Grade 1 to 12)**. Used as the choices for
-  a course's level, and in what Kavi writes (course plans, quiz and check
+  a course's level (with **None**, a course's level is short free text, 04
+  CRS-04), and in what Kavi writes (course plans, quiz and check
   questions). Line: **Kavi uses these names when it mentions a level.**
 - The reading level for students comes from **Who you mostly teach** (CFG-T).
 

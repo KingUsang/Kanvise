@@ -216,7 +216,8 @@ Left column, top to bottom:
 3. **About:** the description, with an **Edit** pencil. Empty: **Add a short
    description so students know what this course is for.**
 4. **Course plan** card (once the plan is Active): **Course plan** eyebrow,
-   **Mathematics · Algebra 1**, **8 modules · 32 topics · 96 objectives**, a
+   **Mathematics · High School** (Bobbin's subject and level), **8 modules · 32
+   topics · 96 objectives**, a
    segmented progress bar **12 of 32 topics covered** with the percentage, and
    **Open course plan ›**. In a group course the bar shows the group average
    and the line says **Average across 3 students**.
@@ -241,10 +242,17 @@ Right column:
 
 Checked against `04-courses/screenshots/sample-course--outline.png`.
 
-- **Header card:** **Course plan** eyebrow, title **Mathematics · Algebra 1**,
-  **8 modules · 32 topics · 96 objectives**, the progress bar, 👍 / 👎 while any
-  module is still an unedited Kavi draft, and **⋯** (Export, Regenerate
-  untouched modules, Copy plan from another course).
+- **Header card:** **Course plan** eyebrow, title **Mathematics · High
+  School** (subject · level, as in Bobbin), **8 modules · 32 topics · 96
+  objectives**, the chips **Mathematics** and **High School**, the progress
+  bar, 👍 / 👎 while any module is still an unedited Kavi draft, and **⋯**
+  (Export, Regenerate untouched modules, Copy plan from another course).
+- **Level:** the second part of the title and the second chip are the
+  course's level, which is optional. A pencil beside the title edits it: a
+  short text box (up to 40 characters, placeholder **e.g. High School**), or a
+  dropdown of the account's level names when they are set (12 CFG-K). With no
+  level, the title is just the subject (**Mathematics**) with one chip. The
+  sample course's level is **High School**, as in Bobbin's sample.
 - **Viewing:** a selector **Everyone** (default for groups) or one student.
   For one-to-one courses it shows that student and is fixed.
 - **Next** strip: the topics with status **Next** for the selected student,
@@ -476,8 +484,9 @@ full-height sheet on phones.
   review**).
 - After accepting, a toast **Course plan updated.** (no Undo; each change can
   be set back by hand, and the history shows what changed). One exception:
-  rows accepted from a lesson summary are set back if the tutor presses
-  **Undo** on that summary's **Lesson complete.** toast (08 SM-04).
+  pressing **Undo** on a summary's **Lesson complete.** toast withdraws every
+  proposal from that summary. Accepted rows are set back, waiting rows are
+  removed, and completing the summary again proposes fresh rows (08 SM-04).
 - Proposals that are not accepted within 30 days are dropped, and the history
   notes **Not reviewed**.
 

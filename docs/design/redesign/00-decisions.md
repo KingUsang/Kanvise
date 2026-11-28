@@ -253,9 +253,11 @@ below.
   Academy**, and agency admin **Chidi Okafor** (Bobbin's sample admin is
   only "Admin User", so the admin's name is Kanvise's). In examples Casey
   has an email and Alex doesn't, so a no-email line always names Alex. Other
-  names appear only to fill a group of three or more. Level names such as SS2
-  or Year 9 appear only where the optional level names setting is described
-  (12 CFG-K).
+  names appear only to fill a group of three or more. General levels such as
+  **High School** (Bobbin's, on the course plan header) are fine anywhere.
+  Local level names tied to one country's school system, such as SS2 or Year
+  9, appear only where the optional level names setting is described (12
+  CFG-K).
 - Say **Student**, not Learner, in all user-facing text. Routes and database
   names stay as they are. Standard 01 must be updated to match (see the
   standards table).
