@@ -8,6 +8,24 @@ This standard governs product UI hierarchy, visual tokens, shared primitives,
 responsive behavior, content, interaction feedback, and accessibility. It
 applies to Admin, Tutor, Learner, public, auth, and live-class experiences.
 
+## Changes
+
+**2026-11-28: location token and redesign wording (proposed).**
+
+- **Status:** Proposed with redesign build step 1 (branch
+  `redesign/01-app-shell`). It is approved when the owner approves or merges
+  that pull request. If the owner rejects it, the earlier Approved text
+  (indigo for selected navigation, and the earlier product term list)
+  applies again.
+- **Source:** `docs/design/redesign/00-decisions.md` section 18 (standards
+  and ledger changes) and sections 11 and 13a; `docs/design/redesign/01-app-shell.md`
+  SH-12 (contrast) and SH-15 (colour rule). Ledger row UI-003.
+- **What changes:** "Semantic visual language" adds a named **location** role
+  (orange, "you are here") for selected navigation and the current place;
+  indigo stays for primary actions and links. "Copy and localization
+  readiness" uses the redesign terms (Student, Course, Lesson, Homework) in
+  user-facing text.
+
 ## Design authority and current direction
 
 Product behavior and language come from the approved domain and feature
@@ -49,7 +67,9 @@ Core roles are:
 - page and surface backgrounds;
 - primary and muted foreground text;
 - outline/divider;
-- primary action/active navigation;
+- primary action and links;
+- location (orange, "you are here"): selected navigation and the current
+  place (proposed 2026-11-28, see Changes);
 - accent/eyebrow;
 - success, warning, danger, and information, each with surface, border, text,
   and icon roles; and
@@ -57,10 +77,26 @@ Core roles are:
 
 Colour communicates emphasis but never carries meaning alone. The canonical
 dashboard page/entity title uses `dashboard-foreground` (near black). Brand
-indigo is for primary actions, selected navigation, links, and intentional hero
-surfaces—not an alternate page-title colour. Accent brown is for restrained
+indigo is for primary actions, links, and intentional hero surfaces. It is not
+an alternate page-title colour. Accent brown is for restrained
 eyebrows/highlights, not competing primary buttons. This resolves the current
 black-versus-blue header drift.
+
+The location role (proposed 2026-11-28, see Changes) is an orange token that
+means "you are here" and nothing else. It is used only for:
+
+- the active sidebar item's left bar;
+- the active tab's underline;
+- the current wizard step;
+- today on the calendar and on the dashboard's day strip; and
+- the active phone tab marker.
+
+These places come from `docs/design/redesign/01-app-shell.md` SH-15. Primary
+buttons stay indigo and are never orange. Lesson time colours (blue for
+scheduled, amber for starting soon, green for live) are never orange. The
+location token meets 3:1 contrast against its background when used as a bar,
+underline or outline, and 4.5:1 if it is ever used for text (01-app-shell.md
+SH-12).
 
 Use one spacing scale and let the dashboard shell own page gutters: 16px on
 narrow screens and 40px at desktop unless the shell standard changes. Pages do
@@ -191,9 +227,14 @@ not a later audit.
 
 ## Copy and localization readiness
 
-Use approved product terms: Independent Tutor, Tutoring Agency, Admin, Tutor,
-Learner, Class, Subject, Session, Quiz, Assignment, and share-link assignment.
-Copy is plain, specific, and action-led. Avoid internal schema/provider names,
+Use these product terms in user-facing text (proposed 2026-11-28, see
+Changes): Independent Tutor, tutoring agency, Admin, Tutor, Student, Course,
+Lesson, Homework, Quiz, and Lesson summary. Do not use learner, live class,
+class, session, assignment, report (for what a tutor writes after a lesson),
+observer, parent, guardian, diagnostic or waiting room in UI copy or emails
+(`docs/design/redesign/00-decisions.md` section 13a). "Tutoring account"
+appears only on the account switcher. Routes and database names keep their
+current names. Copy is plain, specific, and action-led. Avoid internal schema/provider names,
 technical jargon, unsupported claims, and decorative metrics.
 
 Do not assemble sentences from fragments that make grammar or future translation
