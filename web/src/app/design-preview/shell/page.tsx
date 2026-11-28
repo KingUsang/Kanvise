@@ -20,7 +20,8 @@ function one(value: string | string[] | undefined) {
  * Query: role=admin|tutor|independent, open=more|help|account-menu|switcher|
  * whats-new|feedback|sign-out-confirm|phone-menu, page=not-available|admin-only|
  * error|loading|saving|conflict, connection=offline|reconnecting, rail=1, path=/dashboard/..., long=1, badge=<n>|failed, read=1, pending=<n>,
- * search=empty|results|no-results|error|offline|loading (opens the search palette, SH-05).
+ * search=empty|results|no-results|error|offline|loading (opens the search palette, SH-05),
+ * toast=undo (shows a toast with Undo on load, to check it sits above the bottom bar).
  */
 export default async function ShellPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (process.env.NEXT_PUBLIC_ENABLE_DESIGN_PREVIEW !== '1') notFound()
@@ -38,6 +39,7 @@ export default async function ShellPreviewPage({ searchParams }: { searchParams:
     search: one(params.search),
     signedOut: one(params.open) === 'signed-out',
     connection: one(params.connection),
+    toast: one(params.toast) === 'undo' ? 'undo' : undefined,
   }
   return <ShellPreview options={options} />
 }

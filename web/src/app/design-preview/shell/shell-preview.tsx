@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { BookMarked } from 'lucide-react'
 import { getDashboardPageTitle, deniedReason, type DashboardCapabilities } from '@/config/dashboard-navigation'
 import { changelog, type ChangelogEntry } from '@/content/changelog'
@@ -31,6 +31,7 @@ export type PreviewOptions = {
   signedOut: boolean
   search?: string
   connection?: string
+  toast?: 'undo'
 }
 
 const overlays: ShellOverlay[] = ['more', 'help', 'account-menu', 'switcher', 'whats-new', 'feedback', 'sign-out-confirm', 'phone-menu']
@@ -196,6 +197,20 @@ export function ShellPreview({ options }: { options: PreviewOptions }) {
       </div>
     </>
   )
+
+  // ?toast=undo shows a toast with Undo, to check it sits above the bottom bar (R-10).
+  useEffect(() => {
+    if (!mounted || options.toast !== 'undo') return
+    // Wait a moment so the app's toaster has mounted and is listening.
+    let handle: { close: () => void } | undefined
+    const timer = setTimeout(() => {
+      handle = toast.undo({ text: 'Homework deleted.', onUndo: () => toast.info('Homework restored.') })
+    }, 300)
+    return () => {
+      clearTimeout(timer)
+      handle?.close()
+    }
+  }, [mounted, options.toast])
 
   if (!mounted) return null
 

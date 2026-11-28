@@ -29,7 +29,7 @@ export type RailState = { tablet: boolean; desktop: boolean }
  * classes apply only at the widths where the rail is showing.
  */
 function railClasses(variant: 'sidebar' | 'sheet', rail: RailState) {
-  if (variant === 'sheet') return { hideInRail: '', onlyInRail: 'hidden', srInRail: '', centreInRail: '', plainInRail: '', stackInRail: '' }
+  if (variant === 'sheet') return { hideInRail: '', onlyInRail: 'hidden', srInRail: '', centreInRail: '', plainInRail: '', stackInRail: '', padInRail: '' }
   const t = rail.tablet
   const d = rail.desktop
   return {
@@ -39,6 +39,8 @@ function railClasses(variant: 'sidebar' | 'sheet', rail: RailState) {
     centreInRail: cx(t && 'md:max-lg:justify-center md:max-lg:px-0', d && 'lg:justify-center lg:px-0'),
     plainInRail: cx(t && 'md:max-lg:border-transparent md:max-lg:bg-transparent', d && 'lg:border-transparent lg:bg-transparent'),
     stackInRail: cx(t && 'md:max-lg:flex-col', d && 'lg:flex-col'),
+    // Narrower side padding in the 64px rail, so the account card and search keep a 44px tap target (R-09).
+    padInRail: cx(t && 'md:max-lg:px-2', d && 'lg:px-2'),
   }
 }
 
@@ -221,7 +223,7 @@ export function SidebarContent({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className={cx('space-y-3', variant === 'sidebar' ? 'px-3 pb-2' : 'pb-2')}>
+      <div className={cx('space-y-3', variant === 'sidebar' ? cx('px-3 pb-2', r.padInRail) : 'pb-2')}>
         <AccountCard data={data} r={r} defaultOpen={initialOverlay === 'switcher'} onSwitch={onSwitchAccount} />
         {variant === 'sidebar'
           ? (typeof searchSlot === 'function' ? searchSlot({ srInRail: r.srInRail, hideInRail: r.hideInRail, centreInRail: r.centreInRail, tooltips }) : searchSlot)
@@ -268,7 +270,7 @@ export function SidebarContent({
           defaultOpen={initialOverlay === 'account-menu'}
           header={<PersonHeader name={data.person.name} email={data.person.email} />}
           items={accountMenuItems({ onSignOut, signingOut })}
-          triggerClassName={cx('flex min-h-12 w-full min-w-0 items-center gap-3 rounded-dashboard-control px-2 py-1.5 text-left hover:bg-dashboard-surface-hover', focusRing, r.centreInRail)}
+          triggerClassName={cx('flex min-h-12 w-full min-w-11 items-center gap-3 rounded-dashboard-control px-2 py-1.5 text-left hover:bg-dashboard-surface-hover', focusRing, r.centreInRail)}
           trigger={
             <>
               <Avatar name={data.person.name} src={data.person.photoUrl} size="md" />
@@ -322,7 +324,7 @@ export function DesktopSidebar({ collapsed, tabletExpanded, toggleExpanded, onTo
         )}
       >
         <div className={cx('flex h-14 shrink-0 items-center justify-between gap-2 px-4', r.centreInRail)}>
-          <Link href="/dashboard" className={cx('flex items-center gap-2 rounded-dashboard-control', focusRing, r.hideInRail)}>
+          <Link href="/dashboard" className={cx('flex min-h-11 items-center gap-2 rounded-dashboard-control', focusRing, r.hideInRail)}>
             {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark */}
             <img src="/kanvise_logo.jpeg" alt="" className="size-7 rounded-md object-cover" />
             <span className="text-lg font-bold tracking-tight text-dashboard-primary">Kanvise</span>

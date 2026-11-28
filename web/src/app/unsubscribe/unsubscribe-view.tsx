@@ -95,7 +95,7 @@ export function UnsubscribeView({ preview, previewLabel }: { preview?: Unsubscri
   return (
     <main className="flex min-h-dvh flex-col items-center bg-dashboard-page px-dashboard-gutter py-10 text-dashboard-foreground sm:justify-center sm:py-16">
       <div className="w-full max-w-[440px]">
-        <Link href="/" aria-label="Kanvise home" className="mx-auto mb-8 flex w-fit items-center justify-center rounded-dashboard-control">
+        <Link href="/" aria-label="Kanvise home" className="mx-auto mb-8 flex min-h-11 min-w-11 w-fit items-center justify-center rounded-dashboard-control">
           <Image src="/kanvise_logo_small_blue.png" alt="" width={44} height={40} className="h-10 w-auto" priority />
         </Link>
         <section
