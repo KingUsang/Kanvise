@@ -26,7 +26,11 @@ import { loginHref } from "@/lib/auth-continuation";
 import { authenticatedApiFetch, SESSION_ENDED_EVENT } from "@/lib/authenticated-fetch";
 import { useDashboardSession } from "@/lib/dashboard-session";
 import { fetchSearch } from "@/lib/search";
-import { getPendingUploadCount } from "@/lib/pending-uploads";
+import { discardPendingUploads, getPendingUploadCount } from "@/lib/pending-uploads";
+import { getSaveQueue } from "@/lib/offline/save-queue";
+import { useUploadingCount } from "@/lib/offline/use-autosave-field";
+import { useOnline } from "@/lib/offline/use-online";
+import { useOfflineBanner } from "@/components/ui/offline-banner";
 import { detachBrowserPushOnLogout } from "@/lib/push-notifications";
 import { rememberAccountSwitch, takeAccountSwitch } from "@/lib/shell-preferences";
 import { createClient } from "@/lib/supabase/client";
@@ -84,6 +88,13 @@ export function DashboardShell({
     const supabase = createClient();
     const { data } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === "SIGNED_OUT" && !signingOutRef.current) setSignedOut(true);
+      // Signed in again (for example in another tab): carry on and upload
+      // what was saved on this device meanwhile (SH-14b). Senders are
+      // registered by the autosaving fields; build step 1 has none yet.
+      if (event === "SIGNED_IN") {
+        setSignedOut(false);
+        void getSaveQueue().flush();
+      }
     });
     const onSessionEnded = () => {
       if (!signingOutRef.current) setSignedOut(true);
@@ -102,6 +113,17 @@ export function DashboardShell({
   }, []);
 
   const session = sessionQuery.data;
+  const online = useOnline();
+  const offlineBanner = useOfflineBanner(online, useUploadingCount());
+
+  // Changes on this device belong to one person in one account (SH-13).
+  const scopePersonId = session?.user.id;
+  const scopeAccountId = memberships.selected?.school_id;
+  React.useEffect(() => {
+    if (!scopePersonId || !scopeAccountId) return;
+    getSaveQueue().setScope({ personId: scopePersonId, accountId: scopeAccountId });
+  }, [scopePersonId, scopeAccountId]);
+
   const fallbackCapabilities: DashboardCapabilities = {
     isAdmin: user.role === "admin",
     isTutor: user.role === "tutor",
@@ -187,6 +209,7 @@ export function DashboardShell({
       if (!response.ok) throw new Error("Feedback was not sent");
     },
     getPendingUploadCount,
+    discardPendingUploads,
   };
 
   const allowed = canAccessDashboardPath(pathname, capabilities);
@@ -215,6 +238,7 @@ export function DashboardShell({
       onSignOutStart={() => { signingOutRef.current = true; }}
       searchSlot={searchReady ? (rail) => <SearchTrigger variant="sidebar" rail={rail} /> : undefined}
       phoneSearchSlot={searchReady ? <SearchTrigger variant="phone" /> : undefined}
+      offlineBanner={offlineBanner}
     >
       {content}
     </ShellFrame>

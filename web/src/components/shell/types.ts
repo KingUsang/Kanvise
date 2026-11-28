@@ -31,6 +31,8 @@ export type ShellActions = {
   signOut: () => Promise<void>
   sendFeedback: (message: string) => Promise<void>
   getPendingUploadCount: () => Promise<number>
+  /** Called after "Sign out anyway", before signing out: drops the waiting changes (SH-06). */
+  discardPendingUploads?: () => Promise<void>
 }
 
 export type ShellLinks = {

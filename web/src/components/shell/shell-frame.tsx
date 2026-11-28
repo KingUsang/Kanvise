@@ -6,6 +6,7 @@ import { toast as sonnerToast } from 'sonner'
 import { getDashboardPageTitle } from '@/config/dashboard-navigation'
 import { AlertDialog } from '@/components/ui/dialog'
 import { SkipLink } from '@/components/ui/live-region'
+import { OfflineBanner, type OfflineBannerMode } from '@/components/ui/offline-banner'
 import { Sheet } from '@/components/ui/sheet'
 import { markWhatsNewRead, setSidebarCollapsed, useSidebarCollapsed, useWhatsNewUnread } from '@/lib/shell-preferences'
 import { BottomBar, PhoneTopBar } from './phone-chrome'
@@ -89,6 +90,8 @@ export type ShellFrameProps = {
   initialOverlay?: ShellOverlay
   /** Design preview: start with the desktop rail. */
   initialCollapsed?: boolean
+  /** The offline or "Back online. Uploading n changes…" line (SH-13). */
+  offlineBanner?: { mode: OfflineBannerMode; count: number }
 }
 
 /**
@@ -109,6 +112,7 @@ export function ShellFrame({
   phoneSearchSlot,
   initialOverlay,
   initialCollapsed,
+  offlineBanner,
 }: ShellFrameProps) {
   const routerPathname = usePathname()
   const pathname = pathnameOverride ?? routerPathname ?? '/dashboard'
@@ -192,10 +196,12 @@ export function ShellFrame({
   const canSendFeedback = Boolean(shellData.account) && !shellData.capabilities.setupRequired
   const openFeedback = canSendFeedback ? () => setDialog('feedback') : undefined
 
-  const signOutNow = async () => {
+  const signOutNow = async ({ discard = false } = {}) => {
     setSigningOut(true)
     onSignOutStart?.()
     try {
+      // The person confirmed that the waiting changes may be lost (SH-06).
+      if (discard) await actions.discardPendingUploads?.()
       await actions.signOut()
     } catch {
       setSigningOut(false)
@@ -262,6 +268,12 @@ export function ShellFrame({
             searchSlot={phoneSearchSlot}
             defaultMenuOpen={initialOverlay === 'phone-menu'}
           />
+          {/* Under the top bar on phones, at the top of the content from 768px; never at the bottom (SH-13, R-10). */}
+          <OfflineBanner
+            mode={offlineBanner?.mode ?? null}
+            count={offlineBanner?.count ?? 0}
+            className="sticky top-dashboard-topbar z-20 md:top-0"
+          />
           <main
             id="main-content"
             tabIndex={-1}
@@ -290,7 +302,7 @@ export function ShellFrame({
           confirmLabel="Sign out anyway"
           pending={signingOut}
           onCancel={() => setConfirmSignOut(false)}
-          onConfirm={() => void signOutNow()}
+          onConfirm={() => void signOutNow({ discard: true })}
         />
         <SignedOutDialog open={signedOut} signInHref={signInHref} />
       </div>

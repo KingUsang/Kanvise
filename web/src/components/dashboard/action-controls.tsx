@@ -86,7 +86,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   )
   if (!hasReason) return button
   return (
-    <span className={`inline-flex max-w-full flex-col gap-1 ${fullWidthMobile ? 'w-full sm:w-auto' : ''}`.trim()}>
+    <span className={`inline-flex max-w-full flex-col items-start gap-1 ${fullWidthMobile ? 'w-full sm:w-auto' : ''}`.trim()}>
       {button}
       <span id={reasonId} className="text-dashboard-secondary text-dashboard-muted">{disabledReason}</span>
     </span>

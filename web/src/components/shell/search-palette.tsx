@@ -34,6 +34,7 @@ import {
   type SearchFunction,
   type SearchGroup,
 } from '@/lib/search'
+import { useOnline } from '@/lib/offline/use-online'
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
@@ -67,17 +68,8 @@ function useShortcutHint() {
   )
 }
 
-function subscribeOnline(listener: () => void) {
-  window.addEventListener('online', listener)
-  window.addEventListener('offline', listener)
-  return () => {
-    window.removeEventListener('online', listener)
-    window.removeEventListener('offline', listener)
-  }
-}
-
-function useOnline(forcedOffline: boolean) {
-  const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true)
+function useOnlineOrPreview(forcedOffline: boolean) {
+  const online = useOnline()
   return forcedOffline ? false : online
 }
 
@@ -269,7 +261,7 @@ export function SearchPalette({
   const [searchedFor, setSearchedFor] = useState('')
   const [active, setActive] = useState(0)
   const [attempt, setAttempt] = useState(0)
-  const online = useOnline(previewOffline(previewState))
+  const online = useOnlineOrPreview(previewOffline(previewState))
   const requestRef = useRef(0)
   const searchRef = useRef(search)
   useEffect(() => { searchRef.current = search }, [search])

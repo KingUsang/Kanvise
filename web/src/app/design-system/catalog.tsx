@@ -28,6 +28,12 @@ import { Field, fieldControlClassName } from '@/components/ui/field'
 import { EmptyState, ErrorState, StaleDataNotice } from '@/components/dashboard/async-states'
 import { parsePageParam } from '@/lib/use-url-state'
 import { toast } from '@/lib/toast'
+import { SaveStatus } from '@/components/ui/save-status'
+import { ConflictBanner } from '@/components/ui/conflict-banner'
+import { OfflineBanner, useOfflineBanner } from '@/components/ui/offline-banner'
+import { OnlineOnlyButton } from '@/components/ui/online-only-button'
+import { useUploadingCount } from '@/lib/offline/use-autosave-field'
+import { AutosaveDemo, getDemoQueue, useDemoOnline } from './autosave-demo'
 
 const sections = [
   ['tokens', 'Tokens'],
@@ -41,6 +47,7 @@ const sections = [
   ['states', 'Loading, empty, error'],
   ['lists', 'Lists and pagination'],
   ['toasts', 'Toasts'],
+  ['saving', 'Saving and offline'],
 ] as const
 
 const tokenSwatches: { name: string; className: string }[] = [
@@ -87,6 +94,59 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
       <p className="text-dashboard-eyebrow font-bold uppercase text-dashboard-muted">{label}</p>
       <div className="flex flex-wrap items-start gap-3">{children}</div>
     </div>
+  )
+}
+
+const sampleSavedAt = new Date(2026, 10, 28, 16, 12)
+
+function SavingSection() {
+  const online = useDemoOnline()
+  const banner = useOfflineBanner(online, useUploadingCount(getDemoQueue()))
+  return (
+    <Section id="saving" title="Saving and offline">
+      <Row label="Saving states (SH-13); focus or tap Saved for the time">
+        <div className="flex flex-col gap-1">
+          <SaveStatus state="saving" />
+          <SaveStatus state="saved" savedAt={sampleSavedAt} />
+          <SaveStatus state="saved-on-device" />
+          <SaveStatus state="couldnt-save" onRetry={() => toast.info('Trying again.')} />
+        </div>
+      </Row>
+      <Row label="Offline banner (under the top bar on phones)">
+        <div className="w-full overflow-hidden rounded-dashboard-panel border border-dashboard-outline">
+          <OfflineBanner mode="offline" count={0} />
+        </div>
+        <div className="w-full overflow-hidden rounded-dashboard-panel border border-dashboard-outline">
+          <OfflineBanner mode="reconnecting" count={2} />
+        </div>
+        <div className="w-full overflow-hidden rounded-dashboard-panel border border-dashboard-outline">
+          <OfflineBanner mode="reconnecting" count={1} />
+        </div>
+      </Row>
+      <Row label="Changed while offline">
+        <ConflictBanner
+          className="w-full"
+          mine="Warm-up: times tables. Then fractions of amounts, with three worked examples before the practice questions."
+          theirs="Start with a fractions quiz, then go over homework."
+          onKeepMine={() => toast.info('Keeping your version.')}
+          onUseNewer={() => toast.info('Using the newer version.')}
+        />
+      </Row>
+      <Row label="Actions that need the server, offline">
+        <OnlineOnlyButton offlineReason="You're offline. You can send this homework when you're back online.">Send</OnlineOnlyButton>
+        <Button disabledReason="You're offline. You can complete this summary when you're back online.">Complete</Button>
+      </Row>
+      <Row label="Try it: a field that saves by itself">
+        <div className="w-full space-y-3">
+          <OfflineBanner
+            mode={banner.mode}
+            count={banner.count}
+            className={banner.mode ? 'overflow-hidden rounded-dashboard-panel border border-dashboard-outline' : ''}
+          />
+          <AutosaveDemo />
+        </div>
+      </Row>
+    </Section>
   )
 }
 
@@ -364,6 +424,7 @@ export function DesignSystemCatalog() {
           </Row>
           <p className="text-dashboard-small text-dashboard-muted" aria-hidden="true">Last event: {announcement || 'none'}</p>
         </Section>
+        <SavingSection />
         <LiveRegion message={announcement} />
       </main>
 

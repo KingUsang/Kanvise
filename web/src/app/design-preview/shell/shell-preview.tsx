@@ -14,6 +14,9 @@ import type { ShellData, ShellOverlay } from '@/components/shell/types'
 import { markWhatsNewRead } from '@/lib/shell-preferences'
 import { toast } from '@/lib/toast'
 import type { SearchFunction, SearchGroup } from '@/lib/search'
+import { useOfflineBanner } from '@/components/ui/offline-banner'
+import { useUploadingCount } from '@/lib/offline/use-autosave-field'
+import { AutosaveDemo, getDemoQueue, useDemoOnline } from '@/app/design-system/autosave-demo'
 
 export type PreviewOptions = {
   role: 'admin' | 'tutor' | 'independent'
@@ -27,6 +30,7 @@ export type PreviewOptions = {
   pending: number
   signedOut: boolean
   search?: string
+  connection?: string
 }
 
 const overlays: ShellOverlay[] = ['more', 'help', 'account-menu', 'switcher', 'whats-new', 'feedback', 'sign-out-confirm', 'phone-menu']
@@ -151,12 +155,30 @@ export function ShellPreview({ options }: { options: PreviewOptions }) {
     return true
   })
 
+  // ?connection=offline|reconnecting fixes the banner; otherwise it follows
+  // the real connection and the saving demo (?page=saving).
+  const online = useDemoOnline()
+  const liveBanner = useOfflineBanner(online, useUploadingCount(getDemoQueue()))
+  const offlineBanner = options.connection === 'offline'
+    ? { mode: 'offline' as const, count: 0 }
+    : options.connection === 'reconnecting'
+      ? { mode: 'reconnecting' as const, count: options.pending || 2 }
+      : liveBanner
+
   const title = getDashboardPageTitle(path)
   let content
   if (options.page === 'not-available') content = <NotAvailable independent={options.role === 'independent'} />
   else if (options.page === 'admin-only') content = <NotAvailable reason={deniedReason(path, data.capabilities)} independent={options.role === 'independent'} />
   else if (options.page === 'error') content = <ErrorState size="card" onRetry={() => toast.info('Trying again.')} />
   else if (loading) content = <PageLoadingState label="Loading this page" />
+  else if (options.page === 'saving' || options.page === 'conflict') content = (
+    <>
+      <PageHeader title="Lesson plan" description="A preview of a field that saves by itself (SH-13). The real editors arrive in later build steps." />
+      <div className="mt-8">
+        <AutosaveDemo initialConflict={options.page === 'conflict'} />
+      </div>
+    </>
+  )
   else content = (
     <>
       <PageHeader
@@ -199,6 +221,7 @@ export function ShellPreview({ options }: { options: PreviewOptions }) {
       initialOverlay={open}
       initialCollapsed={options.rail}
       signedOut={options.signedOut}
+      offlineBanner={offlineBanner}
       links={{
         helpUrl: 'https://help.example.com',
         changelogUrl: 'https://example.com/changelog',

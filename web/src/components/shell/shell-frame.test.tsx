@@ -206,6 +206,47 @@ describe('ShellFrame', () => {
     expect(shellActions.signOut).not.toHaveBeenCalled()
   })
 
+  it('drops the waiting changes only after Sign out anyway', async () => {
+    const order: string[] = []
+    const shellActions = actions({
+      getPendingUploadCount: vi.fn(async () => 1),
+      discardPendingUploads: vi.fn(async () => { order.push('discard') }),
+      signOut: vi.fn(async () => { order.push('sign-out') }),
+    })
+    renderShell({ shellActions })
+    fireEvent.click(sidebar().getByRole('button', { name: /Chidi Okafor/ }))
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' })) })
+    expect(shellActions.discardPendingUploads).not.toHaveBeenCalled()
+    await act(async () => { fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Sign out anyway' })) })
+    expect(order).toEqual(['discard', 'sign-out'])
+  })
+
+  it('does not drop anything when nothing is waiting', async () => {
+    const shellActions = actions({ discardPendingUploads: vi.fn(async () => undefined) })
+    renderShell({ shellActions })
+    fireEvent.click(sidebar().getByRole('button', { name: /Chidi Okafor/ }))
+    await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' })) })
+    expect(shellActions.signOut).toHaveBeenCalled()
+    expect(shellActions.discardPendingUploads).not.toHaveBeenCalled()
+  })
+
+  it('shows the offline banner above the page content, not at the bottom', () => {
+    const { rerender } = render(
+      <ShellFrame shellData={adminData()} actions={actions()} links={{ changelog: entries }} pathname="/dashboard" offlineBanner={{ mode: 'offline', count: 0 }}>
+        <h1>Page</h1>
+      </ShellFrame>,
+    )
+    const banner = screen.getByText("You're offline. Changes are saved on this device and will upload when you're back.")
+    const main = screen.getByRole('main')
+    expect(banner.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    rerender(
+      <ShellFrame shellData={adminData()} actions={actions()} links={{ changelog: entries }} pathname="/dashboard" offlineBanner={{ mode: 'reconnecting', count: 1 }}>
+        <h1>Page</h1>
+      </ShellFrame>,
+    )
+    expect(screen.getByText('Back online. Uploading 1 change…')).toBeInTheDocument()
+  })
+
   it('switches account from the account card', async () => {
     const shellActions = actions()
     renderShell({ shellActions })
