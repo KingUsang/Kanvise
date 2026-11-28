@@ -330,8 +330,8 @@ Billing is a proposal only, built after the payments hold (spec 13).
   attending. This settles DEV-ACC-004. Spec 07 has the details.
 - **Lead** is always the preselected way in. When the tutor is already in the
   lesson, the admin can choose **Watch** instead (camera and microphone off,
-  visible to everyone; 07 CR-09). Watch is a Kanvise addition for owner
-  confirmation (HANDOFF).
+  visible to everyone; 07 CR-09). Watch is a Kanvise addition, confirmed by
+  the owner.
 
 ## 14c. Permissions
 
@@ -347,6 +347,8 @@ Billing is a proposal only, built after the payments hold (spec 13).
 
 - Copy Bobbin's consent checkbox on the student: **Recording consent already
   given**, with a line explaining it.
+- The checkbox starts unticked (06 STU-03), unlike Bobbin's, because ticking it
+  is the tutor saying consent was given. Confirmed by the owner.
 - A lesson is recorded only when every student in it has consent recorded.
   Otherwise it runs without a recording, and Kavi can only draft the summary
   from the tutor's notes.
@@ -475,8 +477,14 @@ the matching build ticket starts.
 - No self-confidence rating. A student's goal is free text.
 - Reminders go to tutors, read as in 18 NTF-02 (tutors get reminders of
   their own lessons; students get the reminders set in 12 CFG-L; chasing
-  reminders go out only when a tutor presses Remind). This reading is listed
-  for owner confirmation in HANDOFF; spec 18 lists each notification.
+  reminders go out only when a tutor presses Remind). The owner confirmed this
+  reading; spec 18 lists each notification.
+- Personal join links can be sent by Copy, WhatsApp or Email (05 LP-05).
+- Kavi's default writing style is Structured (12 CFG-K).
+- Admins joining a lesson they don't teach have Lead preselected; Watch is
+  offered only when the tutor is already in the lesson (section 14b, 07 CR-09).
+- The Gemini API terms on users under 18 are not a launch blocker; the owner
+  accepted them for launch (20 DM-26).
 
 ## Open items
 

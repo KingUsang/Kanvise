@@ -128,8 +128,8 @@ is the starting value of a switch. **Setting** names where the switch is.
 
 ## NTF-02 · Who gets lesson reminders
 
-The owner's default "reminders go to tutors" is read like this. It needs the
-owner's confirmation in review.
+The owner's default "reminders go to tutors" is read like this. The owner
+confirmed this reading (00 section 19).
 
 1. **Every lesson reminds its tutor.** The tutor of a lesson (including an
    admin with **I teach too** who is the tutor) gets a push and email 30

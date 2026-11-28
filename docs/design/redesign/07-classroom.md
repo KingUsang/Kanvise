@@ -344,8 +344,8 @@ under it:
   - **Watch** · "Camera and microphone off. Everyone in the lesson sees that
     you're watching." Offered only when the tutor is already in the lesson,
     with the line **Michael is teaching. Choose Watch to sit in without
-    taking over.** Watch is a Kanvise addition for owner confirmation
-    (HANDOFF).
+    taking over.** Watch is a Kanvise addition, confirmed by the owner (00
+    section 19).
 - **Cancel** · **Join as admin**.
 
 | | Lead | Watch |

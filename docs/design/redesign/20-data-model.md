@@ -624,13 +624,10 @@ be checked against the signed agreements first.
 | **Deepgram** (`nova-3`, pre-recorded) | The audio of consented recordings of 5 minutes or more | With `mip_opt_out=true` on the request, Deepgram's Model Improvement Program page says data "is retained only for the duration necessary to process the request". Without it, Deepgram may keep samples for model training, so the flag is required on every call. Whether opting out changes the price: **confirm before launch**. Request logs (time, length, model, no audio): **confirm before launch** | Nothing left to delete if the flag was set. Kanvise deletes its own transcript (DM-25) |
 | **Google Gemini API** (paid Cloud project) | Transcript text, Notes for Kavi, course plan topics and objectives, lesson summaries, topic statuses and results, typed answers and images of handed-in work (only when the tutor asks for feedback) | Paid tier: Google says it doesn't use prompts or responses to improve its products, and keeps prompts, context and outputs for 55 days only to detect abuse and for legal requests (Gemini API terms and abuse monitoring page). The free tier uses data for training and human review, so Kanvise never uses it. Kanvise sends inline content only (no Files API, no context caching), so nothing else is stored | Kanvise can't delete Google's 55-day abuse logs early; they expire. The privacy policy says so. Whether Google offers zero retention for this use: **confirm before launch** |
 
-**Launch blocker to clear:** the Gemini API additional terms say the service
-must not be used in an app "directed towards or likely to be accessed by
-individuals under the age of 18". Kanvise students include children and teens
-(02 ONB-03). Students never call Kavi, but Google may still count Kanvise as
-such an app. Confirm with Google before launch, or move the writing provider
-to Vertex AI or another provider under terms that allow it. DM-21 makes that
-a configuration change.
+**Writing provider:** students never call Kavi. The owner has accepted the
+Gemini API terms for launch, including the line on users under 18 (00 section
+19), so this is not a launch blocker. DM-21 makes moving the writing provider
+(for example to Vertex AI) a configuration change.
 
 ## DM-27 · Cost and quality controls
 

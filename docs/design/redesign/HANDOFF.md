@@ -32,10 +32,10 @@ For continuing this work in a new chat. Read this first, then `00-decisions.md`.
 - What was decided is in `00-decisions.md`. Section 18 there lists the
   standards and decision-ledger changes the specs need before build.
 
-## Owner confirmations needed
+## Owner decisions
 
-These are decided in the specs so building can start, but the owner should
-confirm each one:
+Confirmed by the owner (recorded in `00-decisions.md` sections 14b, 14d and
+19):
 
 1. **Recording consent starts unticked** when adding a student (06 STU-03).
    Bobbin starts it ticked. Kanvise unticks it because ticking it is the tutor
@@ -45,29 +45,29 @@ confirm each one:
    are only sent when a tutor presses Remind (18 NTF-02).
 3. **Kavi's default writing style is Structured** (12 CFG-K). Bobbin defaults
    to Detailed; Structured reads better on phones.
-4. **Students see Taught, Knows it and Next**; Needs work is shown to tutors
-   only (04 Topic status model, 09 SA-08).
-5. **Quizzes in v1** are multiple choice, one attempt, no time limit (11).
-6. **Private notes are never sent to Kavi in v1**, even for tutor-only
-   answers (00 sections 16 and 17, 20 DM-25).
-7. **Admins choose Lead or Watch** when joining a lesson they don't teach (07
+4. **Admins choose Lead or Watch** when joining a lesson they don't teach (07
    CR-09). Lead is always preselected, as the owner said an admin has
    moderator rights. Watch (camera and microphone off, no moderator rights,
    always visible to everyone) is a Kanvise addition, offered only when the
    tutor is already in the lesson.
-8. **Use my lesson notes** (08 SM-01) lets the tutor copy their private
+5. **Personal join links** can be sent by Copy, WhatsApp or Email (05 LP-05).
+6. **Gemini API terms and under-18s** are not a launch blocker (20 DM-26).
+
+Decided in the specs so building can start, still for the owner to confirm:
+
+1. **Students see Taught, Knows it and Next**; Needs work is shown to tutors
+   only (04 Topic status model, 09 SA-08).
+2. **Quizzes in v1** are multiple choice, one attempt, no time limit (11).
+3. **Private notes are never sent to Kavi in v1**, even for tutor-only
+   answers (00 sections 16 and 17, 20 DM-25).
+4. **Use my lesson notes** (08 SM-01) lets the tutor copy their private
    classroom notes into **Notes for Kavi** with one tap, to edit before
    drafting. A line under the button warns that Kavi writes What went well and
    What to work on from that box, which students see. The alternative is to
    drop the button and have tutors type Notes for Kavi from scratch.
 
-## Launch blockers and checks
+## Launch checks
 
-- **Gemini API terms and under-18s (blocker).** Google's Gemini API additional
-  terms say the service must not be used in an app likely to be accessed by
-  people under 18. Kanvise has child and teen students. Confirm with Google,
-  or move Kavi's writing provider to Vertex AI or another provider whose
-  terms allow it (20 DM-26; DM-21 makes this a configuration change).
 - **Confirm before launch** (20 DM-26, DM-27): whether Deepgram's training
   opt-out changes the price; what Deepgram keeps in request logs; whether
   Google offers zero retention for this use; the provider prices behind the
