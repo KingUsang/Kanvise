@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   writes: [] as Array<{ table: string; op: string; payload: any }>,
   user: { id: 'person-1', school_id: 'legacy', role: 'admin' } as any,
   account: { id: 'account-1', membershipId: 'm-1', role: 'admin' } as any,
+  failUpdate: false,
 }))
 
 vi.mock('../lib/supabase', () => ({
@@ -15,10 +16,11 @@ vi.mock('../lib/supabase', () => ({
       for (const op of ['upsert', 'update']) {
         builder[op] = vi.fn((payload: any) => {
           mocks.writes.push({ table, op, payload })
+          if (op === 'update') builder.isUpdate = true
           return builder
         })
       }
-      const result = () => mocks.tables[table] ?? { data: null, error: null, count: 0 }
+      const result = () => (builder.isUpdate && mocks.failUpdate ? { data: null, error: { code: 'XX000' } } : mocks.tables[table]) ?? { data: null, error: null, count: 0 }
       builder.maybeSingle = async () => result()
       builder.then = (resolve: (value: any) => void) => Promise.resolve(result()).then(resolve)
       return builder
@@ -49,6 +51,7 @@ function setup(opts: { role?: 'admin' | 'tutor'; owner?: boolean; accountType?: 
   mocks.user = { id: 'person-1', school_id: 'legacy', role }
   mocks.account = { id: 'account-1', membershipId: 'm-1', role }
   mocks.writes.length = 0
+  mocks.failUpdate = false
   mocks.tables = {
     account_memberships: { data: { person_id: opts.owner === false ? 'person-0' : 'person-1' }, error: null, count: 2 },
     account_onboarding_answers: { data: opts.saved ?? null, error: null },
@@ -98,6 +101,15 @@ describe('onboarding routes', () => {
     expect(mocks.writes.find((w) => w.table === 'schools')?.payload).toEqual({ name: 'Science Students Academy' })
   })
 
+  it('reports name_saved false when the agency rename fails', async () => {
+    setup({ accountType: 'centre' })
+    mocks.failUpdate = true
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await onboardingRouter.request('/', json({ teaching_mode: 'team', audience: 'both', class_format: 'both', has_students: true, agency_name: 'Science Students Academy' }))
+    expect(res.status).toBe(200)
+    expect((await res.json()).data).toMatchObject({ saved: true, name_saved: false })
+  })
+
   it('requires an agency name for a team (ONB-07)', async () => {
     const res = await onboardingRouter.request('/', json({ teaching_mode: 'team' }))
     expect(res.status).toBe(400)
@@ -107,7 +119,7 @@ describe('onboarding routes', () => {
 
   it('applies defaults on skip (ONB-09) and flags them', async () => {
     const res = await onboardingRouter.request('/', json({ use_defaults: true }))
-    expect((await res.json()).data).toEqual({ saved: true, used_defaults: true })
+    expect((await res.json()).data).toEqual({ saved: true, name_saved: true, used_defaults: true })
     expect(mocks.writes[0].payload).toMatchObject({ teaching_mode: 'solo', audience: 'both', class_format: 'both', subjects: [], has_students: false })
   })
 

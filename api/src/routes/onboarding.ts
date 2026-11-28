@@ -108,15 +108,19 @@ onboardingRouter.put('/', async (c) => {
 
   // ONB-07: a team's name is what tutors and students see. An independent
   // account keeps the name it was created with.
+  let nameSaved = true
   if (resolved.teaching_mode === 'team' && body.agency_name && !body.use_defaults) {
     const type = await loadAccountType(account.id)
     if (!type.error && type.accountType === 'centre') {
       const { error: nameError } = await db.from('schools').update({ name: body.agency_name }).eq('id', account.id)
-      if (nameError) console.error('[onboarding] Agency name update failed', { code: nameError.code })
+      if (nameError) {
+        console.error('[onboarding] Agency name update failed', { code: nameError.code })
+        nameSaved = false
+      }
     }
   }
 
-  return c.json({ data: { saved: true, used_defaults: resolved.used_defaults } })
+  return c.json({ data: { saved: true, name_saved: nameSaved, used_defaults: resolved.used_defaults } })
 })
 
 async function countRows(table: string, schoolId: string, filter?: (query: any) => any) {

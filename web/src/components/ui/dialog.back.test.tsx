@@ -47,6 +47,32 @@ describe('phone Back gesture on sheets', () => {
     expect(lower).toHaveBeenCalledTimes(1)
   })
 
+  it('does not pop history when the sheet closes because a link was followed', () => {
+    const { back } = spyHistory()
+    const { unmount } = render(<Sheet open onClose={vi.fn()} title="More"><button>a</button></Sheet>)
+    // A nav link tapped inside the sheet pushes the new page on top of the sheet's entry.
+    window.history.pushState({}, '', '/elsewhere')
+    unmount()
+    expect(back).not.toHaveBeenCalled()
+    window.history.replaceState({}, '', '/')
+  })
+
+  it('does not let a pop that never arrives swallow the next real Back', () => {
+    vi.useFakeTimers()
+    try {
+      spyHistory()
+      const lower = vi.fn()
+      render(<Sheet open onClose={lower} title="Lower"><button>a</button></Sheet>)
+      const { unmount } = render(<Sheet open onClose={vi.fn()} title="Upper"><button>b</button></Sheet>)
+      unmount() // asks for a pop; the mocked history.back never delivers one
+      act(() => { vi.advanceTimersByTime(1500) })
+      pressBack()
+      expect(lower).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('closes only the top-most sheet per Back', () => {
     spyHistory()
     const lower = vi.fn()

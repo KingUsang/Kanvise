@@ -53,6 +53,8 @@ export async function saveOnboarding(payload: Record<string, unknown>): Promise<
   })
   const body = await readJson(response)
   if (!response.ok) throw new Error(typeof body?.error === 'string' ? body.error : 'Could not save your answers')
+  // The answers are saved but the agency rename failed. Throwing lets the owner retry; saving again is safe.
+  if (body?.data?.name_saved === false) throw new Error("We couldn't save your agency name. Try again.")
   return { usedDefaults: body?.data?.used_defaults === true }
 }
 

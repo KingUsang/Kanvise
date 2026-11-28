@@ -73,14 +73,16 @@ export function isTopDialog(token: symbol) {
  * that pop is ignored. The current history state is copied so the Next.js
  * router still recognises the entry.
  */
-type BackEntry = { token: symbol; close: () => boolean | void; pushed: boolean };
+type BackEntry = { token: symbol; close: () => boolean | void; pushed: boolean; href: string };
 const backStack: BackEntry[] = [];
-let ignoredPops = 0;
+/** Pops this module asked for. Each expires after a short wait so a pop that never arrives cannot swallow a real Back. */
+let ignoredPops: symbol[] = [];
+const IGNORED_POP_TTL_MS = 1000;
 let backListening = false;
 
 function onPopState() {
-  if (ignoredPops > 0) {
-    ignoredPops -= 1;
+  if (ignoredPops.length > 0) {
+    ignoredPops.shift();
     return;
   }
   const top = backStack[backStack.length - 1];
@@ -94,7 +96,7 @@ function onPopState() {
 /** Test helper: forget pops that a mocked history.back() never delivered. */
 export function resetBackHandlingForTests() {
   backStack.length = 0;
-  ignoredPops = 0;
+  ignoredPops = [];
 }
 
 function pushBackEntry(entry: BackEntry) {
@@ -103,7 +105,7 @@ function pushBackEntry(entry: BackEntry) {
 }
 
 function registerBack(token: symbol, close: () => boolean | void): () => void {
-  const entry: BackEntry = { token, close, pushed: false };
+  const entry: BackEntry = { token, close, pushed: false, href: window.location.href };
   backStack.push(entry);
   if (!backListening) {
     window.addEventListener("popstate", onPopState);
@@ -115,8 +117,17 @@ function registerBack(token: symbol, close: () => boolean | void): () => void {
     if (index >= 0) backStack.splice(index, 1);
     if (entry.pushed) {
       entry.pushed = false;
-      ignoredPops += 1;
-      window.history.back();
+      // Closed because a link was followed: the entry is behind the new page, so popping would undo the navigation.
+      // Also skip when the current entry is not ours, since back() would then leave the page.
+      const stillOnOwnEntry = window.location.href === entry.href && Boolean((window.history.state as { kanviseSheet?: boolean } | null)?.kanviseSheet);
+      if (stillOnOwnEntry) {
+        const mark = Symbol("ignored-pop");
+        ignoredPops.push(mark);
+        setTimeout(() => {
+          ignoredPops = ignoredPops.filter((m) => m !== mark);
+        }, IGNORED_POP_TTL_MS);
+        window.history.back();
+      }
     }
     if (backStack.length === 0 && backListening) {
       window.removeEventListener("popstate", onPopState);

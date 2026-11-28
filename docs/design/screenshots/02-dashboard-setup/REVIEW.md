@@ -78,3 +78,17 @@ Checked every user-facing string in `components/dashboard/home`, `components/das
 
 1. **This week list.** The owner prefers Bobbin's way for the calendar part of the dashboard. Bobbin's This week shows the selected day's lessons under the strip, with an "All lessons" link; Kanvise lists the whole week. Not changed in this step; to be picked up by the planner with the right step.
 2. **Course plan row.** It can only be skipped, never done, until step 4 adds the topic read, so a new account cannot reach "You're all set." without skipping it. Fine for now, since the row is hidden until step 4.
+
+## Known differences from the design
+
+These are not logged in `docs/deviations.md`, which is for closing bugs and inconsistencies. No register rows were closed in this step.
+
+- **Tutor admin-page block (SH-14a).** Middleware no longer redirects a Tutor who opens an admin-only URL. The client shell hides admin destinations and redirects, and the API refuses the data through role checks. A Tutor can briefly request an admin route's client bundle. Move the check to a server layout if admin pages ever render data on the server.
+- **Dashboard frame (DB-01, DB-03, DB-04).** Needs attention, Suggestions, Live now, Join, Write summary, Schedule lesson and the Sample course banner are not rendered until the step that owns their target ships. Lesson rows and All lessons are not links until the lesson page ships in step 4.
+- **Overview endpoint.** "Classroom opens" is a fixed 15 minutes until CFG-L stores the setting. Student counts cost one lookup per distinct course in view, so a week with many courses runs several lookups. Batch them if the week view gets slow. Course swatch colours derive from the course id.
+- **Setup checklist (SET-01).** `SETUP_SHIPPED_STEP` is 2, so no row shows, the Setup item and sidebar card stay hidden, and `/dashboard/setup` redirects to `/dashboard`. Raise it as steps 3, 4 and 5 ship, and add the stored facts for the course plan topic and device check in steps 4 and 5.
+- **Account type (ONB-02).** The account type is set at tutoring agency setup. A team answer on an independent account is stored only, and an agency name renames only an agency account.
+- **Account owner (ONB-10).** `account_onboarding_answers` has one row per account. Only the earliest active admin answers and sees the checklist. Accounts with no row get no checklist. A removed owner hands the checklist to the next admin.
+- **Typing (ONB-02 to ONB-06).** Kavi's reply to an answer shows with the next question. Only questions and the greeting are typed.
+- **Omitted content (ONB-05, SET-03).** The defaults banner leaves out the Teaching preferences link (CFG-T, step 3). SET-03 omits the first lesson time. The help card shows only when `NEXT_PUBLIC_HELP_URL` is set. Explore the sample course is not built.
+
