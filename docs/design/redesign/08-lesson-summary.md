@@ -219,8 +219,10 @@ the toast has **Undo**.
 - The dashboard's **summaries to write** count drops by one.
 
 **Editing after completing:** allowed. The summary shows **Edited 27 Nov, 6:10
-PM**, and the student sees the latest version. Newly ticked topics or changed
-choices create new CRS-08 rows; nothing changes the plan without them.
+PM**, and the student sees the latest version, with a Bell notice **Alex
+updated the summary of Monday's lesson.** (at most once a day, 18 NTF-01).
+Newly ticked topics or changed choices create new CRS-08 rows; nothing
+changes the plan without them.
 
 **Reminder:** if a lesson is still **Awaiting summary** 24 hours after it ended,
 the tutor gets one push and email: **Casey's lesson summary from yesterday is
@@ -293,6 +295,8 @@ a lesson covered by another summary.
 | Read the summary | Yes | Yes | Yes | Their own, in the app |
 
 ## Data needed (for the build)
+
+Tables are in `20-data-model.md`: lesson summaries DM-10, topic status proposals DM-05, recordings DM-09.
 
 - Summary per lesson per student: sections, ticked topics with Got it / Needs
   more work, which ticks came from the lesson, Kavi's picks and whether each

@@ -134,8 +134,8 @@ Title **People** · subtitle **Add students and tutors to the course.**
   a quiet line: **This will be a group course.**
 - **Tutors** (agency admins only): checkbox rows of the agency's tutors with
   **1 of 3 selected**, at least one required, and **+ Add a tutor** (opens the
-  invite dialog in `19-tutors-and-team.md`). An admin is listed here only if
-  they have turned on **I teach too** (12 settings and `19-tutors-and-team.md`);
+  Add tutor dialog, 19 TM-03). An admin is listed here only if
+  they have turned on **I teach too** (12 CFG-P, 19 TM-10);
   otherwise an admin leads a lesson through **Join as an admin?** (07 CR-09).
   Independent tutors don't see this section; they are the tutor.
 
@@ -687,6 +687,8 @@ the notification (`18-notifications.md`).
 | Send a starting check, see results | Yes | Yes | Their own courses |
 
 ## Data needed (for the build)
+
+Tables are in `20-data-model.md`: courses DM-03, course plan DM-04, topic status DM-05, starting check DM-11.
 
 - Course: name, subject, description, colour, trial flag, status (Active,
   Archived), tutors, students (maps onto today's programme and subject tables at

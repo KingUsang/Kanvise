@@ -21,7 +21,7 @@ the first redesign pass.
 | `/dashboard/teaching` ("Plan and follow up") | Teaching hub: materials, follow-ups | Merge into Dashboard (Needs attention) and the lesson page | 03, 05 |
 | `/dashboard/attendance` | Attendance reports | Merge into the lesson page (Session tab) and the student page (Attendance tab) | 05, 06 |
 | `/dashboard/students` | Roster, import CSV, export, enrolments | Keep as Students | 06 Students |
-| `/dashboard/tutors` | Tutors, invitations, subject assignments | Keep as Tutors (agencies) | 12 Settings / team |
+| `/dashboard/tutors` | Tutors, invitations, subject assignments | Keep as Tutors and Team (agencies) | 19 Tutors and team |
 | `/dashboard/assignments`, `/assignments/[id]/submissions` | Assignments and marking | Keep as Homework | 10 Homework |
 | `/dashboard/direct-assignments`, `/direct-assignment/[token]` | Share-link assignments for guests | Retire (owner decision: no guest flows) | 10 |
 | `/dashboard/mocks`, `/mocks/builder`, `/mocks/[id]/results` | Quizzes, builder, results | Keep as Quizzes, rebuilt with Generate with Kavi | 11 Quizzes |

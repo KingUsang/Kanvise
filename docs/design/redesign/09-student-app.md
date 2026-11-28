@@ -214,7 +214,7 @@ and **Download**. Empty: **Alex hasn't shared any files yet.**
 ## SA-09 · Notifications
 
 The full list of what a student is sent, on which channel and with which
-default, is in `18-notifications.md`. This section is the student's view.
+default, is the matrix in 18 NTF-01. This section is the student's view.
 - A bell in the top bar with a count. The list shows, newest first, for
   example:
   - **Alex started your lesson. Join now.**
@@ -225,9 +225,10 @@ default, is in `18-notifications.md`. This section is the student's view.
   - **Your homework was marked: 8/10.**
   - **New quiz: Simultaneous equations check.**
   - **Your lesson on Mon was moved to Tue, 4:00 PM.** / **…was cancelled.**
-- Push (if allowed) carries the same events. Email is used for reminders and
-  changes to a lesson, never for "your lesson has started" (it would arrive
-  late). Every email has an unsubscribe link (00 section 19).
+- Push (if allowed) carries the same events. Email is used for invitations,
+  reminders, new homework and changes to a lesson, never for "your lesson has
+  started" (it would arrive late). Every email that can be switched off has an
+  unsubscribe link (00 section 19, 18 NTF-04).
 - The first time on Home, a one-time card: **Get a reminder before each
   lesson.** with **Turn on notifications** / **Not now**.
 
@@ -277,6 +278,8 @@ may have drafted for the tutor (08, 10, 11, 04).
 - Concerns a student raises go only to the chosen people (07 CR-13).
 
 ## Data needed (for the build)
+
+Tables are in `20-data-model.md`: people DM-01, join links DM-07, notifications DM-15, recordings DM-09.
 
 - Student shell routes and the four tabs.
 - Next lesson with join state; personal join links.

@@ -165,6 +165,8 @@ summarise library files.
 
 ## Data needed (for the build)
 
+Tables are in `20-data-model.md`: resources and uploads DM-18.
+
 - Files in R2 with folder, owner, size, type (checked from contents), upload
   intents (built in Round 9B), team-shared flag.
 - Attachments: file or folder to course; file to homework; file to lesson.

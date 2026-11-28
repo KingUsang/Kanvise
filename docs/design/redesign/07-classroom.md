@@ -198,7 +198,7 @@ Kanvise's additions:
    latest message if they sent one (**Running late · 4:02 PM**, CR-12). For
    students not here: **Copy link**, **WhatsApp** (when they have a phone),
    **Email** (when they have an email), and **Remind** ("Your lesson with Alex
-   has started", push and email). **Let Casey know** (or **Let everyone
+   has started", push, or email when they have no push; 18 NTF-01). **Let Casey know** (or **Let everyone
    know**) opens the tutor chips (CR-12). When a link is opened on a second
    device: **Casey's link was just opened on another device.** with **Get a
    new link** (05 LP-05).
@@ -385,8 +385,9 @@ support.
 
 ## CR-11 · Alerts
 
-Browser push (with email as backup), all switchable in Settings. The full list
-of messages and channels is in `18-notifications.md`.
+The messages Kanvise sends around a lesson. Channels, defaults and switches
+are in the matrix in 18 NTF-01 (tutors switch theirs in 12 CFG-N); this table
+only gives the wording.
 
 | Who | When | Message |
 |---|---|---|
@@ -495,6 +496,8 @@ For the tutor's second device, usually a phone pointed at written work.
   questions, and CR-07 offers **Write lesson summary**.
 
 ## Data needed (for the build)
+
+Tables are in `20-data-model.md`: lessons and room state DM-06, join links DM-07, attendance DM-08, recordings and consent DM-09, chip messages and concerns DM-16, added devices and device checks DM-17.
 
 - Join token per person and role, including the admin Lead and Watch tokens
   (exists for tutor and student).

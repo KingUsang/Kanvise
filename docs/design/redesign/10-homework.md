@@ -208,6 +208,8 @@ stacked.
 
 ## Data needed (for the build)
 
+Tables are in `20-data-model.md`: homework and hand-ins DM-12, topic status proposals DM-05.
+
 - Homework: course, students, title, due, instructions, files, hand-in mode,
   marking mode, linked lesson, linked topics, from-suggestion flag. (Today's
   assignments, assignment guard functions and submissions cover most of this.)

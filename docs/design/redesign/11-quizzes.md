@@ -206,6 +206,8 @@ copy.**
 
 ## Data needed (for the build)
 
+Tables are in `20-data-model.md`: quizzes DM-13, topic status proposals DM-05.
+
 - Quiz: course, title, status, questions (text, image, options, correct
   option, topic, explanation, Kavi-drafted and checked flags), settings
   (students, due, what to show, shuffle options). Today's versioned mock and

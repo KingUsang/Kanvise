@@ -133,7 +133,7 @@ Title **Course and students** · subtitle **Pick a course and who's attending.**
   for this lesson only (for example someone is away).
 - **Tutor** (admins only): one choice from the course's tutors, the first
   preselected. An admin appears here only when they have **I teach too** on (12
-  settings and `19-tutors-and-team.md`) and are on the course; otherwise they
+  CFG-P, 19 TM-10) and are on the course; otherwise they
   lead a lesson through **Join as an admin?** (07 CR-09).
 - No courses yet: the step shows **You need a course first.** with **Create a
   course** (or, for agency tutors, **Ask your admin to add you to a course.**).
@@ -415,6 +415,8 @@ classroom as Atlas.").
 | Copy, send or renew join links | Yes | Yes | Their own lessons |
 
 ## Data needed (for the build)
+
+Tables are in `20-data-model.md`: lessons, series and activity DM-06, join links DM-07, held messages DM-15.
 
 - Lesson: course, students attending, tutor, topic, linked plan topic,
   start/end, timezone, series rule and exceptions, status, status history.

@@ -419,6 +419,8 @@ Casey**, and the **Kavi suggests** card. Both are tutor-only.
 
 ## Data needed (for the build)
 
+Tables are in `20-data-model.md`: people DM-01, invitations DM-02, recording consent DM-09, attendance DM-08.
+
 - Student profile: first and last name (at least one), email (optional), phone
   (optional), timezone, goal, status.
 - Recording consent per student: state, who recorded or withdrew it and when

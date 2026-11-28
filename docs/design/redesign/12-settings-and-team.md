@@ -41,12 +41,14 @@ the right: **Jump to ▾** and **Find a setting** (search), as in Bobbin.
 | YOUR TEACHING | Lessons and classroom | Yes | Yes | No |
 | YOUR TEACHING | Kavi | Yes | Yes | No |
 | ACCOUNT | Business details | Yes | Yes | No |
-| ACCOUNT | Team (moving to `19-tutors-and-team.md`) | No | Yes | No |
 | ACCOUNT | Billing | Later | Later | No |
 | ACCOUNT | Data and privacy | Yes | Yes | No |
 
 Agency tutors see only the YOU group, as Bobbin's tutors see only Your details,
 Password, Two-factor and Notifications (`15-tutor-role/screenshots/tutor-profile--default.png`).
+
+Tutors and team members are not managed here. They have their own pages in
+the sidebar's PEOPLE group, as in Bobbin (`19-tutors-and-team.md`, CFG-TM).
 
 ---
 
@@ -71,7 +73,7 @@ Password, Two-factor and Notifications (`15-tutor-role/screenshots/tutor-profile
   tutor's. When it is off, an admin leads a lesson through **Join as an
   admin?** (07 CR-09). Turning it off while they are a course's only tutor
   asks: **You're the only tutor on 2 courses. Choose a new tutor first.** with
-  the list (`19-tutors-and-team.md`).
+  the reassign list (19 TM-10, TM-06).
   This replaces Bobbin's advice in its admin join dialog ("If you teach this
   lesson from another account, join from that account instead",
   `03-lessons/screenshots/classroom--join-dialog.png`): one account can both
@@ -95,28 +97,38 @@ Password, Two-factor and Notifications (`15-tutor-role/screenshots/tutor-profile
 
 ## CFG-N · Notifications
 
-`18-notifications.md` holds the full list (every event, who gets it, on which
-channel, the default and whether it can be switched off). This section is the
-place where a person switches their own rows. It shows only the rows that can
-be switched for that person's role, with **Push** and **Email** toggles:
+`18-notifications.md` holds the full list (18 NTF-01: every event, who gets
+it, on which channel, the default and where it can be switched off). This
+section is where a person switches their own rows. It shows only the rows
+that can be switched for that person's role, each with a line under the title
+and **Push** and **Email** toggles, as Bobbin's personal Notifications card
+(`15-tutor-role/screenshots/tutor-profile-notifications.png`):
 
-| Notification (examples) | Default |
-|---|---|
-| Lesson reminder before my lesson | Push on, email on |
-| A student is waiting for my lesson | Push on, email off |
-| My lesson hasn't started on time | Push on, email on |
-| A student sent a message about a lesson (07 CR-12) | Push on, email off |
-| Homework handed in | Push on, email off |
-| Quiz finished | Push on, email off |
-| Starting check finished | Push on, email on |
-| Summary still to write (after 24 h) | Push on, email on |
+| Row | Who sees it | Default |
+|---|---|---|
+| Lesson reminder before my lesson | Anyone who teaches | Push on, email on |
+| A student is waiting for my lesson | Anyone who teaches | Push on, email off |
+| My lesson hasn't started on time | Anyone who teaches | Push on, email on |
+| A student sent a message about a lesson (07 CR-12) | Anyone who teaches | Push on, email off |
+| Homework handed in | Anyone who teaches | Push on, email off |
+| Quiz finished | Anyone who teaches | Push on, email off |
+| Starting check finished | Anyone who teaches | Push on, email on |
+| Summary still to write (after 24 h) | Anyone who teaches | Push on, email on |
+| Kavi's draft is ready (once Kavi exists) | Anyone who teaches | Push on, email off |
+| Courses given to me | Agency tutors, admins with I teach too | Push on, email on |
+| Daily summary for admins (18 NTF-06) | Agency admins | Email on (no push) |
+
+Messages a person needs to take part (invitations, moved or cancelled
+lessons, password emails) are always sent and have no row here (18 NTF-01,
+**Always**).
 
 - A row at the top: **Browser notifications:** **On** / **Turn on** (asks the
   browser), with a note when the browser has blocked them and how to allow
   them.
-- Every email has an unsubscribe link. It opens this section with that row
-  switched off and a toast **You won't get these emails any more.** with
-  **Undo**.
+- Every email that can be switched off has an unsubscribe link (18 NTF-04).
+  It switches that row off, without signing in, and shows the small page in 18
+  NTF-04 with **Undo** and **Manage notifications** (which opens this
+  section).
 - Times in emails use the account's timezone (CFG-A), with the zone named, for
   example **4:00 PM WAT** (00 section 19).
 
@@ -253,32 +265,13 @@ the privacy policy.
 There is no public web address setting: public pages are retired (00 section
 15, F-63).
 
-## CFG-TM · Team (agencies)
+## CFG-TM · Team (moved)
 
-This section moves to `19-tutors-and-team.md`, which will own the Tutors and
-Team pages. Until then the rules below stand.
-
-Two tabs: **Tutors** · **Admins**.
-
-**Tutors:**
-- List: name, email, courses (count), status (**Active**, **Invite not
-  accepted**), and **⋯** (Resend invite, Remove).
-- **Invite a tutor** dialog: first name (optional), last name, email, and
-  **Courses (optional)**. Line: **We'll email them an invite to set a password
-  and sign in. They'll see only the courses you give them.** Button **Send
-  invite**.
-- An account can send at most 50 invitations an hour (00 section 19). Over
-  that: **You've sent a lot of invitations. Try again in an hour.**
-- **Remove tutor:** **Remove Michael Chen? They'll lose access straight away.
-  Their courses need a new tutor before their next lessons.** with a list of
-  affected courses and a **Reassign to** dropdown. **Remove** (red).
-
-**Admins:**
-- List as above.
-- **Invite an admin** dialog: as above. Line: **Admins can see and change
-  everything in this account, including other tutors' courses.**
-- **Remove admin:** as above, without reassignment. The last admin can't be
-  removed: **There must be at least one admin.**
+Tutors and team members moved to `19-tutors-and-team.md`: the Tutors list,
+Add tutor, the tutor page, the Team page, removing someone with the required
+Reassign step, **I teach too** and the 50-invitations-an-hour limit (19 TM-01
+to TM-11). Settings keeps only the **I teach too** toggle (CFG-P) and
+**On my own / With a team** (CFG-T).
 
 ## CFG-D · Data and privacy
 
@@ -308,12 +301,14 @@ Checked against `14-settings/screenshots/settings-data-export--full.png`.
 
 ## Data needed (for the build)
 
+Tables are in `20-data-model.md`: settings DM-14, notification preferences and
+unsubscribe tokens DM-15, people DM-01.
+
 - Personal settings (profile, I teach too, notification preferences per
   channel, unsubscribe tokens).
 - Account settings (teaching preferences, lesson defaults, recording rules,
   Kavi style, level names, Kavi switches, timezone).
-- Team members and invitations (today's account invitations), with the
-  50-an-hour limit.
+- Team members and invitations: see 19 and DM-02.
 - Per-student export, full export, and per-student deletion jobs.
 
 ## Checked against Bobbin

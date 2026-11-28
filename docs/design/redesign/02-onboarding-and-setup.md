@@ -236,7 +236,7 @@ Both lists have five steps, as Bobbin's does. The total is always 5, and
 
 | # | Step | Time | Reason line | Button | Opens | Done when |
 |---|---|---|---|---|---|---|
-| 1 | Add a tutor | 1 min | Tutors run the lessons. Add yourself or a colleague. | **Add tutor** | Invite tutor dialog (`19-tutors-and-team.md`) | The agency has at least one tutor (an invited tutor counts, as does the admin adding themselves) |
+| 1 | Add a tutor | 1 min | Tutors run the lessons. Add a colleague, or turn on **I teach too** if you teach. | **Add tutor** | Add tutor dialog (19 TM-03), or **I teach too** (19 TM-10) | The agency has at least one tutor (an invited tutor counts, as does an admin with **I teach too**) |
 | 2 | Add your students | 2 mins | Students are the people your tutors teach. They get their lessons, homework and summaries in Kanvise. | **Add students** | Add student dialog (06 STU-03, or STU-04 as above) | At least one real student |
 | 3 | Create a course | 2 mins | A course pairs a student with a tutor over time. | **Create course** | New course wizard (spec 04) | At least one real course |
 | 4 | Build the course plan | 2 mins | The topics the course will cover, so lessons and summaries tick them off. | **Build plan** | The **Build the course plan** card on the course from step 3 | That course plan has at least one topic, or the step was skipped |
@@ -332,6 +332,8 @@ When all five steps are done or skipped:
 | Student | No | No |
 
 ## Data needed (for the build)
+
+Tables are in `20-data-model.md`: settings and onboarding answers DM-14, people and accounts DM-01, device checks DM-17, invitations DM-02.
 
 - Onboarding answers stored per account. Invited tutors read the account's
   answers; nothing is stored per tutor.

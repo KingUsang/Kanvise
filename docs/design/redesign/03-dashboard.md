@@ -147,12 +147,14 @@ something" are hidden at 0.
 | Lessons that didn't start | **1 lesson didn't start** · "Not held · Algebra 1 Small Group, Tue 4:00 PM" | Lessons filtered to Not held |
 | Homework waiting over 3 days | **4 hand-ins waiting over 3 days** · "Oldest: Ada, 5 days" | Homework filtered to To mark, handed in more than 3 days ago |
 | Tutors not joined yet | **1 tutor hasn't joined yet** · "Invited 6 days ago" | Tutors filtered to Invited (`19-tutors-and-team.md`) |
-| Lessons without a tutor (only when there is something) | **2 lessons without a tutor** · "Michael Chen was removed. Choose who teaches them." | Those courses, with **Choose a tutor** |
+| Lessons without a tutor (only when there is something) | **2 lessons without a tutor** · "Michael Chen can no longer sign in. Choose who teaches them." | Those courses, with **Choose a tutor** |
 
 - A summary is overdue when the lesson ended more than 48 hours ago and has
   neither a summary nor **No summary needed**.
-- **Lessons without a tutor** can only happen one way: an admin removes a tutor
-  and chooses to reassign their courses later (`19-tutors-and-team.md`). Every
+- **Lessons without a tutor** should never happen: removing a tutor requires
+  choosing a new tutor for each of their courses (19 TM-06). The row shows only
+  if a tutor's access ended outside that flow (for example Kanvise support
+  closed their sign-in), and **Choose a tutor** opens the same Reassign step. Every
   new course and lesson needs a tutor (specs 04 and 05), so otherwise the row
   never shows.
 
@@ -229,6 +231,8 @@ a **Dashboard ›** link at the top right goes back, as in Bobbin.
   politely ("2 lessons running").
 
 ## Data needed (for the build)
+
+Tables are in `20-data-model.md`: lessons DM-06, lesson summaries DM-10, homework DM-12, invitations DM-02, topic status DM-05.
 
 - Lesson list for today and this week, with status as above, and the account's
   **Classroom opens** setting.
