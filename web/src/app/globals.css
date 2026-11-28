@@ -219,14 +219,30 @@
   /* The shell owns page gutters: 16px below 1024px, 40px from 1024px
      (SH-01, R-01). */
   --dashboard-gutter: 16px;
-  /* Height of everything fixed at the bottom of a phone page (bottom bar,
-     fixed action bar). The shell sets it; toasts sit above it (R-10). */
-  --shell-bottom-offset: 0px;
+  /* Everything fixed at the bottom of a phone page, above the safe area
+     (R-10): the bottom bar plus one page-level fixed element (the Fab or a
+     fixed action bar). Toasts and page bottom padding read the total; the
+     Fab reads only the bar offset so it sits just above the bar. */
+  --shell-bar-offset: 0px;
+  --shell-fixed-offset: 0px;
+  --shell-bottom-offset: calc(var(--shell-bar-offset) + var(--shell-fixed-offset));
 }
 
 @media (min-width: 1024px) {
   :root {
     --dashboard-gutter: 40px;
+  }
+}
+
+/* The dashboard shell marks <html> while its phone bottom bar shows (64px
+   tall plus safe-area padding, which consumers add themselves). */
+@media (max-width: 767.98px) {
+  html[data-shell-bottom-bar="visible"] {
+    --shell-bar-offset: 4rem;
+  }
+  /* A mounted Fab (56px) and its 16px gap. */
+  html[data-shell-fab] {
+    --shell-fixed-offset: 4.5rem;
   }
 }
 

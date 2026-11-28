@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { getDashboardAccess } from '@/config/dashboard-navigation'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 import { postAuthDestination, type KanviseRole } from '@/lib/auth-continuation'
 
@@ -124,14 +123,10 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard/student'
         return NextResponse.redirect(url)
-      } else if (kanvise_role === 'tutor' && getDashboardAccess(request.nextUrl.pathname) === 'admin') {
-        // Do not rely on hidden navigation: stop a tutor who types or follows an
-        // admin-only URL before any page code or API request runs.
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        url.searchParams.set('notice', 'not-authorised')
-        return NextResponse.redirect(url)
       }
+      // A tutor who opens an admin-only URL is not redirected: the dashboard
+      // shell renders the Not available page in place (01-app-shell SH-14a)
+      // before any page code runs, and the API checks every request.
     }
   }
 

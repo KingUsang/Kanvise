@@ -50,6 +50,9 @@ export function Menu({
   triggerVariant = 'quiet',
   triggerClassName,
   iconOnly = true,
+  defaultOpen = false,
+  menuClassName = '',
+  className = '',
 }: {
   /** Accessible name of the menu button, and of the menu. */
   label: string
@@ -63,11 +66,17 @@ export function Menu({
   triggerClassName?: string
   /** True when `trigger` has no visible text, so `label` names the button. */
   iconOnly?: boolean
+  /** Open on first render (design previews and tests). */
+  defaultOpen?: boolean
+  /** Extra classes for the menu panel, for example a fixed width. */
+  menuClassName?: string
+  /** Classes for the wrapper, for example `flex-1 min-w-0` for a full-width trigger. */
+  className?: string
 }) {
   const id = useId()
   const buttonId = `${id}-button`
   const menuId = `${id}-menu`
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const [initialFocus, setInitialFocus] = useState<'first' | 'last'>('first')
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -130,7 +139,7 @@ export function Menu({
   const itemClass = 'flex min-h-11 w-full items-center gap-3 rounded-dashboard-control px-3 text-left text-dashboard-small font-medium outline-none hover:bg-dashboard-surface-hover focus-visible:bg-dashboard-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-dashboard-focus aria-disabled:cursor-not-allowed aria-disabled:opacity-60'
 
   return (
-    <div ref={rootRef} className="relative inline-flex">
+    <div ref={rootRef} className={`relative inline-flex ${className}`.trim()}>
       <button
         ref={buttonRef}
         id={buttonId}
@@ -152,7 +161,7 @@ export function Menu({
           role="menu"
           aria-label={label}
           onKeyDown={onMenuKeyDown}
-          className={`animate-dashboard-menu-in absolute z-50 min-w-56 rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-1.5 shadow-dashboard-overlay ${placementClasses[placement]}`}
+          className={`animate-dashboard-menu-in absolute z-50 min-w-56 rounded-dashboard-panel border border-dashboard-outline bg-dashboard-surface p-1.5 shadow-dashboard-overlay ${placementClasses[placement]} ${menuClassName}`}
         >
           {header ? <div className="border-b border-dashboard-outline px-3 pb-2 pt-1.5">{header}</div> : null}
           {items.map((item, index) => {

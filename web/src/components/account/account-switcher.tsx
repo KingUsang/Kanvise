@@ -68,11 +68,11 @@ export async function loadMemberships() {
   }
 }
 
-function useAccountMemberships() {
+export function useAccountMemberships(enabled = true) {
   const [preferredAccountId, setPreferredAccountId] = useState(getActiveAccountId)
   useEffect(() => subscribeToActiveAccount(() => setPreferredAccountId(getActiveAccountId())), [])
 
-  const query = useQuery({ queryKey: ['account-memberships'], queryFn: loadMemberships, staleTime: 5 * 60_000, retry: false })
+  const query = useQuery({ queryKey: ['account-memberships'], queryFn: loadMemberships, staleTime: 5 * 60_000, retry: false, enabled })
   const selected = useMemo(() => {
     if (!query.data?.length) return null
     // A stored selection is kept only while it is still an active membership.
@@ -92,6 +92,13 @@ function useAccountMemberships() {
   return { ...query, selected }
 }
 
+/** Tells the API which account to use, then stores the choice on this device. */
+export async function switchAccountOnServer(accountId: string) {
+  const response = await authenticatedApiFetch(`${getApiUrl()}/students/me/centres/${accountId}/select`, { method: 'POST' })
+  await responseBody(response, 'We could not switch tutoring accounts. Try again.')
+  setActiveAccountId(accountId)
+}
+
 export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -109,9 +116,7 @@ export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
     setSwitchError(null)
     setSwitchingTo(accountId)
     try {
-      const response = await authenticatedApiFetch(`${getApiUrl()}/students/me/centres/${accountId}/select`, { method: 'POST' })
-      await responseBody(response, 'We could not switch tutoring accounts. Try again.')
-      setActiveAccountId(accountId)
+      await switchAccountOnServer(accountId)
       await queryClient.cancelQueries()
       queryClient.clear()
       setOpen(false)

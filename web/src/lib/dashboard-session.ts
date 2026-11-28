@@ -10,7 +10,15 @@ import type { DashboardCapabilities } from "@/config/dashboard-navigation";
 export type DashboardSession = {
   token: string;
   capabilities: DashboardCapabilities;
-  user: { id: string; first_name: string; last_name: string };
+  user: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    photo_url: string | null;
+  };
+  /** The selected account, for the shell's account card (SH-02). */
+  account: { name: string | null; logo_url: string | null };
 };
 
 export const dashboardQueryKeys = {
@@ -58,6 +66,18 @@ export function useDashboardSession(enabled = true) {
           id: data.profile_id,
           first_name: session.user.user_metadata?.first_name || "",
           last_name: session.user.user_metadata?.last_name || "",
+          email: session.user.email || "",
+          photo_url:
+            typeof data.profile_photo_url === "string"
+              ? data.profile_photo_url
+              : null,
+        },
+        account: {
+          name: typeof data.account_name === "string" ? data.account_name : null,
+          logo_url:
+            typeof data.account_logo_url === "string"
+              ? data.account_logo_url
+              : null,
         },
       };
     },

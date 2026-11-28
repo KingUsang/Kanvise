@@ -83,6 +83,7 @@ describe('dashboard account policy', () => {
     mocks.from.mockImplementation((table: string) => {
       if (table === 'tutor_course_assignments') return assignmentQuery
       if (table === 'schools') return schoolQuery
+      if (table === 'user_profiles') return query({ data: null, error: null })
       throw new Error(`Unexpected table ${table}`)
     })
 
@@ -92,6 +93,53 @@ describe('dashboard account policy', () => {
     expect(await response.json()).toMatchObject({ data: { is_admin: true, is_tutor: false } })
     expect(schoolQuery.eq).toHaveBeenCalledWith('id', 'account-1')
     expect(schoolQuery.eq).not.toHaveBeenCalledWith('id', 'legacy-school')
+  })
+
+  it('returns the account name, logo and profile photo for the app shell', async () => {
+    const assignmentQuery = query({ data: { id: 'assignment-1' }, error: null })
+    const schoolQuery = query({ data: { account_type: 'centre', name: 'Science Students Academy', logo_url: 'https://cdn.example.com/logo.png' }, error: null })
+    const profileQuery = query({ data: { profile_photo_url: 'https://cdn.example.com/chidi.png' }, error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'tutor_course_assignments') return assignmentQuery
+      if (table === 'schools') return schoolQuery
+      if (table === 'user_profiles') return profileQuery
+      throw new Error(`Unexpected table ${table}`)
+    })
+
+    const response = await dashboardRouter.request('/capabilities')
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      data: {
+        profile_id: 'admin-1',
+        is_admin: true,
+        is_tutor: true,
+        organisation_type: 'centre',
+        account_name: 'Science Students Academy',
+        account_logo_url: 'https://cdn.example.com/logo.png',
+        profile_photo_url: 'https://cdn.example.com/chidi.png',
+      },
+    })
+    expect(schoolQuery.select).toHaveBeenCalledWith('account_type, name, logo_url')
+    expect(profileQuery.eq).toHaveBeenCalledWith('id', 'admin-1')
+  })
+
+  it('still answers when the profile photo cannot be read', async () => {
+    const schoolQuery = query({ data: { account_type: 'independent', name: 'Alex Thompson Tutoring', logo_url: null }, error: null })
+    const profileQuery = query({ data: null, error: { message: 'boom' } })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'tutor_course_assignments') return query({ data: null, error: null })
+      if (table === 'schools') return schoolQuery
+      if (table === 'user_profiles') return profileQuery
+      throw new Error(`Unexpected table ${table}`)
+    })
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const response = await dashboardRouter.request('/capabilities')
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ data: { organisation_type: 'independent', account_name: 'Alex Thompson Tutoring', account_logo_url: null, profile_photo_url: null } })
+    error.mockRestore()
   })
 })
 

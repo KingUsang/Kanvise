@@ -55,7 +55,15 @@ export async function accountScopedFetch(input: RequestInfo | URL, init?: Reques
   return response
 }
 
+/**
+ * Fired on window when an authenticated request finds the sign-in has ended,
+ * so the dashboard shell can show "You've been signed out" (SH-14b) while the
+ * page stays on screen.
+ */
+export const SESSION_ENDED_EVENT = 'kanvise:session-ended'
+
 function sessionEndedResponse() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SESSION_ENDED_EVENT))
   return new Response(
     JSON.stringify({ error: 'Your session has ended. Please sign in again.', code: 'SESSION_EXPIRED' }),
     { status: 401, headers: { 'Content-Type': 'application/json' } },

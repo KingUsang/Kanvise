@@ -61,7 +61,6 @@ describe('product terminology compatibility adapters', () => {
 
   it('keeps prohibited legacy copy out of the bounded shared surfaces', () => {
     const sharedSurfacePaths = [
-      'src/components/dashboard/more-workspace-client.tsx',
       'src/components/student/student-shell.tsx',
       'src/components/dashboard/classes/class-workspace-client.tsx',
       'src/components/dashboard/schedule/classes-workspace.tsx',

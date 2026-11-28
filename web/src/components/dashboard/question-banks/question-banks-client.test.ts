@@ -41,10 +41,11 @@ describe('question-bank authoring helpers', () => {
     expect(courseOptionLabel({ id: '2', name: 'Mathematics' })).toBe('Mathematics')
   })
 
-  it('shows question banks to admins, tutors, and combined admin-tutors', () => {
-    expect(getDashboardNavItems({ isAdmin: true, isTutor: false }).some(item => item.href === '/dashboard/question-banks')).toBe(true)
-    expect(getDashboardNavItems({ isAdmin: false, isTutor: true }).some(item => item.href === '/dashboard/question-banks')).toBe(true)
-    expect(getDashboardNavItems({ isAdmin: true, isTutor: true }).some(item => item.href === '/dashboard/question-banks')).toBe(true)
+  it('keeps question banks open to admins, tutors, and combined admin-tutors', () => {
+    // Question banks are not a sidebar item in the redesign (SH-02); the route stays open to staff.
+    expect(canAccessDashboardPath('/dashboard/question-banks', { isAdmin: true, isTutor: false })).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/question-banks', { isAdmin: false, isTutor: true })).toBe(true)
+    expect(canAccessDashboardPath('/dashboard/question-banks', { isAdmin: true, isTutor: true })).toBe(true)
   })
 
   it('classifies nested dashboard routes using their parent page privileges', () => {
@@ -67,8 +68,7 @@ describe('question-bank authoring helpers', () => {
 
   it('keeps a new Admin inside tutoring account setup until a tutoring account is created', () => {
     const onboarding = { isAdmin: true, isTutor: false, setupRequired: true }
-    expect(getDashboardNavItems(onboarding).map(item => item.href)).toContain('/dashboard/classes')
-    expect(getDashboardNavItems(onboarding).map(item => item.href)).toContain('/dashboard/school-setup')
+    expect(getDashboardNavItems(onboarding).map(item => item.href)).toEqual(['/dashboard/school-setup'])
     expect(canAccessDashboardPath('/dashboard/school-setup', onboarding)).toBe(true)
     expect(canAccessDashboardPath('/dashboard/classes', onboarding)).toBe(false)
   })

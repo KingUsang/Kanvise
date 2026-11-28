@@ -23,11 +23,13 @@ const TAP_VISIBLE_MS = 2500
  * `describes={false}` when the text already is the trigger's accessible name
  * (for example the collapsed sidebar rail), so it is not read twice.
  */
-export function Tooltip({ content, children, side = 'top', describes = true }: {
+export function Tooltip({ content, children, side = 'top', describes = true, className = '' }: {
   content: ReactNode
   children: ReactElement<TriggerProps>
   side?: keyof typeof sideClasses
   describes?: boolean
+  /** Wrapper classes, for example `flex w-full` around a full-width link. */
+  className?: string
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -68,7 +70,7 @@ export function Tooltip({ content, children, side = 'top', describes = true }: {
   })
 
   return (
-    <span className="relative inline-flex" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+    <span className={`relative ${className || 'inline-flex'}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       {trigger}
       <span
         id={id}
