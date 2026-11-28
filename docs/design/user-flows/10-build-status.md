@@ -29,7 +29,7 @@ review.
 | Groups per result | Up to five | Up to five | Match |
 | What is matched | Not stated | People: first name, last name, email, "first last". Courses: name. Lessons: title only | Written into the spec. Notes and summaries are not searched, as wanted |
 | Cancelled lessons | Not stated | Left out | Written into the spec; confirm it is wanted |
-| Students group | Agency tutors find their own students | **Admins only.** Tutors get no Students group | **Differs.** Fix in the build, or relax the spec. I kept the spec as it was (DEV note below) |
+| Students group | Agency tutors find their own students | **Admins only.** Tutors get no Students group | **Differs.** Fix in the build (a small change in `searchStudents`), or relax the spec. I kept the spec as it was |
 | Tutors group | Agency admins | Agency admins only; hidden for independent accounts (uses `account_type`) | Match |
 | Courses, Lessons for tutors | Own only | Courses they teach, and their own lessons | Match |
 | Homework, Quizzes, Resources, Settings results | Searched | Not yet. They appear in "Browse by type" if the person sees that page | Expected: they arrive with their steps |
@@ -45,7 +45,7 @@ need follow-up code, so the builders should know before they treat step 1 as don
 
 | Spec | My change | Built today |
 |---|---|---|
-| 01 SH-02 account card | Tutors and admins always see the chevron, and the card opens the account switcher | Chevron only when there is more than one account |
+| 01 SH-02 account card | Tutors and admins always see the chevron, and the card opens the account switcher | Built to the earlier wording (chevron only with more than one account). Not checked in the code |
 | 01 SH-02 user card | Second line shows the active role (**Tutor · Agency name**) for someone who holds both | Not built |
 | 01 SH-06 account menu | **Switch role** (Admin or Tutor) for an admin who also teaches; links switch role when needed | Not built |
 | 01 SH-07 account switcher | **Create another account** at the bottom; always available to tutors and admins | Not built |
@@ -53,6 +53,11 @@ need follow-up code, so the builders should know before they treat step 1 as don
 | 12 settings names | PERSONAL, LESSONS, ACCOUNT groups; **How you teach**; one **General** section | Step 3, not built |
 | 18 notifications | Push for **lesson didn't take place** and **recording didn't save**; notice to the old address on email change; student invitation lasts 7 days; concerns exclude the person concerned | Held messages, preferences and unsubscribe are built (NTF-03, NTF-04). The rest arrive with their steps |
 | 20 DM-01 | One membership per person per account, plus a `can_teach` flag for admins | Not built. Existing table already has one role per person per account |
+
+Note: I did not check how an independent tutor's membership is stored, so I am
+assuming it counts as an admin in the search code (`role === 'admin'`), which the
+Students group relies on. The "Not built" cells below mean the wording is new and I
+did not search the code for it.
 
 ## What I would do next
 
