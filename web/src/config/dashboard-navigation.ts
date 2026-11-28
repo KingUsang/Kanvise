@@ -3,6 +3,8 @@ export type DashboardCapabilities = {
   isTutor: boolean
   setupRequired?: boolean
   organisationType?: 'centre' | 'independent'
+  /** The setup checklist has rows to show and is not finished (02 SET-01). */
+  setupVisible?: boolean
 }
 
 export type DashboardAccess = 'all' | 'admin' | 'tutor' | 'shared'
@@ -54,7 +56,7 @@ export const dashboardNavGroupLabels: Record<DashboardNavGroupId, string | null>
  *
  * | Spec item  | Step 1 target            | Shown to                                         |
  * |------------|--------------------------|--------------------------------------------------|
- * | Setup      | HIDDEN (step 2)          |                                                  |
+ * | Setup      | /dashboard/setup         | account owner, while the checklist has rows to do |
  * | Dashboard  | /dashboard               | all staff                                        |
  * | Calendar   | /dashboard/schedule      | shared                                           |
  * | Lessons    | HIDDEN (step 4)          | no lessons list yet                              |
@@ -100,11 +102,22 @@ export const setupNavItem: DashboardNavItem = {
   keywords: ['setup', 'agency'],
 }
 
+/** Setup sits above Dashboard while the checklist is unfinished (01 SH-02). */
+export const setupChecklistNavItem: DashboardNavItem = {
+  label: 'Setup',
+  href: '/dashboard/setup',
+  icon: 'setup',
+  group: 'top',
+  access: 'admin',
+  keywords: ['setup', 'checklist', 'get started'],
+}
+
 type RouteRule = { href: string; access: DashboardAccess; agencyOnly?: boolean; title: string }
 
 /** Access rules and phone titles for every staff route, linked or not. */
 export const dashboardRouteRules: RouteRule[] = [
   ...dashboardNavItems.map(({ href, access, agencyOnly, label }) => ({ href, access, agencyOnly, title: label })),
+  { href: '/dashboard/setup', access: 'admin', title: 'Setup' },
   { href: '/dashboard/profile', access: 'shared', title: 'My profile' },
   { href: '/dashboard/school-setup', access: 'admin', title: 'Set up tutoring agency' },
 ]
@@ -128,7 +141,8 @@ export function canAccessDashboardItem(item: Pick<DashboardNavItem, 'access' | '
 
 export function getDashboardNavItems(capabilities: DashboardCapabilities) {
   if (capabilities.setupRequired) return [setupNavItem]
-  return dashboardNavItems.filter((item) => canAccessDashboardItem(item, capabilities))
+  const items = dashboardNavItems.filter((item) => canAccessDashboardItem(item, capabilities))
+  return capabilities.setupVisible && capabilities.isAdmin ? [setupChecklistNavItem, ...items] : items
 }
 
 /** Visible items in SH-02 groups. A group with no visible items is left out. */

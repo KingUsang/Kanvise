@@ -26,6 +26,8 @@ export type ShellData = {
    * an "unavailable" marker instead of hiding the badge (DEV-QUIZ-034).
    */
   badges: { ungradedQuizzes: number | null; ungradedQuizzesUnavailable?: boolean }
+  /** Setup card progress (SH-02 item 3). Null or missing hides the card. */
+  setup?: { completed: number; total: number; label: string } | null
   /** Capabilities still loading: the nav shows skeleton rows. */
   loading?: boolean
 }

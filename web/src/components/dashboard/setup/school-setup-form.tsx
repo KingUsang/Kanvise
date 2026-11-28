@@ -175,7 +175,8 @@ export function SchoolSetupForm({ initialData }: { initialData: any }) {
         toast.success('Your tutoring agency is ready')
         // Dashboard layouts persist across soft navigation. A full navigation
         // rebuilds the shell with setupRequired=false from the refreshed JWT.
-        window.location.assign('/dashboard')
+        // The new owner answers Kavi's questions first (02 ONB-01).
+        window.location.assign('/onboarding')
         return
       }
       const normalizedFormData = {

@@ -71,11 +71,11 @@ describe('GET /search', () => {
     mocks.recorded = []
     mocks.rows = {
       schools: () => [{ account_type: 'centre' }],
-      user_profiles: (filters) => {
+      account_memberships: (filters) => {
         const role = filters.find((call) => call.method === 'eq' && call.args[0] === 'role')?.args[1]
-        return role === 'student'
-          ? [{ id: 'student-1', first_name: 'Ada', last_name: 'Lovelace', email: null }]
-          : [{ id: 'tutor-1', first_name: 'Adam', last_name: 'Smith', email: 'adam@example.com' }]
+        return role === 'learner'
+          ? [{ person: { id: 'student-1', first_name: 'Ada', last_name: 'Lovelace', email: null } }]
+          : [{ person: { id: 'tutor-1', first_name: 'Adam', last_name: 'Smith', email: 'adam@example.com' } }]
       },
       programmes: () => [{ id: 'course-1', name: 'Adaptive Maths' }],
       live_classes: (filters) => filters.some((call) => call.method === 'gte')
@@ -134,11 +134,24 @@ describe('GET /search', () => {
     }
   })
 
+  it('finds people through active memberships, not the profile account', async () => {
+    await search('Ada')
+    const people = calls('account_memberships')
+    expect(people.length).toBeGreaterThan(0)
+    expect(calls('user_profiles')).toHaveLength(0)
+    for (const entry of people) {
+      expect(has(entry, 'eq', 'status', 'active')).toBe(true)
+      expect(has(entry, 'eq', 'person.is_active', true)).toBe(true)
+    }
+    const roles = people.map((entry) => entry.calls.find((call) => call.method === 'eq' && call.args[0] === 'role')?.args[1])
+    expect(new Set(roles)).toEqual(new Set(['learner', 'tutor']))
+  })
+
   it('does not give a tutor the Students or Tutors groups', async () => {
     mocks.account = { id: 'account-1', membershipId: 'membership-1', role: 'tutor' }
     const { body } = await search('Ada')
     expect(body.data.groups.map((group: any) => group.type)).toEqual(['course', 'lesson'])
-    expect(calls('user_profiles')).toHaveLength(0)
+    expect(calls('account_memberships')).toHaveLength(0)
   })
 
   it('gives a tutor only the courses they teach and their own lessons', async () => {
@@ -173,9 +186,9 @@ describe('GET /search', () => {
 
   it('searches first and last name together when the text has a space', async () => {
     await search('Ada Love')
-    const fullName = calls('user_profiles').find((entry) => entry.calls.filter((call) => call.method === 'ilike').length === 2)
-    expect(fullName?.calls).toContainEqual({ method: 'ilike', args: ['first_name', '%Ada%'] })
-    expect(fullName?.calls).toContainEqual({ method: 'ilike', args: ['last_name', '%Love%'] })
+    const fullName = calls('account_memberships').find((entry) => entry.calls.filter((call) => call.method === 'ilike').length === 2)
+    expect(fullName?.calls).toContainEqual({ method: 'ilike', args: ['person.first_name', '%Ada%'] })
+    expect(fullName?.calls).toContainEqual({ method: 'ilike', args: ['person.last_name', '%Love%'] })
   })
 })
 

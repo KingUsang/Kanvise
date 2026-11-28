@@ -57,3 +57,30 @@ export function reportingPeriods(now: Date, timeZone: string) {
     sevenDayEnd: new Date(localMidnight(year, month, day + 8, timeZone).getTime() - 1),
   }
 }
+
+export type WeekDay = { date: string; start: Date; end: Date }
+
+/**
+ * Monday to Sunday in the given zone, `weekOffset` weeks from the current one
+ * (03-dashboard DB-04). `todayIndex` is the position of today in a week that
+ * contains it, else -1.
+ */
+export function weekPeriods(now: Date, timeZone: string, weekOffset = 0) {
+  const { year, month, day } = localDate(now, timeZone)
+  const sinceMonday = (new Date(Date.UTC(year, month, day)).getUTCDay() + 6) % 7
+  const firstDay = day - sinceMonday + weekOffset * 7
+  const days: WeekDay[] = Array.from({ length: 7 }, (_, index) => {
+    const start = localMidnight(year, month, firstDay + index, timeZone)
+    const next = localMidnight(year, month, firstDay + index + 1, timeZone)
+    const label = new Date(Date.UTC(year, month, firstDay + index))
+    return { date: label.toISOString().slice(0, 10), start, end: new Date(next.getTime() - 1) }
+  })
+  const todayDate = new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)
+  return {
+    timezone: timeZone,
+    days,
+    weekStart: days[0].start,
+    weekEnd: days[6].end,
+    todayIndex: days.findIndex((item) => item.date === todayDate),
+  }
+}

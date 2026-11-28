@@ -66,7 +66,83 @@ export function isTopDialog(token: symbol) {
   return dialogStack[dialogStack.length - 1] === token;
 }
 
+/**
+ * Phone Back gesture for sheets. A sheet pushes one history entry when it
+ * opens; Back pops it and closes the top-most sheet instead of leaving the
+ * page. When a sheet closes by any other route its entry is popped again, and
+ * that pop is ignored. The current history state is copied so the Next.js
+ * router still recognises the entry.
+ */
+type BackEntry = { token: symbol; close: () => boolean | void; pushed: boolean; href: string; navigating: boolean };
+const backStack: BackEntry[] = [];
+/** Pops this module asked for. Each expires after a short wait so a pop that never arrives cannot swallow a real Back. */
+let ignoredPops: symbol[] = [];
+const IGNORED_POP_TTL_MS = 1000;
+let backListening = false;
+
+function onPopState() {
+  if (ignoredPops.length > 0) {
+    ignoredPops.shift();
+    return;
+  }
+  const top = backStack[backStack.length - 1];
+  if (!top || !top.pushed) return;
+  // The browser already popped the entry; closing must not pop it again.
+  top.pushed = false;
+  // A guard (unsaved changes, busy) can refuse: the dialog stays, so it gets its entry back.
+  if (top.close() === false) pushBackEntry(top);
+}
+
+/** Test helper: forget pops that a mocked history.back() never delivered. */
+export function resetBackHandlingForTests() {
+  backStack.length = 0;
+  ignoredPops = [];
+}
+
+function pushBackEntry(entry: BackEntry) {
+  entry.pushed = true;
+  window.history.pushState({ ...(window.history.state ?? {}), kanviseSheet: true }, "", window.location.href);
+}
+
+function registerBack(token: symbol, close: () => boolean | void): { unregister: () => void; markNavigating: () => void } {
+  const entry: BackEntry = { token, close, pushed: false, href: window.location.href, navigating: false };
+  backStack.push(entry);
+  if (!backListening) {
+    window.addEventListener("popstate", onPopState);
+    backListening = true;
+  }
+  pushBackEntry(entry);
+  const unregister = () => {
+    const index = backStack.indexOf(entry);
+    if (index >= 0) backStack.splice(index, 1);
+    if (entry.pushed) {
+      entry.pushed = false;
+      // Closed because a link inside was clicked: the route change commits after this unmount, so popping now
+      // would race it and can restore the old page. Leave the spare entry; Back passes through it.
+      // Also skip when navigation already committed or the current entry is not ours, since back() would then leave the page.
+      const stillOnOwnEntry = window.location.href === entry.href && Boolean((window.history.state as { kanviseSheet?: boolean } | null)?.kanviseSheet);
+      if (stillOnOwnEntry && !entry.navigating) {
+        const mark = Symbol("ignored-pop");
+        ignoredPops.push(mark);
+        setTimeout(() => {
+          ignoredPops = ignoredPops.filter((m) => m !== mark);
+        }, IGNORED_POP_TTL_MS);
+        window.history.back();
+      }
+    }
+    if (backStack.length === 0 && backListening) {
+      window.removeEventListener("popstate", onPopState);
+      backListening = false;
+    }
+  };
+  return { unregister, markNavigating: () => { entry.navigating = true; } };
+}
+
 interface DialogProps {
+  /** Phone Back gesture closes this dialog (sheets). Needs `onClose`. */
+  closeOnBack?: boolean;
+  /** What Back does instead of `onClose`. Return false when a guard keeps the dialog open. */
+  onBack?: () => boolean | void;
   /** Accessible name. Use `labelledBy` instead when a visible heading exists. */
   label?: string;
   labelledBy?: string;
@@ -88,13 +164,15 @@ interface DialogProps {
  * Shared modal dialog: role/aria-modal, focus moved in on open, Tab trapped,
  * Escape closes, focus restored to the previously focused element on close.
  */
-export function Dialog({ label, labelledBy, describedBy, onClose, dismissOnBackdrop = true, className, panelClassName, role = "dialog", layout, children }: DialogProps) {
+export function Dialog({ closeOnBack = false, onBack, label, labelledBy, describedBy, onClose, dismissOnBackdrop = true, className, panelClassName, role = "dialog", layout, children }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const onBackRef = useRef(onBack);
   useEffect(() => {
     onCloseRef.current = onClose;
-  }, [onClose]);
+    onBackRef.current = onBack;
+  }, [onClose, onBack]);
 
   useEffect(() => {
     const token = Symbol("dialog");
@@ -122,13 +200,23 @@ export function Dialog({ label, labelledBy, describedBy, onClose, dismissOnBackd
       (target === null || target < 0 ? panel : items[target]).focus();
     };
     document.addEventListener("keydown", onKeyDown, true);
+    const back = closeOnBack && onCloseRef.current ? registerBack(token, () => (onBackRef.current ? onBackRef.current() : onCloseRef.current?.())) : null;
+    const root = rootRef.current;
+    const onLinkClick = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest?.("a[href]");
+      if (link && !link.hasAttribute("download") && link.getAttribute("target") !== "_blank") back?.markNavigating();
+    };
+    if (back) root?.addEventListener("click", onLinkClick);
     return () => {
+      root?.removeEventListener("click", onLinkClick);
+      back?.unregister();
       document.removeEventListener("keydown", onKeyDown, true);
       removeDialog(token);
       restoreInert();
       document.body.style.overflow = previousOverflow;
       if (previous && document.contains(previous)) previous.focus();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- set up once per mount
   }, []);
 
   if (typeof document === "undefined") return null;
@@ -220,9 +308,10 @@ export function ModalDialog({
   const { titleId, descriptionId } = useDialogIds();
   if (!open) return null;
   const requestClose = (reason: DialogCloseReason) => {
-    if (busy) return;
-    if (onRequestClose && onRequestClose(reason) === false) return;
+    if (busy) return false;
+    if (onRequestClose && onRequestClose(reason) === false) return false;
     onClose();
+    return true;
   };
   const sheet = phoneLayout === "sheet";
   const width = size === "lg" ? "md:max-w-[640px]" : "md:max-w-[480px]";
@@ -230,8 +319,10 @@ export function ModalDialog({
     <Dialog
       labelledBy={titleId}
       describedBy={descriptionId}
-      onClose={() => requestClose("dismiss")}
+      onClose={() => { requestClose("dismiss"); }}
       layout={sheet ? "sheet" : "centred"}
+      closeOnBack
+      onBack={() => requestClose("dismiss")}
       className={sheet ? `${scrimClassName} max-md:p-0` : scrimClassName}
       panelClassName={[
         "flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-dashboard-dialog bg-dashboard-surface shadow-dashboard-overlay outline-none",

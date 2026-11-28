@@ -91,6 +91,24 @@ export const supabaseUnsubscribeStore: UnsubscribeStore = {
   },
 }
 
+/**
+ * Deletes tokens that can no longer be used: expired ones, and used ones past
+ * the one-day grace. Rows still inside either window are kept so reloads and
+ * Undo keep working. Returns how many rows were removed.
+ */
+export async function purgeUnsubscribeTokens(
+  client: Pick<typeof supabase, 'from'> = supabase,
+  now: Date = new Date(),
+): Promise<number> {
+  const nowIso = now.toISOString()
+  const usedBefore = new Date(now.getTime() - USED_TOKEN_GRACE_MS).toISOString()
+  const expired = await client.from('unsubscribe_tokens').delete().lte('expires_at', nowIso).select('id')
+  if (expired.error) throw expired.error
+  const used = await client.from('unsubscribe_tokens').delete().lte('used_at', usedBefore).select('id')
+  if (used.error) throw used.error
+  return (expired.data?.length ?? 0) + (used.data?.length ?? 0)
+}
+
 /** A new raw token for one email. Only its hash is stored. */
 export async function issueUnsubscribeToken(
   input: { personId: string; schoolId: string | null; rowKey: NotificationRowKey },

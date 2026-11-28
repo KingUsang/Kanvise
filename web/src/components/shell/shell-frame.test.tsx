@@ -64,6 +64,23 @@ describe('ShellFrame', () => {
   beforeEach(() => window.localStorage.clear())
   afterEach(cleanup)
 
+  it('shows the setup card with its count until setup is finished (SH-02)', () => {
+    renderShell({ data: adminData({ capabilities: { isAdmin: true, isTutor: true, organisationType: 'centre', setupVisible: true }, setup: { completed: 2, total: 5, label: '2/5 completed' } }) })
+    const card = sidebar().getByRole('link', { name: /Set up your account/ })
+    expect(card).toHaveAttribute('href', '/dashboard/setup')
+    expect(within(card).getByRole('progressbar', { name: 'Setup progress' })).toHaveAttribute('aria-valuenow', '2')
+    expect(within(card).getByText('2/5 completed')).toBeInTheDocument()
+    expect(sidebar().getByRole('link', { name: 'Setup' })).toHaveAttribute('href', '/dashboard/setup')
+  })
+
+  it('shows no setup card for invited staff or once setup is done', () => {
+    renderShell({ data: tutorData() })
+    expect(sidebar().queryByText('Set up your account')).toBeNull()
+    cleanup()
+    renderShell({ data: adminData({ setup: null }) })
+    expect(sidebar().queryByText('Set up your account')).toBeNull()
+  })
+
   it('renders exactly one main landmark with the skip link target', () => {
     renderShell()
     expect(screen.getAllByRole('main')).toHaveLength(1)

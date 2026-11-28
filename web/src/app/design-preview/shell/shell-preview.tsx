@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { BookMarked } from 'lucide-react'
 import { getDashboardPageTitle, deniedReason, type DashboardCapabilities } from '@/config/dashboard-navigation'
 import { changelog, type ChangelogEntry } from '@/content/changelog'
@@ -141,13 +141,24 @@ function wait(ms: number) {
 
 const noSubscribe = () => () => undefined
 
-export function ShellPreview({ options }: { options: PreviewOptions }) {
+export function ShellPreview({ options, content: contentOverride, setup }: {
+  options: PreviewOptions
+  /** Page content that replaces the sample page (used by the dashboard and setup previews). */
+  content?: ReactNode
+  /** Sidebar setup card progress (SH-02 item 3). */
+  setup?: ShellData['setup']
+}) {
   // Render on the client only: overlays that start open are portals, which
   // the server cannot render, so hydrating them would not match.
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false)
   const data = fixture(options)
   const loading = options.page === 'loading'
-  const shellData: ShellData = { ...data, loading }
+  const shellData: ShellData = {
+    ...data,
+    loading,
+    setup: setup ?? null,
+    capabilities: { ...data.capabilities, setupVisible: Boolean(setup) },
+  }
   const path = options.path ?? (options.page === 'admin-only' ? '/dashboard/tutors' : '/dashboard')
   // ?read=1 shows the state after What's new was opened. Writing the read
   // marker once, before the shell reads it, is idempotent.
@@ -168,7 +179,8 @@ export function ShellPreview({ options }: { options: PreviewOptions }) {
 
   const title = getDashboardPageTitle(path)
   let content
-  if (options.page === 'not-available') content = <NotAvailable independent={options.role === 'independent'} />
+  if (contentOverride) content = contentOverride
+  else if (options.page === 'not-available') content = <NotAvailable independent={options.role === 'independent'} />
   else if (options.page === 'admin-only') content = <NotAvailable reason={deniedReason(path, data.capabilities)} independent={options.role === 'independent'} />
   else if (options.page === 'error') content = <ErrorState size="card" onRetry={() => toast.info('Trying again.')} />
   else if (loading) content = <PageLoadingState label="Loading this page" />

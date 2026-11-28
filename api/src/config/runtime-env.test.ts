@@ -53,6 +53,20 @@ describe('validateProductionEnvironment', () => {
       .toThrow(/EMAIL_FROM.*GEMINI_API_KEY.*KANVISE_INTERNAL_SECRET/)
   })
 
+  it('requires FRONTEND_URL on its own, because emails and notification links throw without it', () => {
+    const { FRONTEND_URL: _omitted, ...withoutFrontendUrl } = validProductionEnv
+    expect(() => validateProductionEnvironment(withoutFrontendUrl as NodeJS.ProcessEnv))
+      .toThrow('Missing production environment variables: FRONTEND_URL')
+    expect(() => validateProductionEnvironment({ ...validProductionEnv, FRONTEND_URL: '  ' }))
+      .toThrow('Missing production environment variables: FRONTEND_URL')
+  })
+
+  it('makes the Oracle deploy script refuse an API .env without FRONTEND_URL', () => {
+    const script = readFileSync(fileURLToPath(new URL('../../../scripts/operations/deploy-api-on-oracle.sh', import.meta.url)), 'utf8')
+    expect(script).toMatch(/grep -Eq '[^']*FRONTEND_URL=[^']*' "\$\{deploy_root\}\/api\/\.env"/)
+    expect(script).toContain('FRONTEND_URL must be set')
+  })
+
   it('rejects insecure production origins', () => {
     expect(() => validateProductionEnvironment({ ...validProductionEnv, FRONTEND_URL: 'http://example.com' }))
       .toThrow('FRONTEND_URL must use HTTPS')

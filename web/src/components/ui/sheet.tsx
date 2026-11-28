@@ -41,6 +41,7 @@ export function Sheet({ open, onClose, title, description, side = 'bottom', foot
       labelledBy={titleId}
       describedBy={description ? descriptionId : undefined}
       onClose={onClose}
+      closeOnBack
       layout={`sheet-${side}`}
       className={`animate-dashboard-scrim-in fixed inset-0 z-[99999] flex bg-dashboard-scrim backdrop-blur-sm ${sideClasses[side]}`}
       panelClassName={`flex flex-col overflow-hidden bg-dashboard-surface shadow-dashboard-overlay outline-none ${panelClasses[side]}`}

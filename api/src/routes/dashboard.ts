@@ -8,14 +8,15 @@ import {
 } from "../middleware/auth";
 import { standaloneAwareAccountContext } from "../middleware/account-projection";
 import type { AccountContext } from "../types";
-import { resolveStudentCourses } from "../lib/student-course-access";
+import { listCourseLearnerIds, resolveStudentCourses } from "../lib/student-course-access";
 import {
   loadStudentMockAudience,
   studentCanAccessCentreMock,
   type StudentMockAudience,
 } from "../lib/student-mock-audience";
 import { buildStudentProgress } from "../domain/student-progress";
-import { reportingPeriods, resolveReportingTimezone } from "../lib/reporting-period";
+import { reportingPeriods, resolveReportingTimezone, weekPeriods } from "../lib/reporting-period";
+import { DEFAULT_CLASSROOM_OPENS_MINUTES, lessonDisplayStatus } from "../lib/dashboard-overview";
 
 export const dashboardRouter = new Hono<{ Variables: Variables }>();
 
@@ -984,4 +985,176 @@ dashboardRouter.get("/stats", async (c) => {
 
   responseData.data_status = health.status();
   return c.json({ data: responseData });
+});
+
+// 03-dashboard DB-01, DB-03, DB-04, DB-07, DB-08: one read for the dashboard
+// frame. Independent tutors and agency tutors see their own lessons; agency
+// admins see every tutor's lessons unless `mine=1`.
+const LESSON_COLUMNS =
+  "id, title, scheduled_at, duration_minutes, status, course_id, tutor_id, courses!live_classes_course_id_fkey(name)";
+
+dashboardRouter.get("/overview", async (c) => {
+  const user = c.get("user");
+  const schoolId = user.school_id;
+  if (!schoolId) return c.json({ error: "User does not belong to a school" }, 400);
+  if (user.role !== "admin" && user.role !== "tutor")
+    return c.json({ error: "Staff access only", code: "INSUFFICIENT_ROLE" }, 403);
+
+  const now = new Date();
+  const timezone = resolveReportingTimezone(c.req.query("tz"));
+  const offsetParam = Number.parseInt(c.req.query("week") ?? "0", 10);
+  const weekOffset = Number.isFinite(offsetParam) ? Math.max(-52, Math.min(52, offsetParam)) : 0;
+  const week = weekPeriods(now, timezone, weekOffset);
+  const today = reportingPeriods(now, timezone);
+
+  const [
+    { data: school, error: schoolError },
+    { data: assignment, error: assignmentError },
+  ] = await Promise.all([
+    supabase.from("schools").select("account_type").eq("id", schoolId).maybeSingle(),
+    user.role === "admin"
+      ? supabase
+          .from("tutor_course_assignments")
+          .select("id")
+          .eq("school_id", schoolId)
+          .eq("tutor_id", user.id)
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (schoolError || assignmentError)
+    return c.json({ error: "Failed to load dashboard", code: "DATABASE_ERROR" }, 500);
+
+  const independent = school?.account_type === "independent";
+  const isAdmin = user.role === "admin";
+  const teaches = user.role === "tutor" || Boolean(assignment);
+  const view = independent ? "independent" : isAdmin ? "agency_admin" : "agency_tutor";
+  const mineOnly = view === "agency_admin" && c.req.query("mine") === "1";
+  const scopeAll = view === "agency_admin" && !mineOnly;
+
+  const lessonQuery = (from: Date, to: Date) => {
+    let query = supabase
+      .from("live_classes")
+      .select(LESSON_COLUMNS)
+      .eq("school_id", schoolId)
+      .gte("scheduled_at", from.toISOString())
+      .lte("scheduled_at", to.toISOString())
+      .order("scheduled_at", { ascending: true });
+    if (!scopeAll) query = query.eq("tutor_id", user.id);
+    return query;
+  };
+
+  let nextQuery = supabase
+    .from("live_classes")
+    .select(LESSON_COLUMNS)
+    .eq("school_id", schoolId)
+    .eq("status", "scheduled")
+    .gt("scheduled_at", today.todayEnd.toISOString())
+    .order("scheduled_at", { ascending: true })
+    .limit(1);
+  if (!scopeAll) nextQuery = nextQuery.eq("tutor_id", user.id);
+
+  const [
+    { data: todayRows, error: todayError },
+    { data: weekRows, error: weekError },
+    { data: nextRows, error: nextError },
+  ] = await Promise.all([
+    lessonQuery(today.todayStart, today.todayEnd),
+    lessonQuery(week.weekStart, week.weekEnd),
+    nextQuery,
+  ]);
+  if (todayError || weekError || nextError) {
+    console.error("dashboard.overview_failed", { code: (todayError ?? weekError ?? nextError)?.code });
+    return c.json({ error: "Failed to load dashboard", code: "DATABASE_ERROR" }, 500);
+  }
+
+  const todayLessons: any[] = todayRows || [];
+  const weekLessons: any[] = weekRows || [];
+  const nextLesson: any = (nextRows || [])[0] ?? null;
+  const all = [...todayLessons, ...weekLessons, ...(nextLesson ? [nextLesson] : [])];
+
+  let hasAnyLesson = all.length > 0;
+  if (!hasAnyLesson) {
+    let anyQuery = supabase
+      .from("live_classes")
+      .select("id")
+      .eq("school_id", schoolId)
+      .limit(1);
+    if (!scopeAll) anyQuery = anyQuery.eq("tutor_id", user.id);
+    const { data: anyRows, error: anyError } = await anyQuery;
+    if (anyError) return c.json({ error: "Failed to load dashboard", code: "DATABASE_ERROR" }, 500);
+    hasAnyLesson = (anyRows || []).length > 0;
+  }
+
+  const tutorIds = [...new Set(all.map((lesson) => lesson.tutor_id as string))];
+  const courseIds = [...new Set(all.map((lesson) => lesson.course_id as string).filter(Boolean))];
+  const [tutorResult, studentCounts] = await Promise.all([
+    scopeAll && tutorIds.length
+      ? supabase.from("user_profiles").select("id, first_name, last_name").in("id", tutorIds)
+      : Promise.resolve({ data: [], error: null }),
+    Promise.all(
+      courseIds.map(async (courseId) => {
+        try {
+          return [courseId, (await listCourseLearnerIds(schoolId, courseId)).length] as const;
+        } catch (error) {
+          console.error("dashboard.student_count_failed", { courseId });
+          return [courseId, null] as const;
+        }
+      }),
+    ),
+  ]);
+  if (tutorResult.error)
+    console.error("dashboard.tutor_names_failed", { code: tutorResult.error.code });
+  const tutorNames = new Map(
+    ((tutorResult.data || []) as any[]).map((row) => [
+      row.id as string,
+      [row.first_name, row.last_name].filter(Boolean).join(" ") || null,
+    ]),
+  );
+  const counts = new Map(studentCounts);
+
+  const shape = (lesson: any) => ({
+    id: lesson.id,
+    title: lesson.title,
+    scheduled_at: lesson.scheduled_at,
+    duration_minutes: lesson.duration_minutes,
+    status: lessonDisplayStatus(lesson, now),
+    course_id: lesson.course_id,
+    course_name: lesson.courses?.name ?? null,
+    student_count: counts.get(lesson.course_id) ?? null,
+    tutor_id: lesson.tutor_id,
+    tutor_name: scopeAll ? (tutorNames.get(lesson.tutor_id) ?? null) : null,
+  });
+
+  const weekShaped = weekLessons.map(shape);
+  return c.json({
+    data: {
+      view,
+      teaches,
+      scope: scopeAll ? "all" : "own",
+      timezone,
+      classroom_opens_minutes: DEFAULT_CLASSROOM_OPENS_MINUTES,
+      has_any_lesson: hasAnyLesson,
+      today: todayLessons.map(shape),
+      next_lesson: nextLesson ? shape(nextLesson) : null,
+      week: {
+        offset: weekOffset,
+        today_index: week.todayIndex,
+        days: week.days.map((day) => ({
+          date: day.date,
+          lesson_count: weekShaped.filter((lesson) => {
+            const at = new Date(lesson.scheduled_at).getTime();
+            return at >= day.start.getTime() && at <= day.end.getTime();
+          }).length,
+        })),
+        lessons: weekShaped.map((lesson) => ({
+          ...lesson,
+          day_index: week.days.findIndex((day) => {
+            const at = new Date(lesson.scheduled_at).getTime();
+            return at >= day.start.getTime() && at <= day.end.getTime();
+          }),
+        })),
+      },
+    },
+  });
 });

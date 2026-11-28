@@ -9,6 +9,7 @@ import { runUploadOrphanSweep } from './storage-cleanup'
 import { runOnboardingDripJob } from './onboarding-drip'
 import { createLeasedJob, databaseSchedulerLease } from './scheduler-lease'
 import { workerId } from './durable-jobs'
+import { purgeUnsubscribeTokens } from '../notifications/unsubscribe'
 import { runPresentationRecoveryJob } from '../slides/presentation-processor'
 
 // Each scheduled job runs only while this process holds its database lease, so
@@ -22,6 +23,7 @@ export function startScheduledJobs() {
     { expression: '* * * * *', guarded: createGuardedJob('mock_publication', () => runMockPublicationJob()) },
     { expression: '*/5 * * * *', guarded: createGuardedJob('live_class_reminder', () => runLiveClassReminderJob()) },
     { expression: '* * * * *', guarded: createGuardedJob('durable_jobs', () => runGeneralDurableJobs()) },
+    { expression: '23 3 * * *', guarded: createGuardedJob('unsubscribe_token_purge', () => purgeUnsubscribeTokens()) },
     { expression: '*/15 * * * *', guarded: createGuardedJob('upload_orphan_sweep', () => runUploadOrphanSweep()) },
     { expression: '*/30 * * * *', guarded: createGuardedJob('assignment_deadline', () => runAssignmentDeadlineJob()) },
     { expression: '17 */6 * * *', guarded: createGuardedJob('timetable_materialization', () => runTimetableMaterializationJob()) },

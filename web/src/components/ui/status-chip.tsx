@@ -1,13 +1,15 @@
 import { Check } from 'lucide-react'
 
 /** Lesson statuses from 01-app-shell SH-15 and SH-12: always a dot or icon plus a word. */
-export type LessonStatus = 'planned' | 'starting-soon' | 'live' | 'complete'
+export type LessonStatus = 'planned' | 'starting-soon' | 'live' | 'complete' | 'not-held' | 'cancelled'
 
 const statusConfig: Record<LessonStatus, { label: string; dot: string }> = {
   planned: { label: 'Planned', dot: 'bg-dashboard-status-planned' },
   'starting-soon': { label: 'Starting soon', dot: 'bg-dashboard-status-soon' },
   live: { label: 'Live', dot: 'bg-dashboard-status-live animate-dashboard-live-pulse' },
   complete: { label: 'Complete', dot: '' },
+  'not-held': { label: 'Not held', dot: 'bg-dashboard-outline-strong' },
+  cancelled: { label: 'Cancelled', dot: 'bg-dashboard-outline-strong' },
 }
 
 export function lessonStatusLabel(status: LessonStatus) {

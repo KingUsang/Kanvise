@@ -33,6 +33,10 @@ test -f "${GITHUB_WORKSPACE}/package.json"
 test -f "${GITHUB_WORKSPACE}/package-lock.json"
 test -f "${GITHUB_WORKSPACE}/api/package.json"
 test -f "${deploy_root}/api/.env"
+# Email and notification links throw without FRONTEND_URL, so refuse to deploy without it.
+grep -Eq '^[[:space:]]*(export[[:space:]]+)?FRONTEND_URL=[^[:space:]#]' "${deploy_root}/api/.env" \
+  && ! grep -Eq '^[[:space:]]*(export[[:space:]]+)?FRONTEND_URL=[[:space:]]*[[:punct:]]{2}[[:space:]]*(#.*)?$' "${deploy_root}/api/.env" \
+  || { echo "FRONTEND_URL must be set in ${deploy_root}/api/.env" >&2; exit 66; }
 
 exec 9>"/tmp/kanvise-${deploy_environment}-deploy.lock"
 flock -n 9 || { echo "Another ${deploy_environment} deployment is running" >&2; exit 75; }
