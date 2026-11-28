@@ -7,6 +7,7 @@ data ownership, or backend capability.
 
 - `auth/`: authentication and enrollment behaviour plus its storyboard
 - `flows/`: broad product journeys and navigation studies
+- `kavi/`: what Kavi (the AI assistant) does, and the brief for the engineer who builds it
 - `user-flows/`: end-to-end user flows, state machines, QA test plan and
   proposals for payments and progress, written from the redesign specs
 - `dashboard/`: dashboard and timetable composition references
